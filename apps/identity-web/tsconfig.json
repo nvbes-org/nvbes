@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "paths": {
+      "@nvbes/http-client": ["../../libs/ts/http-client/src/index.ts"],
+      "@nvbes/identity-client": ["../../libs/ts/identity-client/src/index.ts"],
+      "@nvbes/identity-sdk-web": ["../../libs/ts/identity-sdk-web/src/index.ts"],
+      "@nvbes/identity-sdk-web/src/*": ["../../libs/ts/identity-sdk-web/src/*"],
+      "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
+      "@nvbes/identity-sdk-core/src/*": ["../../libs/ts/identity-sdk-core/src/*"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

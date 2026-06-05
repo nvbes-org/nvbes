@@ -1,0 +1,14 @@
+[package]
+name = "nvbes-storage"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+async-trait = "0.1"
+aws-config = { version = "1.8.16", default-features = false, features = ["rt-tokio", "credentials-process", "sso", "default-https-client"] }
+aws-sdk-s3 = { version = "1.132.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+url = "2"

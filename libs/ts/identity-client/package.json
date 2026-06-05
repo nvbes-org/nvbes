@@ -1,0 +1,23 @@
+{
+  "name": "@nvbes/identity-client",
+  "version": "0.1.0",
+  "description": "Typed browser client for nvbes Identity API",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch"
+  },
+  "dependencies": {
+    "@nvbes/http-client": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

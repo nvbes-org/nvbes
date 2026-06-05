@@ -1,0 +1,17 @@
+[package]
+name = "nvbes-redis"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+redis = { version = "0.29", features = ["tokio-comp", "json", "streams", "script"] }
+bb8-redis = "0.21"
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+metrics.workspace = true
+chrono.workspace = true
+uuid.workspace = true

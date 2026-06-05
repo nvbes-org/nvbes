@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Web: Launch Chrome (localhost:5173)",
+      "type": "chrome",
+      "request": "attach",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/identity-web"
+    },
+    {
+      "name": "Rust: Debug identity-api",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["run", "--package", "nvbes-identity-api"]
+      },
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PATH": "/Users/shayn/.cargo/bin:${env:PATH}"
+      },
+      "sourceLanguages": ["rust"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Dev + Web Debug",
+      "configurations": ["Web: Launch Chrome (localhost:5173)"],
+      "preLaunchTask": "pnpm: dev"
+    }
+  ]
+}

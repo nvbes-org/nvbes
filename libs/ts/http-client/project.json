@@ -1,0 +1,21 @@
+{
+  "name": "http-client",
+  "projectType": "library",
+  "root": "libs/ts/http-client",
+  "sourceRoot": "libs/ts/http-client/src",
+  "tags": ["type:lib", "domain:shared", "layer:transport"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/http-client build"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/http-client dev"
+      }
+    }
+  }
+}

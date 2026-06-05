@@ -1,0 +1,25 @@
+#[path = "drive.domains.public_api.api_key_signatures.rs"]
+pub mod api_key_signatures;
+#[path = "drive.domains.public_api.auth.rs"]
+pub mod auth;
+#[path = "drive.domains.public_api.db.rs"]
+pub mod db;
+#[path = "drive.domains.public_api.http_signatures.rs"]
+pub mod http_signatures;
+#[path = "drive.domains.public_api.routes.mgmt_handlers.rs"]
+pub mod mgmt_handlers;
+#[path = "drive.domains.public_api.observability.rs"]
+pub mod observability;
+#[path = "drive.domains.public_api.routes.rs"]
+pub mod routes;
+#[path = "drive.domains.public_api.routes.helpers.rs"]
+pub mod routes_helpers;
+#[path = "drive.domains.public_api.service.rs"]
+pub mod service;
+#[path = "drive.domains.public_api.types.rs"]
+pub mod types;
+#[path = "drive.domains.public_api.routes.v1_handlers.mod.rs"]
+pub mod v1_handlers;
+
+pub use routes::router;
+pub use service::*;

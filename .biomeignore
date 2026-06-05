@@ -1,0 +1,10 @@
+.agents/
+.cargo*/
+.cursor/
+.gemini/
+.github/
+.nx
+.opencode
+.playwright-mcp
+.rustup*/
+.vscode/

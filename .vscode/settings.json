@@ -1,0 +1,35 @@
+{
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/node_modules": true,
+    "**/target": true,
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/.next": true,
+    "**/.parcel-cache": true,
+    "**/.cache": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/target/**": true,
+    "**/dist/**": true,
+    "**/.git/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/dist": true
+  },
+
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "npm.packageManager": "pnpm",
+  "git.enableSmartCommit": false,
+  "git.confirmSync": false,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "rust-analyzer.cargo.autoreload": true
+}

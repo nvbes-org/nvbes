@@ -1,0 +1,39 @@
+[package]
+name = "nvbes-core"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+axum.workspace = true
+axum-server.workspace = true
+argon2.workspace = true
+aes-gcm.workspace = true
+base64.workspace = true
+chrono.workspace = true
+data-encoding.workspace = true
+hkdf.workspace = true
+hmac.workspace = true
+ipnet.workspace = true
+password-hash.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+socket2.workspace = true
+uuid.workspace = true
+urlencoding.workspace = true
+rand_core = { version = "0.6", features = ["getrandom"] }
+zxcvbn = "3.1.1"
+sqlx.workspace = true
+tracing.workspace = true
+reqwest.workspace = true
+rustls-pemfile.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["net"] }
+tokio-rustls.workspace = true
+tower = "0.5"
+tower-http = { workspace = true }
+nvbes-redis = { path = "../redis" }
+utoipa = { workspace = true }

@@ -1,0 +1,7 @@
+scaleway_project_id = "00000000-0000-0000-0000-000000000000"
+cloudflare_zone_id  = "00000000000000000000000000000000"
+base_domain         = "nvbes.example"
+ssh_allowed_ips     = ["203.0.113.10/32"]
+
+# Prefer TF_VAR_postgres_password or your CI secret store for real values.
+postgres_password = "replace-me-staging"

@@ -1,0 +1,86 @@
+x-postgres: &postgres
+  image: postgres:17-alpine
+  container_name: nvbes-postgres
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: nvbes
+  ports:
+    - "5432:5432"
+  volumes:
+    - nvbes_pgdata:/var/lib/postgresql/data
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres -d nvbes"]
+    interval: 5s
+    timeout: 3s
+    retries: 5
+
+services:
+  postgres:
+    <<: *postgres
+    profiles: [infra, full]
+
+  redis:
+    image: redis/redis-stack:7.4.0-v2
+    container_name: nvbes-redis
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - nvbes_redis_data:/data
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-redis_dev} --maxmemory 256mb --maxmemory-policy volatile-lru"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    profiles: [infra, full]
+
+  # ── Profile: observability ────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: nvbes-prometheus
+    profiles: [observability, full]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/console_templates"
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: nvbes-tempo
+    profiles: [observability, full]
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nvbes-grafana
+    profiles: [observability, full]
+    volumes:
+      - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+      tempo:
+        condition: service_started
+
+volumes:
+  nvbes_pgdata:
+  nvbes_redis_data:

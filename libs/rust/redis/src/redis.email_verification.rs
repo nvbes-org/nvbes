@@ -1,0 +1,175 @@
+use chrono::{DateTime, Utc};
+use redis::AsyncCommands;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+use crate::connection::{RedisError, RedisPool};
+
+const EMAIL_VERIFICATION_TOKEN_KEY_PREFIX: &str = "nvbes:identity:email-verification-token";
+const EMAIL_VERIFICATION_PRINCIPAL_INDEX_PREFIX: &str =
+    "nvbes:identity:email-verification-tokens:principal";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedEmailVerificationToken {
+    pub principal_id: Uuid,
+    pub token_hash: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    pub consumed_at: Option<DateTime<Utc>>,
+}
+
+pub async fn store_email_verification_token(
+    pool: &RedisPool,
+    token: &CachedEmailVerificationToken,
+) -> Result<(), RedisError> {
+    let ttl_seconds = ttl_seconds(token.expires_at);
+    let mut conn = pool.get().await?;
+    let json = serde_json::to_string(token)?;
+
+    let _: () = conn
+        .set_ex(
+            email_verification_token_key(&token.token_hash),
+            json,
+            ttl_seconds,
+        )
+        .await?;
+    let _: bool = conn
+        .sadd(
+            email_verification_principal_index_key(&token.principal_id),
+            &token.token_hash,
+        )
+        .await?;
+    let _: bool = conn
+        .expire(
+            email_verification_principal_index_key(&token.principal_id),
+            ttl_seconds as i64,
+        )
+        .await?;
+    Ok(())
+}
+
+pub async fn get_email_verification_token(
+    pool: &RedisPool,
+    token_hash: &str,
+) -> Result<Option<CachedEmailVerificationToken>, RedisError> {
+    let mut conn = pool.get().await?;
+    let raw: Option<String> = conn.get(email_verification_token_key(token_hash)).await?;
+    raw.map(|json| serde_json::from_str(&json))
+        .transpose()
+        .map_err(Into::into)
+}
+
+pub async fn latest_unconsumed_email_verification_token_for_principal(
+    pool: &RedisPool,
+    principal_id: Uuid,
+) -> Result<Option<CachedEmailVerificationToken>, RedisError> {
+    let mut conn = pool.get().await?;
+    let token_hashes: Vec<String> = conn
+        .smembers(email_verification_principal_index_key(&principal_id))
+        .await?;
+
+    let mut latest: Option<CachedEmailVerificationToken> = None;
+    for token_hash in token_hashes {
+        if let Some(token) = get_email_verification_token(pool, &token_hash).await? {
+            if token.consumed_at.is_none() {
+                match latest {
+                    Some(ref current) if current.created_at >= token.created_at => {}
+                    _ => latest = Some(token),
+                }
+            }
+        }
+    }
+
+    Ok(latest)
+}
+
+pub async fn mark_email_verification_token_consumed(
+    pool: &RedisPool,
+    token_hash: &str,
+) -> Result<(), RedisError> {
+    if let Some(mut token) = get_email_verification_token(pool, token_hash).await? {
+        token.consumed_at = Some(Utc::now());
+        store_email_verification_token(pool, &token).await?;
+    }
+    Ok(())
+}
+
+pub async fn consume_all_email_verification_tokens_for_principal(
+    pool: &RedisPool,
+    principal_id: Uuid,
+) -> Result<(), RedisError> {
+    let mut conn = pool.get().await?;
+    let token_hashes: Vec<String> = conn
+        .smembers(email_verification_principal_index_key(&principal_id))
+        .await?;
+    for token_hash in token_hashes {
+        mark_email_verification_token_consumed(pool, &token_hash).await?;
+    }
+    Ok(())
+}
+
+fn email_verification_token_key(token_hash: &str) -> String {
+    format!("{EMAIL_VERIFICATION_TOKEN_KEY_PREFIX}:{token_hash}")
+}
+
+fn email_verification_principal_index_key(principal_id: &Uuid) -> String {
+    format!("{EMAIL_VERIFICATION_PRINCIPAL_INDEX_PREFIX}:{principal_id}")
+}
+
+fn ttl_seconds(expires_at: DateTime<Utc>) -> u64 {
+    let ttl = (expires_at - Utc::now()).num_seconds().max(1);
+    ttl as u64
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    async fn test_redis_pool() -> RedisPool {
+        let mut config = crate::config::RedisConfig::from_env();
+        if config.url == "redis://localhost:6379" {
+            config.url = "redis://127.0.0.1:6379".to_string();
+        }
+        config.max_connections = 2;
+        crate::connection::create_pool(&config)
+            .await
+            .expect("redis pool")
+    }
+
+    #[tokio::test]
+    async fn stores_and_consumes_email_verification_token() {
+        let redis = test_redis_pool().await;
+        let principal_id = Uuid::new_v4();
+        let token_hash = format!("hash-{}", Uuid::new_v4());
+
+        store_email_verification_token(
+            &redis,
+            &CachedEmailVerificationToken {
+                principal_id,
+                token_hash: token_hash.clone(),
+                created_at: Utc::now(),
+                expires_at: Utc::now() + chrono::Duration::minutes(5),
+                consumed_at: None,
+            },
+        )
+        .await
+        .expect("token should store");
+
+        let token = latest_unconsumed_email_verification_token_for_principal(&redis, principal_id)
+            .await
+            .expect("token lookup should work")
+            .expect("token should exist");
+        assert_eq!(token.token_hash, token_hash);
+
+        mark_email_verification_token_consumed(&redis, &token_hash)
+            .await
+            .expect("token should be consumable");
+
+        let token = get_email_verification_token(&redis, &token_hash)
+            .await
+            .expect("token lookup should work")
+            .expect("token should exist");
+        assert!(token.consumed_at.is_some());
+    }
+}

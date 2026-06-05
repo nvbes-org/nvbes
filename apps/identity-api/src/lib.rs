@@ -1,0 +1,12 @@
+#[path = "identity.app.rs"]
+pub mod app;
+#[path = "identity.database.rs"]
+pub mod database;
+#[path = "identity.domains.mod.rs"]
+pub mod domains;
+#[path = "identity.email.mod.rs"]
+pub mod email;
+#[path = "identity.http.mod.rs"]
+pub mod http;
+#[path = "identity.test_support.rs"]
+pub mod test_support;

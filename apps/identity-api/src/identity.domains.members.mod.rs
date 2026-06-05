@@ -1,0 +1,12 @@
+#[path = "identity.domains.members.invites.rs"]
+pub mod invites;
+#[path = "identity.domains.members.membership.rs"]
+pub mod membership;
+#[path = "identity.domains.members.records.rs"]
+pub mod records;
+#[path = "identity.domains.members.routes.rs"]
+pub mod routes;
+#[path = "identity.domains.members.service.rs"]
+pub mod service;
+#[path = "identity.domains.members.types.rs"]
+pub mod types;

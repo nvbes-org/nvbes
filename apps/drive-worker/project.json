@@ -1,0 +1,27 @@
+{
+  "name": "drive-worker",
+  "projectType": "application",
+  "root": "apps/drive-worker",
+  "sourceRoot": "apps/drive-worker/src",
+  "tags": ["type:app", "domain:drive", "layer:worker"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo build --manifest-path apps/drive-worker/Cargo.toml"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo check --manifest-path apps/drive-worker/Cargo.toml"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo test --manifest-path apps/drive-worker/Cargo.toml"
+      }
+    }
+  }
+}

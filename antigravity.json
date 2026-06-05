@@ -1,0 +1,34 @@
+{
+  "name": "nvbes",
+  "agent": "antigravity",
+  "instructions": [
+    "AGENTS.md",
+    ".cursor/rules/core-workflow.mdc",
+    ".cursor/rules/rust-backend.mdc",
+    ".cursor/rules/typescript-react.mdc",
+    ".agents/skills/fix-errors/SKILL.md",
+    ".agents/skills/frontend-design/SKILL.md",
+    ".agents/skills/nx-workspace/SKILL.md",
+    ".agents/skills/postgresql-code-review/SKILL.md",
+    ".agents/skills/postgresql-optimization/SKILL.md",
+    ".agents/skills/rust-best-practices/SKILL.md",
+    ".agents/skills/security-expert/SKILL.md",
+    ".agents/skills/shadcn/SKILL.md",
+    ".agents/skills/stripe-best-practices/SKILL.md",
+    ".agents/skills/tanstack-query-best-practices/SKILL.md",
+    ".agents/skills/vite/SKILL.md"
+  ],
+  "mcp": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"],
+      "enabled": true
+    }
+  },
+  "preferences": {
+    "packageManager": "pnpm",
+    "rust": {
+      "checkWorkspaceOnSave": true
+    }
+  }
+}

@@ -1,0 +1,210 @@
+use chrono::{DateTime, Duration as ChronoDuration, Utc};
+use uuid::Uuid;
+
+use super::db::{PublicShareRecord, ShareLinkRecord, SharePolicy, ShareableObjectRecord};
+use super::types::SignedPublicDownloadUrlView;
+use crate::{domains::files::models::StorageObjectStatus, http::error::AppError};
+
+pub fn normalize_expires_at(
+    requested: Option<DateTime<Utc>>,
+    policy: &SharePolicy,
+) -> Result<DateTime<Utc>, AppError> {
+    let now = Utc::now();
+    let expires_at =
+        requested.unwrap_or_else(|| now + ChronoDuration::days(i64::from(policy.default_ttl_days)));
+    let max_expires_at = now + ChronoDuration::days(i64::from(policy.max_ttl_days));
+
+    if expires_at <= now {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            "Share link expiration must be in the future.",
+        ));
+    }
+
+    if expires_at > max_expires_at {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            "Share link expiration exceeds the workspace maximum TTL.",
+        ));
+    }
+
+    Ok(expires_at)
+}
+
+pub fn normalize_max_downloads(max_downloads: Option<i32>) -> Result<Option<i32>, AppError> {
+    match max_downloads {
+        Some(value) if value <= 0 => Err(AppError::bad_request(
+            "validation_failed",
+            "max_downloads must be greater than zero when provided.",
+        )),
+        value => Ok(value),
+    }
+}
+
+pub fn ensure_link_not_revoked_or_expired(link: &ShareLinkRecord) -> Result<(), AppError> {
+    if link.revoked_at.is_some() {
+        return Err(AppError::conflict(
+            "share_link_revoked",
+            "Share link is revoked.",
+        ));
+    }
+
+    if link.expires_at <= Utc::now() {
+        return Err(AppError::conflict(
+            "share_link_expired",
+            "Share link is expired.",
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn public_share_requires_clean_scan(environment: &str) -> bool {
+    environment != "development"
+}
+
+pub fn ensure_shareable_object_for_public_link(
+    object: &ShareableObjectRecord,
+    require_clean_scan: bool,
+) -> Result<(), AppError> {
+    if matches!(object.status, StorageObjectStatus::Quarantined) {
+        return Err(AppError::conflict(
+            "file_quarantined",
+            "This file has been quarantined due to a policy violation.",
+        ));
+    }
+
+    if !matches!(object.status, StorageObjectStatus::Active) {
+        return Err(AppError::conflict(
+            "object_not_shareable",
+            "Only active files can be shared publicly.",
+        ));
+    }
+
+    if require_clean_scan && object.scan_status != "clean" {
+        return Err(AppError::conflict(
+            "file_scan_not_cleared",
+            "This file cannot be shared publicly until anti-malware scanning clears it.",
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn enforce_public_share_access(
+    share: &PublicShareRecord,
+    require_clean_scan: bool,
+) -> Result<(), AppError> {
+    if share.revoked_at.is_some() {
+        return Err(AppError::forbidden(
+            "share_link_revoked",
+            "This public share has been revoked.",
+        ));
+    }
+
+    if share.expires_at <= Utc::now() {
+        return Err(AppError::forbidden(
+            "share_link_expired",
+            "This public share has expired.",
+        ));
+    }
+
+    if matches!(share.object_status, StorageObjectStatus::Quarantined) {
+        return Err(AppError::forbidden(
+            "file_quarantined",
+            "This file has been quarantined due to a policy violation.",
+        ));
+    }
+
+    if !matches!(share.object_status, StorageObjectStatus::Active) {
+        return Err(AppError::forbidden(
+            "share_link_unavailable",
+            "This public share is no longer available.",
+        ));
+    }
+
+    if require_clean_scan && share.scan_status != "clean" {
+        return Err(AppError::forbidden(
+            "file_scan_not_cleared",
+            "This public share is unavailable until anti-malware scanning clears the file.",
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn build_public_share_url(_share_link_id: Uuid, token: &str) -> String {
+    format!("/public/shares/{token}")
+}
+
+pub async fn build_signed_public_download_url(
+    storage: &dyn nvbes_storage::ObjectStore,
+    object_key: &str,
+    expires_at: DateTime<Utc>,
+) -> Result<SignedPublicDownloadUrlView, AppError> {
+    let expires = (expires_at - Utc::now())
+        .to_std()
+        .unwrap_or(std::time::Duration::from_secs(300));
+
+    let presigned = storage
+        .presign_download(object_key, expires)
+        .await
+        .map_err(|e| {
+            AppError::internal("storage_error", format!("Failed to presign download: {e}"))
+        })?;
+
+    Ok(SignedPublicDownloadUrlView {
+        url: presigned.url,
+        method: presigned.method,
+        expires_at,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domains::files::models::StorageObjectStatus;
+
+    fn shareable_object(status: StorageObjectStatus, scan_status: &str) -> ShareableObjectRecord {
+        ShareableObjectRecord {
+            id: Uuid::new_v4(),
+            status,
+            scan_status: scan_status.to_owned(),
+        }
+    }
+
+    #[test]
+    fn public_share_requires_clean_scan_outside_development() {
+        assert!(public_share_requires_clean_scan("staging"));
+        assert!(public_share_requires_clean_scan("production"));
+        assert!(!public_share_requires_clean_scan("development"));
+    }
+
+    #[test]
+    fn active_but_unclean_object_is_not_publicly_shareable_when_scan_is_required() {
+        let object = shareable_object(StorageObjectStatus::Active, "unscanned_disabled");
+
+        let error = ensure_shareable_object_for_public_link(&object, true)
+            .expect_err("unclean scan should block public sharing");
+
+        assert_eq!(error.code, "file_scan_not_cleared");
+    }
+
+    #[test]
+    fn development_can_share_active_unscanned_object() {
+        let object = shareable_object(StorageObjectStatus::Active, "unscanned_disabled");
+
+        ensure_shareable_object_for_public_link(&object, false)
+            .expect("development should allow active unscanned objects");
+    }
+
+    #[test]
+    fn quarantined_object_is_never_publicly_shareable() {
+        let object = shareable_object(StorageObjectStatus::Quarantined, "infected");
+
+        let error = ensure_shareable_object_for_public_link(&object, false)
+            .expect_err("quarantine should always block public sharing");
+
+        assert_eq!(error.code, "file_quarantined");
+    }
+}

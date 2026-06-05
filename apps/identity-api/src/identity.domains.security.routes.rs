@@ -1,0 +1,228 @@
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    http::HeaderMap,
+    response::IntoResponse,
+    routing::get,
+};
+use nvbes_core::http::error::ErrorEnvelope;
+use uuid::Uuid;
+
+use crate::{
+    app::AppState,
+    domains::authz::{ResourceContext, WorkspaceAction, authorize_workspace_action},
+    http::error::AppError,
+};
+
+use super::service;
+use super::types::{
+    ListRecoveryReviewsInput, ListRecoveryReviewsResponse, ListSecurityEventsInput,
+    SecurityEventsResponse, WorkerQueueStatusResponse,
+};
+
+pub fn router(_state: &AppState) -> Router<AppState> {
+    Router::new()
+        .route(
+            "/workspaces/{workspaceId}/security-events",
+            get(list_security_events),
+        )
+        .route(
+            "/workspaces/{workspaceId}/security-events/export",
+            get(export_security_events),
+        )
+        .route(
+            "/workspaces/{workspaceId}/recovery-reviews",
+            get(list_recovery_reviews),
+        )
+        .route(
+            "/workspaces/{workspaceId}/worker-queue/status",
+            get(worker_queue_status),
+        )
+}
+
+fn security_events_action() -> WorkspaceAction {
+    WorkspaceAction::ExportAudit
+}
+
+fn worker_queue_action() -> WorkspaceAction {
+    WorkspaceAction::ExportAudit
+}
+
+#[utoipa::path(
+    get,
+    path = "/workspaces/{workspaceId}/security-events",
+    tag = "security",
+    params(
+        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("before" = Option<Uuid>, Query, description = "Cursor for pagination"),
+    ),
+    responses(
+        (status = 200, description = "Security events", body = SecurityEventsResponse),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn list_security_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Query(query): Query<ListSecurityEventsInput>,
+) -> Result<Json<SecurityEventsResponse>, AppError> {
+    let access = authorize_workspace_action(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &headers,
+        workspace_id,
+        security_events_action(),
+        ResourceContext::default(),
+    )
+    .await?;
+
+    let result = service::list_events(&state.db, &access, query).await?;
+    Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/workspaces/{workspaceId}/security-events/export",
+    tag = "security",
+    params(
+        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+    ),
+    responses(
+        (status = 200, description = "Security events export file"),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn export_security_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let access = authorize_workspace_action(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &headers,
+        workspace_id,
+        security_events_action(),
+        ResourceContext::default(),
+    )
+    .await?;
+
+    let export = service::export_events(&state.db, &access).await?;
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                export.content_type.to_owned(),
+            ),
+            (
+                axum::http::header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{}\"", export.filename),
+            ),
+        ],
+        export.body,
+    ))
+}
+
+#[utoipa::path(
+    get,
+    path = "/workspaces/{workspaceId}/recovery-reviews",
+    tag = "security",
+    params(
+        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("before" = Option<Uuid>, Query, description = "Cursor ID for pagination"),
+    ),
+    responses(
+        (status = 200, description = "Recovery reviews", body = ListRecoveryReviewsResponse),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn list_recovery_reviews(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Query(query): Query<ListRecoveryReviewsInput>,
+) -> Result<Json<ListRecoveryReviewsResponse>, AppError> {
+    let access = authorize_workspace_action(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &headers,
+        workspace_id,
+        security_events_action(),
+        ResourceContext::default(),
+    )
+    .await?;
+
+    let result = service::list_recovery_reviews(
+        &state.db,
+        &access,
+        query.limit,
+        query.before_created_at,
+        query.before_id,
+    )
+    .await?;
+    Ok(Json(result))
+}
+
+#[utoipa::path(
+    get,
+    path = "/workspaces/{workspaceId}/worker-queue/status",
+    tag = "security",
+    params(
+        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+    ),
+    responses(
+        (status = 200, description = "Worker queue status", body = WorkerQueueStatusResponse),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn worker_queue_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+) -> Result<Json<WorkerQueueStatusResponse>, AppError> {
+    let _access = authorize_workspace_action(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &headers,
+        workspace_id,
+        worker_queue_action(),
+        ResourceContext::default(),
+    )
+    .await?;
+
+    let result = service::worker_queue_status(&state.redis, workspace_id).await?;
+    Ok(Json(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{security_events_action, worker_queue_action};
+    use crate::domains::authz::WorkspaceAction;
+
+    #[test]
+    fn security_routes_use_export_audit_action() {
+        assert!(matches!(
+            security_events_action(),
+            WorkspaceAction::ExportAudit
+        ));
+    }
+
+    #[test]
+    fn worker_queue_route_uses_export_audit_action() {
+        assert!(matches!(
+            worker_queue_action(),
+            WorkspaceAction::ExportAudit
+        ));
+    }
+}

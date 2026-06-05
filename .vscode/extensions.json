@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "editorconfig.editorconfig",
+    "rust-lang.rust-analyzer",
+    "vadimcn.vscode-lldb"
+  ],
+  "unwantedRecommendations": []
+}

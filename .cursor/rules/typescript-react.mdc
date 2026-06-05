@@ -1,0 +1,30 @@
+---
+description: Conventions TypeScript/React pour apps et packages
+globs: "{apps,packages}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript et React
+
+- Preferer des composants et fonctions de petite taille, avec responsabilite unique.
+- Garder les types explicites sur les APIs publiques (props, retours de helpers partages).
+- INTERDICTION STRICTE du type `any`. Utiliser `unknown` ou des types précis. Pas de passe-droit.
+- Respecter l'ecosysteme existant (Vite, React Router, Effect si deja present dans le module).
+- Ne pas introduire de nouvelle dependance frontend sans besoin fonctionnel clair.
+- Les composants d’assemblage doivent rester minces; la logique de domaine ou de data fetching doit être isolée.
+
+# Conventions de fichiers
+
+- Fichiers < 300 lignes. Au-dela, extraire par responsabilite.
+- Noms auto-documentants : le nom doit suffire a comprendre le contenu sans ouvrir le fichier.
+- Pas de `utils.ts`, `helpers.ts` ou fichiers "fourre-tout".
+- Co-localisation : fichier de test a cote de l'implementation (`Component.tsx` + `Component.test.tsx`).
+- Barrel files (index.ts) < 20 lignes. Pas de re-exports massifs.
+- Si un fichier d’index commence à devenir un point de fuite de contexte, le remplacer par des imports explicites.
+
+# Qualite et format
+
+- Laisser Biome gerer format/lint, ne pas mixer avec des regles contradictoires.
+- Eviter la logique metier dans les composants de presentation.
+- Pour les appels reseau/cache, suivre les conventions de hooks deja presentes dans le dossier.
+- Toute correction de bug non triviale doit s'accompagner d'un test (unitaire ou integration) quand c'est faisable.

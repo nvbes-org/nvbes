@@ -1,0 +1,32 @@
+---
+description: Conventions Rust pour apps API et crates partagees
+globs: "{apps,crates}/**/*.rs"
+alwaysApply: false
+---
+
+# Rust backend
+
+- Favoriser des erreurs typées (`Result<T, E>`) et messages contextuels exploitables.
+- Eviter les `unwrap`/`expect` hors tests ou cas explicitement justifies.
+- Garder des fonctions courtes, avec des noms centres sur le domaine.
+- Minimiser les clones; preferer emprunts et ownership clairs.
+- Toute nouvelle logique metier doit privilegier des types de domaine explicites plutot que des primitives nues.
+- Si une extraction sert uniquement à réduire la taille d’un fichier, elle doit aussi améliorer la lisibilité ou la réutilisation.
+
+# Conventions de fichiers
+
+- Structure plate dans `src/` : pas de sous-repertoires profonds.
+- Noms en dot-notation : `crate.couche.module.rs`. Ex: `identity.domain.billing.service.rs`
+- Les modules sont declares dans le `mod.rs` correspondant avec `#[path]` :
+  ```rust
+  #[path = "identity.domain.billing.service.rs"]
+  pub mod service;
+  ```
+- Limite stricte : 300 lignes (envisager extraction), 500 lignes (obligation).
+- Un fichier = une responsabilite. Si un fichier depasse 500 lignes, extraire par couche (ex: `service.payments.rs`, `service.subscriptions.rs`).
+- Les modules publics doivent rester simples à parcourir: une responsabilité, un nom clair, pas de logique cachée dans les barrels.
+
+# Verification
+
+- Apres changement Rust, lancer `cargo check --workspace`.
+- Si une logique critique change, ajouter un test cible; si impossible, documenter la limite dans la reponse.

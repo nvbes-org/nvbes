@@ -1,0 +1,27 @@
+{
+  "name": "web-runtime",
+  "projectType": "library",
+  "root": "libs/ts/web-runtime",
+  "sourceRoot": "libs/ts/web-runtime/src",
+  "tags": ["type:lib", "domain:shared", "layer:runtime"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/web-runtime build"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/web-runtime typecheck"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/web-runtime test"
+      }
+    }
+  }
+}

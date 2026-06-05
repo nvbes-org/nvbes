@@ -1,0 +1,334 @@
+import { createHttpClient, type HttpClient } from '@nvbes/http-client';
+import { z } from 'zod';
+
+type RequestOptions = { signal?: AbortSignal };
+
+const NullableStringSchema = z.string().nullable();
+
+const AccountWorkspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  workspace_type: z.string(),
+  data_region: z.string().optional(),
+  role: z.string(),
+  trial_ends_at: NullableStringSchema.optional(),
+  plan_code: z.string().optional(),
+});
+
+const AccountPrincipalSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  display_name: z.string(),
+  firstname: NullableStringSchema.optional(),
+  lastname: NullableStringSchema.optional(),
+  username: NullableStringSchema.optional(),
+  birthdate: NullableStringSchema.optional(),
+  region: NullableStringSchema.optional(),
+  email_verified: z.boolean(),
+  mfa_enabled: z.boolean(),
+  created_at: z.string(),
+});
+
+const AccountMeSchema = z.object({
+  user: AccountPrincipalSchema,
+  current_tenant_id: NullableStringSchema,
+  current_organization_id: NullableStringSchema,
+  current_workspace_id: NullableStringSchema,
+  current_workspace_region: NullableStringSchema,
+});
+
+const AccountSessionSchema = z.object({
+  id: z.string(),
+  tenant_id: NullableStringSchema,
+  organization_id: NullableStringSchema,
+  workspace_id: NullableStringSchema,
+  workspace_region: NullableStringSchema,
+  created_at: z.string(),
+  last_seen_at: z.string(),
+  expires_at: z.string(),
+  revoked_at: NullableStringSchema,
+  ip: NullableStringSchema,
+  user_agent: NullableStringSchema,
+  current: z.boolean(),
+});
+
+const SessionsResponseSchema = z.object({
+  sessions: z.array(AccountSessionSchema),
+});
+
+const AccountEntrySchema = z.object({
+  authuser: z.string(),
+  user: AccountPrincipalSchema,
+  session: AccountSessionSchema,
+});
+
+const WorkspacesResponseSchema = z.object({
+  workspaces: z.array(AccountWorkspaceSchema).optional(),
+});
+
+const AccountsResponseSchema = z.object({
+  accounts: z.array(AccountEntrySchema).optional(),
+});
+
+const BillingRedirectSchema = z.object({
+  url: z.string().url(),
+});
+
+const UserConsentSchema = z.object({
+  id: z.string(),
+  principal_id: z.string(),
+  consent_type: z.string(),
+  document_version: z.string(),
+  ip_address: NullableStringSchema.optional(),
+  granted_at: z.string(),
+  revoked_at: NullableStringSchema.optional(),
+});
+
+const SuccessSchema = z.object({
+  success: z.boolean(),
+});
+
+const EmptySchema = z.undefined();
+
+const GpcStatusSchema = z.object({
+  gpc_enabled: z.boolean(),
+  gpc_opt_out_active: z.boolean(),
+});
+
+export type AccountWorkspace = z.infer<typeof AccountWorkspaceSchema>;
+export type AccountMe = z.infer<typeof AccountMeSchema>;
+export type AccountSession = z.infer<typeof AccountSessionSchema>;
+export type AccountPrincipal = z.infer<typeof AccountPrincipalSchema>;
+export type AccountEntry = z.infer<typeof AccountEntrySchema>;
+export type UserConsent = z.infer<typeof UserConsentSchema>;
+export type GpcStatus = z.infer<typeof GpcStatusSchema>;
+
+export type IdentityClientOptions = {
+  baseUrl?: string;
+  http?: HttpClient;
+};
+
+export class IdentityClient {
+  private readonly http: HttpClient;
+
+  constructor(options: IdentityClientOptions = {}) {
+    this.http =
+      options.http ??
+      createHttpClient({
+        baseUrl: options.baseUrl,
+        credentials: 'include',
+      });
+  }
+
+  getMe(options?: { signal?: AbortSignal }): Promise<AccountMe> {
+    return this.http.get<AccountMe>('/auth/me', AccountMeSchema, options);
+  }
+
+  listWorkspaces(options?: { signal?: AbortSignal }): Promise<AccountWorkspace[]> {
+    return this.http
+      .get('/workspaces', WorkspacesResponseSchema, options)
+      .then((response) => response.workspaces ?? []);
+  }
+
+  listAccounts(options?: { signal?: AbortSignal }): Promise<AccountEntry[]> {
+    return this.http
+      .get('/auth/accounts', AccountsResponseSchema, options)
+      .then((response) => response.accounts ?? []);
+  }
+
+  listSessions(options?: { signal?: AbortSignal }): Promise<AccountSession[]> {
+    return this.http
+      .get('/auth/sessions', SessionsResponseSchema, options)
+      .then((response) => response.sessions);
+  }
+
+  revokeSession(sessionId: string): Promise<void> {
+    return this.http.delete(`/auth/sessions/${sessionId}`, SuccessSchema).then(() => undefined);
+  }
+
+  revokeOtherSessions(): Promise<void> {
+    return this.http.post('/auth/sessions/revoke-others', SuccessSchema, {}).then(() => undefined);
+  }
+
+  logout(): Promise<void> {
+    return this.http.post('/auth/logout', SuccessSchema, {}).then(() => undefined);
+  }
+
+  createBillingCheckout(workspaceId: string, planCode: string): Promise<string> {
+    return this.http
+      .post(`/workspaces/${workspaceId}/billing/checkout`, BillingRedirectSchema, {
+        plan_code: planCode,
+      })
+      .then((response) => response.url);
+  }
+
+  createBillingPortal(workspaceId: string): Promise<string> {
+    return this.http
+      .post(`/workspaces/${workspaceId}/billing/portal`, BillingRedirectSchema, {})
+      .then((response) => response.url);
+  }
+
+  getBillingOverview(workspaceId: string, options?: RequestOptions): Promise<BillingOverview> {
+    return this.http.get(
+      `/workspaces/${workspaceId}/billing/overview`,
+      BillingOverviewSchema,
+      options,
+    );
+  }
+
+  listConsents(options?: { signal?: AbortSignal }): Promise<UserConsent[]> {
+    return this.http.get('/legal/consents', z.array(UserConsentSchema), options);
+  }
+
+  grantConsent(consentType: string, documentVersion: string): Promise<UserConsent> {
+    return this.http.post('/legal/consent', UserConsentSchema, {
+      consent_type: consentType,
+      document_version: documentVersion,
+    });
+  }
+
+  gpcStatus(options?: { signal?: AbortSignal }): Promise<GpcStatus> {
+    return this.http.get('/legal/gpc', GpcStatusSchema, options);
+  }
+
+  revokeConsent(consentType: string, documentVersion: string): Promise<void> {
+    return this.http
+      .post('/legal/consent/revoke', EmptySchema, {
+        consent_type: consentType,
+        document_version: documentVersion,
+      })
+      .then(() => undefined);
+  }
+
+  listOAuthClients(options?: RequestOptions): Promise<OAuthClient[]> {
+    return this.http
+      .get<OAuthClientsResponse>('/oauth/clients', OAuthClientsResponseSchema, options)
+      .then((response) => response.clients);
+  }
+
+  revokeOAuthClient(clientId: string): Promise<void> {
+    return this.http.delete(`/oauth/clients/${clientId}`, SuccessSchema).then(() => undefined);
+  }
+
+  createWorkspace(input: CreateWorkspaceInput): Promise<AccountWorkspace> {
+    return this.http
+      .post('/workspaces', CreateWorkspaceResponseSchema, input)
+      .then((response) => response.workspace);
+  }
+
+  forgotPassword(email: string): Promise<ForgotPasswordResult> {
+    return this.http.post('/auth/password/forgot', ForgotPasswordResultSchema, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Promise<ResetPasswordResult> {
+    return this.http.post('/auth/password/reset', ResetPasswordResultSchema, {
+      token,
+      new_password: newPassword,
+    });
+  }
+}
+
+const OAuthClientSchema = z.object({
+  id: z.string(),
+  client_id: z.string(),
+  name: z.string(),
+  redirect_uris: z.array(z.string()),
+  created_at: z.string(),
+  tenant_id: z.string().nullable().optional(),
+  owner_scope_type: z.string(),
+  owner_scope_id: z.string(),
+  client_type: z.string(),
+});
+
+const OAuthClientsResponseSchema = z.object({
+  clients: z.array(OAuthClientSchema),
+});
+
+const CreateWorkspaceInputSchema = z.object({
+  name: z.string().min(1).max(100),
+  workspace_type: z.string().optional(),
+});
+
+const CreateWorkspaceResponseSchema = z.object({
+  workspace: AccountWorkspaceSchema,
+});
+
+const ForgotPasswordResultSchema = z.object({
+  success: z.boolean(),
+  requires_admin_approval: z.boolean(),
+  available_at: NullableStringSchema.optional(),
+});
+
+const ResetPasswordResultSchema = z.object({
+  success: z.boolean(),
+});
+
+const PlanViewSchema = z.object({
+  code: z.string(),
+  included_storage_gb: z.number(),
+  included_users: z.number(),
+  retention_days: z.number(),
+  max_share_links: z.number(),
+  audit_level: z.string(),
+  max_share_link_ttl_days: z.number(),
+  monthly_price_cents: z.number(),
+  currency: z.string(),
+});
+
+const SubscriptionViewSchema = z.object({
+  status: z.string(),
+  billing_provider: z.string(),
+  billing_customer_id: z.string().nullable().optional(),
+  billing_subscription_id: z.string().nullable().optional(),
+  current_period_start: z.string().nullable().optional(),
+  current_period_end: z.string().nullable().optional(),
+  trial_ends_at: z.string().nullable().optional(),
+});
+
+const BillingOverviewSchema = z.object({
+  workspace_id: z.string(),
+  plan: PlanViewSchema,
+  subscription: SubscriptionViewSchema,
+  billing_account: z.object({
+    stripe_customer_id: z.string().nullable().optional(),
+    billing_email: z.string().nullable().optional(),
+    country: z.string().nullable().optional(),
+    customer_type: z.string(),
+    vat_number: z.string().nullable().optional(),
+    tax_exempt_status: z.string().nullable().optional(),
+  }),
+  entitlements: z.object({
+    can_upload: z.boolean(),
+    can_create_share_links: z.boolean(),
+    included_storage_bytes: z.number(),
+    included_users: z.number(),
+    max_share_links: z.number(),
+    max_share_link_ttl_days: z.number(),
+    audit_level: z.string(),
+    api_key_limit: z.number(),
+    billing_locked: z.boolean(),
+  }),
+  invoice_estimate: z.object({
+    workspace_id: z.string(),
+    billing_period_start: z.string(),
+    billing_period_end: z.string(),
+    base_amount_cents: z.number(),
+    storage_overage_amount_cents: z.number(),
+    seat_overage_amount_cents: z.number(),
+    estimated_amount_cents: z.number(),
+    currency: z.string(),
+  }),
+});
+
+export type OAuthClient = z.infer<typeof OAuthClientSchema>;
+export type OAuthClientsResponse = z.infer<typeof OAuthClientsResponseSchema>;
+export type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceInputSchema>;
+export type ForgotPasswordResult = z.infer<typeof ForgotPasswordResultSchema>;
+export type ResetPasswordResult = z.infer<typeof ResetPasswordResultSchema>;
+export type BillingOverview = z.infer<typeof BillingOverviewSchema>;
+
+export const identityClient = new IdentityClient();
+
+export function createIdentityClient(options?: IdentityClientOptions): IdentityClient {
+  return new IdentityClient(options);
+}

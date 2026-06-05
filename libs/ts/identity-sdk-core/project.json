@@ -1,0 +1,21 @@
+{
+  "name": "identity-sdk-core",
+  "projectType": "library",
+  "root": "libs/ts/identity-sdk-core",
+  "sourceRoot": "libs/ts/identity-sdk-core/src",
+  "tags": ["type:lib", "domain:identity", "layer:sdk"],
+  "targets": {
+    "generate:ts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/identity-sdk-core generate:ts"
+      }
+    },
+    "generate:rust": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/identity-sdk-core generate:rust"
+      }
+    }
+  }
+}

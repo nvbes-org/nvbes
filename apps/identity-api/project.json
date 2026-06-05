@@ -1,0 +1,27 @@
+{
+  "name": "identity-api",
+  "projectType": "application",
+  "root": "apps/identity-api",
+  "sourceRoot": "apps/identity-api/src",
+  "tags": ["type:app", "domain:identity", "layer:app"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo build --manifest-path apps/identity-api/Cargo.toml"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo check --manifest-path apps/identity-api/Cargo.toml"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo test --manifest-path apps/identity-api/Cargo.toml"
+      }
+    }
+  }
+}

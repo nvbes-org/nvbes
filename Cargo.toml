@@ -1,0 +1,81 @@
+[workspace]
+members = [
+  "apps/drive-api",
+  "apps/drive-worker",
+  "apps/identity-api",
+  "apps/identity-worker",
+  "libs/rust/audit",
+  "libs/rust/billing",
+  "libs/rust/core",
+  "libs/rust/dpop",
+  "libs/rust/redis",
+  "libs/rust/region",
+  "libs/rust/email",
+  "libs/rust/identity-sdk-backend",
+  "libs/rust/observability",
+  "libs/rust/scan",
+  "libs/rust/storage",
+  "libs/rust/tenancy",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "UNLICENSED"
+version = "0.1.0"
+
+[workspace.dependencies]
+anyhow = "1.0.100"
+argon2 = "0.5.3"
+aes-gcm = "0.10.3"
+axum = "0.8.9"
+axum-server = { version = "0.8.0", default-features = false, features = ["tls-rustls"] }
+base64 = "0.22.1"
+chrono = { version = "0.4.44", features = ["serde"] }
+data-encoding = "2.9.0"
+hkdf = "0.12.4"
+hmac = "0.12.1"
+ipnet = "2.11.0"
+password-hash = { version = "0.5.0", features = ["rand_core"] }
+rand = "0.9.2"
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
+rustls-pemfile = "2"
+sha1 = "0.10.6"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.10.9"
+socket2 = "0.6"
+roxmltree = "0.20.0"
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+tokio = { version = "1.52.3", features = ["full"] }
+tokio-rustls = "0.26"
+sentry = { version = "0.48.2", default-features = false, features = [
+  "tower",
+  "tower-axum-matched-path",
+  "tracing",
+  "panic",
+  "reqwest",
+  "rustls",
+  "tokio",
+  "logs",
+] }
+sentry-tracing = { version = "0.48.2", features = ["logs"] }
+sentry-tower = { version = "0.48.2", features = ["http"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+uuid = { version = "1.23.1", features = ["serde", "v4"] }
+urlencoding = "2.1.3"
+webauthn-rs = { version = "0.5.0", features = ["danger-allow-state-serialisation"] }
+thiserror = "2"
+metrics = "0.24.6"
+metrics-exporter-prometheus = "0.16"
+opentelemetry = "0.31"
+opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "trace"] }
+tracing-opentelemetry = "0.32"
+tower-http = { version = "0.6", features = ["cors", "timeout", "compression-full"] }
+utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+[patch.crates-io]
+xmlsec = { path = "vendor/xmlsec" }

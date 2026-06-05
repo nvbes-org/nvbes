@@ -1,0 +1,45 @@
+[package]
+name = "nvbes-drive-api"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+axum-server.workspace = true
+base64.workspace = true
+chrono.workspace = true
+ed25519-dalek = "2.2.0"
+hmac.workspace = true
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-audit = { path = "../../libs/rust/audit" }
+nvbes-redis = { path = "../../libs/rust/redis" }
+nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-scan = { path = "../../libs/rust/scan" }
+nvbes-storage = { path = "../../libs/rust/storage" }
+nvbes-tenancy = { path = "../../libs/rust/tenancy" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+metrics.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+sentry.workspace = true
+sentry-tower.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tower = "0.5"
+tower-http = { workspace = true }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["json"] }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+uuid.workspace = true
+aws-config = { version = "1.8.16", default-features = false, features = ["rt-tokio", "credentials-process", "sso", "default-https-client"] }
+aws-sdk-s3 = { version = "1.132.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
+
+[dev-dependencies]
+nvbes-identity-api = { path = "../identity-api" }

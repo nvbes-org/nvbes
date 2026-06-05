@@ -1,0 +1,174 @@
+import {
+  type MutationFunction,
+  QueryClient,
+  keepPreviousData,
+  type QueryFunction,
+  type QueryKey,
+} from '@tanstack/react-query';
+import { DtoValidationError, HttpError } from '@nvbes/http-client';
+import { Effect } from 'effect';
+
+export type ClientErrorKind = 'api' | 'dto' | 'unexpected';
+
+export class ClientRuntimeError extends Error {
+  readonly kind: ClientErrorKind;
+  readonly status?: number;
+  readonly body?: unknown;
+  readonly cause: unknown;
+  readonly requestId?: string;
+
+  constructor(
+    kind: ClientErrorKind,
+    message: string,
+    cause: unknown,
+    status?: number,
+    body?: unknown,
+    requestId?: string,
+  ) {
+    super(message);
+    this.name = 'ClientRuntimeError';
+    this.kind = kind;
+    this.status = status;
+    this.body = body;
+    this.cause = cause;
+    this.requestId = requestId;
+  }
+}
+
+export function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        gcTime: 30 * 60 * 1000,
+        placeholderData: keepPreviousData,
+        retry: (failureCount, error) => {
+          const normalized = normalizeClientError(error);
+          if (normalized.kind === 'api' && normalized.status && normalized.status < 500) {
+            return false;
+          }
+          return failureCount < 2;
+        },
+        staleTime: 30 * 1000,
+        refetchOnWindowFocus: false,
+        throwOnError: false,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+}
+
+export function normalizeClientError(error: unknown): ClientRuntimeError {
+  if (error instanceof ClientRuntimeError) {
+    return error;
+  }
+
+  if (error instanceof HttpError) {
+    return new ClientRuntimeError(
+      'api',
+      error.message,
+      error,
+      error.status,
+      error.body,
+      error.requestId,
+    );
+  }
+
+  if (error instanceof DtoValidationError) {
+    return new ClientRuntimeError('dto', error.message, error);
+  }
+
+  if (error instanceof Error) {
+    return new ClientRuntimeError('unexpected', error.message, error);
+  }
+
+  return new ClientRuntimeError('unexpected', 'Unexpected client runtime error', error);
+}
+
+export function effectQueryFn<TData>(
+  effectFactory: () => Effect.Effect<TData, unknown, never>,
+): QueryFunction<TData, QueryKey> {
+  return async () => runClientEffect(effectFactory());
+}
+
+export function effectMutationFn<TVariables, TData>(
+  effectFactory: (variables: TVariables) => Effect.Effect<TData, unknown, never>,
+): MutationFunction<TData, TVariables> {
+  return async (variables) => runClientEffect(effectFactory(variables));
+}
+
+export async function runClientEffect<TData>(
+  effect: Effect.Effect<TData, unknown, never>,
+): Promise<TData> {
+  try {
+    return await Effect.runPromise(effect);
+  } catch (error) {
+    throw normalizeClientError(error);
+  }
+}
+
+export { ErrorBoundary } from './ErrorBoundary';
+export type { ErrorBoundaryProps } from './ErrorBoundary';
+export { RouterErrorFallback } from './RouterErrorFallback';
+export {
+  AuthErrorBoundary,
+  AuthErrorFallback,
+  BillingErrorBoundary,
+  BillingErrorFallback,
+  EditorErrorBoundary,
+  EditorErrorFallback,
+  UploadErrorBoundary,
+  UploadErrorFallback,
+} from './feature-fallbacks';
+export { configureErrorReporting, reportClientError } from './report-error';
+export type { ClientErrorReportContext, ClientErrorReporter } from './report-error';
+export {
+  createSentryReplayPrivacyOptions,
+  getSentryReplaysOnErrorSampleRate,
+  getSentryTracesSampleRate,
+  sanitizeUrlString,
+  scrubReplayRecordingEvent,
+  scrubSentryBreadcrumb,
+  scrubSentryEvent,
+} from './sentry-privacy';
+
+export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
+  if (error instanceof ClientRuntimeError) {
+    const base = error.message || fallback;
+    return error.requestId ? `${base} (ref: ${error.requestId})` : base;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+}
+
+export {
+  getInstallPrompt,
+  getSwReady,
+  migrateServiceWorkers,
+  onBackgroundFetchEvent,
+  onInstallReady,
+  queueMutation,
+  registerBackgroundSync,
+  registerPeriodicSync,
+  registerServiceWorker,
+  sendNetworkQualityToSw,
+  sendToSw,
+  startBackgroundFetch,
+} from './service-worker';
+export {
+  broadcast,
+  broadcastLogout,
+  broadcastTokenRefreshed,
+  broadcastWorkspaceChange,
+  onBroadcast,
+} from './broadcast';
+export { acquireTokenRefreshLock, withTokenRefreshLock } from './token-lock';
+export { cryptoWorker } from './worker.crypto.client';
+export { createWorker, defineWorker } from './worker';
+export { useNetworkQuality } from './use-network-quality';
+export type { NetworkQuality, EffectiveType } from './use-network-quality';

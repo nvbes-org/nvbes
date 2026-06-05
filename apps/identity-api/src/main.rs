@@ -1,0 +1,94 @@
+use nvbes_core::config::AppConfig;
+use nvbes_core::http::keep_alive;
+use nvbes_observability::{init_sentry, init_tracing, install_safe_panic_hook};
+use sqlx::postgres::PgPoolOptions;
+use std::net::SocketAddr;
+use std::time::Duration;
+use utoipa::OpenApi;
+
+#[path = "identity.tools.beta.rs"]
+mod beta_tools;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|a| a == "--export-openapi") {
+        let doc = nvbes_identity_api::http::openapi::IdentityApiDoc::openapi();
+        println!("{}", doc.to_json()?);
+        return Ok(());
+    }
+
+    if let Some(command) = beta_tools::parse_cli_command(&args)? {
+        beta_tools::run_cli_command(command).await?;
+        return Ok(());
+    }
+
+    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    if config.environment != "development" && config.turnstile_secret_key.is_none() {
+        panic!(
+            "TURNSTILE_SECRET_KEY is required outside development. Refusing to start with fail-open login protection."
+        );
+    }
+
+    let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
+    install_safe_panic_hook();
+    init_tracing(&config);
+
+    let db = PgPoolOptions::new()
+        .max_connections(config.database_max_connections)
+        .connect(&config.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&db).await?;
+
+    let state = nvbes_identity_api::app::AppState::bootstrap(&config, db).await?;
+    let app = nvbes_identity_api::app::build_router(state);
+
+    let http_addr: SocketAddr = format!("0.0.0.0:{}", config.api_port).parse()?;
+    let http_listener = keep_alive::bind_listener_with_keepalive(http_addr, 4096)?;
+    tracing::info!(addr = %http_addr, "Starting HTTP listener");
+
+    if config.mtls_enabled {
+        let mtls_addr: SocketAddr = format!("0.0.0.0:{}", config.mtls_port).parse()?;
+        let mtls_acceptor = nvbes_core::tls::build_mtls_acceptor(&config)
+            .await
+            .map_err(anyhow::Error::msg)?;
+        let mtls_app = app.clone();
+        let mtls_handle = axum_server::Handle::new();
+
+        let mtls_server =
+            axum_server::bind_rustls(mtls_addr, mtls_acceptor).handle(mtls_handle.clone());
+
+        tracing::info!(addr = %mtls_addr, "Starting mTLS listener");
+
+        tokio::spawn(async move {
+            if let Err(e) = mtls_server.serve(mtls_app.into_make_service()).await {
+                tracing::error!(?e, "mTLS server error");
+            }
+        });
+
+        axum::serve(
+            http_listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await?;
+
+        mtls_handle.graceful_shutdown(Some(Duration::from_secs(30)));
+    } else {
+        tracing::info!(%http_addr, "Starting nvbes Identity API");
+        axum::serve(
+            http_listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await?;
+    }
+
+    Ok(())
+}

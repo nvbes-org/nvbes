@@ -1,0 +1,31 @@
+{
+  "name": "@nvbes/identity-sdk-web",
+  "version": "0.1.0",
+  "description": "nvbes Identity SDK for web browsers (secure cookies)",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test"
+  },
+  "dependencies": {
+    "@nvbes/identity-sdk-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "js-cookie": "^3.0.5"
+  }
+}

@@ -1,0 +1,11 @@
+[package]
+name = "nvbes-tenancy"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+nvbes-core = { path = "../core" }
+serde.workspace = true
+sqlx.workspace = true
+uuid.workspace = true

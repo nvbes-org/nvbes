@@ -1,0 +1,11 @@
+pre-commit:
+  commands:
+    check:
+      glob: '*.{js,ts,cjs,mjs,jsx,tsx,json,jsonc,css,scss,md,html}'
+      run: pnpm exec vp check --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  commands:
+    check:
+      run: pnpm check:web

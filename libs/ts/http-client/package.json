@@ -1,0 +1,22 @@
+{
+  "name": "@nvbes/http-client",
+  "version": "0.1.0",
+  "description": "Shared fetch transport with runtime DTO validation",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

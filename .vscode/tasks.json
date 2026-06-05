@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pnpm: install (root)",
+      "type": "shell",
+      "command": "pnpm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "pnpm: dev",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pnpm: lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "problemMatcher": []
+    },
+    {
+      "label": "pnpm: check",
+      "type": "shell",
+      "command": "pnpm check",
+      "problemMatcher": []
+    },
+    {
+      "label": "pnpm: test",
+      "type": "shell",
+      "command": "pnpm test",
+      "problemMatcher": []
+    },
+    {
+      "label": "pnpm: verify",
+      "type": "shell",
+      "command": "pnpm verify",
+      "problemMatcher": []
+    },
+    {
+      "label": "hooks: install lefthook",
+      "type": "shell",
+      "command": "pnpm dlx lefthook install",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cargo: check workspace",
+      "type": "shell",
+      "command": "cargo check --workspace",
+      "problemMatcher": []
+    }
+  ]
+}

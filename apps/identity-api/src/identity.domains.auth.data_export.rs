@@ -1,0 +1,63 @@
+use serde_json::Value as JsonValue;
+use uuid::Uuid;
+
+#[path = "identity.domains.auth.data_export.query.rs"]
+mod query;
+
+use crate::http::error::AppError;
+
+pub const DATA_EXPORT_TTL_SECONDS: u64 = 24 * 60 * 60;
+
+pub fn account_export_cache_key(principal_id: Uuid) -> String {
+    format!("privacy:identity:account_export:{principal_id}")
+}
+
+pub async fn build_account_export(
+    db: &sqlx::PgPool,
+    principal_id: Uuid,
+) -> Result<JsonValue, AppError> {
+    query::build_account_export(db, principal_id).await
+}
+
+pub async fn store_account_export(
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+    export: &JsonValue,
+) -> Result<(), AppError> {
+    nvbes_redis::cache::cache_set_json(
+        redis,
+        &account_export_cache_key(principal_id),
+        export,
+        DATA_EXPORT_TTL_SECONDS,
+    )
+    .await
+    .map_err(|error| AppError::internal("data_export_store_failed", &error.to_string()))
+}
+
+pub async fn load_account_export(
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+) -> Result<Option<JsonValue>, AppError> {
+    nvbes_redis::cache::cache_get_json(redis, &account_export_cache_key(principal_id))
+        .await
+        .map_err(|error| AppError::internal("data_export_load_failed", &error.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DATA_EXPORT_TTL_SECONDS, account_export_cache_key};
+    use uuid::Uuid;
+
+    #[test]
+    fn account_export_cache_key_is_subject_scoped() {
+        assert_eq!(
+            account_export_cache_key(Uuid::nil()),
+            "privacy:identity:account_export:00000000-0000-0000-0000-000000000000"
+        );
+    }
+
+    #[test]
+    fn account_export_ttl_is_one_day() {
+        assert_eq!(DATA_EXPORT_TTL_SECONDS, 86_400);
+    }
+}

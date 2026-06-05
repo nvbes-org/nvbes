@@ -1,0 +1,2 @@
+[migrate]
+migration-table = "_sqlx_migrations_drive"

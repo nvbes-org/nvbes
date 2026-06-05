@@ -1,0 +1,17 @@
+{
+  "name": "@nvbes/identity-sdk-core",
+  "version": "0.1.0",
+  "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation",
+  "files": [
+    "openapi.json",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "generate:ts": "openapi-typescript openapi.json -o src/types.gen.ts",
+    "generate:rust": "openapi-generator-cli generate -i openapi.json -g rust -o ../identity-sdk-backend"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.0.0"
+  }
+}
