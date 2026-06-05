@@ -150,7 +150,11 @@ async fn run_pubsub_listener(
                 continue;
             }
         };
-        tracing::info!(channel = %channel, payload = %payload, "Received real-time event via PubSub");
+        tracing::info!(
+            channel = %channel,
+            payload_size_bytes = payload.len(),
+            "Received real-time event via PubSub"
+        );
 
         if channel == "nvbes:pubsub:workspace:deleted" {
             if let Ok(workspace_id) = uuid::Uuid::parse_str(&payload) {

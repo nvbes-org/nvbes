@@ -71,20 +71,6 @@ pub async fn observe_request(
             .map(|matched_path| matched_path.as_str()),
     );
 
-    let client_ip = req
-        .headers()
-        .get(nvbes_core::http::client_ip::TRUSTED_CLIENT_IP_HEADER)
-        .and_then(|h| h.to_str().ok())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string());
-
-    let user_agent = req
-        .headers()
-        .get(axum::http::header::USER_AGENT)
-        .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string());
-
     req.extensions_mut().insert(request_id.clone());
     metrics.start_request();
 
@@ -140,8 +126,6 @@ pub async fn observe_request(
             path_template = %path_template,
             status = status.as_u16(),
             duration_ms,
-            client_ip = client_ip.as_deref().unwrap_or("unknown"),
-            user_agent = user_agent.as_deref().unwrap_or("unknown"),
         );
     } else if status.is_client_error() {
         tracing::warn!(
@@ -155,8 +139,6 @@ pub async fn observe_request(
             path_template = %path_template,
             status = status.as_u16(),
             duration_ms,
-            client_ip = client_ip.as_deref().unwrap_or("unknown"),
-            user_agent = user_agent.as_deref().unwrap_or("unknown"),
         );
     } else {
         tracing::info!(
@@ -170,8 +152,6 @@ pub async fn observe_request(
             path_template = %path_template,
             status = status.as_u16(),
             duration_ms,
-            client_ip = client_ip.as_deref().unwrap_or("unknown"),
-            user_agent = user_agent.as_deref().unwrap_or("unknown"),
         );
     }
 

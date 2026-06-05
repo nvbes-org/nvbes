@@ -114,7 +114,12 @@ impl EmailSender for ScalewayEmailClient {
 
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            error!(status = %status, body = %body, "ScalewayEmail: API error");
+            let body_size_bytes = body.len();
+            error!(
+                status = %status,
+                body_size_bytes,
+                "ScalewayEmail: API error"
+            );
             return Err(EmailError::Api {
                 status: status.as_u16(),
                 message: body,

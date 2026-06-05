@@ -9,7 +9,6 @@ pub struct ScanOutcome {
 
 pub async fn perform_scan(
     scanner: &dyn ScanEngine,
-    object_key: &str,
     file_data: &[u8],
     scan_enabled: bool,
     scan_fail_open: bool,
@@ -24,7 +23,7 @@ pub async fn perform_scan(
 
     match scanner.scan(file_data).await {
         Ok(ScanResult::Clean) => {
-            tracing::info!(object_key, "File scan: clean");
+            tracing::info!("File scan: clean");
             Ok(ScanOutcome {
                 status: "clean".to_string(),
                 is_quarantined: false,
@@ -32,7 +31,7 @@ pub async fn perform_scan(
             })
         }
         Ok(ScanResult::Infected { signature }) => {
-            tracing::warn!(object_key, signature = %signature, "File scan: infected");
+            tracing::warn!(signature = %signature, "File scan: infected");
             Ok(ScanOutcome {
                 status: "infected".to_string(),
                 is_quarantined: true,
@@ -40,9 +39,9 @@ pub async fn perform_scan(
             })
         }
         Err(scan_error) => {
-            tracing::error!(object_key, error = %scan_error, "File scan: error");
+            tracing::error!(error = %scan_error, "File scan: error");
             if scan_fail_open {
-                tracing::warn!(object_key, "Scan fail-open: activating despite error");
+                tracing::warn!("Scan fail-open: activating despite error");
                 Ok(ScanOutcome {
                     status: "error_fail_open".to_string(),
                     is_quarantined: false,
