@@ -1,0 +1,93 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+local.file "grafana_cloud_prometheus_token" {
+  filename  = "/run/secrets/grafana_cloud_prometheus_token"
+  is_secret = true
+}
+
+local.file "grafana_cloud_otlp_token" {
+  filename  = "/run/secrets/grafana_cloud_otlp_token"
+  is_secret = true
+}
+
+local.file "nvbes_observability_internal_token" {
+  filename  = "/run/secrets/nvbes_observability_internal_token"
+  is_secret = true
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USER")
+      password = local.file.grafana_cloud_prometheus_token.content
+    }
+  }
+
+  external_labels = {
+    environment = "production",
+    platform    = "nvbes",
+  }
+}
+
+prometheus.scrape "nvbes_apis" {
+  targets = [
+    {
+      "__address__" = sys.env("NVBES_IDENTITY_API_METRICS_TARGET"),
+      "job"         = "identity-api",
+      "service"     = "identity-api",
+    },
+    {
+      "__address__" = sys.env("NVBES_DRIVE_API_METRICS_TARGET"),
+      "job"         = "drive-api",
+      "service"     = "drive-api",
+    },
+  ]
+
+  scrape_interval = "15s"
+  metrics_path    = "/metrics"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+
+  authorization {
+    type = "Bearer"
+    credentials = local.file.nvbes_observability_internal_token.content
+  }
+}
+
+otelcol.receiver.otlp "nvbes" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    traces = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = sys.env("GRAFANA_CLOUD_OTLP_ENDPOINT")
+    auth     = otelcol.auth.basic.grafana_cloud.handler
+  }
+}
+
+otelcol.auth.basic "grafana_cloud" {
+  client_auth {
+    username = sys.env("GRAFANA_CLOUD_OTLP_USER")
+    password = local.file.grafana_cloud_otlp_token.content
+  }
+}

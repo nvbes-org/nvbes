@@ -1,0 +1,34 @@
+services:
+  grafana-alloy:
+    image: ${GRAFANA_ALLOY_IMAGE:?Set a pinned grafana/alloy image or digest}
+    container_name: nvbes-grafana-alloy
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    environment:
+      GRAFANA_CLOUD_PROMETHEUS_URL: ${GRAFANA_CLOUD_PROMETHEUS_URL:?Set Grafana Cloud Prometheus remote_write URL}
+      GRAFANA_CLOUD_PROMETHEUS_USER: ${GRAFANA_CLOUD_PROMETHEUS_USER:?Set Grafana Cloud Prometheus user}
+      GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT:?Set Grafana Cloud OTLP endpoint}
+      GRAFANA_CLOUD_OTLP_USER: ${GRAFANA_CLOUD_OTLP_USER:?Set Grafana Cloud OTLP user}
+      NVBES_IDENTITY_API_METRICS_TARGET: ${NVBES_IDENTITY_API_METRICS_TARGET:?Set identity API metrics target}
+      NVBES_DRIVE_API_METRICS_TARGET: ${NVBES_DRIVE_API_METRICS_TARGET:?Set drive API metrics target}
+    ports:
+      - "127.0.0.1:${NVBES_ALLOY_HTTP_PORT:-12345}:12345"
+      - "127.0.0.1:${NVBES_OTLP_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${NVBES_OTLP_HTTP_PORT:-4318}:4318"
+    volumes:
+      - ./alloy.config.alloy:/etc/alloy/config.alloy:ro
+      - ${GRAFANA_CLOUD_PROMETHEUS_TOKEN_FILE:?Set Grafana Cloud Prometheus token file}:/run/secrets/grafana_cloud_prometheus_token:ro
+      - ${GRAFANA_CLOUD_OTLP_TOKEN_FILE:?Set Grafana Cloud OTLP token file}:/run/secrets/grafana_cloud_otlp_token:ro
+      - ${NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE:?Set nvbes observability token file}:/run/secrets/nvbes_observability_internal_token:ro
+      - alloy_data:/var/lib/alloy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:12345/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  alloy_data:
