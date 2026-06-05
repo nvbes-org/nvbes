@@ -133,6 +133,16 @@ export {
   scrubSentryEvent,
 } from './sentry-privacy';
 export { createSentryFeedbackOptions } from './sentry-feedback';
+export {
+  installBrowserSentrySmoke,
+  isBrowserSentrySmokeEnabled,
+  SENTRY_SMOKE_GLOBAL,
+} from './sentry-smoke';
+export type {
+  BrowserSentrySmokeOptions,
+  BrowserSentrySmokeReporter,
+  BrowserSentrySmokeResult,
+} from './sentry-smoke';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
   if (error instanceof ClientRuntimeError) {
