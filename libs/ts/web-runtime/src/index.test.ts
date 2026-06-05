@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   ClientRuntimeError,
+  createSentryFeedbackOptions,
   effectMutationFn,
   effectQueryFn,
   normalizeClientError,
@@ -66,6 +67,19 @@ describe('web-runtime Effect adapters', () => {
 });
 
 describe('Sentry privacy scrubbing', () => {
+  it('keeps Sentry feedback explicit and low-PII', () => {
+    expect(createSentryFeedbackOptions('drive-web')).toMatchObject({
+      autoInject: true,
+      showEmail: false,
+      showName: false,
+      enableScreenshot: false,
+      tags: {
+        app: 'drive-web',
+        feature: 'user-feedback',
+      },
+    });
+  });
+
   it('removes user data and request payloads from Sentry events', () => {
     const event = scrubSentryEvent({
       user: { email: 'ada@example.com' },

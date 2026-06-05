@@ -5,6 +5,10 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
+import {
+  captureDriveServiceWorkerException,
+  initDriveServiceWorkerSentry,
+} from './drive.sw.sentry';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -27,6 +31,22 @@ interface BackgroundFetchRegistration {
 interface BackgroundFetchEvent extends ExtendableEvent {
   readonly registration: BackgroundFetchRegistration;
   updateUI(options: { title: string }): Promise<void>;
+}
+
+const sentryInitialized = initDriveServiceWorkerSentry();
+
+if (sentryInitialized) {
+  self.addEventListener('error', (event) => {
+    captureDriveServiceWorkerException(event.error ?? event.message, 'global.error', {
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    });
+  });
+
+  self.addEventListener('unhandledrejection', (event) => {
+    captureDriveServiceWorkerException(event.reason, 'global.unhandledrejection');
+  });
 }
 
 clientsClaim();
@@ -62,7 +82,11 @@ registerRoute(
       const fetchEvent = event as FetchEvent;
       try {
         return await fetch(fetchEvent.request);
-      } catch {
+      } catch (error) {
+        captureDriveServiceWorkerException(error, 'navigation.fetch', {
+          url: fetchEvent.request.url,
+          method: fetchEvent.request.method,
+        });
         return caches.match('/offline.html') as Promise<Response>;
       }
     },
@@ -80,7 +104,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
   const { type, id } = event.data || {};
 
   if (type === 'SKIP_WAITING') {
-    self.skipWaiting();
+    void self.skipWaiting();
     return;
   }
 
@@ -189,7 +213,11 @@ async function replayQueue(tag: string) {
   for (const record of records) {
     try {
       await fetch(record.url, record.init);
-    } catch {
+    } catch (error) {
+      captureDriveServiceWorkerException(error, 'queue.replay', {
+        tag,
+        url: record.url,
+      });
       // Will retry on next sync
     }
   }

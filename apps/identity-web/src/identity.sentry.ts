@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/react';
 import {
   type ClientErrorReportContext,
+  createSentryFeedbackOptions,
   createSentryReplayPrivacyOptions,
   getSentryReplaysOnErrorSampleRate,
   getSentryTracesSampleRate,
@@ -34,6 +35,7 @@ export function initSentry(): boolean {
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration(createSentryReplayPrivacyOptions()),
+      Sentry.feedbackIntegration(createSentryFeedbackOptions('identity-web')),
     ],
     beforeSend: scrubSentryEvent,
     beforeSendTransaction: scrubSentryEvent,

@@ -10,5 +10,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/sw.ts"]
+  "exclude": ["src/sw.ts", "src/drive.sw.sentry.ts"]
 }

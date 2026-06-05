@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@sentry/browser':
+      specifier: ^10.53.1
+      version: 10.53.1
     '@sentry/react':
       specifier: ^10.53.1
       version: 10.53.1
@@ -104,6 +107,9 @@ importers:
       '@nvbes/web-runtime':
         specifier: workspace:*
         version: link:../../libs/ts/web-runtime
+      '@sentry/browser':
+        specifier: 'catalog:'
+        version: 10.53.1
       '@sentry/react':
         specifier: 'catalog:'
         version: 10.53.1(react@19.2.6)

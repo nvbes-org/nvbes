@@ -132,6 +132,7 @@ export {
   scrubSentryBreadcrumb,
   scrubSentryEvent,
 } from './sentry-privacy';
+export { createSentryFeedbackOptions } from './sentry-feedback';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
   if (error instanceof ClientRuntimeError) {
