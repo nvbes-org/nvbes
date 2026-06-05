@@ -46,6 +46,8 @@ pub struct AppConfig {
     #[serde(skip_serializing)]
     pub otlp_endpoint: Option<String>,
     #[serde(skip_serializing)]
+    pub otlp_authorization_header: Option<String>,
+    #[serde(skip_serializing)]
     pub observability_internal_token: Option<String>,
     pub kms_enabled: bool,
     #[serde(skip_serializing)]
@@ -261,6 +263,7 @@ impl AppConfig {
             sentry_dsn: optional_env("NVBES_SENTRY_DSN"),
             sentry_logs_enabled: env_bool("NVBES_SENTRY_LOGS_ENABLED", false),
             otlp_endpoint: optional_env("NVBES_OTLP_ENDPOINT"),
+            otlp_authorization_header: optional_env("NVBES_OTLP_AUTHORIZATION_HEADER"),
             observability_internal_token: optional_env("NVBES_OBSERVABILITY_INTERNAL_TOKEN"),
             kms_enabled: std::env::var("NVBES_KMS_ENABLED")
                 .ok()
@@ -421,6 +424,9 @@ impl AppConfig {
         }
         if let Some(v) = secrets.get("NVBES_OTLP_ENDPOINT") {
             self.otlp_endpoint = Some(v.clone());
+        }
+        if let Some(v) = secrets.get("NVBES_OTLP_AUTHORIZATION_HEADER") {
+            self.otlp_authorization_header = Some(v.clone());
         }
         if let Some(v) = secrets.get("NVBES_OBSERVABILITY_INTERNAL_TOKEN") {
             self.observability_internal_token = Some(v.clone());

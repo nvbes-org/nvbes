@@ -61,8 +61,13 @@ docker compose \
 
 ```bash
 NVBES_OTLP_ENDPOINT=http://127.0.0.1:4317
+NVBES_OTLP_AUTHORIZATION_HEADER=
 NVBES_OBSERVABILITY_INTERNAL_TOKEN=<meme secret que le fichier Alloy>
 ```
+
+`NVBES_OTLP_AUTHORIZATION_HEADER` reste vide quand les services exportent vers
+Alloy en local. Ne le renseigner que pour un export OTLP direct vers Grafana
+Cloud, par exemple `Basic <base64(instance_id:token)>`.
 
 ## Privacy-by-design
 
