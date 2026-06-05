@@ -1,7 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
-    WorkerMonitorSchedule, init_sentry, init_tracing, install_safe_panic_hook,
-    start_worker_monitor_check_in, worker_monitor_slug,
+    WorkerMonitorSchedule, capture_sentry_smoke, init_sentry, init_tracing,
+    install_safe_panic_hook, start_worker_monitor_check_in, worker_monitor_slug,
 };
 
 #[path = "drive.workers.mod.rs"]
@@ -23,6 +23,17 @@ async fn main() -> anyhow::Result<()> {
     let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
     install_safe_panic_hook();
     init_tracing(&config);
+
+    if matches!(std::env::args().nth(1).as_deref(), Some("sentry-smoke")) {
+        let result = capture_sentry_smoke(
+            "drive-worker",
+            &config.environment,
+            "worker",
+            config.sentry_dsn.is_some(),
+        );
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
 
     let database = Database::connect(&config).await?;
     database.migrate().await?;

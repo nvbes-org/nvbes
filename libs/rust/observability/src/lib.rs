@@ -23,6 +23,7 @@ pub use trace_context::{
 };
 pub use tracing::init_tracing;
 pub use worker_sentry::{
-    WorkerJobContext, WorkerMonitorSchedule, capture_worker_heartbeat, capture_worker_job_error,
-    start_worker_monitor_check_in, worker_monitor_slug,
+    SentrySmokeResult, WorkerJobContext, WorkerMonitorSchedule, capture_sentry_smoke,
+    capture_worker_heartbeat, capture_worker_job_error, start_worker_monitor_check_in,
+    worker_monitor_slug,
 };

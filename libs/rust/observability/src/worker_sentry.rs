@@ -4,6 +4,7 @@ use sentry::protocol::{
     Envelope, MonitorCheckIn, MonitorCheckInStatus, MonitorConfig, MonitorIntervalUnit,
     MonitorSchedule, Value,
 };
+use serde::Serialize;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
@@ -32,6 +33,20 @@ pub struct WorkerJobContext<'a> {
     pub max_attempts: u32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct SentrySmokeResult {
+    pub status: &'static str,
+    pub app_name: String,
+    pub environment: String,
+    pub runtime: String,
+    pub event_id: String,
+    pub check_in_id: String,
+    pub monitor_slug: String,
+    pub dsn_configured: bool,
+    pub flushed: bool,
+}
+
 pub fn worker_monitor_slug(app_name: &str, task_name: &str) -> String {
     let mut slug = String::new();
     let mut previous_separator = false;
@@ -50,6 +65,48 @@ pub fn worker_monitor_slug(app_name: &str, task_name: &str) -> String {
     }
 
     slug.trim_matches('-').to_string()
+}
+
+pub fn capture_sentry_smoke(
+    app_name: &str,
+    environment: &str,
+    runtime: &str,
+    dsn_configured: bool,
+) -> SentrySmokeResult {
+    let monitor_slug = worker_monitor_slug(app_name, "sentry-smoke");
+    let check_in_id = Uuid::new_v4();
+    let event_id = sentry::with_scope(
+        |scope| {
+            scope.set_transaction(Some("observability.sentry_smoke"));
+            scope.set_tag("app", app_name);
+            scope.set_tag("environment", environment);
+            scope.set_tag("runtime", runtime);
+            scope.set_tag("smoke_test", "sentry");
+        },
+        || sentry::capture_message("nvbes sentry smoke test", sentry::Level::Info),
+    );
+
+    let check_in_sent = send_check_in(
+        check_in_id,
+        &monitor_slug,
+        MonitorCheckInStatus::Ok,
+        Some(environment),
+        Some(0.0),
+        None,
+    );
+    let flushed = check_in_sent && flush_sentry(std::time::Duration::from_secs(2));
+
+    SentrySmokeResult {
+        status: "accepted",
+        app_name: app_name.to_owned(),
+        environment: environment.to_owned(),
+        runtime: runtime.to_owned(),
+        event_id: event_id.to_string(),
+        check_in_id: check_in_id.to_string(),
+        monitor_slug,
+        dsn_configured,
+        flushed,
+    }
 }
 
 pub fn capture_worker_heartbeat(
@@ -152,10 +209,10 @@ fn send_check_in(
     environment: Option<&str>,
     duration: Option<f64>,
     monitor_config: Option<MonitorConfig>,
-) {
+) -> bool {
     sentry::Hub::with_active(|hub| {
         let Some(client) = hub.client() else {
-            return;
+            return false;
         };
 
         let mut envelope = Envelope::new();
@@ -168,12 +225,20 @@ fn send_check_in(
             monitor_config,
         });
         client.send_envelope(envelope);
-    });
+        true
+    })
+}
+
+fn flush_sentry(timeout: std::time::Duration) -> bool {
+    sentry::Hub::with_active(|hub| match hub.client() {
+        Some(client) => client.flush(Some(timeout)),
+        None => false,
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::worker_monitor_slug;
+    use super::{SentrySmokeResult, worker_monitor_slug};
 
     #[test]
     fn worker_monitor_slug_normalizes_to_stable_ascii_slug() {
@@ -189,5 +254,24 @@ mod tests {
             worker_monitor_slug("drive_worker", "loop::heartbeat"),
             "drive-worker-loop-heartbeat"
         );
+    }
+
+    #[test]
+    fn sentry_smoke_result_serializes_with_snake_case_contract() {
+        let result = SentrySmokeResult {
+            status: "accepted",
+            app_name: "drive-api".to_string(),
+            environment: "test".to_string(),
+            runtime: "api".to_string(),
+            event_id: uuid::Uuid::nil().to_string(),
+            check_in_id: uuid::Uuid::nil().to_string(),
+            monitor_slug: "drive-api-sentry-smoke".to_string(),
+            dsn_configured: true,
+            flushed: true,
+        };
+
+        let serialized = serde_json::to_value(result).expect("smoke result must serialize");
+
+        assert_eq!(serialized["monitor_slug"], "drive-api-sentry-smoke");
     }
 }
