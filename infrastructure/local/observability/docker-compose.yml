@@ -28,6 +28,9 @@ services:
     container_name: nvbes-grafana
     volumes:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana-provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ./grafana-dashboards:/var/lib/grafana/dashboards/nvbes:ro
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin

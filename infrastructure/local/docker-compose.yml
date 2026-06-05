@@ -70,6 +70,9 @@ services:
     profiles: [observability, full]
     volumes:
       - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./observability/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana-provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ./observability/grafana-dashboards:/var/lib/grafana/dashboards/nvbes:ro
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
