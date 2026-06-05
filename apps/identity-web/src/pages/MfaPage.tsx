@@ -141,7 +141,7 @@ export default function MfaPage() {
   }, []);
 
   useEffect(() => {
-    fetchFactors();
+    void fetchFactors();
   }, [fetchFactors]);
 
   const hasTotp = factors.some((f) => f.factor_type === 'totp');

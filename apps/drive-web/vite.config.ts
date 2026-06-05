@@ -168,6 +168,11 @@ export default defineConfig(({ mode }) => {
 
   const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl);
   const sentryOrg = process.env.SENTRY_ORG || localEnv.SENTRY_ORG || rootEnv.SENTRY_ORG || 'nvbes';
+  const sentryAuthToken =
+    process.env.SENTRY_AUTH_TOKEN ||
+    localEnv.SENTRY_AUTH_TOKEN ||
+    rootEnv.SENTRY_AUTH_TOKEN ||
+    '';
   const sentryProject =
     process.env.SENTRY_PROJECT_DRIVE_WEB ||
     localEnv.SENTRY_PROJECT_DRIVE_WEB ||
@@ -247,15 +252,18 @@ export default defineConfig(({ mode }) => {
           },
         }),
       ),
-      ...pluginList(
-        sentryVitePlugin({
-          org: sentryOrg,
-          project: sentryProject,
-          sourcemaps: {
-            filesToDeleteAfterUpload: ['./dist/**/*.map'],
-          },
-        }),
-      ),
+      ...(sentryAuthToken
+        ? pluginList(
+            sentryVitePlugin({
+              authToken: sentryAuthToken,
+              org: sentryOrg,
+              project: sentryProject,
+              sourcemaps: {
+                filesToDeleteAfterUpload: ['./dist/**/*.map'],
+              },
+            }),
+          )
+        : []),
       ...(process.env.ANALYZE
         ? [
             visualizer({

@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   reportError = (error: Error) => {
     const name = this.props.name ?? 'unknown';
     this.props.onReport?.(error);
-    reportClientError(name, error);
+    void reportClientError(name, error);
     this.setState({ reported: true });
   };
 

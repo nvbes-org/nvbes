@@ -54,7 +54,7 @@ export default function TotpSetupPage() {
   };
 
   const copySecret = () => {
-    navigator.clipboard.writeText(secretBase32);
+    void navigator.clipboard.writeText(secretBase32);
   };
 
   const qrUrl = provisioningUri

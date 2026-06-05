@@ -122,8 +122,8 @@ export default function AccountPrivacyPage() {
   };
 
   useEffect(() => {
-    fetchConsents();
-    fetchGpcStatus();
+    void fetchConsents();
+    void fetchGpcStatus();
   }, []);
 
   const rowCount = consents.length > 0 ? consents.length * 2 - 1 : 0;

@@ -3,11 +3,17 @@ const readyPromise = new Promise<void>((resolve) => {
   readyResolve = resolve;
 });
 
-function onWindowLoad(handler: () => void) {
+function onWindowLoad(handler: () => void | Promise<void>) {
   if (document.readyState === 'complete') {
-    handler();
+    void handler();
   } else {
-    window.addEventListener('load', handler, { once: true });
+    window.addEventListener(
+      'load',
+      () => {
+        void handler();
+      },
+      { once: true },
+    );
   }
 }
 
@@ -53,7 +59,7 @@ function handleBeforeInstallPrompt(event: Event) {
       prompt: () => Promise<void>;
       userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
     };
-    ev.prompt();
+    await ev.prompt();
     const choice = await ev.userChoice;
     if (choice.outcome === 'accepted') {
       deferredPrompt = null;
@@ -202,7 +208,7 @@ export async function registerBackgroundSync(
   const channel = new MessageChannel();
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data?.type === 'sync' && event.data?.tag === tag) {
-      _handler(event);
+      void _handler(event);
     }
   });
 

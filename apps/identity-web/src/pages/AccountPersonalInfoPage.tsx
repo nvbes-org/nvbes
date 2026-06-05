@@ -152,7 +152,7 @@ export default function AccountPersonalInfoPage() {
       setRegion(data.user.region ?? '');
       setEditSuccess(true);
       setEditError(null);
-      queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
     },
     onError: () => {
       setEditError(

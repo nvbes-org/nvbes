@@ -68,7 +68,7 @@ export default function DeviceActivationPage() {
         console.error('Failed to fetch workspaces', err);
       }
     };
-    fetchWorkspaces();
+    void fetchWorkspaces();
 
     if (initialUserCode) {
       void verifyUserCode(initialUserCode);

@@ -62,7 +62,7 @@ export default function RecoveryReviewsPage() {
       }
     };
 
-    fetchReviews();
+    void fetchReviews();
 
     return () => controller.abort();
   }, [me?.current_workspace_id, submittedWorkspaceId]);

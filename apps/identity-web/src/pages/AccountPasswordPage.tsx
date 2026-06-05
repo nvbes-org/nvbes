@@ -39,7 +39,7 @@ export default function AccountPasswordPage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      queryClient.invalidateQueries({ queryKey: ['identity', 'account'] });
+      void queryClient.invalidateQueries({ queryKey: ['identity', 'account'] });
     },
     onError: () => {
       setError('Le mot de passe actuel est incorrect ou le nouveau mot de passe est invalide.');

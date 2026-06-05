@@ -44,7 +44,7 @@ export async function withTokenRefreshLock(
   } else {
     // Another tab owns the lock, wait for the signal
     await new Promise<void>((resolve) => {
-      navigator.locks.request(REFRESH_LOCK, { ifAvailable: false }, async () => {
+      void navigator.locks.request(REFRESH_LOCK, { ifAvailable: false }, () => {
         resolve();
       });
     });

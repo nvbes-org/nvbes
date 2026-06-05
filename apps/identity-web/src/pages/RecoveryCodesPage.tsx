@@ -31,7 +31,7 @@ export default function RecoveryCodesPage() {
   };
 
   const copyAll = () => {
-    navigator.clipboard.writeText(codes.join('\n'));
+    void navigator.clipboard.writeText(codes.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

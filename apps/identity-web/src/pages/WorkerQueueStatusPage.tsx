@@ -57,7 +57,7 @@ export default function WorkerQueueStatusPage() {
       }
     };
 
-    fetchSnapshot();
+    void fetchSnapshot();
 
     return () => controller.abort();
   }, [me?.current_workspace_id, submittedWorkspaceId]);

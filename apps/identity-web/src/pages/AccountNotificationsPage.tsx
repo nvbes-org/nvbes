@@ -41,7 +41,7 @@ export default function AccountNotificationsPage() {
   const mutation = useMutation({
     mutationFn: (prefs: NotificationPrefs) => updateNotifications(prefs),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 

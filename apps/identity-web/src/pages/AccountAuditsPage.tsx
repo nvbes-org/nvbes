@@ -89,7 +89,7 @@ export default function AccountAuditsPage() {
       }
       setLoading(false);
     };
-    fetchEvents();
+    void fetchEvents();
   }, [me?.current_workspace_id]);
 
   const rowCount = events.length > 0 ? events.length * 2 - 1 : 0;
