@@ -14,7 +14,9 @@ use app::build_app;
 use db::Database;
 use nvbes_core::config::AppConfig;
 use nvbes_core::http::keep_alive;
-use nvbes_observability::{init_sentry, init_tracing, install_safe_panic_hook};
+use nvbes_observability::{
+    init_sentry, init_tracing, install_safe_panic_hook, start_continuous_profiling,
+};
 use utoipa::OpenApi;
 
 #[tokio::main]
@@ -40,6 +42,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     database.migrate().await?;
+    let _profiling_guard =
+        start_continuous_profiling(&config, "drive-api").map_err(anyhow::Error::msg)?;
 
     let app = build_app(config.clone(), database).await?;
 

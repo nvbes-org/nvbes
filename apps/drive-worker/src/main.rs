@@ -1,7 +1,8 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
     WorkerMonitorSchedule, capture_sentry_smoke, init_sentry, init_tracing,
-    install_safe_panic_hook, start_worker_monitor_check_in, worker_monitor_slug,
+    install_safe_panic_hook, start_continuous_profiling, start_worker_monitor_check_in,
+    worker_monitor_slug,
 };
 
 #[path = "drive.workers.mod.rs"]
@@ -37,6 +38,9 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
+
+    let _profiling_guard =
+        start_continuous_profiling(&config, "drive-worker").map_err(anyhow::Error::msg)?;
 
     let database = Database::connect(&config).await?;
     database.migrate().await?;

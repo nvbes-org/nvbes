@@ -1,6 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
     capture_sentry_smoke, init_sentry, init_tracing, install_safe_panic_hook,
+    start_continuous_profiling,
 };
 use sqlx::postgres::PgPoolOptions;
 
@@ -31,6 +32,9 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
+
+    let _profiling_guard =
+        start_continuous_profiling(&config, "identity-worker").map_err(anyhow::Error::msg)?;
 
     let db = PgPoolOptions::new()
         .max_connections(20)

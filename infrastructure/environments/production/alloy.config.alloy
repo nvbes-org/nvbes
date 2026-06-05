@@ -13,6 +13,11 @@ local.file "grafana_cloud_otlp_token" {
   is_secret = true
 }
 
+local.file "grafana_cloud_profiles_token" {
+  filename  = "/run/secrets/grafana_cloud_profiles_token"
+  is_secret = true
+}
+
 local.file "nvbes_observability_internal_token" {
   filename  = "/run/secrets/nvbes_observability_internal_token"
   is_secret = true
@@ -113,5 +118,30 @@ otelcol.auth.basic "grafana_cloud" {
   client_auth {
     username = sys.env("GRAFANA_CLOUD_OTLP_USER")
     password = local.file.grafana_cloud_otlp_token.content
+  }
+}
+
+pyroscope.receive_http "nvbes" {
+  http {
+    listen_address = "0.0.0.0"
+    listen_port    = 4040
+  }
+
+  forward_to = [pyroscope.write.grafana_cloud.receiver]
+}
+
+pyroscope.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROFILES_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROFILES_USER")
+      password = local.file.grafana_cloud_profiles_token.content
+    }
+  }
+
+  external_labels = {
+    environment = "production",
+    platform    = "nvbes",
   }
 }

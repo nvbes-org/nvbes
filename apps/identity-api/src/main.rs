@@ -1,6 +1,8 @@
 use nvbes_core::config::AppConfig;
 use nvbes_core::http::keep_alive;
-use nvbes_observability::{init_sentry, init_tracing, install_safe_panic_hook};
+use nvbes_observability::{
+    init_sentry, init_tracing, install_safe_panic_hook, start_continuous_profiling,
+};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -34,6 +36,8 @@ async fn main() -> anyhow::Result<()> {
     let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
     install_safe_panic_hook();
     init_tracing(&config);
+    let _profiling_guard =
+        start_continuous_profiling(&config, "identity-api").map_err(anyhow::Error::msg)?;
 
     let db = PgPoolOptions::new()
         .max_connections(config.database_max_connections)

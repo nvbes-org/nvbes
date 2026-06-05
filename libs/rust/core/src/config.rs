@@ -47,6 +47,14 @@ pub struct AppConfig {
     pub otlp_endpoint: Option<String>,
     #[serde(skip_serializing)]
     pub otlp_authorization_header: Option<String>,
+    pub profiling_enabled: bool,
+    #[serde(skip_serializing)]
+    pub profiling_endpoint: Option<String>,
+    pub profiling_sample_rate_hz: u32,
+    #[serde(skip_serializing)]
+    pub profiling_basic_auth_user: Option<String>,
+    #[serde(skip_serializing)]
+    pub profiling_basic_auth_password: Option<String>,
     #[serde(skip_serializing)]
     pub observability_internal_token: Option<String>,
     pub kms_enabled: bool,
@@ -264,6 +272,14 @@ impl AppConfig {
             sentry_logs_enabled: env_bool("NVBES_SENTRY_LOGS_ENABLED", false),
             otlp_endpoint: optional_env("NVBES_OTLP_ENDPOINT"),
             otlp_authorization_header: optional_env("NVBES_OTLP_AUTHORIZATION_HEADER"),
+            profiling_enabled: env_bool("NVBES_PROFILING_ENABLED", false),
+            profiling_endpoint: optional_env("NVBES_PROFILING_ENDPOINT"),
+            profiling_sample_rate_hz: std::env::var("NVBES_PROFILING_SAMPLE_RATE_HZ")
+                .ok()
+                .and_then(|value| value.parse::<u32>().ok())
+                .unwrap_or(100),
+            profiling_basic_auth_user: optional_env("NVBES_PROFILING_BASIC_AUTH_USER"),
+            profiling_basic_auth_password: optional_env("NVBES_PROFILING_BASIC_AUTH_PASSWORD"),
             observability_internal_token: optional_env("NVBES_OBSERVABILITY_INTERNAL_TOKEN"),
             kms_enabled: std::env::var("NVBES_KMS_ENABLED")
                 .ok()
@@ -428,6 +444,15 @@ impl AppConfig {
         if let Some(v) = secrets.get("NVBES_OTLP_AUTHORIZATION_HEADER") {
             self.otlp_authorization_header = Some(v.clone());
         }
+        if let Some(v) = secrets.get("NVBES_PROFILING_ENDPOINT") {
+            self.profiling_endpoint = Some(v.clone());
+        }
+        if let Some(v) = secrets.get("NVBES_PROFILING_BASIC_AUTH_USER") {
+            self.profiling_basic_auth_user = Some(v.clone());
+        }
+        if let Some(v) = secrets.get("NVBES_PROFILING_BASIC_AUTH_PASSWORD") {
+            self.profiling_basic_auth_password = Some(v.clone());
+        }
         if let Some(v) = secrets.get("NVBES_OBSERVABILITY_INTERNAL_TOKEN") {
             self.observability_internal_token = Some(v.clone());
         }
@@ -569,6 +594,7 @@ fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(), String> {
     )?;
     validate_database_url(&config.database_url, strict_mode)?;
     validate_jwt_secret(&config.jwt_secret, strict_mode)?;
+    validate_profiling(config)?;
     validate_observability_internal_token(config, strict_mode)?;
     validate_positive_integer(
         "NVBES_AUTH_VERIFICATION_RESEND_COOLDOWN_SECONDS",
@@ -699,6 +725,48 @@ fn validate_observability_internal_token(
     Ok(())
 }
 
+fn validate_profiling(config: &AppConfig) -> Result<(), String> {
+    if config.profiling_sample_rate_hz == 0 {
+        return Err("NVBES_PROFILING_SAMPLE_RATE_HZ must be greater than zero".to_string());
+    }
+
+    if !config.profiling_enabled {
+        return Ok(());
+    }
+
+    let endpoint = config.profiling_endpoint.as_deref().ok_or_else(|| {
+        "NVBES_PROFILING_ENDPOINT is required when profiling is enabled".to_string()
+    })?;
+
+    validate_profiling_endpoint(endpoint)?;
+
+    match (
+        &config.profiling_basic_auth_user,
+        &config.profiling_basic_auth_password,
+    ) {
+        (Some(_), Some(_)) | (None, None) => Ok(()),
+        _ => Err(
+            "NVBES_PROFILING_BASIC_AUTH_USER and NVBES_PROFILING_BASIC_AUTH_PASSWORD must be set together"
+                .to_string(),
+        ),
+    }
+}
+
+fn validate_profiling_endpoint(value: &str) -> Result<(), String> {
+    let url = Url::parse(value)
+        .map_err(|_| "NVBES_PROFILING_ENDPOINT must be a valid URL".to_string())?;
+
+    match url.scheme() {
+        "http" | "https" => {}
+        _ => return Err("NVBES_PROFILING_ENDPOINT must use HTTP or HTTPS".to_string()),
+    }
+
+    url.host_str()
+        .ok_or_else(|| "NVBES_PROFILING_ENDPOINT must include a host".to_string())?;
+
+    Ok(())
+}
+
 fn validate_webauthn_rp_id(value: &str, strict_mode: bool) -> Result<(), String> {
     let value = value.trim();
 
@@ -776,8 +844,8 @@ fn validate_request_e2ee(config: &AppConfig, strict_mode: bool) -> Result<(), St
 mod tests {
     use super::{
         AppConfig, env_or_default, validate_jwt_secret, validate_observability_internal_token,
-        validate_positive_integer, validate_public_url, validate_request_e2ee,
-        validate_webauthn_rp_id,
+        validate_positive_integer, validate_profiling, validate_profiling_endpoint,
+        validate_public_url, validate_request_e2ee, validate_webauthn_rp_id,
     };
 
     #[test]
@@ -845,6 +913,43 @@ mod tests {
         let placeholder_error = validate_observability_internal_token(&placeholder, true)
             .expect_err("placeholder observability token must be rejected");
         assert!(placeholder_error.contains("placeholder"));
+    }
+
+    #[test]
+    fn validate_profiling_requires_endpoint_when_enabled() {
+        let config = AppConfig {
+            profiling_enabled: true,
+            profiling_sample_rate_hz: 100,
+            ..AppConfig::default()
+        };
+
+        let error =
+            validate_profiling(&config).expect_err("enabled profiling must require an endpoint");
+
+        assert!(error.contains("NVBES_PROFILING_ENDPOINT"));
+    }
+
+    #[test]
+    fn validate_profiling_rejects_partial_basic_auth() {
+        let config = AppConfig {
+            profiling_enabled: true,
+            profiling_endpoint: Some("http://127.0.0.1:4040".to_string()),
+            profiling_sample_rate_hz: 100,
+            profiling_basic_auth_user: Some("tenant".to_string()),
+            profiling_basic_auth_password: None,
+            ..AppConfig::default()
+        };
+
+        let error =
+            validate_profiling(&config).expect_err("partial profiling basic auth must be rejected");
+
+        assert!(error.contains("must be set together"));
+    }
+
+    #[test]
+    fn validate_profiling_endpoint_allows_local_alloy() {
+        validate_profiling_endpoint("http://127.0.0.1:4040")
+            .expect("local Alloy Pyroscope endpoint must be accepted");
     }
 
     #[test]

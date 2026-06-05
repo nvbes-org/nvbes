@@ -25,7 +25,7 @@ nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-region = { path = "../../libs/rust/region" }
 nvbes-tenancy = { path = "../../libs/rust/tenancy" }
-nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp"] }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 hex = "0.4"
 hmac.workspace = true
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }

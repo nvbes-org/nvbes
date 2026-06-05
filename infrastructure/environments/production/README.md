@@ -11,7 +11,8 @@ Flux production cible:
 ```text
 nvbes APIs /metrics ──────┐
 nvbes workers /metrics ───┤─ Grafana Alloy ── remote_write ── Grafana Cloud Metrics
-nvbes OTLP traces ────────┘                 └─ OTLP HTTP ──── Grafana Cloud Traces
+nvbes OTLP traces ────────┤                 ├─ OTLP HTTP ──── Grafana Cloud Traces
+nvbes Pyroscope profiles ─┘                 └─ Pyroscope ──── Grafana Cloud Profiles
 ```
 
 Alloy est obligatoire entre les services et Grafana Cloud. Il fournit un point
@@ -21,7 +22,8 @@ centralise l'authentification, l'etiquetage et les futures regles de redaction.
 ## Fichiers
 
 - `docker-compose.observability.yml`: service Alloy production.
-- `alloy.config.alloy`: pipeline metrics + traces vers Grafana Cloud.
+- `alloy.config.alloy`: pipeline metrics, traces et profiles vers Grafana
+  Cloud.
 - `observability.env.example`: variables requises, sans secret reel.
 
 ## Secrets requis
@@ -37,6 +39,10 @@ GRAFANA_CLOUD_PROMETHEUS_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_prometheus
 GRAFANA_CLOUD_OTLP_ENDPOINT="https://otlp-gateway-<region>.grafana.net/otlp"
 GRAFANA_CLOUD_OTLP_USER="<stack-otlp-user>"
 GRAFANA_CLOUD_OTLP_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_otlp_token"
+
+GRAFANA_CLOUD_PROFILES_URL="https://profiles-prod-<region>.grafana.net"
+GRAFANA_CLOUD_PROFILES_USER="<stack-profiles-user>"
+GRAFANA_CLOUD_PROFILES_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_profiles_token"
 
 NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE="/etc/nvbes/secrets/nvbes_observability_internal_token"
 ```
@@ -62,6 +68,11 @@ docker compose \
 ```bash
 NVBES_OTLP_ENDPOINT=http://127.0.0.1:4317
 NVBES_OTLP_AUTHORIZATION_HEADER=
+NVBES_PROFILING_ENABLED=true
+NVBES_PROFILING_ENDPOINT=http://127.0.0.1:4040
+NVBES_PROFILING_SAMPLE_RATE_HZ=100
+NVBES_PROFILING_BASIC_AUTH_USER=
+NVBES_PROFILING_BASIC_AUTH_PASSWORD=
 NVBES_OBSERVABILITY_INTERNAL_TOKEN=<meme secret que le fichier Alloy>
 NVBES_DRIVE_WORKER_METRICS_BIND_ADDR=127.0.0.1:4101
 NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
@@ -76,6 +87,12 @@ publique.
 Alloy en local. Ne le renseigner que pour un export OTLP direct vers Grafana
 Cloud, par exemple `Basic <base64(instance_id:token)>`.
 
+`NVBES_PROFILING_*` utilise le SDK Pyroscope Rust avec backend pprof-rs. Le
+profiling est opt-in (`NVBES_PROFILING_ENABLED=true`) et doit pointer vers
+Alloy en local. Les variables Basic Auth profiling restent vides avec Alloy; ne
+les renseigner que pour un export Pyroscope direct, ce qui n'est pas le chemin
+production recommande.
+
 ## Privacy-by-design
 
 - `/metrics` reste interne et protege par `Authorization: Bearer`.
@@ -86,8 +103,12 @@ Cloud, par exemple `Basic <base64(instance_id:token)>`.
   signed URL, payload utilisateur, contenu de fichier.
 - Les logs applicatifs ne sont pas encore envoyes a Grafana Cloud. Ajouter Loki
   seulement apres une passe de redaction dediee.
-- Le profiling continu n'est pas active. Ajouter Pyroscope seulement apres
-  instrumentation explicite et revue privacy.
+- Le profiling continu exporte uniquement des stacks CPU et des labels
+  techniques (`service`, `environment`, `platform`). Ne jamais ajouter de tags
+  dynamiques issus d'un tenant, utilisateur, chemin fichier, object key ou
+  payload.
+- Aucun endpoint pprof HTTP applicatif n'est expose. Les services poussent vers
+  Alloy; Alloy seul pousse vers Grafana Cloud Profiles avec secret monte.
 
 ## Verification
 
@@ -104,6 +125,8 @@ Dans Grafana Cloud:
 - Metrics APIs: `http_requests_total{environment="production"}`
 - Metrics workers: `worker_queue_jobs_total{environment="production"}`
 - Traces: service `nvbes-identity-api` ou `nvbes-drive-api`
+- Profiles: applications `identity-api`, `drive-api`, `identity-worker`,
+  `drive-worker`
 
 ## References
 
