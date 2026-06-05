@@ -13,6 +13,7 @@ members = [
   "libs/rust/email",
   "libs/rust/identity-sdk-backend",
   "libs/rust/observability",
+  "libs/rust/product-analytics",
   "libs/rust/scan",
   "libs/rust/storage",
   "libs/rust/tenancy",

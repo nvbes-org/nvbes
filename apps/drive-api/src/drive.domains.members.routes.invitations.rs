@@ -7,6 +7,8 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 
+use nvbes_product_analytics::ProductAnalyticsEvent;
+
 use super::service::{
     AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
 };
@@ -70,6 +72,15 @@ async fn invite_member(
         user_agent(&headers),
     )
     .await?;
+
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "member.invited",
+            access.auth.user_id,
+            workspace_id,
+        )
+        .property("member_count", 1_i64),
+    );
 
     Ok(Json(result))
 }

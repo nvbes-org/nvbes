@@ -51,6 +51,7 @@ import {
   readPendingOAuthAuthorizeRequest,
   savePendingOAuthAuthorizeRequest,
 } from '../identity.oauth';
+import { trackEvent } from '../identity.posthog';
 import { RegisterBrandPanel } from './RegisterBrandPanel';
 
 type RegisterStep = 1 | 2;
@@ -355,6 +356,10 @@ export default function RegisterPage() {
     if (!canProceedFromStep1) return;
 
     try {
+      trackEvent('auth.signup_started', {
+        country: selectedRegion || detectedRegion || undefined,
+      });
+
       const challenge = await fetchPowChallenge(identityApiBaseUrl);
       const powResolved =
         challenge && challenge.difficulty > 0
@@ -376,6 +381,10 @@ export default function RegisterPage() {
           region: selectedRegion || undefined,
         },
         ...powResolved,
+      });
+
+      trackEvent('auth.signup_completed', {
+        country: selectedRegion || detectedRegion || undefined,
       });
 
       if (oauthRequest) {

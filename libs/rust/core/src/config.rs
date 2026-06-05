@@ -47,6 +47,12 @@ pub struct AppConfig {
     pub otlp_endpoint: Option<String>,
     #[serde(skip_serializing)]
     pub otlp_authorization_header: Option<String>,
+    pub posthog_enabled: bool,
+    pub posthog_host: String,
+    #[serde(skip_serializing)]
+    pub posthog_project_token: Option<String>,
+    #[serde(skip_serializing)]
+    pub analytics_id_salt: Option<String>,
     pub profiling_enabled: bool,
     #[serde(skip_serializing)]
     pub profiling_endpoint: Option<String>,
@@ -272,6 +278,11 @@ impl AppConfig {
             sentry_logs_enabled: env_bool("NVBES_SENTRY_LOGS_ENABLED", false),
             otlp_endpoint: optional_env("NVBES_OTLP_ENDPOINT"),
             otlp_authorization_header: optional_env("NVBES_OTLP_AUTHORIZATION_HEADER"),
+            posthog_enabled: env_bool("NVBES_POSTHOG_ENABLED", false),
+            posthog_host: optional_env("NVBES_POSTHOG_HOST")
+                .unwrap_or_else(|| "https://eu.i.posthog.com".to_string()),
+            posthog_project_token: optional_env("NVBES_POSTHOG_PROJECT_TOKEN"),
+            analytics_id_salt: optional_env("NVBES_ANALYTICS_ID_SALT"),
             profiling_enabled: env_bool("NVBES_PROFILING_ENABLED", false),
             profiling_endpoint: optional_env("NVBES_PROFILING_ENDPOINT"),
             profiling_sample_rate_hz: std::env::var("NVBES_PROFILING_SAMPLE_RATE_HZ")
@@ -444,6 +455,12 @@ impl AppConfig {
         if let Some(v) = secrets.get("NVBES_OTLP_AUTHORIZATION_HEADER") {
             self.otlp_authorization_header = Some(v.clone());
         }
+        if let Some(v) = secrets.get("NVBES_POSTHOG_PROJECT_TOKEN") {
+            self.posthog_project_token = Some(v.clone());
+        }
+        if let Some(v) = secrets.get("NVBES_ANALYTICS_ID_SALT") {
+            self.analytics_id_salt = Some(v.clone());
+        }
         if let Some(v) = secrets.get("NVBES_PROFILING_ENDPOINT") {
             self.profiling_endpoint = Some(v.clone());
         }
@@ -595,6 +612,7 @@ fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(), String> {
     validate_database_url(&config.database_url, strict_mode)?;
     validate_jwt_secret(&config.jwt_secret, strict_mode)?;
     validate_grafana_export_path(config, strict_mode)?;
+    validate_posthog_analytics(config, strict_mode)?;
     validate_profiling(config)?;
     validate_observability_internal_token(config, strict_mode)?;
     validate_positive_integer(
@@ -776,6 +794,61 @@ fn validate_grafana_export_path(config: &AppConfig, strict_mode: bool) -> Result
     Ok(())
 }
 
+fn validate_posthog_analytics(config: &AppConfig, strict_mode: bool) -> Result<(), String> {
+    if !config.posthog_enabled && config.posthog_host.trim().is_empty() {
+        return Ok(());
+    }
+
+    let url = Url::parse(&config.posthog_host)
+        .map_err(|_| "NVBES_POSTHOG_HOST must be a valid URL".to_string())?;
+    match url.scheme() {
+        "http" | "https" => {}
+        _ => return Err("NVBES_POSTHOG_HOST must use HTTP or HTTPS".to_string()),
+    }
+
+    if !config.posthog_enabled {
+        return Ok(());
+    }
+
+    if config
+        .posthog_project_token
+        .as_deref()
+        .unwrap_or("")
+        .trim()
+        .is_empty()
+    {
+        return Err(
+            "NVBES_POSTHOG_PROJECT_TOKEN is required when NVBES_POSTHOG_ENABLED is true"
+                .to_string(),
+        );
+    }
+
+    let salt = config.analytics_id_salt.as_deref().unwrap_or("").trim();
+    if salt.is_empty() {
+        return Err(
+            "NVBES_ANALYTICS_ID_SALT is required when NVBES_POSTHOG_ENABLED is true".to_string(),
+        );
+    }
+    if strict_mode && salt.len() < 32 {
+        return Err(
+            "NVBES_ANALYTICS_ID_SALT must be at least 32 characters outside development"
+                .to_string(),
+        );
+    }
+
+    if strict_mode {
+        let host = url.host_str().unwrap_or("").to_ascii_lowercase();
+        if host == "app.posthog.com" || host == "us.i.posthog.com" {
+            return Err(
+                "NVBES_POSTHOG_HOST must use PostHog EU Cloud or a first-party proxy outside development"
+                    .to_string(),
+            );
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_profiling_endpoint(value: &str) -> Result<(), String> {
     let url = Url::parse(value)
         .map_err(|_| "NVBES_PROFILING_ENDPOINT must be a valid URL".to_string())?;
@@ -868,9 +941,9 @@ fn validate_request_e2ee(config: &AppConfig, strict_mode: bool) -> Result<(), St
 mod tests {
     use super::{
         AppConfig, env_or_default, validate_grafana_export_path, validate_jwt_secret,
-        validate_observability_internal_token, validate_positive_integer, validate_profiling,
-        validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
-        validate_webauthn_rp_id,
+        validate_observability_internal_token, validate_positive_integer,
+        validate_posthog_analytics, validate_profiling, validate_profiling_endpoint,
+        validate_public_url, validate_request_e2ee, validate_webauthn_rp_id,
     };
 
     #[test]
@@ -1002,6 +1075,36 @@ mod tests {
             .expect_err("strict mode must reject direct Pyroscope auth");
 
         assert!(error.contains("Grafana Alloy"));
+    }
+
+    #[test]
+    fn validate_posthog_requires_token_and_salt_when_enabled() {
+        let config = AppConfig {
+            posthog_enabled: true,
+            posthog_host: "https://eu.i.posthog.com".to_string(),
+            ..AppConfig::default()
+        };
+
+        let error = validate_posthog_analytics(&config, false)
+            .expect_err("enabled PostHog must require a project token");
+
+        assert!(error.contains("NVBES_POSTHOG_PROJECT_TOKEN"));
+    }
+
+    #[test]
+    fn validate_posthog_rejects_us_direct_host_in_strict_mode() {
+        let config = AppConfig {
+            posthog_enabled: true,
+            posthog_host: "https://us.i.posthog.com".to_string(),
+            posthog_project_token: Some("phc_test".to_string()),
+            analytics_id_salt: Some("01234567890123456789012345678901".to_string()),
+            ..AppConfig::default()
+        };
+
+        let error = validate_posthog_analytics(&config, true)
+            .expect_err("strict mode must reject PostHog US direct host");
+
+        assert!(error.contains("EU Cloud"));
     }
 
     #[test]

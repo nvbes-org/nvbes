@@ -18,6 +18,7 @@ use crate::domains::workspaces::service::{
 };
 use crate::http::error::AppError;
 use crate::http::request::{bearer_token, client_ip, user_agent};
+use nvbes_product_analytics::ProductAnalyticsEvent;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new()
@@ -82,21 +83,31 @@ pub(crate) async fn create_workspace(
     let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await?;
     ensure_email_verified(&auth)?;
 
-    Ok(Json(
-        service::create_workspace(
-            &state.db,
-            &auth,
-            CreateWorkspaceInput {
-                name: request.name,
-                workspace_type: None,
-                jurisdiction: None,
-                region: None,
-            },
-            client_ip(&headers),
-            user_agent(&headers),
+    let result = service::create_workspace(
+        &state.db,
+        &auth,
+        CreateWorkspaceInput {
+            name: request.name,
+            workspace_type: None,
+            jurisdiction: None,
+            region: None,
+        },
+        client_ip(&headers),
+        user_agent(&headers),
+    )
+    .await?;
+
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "workspace.created",
+            auth.user_id,
+            result.workspace.id,
         )
-        .await?,
-    ))
+        .property("workspace_type", result.workspace.workspace_type.clone())
+        .property("plan_code", result.workspace.plan_code.clone()),
+    );
+
+    Ok(Json(result))
 }
 
 #[utoipa::path(

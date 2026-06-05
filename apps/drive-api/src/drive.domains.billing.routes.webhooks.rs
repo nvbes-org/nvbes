@@ -28,8 +28,14 @@ async fn handle_webhook(
     let signature = headers
         .get("stripe-signature")
         .and_then(|value| value.to_str().ok());
-    let result =
-        crate::domains::billing::handle_webhook(&state.db, &state.config, signature, &body).await;
+    let result = crate::domains::billing::handle_webhook(
+        &state.db,
+        &state.config,
+        &state.product_analytics,
+        signature,
+        &body,
+    )
+    .await;
 
     match &result {
         Ok(_) => state.observability.record_billing_webhook(

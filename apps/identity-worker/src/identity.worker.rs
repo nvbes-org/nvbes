@@ -1,3 +1,5 @@
+#[path = "identity.worker.analytics.rs"]
+pub mod analytics;
 #[path = "identity.worker.housekeeping.rs"]
 pub mod housekeeping;
 #[path = "identity.worker.jobs.rs"]

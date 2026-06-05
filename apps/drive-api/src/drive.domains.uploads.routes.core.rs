@@ -13,6 +13,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use nvbes_core::http::error::ErrorEnvelope;
+use nvbes_product_analytics::{ProductAnalyticsEvent, size_bytes_bucket};
 
 use crate::{
     app::AppState,
@@ -146,6 +147,19 @@ async fn create_upload(
         ),
     }
 
+    if result.is_ok() {
+        state.product_analytics.capture(
+            ProductAnalyticsEvent::workspace_for_user(
+                "file.upload_started",
+                access.auth.user_id,
+                workspace_id,
+            )
+            .property("file_count", 1_i64)
+            .property("upload_count", 1_i64)
+            .property("size_bytes_bucket", size_bytes_bucket(expected_size_bytes)),
+        );
+    }
+
     Ok(Json(result?).into_response())
 }
 
@@ -214,6 +228,19 @@ async fn complete_upload(
             None,
             started_at.elapsed(),
         ),
+    }
+
+    if result.is_ok() {
+        state.product_analytics.capture(
+            ProductAnalyticsEvent::workspace_for_user(
+                "file.upload_completed",
+                access.auth.user_id,
+                workspace_id,
+            )
+            .property("file_count", 1_i64)
+            .property("upload_count", 1_i64)
+            .property("size_bytes_bucket", size_bytes_bucket(size_bytes)),
+        );
     }
 
     Ok(Json(result?))

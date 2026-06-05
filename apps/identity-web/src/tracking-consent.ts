@@ -1,4 +1,10 @@
-import { identityClient } from '@nvbes/identity-client';
+import { identityClient, type UserConsent } from '@nvbes/identity-client';
+import {
+  ALL_POSTHOG_CONSENT,
+  EMPTY_POSTHOG_CONSENT,
+  hasAnyPostHogConsent,
+  type PostHogPurposeConsent,
+} from '@nvbes/web-runtime/posthog';
 
 export interface CookieConsentState {
   categories: {
@@ -12,24 +18,67 @@ export interface CookieConsentState {
     posthog: boolean;
     sentry: boolean;
   };
+  posthog: PostHogPurposeConsent;
 }
 
 export interface TrackingConsentStoredValue {
-  version: 2;
+  version: 3;
   savedAt: string;
   expiresAt: string;
   source: string;
   consent: CookieConsentState;
 }
 
+type ConsentCategory = keyof CookieConsentState['categories'];
+type ConsentVendor = keyof CookieConsentState['vendors'];
+type PostHogPurpose = keyof PostHogPurposeConsent;
+
+type LegacyConsentCandidate = {
+  categories?: Partial<Record<ConsentCategory | 'marketing', boolean>>;
+  vendors?: Partial<Record<ConsentVendor | 'marketingVendor', boolean>>;
+  posthog?: Partial<Record<PostHogPurpose, boolean>>;
+};
+
+type StoredConsentCandidate = {
+  version?: number;
+  savedAt?: string;
+  expiresAt?: string;
+  source?: string;
+  consent?: unknown;
+};
+
+type ActiveConsent = Pick<UserConsent, 'consent_type' | 'document_version' | 'revoked_at'>;
+
 export const TRACKING_CONSENT_CHANGED_EVENT = 'nvbes:tracking-consent-changed';
 const CONSENT_TTL_DAYS = 183;
+const DOCUMENT_VERSION = 'v3';
 
 export const CATEGORY_VENDORS_MAP = {
   essentials: ['stripe', 'identity'],
   analytics: ['posthog'],
   performance: ['sentry'],
 } as const;
+
+export const CATEGORY_POSTHOG_PURPOSES_MAP = {
+  essentials: [],
+  analytics: [
+    'productAnalytics',
+    'autocaptureHeatmaps',
+    'sessionReplay',
+    'surveysFeedback',
+    'featureFlags',
+  ],
+  performance: ['errorTracking'],
+} as const satisfies Record<ConsentCategory, readonly PostHogPurpose[]>;
+
+export const POSTHOG_PURPOSE_CONSENT_TYPES = {
+  productAnalytics: 'posthog_product_analytics',
+  autocaptureHeatmaps: 'posthog_autocapture_heatmaps',
+  sessionReplay: 'posthog_session_replay',
+  surveysFeedback: 'posthog_surveys_feedback',
+  errorTracking: 'posthog_error_tracking',
+  featureFlags: 'posthog_feature_flags',
+} as const satisfies Record<PostHogPurpose, string>;
 
 export const DEFAULT_CONSENT: CookieConsentState = {
   categories: {
@@ -43,6 +92,7 @@ export const DEFAULT_CONSENT: CookieConsentState = {
     posthog: false,
     sentry: false,
   },
+  posthog: EMPTY_POSTHOG_CONSENT,
 };
 
 export const ACCEPT_ALL_CONSENT: CookieConsentState = {
@@ -57,6 +107,7 @@ export const ACCEPT_ALL_CONSENT: CookieConsentState = {
     posthog: true,
     sentry: true,
   },
+  posthog: ALL_POSTHOG_CONSENT,
 };
 
 export const DECLINE_ALL_CONSENT: CookieConsentState = {
@@ -71,8 +122,10 @@ export const DECLINE_ALL_CONSENT: CookieConsentState = {
     posthog: false,
     sentry: false,
   },
+  posthog: EMPTY_POSTHOG_CONSENT,
 };
 
+const STORAGE_KEY_V3 = 'nvbes.tracking-consent.v3';
 const STORAGE_KEY_V2 = 'nvbes.tracking-consent.v2';
 const STORAGE_KEY_V1 = 'nvbes.tracking-consent.v1';
 
@@ -82,48 +135,143 @@ function consentExpiry(savedAt: Date): string {
   return expiresAt.toISOString();
 }
 
+function clonePostHogConsent(consent: PostHogPurposeConsent): PostHogPurposeConsent {
+  return { ...consent };
+}
+
+function cloneConsent(consent: CookieConsentState): CookieConsentState {
+  return {
+    categories: { ...consent.categories },
+    vendors: { ...consent.vendors },
+    posthog: clonePostHogConsent(consent.posthog),
+  };
+}
+
 function createStoredConsent(
   consent: CookieConsentState,
   source: string,
   savedAt = new Date(),
 ): TrackingConsentStoredValue {
   return {
-    version: 2,
+    version: 3,
     savedAt: savedAt.toISOString(),
     expiresAt: consentExpiry(savedAt),
     source,
-    consent,
+    consent: cloneConsent(consent),
   };
 }
 
-function parseStoredConsent(value: string): CookieConsentState | null {
-  const parsed = JSON.parse(value) as CookieConsentState | TrackingConsentStoredValue;
-  const consent = 'consent' in parsed ? parsed.consent : parsed;
-  const expiresAt = 'expiresAt' in parsed ? Date.parse(parsed.expiresAt) : Number.NaN;
+function booleanValue(value: unknown, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizePostHogConsent(
+  candidate: LegacyConsentCandidate,
+  legacyProductOnly: boolean,
+): PostHogPurposeConsent {
+  const legacyPostHogVendor = booleanValue(candidate.vendors?.posthog, false);
+  if (legacyProductOnly) {
+    return {
+      ...EMPTY_POSTHOG_CONSENT,
+      productAnalytics: legacyPostHogVendor,
+    };
+  }
+
+  return {
+    productAnalytics: booleanValue(candidate.posthog?.productAnalytics, legacyPostHogVendor),
+    autocaptureHeatmaps: booleanValue(candidate.posthog?.autocaptureHeatmaps, false),
+    sessionReplay: booleanValue(candidate.posthog?.sessionReplay, false),
+    surveysFeedback: booleanValue(candidate.posthog?.surveysFeedback, false),
+    errorTracking: booleanValue(candidate.posthog?.errorTracking, false),
+    featureFlags: booleanValue(candidate.posthog?.featureFlags, false),
+  };
+}
+
+function normalizeConsent(value: unknown, legacyProductOnly: boolean): CookieConsentState | null {
+  if (!isObject(value)) {
+    return null;
+  }
+
+  const candidate = value as LegacyConsentCandidate;
+  const posthog = normalizePostHogConsent(candidate, legacyProductOnly);
+  const hasPostHog = hasAnyPostHogConsent(posthog);
+
+  const analyticsGranted =
+    booleanValue(candidate.categories?.analytics, false) ||
+    posthog.productAnalytics ||
+    posthog.autocaptureHeatmaps ||
+    posthog.sessionReplay ||
+    posthog.surveysFeedback ||
+    posthog.featureFlags;
+  const performanceGranted =
+    booleanValue(candidate.categories?.performance, false) ||
+    booleanValue(candidate.vendors?.sentry, false) ||
+    posthog.errorTracking;
+
+  return {
+    categories: {
+      essentials: true,
+      analytics: analyticsGranted,
+      performance: performanceGranted,
+    },
+    vendors: {
+      stripe: booleanValue(candidate.vendors?.stripe, true),
+      identity: booleanValue(candidate.vendors?.identity, true),
+      posthog: hasPostHog,
+      sentry: booleanValue(candidate.vendors?.sentry, performanceGranted),
+    },
+    posthog,
+  };
+}
+
+function parseStoredConsent(value: string, legacyProductOnly: boolean): CookieConsentState | null {
+  const parsed = JSON.parse(value) as StoredConsentCandidate | CookieConsentState;
+  const expiresAt = isObject(parsed) && 'expiresAt' in parsed ? Date.parse(String(parsed.expiresAt)) : Number.NaN;
 
   if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    window.localStorage.removeItem(STORAGE_KEY_V3);
     window.localStorage.removeItem(STORAGE_KEY_V2);
     window.localStorage.removeItem(STORAGE_KEY_V1);
     return null;
   }
 
-  if ('marketing' in consent.categories || 'marketingVendor' in consent.vendors) {
-    return {
-      categories: {
-        essentials: consent.categories.essentials,
-        analytics: consent.categories.analytics,
-        performance: consent.categories.performance,
-      },
-      vendors: {
-        stripe: consent.vendors.stripe,
-        identity: consent.vendors.identity,
-        posthog: consent.vendors.posthog,
-        sentry: consent.vendors.sentry,
-      },
-    };
+  if (isObject(parsed) && 'consent' in parsed) {
+    return normalizeConsent(parsed.consent, legacyProductOnly);
   }
 
-  return consent;
+  return normalizeConsent(parsed, legacyProductOnly);
+}
+
+function legacyV1Consent(accepted: boolean): CookieConsentState {
+  if (!accepted) {
+    return cloneConsent(DECLINE_ALL_CONSENT);
+  }
+
+  return {
+    categories: {
+      essentials: true,
+      analytics: true,
+      performance: true,
+    },
+    vendors: {
+      stripe: true,
+      identity: true,
+      posthog: true,
+      sentry: true,
+    },
+    posthog: {
+      ...EMPTY_POSTHOG_CONSENT,
+      productAnalytics: true,
+    },
+  };
+}
+
+function persistMigratedConsent(consent: CookieConsentState, source: string): void {
+  window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(createStoredConsent(consent, source)));
 }
 
 export function getTrackingConsent(): CookieConsentState | null {
@@ -131,124 +279,175 @@ export function getTrackingConsent(): CookieConsentState | null {
     return null;
   }
 
-  const valueV2 = window.localStorage.getItem(STORAGE_KEY_V2);
-  if (valueV2) {
+  const valueV3 = window.localStorage.getItem(STORAGE_KEY_V3);
+  if (valueV3) {
     try {
-      return parseStoredConsent(valueV2);
+      return parseStoredConsent(valueV3, false);
     } catch {
-      // Corrupted storage, fallback
+      window.localStorage.removeItem(STORAGE_KEY_V3);
     }
   }
 
-  // Fallback to V1
+  const valueV2 = window.localStorage.getItem(STORAGE_KEY_V2);
+  if (valueV2) {
+    try {
+      const migrated = parseStoredConsent(valueV2, true);
+      if (migrated) {
+        persistMigratedConsent(migrated, 'legacy-v2-migration');
+        return migrated;
+      }
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEY_V2);
+    }
+  }
+
   const valueV1 = window.localStorage.getItem(STORAGE_KEY_V1);
-  if (valueV1 === 'accepted') {
-    window.localStorage.setItem(
-      STORAGE_KEY_V2,
-      JSON.stringify(createStoredConsent(ACCEPT_ALL_CONSENT, 'legacy-v1-migration')),
-    );
-    return ACCEPT_ALL_CONSENT;
-  } else if (valueV1 === 'declined') {
-    window.localStorage.setItem(
-      STORAGE_KEY_V2,
-      JSON.stringify(createStoredConsent(DECLINE_ALL_CONSENT, 'legacy-v1-migration')),
-    );
-    return DECLINE_ALL_CONSENT;
+  if (valueV1 === 'accepted' || valueV1 === 'declined') {
+    const migrated = legacyV1Consent(valueV1 === 'accepted');
+    persistMigratedConsent(migrated, 'legacy-v1-migration');
+    return migrated;
   }
 
   return null;
 }
 
-export function isVendorAccepted(vendor: keyof CookieConsentState['vendors']): boolean {
+export function getPostHogConsent(): PostHogPurposeConsent {
+  const consent = getTrackingConsent();
+  return clonePostHogConsent(consent?.posthog ?? EMPTY_POSTHOG_CONSENT);
+}
+
+export function isPostHogPurposeAccepted(purpose: PostHogPurpose): boolean {
+  return getPostHogConsent()[purpose] === true;
+}
+
+export function isVendorAccepted(vendor: ConsentVendor): boolean {
   const consent = getTrackingConsent();
   if (!consent) return false;
+  if (vendor === 'posthog') return hasAnyPostHogConsent(consent.posthog);
   return consent.vendors[vendor] || false;
 }
 
-export function isCategoryAccepted(category: keyof CookieConsentState['categories']): boolean {
+export function isCategoryAccepted(category: ConsentCategory): boolean {
   const consent = getTrackingConsent();
   if (!consent) return false;
   return consent.categories[category] || false;
 }
 
-export function setTrackingConsent(consent: CookieConsentState, source = 'identity-web') {
-  window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(createStoredConsent(consent, source)));
+function hasAnyOptionalConsent(consent: CookieConsentState): boolean {
+  return (
+    consent.categories.analytics ||
+    consent.categories.performance ||
+    hasAnyPostHogConsent(consent.posthog) ||
+    consent.vendors.sentry
+  );
+}
 
-  // Write v1 for backward compatibility
-  const hasAnyOptional = consent.categories.analytics || consent.categories.performance;
+export function setTrackingConsent(consent: CookieConsentState, source = 'identity-web') {
+  const normalized = normalizeConsent(consent, false) ?? cloneConsent(DEFAULT_CONSENT);
+  window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(createStoredConsent(normalized, source)));
+
+  const hasAnyOptional = hasAnyOptionalConsent(normalized);
   window.localStorage.setItem(STORAGE_KEY_V1, hasAnyOptional ? 'accepted' : 'declined');
 
   window.dispatchEvent(
     new CustomEvent(TRACKING_CONSENT_CHANGED_EVENT, {
-      detail: { consent, source },
+      detail: { consent: normalized, source },
     }),
   );
 
   void (async () => {
     try {
-      await syncWithBackend(consent);
+      await syncWithBackend(normalized);
     } catch {
-      // Ignore if not logged in or endpoint fails
+      // Ignore if not logged in or endpoint fails.
     }
   })();
+}
+
+function activeVersionsByConsentType(consents: ActiveConsent[]): Map<string, Set<string>> {
+  const active = new Map<string, Set<string>>();
+  for (const consent of consents) {
+    if (consent.revoked_at) continue;
+
+    const versions = active.get(consent.consent_type) ?? new Set<string>();
+    versions.add(consent.document_version);
+    active.set(consent.consent_type, versions);
+  }
+  return active;
+}
+
+function queueConsentSync(
+  promises: Promise<unknown>[],
+  activeVersions: Map<string, Set<string>>,
+  consentType: string,
+  granted: boolean,
+): void {
+  const versions = activeVersions.get(consentType) ?? new Set<string>();
+
+  if (granted && !versions.has(DOCUMENT_VERSION)) {
+    promises.push(identityClient.grantConsent(consentType, DOCUMENT_VERSION));
+  }
+
+  for (const version of versions) {
+    if (!granted || version !== DOCUMENT_VERSION) {
+      promises.push(identityClient.revokeConsent(consentType, version));
+    }
+  }
 }
 
 async function syncWithBackend(consent: CookieConsentState) {
   try {
     const consents = await identityClient.listConsents();
-    const activeConsents = new Set(
-      consents.filter((c) => !c.revoked_at).map((c) => c.consent_type),
-    );
+    const activeConsents = activeVersionsByConsentType(consents);
 
-    const categoryMapping: Record<keyof CookieConsentState['categories'], string> = {
+    const categoryMapping = {
       essentials: 'cookie_consent_essentials',
       analytics: 'cookie_consent_analytics',
       performance: 'cookie_consent_performance',
-    };
+    } as const satisfies Record<ConsentCategory, string>;
 
-    const vendorMapping: Record<keyof CookieConsentState['vendors'], string> = {
+    const vendorMapping = {
       stripe: 'cookie_consent_vendor_stripe',
       identity: 'cookie_consent_vendor_identity',
       posthog: 'cookie_consent_vendor_posthog',
       sentry: 'cookie_consent_vendor_sentry',
-    };
+    } as const satisfies Record<ConsentVendor, string>;
 
     const promises: Promise<unknown>[] = [];
 
-    for (const [cat, consentType] of Object.entries(categoryMapping)) {
-      const isGranted = consent.categories[cat as keyof CookieConsentState['categories']];
-      const hasOnBackend = activeConsents.has(consentType);
-      if (isGranted && !hasOnBackend) {
-        promises.push(identityClient.grantConsent(consentType, 'v2'));
-      } else if (!isGranted && hasOnBackend) {
-        promises.push(identityClient.revokeConsent(consentType, 'v2'));
-      }
+    for (const [category, consentType] of Object.entries(categoryMapping)) {
+      queueConsentSync(promises, activeConsents, consentType, consent.categories[category as ConsentCategory]);
     }
 
-    for (const [ven, consentType] of Object.entries(vendorMapping)) {
-      const isGranted = consent.vendors[ven as keyof CookieConsentState['vendors']];
-      const hasOnBackend = activeConsents.has(consentType);
-      if (isGranted && !hasOnBackend) {
-        promises.push(identityClient.grantConsent(consentType, 'v2'));
-      } else if (!isGranted && hasOnBackend) {
-        promises.push(identityClient.revokeConsent(consentType, 'v2'));
-      }
+    for (const [vendor, consentType] of Object.entries(vendorMapping)) {
+      const granted =
+        vendor === 'posthog'
+          ? hasAnyPostHogConsent(consent.posthog)
+          : consent.vendors[vendor as ConsentVendor];
+      queueConsentSync(promises, activeConsents, consentType, granted);
     }
 
-    // Keep overall 'cookie_consent' active if at least one optional is accepted
-    const hasAnyOptional = consent.categories.analytics || consent.categories.performance;
-    const hasGeneralBackend = activeConsents.has('cookie_consent');
-    if (hasAnyOptional && !hasGeneralBackend) {
-      promises.push(identityClient.grantConsent('cookie_consent', 'v2'));
-    } else if (!hasAnyOptional && hasGeneralBackend) {
-      promises.push(identityClient.revokeConsent('cookie_consent', 'v2'));
+    for (const [purpose, consentType] of Object.entries(POSTHOG_PURPOSE_CONSENT_TYPES)) {
+      queueConsentSync(
+        promises,
+        activeConsents,
+        consentType,
+        consent.posthog[purpose as PostHogPurpose],
+      );
     }
+
+    queueConsentSync(
+      promises,
+      activeConsents,
+      'cookie_consent',
+      hasAnyOptionalConsent(consent),
+    );
 
     if (promises.length > 0) {
       await Promise.all(promises);
     }
   } catch {
-    // Suppress errors during client updates (e.g. offline, unauthenticated)
+    // Suppress errors during client updates (e.g. offline, unauthenticated).
   }
 }
 

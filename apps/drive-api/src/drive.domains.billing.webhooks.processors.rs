@@ -12,10 +12,16 @@ use nvbes_billing::{
     stripe_subscription_status, timestamp_field,
 };
 
+pub struct ProcessedBillingAnalytics {
+    pub workspace_id: Uuid,
+    pub event_name: &'static str,
+    pub status: Option<&'static str>,
+}
+
 pub async fn process_stripe_event(
     tx: &mut Transaction<'_, Postgres>,
     event: &StripeWebhookEvent,
-) -> Result<(), AppError> {
+) -> Result<Option<ProcessedBillingAnalytics>, AppError> {
     let event_type = event.event_type.as_str();
     let data_object = &event.data_object;
     match event_type {
@@ -25,14 +31,14 @@ pub async fn process_stripe_event(
         }
         "customer.subscription.deleted" => process_subscription_deleted(tx, data_object).await,
         "invoice.payment_failed" => process_invoice_payment_failed(tx, data_object).await,
-        _ => Ok(()),
+        _ => Ok(None),
     }
 }
 
 async fn process_checkout_completed(
     tx: &mut Transaction<'_, Postgres>,
     object: &Value,
-) -> Result<(), AppError> {
+) -> Result<Option<ProcessedBillingAnalytics>, AppError> {
     let workspace_id = metadata_workspace_id(object)
         .or_else(|| {
             object
@@ -76,13 +82,14 @@ async fn process_checkout_completed(
         .await?;
     }
 
-    insert_billing_audit(tx, workspace_id, "billing.checkout_completed", object).await
+    insert_billing_audit(tx, workspace_id, "billing.checkout_completed", object).await?;
+    Ok(None)
 }
 
 async fn process_subscription_upsert(
     tx: &mut Transaction<'_, Postgres>,
     object: &Value,
-) -> Result<(), AppError> {
+) -> Result<Option<ProcessedBillingAnalytics>, AppError> {
     let workspace_id = if let Some(workspace_id) = metadata_workspace_id(object) {
         workspace_id
     } else {
@@ -140,13 +147,23 @@ async fn process_subscription_upsert(
     .await?;
 
     project_workspace_plan_tx(tx, workspace_id, plan_id).await?;
-    insert_billing_audit(tx, workspace_id, "billing.updated", object).await
+    insert_billing_audit(tx, workspace_id, "billing.updated", object).await?;
+
+    if matches!(status, "active" | "trialing") {
+        Ok(Some(ProcessedBillingAnalytics {
+            workspace_id,
+            event_name: "billing.subscription_activated",
+            status: Some(status),
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 async fn process_subscription_deleted(
     tx: &mut Transaction<'_, Postgres>,
     object: &Value,
-) -> Result<(), AppError> {
+) -> Result<Option<ProcessedBillingAnalytics>, AppError> {
     let workspace_id = if let Some(workspace_id) = metadata_workspace_id(object) {
         workspace_id
     } else {
@@ -175,13 +192,14 @@ async fn process_subscription_deleted(
     .await?;
 
     project_workspace_plan_tx(tx, workspace_id, trial_plan_id).await?;
-    insert_billing_audit(tx, workspace_id, "billing.updated", object).await
+    insert_billing_audit(tx, workspace_id, "billing.updated", object).await?;
+    Ok(None)
 }
 
 async fn process_invoice_payment_failed(
     tx: &mut Transaction<'_, Postgres>,
     object: &Value,
-) -> Result<(), AppError> {
+) -> Result<Option<ProcessedBillingAnalytics>, AppError> {
     let customer_id = required_string(object, "customer").ok_or_else(|| {
         AppError::bad_request(
             "webhook_missing_customer",
@@ -202,7 +220,12 @@ async fn process_invoice_payment_failed(
     .execute(tx.as_mut())
     .await?;
 
-    insert_billing_audit(tx, workspace_id, "billing.payment_failed", object).await
+    insert_billing_audit(tx, workspace_id, "billing.payment_failed", object).await?;
+    Ok(Some(ProcessedBillingAnalytics {
+        workspace_id,
+        event_name: "billing.payment_failed",
+        status: Some("past_due"),
+    }))
 }
 
 async fn insert_billing_audit(

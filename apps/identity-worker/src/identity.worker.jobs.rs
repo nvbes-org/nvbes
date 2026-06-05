@@ -9,6 +9,7 @@ use crate::email::jobs::{
     EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
 };
 use crate::http::error::AppError;
+use crate::worker::analytics::capture_billing_webhook_analytics;
 
 use nvbes_redis::worker_queue::QueuedJob;
 
@@ -165,14 +166,21 @@ pub(crate) async fn execute_job(state: &AppState, job: &QueuedJob) -> anyhow::Re
                 .await
                 .unwrap_or(None);
 
-                if let Some(code) = plan_code {
+                if let Some(code) = plan_code.as_deref() {
                     let _ = nvbes_redis::pubsub::publish_workspace_plan_updated(
                         &state.redis,
                         &workspace_id.to_string(),
-                        &code,
+                        code,
                     )
                     .await;
                 }
+
+                capture_billing_webhook_analytics(
+                    state,
+                    workspace_id,
+                    &job_payload,
+                    plan_code.as_deref(),
+                );
             }
 
             Ok(serde_json::json!({"status": "processed"}))

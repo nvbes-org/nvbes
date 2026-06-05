@@ -15,6 +15,7 @@ pub struct AppState {
     pub db: crate::database::Database,
     pub jwt: crate::domains::auth::jwt::JwtService,
     pub observability: nvbes_observability::metrics::HttpMetrics,
+    pub product_analytics: nvbes_product_analytics::ProductAnalytics,
     pub email: std::sync::Arc<dyn nvbes_email::EmailSender>,
     pub dpop_nonce: Option<std::sync::Arc<nvbes_dpop::DpopNonceStore>>,
     pub redis: nvbes_redis::RedisPool,
@@ -117,6 +118,7 @@ impl AppState {
             db: db.clone(),
             jwt,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
+            product_analytics: build_product_analytics(config)?,
             email: build_email_sender(config),
             dpop_nonce,
             redis,
@@ -134,6 +136,19 @@ impl AppState {
 
         Ok(state)
     }
+}
+
+fn build_product_analytics(
+    config: &AppConfig,
+) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
+    Ok(nvbes_product_analytics::ProductAnalytics::new(
+        nvbes_product_analytics::ProductAnalyticsConfig {
+            enabled: config.posthog_enabled,
+            host: config.posthog_host.clone(),
+            project_token: config.posthog_project_token.clone(),
+            analytics_id_salt: config.analytics_id_salt.clone(),
+        },
+    )?)
 }
 
 fn build_email_sender(config: &AppConfig) -> std::sync::Arc<dyn nvbes_email::EmailSender> {

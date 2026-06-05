@@ -6,6 +6,7 @@ services:
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=public-preview
       - /etc/alloy/config.alloy
     environment:
       GRAFANA_CLOUD_PROMETHEUS_URL: ${GRAFANA_CLOUD_PROMETHEUS_URL:?Set Grafana Cloud Prometheus remote_write URL}
@@ -16,6 +17,9 @@ services:
       GRAFANA_CLOUD_LOKI_USER: ${GRAFANA_CLOUD_LOKI_USER:?Set Grafana Cloud Loki user}
       GRAFANA_CLOUD_PROFILES_URL: ${GRAFANA_CLOUD_PROFILES_URL:?Set Grafana Cloud Profiles URL}
       GRAFANA_CLOUD_PROFILES_USER: ${GRAFANA_CLOUD_PROFILES_USER:?Set Grafana Cloud Profiles user}
+      POSTHOG_OTLP_HOST: ${POSTHOG_OTLP_HOST:-https://eu.i.posthog.com}
+      POSTHOG_OTLP_LOGS_ENDPOINT: ${POSTHOG_OTLP_LOGS_ENDPOINT:-https://eu.i.posthog.com/i/v1/logs}
+      POSTHOG_OTLP_TRACES_ENDPOINT: ${POSTHOG_OTLP_TRACES_ENDPOINT:-https://eu.i.posthog.com/i/v1/traces}
       NVBES_IDENTITY_API_METRICS_TARGET: ${NVBES_IDENTITY_API_METRICS_TARGET:?Set identity API metrics target}
       NVBES_DRIVE_API_METRICS_TARGET: ${NVBES_DRIVE_API_METRICS_TARGET:?Set drive API metrics target}
       NVBES_DRIVE_WORKER_METRICS_TARGET: ${NVBES_DRIVE_WORKER_METRICS_TARGET:?Set drive worker metrics target}
@@ -32,6 +36,7 @@ services:
       - ${GRAFANA_CLOUD_OTLP_TOKEN_FILE:?Set Grafana Cloud OTLP token file}:/run/secrets/grafana_cloud_otlp_token:ro
       - ${GRAFANA_CLOUD_LOKI_TOKEN_FILE:?Set Grafana Cloud Loki token file}:/run/secrets/grafana_cloud_loki_token:ro
       - ${GRAFANA_CLOUD_PROFILES_TOKEN_FILE:?Set Grafana Cloud Profiles token file}:/run/secrets/grafana_cloud_profiles_token:ro
+      - ${POSTHOG_PROJECT_TOKEN_FILE:?Set PostHog project token file}:/run/secrets/posthog_project_token:ro
       - ${NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE:?Set nvbes observability token file}:/run/secrets/nvbes_observability_internal_token:ro
       - alloy_data:/var/lib/alloy
     healthcheck:

@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use nvbes_core::http::error::ErrorEnvelope;
+use nvbes_product_analytics::ProductAnalyticsEvent;
 use nvbes_region::{
     country_code_to_data_region, detect_profile_from_country_code, supported_profiles,
 };
@@ -142,6 +143,31 @@ pub(crate) async fn register(
     )
     .await?;
 
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "auth.signup_completed",
+            result.user.id,
+            result.workspace.id,
+        )
+        .property(
+            "country",
+            result
+                .user
+                .region
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
+        )
+        .property("workspace_type", result.workspace.workspace_type.clone()),
+    );
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "workspace.created",
+            result.user.id,
+            result.workspace.id,
+        )
+        .property("workspace_type", result.workspace.workspace_type.clone()),
+    );
+
     Ok(Json(result))
 }
 
@@ -244,6 +270,11 @@ pub(crate) async fn verify_email(
         },
     )
     .await?;
+
+    state.product_analytics.capture(ProductAnalyticsEvent::user(
+        "auth.email_verified",
+        result.user.id,
+    ));
 
     Ok(Json(result))
 }

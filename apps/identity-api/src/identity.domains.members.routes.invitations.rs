@@ -18,6 +18,7 @@ use crate::domains::members::service::{
 };
 use crate::http::error::AppError;
 use crate::http::request::{bearer_token, client_ip, user_agent};
+use nvbes_product_analytics::ProductAnalyticsEvent;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new()
@@ -70,21 +71,30 @@ pub(crate) async fn invite_member(
     )
     .await?;
 
-    Ok(Json(
-        service::invite_member(
-            &state.db,
-            &state.redis,
-            &state.config,
-            &access,
-            InviteMemberInput {
-                email: request.email,
-                role: parse_role(&request.role)?,
-            },
-            client_ip(&headers),
-            user_agent(&headers),
+    let result = service::invite_member(
+        &state.db,
+        &state.redis,
+        &state.config,
+        &access,
+        InviteMemberInput {
+            email: request.email,
+            role: parse_role(&request.role)?,
+        },
+        client_ip(&headers),
+        user_agent(&headers),
+    )
+    .await?;
+
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "member.invited",
+            access.auth.user_id,
+            workspace_id,
         )
-        .await?,
-    ))
+        .property("member_count", 1_i64),
+    );
+
+    Ok(Json(result))
 }
 
 #[utoipa::path(

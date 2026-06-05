@@ -1,130 +1,149 @@
-import posthog from 'posthog-js/dist/module.no-external';
+import {
+  EMPTY_POSTHOG_CONSENT,
+  capturePostHogException,
+  getFeatureFlag,
+  getFeatureFlagPayload,
+  identifyProductUser,
+  initPostHogRuntime,
+  isFeatureEnabled,
+  setPostHogWorkspaceGroup,
+  startPrivacySafeReplay,
+  stopPrivacySafeReplay,
+  trackExperimentExposure,
+  trackProductEvent,
+  type PostHogPurposeConsent,
+} from '@nvbes/web-runtime/posthog';
 import {
   TRACKING_CONSENT_CHANGED_EVENT,
   type CookieConsentState,
-  isVendorAccepted,
+  getPostHogConsent,
 } from './tracking-consent';
 
+const DRIVE_SENSITIVE_ROUTES = [
+  /^\/callback(?:\/|$)/u,
+  /\/(?:files?|folders?|previews?|uploads?|downloads?|share-links?)(?:\/|$)/u,
+  /\/(?:billing|checkout|portal)(?:\/|$)/u,
+  /\/(?:privacy|export|delete|tokens?|service-accounts?)(?:\/|$)/u,
+] as const;
+
 let initialized = false;
-let consentListenerInstalled = false;
+let pageTrackingInstalled = false;
+let lastTrackedPath: string | null = null;
 
-function currentHostCookieDomains(): string[] {
+function currentPath(): string {
   if (typeof window === 'undefined') {
-    return [];
+    return '/';
   }
-
-  const host = window.location.hostname;
-  const parts = host.split('.').filter(Boolean);
-  if (parts.length < 2 || host === 'localhost' || /^[\d.]+$/.test(host)) {
-    return [host];
-  }
-
-  return [host, `.${parts.slice(-2).join('.')}`];
+  return window.location.pathname || '/';
 }
 
-function clearPostHogStorage() {
+function subscribeToConsent(listener: (consent: PostHogPurposeConsent) => void): () => void {
   if (typeof window === 'undefined') {
-    return;
+    return () => {};
   }
 
-  for (const storage of [window.localStorage, window.sessionStorage]) {
-    for (const key of Object.keys(storage)) {
-      const normalized = key.toLowerCase();
-      if (normalized.startsWith('ph_') || normalized.includes('posthog')) {
-        storage.removeItem(key);
-      }
-    }
-  }
-
-  for (const rawCookie of document.cookie.split(';')) {
-    const cookieName = rawCookie.split('=')[0]?.trim();
-    if (!cookieName) continue;
-
-    const normalized = cookieName.toLowerCase();
-    if (!normalized.startsWith('ph_') && !normalized.includes('posthog')) continue;
-
-    document.cookie = `${cookieName}=; Max-Age=0; path=/; SameSite=Lax`;
-    for (const domain of currentHostCookieDomains()) {
-      document.cookie = `${cookieName}=; Max-Age=0; path=/; domain=${domain}; SameSite=Lax`;
-    }
-  }
-}
-
-function enablePostHogCapture() {
-  posthog.opt_in_capturing();
-  posthog.capture('$pageview');
-}
-
-function disablePostHogCapture() {
-  if (!initialized) {
-    clearPostHogStorage();
-    return;
-  }
-
-  posthog.stopSessionRecording();
-  posthog.opt_out_capturing();
-  posthog.reset();
-  clearPostHogStorage();
-}
-
-function installConsentListener() {
-  if (consentListenerInstalled || typeof window === 'undefined') {
-    return;
-  }
-
-  window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, (event) => {
+  const handleConsentChange = (event: Event) => {
     if (!(event instanceof CustomEvent)) {
       return;
     }
 
     const detail = event.detail as { consent?: CookieConsentState };
-    if (detail.consent?.vendors.posthog) {
-      const wasInitialized = initialized;
-      initPostHog();
-      if (wasInitialized && initialized) {
-        enablePostHogCapture();
-      }
-    } else {
-      disablePostHogCapture();
-    }
-  });
+    listener(detail.consent?.posthog ?? EMPTY_POSTHOG_CONSENT);
+  };
 
-  consentListenerInstalled = true;
+  window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
+  return () => window.removeEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
+}
+
+function captureCurrentPageView(): void {
+  const routePath = currentPath();
+  if (routePath === lastTrackedPath) {
+    return;
+  }
+
+  lastTrackedPath = routePath;
+  void trackProductEvent('marketing.page_viewed', {
+    event_source: 'router',
+    source: 'drive-web',
+  });
+}
+
+function schedulePageView(): void {
+  window.requestAnimationFrame(captureCurrentPageView);
+}
+
+function installPageTracking(): void {
+  if (pageTrackingInstalled || typeof window === 'undefined') {
+    return;
+  }
+
+  const originalPushState: History['pushState'] = window.history.pushState.bind(window.history);
+  const originalReplaceState: History['replaceState'] = window.history.replaceState.bind(
+    window.history,
+  );
+
+  window.history.pushState = function pushStateWithPostHogTracking(
+    ...args: Parameters<History['pushState']>
+  ) {
+    const result = originalPushState(...args);
+    schedulePageView();
+    return result;
+  };
+
+  window.history.replaceState = function replaceStateWithPostHogTracking(
+    ...args: Parameters<History['replaceState']>
+  ) {
+    const result = originalReplaceState(...args);
+    schedulePageView();
+    return result;
+  };
+
+  window.addEventListener('popstate', schedulePageView);
+  pageTrackingInstalled = true;
 }
 
 export function initPostHog() {
-  installConsentListener();
-
-  if (initialized || !isVendorAccepted('posthog')) {
+  if (initialized) {
     return;
   }
-
-  const apiKey = import.meta.env.VITE_POSTHOG_KEY;
-  const apiHost = import.meta.env.VITE_POSTHOG_HOST || 'https://app.posthog.com';
-
-  if (!apiKey) {
-    console.warn('PostHog API Key not found, skipping initialization');
-    return;
-  }
-
-  posthog.init(apiKey, {
-    api_host: apiHost,
-    autocapture: false,
-    capture_pageview: false,
-    disable_session_recording: true,
-    opt_out_capturing_by_default: true,
-    person_profiles: 'identified_only',
-    persistence: 'localStorage',
-  });
 
   initialized = true;
-  enablePostHogCapture();
+  installPageTracking();
+
+  initPostHogRuntime({
+    appName: 'drive-web',
+    apiKey: import.meta.env.VITE_POSTHOG_KEY,
+    apiHost: import.meta.env.VITE_POSTHOG_HOST || 'https://eu.i.posthog.com',
+    analyticsSalt:
+      import.meta.env.VITE_ANALYTICS_ID_SALT || import.meta.env.VITE_POSTHOG_ANALYTICS_SALT,
+    getConsent: getPostHogConsent,
+    onConsentChange: subscribeToConsent,
+    getRoutePath: currentPath,
+    getCommonProperties: () => ({
+      app_name: 'drive-web',
+      event_source: 'browser',
+    }),
+    blockedRoutePatterns: [...DRIVE_SENSITIVE_ROUTES],
+  });
+
+  captureCurrentPageView();
 }
 
 export const trackEvent = (name: string, properties?: Record<string, unknown>) => {
-  if (!isVendorAccepted('posthog')) {
-    return;
-  }
+  void trackProductEvent(name, properties);
+};
 
-  posthog.capture(name, properties);
+export const identifyUser = (userId: string, traits?: Record<string, unknown>) => {
+  void identifyProductUser(userId, traits);
+};
+
+export {
+  capturePostHogException,
+  getFeatureFlag,
+  getFeatureFlagPayload,
+  isFeatureEnabled,
+  setPostHogWorkspaceGroup,
+  startPrivacySafeReplay,
+  stopPrivacySafeReplay,
+  trackExperimentExposure,
 };

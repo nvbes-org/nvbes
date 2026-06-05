@@ -5,7 +5,9 @@
     "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "paths": {
-      "@nvbes/http-client": ["../http-client/src/index.ts"]
+      "@nvbes/http-client": ["../http-client/src/index.ts"],
+      "posthog-js": ["../../../node_modules/posthog-js/dist/module.d.ts"],
+      "posthog-js/*": ["../../../node_modules/posthog-js/*"]
     }
   },
   "include": ["src"]

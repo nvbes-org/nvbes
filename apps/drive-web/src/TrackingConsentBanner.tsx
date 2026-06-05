@@ -8,6 +8,62 @@ import {
   type CookieConsentState,
 } from './tracking-consent';
 
+type PostHogPurpose = keyof CookieConsentState['posthog'];
+
+const ANALYTICS_POSTHOG_PURPOSES: PostHogPurpose[] = [
+  'productAnalytics',
+  'autocaptureHeatmaps',
+  'sessionReplay',
+  'surveysFeedback',
+  'featureFlags',
+];
+
+function hasAnyPostHogPurpose(posthog: CookieConsentState['posthog']): boolean {
+  return Object.values(posthog).some((value) => value);
+}
+
+function deriveConsentState(consent: CookieConsentState): CookieConsentState {
+  return {
+    categories: {
+      essentials: true,
+      analytics: ANALYTICS_POSTHOG_PURPOSES.some((purpose) => consent.posthog[purpose]),
+      performance: consent.vendors.sentry || consent.posthog.errorTracking,
+    },
+    vendors: {
+      stripe: true,
+      identity: true,
+      posthog: hasAnyPostHogPurpose(consent.posthog),
+      sentry: consent.vendors.sentry,
+    },
+    posthog: { ...consent.posthog },
+  };
+}
+
+function ConsentToggle({
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[11px] font-medium text-foreground">{label}</p>
+        <p className="text-[10px] text-muted-foreground">{description}</p>
+      </div>
+      <label className="relative inline-flex shrink-0 items-center cursor-pointer">
+        <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
+        <div className="w-7 h-3.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-primary" />
+      </label>
+    </div>
+  );
+}
+
 export function TrackingConsentBanner() {
   const currentConsent = getTrackingConsent();
   const hasChoice = currentConsent !== null;
@@ -52,20 +108,23 @@ export function TrackingConsentBanner() {
 
     setTempConsent((prev) => {
       const nextVal = !prev.categories[category];
-      const nextCategories = { ...prev.categories, [category]: nextVal };
       const nextVendors = { ...prev.vendors };
+      const nextPosthog = { ...prev.posthog };
 
-      // Update vendors inside this category
       if (category === 'analytics') {
-        nextVendors.posthog = nextVal;
+        for (const purpose of ANALYTICS_POSTHOG_PURPOSES) {
+          nextPosthog[purpose] = nextVal;
+        }
       } else if (category === 'performance') {
         nextVendors.sentry = nextVal;
+        nextPosthog.errorTracking = nextVal;
       }
 
-      return {
-        categories: nextCategories,
+      return deriveConsentState({
+        categories: { ...prev.categories, [category]: nextVal },
         vendors: nextVendors,
-      };
+        posthog: nextPosthog,
+      });
     });
   };
 
@@ -78,19 +137,36 @@ export function TrackingConsentBanner() {
     setTempConsent((prev) => {
       const nextVal = !prev.vendors[vendor];
       const nextVendors = { ...prev.vendors, [vendor]: nextVal };
+      const nextPosthog = { ...prev.posthog };
 
-      // Update category if vendor changes
-      const nextCategories = { ...prev.categories };
-      if (category === 'analytics') {
-        nextCategories.analytics = nextVendors.posthog;
+      if (vendor === 'posthog') {
+        for (const purpose of Object.keys(nextPosthog) as PostHogPurpose[]) {
+          nextPosthog[purpose] = nextVal;
+        }
       } else if (category === 'performance') {
-        nextCategories.performance = nextVendors.sentry;
+        nextPosthog.errorTracking = nextPosthog.errorTracking && nextVal;
       }
 
-      return {
-        categories: nextCategories,
+      return deriveConsentState({
+        categories: { ...prev.categories },
         vendors: nextVendors,
+        posthog: nextPosthog,
+      });
+    });
+  };
+
+  const togglePostHogPurpose = (purpose: PostHogPurpose) => {
+    setTempConsent((prev) => {
+      const nextPosthog = {
+        ...prev.posthog,
+        [purpose]: !prev.posthog[purpose],
       };
+
+      return deriveConsentState({
+        categories: { ...prev.categories },
+        vendors: { ...prev.vendors },
+        posthog: nextPosthog,
+      });
     });
   };
 
@@ -197,24 +273,43 @@ export function TrackingConsentBanner() {
                     <div className="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary" />
                   </label>
                 </div>
-                <div className="pl-5 pt-2 border-t border-border/20 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-medium text-foreground">PostHog</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Analyses comportementales et de parcours.
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={tempConsent.vendors.posthog}
-                        onChange={() => toggleVendor('posthog', 'analytics')}
-                        className="sr-only peer"
-                      />
-                      <div className="w-7 h-3.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-primary" />
-                    </label>
-                  </div>
+                <div className="pl-5 pt-2 border-t border-border/20 space-y-2">
+                  <ConsentToggle
+                    checked={tempConsent.vendors.posthog}
+                    onChange={() => toggleVendor('posthog', 'analytics')}
+                    label="PostHog"
+                    description="Active ou désactive toutes les finalités PostHog."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.productAnalytics}
+                    onChange={() => togglePostHogPurpose('productAnalytics')}
+                    label="Analytics produit"
+                    description="Mesure les étapes de funnel sans données personnelles."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.featureFlags}
+                    onChange={() => togglePostHogPurpose('featureFlags')}
+                    label="Feature flags"
+                    description="Active des expériences non critiques après consentement."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.autocaptureHeatmaps}
+                    onChange={() => togglePostHogPurpose('autocaptureHeatmaps')}
+                    label="Heatmaps & autocapture"
+                    description="Capture uniquement les interactions masquées et non sensibles."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.sessionReplay}
+                    onChange={() => togglePostHogPurpose('sessionReplay')}
+                    label="Session replay"
+                    description="Relecture masquée, bloquée sur auth, billing et fichiers."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.surveysFeedback}
+                    onChange={() => togglePostHogPurpose('surveysFeedback')}
+                    label="Surveys & feedback"
+                    description="Questionnaires ciblés hors pages sensibles."
+                  />
                 </div>
               </div>
 
@@ -239,24 +334,19 @@ export function TrackingConsentBanner() {
                     <div className="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary" />
                   </label>
                 </div>
-                <div className="pl-5 pt-2 border-t border-border/20 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-medium text-foreground">Sentry</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Rapports d'erreurs en temps réel.
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={tempConsent.vendors.sentry}
-                        onChange={() => toggleVendor('sentry', 'performance')}
-                        className="sr-only peer"
-                      />
-                      <div className="w-7 h-3.5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-primary" />
-                    </label>
-                  </div>
+                <div className="pl-5 pt-2 border-t border-border/20 space-y-2">
+                  <ConsentToggle
+                    checked={tempConsent.vendors.sentry}
+                    onChange={() => toggleVendor('sentry', 'performance')}
+                    label="Sentry"
+                    description="Rapports d'erreurs en temps réel."
+                  />
+                  <ConsentToggle
+                    checked={tempConsent.posthog.errorTracking}
+                    onChange={() => togglePostHogPurpose('errorTracking')}
+                    label="PostHog error tracking"
+                    description="Capture navigateur scrubbed en parallèle de Sentry."
+                  />
                 </div>
               </div>
             </div>

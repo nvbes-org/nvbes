@@ -12,6 +12,7 @@ nvbes-core = { path = "../../libs/rust/core" }
 nvbes-redis = { path = "../../libs/rust/redis" }
 nvbes-identity-api = { path = "../identity-api" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 serde_json.workspace = true
 sqlx.workspace = true
 tokio.workspace = true

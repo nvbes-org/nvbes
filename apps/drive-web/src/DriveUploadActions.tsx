@@ -5,6 +5,7 @@ import { useFileSystemAccess } from './hooks/use-file-system-access';
 import { useWakeLock } from './hooks/use-wake-lock';
 import { DriveUploadDialog } from './DriveUploadDialog';
 import type { UploadFileInput } from './drive.native-fs.service';
+import { trackEvent } from './drive.posthog';
 import type { UploadProgress, UploadSummary } from './drive.uploads.types';
 
 type DriveUploadActionsProps = {
@@ -45,6 +46,15 @@ export function DriveUploadActions({ workspaceId, parentId }: DriveUploadActions
         );
       return [...prev, ...newUploads];
     });
+  }
+
+  function totalBytesBucket(items: UploadFileInput[]): string {
+    const totalBytes = items.reduce((acc, item) => acc + item.file.size, 0);
+    if (totalBytes < 1024 * 1024) return '<1mb';
+    if (totalBytes < 10 * 1024 * 1024) return '1-10mb';
+    if (totalBytes < 100 * 1024 * 1024) return '10-100mb';
+    if (totalBytes < 1024 * 1024 * 1024) return '100mb-1gb';
+    return '1gb+';
   }
 
   async function handleUploadFiles() {
@@ -93,8 +103,15 @@ export function DriveUploadActions({ workspaceId, parentId }: DriveUploadActions
 
   async function startUploads(items: UploadFileInput[]) {
     const { uploadFileToDrive } = await import('./drive.native-fs.service');
+    const totalBytes = totalBytesBucket(items);
 
-    await Promise.allSettled(
+    trackEvent('file.upload_started', {
+      workspace_id: workspaceId,
+      file_count: items.length,
+      total_bytes_bucket: totalBytes,
+    });
+
+    const results = await Promise.all(
       items.map(async (item) => {
         try {
           const uploadId = await uploadFileToDrive(workspaceId, item, (progress) => {
@@ -104,14 +121,25 @@ export function DriveUploadActions({ workspaceId, parentId }: DriveUploadActions
             });
           });
           updateUpload(item.name, { status: 'done', uploadId, bytesUploaded: item.file.size });
+          return true;
         } catch (error) {
           updateUpload(item.name, {
             status: 'error',
             error: error instanceof Error ? error.message : 'Upload failed',
           });
+          return false;
         }
       }),
     );
+
+    const completedCount = results.filter((completed) => completed).length;
+    trackEvent('file.upload_completed', {
+      workspace_id: workspaceId,
+      file_count: completedCount,
+      upload_count: items.length,
+      total_bytes_bucket: totalBytes,
+      status: completedCount === items.length ? 'completed' : completedCount > 0 ? 'partial' : 'failed',
+    });
 
     setIsUploading(false);
   }

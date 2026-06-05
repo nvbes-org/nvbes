@@ -16,6 +16,7 @@ use crate::domains::billing::service::{
 };
 use crate::http::error::AppError;
 use crate::http::request::{client_ip, user_agent};
+use nvbes_product_analytics::ProductAnalyticsEvent;
 use std::time::Instant;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
@@ -121,6 +122,7 @@ pub(crate) async fn create_checkout(
     )
     .await?;
 
+    let plan_code = request.plan_code;
     let result = service::create_checkout_session(
         &state.rate_limiter,
         &state.db,
@@ -128,7 +130,7 @@ pub(crate) async fn create_checkout(
         &state.config,
         &access,
         CreateCheckoutInput {
-            plan_code: request.plan_code,
+            plan_code: plan_code.clone(),
             success_url: request.success_url,
             cancel_url: request.cancel_url,
         },
@@ -148,6 +150,17 @@ pub(crate) async fn create_checkout(
             "failure",
             started_at.elapsed(),
         ),
+    }
+
+    if result.is_ok() {
+        state.product_analytics.capture(
+            ProductAnalyticsEvent::workspace_for_user(
+                "billing.checkout_started",
+                access.auth.user_id,
+                workspace_id,
+            )
+            .property("plan_code", plan_code),
+        );
     }
 
     Ok(Json(result?))

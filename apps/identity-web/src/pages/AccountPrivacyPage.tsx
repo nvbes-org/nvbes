@@ -16,13 +16,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { identityHttpClient } from '../identity.http';
-import {
-  setTrackingConsent,
-  getTrackingConsent,
-  DEFAULT_CONSENT,
-  DECLINE_ALL_CONSENT,
-  type CookieConsentState,
-} from '../tracking-consent';
+import { CookieConsentSettings } from '../components/CookieConsentSettings';
+import { setTrackingConsent, DECLINE_ALL_CONSENT } from '../tracking-consent';
 
 const emptySchema = z.undefined();
 
@@ -45,6 +40,12 @@ const consentLabels: Record<string, string> = {
   cookie_consent_vendor_identity: 'Cookie nvbes Identity',
   cookie_consent_vendor_posthog: 'Cookie PostHog',
   cookie_consent_vendor_sentry: 'Cookie Sentry',
+  posthog_product_analytics: 'PostHog analytics produit',
+  posthog_autocapture_heatmaps: 'PostHog heatmaps & autocapture',
+  posthog_session_replay: 'PostHog session replay',
+  posthog_surveys_feedback: 'PostHog surveys & feedback',
+  posthog_error_tracking: 'PostHog error tracking',
+  posthog_feature_flags: 'PostHog feature flags',
   marketing_emails: 'Emails marketing',
   data_processing: 'Traitement des donnees',
   third_party_sharing: 'Partage avec des tiers',
@@ -100,9 +101,7 @@ export default function AccountPrivacyPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [cookieConsent, setCookieConsent] = useState<CookieConsentState>(
-    () => getTrackingConsent() || DEFAULT_CONSENT,
-  );
+  const [cookieConsentRevision, setCookieConsentRevision] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const fetchConsents = async () => {
@@ -145,7 +144,7 @@ export default function AccountPrivacyPage() {
       ) {
         // Also update local storage if cookie consent revoked
         setTrackingConsent(DECLINE_ALL_CONSENT, 'identity-web:account-privacy:revoke');
-        setCookieConsent(DECLINE_ALL_CONSENT);
+        setCookieConsentRevision((revision) => revision + 1);
       }
     } catch {
       setConsents(previous);
@@ -290,146 +289,7 @@ export default function AccountPrivacyPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-4">
-            {/* Category: Essentials */}
-            <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <span>🔒</span> Essentiels et Sécurité
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Nécessaires au fonctionnement technique et à la sécurité.
-                  </p>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  Obligatoire
-                </span>
-              </div>
-              <div className="pl-5 pt-1.5 border-t border-border/20 flex flex-wrap gap-x-4 gap-y-1">
-                <span className="text-xs text-muted-foreground">⚡ nvbes Identity</span>
-                <span className="text-xs text-muted-foreground">
-                  💳 Stripe (Paiements et Fraude)
-                </span>
-              </div>
-            </div>
-
-            {/* Category: Analytics */}
-            <div className="rounded-xl border border-border/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <span>📈</span> Analyses d'audience
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Mesure l'utilisation pour l'amélioration continue.
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={cookieConsent.categories.analytics}
-                    onChange={() => {
-                      const nextVal = !cookieConsent.categories.analytics;
-                      const next = {
-                        categories: { ...cookieConsent.categories, analytics: nextVal },
-                        vendors: { ...cookieConsent.vendors, posthog: nextVal },
-                      };
-                      setCookieConsent(next);
-                      setTrackingConsent(next, 'identity-web:account-privacy:analytics');
-                    }}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              </div>
-              <div className="pl-5 pt-2 border-t border-border/20 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-foreground">PostHog</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Analyses comportementales et de parcours.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={cookieConsent.vendors.posthog}
-                      onChange={() => {
-                        const nextVal = !cookieConsent.vendors.posthog;
-                        const next = {
-                          categories: { ...cookieConsent.categories, analytics: nextVal },
-                          vendors: { ...cookieConsent.vendors, posthog: nextVal },
-                        };
-                        setCookieConsent(next);
-                        setTrackingConsent(next, 'identity-web:account-privacy:posthog');
-                      }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Category: Performance */}
-            <div className="rounded-xl border border-border/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <span>🛠️</span> Performance & Erreurs
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Suivi de la stabilité et diagnostics techniques.
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={cookieConsent.categories.performance}
-                    onChange={() => {
-                      const nextVal = !cookieConsent.categories.performance;
-                      const next = {
-                        categories: { ...cookieConsent.categories, performance: nextVal },
-                        vendors: { ...cookieConsent.vendors, sentry: nextVal },
-                      };
-                      setCookieConsent(next);
-                      setTrackingConsent(next, 'identity-web:account-privacy:performance');
-                    }}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              </div>
-              <div className="pl-5 pt-2 border-t border-border/20 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-foreground">Sentry</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Rapports d'erreurs en temps réel.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={cookieConsent.vendors.sentry}
-                      onChange={() => {
-                        const nextVal = !cookieConsent.vendors.sentry;
-                        const next = {
-                          categories: { ...cookieConsent.categories, performance: nextVal },
-                          vendors: { ...cookieConsent.vendors, sentry: nextVal },
-                        };
-                        setCookieConsent(next);
-                        setTrackingConsent(next, 'identity-web:account-privacy:sentry');
-                      }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-8 h-4 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CookieConsentSettings key={cookieConsentRevision} />
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@
       "@nvbes/http-client": ["../../libs/ts/http-client/src/index.ts"],
       "@nvbes/identity-sdk": ["../../libs/ts/identity-sdk/src/index.ts"],
       "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
+      "@nvbes/web-runtime/posthog": ["../../libs/ts/web-runtime/src/posthog.ts"],
       "@/*": ["./src/*"]
     }
   },

@@ -23,6 +23,11 @@ local.file "grafana_cloud_profiles_token" {
   is_secret = true
 }
 
+local.file "posthog_project_token" {
+  filename  = "/run/secrets/posthog_project_token"
+  is_secret = true
+}
+
 local.file "nvbes_observability_internal_token" {
   filename  = "/run/secrets/nvbes_observability_internal_token"
   is_secret = true
@@ -195,7 +200,10 @@ otelcol.processor.tail_sampling "privacy" {
 
 otelcol.processor.batch "default" {
   output {
-    traces = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    traces = [
+      otelcol.exporter.otlphttp.grafana_cloud.input,
+      otelcol.exporter.otlphttp.posthog_traces.input,
+    ]
   }
 }
 
@@ -211,6 +219,19 @@ otelcol.auth.basic "grafana_cloud" {
     username = sys.env("GRAFANA_CLOUD_OTLP_USER")
     password = local.file.grafana_cloud_otlp_token.content
   }
+}
+
+otelcol.exporter.otlphttp "posthog_traces" {
+  traces_endpoint = sys.env("POSTHOG_OTLP_TRACES_ENDPOINT")
+
+  client {
+    endpoint = sys.env("POSTHOG_OTLP_HOST")
+    auth     = otelcol.auth.bearer.posthog.handler
+  }
+}
+
+otelcol.auth.bearer "posthog" {
+  token = local.file.posthog_project_token.content
 }
 
 pyroscope.receive_http "nvbes" {
@@ -310,5 +331,71 @@ loki.write "grafana_cloud" {
       username = sys.env("GRAFANA_CLOUD_LOKI_USER")
       password = local.file.grafana_cloud_loki_token.content
     }
+  }
+}
+
+otelcol.receiver.filelog "nvbes_posthog_logs" {
+  include                    = ["/var/log/nvbes/*.jsonl"]
+  start_at                   = "end"
+  include_file_name          = false
+  include_file_name_resolved = false
+  include_file_path          = false
+  include_file_path_resolved = false
+  max_log_size               = "16KiB"
+
+  resource = {
+    "deployment.environment" = "production",
+    "service.namespace"      = "nvbes",
+    "platform"               = "nvbes",
+  }
+
+  output {
+    logs = [otelcol.processor.transform.posthog_logs_privacy.input]
+  }
+}
+
+otelcol.processor.transform "posthog_logs_privacy" {
+  error_mode = "ignore"
+
+  log_statements {
+    context = "log"
+    statements = [
+      `replace_pattern(body, "(?i)(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\\s]+)", "[FilteredSecret]")`,
+      `replace_pattern(body, "(?i)(Bearer|Basic)\\s+[A-Za-z0-9._~+/=-]+", "[FilteredAuthorization]")`,
+      `replace_pattern(body, "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", "[FilteredEmail]")`,
+      `replace_pattern(body, "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", "[FilteredIp]")`,
+      `replace_pattern(body, "\"(client_ip|user_agent|object_key|payload|file_name|filename)\":\"[^\"]*\"", "\"filtered\":\"[Filtered]\"")`,
+      `delete_key(attributes, "log.file.name")`,
+      `delete_key(attributes, "log.file.path")`,
+      `delete_key(attributes, "email")`,
+      `delete_key(attributes, "client_ip")`,
+      `delete_key(attributes, "user_agent")`,
+      `delete_key(attributes, "object_key")`,
+      `delete_key(attributes, "file_name")`,
+      `delete_key(attributes, "filename")`,
+      `delete_key(attributes, "token")`,
+      `delete_key(attributes, "authorization")`,
+      `limit(attributes, 80, [])`,
+      `truncate_all(attributes, 2048)`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.batch.posthog_logs.input]
+  }
+}
+
+otelcol.processor.batch "posthog_logs" {
+  output {
+    logs = [otelcol.exporter.otlphttp.posthog_logs.input]
+  }
+}
+
+otelcol.exporter.otlphttp "posthog_logs" {
+  logs_endpoint = sys.env("POSTHOG_OTLP_LOGS_ENDPOINT")
+
+  client {
+    endpoint = sys.env("POSTHOG_OTLP_HOST")
+    auth     = otelcol.auth.bearer.posthog.handler
   }
 }

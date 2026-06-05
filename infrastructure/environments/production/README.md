@@ -11,8 +11,9 @@ Flux production cible:
 ```text
 nvbes APIs /metrics ──────┐
 nvbes workers /metrics ───┤─ Grafana Alloy ── remote_write ── Grafana Cloud Metrics
-nvbes OTLP traces ────────┤                 ├─ OTLP HTTP ──── Grafana Cloud Traces
+nvbes OTLP traces ────────┤                 ├─ OTLP HTTP ──── Grafana Cloud Traces + PostHog Traces
 nvbes app logs ───────────┤                 ├─ Loki push ──── Grafana Cloud Logs
+                           │                 ├─ OTLP HTTP ──── PostHog Logs
 nvbes Pyroscope profiles ─┘                 └─ Pyroscope ──── Grafana Cloud Profiles
 ```
 
@@ -26,8 +27,8 @@ Profiles/Pyroscope.
 ## Fichiers
 
 - `docker-compose.observability.yml`: service Alloy production.
-- `alloy.config.alloy`: pipeline metrics, traces et profiles vers Grafana
-  Cloud.
+- `alloy.config.alloy`: pipeline metrics, traces, logs et profiles vers
+  Grafana Cloud, avec dual-export traces/logs vers PostHog.
 - `observability.env.example`: variables requises, sans secret reel.
 
 ## Secrets requis
@@ -52,11 +53,19 @@ GRAFANA_CLOUD_PROFILES_URL="https://profiles-prod-<region>.grafana.net"
 GRAFANA_CLOUD_PROFILES_USER="<stack-profiles-user>"
 GRAFANA_CLOUD_PROFILES_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_profiles_token"
 
+POSTHOG_PROJECT_TOKEN_FILE="/etc/nvbes/secrets/posthog_project_token"
+POSTHOG_OTLP_HOST="https://eu.i.posthog.com"
+POSTHOG_OTLP_LOGS_ENDPOINT="https://eu.i.posthog.com/i/v1/logs"
+POSTHOG_OTLP_TRACES_ENDPOINT="https://eu.i.posthog.com/i/v1/traces"
+
 NVBES_LOGS_DIR="/var/log/nvbes"
 NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE="/etc/nvbes/secrets/nvbes_observability_internal_token"
 ```
 
 Les fichiers `*_TOKEN_FILE` contiennent uniquement le token brut correspondant.
+`POSTHOG_PROJECT_TOKEN_FILE` contient le project token PostHog utilise comme
+Bearer token OTLP. Utiliser PostHog EU Cloud ou un proxy first-party; ne pas
+pointer vers un endpoint US direct.
 
 ## Demarrage
 
@@ -113,10 +122,15 @@ uniquement dans Alloy.
   signed URL, payload utilisateur, contenu de fichier.
 - Les traces passent par `otelcol.processor.attributes` puis
   `otelcol.processor.tail_sampling`: suppression IP/user-agent/object key et
-  conservation prioritaire des erreurs/lenteurs avec baseline sample 20%.
+  conservation prioritaire des erreurs/lenteurs avec baseline sample 20% avant
+  export Grafana et PostHog.
 - Les logs applicatifs lus depuis `NVBES_LOGS_DIR` passent par `loki.process`:
   redaction secrets/email/IP/champs sensibles, drop des lignes > 16KB et
   sampling baseline 50% avant envoi Loki.
+- Le flux PostHog Logs relit les memes fichiers via `otelcol.receiver.filelog`
+  et applique une redaction OTLP dediee avant `POSTHOG_OTLP_LOGS_ENDPOINT`.
+  Alloy doit etre lance avec `--stability.level=public-preview` pour ce
+  receiver. Ne pas exporter les metrics vers PostHog dans cette passe.
 - Le profiling continu exporte uniquement des stacks CPU et des labels
   techniques (`service`, `environment`, `platform`). Ne jamais ajouter de tags
   dynamiques issus d'un tenant, utilisateur, chemin fichier, object key ou
@@ -139,6 +153,9 @@ Dans Grafana Cloud:
 - Metrics APIs: `http_requests_total{environment="production"}`
 - Metrics workers: `worker_queue_jobs_total{environment="production"}`
 - Traces: service `nvbes-identity-api` ou `nvbes-drive-api`
+- PostHog Traces: evenement trace visible dans PostHog uniquement apres
+  redaction et tail sampling Alloy.
+- PostHog Logs: lignes JSON redacted, sans email/IP/token/object key.
 - Profiles: applications `identity-api`, `drive-api`, `identity-worker`,
   `drive-worker`
 - Logs: `{platform="nvbes", environment="production"}`

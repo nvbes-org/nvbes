@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use nvbes_core::http::error::ErrorEnvelope;
+use nvbes_product_analytics::ProductAnalyticsEvent;
 
 use crate::{
     app::AppState,
@@ -147,6 +148,15 @@ async fn create_share_link(
         user_agent(&headers),
     )
     .await?;
+
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::workspace_for_user(
+            "share_link.created",
+            access.auth.user_id,
+            result.share_link.workspace_id,
+        )
+        .property("share_link_count", 1_i64),
+    );
 
     Ok(Json(result))
 }

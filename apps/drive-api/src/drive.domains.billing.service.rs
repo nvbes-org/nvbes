@@ -1,5 +1,6 @@
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 use nvbes_core::config::AppConfig;
+use nvbes_product_analytics::ProductAnalytics;
 
 use super::manage;
 pub use super::types::*;
@@ -51,8 +52,9 @@ pub async fn get_invoice_estimate(
 pub async fn handle_webhook(
     db: &sqlx::PgPool,
     config: &AppConfig,
+    product_analytics: &ProductAnalytics,
     signature_header: Option<&str>,
     payload: &[u8],
 ) -> Result<BillingWebhookResponse, AppError> {
-    webhooks::handle_webhook(db, config, signature_header, payload).await
+    webhooks::handle_webhook(db, config, product_analytics, signature_header, payload).await
 }

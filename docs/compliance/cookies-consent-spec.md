@@ -19,8 +19,13 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
 | Catégorie                      | Consentement requis                | Exemples / Services                                                    |
 | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------- |
 | Strictement nécessaires        | Non                                | nvbes Identity (Auth), Stripe (Fraude), Sécurité API                 |
-| Mesure d'audience (Exemptée)   | Non (si configuré)                 | PostHog (Anonymisé, proxyfié conforme CNIL)                            |
-| Product Analytics              | Oui                                | PostHog (Full sessions, replay, heatmaps)                              |
+| Mesure d'audience (Exemptée)   | Non (si configuré et documenté)    | Mesure strictement anonymisée, proxyfiée, sans cross-site ni replay     |
+| Product Analytics              | Oui                                | PostHog `posthog_product_analytics`                                    |
+| Heatmaps / Autocapture         | Oui, finalité séparée              | PostHog `posthog_autocapture_heatmaps`, routes sensibles bloquées      |
+| Session Replay                 | Oui, finalité séparée              | PostHog `posthog_session_replay`, masquage texte/input fort            |
+| Surveys / Feedback             | Oui, finalité séparée              | PostHog `posthog_surveys_feedback`, post-auth hors pages sensibles     |
+| Feature Flags / Experiments    | Oui, finalité séparée              | PostHog `posthog_feature_flags`, flags non critiques uniquement        |
+| Error Tracking PostHog         | Oui, finalité séparée              | PostHog `posthog_error_tracking`, scrubber actif                       |
 | Performance / Erreurs          | Oui sauf qualification stricte     | Sentry browser/SW si non strictement technique; diagnostics techniques exemptes seulement si minimises |
 
 ## Exigences UI
@@ -49,6 +54,25 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
   pas d'identifiant direct, `sendDefaultPii=false`, scrubber actif, duree courte.
 - A defaut de cette documentation, Sentry est traite comme performance soumis au
   consentement prealable.
+
+## Regles PostHog
+
+- Stockage consentement courant: `nvbes.tracking-consent.v3`.
+- Les finalites PostHog sont separees:
+  `posthog_product_analytics`, `posthog_autocapture_heatmaps`,
+  `posthog_session_replay`, `posthog_surveys_feedback`,
+  `posthog_error_tracking`, `posthog_feature_flags`.
+- Migration v2 -> v3: un ancien consentement PostHog active seulement
+  `posthog_product_analytics`; replay, surveys, error tracking, heatmaps et
+  flags exigent un nouveau choix.
+- Le retrait a chaud doit stopper capture, replay, surveys, polling flags et
+  purger cookies/storage PostHog.
+- Interdit dans PostHog: email, nom, nom de fichier, object key, token, signed
+  URL, payload utilisateur, contenu de fichier, UUID brut.
+- Les distinct IDs et group IDs doivent etre pseudonymises par HMAC avec un
+  salt analytics.
+- Les feature flags PostHog ne doivent jamais piloter auth, securite, billing
+  enforcement ou autorisation d'acces.
 
 ## Gouvernance
 

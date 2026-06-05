@@ -8,6 +8,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use nvbes_core::http::error::ErrorEnvelope;
+use nvbes_product_analytics::ProductAnalyticsEvent;
 
 use crate::{
     app::AppState,
@@ -103,6 +104,7 @@ async fn create_checkout_session(
     )
     .await?;
 
+    let plan_code = request.plan_code.clone();
     let result = crate::domains::billing::create_checkout_session(
         &state.db,
         &state.config,
@@ -124,6 +126,17 @@ async fn create_checkout_session(
             "failure",
             started_at.elapsed(),
         ),
+    }
+
+    if result.is_ok() {
+        state.product_analytics.capture(
+            ProductAnalyticsEvent::workspace_for_user(
+                "billing.checkout_started",
+                access.auth.user_id,
+                workspace_id,
+            )
+            .property("plan_code", plan_code),
+        );
     }
 
     Ok(Json(result?))

@@ -25,7 +25,7 @@ function getSentryHost(dsn?: string): string {
 function getPostHogHost(apiKey: string, apiHost: string): string {
   if (!apiKey) return '';
   try {
-    return new URL(apiHost || 'https://app.posthog.com').origin;
+    return new URL(apiHost || 'https://eu.i.posthog.com').origin;
   } catch {
     return '';
   }
@@ -185,7 +185,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_POSTHOG_HOST ||
     localEnv.VITE_POSTHOG_HOST ||
     rootEnv.VITE_POSTHOG_HOST ||
-    'https://app.posthog.com';
+    'https://eu.i.posthog.com';
   const posthogHost = getPostHogHost(posthogKey, posthogApiHost);
 
   const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost);
@@ -328,6 +328,10 @@ export default defineConfig(({ mode }) => {
         {
           find: '@nvbes/identity-sdk',
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk/src/index.ts'),
+        },
+        {
+          find: '@nvbes/web-runtime/posthog',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/posthog.ts'),
         },
         {
           find: '@nvbes/web-runtime',

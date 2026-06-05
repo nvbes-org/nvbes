@@ -15,6 +15,7 @@ pub struct AppState {
     pub config: AppConfig,
     pub db: Database,
     pub observability: nvbes_observability::metrics::HttpMetrics,
+    pub product_analytics: nvbes_product_analytics::ProductAnalytics,
     pub storage: std::sync::Arc<dyn ObjectStore>,
     pub scanner: std::sync::Arc<dyn ScanEngine>,
     pub redis: nvbes_redis::RedisPool,
@@ -111,10 +112,12 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
     let rate_limiter = nvbes_core::limiter::RateLimiter::new(redis.clone());
 
     let cors = nvbes_core::security::cors_layer(&config);
+    let product_analytics = build_product_analytics(&config)?;
     let state = AppState {
         config,
         db,
         observability: nvbes_observability::metrics::HttpMetrics::default(),
+        product_analytics,
         storage,
         scanner,
         redis,
@@ -167,4 +170,17 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
         .layer(sentry_tower::SentryHttpLayer::new().enable_transaction())
         .layer(sentry_tower::NewSentryLayer::new_from_top())
         .with_state(state))
+}
+
+fn build_product_analytics(
+    config: &AppConfig,
+) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
+    Ok(nvbes_product_analytics::ProductAnalytics::new(
+        nvbes_product_analytics::ProductAnalyticsConfig {
+            enabled: config.posthog_enabled,
+            host: config.posthog_host.clone(),
+            project_token: config.posthog_project_token.clone(),
+            analytics_id_salt: config.analytics_id_salt.clone(),
+        },
+    )?)
 }

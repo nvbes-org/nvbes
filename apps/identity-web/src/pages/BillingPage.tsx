@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/card';
 import { useAccountContext } from '@/hooks/useAccountContext';
 import { cn } from '@/lib/utils';
+import { trackEvent } from '../identity.posthog';
 
 interface Plan {
   code: string;
@@ -165,6 +166,10 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setCheckoutLoading(planCode);
     try {
+      trackEvent('billing.checkout_started', {
+        plan_code: planCode,
+        workspace_id: workspaceId,
+      });
       window.location.href = await identityClient.createBillingCheckout(workspaceId, planCode);
     } finally {
       setCheckoutLoading(null);

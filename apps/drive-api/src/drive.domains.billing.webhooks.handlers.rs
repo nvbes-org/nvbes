@@ -3,11 +3,13 @@ use super::super::types::BillingWebhookResponse;
 use crate::http::error::AppError;
 use nvbes_billing::hex_encode;
 use nvbes_core::config::AppConfig;
+use nvbes_product_analytics::{ProductAnalytics, ProductAnalyticsEvent};
 use sha2::{Digest, Sha256};
 
 pub async fn handle_webhook(
     db: &sqlx::PgPool,
     config: &AppConfig,
+    product_analytics: &ProductAnalytics,
     signature_header: Option<&str>,
     payload: &[u8],
 ) -> Result<BillingWebhookResponse, AppError> {
@@ -53,7 +55,7 @@ pub async fn handle_webhook(
 
     let processed = super::processors::process_stripe_event(&mut tx, &event).await;
     match processed {
-        Ok(()) => {
+        Ok(analytics_signal) => {
             sqlx::query(
                 r#"
                 UPDATE billing_webhook_events
@@ -66,6 +68,16 @@ pub async fn handle_webhook(
             .execute(tx.as_mut())
             .await?;
             tx.commit().await?;
+
+            if let Some(signal) = analytics_signal {
+                let mut analytics_event =
+                    ProductAnalyticsEvent::workspace(signal.event_name, signal.workspace_id);
+                if let Some(status) = signal.status {
+                    analytics_event = analytics_event.property("status", status);
+                }
+                product_analytics.capture(analytics_event);
+            }
+
             Ok(BillingWebhookResponse {
                 provider_event_id: event.id,
                 status: "processed".to_string(),

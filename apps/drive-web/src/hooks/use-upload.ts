@@ -8,7 +8,16 @@ import {
   cancelFileUpload,
   type UploadFileInput,
 } from '../drive.native-fs.service';
+import { trackEvent } from '../drive.posthog';
 import type { UploadProgress, UploadSummary } from '../drive.uploads.types';
+
+function bytesBucket(bytes: number): string {
+  if (bytes < 1024 * 1024) return '<1mb';
+  if (bytes < 10 * 1024 * 1024) return '1-10mb';
+  if (bytes < 100 * 1024 * 1024) return '10-100mb';
+  if (bytes < 1024 * 1024 * 1024) return '100mb-1gb';
+  return '1gb+';
+}
 
 export function useUpload(workspaceId: string, parentId?: string) {
   const queryClient = useQueryClient();
@@ -64,6 +73,14 @@ export function useUpload(workspaceId: string, parentId?: string) {
       void acquireWakeLock();
 
       try {
+        const totalBytes = itemsWithParent.reduce((acc, item) => acc + item.file.size, 0);
+        trackEvent('file.upload_started', {
+          workspace_id: workspaceId,
+          file_count: itemsWithParent.length,
+          total_bytes_bucket: bytesBucket(totalBytes),
+        });
+
+        let completedCount = 0;
         await uploadDirectoryToDrive(
           workspaceId,
           itemsWithParent,
@@ -80,8 +97,21 @@ export function useUpload(workspaceId: string, parentId?: string) {
               uploadId,
               bytesUploaded: uploads.get(fileName)?.fileSize ?? 0,
             });
+            if (!error) completedCount += 1;
           },
         );
+        trackEvent('file.upload_completed', {
+          workspace_id: workspaceId,
+          file_count: completedCount,
+          upload_count: itemsWithParent.length,
+          total_bytes_bucket: bytesBucket(totalBytes),
+          status:
+            completedCount === itemsWithParent.length
+              ? 'completed'
+              : completedCount > 0
+                ? 'partial'
+                : 'failed',
+        });
       } finally {
         void releaseWakeLock();
       }
@@ -112,6 +142,12 @@ export function useUpload(workspaceId: string, parentId?: string) {
       void acquireWakeLock();
 
       try {
+        trackEvent('file.upload_started', {
+          workspace_id: workspaceId,
+          file_count: 1,
+          total_bytes_bucket: bytesBucket(file.size),
+        });
+
         const uploadId = await uploadFileFromHandle(workspaceId, handle, parentId, (progress) => {
           updateUpload(key, {
             bytesUploaded: progress.bytesUploaded,
@@ -124,10 +160,24 @@ export function useUpload(workspaceId: string, parentId?: string) {
           uploadId,
           bytesUploaded: file.size,
         });
+        trackEvent('file.upload_completed', {
+          workspace_id: workspaceId,
+          file_count: 1,
+          upload_count: 1,
+          total_bytes_bucket: bytesBucket(file.size),
+          status: 'completed',
+        });
       } catch (error) {
         updateUpload(key, {
           status: 'error',
           error: error instanceof Error ? error.message : 'Upload failed',
+        });
+        trackEvent('file.upload_completed', {
+          workspace_id: workspaceId,
+          file_count: 0,
+          upload_count: 1,
+          total_bytes_bucket: bytesBucket(file.size),
+          status: 'failed',
         });
       } finally {
         void releaseWakeLock();
