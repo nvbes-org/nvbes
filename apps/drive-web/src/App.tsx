@@ -6,6 +6,7 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { Profiler, useState } from 'react';
 import { NetworkQualityInit } from './components/NetworkQualityInit';
 import { router } from './drive.router';
+import { TrackingConsentBanner } from './TrackingConsentBanner';
 
 function handleRenderProfiler(
   id: string,
@@ -37,6 +38,7 @@ export function App() {
     <ErrorBoundary name="global">
       <QueryClientProvider client={queryClient}>
         <NetworkQualityInit />
+        <TrackingConsentBanner />
         {import.meta.env.DEV ? (
           <Profiler id="drive-web" onRender={handleRenderProfiler}>
             <RouterProvider router={router} />

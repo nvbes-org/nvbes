@@ -29,8 +29,18 @@ const SECRET_ASSIGNMENT_PATTERN =
   /\b(token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\s]+)/gi;
 
 let initialized = false;
+let consentGranted = false;
 
-export function initDriveServiceWorkerSentry(): boolean {
+export function setDriveServiceWorkerSentryConsent(accepted: boolean): boolean {
+  consentGranted = accepted;
+  if (!accepted) {
+    return false;
+  }
+
+  return initDriveServiceWorkerSentry();
+}
+
+function initDriveServiceWorkerSentry(): boolean {
   if (initialized) {
     return true;
   }
@@ -60,7 +70,7 @@ export function captureDriveServiceWorkerException(
   operation: string,
   context?: Record<string, unknown>,
 ) {
-  if (!initialized) {
+  if (!initialized || !consentGranted) {
     return;
   }
 

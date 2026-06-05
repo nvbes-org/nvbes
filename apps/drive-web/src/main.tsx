@@ -5,6 +5,7 @@ import './styles.css';
 import { configureErrorReporting, registerServiceWorker } from '@nvbes/web-runtime';
 import { initPostHog } from './drive.posthog';
 import { captureSentryException, initSentry } from './drive.sentry';
+import { syncDriveServiceWorkerSentryConsent } from './drive.sw.consent';
 import { syncTrackingConsent } from './tracking-consent';
 
 const sentryInitialized = initSentry();
@@ -29,3 +30,4 @@ ReactDOM.createRoot(rootEl).render(
 );
 
 registerServiceWorker();
+void syncDriveServiceWorkerSentryConsent();

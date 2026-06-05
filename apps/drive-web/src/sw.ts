@@ -7,7 +7,7 @@ import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
 import {
   captureDriveServiceWorkerException,
-  initDriveServiceWorkerSentry,
+  setDriveServiceWorkerSentryConsent,
 } from './drive.sw.sentry';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -33,21 +33,17 @@ interface BackgroundFetchEvent extends ExtendableEvent {
   updateUI(options: { title: string }): Promise<void>;
 }
 
-const sentryInitialized = initDriveServiceWorkerSentry();
-
-if (sentryInitialized) {
-  self.addEventListener('error', (event) => {
-    captureDriveServiceWorkerException(event.error ?? event.message, 'global.error', {
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-    });
+self.addEventListener('error', (event) => {
+  captureDriveServiceWorkerException(event.error ?? event.message, 'global.error', {
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
   });
+});
 
-  self.addEventListener('unhandledrejection', (event) => {
-    captureDriveServiceWorkerException(event.reason, 'global.unhandledrejection');
-  });
-}
+self.addEventListener('unhandledrejection', (event) => {
+  captureDriveServiceWorkerException(event.reason, 'global.unhandledrejection');
+});
 
 clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST);
@@ -110,6 +106,11 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
 
   if (type === 'NETWORK_QUALITY') {
     isSlowConnection = event.data.isSlowConnection === true;
+    return;
+  }
+
+  if (type === 'SENTRY_CONSENT_UPDATED') {
+    setDriveServiceWorkerSentryConsent(event.data?.sentryAccepted === true);
     return;
   }
 
