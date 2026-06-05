@@ -22,24 +22,35 @@ function getSentryHost(dsn?: string): string {
   }
 }
 
+function getPostHogHost(apiKey: string, apiHost: string): string {
+  if (!apiKey) return '';
+  try {
+    return new URL(apiHost || 'https://app.posthog.com').origin;
+  } catch {
+    return '';
+  }
+}
+
 function getCsp(
   mode: string,
   sentryHost: string,
   stripeJsUrl: string,
   stripeApiUrl: string,
+  posthogHost: string,
 ): string {
   const isDev = mode === 'development';
   const sentryScript = sentryHost ? ` ${sentryHost}` : '';
   const sentryConnect = sentryHost ? ` ${sentryHost}` : '';
+  const posthogConnect = posthogHost ? ` ${posthogHost}` : '';
 
   const stripeScript = stripeJsUrl ? ` ${stripeJsUrl}` : '';
   const stripeFrame = stripeJsUrl ? ` ${stripeJsUrl}` : '';
   const stripeConnect = stripeApiUrl ? ` ${stripeApiUrl}` : '';
 
   if (isDev) {
-    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${sentryScript} ${stripeScript}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ${sentryConnect} ${stripeConnect} http://localhost:8080 http://127.0.0.1:8080; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
+    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${sentryScript} ${stripeScript}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ${sentryConnect} ${stripeConnect} ${posthogConnect} http://localhost:8080 http://127.0.0.1:8080; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
   }
-  return `default-src 'self'; script-src 'self' ${sentryScript} ${stripeScript}; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${sentryConnect} ${stripeConnect}; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
+  return `default-src 'self'; script-src 'self' ${sentryScript} ${stripeScript}; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${sentryConnect} ${stripeConnect} ${posthogConnect}; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
 }
 
 function getMetaCsp(
@@ -47,8 +58,9 @@ function getMetaCsp(
   sentryHost: string,
   stripeJsUrl: string,
   stripeApiUrl: string,
+  posthogHost: string,
 ): string {
-  return getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl).replace(
+  return getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost).replace(
     "; frame-ancestors 'none'",
     '',
   );
@@ -63,11 +75,12 @@ function cspPlugin(
   sentryHost: string,
   stripeJsUrl: string,
   stripeApiUrl: string,
+  posthogHost: string,
 ): Plugin {
   return {
     name: 'csp-injection-plugin',
     transformIndexHtml(html: string) {
-      const cspString = getMetaCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl);
+      const cspString = getMetaCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost);
       const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}" />`;
       return html.replace('<!-- %CSP_META% -->', metaTag);
     },
@@ -166,7 +179,16 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_STRIPE_API_URL ||
     (stripeEnabled ? 'https://api.stripe.com' : '');
 
-  const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl);
+  const posthogKey =
+    process.env.VITE_POSTHOG_KEY || localEnv.VITE_POSTHOG_KEY || rootEnv.VITE_POSTHOG_KEY || '';
+  const posthogApiHost =
+    process.env.VITE_POSTHOG_HOST ||
+    localEnv.VITE_POSTHOG_HOST ||
+    rootEnv.VITE_POSTHOG_HOST ||
+    'https://app.posthog.com';
+  const posthogHost = getPostHogHost(posthogKey, posthogApiHost);
+
+  const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost);
   const sentryOrg = process.env.SENTRY_ORG || localEnv.SENTRY_ORG || rootEnv.SENTRY_ORG || 'nvbes';
   const sentryAuthToken =
     process.env.SENTRY_AUTH_TOKEN ||
@@ -187,7 +209,7 @@ export default defineConfig(({ mode }) => {
       ...pluginList(react()),
       ...pluginList(tailwindcss()),
       devtoolsJson(),
-      cspPlugin(mode, sentryHost, stripeJsUrl, stripeApiUrl),
+      cspPlugin(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost),
       sriPlugin(),
       ...pluginList(
         VitePWA({

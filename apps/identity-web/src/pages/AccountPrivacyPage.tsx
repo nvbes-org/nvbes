@@ -144,7 +144,7 @@ export default function AccountPrivacyPage() {
         consent.consent_type.startsWith('cookie_consent_')
       ) {
         // Also update local storage if cookie consent revoked
-        setTrackingConsent(DECLINE_ALL_CONSENT);
+        setTrackingConsent(DECLINE_ALL_CONSENT, 'identity-web:account-privacy:revoke');
         setCookieConsent(DECLINE_ALL_CONSENT);
       }
     } catch {
@@ -336,7 +336,7 @@ export default function AccountPrivacyPage() {
                         vendors: { ...cookieConsent.vendors, posthog: nextVal },
                       };
                       setCookieConsent(next);
-                      setTrackingConsent(next);
+                      setTrackingConsent(next, 'identity-web:account-privacy:analytics');
                     }}
                     className="sr-only peer"
                   />
@@ -362,7 +362,7 @@ export default function AccountPrivacyPage() {
                           vendors: { ...cookieConsent.vendors, posthog: nextVal },
                         };
                         setCookieConsent(next);
-                        setTrackingConsent(next);
+                        setTrackingConsent(next, 'identity-web:account-privacy:posthog');
                       }}
                       className="sr-only peer"
                     />
@@ -394,7 +394,7 @@ export default function AccountPrivacyPage() {
                         vendors: { ...cookieConsent.vendors, sentry: nextVal },
                       };
                       setCookieConsent(next);
-                      setTrackingConsent(next);
+                      setTrackingConsent(next, 'identity-web:account-privacy:performance');
                     }}
                     className="sr-only peer"
                   />
@@ -420,7 +420,7 @@ export default function AccountPrivacyPage() {
                           vendors: { ...cookieConsent.vendors, sentry: nextVal },
                         };
                         setCookieConsent(next);
-                        setTrackingConsent(next);
+                        setTrackingConsent(next, 'identity-web:account-privacy:sentry');
                       }}
                       className="sr-only peer"
                     />

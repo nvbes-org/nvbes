@@ -14,6 +14,17 @@ export interface CookieConsentState {
   };
 }
 
+export interface TrackingConsentStoredValue {
+  version: 2;
+  savedAt: string;
+  expiresAt: string;
+  source: string;
+  consent: CookieConsentState;
+}
+
+export const TRACKING_CONSENT_CHANGED_EVENT = 'nvbes:tracking-consent-changed';
+const CONSENT_TTL_DAYS = 183;
+
 export const CATEGORY_VENDORS_MAP = {
   essentials: ['stripe', 'identity'],
   analytics: ['posthog'],
@@ -65,6 +76,56 @@ export const DECLINE_ALL_CONSENT: CookieConsentState = {
 const STORAGE_KEY_V2 = 'nvbes.tracking-consent.v2';
 const STORAGE_KEY_V1 = 'nvbes.tracking-consent.v1';
 
+function consentExpiry(savedAt: Date): string {
+  const expiresAt = new Date(savedAt);
+  expiresAt.setDate(expiresAt.getDate() + CONSENT_TTL_DAYS);
+  return expiresAt.toISOString();
+}
+
+function createStoredConsent(
+  consent: CookieConsentState,
+  source: string,
+  savedAt = new Date(),
+): TrackingConsentStoredValue {
+  return {
+    version: 2,
+    savedAt: savedAt.toISOString(),
+    expiresAt: consentExpiry(savedAt),
+    source,
+    consent,
+  };
+}
+
+function parseStoredConsent(value: string): CookieConsentState | null {
+  const parsed = JSON.parse(value) as CookieConsentState | TrackingConsentStoredValue;
+  const consent = 'consent' in parsed ? parsed.consent : parsed;
+  const expiresAt = 'expiresAt' in parsed ? Date.parse(parsed.expiresAt) : Number.NaN;
+
+  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    window.localStorage.removeItem(STORAGE_KEY_V2);
+    window.localStorage.removeItem(STORAGE_KEY_V1);
+    return null;
+  }
+
+  if ('marketing' in consent.categories || 'marketingVendor' in consent.vendors) {
+    return {
+      categories: {
+        essentials: consent.categories.essentials,
+        analytics: consent.categories.analytics,
+        performance: consent.categories.performance,
+      },
+      vendors: {
+        stripe: consent.vendors.stripe,
+        identity: consent.vendors.identity,
+        posthog: consent.vendors.posthog,
+        sentry: consent.vendors.sentry,
+      },
+    };
+  }
+
+  return consent;
+}
+
 export function getTrackingConsent(): CookieConsentState | null {
   if (typeof window === 'undefined') {
     return null;
@@ -73,24 +134,7 @@ export function getTrackingConsent(): CookieConsentState | null {
   const valueV2 = window.localStorage.getItem(STORAGE_KEY_V2);
   if (valueV2) {
     try {
-      const parsed = JSON.parse(valueV2) as CookieConsentState;
-      // Clean up potentially loaded marketing keys if parsed
-      if ('marketing' in parsed.categories || 'marketingVendor' in parsed.vendors) {
-        return {
-          categories: {
-            essentials: parsed.categories.essentials,
-            analytics: parsed.categories.analytics,
-            performance: parsed.categories.performance,
-          },
-          vendors: {
-            stripe: parsed.vendors.stripe,
-            identity: parsed.vendors.identity,
-            posthog: parsed.vendors.posthog,
-            sentry: parsed.vendors.sentry,
-          },
-        };
-      }
-      return parsed;
+      return parseStoredConsent(valueV2);
     } catch {
       // Corrupted storage, fallback
     }
@@ -99,10 +143,16 @@ export function getTrackingConsent(): CookieConsentState | null {
   // Fallback to V1
   const valueV1 = window.localStorage.getItem(STORAGE_KEY_V1);
   if (valueV1 === 'accepted') {
-    window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(ACCEPT_ALL_CONSENT));
+    window.localStorage.setItem(
+      STORAGE_KEY_V2,
+      JSON.stringify(createStoredConsent(ACCEPT_ALL_CONSENT, 'legacy-v1-migration')),
+    );
     return ACCEPT_ALL_CONSENT;
   } else if (valueV1 === 'declined') {
-    window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(DECLINE_ALL_CONSENT));
+    window.localStorage.setItem(
+      STORAGE_KEY_V2,
+      JSON.stringify(createStoredConsent(DECLINE_ALL_CONSENT, 'legacy-v1-migration')),
+    );
     return DECLINE_ALL_CONSENT;
   }
 
@@ -121,12 +171,18 @@ export function isCategoryAccepted(category: keyof CookieConsentState['categorie
   return consent.categories[category] || false;
 }
 
-export function setTrackingConsent(consent: CookieConsentState) {
-  window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(consent));
+export function setTrackingConsent(consent: CookieConsentState, source = 'drive-web') {
+  window.localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(createStoredConsent(consent, source)));
 
   // Write v1 for backward compatibility
   const hasAnyOptional = consent.categories.analytics || consent.categories.performance;
   window.localStorage.setItem(STORAGE_KEY_V1, hasAnyOptional ? 'accepted' : 'declined');
+
+  window.dispatchEvent(
+    new CustomEvent(TRACKING_CONSENT_CHANGED_EVENT, {
+      detail: { consent, source },
+    }),
+  );
 
   void (async () => {
     try {

@@ -33,17 +33,17 @@ export function TrackingConsentBanner() {
   }
 
   const handleAcceptAll = () => {
-    setTrackingConsent(ACCEPT_ALL_CONSENT);
+    setTrackingConsent(ACCEPT_ALL_CONSENT, 'identity-web:banner:accept-all');
     window.location.reload();
   };
 
   const handleDeclineAll = () => {
-    setTrackingConsent(DECLINE_ALL_CONSENT);
+    setTrackingConsent(DECLINE_ALL_CONSENT, 'identity-web:banner:decline-all');
     window.location.reload();
   };
 
   const handleSaveCustom = () => {
-    setTrackingConsent(tempConsent);
+    setTrackingConsent(tempConsent, 'identity-web:banner:custom');
     window.location.reload();
   };
 

@@ -33,17 +33,17 @@ export function TrackingConsentBanner() {
   }
 
   const handleAcceptAll = () => {
-    setTrackingConsent(ACCEPT_ALL_CONSENT);
+    setTrackingConsent(ACCEPT_ALL_CONSENT, 'drive-web:banner:accept-all');
     window.location.reload();
   };
 
   const handleDeclineAll = () => {
-    setTrackingConsent(DECLINE_ALL_CONSENT);
+    setTrackingConsent(DECLINE_ALL_CONSENT, 'drive-web:banner:decline-all');
     window.location.reload();
   };
 
   const handleSaveCustom = () => {
-    setTrackingConsent(tempConsent);
+    setTrackingConsent(tempConsent, 'drive-web:banner:custom');
     window.location.reload();
   };
 
