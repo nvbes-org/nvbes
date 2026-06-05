@@ -13,6 +13,11 @@ local.file "grafana_cloud_otlp_token" {
   is_secret = true
 }
 
+local.file "grafana_cloud_loki_token" {
+  filename  = "/run/secrets/grafana_cloud_loki_token"
+  is_secret = true
+}
+
 local.file "grafana_cloud_profiles_token" {
   filename  = "/run/secrets/grafana_cloud_profiles_token"
   is_secret = true
@@ -97,6 +102,93 @@ otelcol.receiver.otlp "nvbes" {
   }
 
   output {
+    traces = [otelcol.processor.attributes.redact.input]
+  }
+}
+
+otelcol.processor.attributes "redact" {
+  action {
+    key    = "client.address"
+    action = "delete"
+  }
+
+  action {
+    key    = "client.ip"
+    action = "delete"
+  }
+
+  action {
+    key    = "http.user_agent"
+    action = "delete"
+  }
+
+  action {
+    key    = "user_agent"
+    action = "delete"
+  }
+
+  action {
+    key    = "enduser.id"
+    action = "delete"
+  }
+
+  action {
+    key    = "user.id"
+    action = "delete"
+  }
+
+  action {
+    key    = "email"
+    action = "delete"
+  }
+
+  action {
+    key    = "file.name"
+    action = "delete"
+  }
+
+  action {
+    key    = "object_key"
+    action = "delete"
+  }
+
+  output {
+    traces = [otelcol.processor.tail_sampling.privacy.input]
+  }
+}
+
+otelcol.processor.tail_sampling "privacy" {
+  decision_wait = "10s"
+
+  policy {
+    name = "errors"
+    type = "status_code"
+
+    status_code {
+      status_codes = ["ERROR"]
+    }
+  }
+
+  policy {
+    name = "slow_traces"
+    type = "latency"
+
+    latency {
+      threshold_ms = 1000
+    }
+  }
+
+  policy {
+    name = "baseline"
+    type = "probabilistic"
+
+    probabilistic {
+      sampling_percentage = 20
+      hash_salt           = "nvbes-production"
+    }
+  }
+
+  output {
     traces = [otelcol.processor.batch.default.input]
   }
 }
@@ -143,5 +235,80 @@ pyroscope.write "grafana_cloud" {
   external_labels = {
     environment = "production",
     platform    = "nvbes",
+  }
+}
+
+local.file_match "nvbes_logs" {
+  path_targets = [
+    {
+      "__path__" = "/var/log/nvbes/*.jsonl",
+      "job"      = "nvbes-app",
+    },
+  ]
+}
+
+loki.source.file "nvbes" {
+  targets    = local.file_match.nvbes_logs.targets
+  forward_to = [loki.process.privacy.receiver]
+}
+
+loki.process "privacy" {
+  stage.replace {
+    expression = "(?i)(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\\s]+)"
+    replace    = "[FilteredSecret]"
+  }
+
+  stage.replace {
+    expression = "(?i)(Bearer|Basic)\\s+[A-Za-z0-9._~+/=-]+"
+    replace    = "[FilteredAuthorization]"
+  }
+
+  stage.replace {
+    expression = "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}"
+    replace    = "[FilteredEmail]"
+  }
+
+  stage.replace {
+    expression = "\"(client_ip|user_agent|object_key|payload|file_name|filename)\":\"[^\"]*\""
+    replace    = "\"filtered\":\"[Filtered]\""
+  }
+
+  stage.replace {
+    expression = "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b"
+    replace    = "[FilteredIp]"
+  }
+
+  stage.drop {
+    longer_than         = "16KB"
+    drop_counter_reason = "oversized_log_line"
+  }
+
+  stage.sampling {
+    rate                = 0.5
+    drop_counter_reason = "baseline_log_sampling"
+  }
+
+  stage.static_labels {
+    values = {
+      environment = "production",
+      platform    = "nvbes",
+    }
+  }
+
+  stage.label_keep {
+    values = ["job", "environment", "platform"]
+  }
+
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_LOKI_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_LOKI_USER")
+      password = local.file.grafana_cloud_loki_token.content
+    }
   }
 }

@@ -12,6 +12,8 @@ services:
       GRAFANA_CLOUD_PROMETHEUS_USER: ${GRAFANA_CLOUD_PROMETHEUS_USER:?Set Grafana Cloud Prometheus user}
       GRAFANA_CLOUD_OTLP_ENDPOINT: ${GRAFANA_CLOUD_OTLP_ENDPOINT:?Set Grafana Cloud OTLP endpoint}
       GRAFANA_CLOUD_OTLP_USER: ${GRAFANA_CLOUD_OTLP_USER:?Set Grafana Cloud OTLP user}
+      GRAFANA_CLOUD_LOKI_URL: ${GRAFANA_CLOUD_LOKI_URL:?Set Grafana Cloud Loki URL}
+      GRAFANA_CLOUD_LOKI_USER: ${GRAFANA_CLOUD_LOKI_USER:?Set Grafana Cloud Loki user}
       GRAFANA_CLOUD_PROFILES_URL: ${GRAFANA_CLOUD_PROFILES_URL:?Set Grafana Cloud Profiles URL}
       GRAFANA_CLOUD_PROFILES_USER: ${GRAFANA_CLOUD_PROFILES_USER:?Set Grafana Cloud Profiles user}
       NVBES_IDENTITY_API_METRICS_TARGET: ${NVBES_IDENTITY_API_METRICS_TARGET:?Set identity API metrics target}
@@ -25,8 +27,10 @@ services:
       - "127.0.0.1:${NVBES_PYROSCOPE_PORT:-4040}:4040"
     volumes:
       - ./alloy.config.alloy:/etc/alloy/config.alloy:ro
+      - ${NVBES_LOGS_DIR:?Set nvbes logs directory}:/var/log/nvbes:ro
       - ${GRAFANA_CLOUD_PROMETHEUS_TOKEN_FILE:?Set Grafana Cloud Prometheus token file}:/run/secrets/grafana_cloud_prometheus_token:ro
       - ${GRAFANA_CLOUD_OTLP_TOKEN_FILE:?Set Grafana Cloud OTLP token file}:/run/secrets/grafana_cloud_otlp_token:ro
+      - ${GRAFANA_CLOUD_LOKI_TOKEN_FILE:?Set Grafana Cloud Loki token file}:/run/secrets/grafana_cloud_loki_token:ro
       - ${GRAFANA_CLOUD_PROFILES_TOKEN_FILE:?Set Grafana Cloud Profiles token file}:/run/secrets/grafana_cloud_profiles_token:ro
       - ${NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE:?Set nvbes observability token file}:/run/secrets/nvbes_observability_internal_token:ro
       - alloy_data:/var/lib/alloy

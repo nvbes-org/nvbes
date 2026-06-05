@@ -21,6 +21,10 @@ Document de reference a tenir a jour avant publication.
 | Audit logs produit (actions admin)  | 1 an (Plan Pro) / 7 ans (Plan Enterprise)               | Preuve et conformité                               |
 | Documents de facturation            | 10 ans                                                  | Obligation comptable et fiscale (L123-22 Code Com) |
 | Tickets support et échanges         | 5 ans après clôture                                     | Preuve contractuelle et défense juridique          |
+| Métriques observabilité             | 13 mois maximum                                         | Pilotage technique et tendances de fiabilité       |
+| Logs techniques redigés             | 30 à 90 jours                                           | Diagnostic incident et sécurité opérationnelle     |
+| Traces distribuées redigées         | 7 à 30 jours                                            | Diagnostic performance et erreurs                  |
+| Profils CPU continus                | 7 à 30 jours                                            | Optimisation performance sans contenu utilisateur  |
 | Workspaces résiliés / impayés       | 30 jours (Accès lecture) + 7 jours (Purge technique)    | Récupération des données et minimisation           |
 | Fichiers en corbeille               | 30 jours (par défaut)                                   | Droit à l'erreur et minimisation                   |
 | Données supprimées (Tombstones)     | 30 jours avant purge physique                           | Cohérence des backups et intégrité technique       |
@@ -31,6 +35,10 @@ Document de reference a tenir a jour avant publication.
 - **Suppression Logique (Soft Delete)**: La donnée est marquée comme supprimée et n'est plus accessible via les interfaces standard. Elle reste présente en base pour assurer l'intégrité référentielle et permettre une restauration rapide en cas d'erreur.
 - **Purge Physique (Hard Delete)**: Un worker de maintenance (`drive-worker-maintenance`) parcourt périodiquement les données marquées pour suppression dont le délai de rétention est expiré et procède à leur destruction irréversible sur le stockage objet (Scaleway S3).
 - **Backups**: Les données supprimées physiquement disparaissent des sauvegardes au fur et à mesure de la rotation des cycles de backup (30 jours).
+- **Observabilité Grafana Cloud**: les signaux quittent l'application via
+  Grafana Alloy uniquement. Alloy applique redaction, sampling, labels
+  techniques et routage avant export. Les durées effectives doivent être
+  configurées dans Grafana Cloud pour rester dans les bornes ci-dessus.
 
 ## 4. Exercice des Droits
 

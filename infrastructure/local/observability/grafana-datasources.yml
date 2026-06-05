@@ -23,6 +23,17 @@ datasources:
         enabled: true
       search:
         hide: false
+      tracesToLogsV2:
+        datasourceUid: 'Loki'
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        tags: [ { key: 'job' }, { key: 'service.name', value: 'service' } ]
+        filterByTraceID: true
+        filterBySpanID: false
+      tracesToProfiles:
+        datasourceUid: 'Pyroscope'
+        tags: [ { key: 'service.name', value: 'service_name' } ]
+        profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
       tracesToMetrics:
         datasourceUid: 'Prometheus'
         spanAttributes: [ 'service.name', 'http.method', 'http.status_code' ]
@@ -30,3 +41,17 @@ datasources:
         queries:
           - name: 'Sample Query'
             query: 'sum(rate(http_request_duration_seconds_count{$$__tags}[5m]))'
+
+  - name: Loki
+    uid: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+
+  - name: Pyroscope
+    uid: Pyroscope
+    type: grafana-pyroscope-datasource
+    access: proxy
+    url: http://pyroscope:4040
+    editable: true

@@ -594,6 +594,7 @@ fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(), String> {
     )?;
     validate_database_url(&config.database_url, strict_mode)?;
     validate_jwt_secret(&config.jwt_secret, strict_mode)?;
+    validate_grafana_export_path(config, strict_mode)?;
     validate_profiling(config)?;
     validate_observability_internal_token(config, strict_mode)?;
     validate_positive_integer(
@@ -752,6 +753,29 @@ fn validate_profiling(config: &AppConfig) -> Result<(), String> {
     }
 }
 
+fn validate_grafana_export_path(config: &AppConfig, strict_mode: bool) -> Result<(), String> {
+    if !strict_mode {
+        return Ok(());
+    }
+
+    if config.otlp_authorization_header.is_some() {
+        return Err(
+            "NVBES_OTLP_AUTHORIZATION_HEADER must stay empty outside development; export OTLP through local Grafana Alloy"
+                .to_string(),
+        );
+    }
+
+    if config.profiling_basic_auth_user.is_some() || config.profiling_basic_auth_password.is_some()
+    {
+        return Err(
+            "NVBES_PROFILING_BASIC_AUTH_* must stay empty outside development; export profiles through local Grafana Alloy"
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
 fn validate_profiling_endpoint(value: &str) -> Result<(), String> {
     let url = Url::parse(value)
         .map_err(|_| "NVBES_PROFILING_ENDPOINT must be a valid URL".to_string())?;
@@ -843,9 +867,10 @@ fn validate_request_e2ee(config: &AppConfig, strict_mode: bool) -> Result<(), St
 #[cfg(test)]
 mod tests {
     use super::{
-        AppConfig, env_or_default, validate_jwt_secret, validate_observability_internal_token,
-        validate_positive_integer, validate_profiling, validate_profiling_endpoint,
-        validate_public_url, validate_request_e2ee, validate_webauthn_rp_id,
+        AppConfig, env_or_default, validate_grafana_export_path, validate_jwt_secret,
+        validate_observability_internal_token, validate_positive_integer, validate_profiling,
+        validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
+        validate_webauthn_rp_id,
     };
 
     #[test]
@@ -950,6 +975,33 @@ mod tests {
     fn validate_profiling_endpoint_allows_local_alloy() {
         validate_profiling_endpoint("http://127.0.0.1:4040")
             .expect("local Alloy Pyroscope endpoint must be accepted");
+    }
+
+    #[test]
+    fn validate_grafana_export_path_rejects_direct_otlp_auth_outside_development() {
+        let config = AppConfig {
+            otlp_authorization_header: Some("Basic direct-grafana-cloud-token".to_string()),
+            ..AppConfig::default()
+        };
+
+        let error = validate_grafana_export_path(&config, true)
+            .expect_err("strict mode must reject direct OTLP auth");
+
+        assert!(error.contains("Grafana Alloy"));
+    }
+
+    #[test]
+    fn validate_grafana_export_path_rejects_direct_profile_auth_outside_development() {
+        let config = AppConfig {
+            profiling_basic_auth_user: Some("stack".to_string()),
+            profiling_basic_auth_password: Some("token".to_string()),
+            ..AppConfig::default()
+        };
+
+        let error = validate_grafana_export_path(&config, true)
+            .expect_err("strict mode must reject direct Pyroscope auth");
+
+        assert!(error.contains("Grafana Alloy"));
     }
 
     #[test]

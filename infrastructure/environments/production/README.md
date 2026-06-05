@@ -12,12 +12,16 @@ Flux production cible:
 nvbes APIs /metrics ──────┐
 nvbes workers /metrics ───┤─ Grafana Alloy ── remote_write ── Grafana Cloud Metrics
 nvbes OTLP traces ────────┤                 ├─ OTLP HTTP ──── Grafana Cloud Traces
+nvbes app logs ───────────┤                 ├─ Loki push ──── Grafana Cloud Logs
 nvbes Pyroscope profiles ─┘                 └─ Pyroscope ──── Grafana Cloud Profiles
 ```
 
-Alloy est obligatoire entre les services et Grafana Cloud. Il fournit un point
-local stable, evite l'exposition publique des endpoints d'observabilite, et
-centralise l'authentification, l'etiquetage et les futures regles de redaction.
+Alloy est obligatoire entre les services et Grafana Cloud. Les SDK applicatifs
+ne doivent pas porter de credentials Grafana Cloud en production. Alloy fournit
+un point local stable, evite l'exposition publique des endpoints
+d'observabilite, centralise l'authentification, l'etiquetage, la redaction, le
+sampling et le routage vers Metrics/Mimir, Logs/Loki, Traces/Tempo et
+Profiles/Pyroscope.
 
 ## Fichiers
 
@@ -40,10 +44,15 @@ GRAFANA_CLOUD_OTLP_ENDPOINT="https://otlp-gateway-<region>.grafana.net/otlp"
 GRAFANA_CLOUD_OTLP_USER="<stack-otlp-user>"
 GRAFANA_CLOUD_OTLP_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_otlp_token"
 
+GRAFANA_CLOUD_LOKI_URL="https://logs-prod-<region>.grafana.net/loki/api/v1/push"
+GRAFANA_CLOUD_LOKI_USER="<stack-loki-user>"
+GRAFANA_CLOUD_LOKI_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_loki_token"
+
 GRAFANA_CLOUD_PROFILES_URL="https://profiles-prod-<region>.grafana.net"
 GRAFANA_CLOUD_PROFILES_USER="<stack-profiles-user>"
 GRAFANA_CLOUD_PROFILES_TOKEN_FILE="/etc/nvbes/secrets/grafana_cloud_profiles_token"
 
+NVBES_LOGS_DIR="/var/log/nvbes"
 NVBES_OBSERVABILITY_INTERNAL_TOKEN_FILE="/etc/nvbes/secrets/nvbes_observability_internal_token"
 ```
 
@@ -84,25 +93,30 @@ les workers sur une interface reseau privee uniquement, jamais sur une interface
 publique.
 
 `NVBES_OTLP_AUTHORIZATION_HEADER` reste vide quand les services exportent vers
-Alloy en local. Ne le renseigner que pour un export OTLP direct vers Grafana
-Cloud, par exemple `Basic <base64(instance_id:token)>`.
+Alloy en local. En production, la configuration Rust refuse cette variable pour
+empecher un export OTLP direct vers Grafana Cloud.
 
 `NVBES_PROFILING_*` utilise le SDK Pyroscope Rust avec backend pprof-rs. Le
 profiling est opt-in (`NVBES_PROFILING_ENABLED=true`) et doit pointer vers
-Alloy en local. Les variables Basic Auth profiling restent vides avec Alloy; ne
-les renseigner que pour un export Pyroscope direct, ce qui n'est pas le chemin
-production recommande.
+Alloy en local. En production, la configuration Rust refuse
+`NVBES_PROFILING_BASIC_AUTH_*`; les credentials Profiles restent montes
+uniquement dans Alloy.
 
 ## Privacy-by-design
 
 - `/metrics` reste interne et protege par `Authorization: Bearer`.
-- Alloy n'expose OTLP que sur `127.0.0.1` par defaut.
+- Alloy n'expose OTLP, Pyroscope et son UI technique que sur `127.0.0.1` par
+  defaut.
 - Les labels metrics doivent rester techniques: `service`, `environment`,
   `method`, `path_template`, `status`, `outcome`.
 - Interdit dans metrics/traces/logs: email, nom de fichier, object key, token,
   signed URL, payload utilisateur, contenu de fichier.
-- Les logs applicatifs ne sont pas encore envoyes a Grafana Cloud. Ajouter Loki
-  seulement apres une passe de redaction dediee.
+- Les traces passent par `otelcol.processor.attributes` puis
+  `otelcol.processor.tail_sampling`: suppression IP/user-agent/object key et
+  conservation prioritaire des erreurs/lenteurs avec baseline sample 20%.
+- Les logs applicatifs lus depuis `NVBES_LOGS_DIR` passent par `loki.process`:
+  redaction secrets/email/IP/champs sensibles, drop des lignes > 16KB et
+  sampling baseline 50% avant envoi Loki.
 - Le profiling continu exporte uniquement des stacks CPU et des labels
   techniques (`service`, `environment`, `platform`). Ne jamais ajouter de tags
   dynamiques issus d'un tenant, utilisateur, chemin fichier, object key ou
@@ -127,10 +141,21 @@ Dans Grafana Cloud:
 - Traces: service `nvbes-identity-api` ou `nvbes-drive-api`
 - Profiles: applications `identity-api`, `drive-api`, `identity-worker`,
   `drive-worker`
+- Logs: `{platform="nvbes", environment="production"}`
+
+## Traces to profiles
+
+Grafana affiche le lien d'un span vers un profil seulement si trois conditions
+sont reunies: traces OTLP vers Tempo, profils Pyroscope vers Profiles, et bridge
+OpenTelemetry ajoutant `pyroscope.profile.id` sur les spans. Le repo provisionne
+Tempo/Pyroscope et le pipeline de profils; l'attribut span-profile reste a
+ajouter lorsque le SDK Rust expose un bridge stable compatible.
 
 ## References
 
 - Grafana recommande Alloy pour l'architecture production OTLP afin d'ajouter
   fiabilite, enrichissement, sampling, redaction et routage.
+- Grafana documente `tracesToProfiles` comme configuration Tempo -> Pyroscope,
+  mais exige aussi un bridge span-profiles cote application.
 - Le local `infrastructure/local/docker-compose.yml` reste volontairement limite
-  a Prometheus, Tempo et Grafana OSS.
+  a Prometheus, Tempo, Loki, Pyroscope et Grafana OSS.

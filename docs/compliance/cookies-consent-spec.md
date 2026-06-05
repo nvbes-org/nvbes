@@ -10,6 +10,9 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
 - Refuser doit etre aussi simple qu'accepter.
 - Le retrait du consentement doit rester accessible a tout moment.
 - Les preuves de consentement doivent etre conservables.
+- Les finalites doivent etre separees et comprehensibles avant le choix.
+- La duree de validite du choix doit etre limitee; cible produit: renouveler la
+  demande au plus tard tous les 6 mois ou lors d'un changement de finalite.
 
 ## Categories
 
@@ -18,7 +21,7 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
 | Strictement nécessaires        | Non                                | nvbes Identity (Auth), Stripe (Fraude), Sécurité API                 |
 | Mesure d'audience (Exemptée)   | Non (si configuré)                 | PostHog (Anonymisé, proxyfié conforme CNIL)                            |
 | Product Analytics              | Oui                                | PostHog (Full sessions, replay, heatmaps)                              |
-| Performance / Erreurs          | Non (si strictement technique)     | Sentry (Diagnostic technique uniquement)                              |
+| Performance / Erreurs          | Oui sauf qualification stricte     | Sentry browser/SW si non strictement technique; diagnostics techniques exemptes seulement si minimises |
 
 ## Exigences UI
 
@@ -34,6 +37,18 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
 - choix utilisateur;
 - perimetre de finalites;
 - preuve technique de configuration.
+- identifiant pseudonyme ou compte authentifie lorsque disponible;
+- source du choix (`identity-web`, `drive-web`, service worker sync).
+
+## Regles Sentry
+
+- Sentry browser et service worker restent bloques par defaut tant que le vendor
+  `sentry` n'est pas accepte.
+- Une exemption "strictement technique" doit etre documentee avant activation
+  sans consentement: finalite securite/diagnostic, minimisation, pas de replay,
+  pas d'identifiant direct, `sendDefaultPii=false`, scrubber actif, duree courte.
+- A defaut de cette documentation, Sentry est traite comme performance soumis au
+  consentement prealable.
 
 ## Gouvernance
 

@@ -23,6 +23,20 @@ services:
       - "4317:4317"   # otlp grpc
       - "4318:4318"   # otlp http
 
+  loki:
+    image: grafana/loki:latest
+    container_name: nvbes-loki
+    command: [ "-config.file=/etc/loki/local-config.yaml" ]
+    ports:
+      - "3100:3100"
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    container_name: nvbes-pyroscope
+    command: [ "server" ]
+    ports:
+      - "4040:4040"
+
   grafana:
     image: grafana/grafana:latest
     container_name: nvbes-grafana
@@ -39,3 +53,5 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - loki
+      - pyroscope
