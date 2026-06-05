@@ -58,6 +58,30 @@ prometheus.scrape "nvbes_apis" {
   }
 }
 
+prometheus.scrape "nvbes_workers" {
+  targets = [
+    {
+      "__address__" = sys.env("NVBES_DRIVE_WORKER_METRICS_TARGET"),
+      "job"         = "drive-worker",
+      "service"     = "drive-worker",
+    },
+    {
+      "__address__" = sys.env("NVBES_IDENTITY_WORKER_METRICS_TARGET"),
+      "job"         = "identity-worker",
+      "service"     = "identity-worker",
+    },
+  ]
+
+  scrape_interval = "15s"
+  metrics_path    = "/metrics"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+
+  authorization {
+    type = "Bearer"
+    credentials = local.file.nvbes_observability_internal_token.content
+  }
+}
+
 otelcol.receiver.otlp "nvbes" {
   grpc {
     endpoint = "0.0.0.0:4317"

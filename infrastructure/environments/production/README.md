@@ -9,9 +9,9 @@ signaux vers Grafana Cloud via Grafana Alloy.
 Flux production cible:
 
 ```text
-nvbes APIs /metrics ─────┐
-                         ├─ Grafana Alloy ── remote_write ── Grafana Cloud Metrics
-nvbes OTLP traces ───────┘                 └─ OTLP HTTP ──── Grafana Cloud Traces
+nvbes APIs /metrics ──────┐
+nvbes workers /metrics ───┤─ Grafana Alloy ── remote_write ── Grafana Cloud Metrics
+nvbes OTLP traces ────────┘                 └─ OTLP HTTP ──── Grafana Cloud Traces
 ```
 
 Alloy est obligatoire entre les services et Grafana Cloud. Il fournit un point
@@ -63,7 +63,14 @@ docker compose \
 NVBES_OTLP_ENDPOINT=http://127.0.0.1:4317
 NVBES_OTLP_AUTHORIZATION_HEADER=
 NVBES_OBSERVABILITY_INTERNAL_TOKEN=<meme secret que le fichier Alloy>
+NVBES_DRIVE_WORKER_METRICS_BIND_ADDR=127.0.0.1:4101
+NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
 ```
+
+Garder les binds workers sur `127.0.0.1` quand Alloy tourne en sidecar ou sur
+le meme hote. Si Alloy scrape via DNS interne (`*.internal.nvbes.fr`), binder
+les workers sur une interface reseau privee uniquement, jamais sur une interface
+publique.
 
 `NVBES_OTLP_AUTHORIZATION_HEADER` reste vide quand les services exportent vers
 Alloy en local. Ne le renseigner que pour un export OTLP direct vers Grafana
@@ -88,11 +95,14 @@ Cloud, par exemple `Basic <base64(instance_id:token)>`.
 curl -fsS http://127.0.0.1:12345/-/ready
 curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
   "$NVBES_IDENTITY_API_METRICS_TARGET/metrics" | head
+curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
+  "$NVBES_DRIVE_WORKER_METRICS_TARGET/metrics" | head
 ```
 
 Dans Grafana Cloud:
 
-- Metrics: `http_requests_total{environment="production"}`
+- Metrics APIs: `http_requests_total{environment="production"}`
+- Metrics workers: `worker_queue_jobs_total{environment="production"}`
 - Traces: service `nvbes-identity-api` ou `nvbes-drive-api`
 
 ## References

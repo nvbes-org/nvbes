@@ -16,6 +16,9 @@ const MAINTENANCE_ENQUEUE_SENTRY_SCHEDULE: WorkerMonitorSchedule = WorkerMonitor
     checkin_margin_minutes: 60,
     max_runtime_minutes: 30,
 };
+const DRIVE_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_DRIVE_WORKER_METRICS_BIND_ADDR";
+const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
+const DEFAULT_DRIVE_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4101";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -41,6 +44,13 @@ async fn main() -> anyhow::Result<()> {
     let storage = nvbes_drive_api::app::build_storage(&config).await;
 
     let observability = nvbes_observability::metrics::HttpMetrics::default();
+    let metrics_bind_addr = drive_worker_metrics_bind_addr();
+    let _metrics_server = nvbes_observability::start_metrics_server(
+        &config,
+        observability.clone(),
+        &metrics_bind_addr,
+    )
+    .await?;
     observability.record_postgres_pool(
         &config.app_name,
         &config.environment,
@@ -78,4 +88,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn drive_worker_metrics_bind_addr() -> String {
+    std::env::var(DRIVE_WORKER_METRICS_BIND_ADDR_ENV)
+        .or_else(|_| std::env::var(WORKER_METRICS_BIND_ADDR_ENV))
+        .unwrap_or_else(|_| DEFAULT_DRIVE_WORKER_METRICS_BIND_ADDR.to_string())
 }

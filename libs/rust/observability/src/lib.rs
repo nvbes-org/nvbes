@@ -10,7 +10,7 @@ pub mod worker_sentry;
 pub use http_client::{
     propagate_headers_trace_context, propagate_trace_context, register_trace_context,
 };
-pub use metrics::metrics_handler;
+pub use metrics::{metrics_handler, start_metrics_server};
 pub use request_id::{
     inbound_request_id, is_safe_request_id, new_request_id, request_id_from_headers,
     request_id_header,

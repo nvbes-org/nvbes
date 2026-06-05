@@ -9,6 +9,10 @@ mod worker;
 
 pub use nvbes_identity_api::{app, domains, email, http};
 
+const IDENTITY_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR";
+const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
+const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
@@ -36,6 +40,14 @@ async fn main() -> anyhow::Result<()> {
     nvbes_identity_api::database::run_migrations(&db).await?;
 
     let state = nvbes_identity_api::app::AppState::bootstrap(&config, db).await?;
+    let metrics_bind_addr = identity_worker_metrics_bind_addr();
+    let _metrics_server = nvbes_observability::start_metrics_server(
+        &config,
+        state.observability.clone(),
+        &metrics_bind_addr,
+    )
+    .await?;
+
     tracing::info!(
         app = %config.app_name,
         environment = %config.environment,
@@ -46,4 +58,10 @@ async fn main() -> anyhow::Result<()> {
         let _ = tokio::signal::ctrl_c().await;
     })
     .await
+}
+
+fn identity_worker_metrics_bind_addr() -> String {
+    std::env::var(IDENTITY_WORKER_METRICS_BIND_ADDR_ENV)
+        .or_else(|_| std::env::var(WORKER_METRICS_BIND_ADDR_ENV))
+        .unwrap_or_else(|_| DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR.to_string())
 }

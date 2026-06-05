@@ -1,7 +1,9 @@
-use axum::{extract::State, response::IntoResponse};
+use axum::{Router, extract::State, middleware, response::IntoResponse, routing::get};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
+use nvbes_core::config::AppConfig;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Clone)]
 pub struct HttpMetrics {
@@ -189,6 +191,30 @@ impl HttpMetrics {
 
 pub async fn metrics_handler(State(metrics): State<HttpMetrics>) -> impl IntoResponse {
     metrics.render()
+}
+
+pub async fn start_metrics_server(
+    config: &AppConfig,
+    metrics: HttpMetrics,
+    bind_addr: &str,
+) -> std::io::Result<JoinHandle<()>> {
+    let listener = TcpListener::bind(bind_addr).await?;
+    let addr = listener.local_addr()?;
+    let router = Router::new()
+        .route("/metrics", get(metrics_handler))
+        .layer(middleware::from_fn_with_state(
+            config.clone(),
+            nvbes_core::http::internal_observability::internal_observability_guard,
+        ))
+        .with_state(metrics);
+
+    tracing::info!(addr = %addr, "Starting worker metrics listener");
+
+    Ok(tokio::spawn(async move {
+        if let Err(error) = axum::serve(listener, router).await {
+            tracing::error!(error = %error, "Worker metrics listener stopped");
+        }
+    }))
 }
 
 impl Default for HttpMetrics {
