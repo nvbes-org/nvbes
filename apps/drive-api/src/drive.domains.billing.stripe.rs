@@ -150,11 +150,12 @@ async fn stripe_post_form(
     let url = format!("{}{}", config.stripe_api_base_url, endpoint);
 
     let client = nvbes_core::security::pinned_http_client();
-    let response = client
+    let request = client
         .post(&url)
         .header("Authorization", format!("Bearer {}", secret_key))
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .form(&fields)
+        .form(&fields);
+    let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .map_err(|e| {

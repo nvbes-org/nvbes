@@ -44,14 +44,15 @@ pub async fn verify_token(
 
     let client = nvbes_core::security::pinned_http_client();
 
-    let res = client
+    let request = client
         .post("https://challenges.cloudflare.com/turnstile/v0/siteverify")
         .json(&TurnstileRequest {
             secret,
             response: token,
             remoteip: options.ip,
             idempotency_key: options.idempotency_key,
-        })
+        });
+    let res = nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .map_err(|e| {

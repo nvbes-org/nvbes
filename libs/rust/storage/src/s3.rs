@@ -12,6 +12,22 @@ use crate::trait_def::{
     ByteRange, CompletedUploadPart, ObjectMeta, ObjectStore, PresignedUrl, UploadedPart,
 };
 
+macro_rules! traced_s3_request {
+    ($request:expr) => {{
+        $request.customize().mutate_request(|request| {
+            let traceparent = nvbes_core::trace_context::new_traceparent(true);
+            request.headers_mut().insert(
+                nvbes_core::trace_context::TRACEPARENT_HEADER,
+                traceparent.to_header_value(),
+            );
+            request.headers_mut().insert(
+                nvbes_core::trace_context::SENTRY_TRACE_HEADER,
+                traceparent.to_sentry_trace_header_value(),
+            );
+        })
+    }};
+}
+
 #[derive(Clone)]
 pub struct S3ObjectStore {
     client: S3Client,
@@ -102,11 +118,7 @@ impl ObjectStore for S3ObjectStore {
     }
 
     async fn get_object(&self, key: &str) -> Result<Vec<u8>, StorageError> {
-        let resp = self
-            .client
-            .get_object()
-            .bucket(&self.bucket)
-            .key(key)
+        let resp = traced_s3_request!(self.client.get_object().bucket(&self.bucket).key(key))
             .send()
             .await?;
 
@@ -123,14 +135,15 @@ impl ObjectStore for S3ObjectStore {
     }
 
     async fn get_object_range(&self, key: &str, range: ByteRange) -> Result<Vec<u8>, StorageError> {
-        let resp = self
-            .client
-            .get_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .range(format!("bytes={}-{}", range.start, range.end_inclusive))
-            .send()
-            .await?;
+        let resp = traced_s3_request!(
+            self.client
+                .get_object()
+                .bucket(&self.bucket)
+                .key(key)
+                .range(format!("bytes={}-{}", range.start, range.end_inclusive))
+        )
+        .send()
+        .await?;
 
         let data = resp
             .body
@@ -167,7 +180,7 @@ impl ObjectStore for S3ObjectStore {
         }
         req = req.content_encoding("identity");
 
-        let resp = req
+        let resp = traced_s3_request!(req)
             .send()
             .await
             .map_err(|e| StorageError::S3(e.to_string()))?;
@@ -187,17 +200,18 @@ impl ObjectStore for S3ObjectStore {
         let size_bytes = i64::try_from(body.len())
             .map_err(|e| StorageError::S3(format!("invalid upload part size: {e}")))?;
 
-        let resp = self
-            .client
-            .upload_part()
-            .bucket(&self.bucket)
-            .key(key)
-            .upload_id(multipart_upload_id)
-            .part_number(part_number)
-            .body(ByteStream::from(body))
-            .send()
-            .await
-            .map_err(|e| StorageError::S3(e.to_string()))?;
+        let resp = traced_s3_request!(
+            self.client
+                .upload_part()
+                .bucket(&self.bucket)
+                .key(key)
+                .upload_id(multipart_upload_id)
+                .part_number(part_number)
+                .body(ByteStream::from(body))
+        )
+        .send()
+        .await
+        .map_err(|e| StorageError::S3(e.to_string()))?;
 
         let etag = resp
             .e_tag()
@@ -231,15 +245,17 @@ impl ObjectStore for S3ObjectStore {
             .set_parts(Some(completed_parts))
             .build();
 
-        self.client
-            .complete_multipart_upload()
-            .bucket(&self.bucket)
-            .key(key)
-            .upload_id(multipart_upload_id)
-            .multipart_upload(upload)
-            .send()
-            .await
-            .map_err(|e| StorageError::S3(e.to_string()))?;
+        traced_s3_request!(
+            self.client
+                .complete_multipart_upload()
+                .bucket(&self.bucket)
+                .key(key)
+                .upload_id(multipart_upload_id)
+                .multipart_upload(upload)
+        )
+        .send()
+        .await
+        .map_err(|e| StorageError::S3(e.to_string()))?;
 
         Ok(())
     }
@@ -249,14 +265,16 @@ impl ObjectStore for S3ObjectStore {
         key: &str,
         multipart_upload_id: &str,
     ) -> Result<(), StorageError> {
-        self.client
-            .abort_multipart_upload()
-            .bucket(&self.bucket)
-            .key(key)
-            .upload_id(multipart_upload_id)
-            .send()
-            .await
-            .map_err(|e| StorageError::S3(e.to_string()))?;
+        traced_s3_request!(
+            self.client
+                .abort_multipart_upload()
+                .bucket(&self.bucket)
+                .key(key)
+                .upload_id(multipart_upload_id)
+        )
+        .send()
+        .await
+        .map_err(|e| StorageError::S3(e.to_string()))?;
 
         Ok(())
     }
@@ -278,7 +296,7 @@ impl ObjectStore for S3ObjectStore {
             req = req.content_type(ct);
         }
 
-        req.send().await?;
+        traced_s3_request!(req).send().await?;
 
         Ok(())
     }
@@ -300,13 +318,14 @@ impl ObjectStore for S3ObjectStore {
             .build()
             .map_err(|e| StorageError::S3(format!("failed to build delete request: {e}")))?;
 
-        let response = self
-            .client
-            .delete_objects()
-            .bucket(&self.bucket)
-            .delete(delete)
-            .send()
-            .await?;
+        let response = traced_s3_request!(
+            self.client
+                .delete_objects()
+                .bucket(&self.bucket)
+                .delete(delete)
+        )
+        .send()
+        .await?;
 
         let errors = response.errors();
         if !errors.is_empty() {
@@ -326,11 +345,7 @@ impl ObjectStore for S3ObjectStore {
     }
 
     async fn head_object(&self, key: &str) -> Result<ObjectMeta, StorageError> {
-        let resp = self
-            .client
-            .head_object()
-            .bucket(&self.bucket)
-            .key(key)
+        let resp = traced_s3_request!(self.client.head_object().bucket(&self.bucket).key(key))
             .send()
             .await?;
 

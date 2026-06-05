@@ -206,6 +206,8 @@ impl IdentityAuthClient {
                 outgoing.insert("x-nvbes-client-ip", ip.clone());
             }
             builder = builder.headers(outgoing);
+        } else {
+            builder = nvbes_core::trace_context::with_fresh_trace_headers(builder);
         }
 
         let response = builder
@@ -269,7 +271,7 @@ impl IdentityAuthClient {
         subject_token_type: Option<&str>,
         scope: Option<&str>,
     ) -> Result<IdentityTokenExchangeResponse, AppError> {
-        let response = self
+        let request = self
             .http
             .post(format!("{}/oauth/token", self.base_url))
             .basic_auth(&self.client_id, Some(&self.client_secret))
@@ -278,7 +280,8 @@ impl IdentityAuthClient {
                 "subject_token": subject_token,
                 "subject_token_type": subject_token_type.unwrap_or("urn:ietf:params:oauth:token-type:access_token"),
                 "scope": scope,
-            }))
+            }));
+        let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
             .send()
             .await
             .map_err(|err| {
@@ -333,6 +336,8 @@ impl IdentityAuthClient {
             let mut outgoing = axum::http::HeaderMap::new();
             nvbes_observability::propagate_headers_trace_context(headers, &mut outgoing);
             builder = builder.headers(outgoing);
+        } else {
+            builder = nvbes_core::trace_context::with_fresh_trace_headers(builder);
         }
 
         let response = builder.send().await.map_err(|err| {

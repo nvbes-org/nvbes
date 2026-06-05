@@ -105,7 +105,8 @@ impl EmailSender for ScalewayEmailClient {
             .client
             .post(&self.api_url)
             .header("X-Session-Token", &self.secret_key)
-            .json(&request)
+            .json(&request);
+        let response = nvbes_core::trace_context::with_fresh_trace_headers(response)
             .send()
             .await?;
 

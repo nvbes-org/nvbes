@@ -107,8 +107,8 @@ async fn request_with_pinned_ip(
         .build()
         .map_err(|err| AppError::internal("federation_client_unavailable", &format!("{}", err)))?;
 
-    client
-        .get(url)
+    let request = client.get(url);
+    nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .map_err(|err| AppError::internal("federation_request_failed", &format!("{}", err)))
@@ -121,8 +121,8 @@ async fn request(url: &str) -> Result<reqwest::Response, AppError> {
         .build()
         .map_err(|err| AppError::internal("federation_client_unavailable", &format!("{}", err)))?;
 
-    client
-        .get(url)
+    let request = client.get(url);
+    nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .map_err(|err| AppError::internal("federation_request_failed", &format!("{}", err)))

@@ -19,6 +19,7 @@ pub mod scw_secrets;
 pub mod security;
 #[path = "tls.mod.rs"]
 pub mod tls;
+pub mod trace_context;
 
 pub use auth::Aal;
 pub use config::AppConfig;

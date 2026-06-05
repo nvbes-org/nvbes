@@ -187,14 +187,15 @@ pub(super) async fn issue_machine_token(
         .timeout(Duration::from_secs(5))
         .build()
         .expect("http client should build");
-    let token_response = http
+    let request = http
         .post(format!("{base_url}/oauth/token"))
         .basic_auth(client_id, Some(client_secret))
         .json(&serde_json::json!({
             "grant_type": "client_credentials",
             "scope": "drive.files.read drive.workspace.read",
             "audience": "nvbes-drive-api",
-        }))
+        }));
+    let token_response = nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .expect("token endpoint should respond");

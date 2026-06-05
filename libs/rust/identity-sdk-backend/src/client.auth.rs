@@ -1,4 +1,4 @@
-use super::{http, IdentityClient};
+use super::{http, trace, IdentityClient};
 use crate::types::*;
 use crate::SdkError;
 
@@ -38,15 +38,14 @@ impl IdentityClient {
         state_token: &str,
         password: &str,
     ) -> Result<LoginPasswordResult, SdkError> {
-        let response = self
-            .http
-            .post(self.endpoint("/auth/challenge/pwd"))
-            .json(&serde_json::json!({
-                "state_token": state_token,
-                "password": password,
-            }))
-            .send()
-            .await?;
+        let request =
+            self.http
+                .post(self.endpoint("/auth/challenge/pwd"))
+                .json(&serde_json::json!({
+                    "state_token": state_token,
+                    "password": password,
+                }));
+        let response = trace::with_fresh_trace_headers(request).send().await?;
 
         if http::is_accepted(response.status()) {
             return Ok(LoginPasswordResult::MfaRequired(response.json().await?));

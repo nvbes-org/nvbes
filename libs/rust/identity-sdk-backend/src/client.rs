@@ -10,6 +10,8 @@ mod http;
 mod mfa;
 #[path = "client.oauth.rs"]
 mod oauth;
+#[path = "client.trace.rs"]
+mod trace;
 
 pub struct IdentityClient {
     pub(crate) http: Client,

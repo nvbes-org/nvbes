@@ -170,11 +170,12 @@ pub async fn stripe_post_form(
     let body = form_encode(fields);
     let client = nvbes_core::security::pinned_http_client();
 
-    let response = client
+    let request = client
         .post(url)
         .bearer_auth(secret_key)
         .header("content-type", "application/x-www-form-urlencoded")
-        .body(body)
+        .body(body);
+    let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
         .map_err(|error| {

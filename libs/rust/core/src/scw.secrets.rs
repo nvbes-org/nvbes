@@ -85,7 +85,8 @@ impl SecretResolver {
         let resp = self
             .http
             .get(&url)
-            .header("X-Auth-Token", &self.config.secret_key)
+            .header("X-Auth-Token", &self.config.secret_key);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await
             .map_err(|e| format!("Secret Manager API error: {e}"))?;
@@ -119,7 +120,8 @@ impl SecretResolver {
         let resp = self
             .http
             .get(&url)
-            .header("X-Auth-Token", &self.config.secret_key)
+            .header("X-Auth-Token", &self.config.secret_key);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await
             .map_err(|e| format!("Secret access error: {e}"))?;

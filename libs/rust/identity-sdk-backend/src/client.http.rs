@@ -1,7 +1,7 @@
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
 
-use super::IdentityClient;
+use super::{trace, IdentityClient};
 use crate::SdkError;
 
 impl IdentityClient {
@@ -13,7 +13,7 @@ impl IdentityClient {
     where
         T: DeserializeOwned,
     {
-        let response = request.send().await?;
+        let response = trace::with_fresh_trace_headers(request).send().await?;
         if !response.status().is_success() {
             return Err(auth_error(response).await);
         }
@@ -22,7 +22,7 @@ impl IdentityClient {
     }
 
     pub(crate) async fn send_empty(&self, request: RequestBuilder) -> Result<(), SdkError> {
-        let response = request.send().await?;
+        let response = trace::with_fresh_trace_headers(request).send().await?;
         if !response.status().is_success() {
             return Err(auth_error(response).await);
         }
@@ -34,7 +34,7 @@ impl IdentityClient {
     where
         T: DeserializeOwned,
     {
-        let response = request.send().await?;
+        let response = trace::with_fresh_trace_headers(request).send().await?;
         if !response.status().is_success() {
             return Err(SdkError::TokenExchange(error_body(response).await));
         }

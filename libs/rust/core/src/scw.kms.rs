@@ -154,7 +154,8 @@ impl KmsClient {
             .post(&url)
             .header("X-Auth-Token", &self.config.secret_key)
             .header("Content-Type", "application/json")
-            .json(&req)
+            .json(&req);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await?;
 
@@ -180,7 +181,8 @@ impl KmsClient {
             .post(&url)
             .header("X-Auth-Token", &self.config.secret_key)
             .header("Content-Type", "application/json")
-            .json(&serde_json::json!({ "key_id": key_id }))
+            .json(&serde_json::json!({ "key_id": key_id }));
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await?;
 
@@ -211,7 +213,8 @@ impl KmsClient {
             .post(&url)
             .header("X-Auth-Token", &self.config.secret_key)
             .header("Content-Type", "application/json")
-            .json(&req)
+            .json(&req);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await?;
 
@@ -235,7 +238,8 @@ impl KmsClient {
         let resp = self
             .http
             .get(&url)
-            .header("X-Auth-Token", &self.config.secret_key)
+            .header("X-Auth-Token", &self.config.secret_key);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await?;
 
@@ -259,7 +263,8 @@ impl KmsClient {
         let resp = self
             .http
             .get(&url)
-            .header("X-Auth-Token", &self.config.secret_key)
+            .header("X-Auth-Token", &self.config.secret_key);
+        let resp = crate::trace_context::with_fresh_trace_headers(resp)
             .send()
             .await?;
 

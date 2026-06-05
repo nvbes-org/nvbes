@@ -133,12 +133,16 @@ pub async fn fetch_request_object_from_uri(uri: &str) -> Result<String, AppError
         .build()
         .map_err(|e| AppError::internal("http_client_error", &e.to_string()))?;
 
-    let response = client.get(uri).send().await.map_err(|e| {
-        AppError::bad_request(
-            "invalid_request_uri",
-            &format!("Failed to fetch request_uri: {}", e),
-        )
-    })?;
+    let request = client.get(uri);
+    let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
+        .send()
+        .await
+        .map_err(|e| {
+            AppError::bad_request(
+                "invalid_request_uri",
+                &format!("Failed to fetch request_uri: {}", e),
+            )
+        })?;
 
     if !response.status().is_success() {
         return Err(AppError::bad_request(

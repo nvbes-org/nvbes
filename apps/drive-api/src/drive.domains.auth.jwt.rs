@@ -156,12 +156,16 @@ async fn refresh_jwks() -> Result<(), AppError> {
         "{}/.well-known/jwks.json",
         identity_base_url().trim_end_matches('/')
     );
-    let response = http_client().get(url).send().await.map_err(|error| {
-        AppError::internal(
-            "jwks_fetch_failed",
-            &format!("Failed to fetch Identity JWKS: {error}"),
-        )
-    })?;
+    let request = http_client().get(url);
+    let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
+        .send()
+        .await
+        .map_err(|error| {
+            AppError::internal(
+                "jwks_fetch_failed",
+                &format!("Failed to fetch Identity JWKS: {error}"),
+            )
+        })?;
     if !response.status().is_success() {
         return Err(AppError::internal(
             "jwks_fetch_failed",
