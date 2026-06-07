@@ -3,6 +3,7 @@ use chrono::{TimeZone, Utc};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
+use crate::domains::public_api::errors::PublicApiErrorKind;
 use crate::http::error::AppError;
 
 const X_NONCE: &str = "x-nonce";
@@ -34,10 +35,7 @@ pub fn verify(
     let provided_signature = required_header(headers, X_SIGNATURE)?;
     let expected_signature = signature(api_key, method, uri, timestamp.timestamp(), nonce)?;
     if !constant_time_eq(provided_signature.as_bytes(), expected_signature.as_bytes()) {
-        return Err(AppError::unauthorized(
-            "api_key_signature_invalid",
-            "API key signature is invalid.",
-        ));
+        return Err(PublicApiErrorKind::ApiKeySignatureInvalid.app_error());
     }
 
     Ok(VerifiedApiKeySignature {
@@ -62,39 +60,29 @@ fn signature(
         timestamp,
         nonce
     );
-    let mut mac = HmacSha256::new_from_slice(api_key.as_bytes()).map_err(|_| {
-        AppError::unauthorized("api_key_signature_invalid", "API key signature is invalid.")
-    })?;
+    let mut mac = HmacSha256::new_from_slice(api_key.as_bytes())
+        .map_err(|_| PublicApiErrorKind::ApiKeySignatureInvalid.app_error())?;
     mac.update(message.as_bytes());
     Ok(nvbes_billing::hex_encode(&mac.finalize().into_bytes()))
 }
 
 fn parse_timestamp(value: &str) -> Result<chrono::DateTime<Utc>, AppError> {
-    let timestamp = value.parse::<i64>().map_err(|_| {
-        AppError::unauthorized(
-            "api_key_timestamp_invalid",
-            "X-Timestamp must be a Unix timestamp in seconds.",
-        )
-    })?;
-    Utc.timestamp_opt(timestamp, 0).single().ok_or_else(|| {
-        AppError::unauthorized("api_key_timestamp_invalid", "X-Timestamp is invalid.")
-    })
+    let timestamp = value
+        .parse::<i64>()
+        .map_err(|_| PublicApiErrorKind::ApiKeyTimestampInvalidFormat.app_error())?;
+    Utc.timestamp_opt(timestamp, 0)
+        .single()
+        .ok_or_else(|| PublicApiErrorKind::ApiKeyTimestampInvalid.app_error())
 }
 
 fn validate_timestamp(timestamp: chrono::DateTime<Utc>) -> Result<(), AppError> {
     let now = Utc::now().timestamp();
     let timestamp = timestamp.timestamp();
     if timestamp < now - MAX_CLOCK_SKEW_SECS {
-        return Err(AppError::unauthorized(
-            "api_key_signature_expired",
-            "X-Timestamp is too old.",
-        ));
+        return Err(PublicApiErrorKind::ApiKeySignatureExpired.app_error());
     }
     if timestamp > now + MAX_CLOCK_SKEW_SECS {
-        return Err(AppError::unauthorized(
-            "api_key_signature_future",
-            "X-Timestamp is in the future.",
-        ));
+        return Err(PublicApiErrorKind::ApiKeySignatureFuture.app_error());
     }
     Ok(())
 }
@@ -107,28 +95,15 @@ fn validate_nonce(nonce: &str) -> Result<(), AppError> {
     if valid_len && valid_chars {
         return Ok(());
     }
-    Err(AppError::unauthorized(
-        "api_key_nonce_invalid",
-        "X-Nonce is invalid.",
-    ))
+    Err(PublicApiErrorKind::ApiKeyNonceInvalid.app_error())
 }
 
 fn required_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<&'a str, AppError> {
     headers
         .get(name)
-        .ok_or_else(|| {
-            AppError::unauthorized(
-                "api_key_signature_header_missing",
-                format!("API key authentication requires header {name}."),
-            )
-        })?
+        .ok_or_else(|| PublicApiErrorKind::ApiKeySignatureInvalid.header_missing(name))?
         .to_str()
-        .map_err(|_| {
-            AppError::unauthorized(
-                "api_key_signature_header_invalid",
-                format!("API key authentication header {name} is invalid."),
-            )
-        })
+        .map_err(|_| PublicApiErrorKind::ApiKeySignatureInvalid.header_invalid(name))
 }
 
 fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {

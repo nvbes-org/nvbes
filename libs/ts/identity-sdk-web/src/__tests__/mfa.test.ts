@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
   confirmTotp,
   generateRecoveryCodes,

@@ -6,11 +6,12 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import devtoolsJson from 'vite-plugin-devtools-json';
-import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite-plus';
 import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite-plus';
 
 const permissionsPolicy =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
+const integrityPolicyStyles = 'blocked-destinations=(style)';
 
 function getSentryHost(dsn?: string): string {
   if (!dsn) return '';
@@ -191,10 +192,7 @@ export default defineConfig(({ mode }) => {
   const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost);
   const sentryOrg = process.env.SENTRY_ORG || localEnv.SENTRY_ORG || rootEnv.SENTRY_ORG || 'nvbes';
   const sentryAuthToken =
-    process.env.SENTRY_AUTH_TOKEN ||
-    localEnv.SENTRY_AUTH_TOKEN ||
-    rootEnv.SENTRY_AUTH_TOKEN ||
-    '';
+    process.env.SENTRY_AUTH_TOKEN || localEnv.SENTRY_AUTH_TOKEN || rootEnv.SENTRY_AUTH_TOKEN || '';
   const sentryProject =
     process.env.SENTRY_PROJECT_DRIVE_WEB ||
     localEnv.SENTRY_PROJECT_DRIVE_WEB ||
@@ -214,64 +212,21 @@ export default defineConfig(({ mode }) => {
       ...pluginList(
         VitePWA({
           registerType: 'autoUpdate',
+          injectRegister: false,
           strategies: 'injectManifest',
           srcDir: 'src',
           filename: 'sw.ts',
           injectManifest: {
             sourcemap: false,
           },
-          includeAssets: ['icon.svg', 'offline.html'],
-          manifest: {
-            name: 'nvbes Drive',
-            short_name: 'Drive',
-            description: 'Stockage et partage de fichiers securise',
-            theme_color: '#0a0a0a',
-            background_color: '#0a0a0a',
-            display: 'standalone',
-            orientation: 'any',
-            start_url: '/',
-            icons: [
-              {
-                src: 'icon.svg',
-                sizes: '512x512',
-                type: 'image/svg+xml',
-                purpose: 'any maskable',
-              },
-            ],
-            shortcuts: [
-              {
-                name: 'Nouveau document',
-                short_name: 'Nouveau',
-                description: 'Creer un nouveau document',
-                url: '/new',
-                icons: [{ src: 'icon.svg', sizes: '96x96' }],
-              },
-              {
-                name: 'Scanner',
-                short_name: 'Scan',
-                description: 'Numeriser un document',
-                url: '/scan',
-                icons: [{ src: 'icon.svg', sizes: '96x96' }],
-              },
-            ],
-            share_target: {
-              action: '/share',
-              method: 'POST',
-              enctype: 'multipart/form-data',
-              params: {
-                title: 'title',
-                text: 'text',
-                url: 'url',
-                files: [{ name: 'files', accept: ['*/*'] }],
-              },
-            },
-            file_handlers: [
-              {
-                action: '/open',
-                accept: { 'application/octet-stream': ['.nvbes'] },
-              },
-            ],
-          },
+          includeAssets: [
+            'icon.svg',
+            'icon-180.png',
+            'icon-192.png',
+            'icon-512.png',
+            'offline.html',
+          ],
+          manifest: false,
         }),
       ),
       ...(sentryAuthToken
@@ -344,6 +299,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       headers: {
         'Content-Security-Policy': cspHeader,
+        'Integrity-Policy-Report-Only': integrityPolicyStyles,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',
@@ -359,6 +315,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       headers: {
         'Content-Security-Policy': cspHeader,
+        'Integrity-Policy': integrityPolicyStyles,
+        'Integrity-Policy-Report-Only': integrityPolicyStyles,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',

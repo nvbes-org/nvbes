@@ -3,6 +3,7 @@ use crate::domains::auth::types::AuthContext;
 use crate::http::error::AppError;
 use crate::http::request::{client_ip, user_agent};
 use axum::http::HeaderMap;
+use nvbes_tenancy::workspace::WorkspaceAccessError;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -18,7 +19,7 @@ pub async fn load_workspace_access(
     {
         return Err(AppError::forbidden(
             "workspace_context_mismatch",
-            "Switch to this workspace before performing the requested action.",
+            WorkspaceAccessError::ContextMismatch.to_string(),
         ));
     }
 
@@ -45,7 +46,7 @@ pub async fn load_workspace_access(
     let row = row.ok_or_else(|| {
         AppError::forbidden(
             "workspace_access_denied",
-            "You do not have access to this workspace.",
+            WorkspaceAccessError::AccessDenied.to_string(),
         )
     })?;
 
@@ -63,10 +64,7 @@ pub async fn load_workspace_access(
     )
     .await?;
     if !assurance.sufficient {
-        return Err(AppError::unauthorized(
-            "step_up_required",
-            "Please verify again before continuing.",
-        ));
+        return Err(nvbes_core::auth::step_up_required_error().into());
     }
 
     Ok(WorkspaceAccess {

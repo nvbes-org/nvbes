@@ -1,6 +1,7 @@
 use axum::http::HeaderMap;
 use chrono::Utc;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 
 use super::device_codes::{
     CachedDeviceCode, get_device_code_by_user_code, is_expired, save_device_code,
@@ -10,15 +11,15 @@ use super::device_validation::{
     ensure_device_approval_context, ensure_device_deny_context,
 };
 use super::service::types::{DeviceApprovalInput, DeviceVerificationInput, DeviceVerificationView};
-use crate::app::AppState;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 
 async fn load_active_device_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
     user_code: &str,
 ) -> Result<CachedDeviceCode, AppError> {
-    let code = get_device_code_by_user_code(&state.redis, user_code)
+    let code = get_device_code_by_user_code(redis, user_code)
         .await?
         .ok_or_else(|| AppError::not_found("invalid_code", "The user code is invalid."))?;
 
@@ -38,7 +39,7 @@ async fn load_active_device_code(
         "#,
     )
     .bind(code.client_uuid)
-    .fetch_optional(&state.db)
+    .fetch_optional(db)
     .await?
     .ok_or_else(|| AppError::not_found("client_not_found", "The OAuth client was not found."))?;
 
@@ -56,19 +57,20 @@ async fn load_active_device_code(
 }
 
 pub async fn verify_device_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
     _headers: &HeaderMap,
     input: DeviceVerificationInput,
 ) -> Result<DeviceVerificationView, AppError> {
     enforce_device_action_rate_limit_db(
-        &state.redis,
+        redis,
         "verify_device_code",
         uuid::Uuid::nil(),
         &input.user_code,
     )
     .await?;
 
-    let code = load_active_device_code(state, &input.user_code).await?;
+    let code = load_active_device_code(db, redis, &input.user_code).await?;
 
     if code.approved_at.is_some() || code.denied_at.is_some() {
         return Err(AppError::bad_request(
@@ -85,14 +87,15 @@ pub async fn verify_device_code(
 }
 
 pub async fn approve_device_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     input: DeviceApprovalInput,
 ) -> Result<(), AppError> {
-    let mut code = load_active_device_code(state, &input.user_code).await?;
+    let mut code = load_active_device_code(db, redis, &input.user_code).await?;
 
     let lock_key = format!("oauth-device-code:{}", code.device_code);
-    let locked = nvbes_redis::lock::acquire(&state.redis, &lock_key, 15)
+    let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)))?;
     if !locked {
@@ -103,7 +106,7 @@ pub async fn approve_device_code(
     }
 
     let result = async {
-        code = load_active_device_code(state, &input.user_code).await?;
+        code = load_active_device_code(db, redis, &input.user_code).await?;
 
         if code.approved_at.is_some() || code.denied_at.is_some() {
             return Err(AppError::bad_request(
@@ -113,8 +116,8 @@ pub async fn approve_device_code(
         }
 
         let approval_context = ensure_device_approval_context(
-            &state.db,
-            &state.redis,
+            db,
+            redis,
             DeviceApprovalContextInput {
                 auth,
                 client_id: &code.client_id,
@@ -136,13 +139,13 @@ pub async fn approve_device_code(
         code.organization_id = approval_context.organization_id;
         code.workspace_id = Some(input.workspace_id);
         code.approved_at = Some(Utc::now());
-        save_device_code(&state.redis, &code).await?;
+        save_device_code(redis, &code).await?;
 
         Ok(())
     }
     .await;
 
-    let release_result = nvbes_redis::lock::release(&state.redis, &lock_key)
+    let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)));
     release_result?;
@@ -151,14 +154,23 @@ pub async fn approve_device_code(
 }
 
 pub async fn deny_device_code(
-    state: &AppState,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     input: DeviceVerificationInput,
 ) -> Result<(), AppError> {
-    let mut code = load_active_device_code(state, &input.user_code).await?;
+    let mut code = get_device_code_by_user_code(redis, &input.user_code)
+        .await?
+        .ok_or_else(|| AppError::not_found("invalid_code", "The user code is invalid."))?;
+
+    if is_expired(code.expires_at) {
+        return Err(AppError::bad_request(
+            "code_expired",
+            "The user code has expired.",
+        ));
+    }
 
     let lock_key = format!("oauth-device-code:{}", code.device_code);
-    let locked = nvbes_redis::lock::acquire(&state.redis, &lock_key, 15)
+    let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)))?;
     if !locked {
@@ -169,7 +181,16 @@ pub async fn deny_device_code(
     }
 
     let result = async {
-        code = load_active_device_code(state, &input.user_code).await?;
+        code = get_device_code_by_user_code(redis, &input.user_code)
+            .await?
+            .ok_or_else(|| AppError::not_found("invalid_code", "The user code is invalid."))?;
+
+        if is_expired(code.expires_at) {
+            return Err(AppError::bad_request(
+                "code_expired",
+                "The user code has expired.",
+            ));
+        }
 
         if code.approved_at.is_some() || code.denied_at.is_some() {
             return Err(AppError::bad_request(
@@ -178,17 +199,17 @@ pub async fn deny_device_code(
             ));
         }
 
-        ensure_device_deny_context(&state.redis, auth, &code.client_id).await?;
+        ensure_device_deny_context(redis, auth, &code.client_id).await?;
 
         code.principal_id = Some(auth.user_id);
         code.denied_at = Some(Utc::now());
-        save_device_code(&state.redis, &code).await?;
+        save_device_code(redis, &code).await?;
 
         Ok(())
     }
     .await;
 
-    let release_result = nvbes_redis::lock::release(&state.redis, &lock_key)
+    let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)));
     release_result?;

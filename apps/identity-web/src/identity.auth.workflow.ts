@@ -14,6 +14,11 @@ import {
 
 export type { RegisterInput };
 
+type RegionDetection = {
+  region: string | null;
+  reliability: 'high' | 'medium' | 'low' | 'none';
+};
+
 function detectRegionFromBrowser(supportedRegions: SupportedRegion[]): {
   region: string | null;
   reliability: 'medium' | 'low' | 'none';
@@ -49,12 +54,12 @@ function detectRegionFromBrowser(supportedRegions: SupportedRegion[]): {
   return { region: null, reliability: 'none' };
 }
 
-export function detectRegionWorkflow() {
+export function detectRegionWorkflow(): Effect.Effect<RegionDetection, unknown, never> {
   return Effect.gen(function* () {
     const serverResult = yield* Effect.tryPromise({
       try: () => detectRegion(),
       catch: (error) => error,
-    }) as any;
+    });
 
     if (
       serverResult &&
@@ -68,14 +73,14 @@ export function detectRegionWorkflow() {
     const supportedRegions = yield* Effect.tryPromise({
       try: () => fetchSupportedRegions(),
       catch: (error) => error,
-    }) as any;
+    });
 
     if (Array.isArray(supportedRegions)) {
       return detectRegionFromBrowser(supportedRegions);
     }
 
     return { region: null, reliability: 'none' as const };
-  }) as Effect.Effect<any, any, never>;
+  });
 }
 
 export function fetchSupportedRegionsWorkflow() {

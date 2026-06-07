@@ -2,7 +2,7 @@ use super::types::*;
 use super::validation::normalize_domain;
 use crate::http::error::AppError;
 use chrono::Utc;
-use nvbes_core::auth::helpers::{generate_token, token_hash};
+use nvbes_core::auth::{generate_token, token_hash};
 use sqlx::PgPool;
 use uuid::Uuid;
 

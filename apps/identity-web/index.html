@@ -6,23 +6,17 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-    <!-- Content Security Policy (CSP) dynamique par environnement -->
     <!-- %CSP_META% -->
-    <!-- Protection Referrer -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <!-- Désactivation détection de format automatique (prévention fuite de données) -->
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
     <meta
       name="description"
       content="nvbes Identity — authentification, MFA, WebAuthn, gestion de comptes et abonnements Stripe pour la plateforme nvbes."
     />
     <meta name="robots" content="index, follow" />
-    <!-- Sécurité XSS Legacy (Fallback) -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <!-- Preconnect to critical origins (etablit la connexion TLS avant la requete) -->
     <link rel="preconnect" href="https://js.stripe.com" />
     <link rel="preconnect" href="https://api.stripe.com" />
-    <!-- dns-prefetch pour les origines secondaires (resolution DNS uniquement) -->
     <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
 
     <meta property="og:title" content="nvbes Identity" />
@@ -34,11 +28,15 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="nvbes" />
     <meta property="og:image" content="/icon.svg" />
+    <meta name="application-name" content="nvbes Identity" />
     <meta name="apple-mobile-web-app-title" content="nvbes Identity" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="mask-icon" href="/icon.svg" color="#0a0a0a" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>nvbes Identity</title>
   </head>
   <body>

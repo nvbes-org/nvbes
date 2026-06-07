@@ -25,41 +25,13 @@ pub(crate) async fn me_export(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<DataExportResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_me_export",
-        &format!("user:{}", auth.user_id()),
-        3,
-        std::time::Duration::from_secs(86400),
-    )
-    .await?;
-
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
-
-    let display_name = auth.display_name.as_str();
-    let html_body = format!(
-        "<p>Bonjour {},</p><p>Votre demande d'export de donnees personnelles a bien ete enregistree. Une notification vous sera envoyee quand le fichier sera pret. Le fichier devra etre recupere depuis votre session authentifiee.</p><p>L'equipe nvbes</p>",
-        display_name
-    );
-
-    crate::email::jobs::enqueue_email_job_tx(
+    let domain_auth = crate::domains::auth::types::AuthContext::from(&auth);
+    crate::domains::auth::data_export::request_account_export(
         &state.db,
         &state.redis,
-        crate::email::jobs::EmailSendPayload {
-            to_email: auth.user_email.clone(),
-            to_name: Some(display_name.to_string()),
-            subject: "Demande d'export de donnees - nvbes".to_string(),
-            html_body,
-            text_body: None,
-            business_type: "data_export".to_string(),
-        },
-        &format!("export-confirm:{}", auth.user_id()),
+        &domain_auth,
     )
     .await?;
-
-    crate::email::jobs::enqueue_data_export_job_tx(&state.redis, auth.user_id(), &auth.user_email)
-        .await?;
-
     Ok(Json(DataExportResult { success: true }))
 }
 

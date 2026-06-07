@@ -143,6 +143,32 @@ export type {
   BrowserSentrySmokeReporter,
   BrowserSentrySmokeResult,
 } from './sentry-smoke';
+export {
+  ACCEPT_ALL_CONSENT,
+  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_VENDORS_MAP,
+  createTrackingConsentApi,
+  DECLINE_ALL_CONSENT,
+  DEFAULT_CONSENT,
+  POSTHOG_PURPOSE_CONSENT_TYPES,
+  TRACKING_CONSENT_CHANGED_EVENT,
+} from './tracking-consent';
+export type {
+  CookieConsentState,
+  TrackingConsentClient,
+  TrackingConsentStoredValue,
+} from './tracking-consent';
+export {
+  ANALYTICS_POSTHOG_PURPOSES,
+  deriveConsentState,
+  hasAnyPostHogPurpose,
+  toggleConsentCategory,
+  toggleConsentPostHogPurpose,
+  toggleConsentVendor,
+  type PostHogPurpose,
+} from './tracking-consent.editor';
+export { SharedTrackingConsentBanner } from './TrackingConsentBanner';
+export { TrackingConsentToggle } from './TrackingConsentToggle';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
   if (error instanceof ClientRuntimeError) {
@@ -158,8 +184,12 @@ export function clientErrorMessage(error: unknown, fallback = 'Une erreur est su
 }
 
 export {
+  clearAppBadge,
   getInstallPrompt,
   getSwReady,
+  getWebAppDisplayMode,
+  getWebPushSupport,
+  isInstalledWebApp,
   migrateServiceWorkers,
   onBackgroundFetchEvent,
   onInstallReady,
@@ -167,10 +197,14 @@ export {
   registerBackgroundSync,
   registerPeriodicSync,
   registerServiceWorker,
+  requestWebPushPermission,
+  setAppBadge,
   sendNetworkQualityToSw,
   sendToSw,
   startBackgroundFetch,
+  supportsAppBadging,
 } from './service-worker';
+export type { WebAppDisplayMode, WebPushSupport } from './service-worker';
 export {
   broadcast,
   broadcastLogout,

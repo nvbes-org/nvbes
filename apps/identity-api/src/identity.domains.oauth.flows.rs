@@ -9,7 +9,10 @@ pub mod token_exchange;
 #[path = "identity.domains.oauth.flows.tokens.rs"]
 pub mod tokens;
 
-pub use super::service::types::*;
+pub use super::service::{
+    AuthorizationCodeView, ClientAuthentication, CreateAuthorizationCodeInput, ExchangeCodeInput,
+    IntrospectionResponse, TokenView,
+};
 
 pub use client_credentials::client_credentials_grant;
 pub use codes::{create_authorization_code, exchange_code};

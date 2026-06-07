@@ -69,6 +69,18 @@ pub fn cookie_value(headers: &HeaderMap, names: &[&str]) -> Option<String> {
 }
 
 pub fn session_cookie_values(headers: &HeaderMap) -> Vec<String> {
+    session_cookie_tokens(headers)
+        .into_iter()
+        .map(|cookie| cookie.token)
+        .collect()
+}
+
+pub struct SessionCookieToken {
+    pub authuser: String,
+    pub token: String,
+}
+
+pub fn session_cookie_tokens(headers: &HeaderMap) -> Vec<SessionCookieToken> {
     let Some(cookie_header) = headers.get("Cookie") else {
         return Vec::new();
     };
@@ -80,11 +92,11 @@ pub fn session_cookie_values(headers: &HeaderMap) -> Vec<String> {
         .split(';')
         .filter_map(|cookie| {
             let (name, value) = cookie.trim().split_once('=')?;
-            if is_session_cookie_name(name) {
-                Some(value.to_string())
-            } else {
-                None
-            }
+            let authuser = session_cookie_authuser(name)?;
+            Some(SessionCookieToken {
+                authuser: authuser.to_string(),
+                token: value.to_string(),
+            })
         })
         .collect()
 }
@@ -95,6 +107,19 @@ fn is_session_cookie_name(name: &str) -> bool {
         "__Host-session" | "session" | "__Host-token" | "token"
     ) || name.starts_with("__Host-session_")
         || name.starts_with("session_")
+}
+
+fn session_cookie_authuser(name: &str) -> Option<&str> {
+    if let Some(suffix) = name.strip_prefix("__Host-session_") {
+        return Some(suffix);
+    }
+    if let Some(suffix) = name.strip_prefix("session_") {
+        return Some(suffix);
+    }
+    if is_session_cookie_name(name) {
+        return Some("0");
+    }
+    None
 }
 
 pub fn client_ip(headers: &HeaderMap) -> Option<String> {
@@ -149,7 +174,7 @@ pub fn supported_data_regions() -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{region_from_headers, session_cookie_values};
+    use super::{region_from_headers, session_cookie_tokens, session_cookie_values};
     use axum::http::{HeaderMap, HeaderValue};
 
     #[test]
@@ -180,5 +205,25 @@ mod tests {
         );
 
         assert_eq!(session_cookie_values(&headers), ["base", "one", "two"]);
+    }
+
+    #[test]
+    fn session_cookie_tokens_extract_authuser_and_token() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Cookie",
+            HeaderValue::from_static(
+                "theme=dark; __Host-session=base; session_1=one; __Host-session_2=two; csrf_token=csrf",
+            ),
+        );
+
+        let cookies = session_cookie_tokens(&headers);
+        assert_eq!(cookies.len(), 3);
+        assert_eq!(cookies[0].authuser, "0");
+        assert_eq!(cookies[0].token, "base");
+        assert_eq!(cookies[1].authuser, "1");
+        assert_eq!(cookies[1].token, "one");
+        assert_eq!(cookies[2].authuser, "2");
+        assert_eq!(cookies[2].token, "two");
     }
 }

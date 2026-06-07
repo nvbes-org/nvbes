@@ -1,3 +1,4 @@
+import { createRequestHeaders } from '@nvbes/http-client';
 import type { IdentityConfig, TokenResponse } from '@nvbes/identity-sdk';
 
 export interface IdentityRuntimeClient {
@@ -67,9 +68,9 @@ export async function refreshAccessToken(
 ): Promise<RefreshTokenResponse> {
   const response = await fetch(client.config.tokenUrl, {
     method: 'POST',
-    headers: {
+    headers: createRequestHeaders('POST', {
       'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    }),
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,

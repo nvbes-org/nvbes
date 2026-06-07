@@ -1,8 +1,6 @@
 use axum::{Router, http::HeaderMap};
 use base64::Engine;
-use std::time::Duration as StdDuration;
 
-use crate::http::request::client_ip;
 use crate::{app::AppState, http::error::AppError};
 
 #[path = "identity.domains.oauth.routes.authorize.rs"]
@@ -109,36 +107,6 @@ pub fn optional_basic_client_auth(
 
     parse_basic_client_auth(headers).map(Some)
 }
-
-pub(super) async fn enforce_public_oauth_rate_limit(
-    redis: &nvbes_redis::RedisPool,
-    headers: &HeaderMap,
-    action: &str,
-    key: &str,
-    ip_hits: usize,
-    key_hits: usize,
-) -> Result<(), AppError> {
-    let ip_key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
-    crate::domains::auth::check_rate_limit(
-        redis,
-        action,
-        &format!("ip:{ip_key}"),
-        ip_hits,
-        StdDuration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        redis,
-        action,
-        &format!("key:{key}"),
-        key_hits,
-        StdDuration::from_secs(60),
-    )
-    .await?;
-    Ok(())
-}
-
-pub(super) use enforce_public_oauth_rate_limit as enforce_public_oauth_rate_limit_db;
 
 #[cfg(test)]
 mod tests {

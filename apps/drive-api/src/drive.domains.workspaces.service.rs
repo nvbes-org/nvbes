@@ -7,7 +7,10 @@ use nvbes_tenancy::role_as_str;
 
 use super::db::WorkspaceRecord;
 use super::lifecycle;
-pub use super::types::*;
+pub use super::types::{
+    CreateWorkspaceInput, UpdateWorkspaceInput, UpdateWorkspacePolicyInput, WorkspaceListResponse,
+    WorkspaceResponse,
+};
 
 pub async fn list_workspaces(
     db: &sqlx::PgPool,

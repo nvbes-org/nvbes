@@ -31,17 +31,12 @@ pub async fn enforce_device_authorization_rate_limit(
     client_id: &str,
 ) -> Result<(), AppError> {
     let ip_key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_rate_limit_pair(
         redis,
         "oauth_device_authorize",
         &format!("ip:{ip_key}"),
         12,
         StdDuration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        redis,
-        "oauth_device_authorize",
         &format!("key:{client_id}"),
         24,
         StdDuration::from_secs(60),
@@ -56,17 +51,12 @@ pub async fn enforce_device_action_rate_limit(
     user_id: Uuid,
     user_code: &str,
 ) -> Result<(), AppError> {
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_rate_limit_pair(
         redis,
         action,
         &format!("user:{user_id}"),
         12,
         StdDuration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        redis,
-        action,
         &format!("code:{user_code}"),
         6,
         StdDuration::from_secs(60),

@@ -20,4 +20,7 @@ pub mod service;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    append_tus_chunk, cancel_upload, complete_upload, create_tus_upload, create_upload,
+    get_tus_upload_status,
+};

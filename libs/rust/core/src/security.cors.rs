@@ -33,6 +33,7 @@ pub fn cors_layer(config: &AppConfig) -> CorsLayer {
             header::AUTHORIZATION,
             header::ACCEPT,
             HeaderName::from_static("x-requested-with"),
+            HeaderName::from_static("idempotency-key"),
             HeaderName::from_static(REQUEST_ID_HEADER_NAME),
             HeaderName::from_static(CSRF_TOKEN_HEADER_NAME),
             HeaderName::from_static(SENTRY_TRACE_HEADER_NAME),

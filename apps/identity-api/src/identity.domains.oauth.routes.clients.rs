@@ -53,6 +53,17 @@ pub fn policies_router(state: &AppState) -> Router<AppState> {
     )
 }
 
+async fn require_management_step_up(
+    redis: &nvbes_redis::RedisPool,
+    auth: &AuthContext,
+) -> Result<(), AppError> {
+    verification::require_recent_step_up(redis, auth, None).await
+}
+
+fn json_value<T: serde::Serialize>(value: T) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(Json(serde_json::to_value(value)?))
+}
+
 #[utoipa::path(
     get,
     path = "/oauth/clients",
@@ -68,7 +79,7 @@ pub(crate) async fn list_clients(
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let result = crate::domains::oauth::clients::list_clients(&state.db, &auth).await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[utoipa::path(
@@ -88,9 +99,9 @@ pub(crate) async fn create_client(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::oauth::service::CreateOAuthClientInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    require_management_step_up(&state.redis, &auth).await?;
     let result = crate::domains::oauth::clients::create_client(&state.db, &auth, request).await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
@@ -119,7 +130,7 @@ pub(crate) async fn list_client_policies(
     let result =
         crate::domains::oauth::policies::list_client_policies(&state.db, &auth, request.client_id)
             .await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[utoipa::path(
@@ -143,11 +154,11 @@ pub(crate) async fn create_client_policy(
     Path(client_id): Path<String>,
     Json(request): Json<crate::domains::oauth::service::CreateOAuthClientPolicyInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    require_management_step_up(&state.redis, &auth).await?;
     let result =
         crate::domains::oauth::policies::create_client_policy(&state.db, &auth, client_id, request)
             .await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[utoipa::path(
@@ -172,11 +183,11 @@ pub(crate) async fn update_client_policy(
     Path(policy_id): Path<Uuid>,
     Json(request): Json<crate::domains::oauth::service::UpdateOAuthClientPolicyInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    require_management_step_up(&state.redis, &auth).await?;
     let result =
         crate::domains::oauth::policies::update_client_policy(&state.db, &auth, policy_id, request)
             .await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[utoipa::path(
@@ -198,10 +209,10 @@ pub(crate) async fn delete_client_policy(
     Extension(auth): Extension<AuthContext>,
     Path(policy_id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    require_management_step_up(&state.redis, &auth).await?;
     let result =
         crate::domains::oauth::policies::delete_client_policy(&state.db, &auth, policy_id).await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }
 
 #[utoipa::path(
@@ -224,9 +235,9 @@ pub(crate) async fn revoke_client(
     Extension(auth): Extension<AuthContext>,
     Path(client_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    require_management_step_up(&state.redis, &auth).await?;
     let result =
         crate::domains::oauth::clients::revoke_client(&state.db, &state.redis, &auth, &client_id)
             .await?;
-    Ok(Json(serde_json::to_value(result)?))
+    json_value(result)
 }

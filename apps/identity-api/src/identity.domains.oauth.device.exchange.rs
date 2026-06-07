@@ -1,21 +1,25 @@
 use chrono::Utc;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
 use super::device_codes::{
     delete_device_code, get_device_code_by_device_code, is_expired, save_device_code,
 };
 use super::service::types::{ExchangeDeviceCodeInput, TokenView};
-use crate::app::AppState;
+use crate::domains::auth::jwt::JwtService;
 use crate::http::error::AppError;
 use nvbes_redis::refresh_token as refresh_store;
 
 pub async fn exchange_device_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    auth_refresh_token_ttl_hours: i64,
     input: ExchangeDeviceCodeInput,
 ) -> Result<TokenView, AppError> {
     let lock_key = format!("oauth-device-code:{}", input.device_code);
-    let locked = nvbes_redis::lock::acquire(&state.redis, &lock_key, 15)
+    let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)))?;
     if !locked {
@@ -26,7 +30,7 @@ pub async fn exchange_device_code(
     }
 
     let result = async {
-        let Some(mut code) = get_device_code_by_device_code(&state.redis, &input.device_code).await? else {
+        let Some(mut code) = get_device_code_by_device_code(redis, &input.device_code).await? else {
             return Err(AppError::unauthorized("invalid_grant", "The device code is invalid."));
         };
 
@@ -46,7 +50,7 @@ pub async fn exchange_device_code(
             "#,
         )
         .bind(&input.client_id)
-        .fetch_optional(&state.db)
+        .fetch_optional(db)
         .await?
         .ok_or_else(|| AppError::unauthorized("invalid_client", "Client not found."))?;
 
@@ -93,7 +97,7 @@ pub async fn exchange_device_code(
             }
 
             code.last_polled_at = Some(Utc::now());
-            save_device_code(&state.redis, &code).await?;
+            save_device_code(redis, &code).await?;
 
             return Err(AppError::unauthorized(
                 "authorization_pending",
@@ -116,7 +120,7 @@ pub async fn exchange_device_code(
         let scopes = code.scope.join(" ");
 
         crate::domains::oauth::policies_eval::ensure_client_policy(
-            &state.db,
+            db,
             &code.client_id,
             Some(tenant_id),
             organization_id,
@@ -128,8 +132,8 @@ pub async fn exchange_device_code(
         .await?;
 
         let assurance = crate::domains::oauth::assurance::resolve_assurance_context(
-            &state.db,
-            &state.redis,
+            db,
+            redis,
             principal_id,
             Some(session_id),
             Some(&code.client_id),
@@ -149,11 +153,11 @@ pub async fn exchange_device_code(
             "SELECT data_region::text FROM workspaces WHERE id = $1",
         )
         .bind(workspace_id)
-        .fetch_optional(&state.db)
+        .fetch_optional(db)
         .await?
         .flatten();
 
-        let token_pair = state.jwt.generate_token_pair_with_session(
+        let token_pair = jwt.generate_token_pair_with_session(
             principal_id,
             Some(workspace_id),
             workspace_region,
@@ -169,7 +173,7 @@ pub async fn exchange_device_code(
         )?;
 
         refresh_store::store_refresh_token(
-            &state.redis,
+            redis,
             &refresh_store::CachedRefreshToken {
                 jti: token_pair.refresh_jti.clone(),
                 session_id: token_pair.session_id,
@@ -180,7 +184,7 @@ pub async fn exchange_device_code(
                 client_id: Some(client_uuid),
                 scope: scopes.clone(),
                 authorization_details: Vec::new(),
-                expires_at: Utc::now() + chrono::Duration::days(30),
+                expires_at: Utc::now() + chrono::Duration::hours(auth_refresh_token_ttl_hours),
                 rotated_from_jti: None,
                 replaced_by_jti: None,
                 reuse_detected_at: None,
@@ -191,7 +195,7 @@ pub async fn exchange_device_code(
         .await
         .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
 
-        delete_device_code(&state.redis, &code).await?;
+        delete_device_code(redis, &code).await?;
 
         let audience = code.audience.clone();
 
@@ -207,7 +211,7 @@ pub async fn exchange_device_code(
     }
     .await;
 
-    let release_result = nvbes_redis::lock::release(&state.redis, &lock_key)
+    let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
         .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)));
     release_result?;

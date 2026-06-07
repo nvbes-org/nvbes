@@ -1,11 +1,14 @@
 pub use billing_shared::models::{BillingStateRecord, PlanRecord, StripePriceMapping};
-pub use billing_shared::types::*;
+pub use billing_shared::types::{
+    BillingOverviewResponse, BillingUsageResponse, BillingWebhookResponse, CheckoutSessionResponse,
+    CreateCheckoutInput, CreatePortalInput, InvoiceEstimateResponse, PlanView,
+    PortalSessionResponse, ProductEntitlementsView, UsageLineView,
+};
 use nvbes_billing as billing_shared;
 use serde::Serialize;
 use uuid::Uuid;
 
-// AuditEventInput is still local for now as it uses AppState/AppError context in some places,
-// or it's very specific to identity-api's audit log format.
+// AuditEventInput stays local because it is specific to identity-api audit log shape.
 #[derive(Debug, Serialize)]
 pub(crate) struct AuditEventInput<'a> {
     pub workspace_id: Uuid,

@@ -1,3 +1,4 @@
+use crate::http::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -39,7 +40,35 @@ pub fn max_aal(left: Aal, right: Aal) -> Aal {
     if left >= right { left } else { right }
 }
 
-#[path = "auth.helpers.rs"]
-pub mod helpers;
+pub fn step_up_required_error() -> AppError {
+    AppError::unauthorized("step_up_required", "Please verify again before continuing.")
+}
 
-pub use helpers::*;
+pub fn workspace_switch_step_up_required_error() -> AppError {
+    AppError::unauthorized(
+        "step_up_required",
+        "Please verify again before switching workspaces.",
+    )
+}
+
+#[path = "auth.helpers.birthdate.rs"]
+mod birthdate;
+#[path = "auth.helpers.password.rs"]
+mod password;
+#[cfg(test)]
+#[path = "auth.helpers.tests.rs"]
+mod tests;
+#[path = "auth.helpers.tokens.rs"]
+mod tokens;
+#[path = "auth.helpers.validation.rs"]
+mod validation;
+
+pub use birthdate::{parse_birthdate, today_in_region, validate_birthdate};
+pub use password::{hash_password, verify_password};
+pub use tokens::{
+    generate_random_token, generate_token, log_dev_token, random_challenge, token_hash,
+    token_hash_b64, unique_slug,
+};
+pub use validation::{
+    normalize_email, require_non_empty, slugify, validate_email, validate_password,
+};

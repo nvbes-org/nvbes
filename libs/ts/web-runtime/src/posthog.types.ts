@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagResult,
-  JsonType,
-} from 'posthog-js/dist/module.full.no-external';
+import type { FeatureFlagResult, JsonType } from 'posthog-js/dist/module.full.no-external';
 
 export interface PostHogPurposeConsent {
   productAnalytics: boolean;

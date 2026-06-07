@@ -8,6 +8,13 @@ use sqlx::PgPool;
 
 use super::service::{AssuranceContext, SessionAssuranceState};
 
+struct RequiredAssuranceInputs<'a> {
+    client_id: Option<&'a str>,
+    tenant_id: Option<Uuid>,
+    organization_id: Option<Uuid>,
+    workspace_id: Option<Uuid>,
+}
+
 /// Resolve the assurance context for a given user and session.
 pub async fn resolve_assurance_context(
     db: &PgPool,
@@ -19,76 +26,24 @@ pub async fn resolve_assurance_context(
     organization_id: Option<Uuid>,
     workspace_id: Option<Uuid>,
 ) -> Result<AssuranceContext, AppError> {
-    let mut required = Aal::Aal1;
-
-    if let Some(client_id) = client_id {
-        let policy_required_str =
-            fetch_policy_required_acr(db, client_id, tenant_id, organization_id, workspace_id)
-                .await?;
-        let policy_required =
-            std::str::FromStr::from_str(&policy_required_str).unwrap_or(Aal::Aal1);
-        required = std::cmp::max(required, policy_required);
-    }
-
-    let risk_required_str = required_acr_from_risk_tier(db, tenant_id).await?;
-    let risk_required = risk_required_str
-        .and_then(|s| std::str::FromStr::from_str(&s).ok())
-        .unwrap_or(Aal::Aal1);
-    required = std::cmp::max(required, risk_required);
-
-    let workspace_required_str =
-        required_acr_from_workspace_role(db, user_id, workspace_id).await?;
-    let workspace_required = workspace_required_str
-        .and_then(|s| std::str::FromStr::from_str(&s).ok())
-        .unwrap_or(Aal::Aal1);
-    required = std::cmp::max(required, workspace_required);
+    let required = resolve_required_assurance(
+        db,
+        user_id,
+        RequiredAssuranceInputs {
+            client_id,
+            tenant_id,
+            organization_id,
+            workspace_id,
+        },
+    )
+    .await?;
 
     let session_state = if let Some(session_id) = session_id {
         fetch_session_assurance_state(redis, user_id, session_id).await?
     } else {
         None
     };
-
-    let mut achieved = session_state
-        .as_ref()
-        .and_then(|state| state.acr.as_deref().and_then(|s| s.parse::<Aal>().ok()))
-        .unwrap_or(Aal::Aal1);
-
-    let has_step_up = session_state.as_ref().is_some_and(|state| {
-        state
-            .step_up_expires_at
-            .is_some_and(|value| value > Utc::now())
-    });
-
-    if has_step_up {
-        achieved = std::cmp::max(achieved, Aal::Aal2);
-    }
-
-    let mut amr = session_state
-        .as_ref()
-        .map(|state| state.amr.clone())
-        .unwrap_or_else(|| vec!["pwd".to_string()]);
-
-    if amr.is_empty() {
-        amr.push("pwd".to_string());
-    }
-    if has_step_up && !amr.iter().any(|value| value == "otp") {
-        amr.push("otp".to_string());
-    }
-
-    let auth_time = session_state
-        .as_ref()
-        .and_then(|state| state.step_up_verified_at)
-        .or_else(|| session_state.as_ref().map(|state| state.created_at))
-        .unwrap_or_else(Utc::now)
-        .timestamp();
-
-    Ok(AssuranceContext {
-        sufficient: achieved >= required,
-        acr: achieved.as_str().to_string(),
-        amr,
-        auth_time,
-    })
+    Ok(build_assurance_context(required, session_state.as_ref()))
 }
 
 /// Fetch the required ACR from client policy.
@@ -136,6 +91,43 @@ pub async fn fetch_policy_required_acr(
     Ok(row
         .map(|row| row.get("required_acr"))
         .unwrap_or_else(|| "aal1".to_string()))
+}
+
+async fn resolve_required_assurance(
+    db: &PgPool,
+    user_id: Uuid,
+    inputs: RequiredAssuranceInputs<'_>,
+) -> Result<Aal, AppError> {
+    let mut required = Aal::Aal1;
+
+    if let Some(client_id) = inputs.client_id {
+        required = std::cmp::max(
+            required,
+            parse_required_aal(Some(
+                fetch_policy_required_acr(
+                    db,
+                    client_id,
+                    inputs.tenant_id,
+                    inputs.organization_id,
+                    inputs.workspace_id,
+                )
+                .await?,
+            )),
+        );
+    }
+
+    required = std::cmp::max(
+        required,
+        parse_required_aal(required_acr_from_risk_tier(db, inputs.tenant_id).await?),
+    );
+    required = std::cmp::max(
+        required,
+        parse_required_aal(
+            required_acr_from_workspace_role(db, user_id, inputs.workspace_id).await?,
+        ),
+    );
+
+    Ok(required)
 }
 
 /// Calculate required ACR based on tenant risk tier.
@@ -232,6 +224,68 @@ pub async fn fetch_session_assurance_state(
             amr: session.amr,
         })
     }))
+}
+
+fn build_assurance_context(
+    required: Aal,
+    session_state: Option<&SessionAssuranceState>,
+) -> AssuranceContext {
+    let achieved = achieved_assurance_level(session_state);
+    let has_step_up = has_valid_step_up(session_state);
+    let mut amr = session_state
+        .map(|state| state.amr.clone())
+        .unwrap_or_else(|| vec!["pwd".to_string()]);
+
+    if amr.is_empty() {
+        amr.push("pwd".to_string());
+    }
+    if has_step_up && !amr.iter().any(|value| value == "otp") {
+        amr.push("otp".to_string());
+    }
+
+    let auth_time = session_state
+        .and_then(|state| state.step_up_verified_at)
+        .or_else(|| session_state.map(|state| state.created_at))
+        .unwrap_or_else(Utc::now)
+        .timestamp();
+
+    AssuranceContext {
+        sufficient: achieved >= required,
+        acr: achieved.as_str().to_string(),
+        amr,
+        auth_time,
+    }
+}
+
+fn achieved_assurance_level(session_state: Option<&SessionAssuranceState>) -> Aal {
+    let mut achieved = session_state
+        .and_then(|state| {
+            state
+                .acr
+                .as_deref()
+                .and_then(|value| value.parse::<Aal>().ok())
+        })
+        .unwrap_or(Aal::Aal1);
+
+    if has_valid_step_up(session_state) {
+        achieved = std::cmp::max(achieved, Aal::Aal2);
+    }
+
+    achieved
+}
+
+fn has_valid_step_up(session_state: Option<&SessionAssuranceState>) -> bool {
+    session_state.is_some_and(|state| {
+        state
+            .step_up_expires_at
+            .is_some_and(|value| value > Utc::now())
+    })
+}
+
+fn parse_required_aal(value: Option<String>) -> Aal {
+    value
+        .and_then(|raw| std::str::FromStr::from_str(&raw).ok())
+        .unwrap_or(Aal::Aal1)
 }
 
 pub fn _assurance_rank(value: &str) -> i32 {

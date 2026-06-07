@@ -80,8 +80,7 @@ const DENIED_KEY_PATTERN =
 const EMAIL_VALUE_PATTERN = /[^\s@]+@[^\s@]+\.[^\s@]+/u;
 const JWT_VALUE_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u;
 const JWT_IN_TEXT_PATTERN = /[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u;
-const UUID_VALUE_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const UUID_VALUE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 export function hasAnyPostHogConsent(consent: PostHogPurposeConsent): boolean {
   return (

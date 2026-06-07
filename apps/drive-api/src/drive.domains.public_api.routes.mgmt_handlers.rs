@@ -11,9 +11,9 @@ use crate::{
     app::AppState,
     domains::authz::{ResourceContext, WorkspaceAction, authorize_workspace_action},
     http::error::AppError,
-    http::request::{client_ip, user_agent},
 };
 
+use super::request_meta::PublicApiRequestMeta;
 use super::types::{ApiKeyListResponse, RevokeApiKeyResponse};
 
 #[utoipa::path(
@@ -75,6 +75,7 @@ pub async fn revoke_api_key(
     headers: HeaderMap,
     Path((workspace_id, api_key_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<RevokeApiKeyResponse>, AppError> {
+    let meta = PublicApiRequestMeta::from_headers(&headers);
     let access = authorize_workspace_action(
         &state.db,
         &headers,
@@ -88,8 +89,8 @@ pub async fn revoke_api_key(
             &state.db,
             &access,
             api_key_id,
-            client_ip(&headers),
-            user_agent(&headers),
+            meta.ip_owned(),
+            meta.user_agent_owned(),
         )
         .await?,
     ))

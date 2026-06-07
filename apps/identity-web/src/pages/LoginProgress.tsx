@@ -1,5 +1,5 @@
 import { KeyRoundIcon, type LucideIcon, MailIcon, ShieldCheckIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/classnames';
 
 export type LoginStep = 'chooser' | 'identifier' | 'password' | 'mfa' | 'consent';
 

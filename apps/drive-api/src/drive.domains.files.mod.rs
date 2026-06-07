@@ -22,4 +22,11 @@ pub mod transfer;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    create_download_url, create_folder, delete_object, download_object, list_objects, list_trash,
+    move_object, rename_object, restore_object, trash_object,
+};
+pub use types::{
+    CreateFolderInput, DownloadUrlResponse, ListObjectsInput, ListObjectsResponse, MoveObjectInput,
+    ObjectResponse, RenameObjectInput,
+};

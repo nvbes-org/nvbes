@@ -2,8 +2,10 @@ use chrono::{DateTime, Utc};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
-pub use super::models::*;
-use super::types::*;
+pub use super::models::{
+    PublicShareRecord, ShareLinkPermission, ShareLinkRecord, SharePolicy, ShareableObjectRecord,
+};
+use super::types::{PublicShareView, ShareLinkView};
 use crate::http::error::AppError;
 
 pub async fn insert_share_link_tx(

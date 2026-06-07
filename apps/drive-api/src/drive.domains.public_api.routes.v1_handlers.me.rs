@@ -1,4 +1,4 @@
-use super::super::routes_helpers::*;
+use super::super::routes_access::{authenticate, log_ok};
 use super::super::types::*;
 use crate::{app::AppState, http::error::AppError};
 use axum::{
@@ -24,7 +24,7 @@ pub async fn me(
     method: Method,
     uri: Uri,
 ) -> Result<Json<ApiIdentityResponse>, AppError> {
-    let ctx = authenticate(
+    let request = authenticate(
         &state.db,
         &state.redis,
         &headers,
@@ -33,8 +33,8 @@ pub async fn me(
         "files:read",
     )
     .await?;
-    let result = crate::domains::public_api::me(&ctx).await;
-    log_ok(&state.db, &headers, &ctx, "GET", "/v1/me", &["files:read"]).await?;
+    let result = crate::domains::public_api::me(&request.ctx).await;
+    log_ok(&state.db, &request, "GET", "/v1/me", &["files:read"]).await?;
     Ok(Json(result))
 }
 
@@ -54,7 +54,7 @@ pub async fn list_workspaces(
     method: Method,
     uri: Uri,
 ) -> Result<Json<PublicWorkspacesResponse>, AppError> {
-    let ctx = authenticate(
+    let request = authenticate(
         &state.db,
         &state.redis,
         &headers,
@@ -63,11 +63,10 @@ pub async fn list_workspaces(
         "files:read",
     )
     .await?;
-    let result = crate::domains::public_api::list_workspaces(&state.db, &ctx).await?;
+    let result = crate::domains::public_api::list_workspaces(&state.db, &request.ctx).await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &request,
         "GET",
         "/v1/workspaces",
         &["files:read"],

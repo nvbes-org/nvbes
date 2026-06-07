@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vite-plus/test';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { generateCodeChallenge, generateCodeVerifier } from '../pkce';
 
 // Mock crypto for Node.js test environment

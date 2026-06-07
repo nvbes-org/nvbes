@@ -12,11 +12,7 @@ import {
   normalizePostHogError,
   sanitizePostHogProperties,
 } from './posthog.privacy';
-import type {
-  PostHogPurposeConsent,
-  PostHogRuntime,
-  PostHogRuntimeOptions,
-} from './posthog.types';
+import type { PostHogPurposeConsent, PostHogRuntime, PostHogRuntimeOptions } from './posthog.types';
 
 type PostHogModule = typeof import('posthog-js/dist/module.full.no-external');
 type PostHogClient = PostHogModule['default'];

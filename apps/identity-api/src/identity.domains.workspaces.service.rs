@@ -4,9 +4,10 @@ use crate::{
     domains::auth::types::AuthContext, domains::authz::WorkspaceAccess, http::error::AppError,
 };
 
+pub use super::types::{
+    CreateWorkspaceInput, UpdateWorkspaceInput, WorkspaceListResponse, WorkspaceResponse,
+};
 use super::{core, db, settings};
-
-pub use super::types::*;
 
 pub async fn list_workspaces(
     db: &PgPool,

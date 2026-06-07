@@ -39,8 +39,8 @@ pub async fn create_share_link(
     queries::enforce_share_link_capacity_tx(&mut tx, access.workspace_id, policy.max_share_links)
         .await?;
 
-    let token = nvbes_core::auth::helpers::generate_token("gxs");
-    let token_hash = nvbes_core::auth::helpers::token_hash(&token);
+    let token = nvbes_core::auth::generate_token("gxs");
+    let token_hash = nvbes_core::auth::token_hash(&token);
 
     let link = db::insert_share_link_tx(
         &mut tx,

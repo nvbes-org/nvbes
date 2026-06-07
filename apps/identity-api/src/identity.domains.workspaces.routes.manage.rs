@@ -10,14 +10,12 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::domains::auth::sessions;
-use crate::domains::authz::{
-    ResourceContext, WorkspaceAction, authorize_workspace_action, ensure_email_verified,
-};
+use crate::domains::authz::{ResourceContext, WorkspaceAction, authorize_workspace_action};
 use crate::domains::workspaces::service::{
     self, CreateWorkspaceInput, UpdateWorkspaceInput, WorkspaceListResponse, WorkspaceResponse,
 };
 use crate::http::error::AppError;
-use crate::http::request::{bearer_token, client_ip, user_agent};
+use crate::http::request::{client_ip, user_agent};
 use nvbes_product_analytics::ProductAnalyticsEvent;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
@@ -55,9 +53,9 @@ pub(crate) async fn list_workspaces(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<WorkspaceListResponse>, AppError> {
-    let token = bearer_token(&headers)?;
-    let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await?;
-    ensure_email_verified(&auth)?;
+    let auth =
+        sessions::authenticate_verified_bearer(&state.db, &state.redis, &state.jwt, &headers)
+            .await?;
 
     Ok(Json(service::list_workspaces(&state.db, &auth).await?))
 }
@@ -79,9 +77,9 @@ pub(crate) async fn create_workspace(
     headers: HeaderMap,
     Json(request): Json<CreateWorkspaceRequest>,
 ) -> Result<Json<WorkspaceResponse>, AppError> {
-    let token = bearer_token(&headers)?;
-    let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await?;
-    ensure_email_verified(&auth)?;
+    let auth =
+        sessions::authenticate_verified_bearer(&state.db, &state.redis, &state.jwt, &headers)
+            .await?;
 
     let result = service::create_workspace(
         &state.db,

@@ -39,7 +39,7 @@ pub(crate) async fn resend_verify_email(
     headers: HeaderMap,
     Json(request): Json<ResendVerificationRequest>,
 ) -> Result<Json<crate::domains::auth::types::ResendVerificationResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_verify_email_resend",
         &format!(
@@ -48,11 +48,6 @@ pub(crate) async fn resend_verify_email(
         ),
         10,
         std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_verify_email_resend",
         &format!("key:{}", request.email),
         4,
         std::time::Duration::from_secs(300),
@@ -88,13 +83,8 @@ pub(crate) async fn change_verify_email(
     headers: HeaderMap,
     Json(request): Json<ChangeVerificationRequest>,
 ) -> Result<Json<crate::domains::auth::types::ResendVerificationResult>, AppError> {
-    let auth = if let Ok(token) = crate::http::request::bearer_token(&headers) {
-        sessions::authenticate(&state.db, &state.redis, &state.jwt, &token)
-            .await
-            .ok()
-    } else {
-        None
-    };
+    let auth =
+        sessions::try_authenticate_bearer(&state.db, &state.redis, &state.jwt, &headers).await;
 
     let rate_limit_key = auth
         .as_ref()
@@ -107,7 +97,7 @@ pub(crate) async fn change_verify_email(
         })
         .unwrap_or_else(|| format!("key:{}", request.email));
 
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_verify_email_change",
         &format!(
@@ -116,11 +106,6 @@ pub(crate) async fn change_verify_email(
         ),
         10,
         std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_verify_email_change",
         &rate_limit_key,
         4,
         std::time::Duration::from_secs(300),

@@ -1,0 +1,33 @@
+import type { FormEvent, ReactNode } from 'react';
+import { ShieldCheck } from 'lucide-react';
+
+export function StepUpFormHeader({ description }: { description?: string }) {
+  return (
+    <div className="flex flex-col gap-1.5 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <ShieldCheck className="size-6" />
+      </div>
+      <h1 className="mt-2 text-xl font-heading font-semibold">Vérification requise</h1>
+      <p className="text-xs text-muted-foreground">
+        {description || 'Veuillez confirmer votre identité pour continuer.'}
+      </p>
+    </div>
+  );
+}
+
+export function StepUpFormCard({
+  children,
+  onSubmit,
+}: {
+  children: ReactNode;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-sm"
+    >
+      {children}
+    </form>
+  );
+}

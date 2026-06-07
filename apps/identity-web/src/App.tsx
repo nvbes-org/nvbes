@@ -2,11 +2,12 @@ import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/router-devtools';
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Profiler, useState } from 'react';
 import { router } from './identity.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
 import { ApiConnectionOverlay } from './components/ApiConnectionOverlay';
+import { ToastProvider } from './components/ui/toast';
 
 function handleRenderProfiler(
   id: string,
@@ -37,21 +38,23 @@ function App() {
   return (
     <ErrorBoundary name="global">
       <QueryClientProvider client={queryClient}>
-        {import.meta.env.DEV ? (
-          <Profiler id="identity-web" onRender={handleRenderProfiler}>
-            <RouterProvider router={router} />
-            <TrackingConsentBanner />
-            <ApiConnectionOverlay />
-            <ReactQueryDevtools initialIsOpen={false} />
-            <TanStackRouterDevtools router={router} position="bottom-right" />
-          </Profiler>
-        ) : (
-          <>
-            <RouterProvider router={router} />
-            <TrackingConsentBanner />
-            <ApiConnectionOverlay />
-          </>
-        )}
+        <ToastProvider>
+          {import.meta.env.DEV ? (
+            <Profiler id="identity-web" onRender={handleRenderProfiler}>
+              <RouterProvider router={router} />
+              <TrackingConsentBanner />
+              <ApiConnectionOverlay />
+              <ReactQueryDevtools initialIsOpen={false} />
+              <TanStackRouterDevtools router={router} position="bottom-right" />
+            </Profiler>
+          ) : (
+            <>
+              <RouterProvider router={router} />
+              <TrackingConsentBanner />
+              <ApiConnectionOverlay />
+            </>
+          )}
+        </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -2,7 +2,16 @@ use crate::{app::AppState, http::error::AppError};
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_redis::par as par_store;
 use serde::Deserialize;
+use std::time::Duration;
 use uuid::Uuid;
+
+#[path = "identity.domains.oauth.routes.par.request.rs"]
+mod request;
+#[path = "identity.domains.oauth.routes.par.store.rs"]
+mod store;
+#[cfg(test)]
+#[path = "identity.domains.oauth.routes.par.tests.rs"]
+mod tests;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/par", post(par))
@@ -58,17 +67,18 @@ async fn par(
         ));
     }
 
-    super::enforce_public_oauth_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_par",
         &client_auth.client_id,
         30,
         20,
+        Duration::from_secs(60),
     )
     .await?;
 
-    validate_par_request(&request)?;
+    request::validate_par_request(&request)?;
 
     let mut parameters = serde_json::Map::new();
     parameters.insert(
@@ -168,48 +178,9 @@ async fn par(
     ))
 }
 
-pub(crate) async fn resolve_pushed_parameters(
-    redis: &nvbes_redis::RedisPool,
-    request_uri: &str,
-    client_id: &str,
-) -> Result<serde_json::Map<String, serde_json::Value>, AppError> {
-    let record = par_store::get_pushed_authorization_request(redis, request_uri)
-        .await
-        .map_err(|err| {
-            AppError::internal("pushed_authorization_request_read_failed", &err.to_string())
-        })?
-        .ok_or_else(|| {
-            AppError::bad_request("invalid_request_uri", "The request_uri is invalid.")
-        })?;
+pub(crate) use store::resolve_pushed_parameters;
 
-    if record.client_id != client_id {
-        return Err(AppError::bad_request(
-            "invalid_request_uri",
-            "The request_uri does not belong to this client.",
-        ));
-    }
-
-    if record.expires_at < chrono::Utc::now() || record.used_at.is_some() {
-        return Err(AppError::bad_request(
-            "invalid_request_uri",
-            "The request_uri has expired or has already been used.",
-        ));
-    }
-
-    Ok(record.parameters)
-}
-
-pub(crate) async fn mark_par_used(
-    redis: &nvbes_redis::RedisPool,
-    request_uri: &str,
-) -> Result<(), AppError> {
-    par_store::mark_pushed_authorization_request_used(redis, request_uri)
-        .await
-        .map_err(|err| {
-            AppError::internal("pushed_authorization_request_mark_failed", &err.to_string())
-        })?;
-    Ok(())
-}
+pub(crate) use store::mark_par_used;
 
 fn par_client_auth(
     headers: &HeaderMap,
@@ -225,78 +196,4 @@ fn par_client_auth(
         body_client_assertion_type,
         body_client_assertion,
     )
-}
-
-fn validate_par_request(request: &ParRequest) -> Result<(), AppError> {
-    let redirect_uri = request
-        .redirect_uri
-        .as_deref()
-        .unwrap_or("")
-        .trim()
-        .to_string();
-
-    if redirect_uri.is_empty() {
-        return Err(AppError::bad_request(
-            "missing_redirect_uri",
-            "The redirect_uri parameter is required for PAR.",
-        ));
-    }
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    async fn test_redis_pool() -> nvbes_redis::RedisPool {
-        crate::test_support::test_redis_pool().await
-    }
-
-    #[tokio::test]
-    async fn stores_and_resolves_pushed_authorization_request_via_redis() {
-        let redis = test_redis_pool().await;
-        let request_uri = format!(
-            "urn:ietf:params:oauth:request_uri:gxpar_{}",
-            Uuid::new_v4().simple()
-        );
-        let client_id = format!("client-{}", Uuid::new_v4());
-
-        par_store::store_pushed_authorization_request(
-            &redis,
-            &par_store::CachedPushedAuthorizationRequest {
-                request_uri: request_uri.clone(),
-                client_id: client_id.clone(),
-                parameters: serde_json::json!({
-                    "redirect_uri": "https://client.example.com/cb",
-                    "scope": "openid profile",
-                    "state": "state-123",
-                })
-                .as_object()
-                .cloned()
-                .expect("parameters should be an object"),
-                expires_at: chrono::Utc::now() + chrono::Duration::seconds(60),
-                used_at: None,
-            },
-        )
-        .await
-        .expect("par should store");
-
-        let params = resolve_pushed_parameters(&redis, &request_uri, &client_id)
-            .await
-            .expect("par should resolve");
-        assert_eq!(
-            params.get("redirect_uri").and_then(|value| value.as_str()),
-            Some("https://client.example.com/cb")
-        );
-
-        mark_par_used(&redis, &request_uri)
-            .await
-            .expect("par should mark used");
-
-        let error = resolve_pushed_parameters(&redis, &request_uri, &client_id)
-            .await
-            .expect_err("used request_uri should be rejected");
-        assert_eq!(error.code, "invalid_request_uri");
-    }
 }

@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-pub use crate::timezones::*;
-
 #[path = "region.timezones.rs"]
 pub mod timezones;
 
@@ -188,7 +186,7 @@ mod tests {
         DataRegion, country_code_to_data_region, detect_profile_from_country_code,
         supported_profiles,
     };
-    use crate::{TZ_ATLANTIC_CANARY, TZ_EUROPE_MADRID};
+    use crate::timezones::{TZ_ATLANTIC_CANARY, TZ_EUROPE_MADRID};
 
     #[test]
     fn detects_supported_profile() {

@@ -154,11 +154,10 @@ function probeChromeRuntime(): boolean {
  * Overridden functions often fail to hide their non-native string representation.
  */
 function probeNativeFunctionSpoofing(): boolean {
-  // oxlint-disable-next-line typescript/no-unsafe-function-type -- generic function type for native check
-  const checkNative = (fn: Function | undefined): boolean => {
-    if (!fn) return false;
+  const checkNative = (readSource: () => string | undefined): boolean => {
     try {
-      const str = fn.toString();
+      const str = readSource();
+      if (!str) return false;
       // A native function always serializes to exactly this:
       // "function name() { [native code] }" or similar for async/getters.
       const isNative = str.includes('[native code]') && !str.includes('return');
@@ -170,9 +169,9 @@ function probeNativeFunctionSpoofing(): boolean {
 
   try {
     // Check frequently targetted functions
-    if (checkNative(navigator.permissions?.query)) return true;
-    if (checkNative(HTMLCanvasElement.prototype.toDataURL)) return true;
-    if (checkNative(Function.prototype.toString)) return true;
+    if (checkNative(() => navigator.permissions?.query?.toString())) return true;
+    if (checkNative(() => HTMLCanvasElement.prototype.toDataURL.toString())) return true;
+    if (checkNative(() => Function.prototype.toString.toString())) return true;
   } catch {
     return true;
   }

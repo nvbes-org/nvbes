@@ -17,10 +17,12 @@ use crate::{
         CreateUploadResponse,
     },
     http::error::AppError,
-    http::request::{client_ip, user_agent},
 };
 
-use super::super::routes_helpers::*;
+use super::super::{
+    routes_access::{log_ok, scoped_access},
+    routes_audit::record_api_event,
+};
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -62,7 +64,7 @@ pub async fn create_upload(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<CreateUploadRequest>,
 ) -> Result<Json<CreateUploadResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -77,7 +79,7 @@ pub async fn create_upload(
     let result = crate::domains::uploads::create_upload(
         state.storage.as_ref(),
         &state.db,
-        &access,
+        &authorized.access,
         CreateUploadInput {
             parent_id: request.parent_id,
             name: request.name,
@@ -85,14 +87,13 @@ pub async fn create_upload(
             expected_size_bytes: request.expected_size_bytes,
             expected_checksum: request.expected_checksum,
         },
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
     )
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "POST",
         "/v1/workspaces/:workspaceId/uploads",
         &["files:write"],
@@ -126,7 +127,7 @@ pub async fn complete_upload(
     Path((workspace_id, upload_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<CompleteUploadRequest>,
 ) -> Result<Json<CompleteUploadResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -142,14 +143,14 @@ pub async fn complete_upload(
         state.storage.as_ref(),
         state.scanner.as_ref(),
         &state.db,
-        &access,
+        &authorized.access,
         upload_id,
         CompleteUploadInput {
             size_bytes: request.size_bytes,
             checksum: request.checksum,
         },
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
         state.config.scan_enabled,
         state.config.scan_fail_open,
         &state.config.scan_engine,
@@ -157,8 +158,7 @@ pub async fn complete_upload(
     .await?;
     record_api_event(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "api.file.uploaded",
         "storage_object",
         Some(result.storage_object.id),
@@ -167,8 +167,7 @@ pub async fn complete_upload(
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "POST",
         "/v1/workspaces/:workspaceId/uploads/:uploadId/complete",
         &["files:write"],
@@ -199,7 +198,7 @@ pub async fn cancel_upload(
     uri: Uri,
     Path((workspace_id, upload_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<CancelUploadResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -214,16 +213,15 @@ pub async fn cancel_upload(
     let result = crate::domains::uploads::cancel_upload(
         state.storage.as_ref(),
         &state.db,
-        &access,
+        &authorized.access,
         upload_id,
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
     )
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "POST",
         "/v1/workspaces/:workspaceId/uploads/:uploadId/cancel",
         &["files:write"],

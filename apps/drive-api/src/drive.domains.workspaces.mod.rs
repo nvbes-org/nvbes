@@ -14,4 +14,4 @@ pub mod types;
 pub mod validation;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{create_workspace, get_workspace, list_workspaces, update_workspace};

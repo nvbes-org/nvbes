@@ -9,10 +9,7 @@ pub async fn require_recent_step_up(
     auth: &AuthContext,
 ) -> Result<(), AppError> {
     if !has_recent_step_up(auth, Aal::Aal2, step_up_ttl_minutes(), Utc::now()) {
-        return Err(AppError::forbidden(
-            "step_up_required",
-            "Please verify again before continuing.",
-        ));
+        return Err(nvbes_core::auth::step_up_required_error().into());
     }
 
     Ok(())
@@ -104,13 +101,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn require_recent_step_up_returns_forbidden_when_stale_or_missing() {
+    async fn require_recent_step_up_returns_unauthorized_when_stale_or_missing() {
         let auth = auth_context(Some("aal1"), Some(Utc::now()));
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let err = require_recent_step_up(&pool, &auth)
             .await
             .expect_err("should fail");
-        assert_eq!(err.status, axum::http::StatusCode::FORBIDDEN);
+        assert_eq!(err.status, axum::http::StatusCode::UNAUTHORIZED);
         assert_eq!(err.code, "step_up_required");
     }
 }

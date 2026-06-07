@@ -2,7 +2,7 @@ import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/router-devtools';
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Profiler, useState } from 'react';
 import { NetworkQualityInit } from './components/NetworkQualityInit';
 import { router } from './drive.router';

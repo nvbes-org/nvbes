@@ -1,9 +1,15 @@
+#[path = "identity.domains.auth.account_chooser.rs"]
+pub mod account_chooser;
+#[path = "identity.domains.auth.account_deletion.rs"]
+pub mod account_deletion;
 #[path = "identity.domains.auth.bot_guard.rs"]
 pub mod bot_guard;
 #[path = "identity.domains.auth.bot_scorer.rs"]
 pub mod bot_scorer;
 #[path = "identity.domains.auth.bot_signals.rs"]
 pub mod bot_signals;
+#[path = "identity.domains.auth.challenge_proof.rs"]
+pub mod challenge_proof;
 #[path = "identity.domains.auth.data_export.rs"]
 pub mod data_export;
 #[path = "identity.domains.auth.db.rs"]

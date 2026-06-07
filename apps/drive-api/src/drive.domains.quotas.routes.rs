@@ -18,7 +18,7 @@ pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new().route("/workspaces/{workspaceId}/quota", get(get_quota))
 }
 
-use super::service::QuotaResponse;
+use crate::domains::quotas::QuotaResponse;
 
 #[utoipa::path(
     get,
@@ -37,7 +37,7 @@ async fn get_quota(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
-) -> Result<Json<crate::domains::quotas::service::QuotaResponse>, AppError> {
+) -> Result<Json<QuotaResponse>, AppError> {
     let access = authorize_workspace_action(
         &state.db,
         &headers,

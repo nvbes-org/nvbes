@@ -2,6 +2,7 @@ use crate::domains::auth::sessions;
 use crate::{app::AppState, http::error::AppError};
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::get};
 use nvbes_core::http::error::ErrorEnvelope;
+use std::time::Duration;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/userinfo", get(userinfo))
@@ -21,15 +22,15 @@ pub(crate) async fn userinfo(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let token = crate::http::request::bearer_token(&headers)?;
-    let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await?;
-    super::enforce_public_oauth_rate_limit(
+    let auth = sessions::authenticate_bearer(&state.db, &state.redis, &state.jwt, &headers).await?;
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_userinfo",
         &format!("session:{}", auth.session_id),
         120,
         120,
+        Duration::from_secs(60),
     )
     .await?;
     let assurance = crate::domains::oauth::assurance::resolve_assurance_context(

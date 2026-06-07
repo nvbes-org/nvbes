@@ -1,5 +1,4 @@
 use crate::app::AppState;
-use crate::domains::auth::state::fetch_state;
 use crate::http::error::AppError;
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
@@ -25,33 +24,21 @@ pub(crate) async fn challenge_webauthn_start(
     headers: HeaderMap,
     Json(request): Json<WebauthnStartRequest>,
 ) -> Result<Json<crate::domains::auth::types::WebauthnAuthStartResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
+    let meta = super::LoginRequestMeta::from_headers(&headers);
+    nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_login_webauthn_start",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
+        &meta.rate_limit_ip_key(),
         10,
         std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_login_webauthn_start",
         &format!("state:{}", request.state_token),
         5,
         std::time::Duration::from_secs(300),
     )
     .await?;
 
-    let auth_state = fetch_state(&state.redis, request.state_token, "mfa").await?;
-    let principal_id = auth_state.principal_id.ok_or_else(|| {
-        AppError::unauthorized(
-            "invalid_auth_state",
-            "The authentication session is invalid or has expired.",
-        )
-    })?;
+    let (auth_state, principal_id) =
+        super::require_mfa_state(&state.redis, request.state_token).await?;
 
     let webauthn = crate::domains::auth::webauthn::build_webauthn(&state.config)?;
     let (challenge_id, options) = crate::domains::auth::webauthn::start_login_authentication(

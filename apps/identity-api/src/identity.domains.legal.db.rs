@@ -134,8 +134,8 @@ pub async fn is_consent_active(
     Ok(row.is_some())
 }
 
-/// Lists all active consents for a principal.
-pub async fn list_active_consents(
+/// Lists all consent records for a principal, including revoked entries.
+pub async fn list_consents(
     db: &PgPool,
     principal_id: Uuid,
 ) -> Result<Vec<UserConsent>, AppError> {
@@ -143,7 +143,7 @@ pub async fn list_active_consents(
         r#"
         SELECT id, principal_id, consent_type, document_version, ip_address::text, granted_at, revoked_at
         FROM user_consents
-        WHERE principal_id = $1 AND revoked_at IS NULL
+        WHERE principal_id = $1
         ORDER BY granted_at DESC
         "#
     )

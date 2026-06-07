@@ -1,4 +1,4 @@
-use super::{normalize_registration_kind, shape_registration_options};
+use super::options::{normalize_registration_kind, shape_registration_options};
 use serde_json::json;
 
 #[test]

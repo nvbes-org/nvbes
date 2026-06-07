@@ -1,14 +1,15 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-    "ignoreDeprecations": "6.0",
-    "skipLibCheck": true,
-    "paths": {
-      "@nvbes/http-client": ["../http-client/src/index.ts"],
-      "posthog-js": ["../../../node_modules/posthog-js/dist/module.d.ts"],
-      "posthog-js/*": ["../../../node_modules/posthog-js/*"]
-    }
-  },
-  "include": ["src"]
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+		"ignoreDeprecations": "6.0",
+		"skipLibCheck": true,
+		"paths": {
+			"@nvbes/http-client": ["../http-client/src/index.ts"],
+			"posthog-js": ["../../../node_modules/posthog-js/dist/module.d.ts"],
+			"posthog-js/*": ["../../../node_modules/posthog-js/*"]
+		}
+	},
+	"include": ["src"],
+	"exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }

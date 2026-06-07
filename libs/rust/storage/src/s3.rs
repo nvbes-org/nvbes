@@ -1,11 +1,14 @@
-use std::time::Duration;
+#[path = "s3.client.rs"]
+mod client;
+#[path = "s3.multipart.rs"]
+mod multipart;
+#[path = "s3.objects.rs"]
+mod objects;
+#[path = "s3.presign.rs"]
+mod presign;
 
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
-use aws_sdk_s3::presigning::PresigningConfig;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart, Delete, ObjectIdentifier};
-use tracing::debug;
 
 use crate::error::StorageError;
 use crate::trait_def::{
@@ -28,6 +31,8 @@ macro_rules! traced_s3_request {
     }};
 }
 
+pub(crate) use traced_s3_request;
+
 #[derive(Clone)]
 pub struct S3ObjectStore {
     client: S3Client,
@@ -42,20 +47,7 @@ impl S3ObjectStore {
         access_key: &str,
         secret_key: &str,
     ) -> Self {
-        let credentials =
-            aws_sdk_s3::config::Credentials::new(access_key, secret_key, None, None, "nvbes");
-
-        let config = aws_sdk_s3::Config::builder()
-            .region(aws_sdk_s3::config::Region::new(region.to_string()))
-            .endpoint_url(endpoint)
-            .credentials_provider(credentials)
-            .behavior_version_latest()
-            .force_path_style(true)
-            .build();
-
-        let client = S3Client::from_conf(config);
-
-        Self { client, bucket }
+        client::new_client(bucket, endpoint, region, access_key, secret_key)
     }
 }
 
@@ -66,102 +58,25 @@ impl ObjectStore for S3ObjectStore {
         key: &str,
         content_type: Option<&str>,
         expected_size_bytes: i64,
-        expires: Duration,
+        expires: std::time::Duration,
     ) -> Result<PresignedUrl, StorageError> {
-        let presign_config = PresigningConfig::expires_in(expires)?;
-
-        let mut req = self
-            .client
-            .put_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .content_length(expected_size_bytes);
-
-        if let Some(ct) = content_type {
-            req = req.content_type(ct);
-        }
-        req = req.content_encoding("identity");
-
-        let presigned = req.presigned(presign_config).await?;
-
-        debug!(key, bucket = %self.bucket, expires_secs = expires.as_secs(), "S3 presigned upload URL generated");
-
-        Ok(PresignedUrl {
-            url: presigned.uri().to_string(),
-            method: "PUT",
-            expires_in: expires,
-        })
+        presign::presign_upload(self, key, content_type, expected_size_bytes, expires).await
     }
 
     async fn presign_download(
         &self,
         key: &str,
-        expires: Duration,
+        expires: std::time::Duration,
     ) -> Result<PresignedUrl, StorageError> {
-        let presign_config = PresigningConfig::expires_in(expires)?;
-
-        let presigned = self
-            .client
-            .get_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .presigned(presign_config)
-            .await?;
-
-        debug!(key, bucket = %self.bucket, expires_secs = expires.as_secs(), "S3 presigned download URL generated");
-
-        Ok(PresignedUrl {
-            url: presigned.uri().to_string(),
-            method: "GET",
-            expires_in: expires,
-        })
+        presign::presign_download(self, key, expires).await
     }
 
     async fn get_object(&self, key: &str) -> Result<Vec<u8>, StorageError> {
-        let resp = traced_s3_request!(self.client.get_object().bucket(&self.bucket).key(key))
-            .send()
-            .await?;
-
-        let data = resp
-            .body
-            .collect()
-            .await
-            .map_err(|e| StorageError::S3(format!("failed to read object body: {e}")))?;
-        let bytes = data.into_bytes().to_vec();
-
-        debug!(key, bucket = %self.bucket, size = bytes.len(), "S3 object downloaded");
-
-        Ok(bytes)
+        objects::get_object(self, key).await
     }
 
     async fn get_object_range(&self, key: &str, range: ByteRange) -> Result<Vec<u8>, StorageError> {
-        let resp = traced_s3_request!(
-            self.client
-                .get_object()
-                .bucket(&self.bucket)
-                .key(key)
-                .range(format!("bytes={}-{}", range.start, range.end_inclusive))
-        )
-        .send()
-        .await?;
-
-        let data = resp
-            .body
-            .collect()
-            .await
-            .map_err(|e| StorageError::S3(format!("failed to read object range body: {e}")))?;
-        let bytes = data.into_bytes().to_vec();
-
-        debug!(
-            key,
-            bucket = %self.bucket,
-            start = range.start,
-            end = range.end_inclusive,
-            size = bytes.len(),
-            "S3 object range downloaded"
-        );
-
-        Ok(bytes)
+        objects::get_object_range(self, key, range).await
     }
 
     async fn create_multipart_upload(
@@ -169,25 +84,7 @@ impl ObjectStore for S3ObjectStore {
         key: &str,
         content_type: Option<&str>,
     ) -> Result<String, StorageError> {
-        let mut req = self
-            .client
-            .create_multipart_upload()
-            .bucket(&self.bucket)
-            .key(key);
-
-        if let Some(ct) = content_type {
-            req = req.content_type(ct);
-        }
-        req = req.content_encoding("identity");
-
-        let resp = traced_s3_request!(req)
-            .send()
-            .await
-            .map_err(|e| StorageError::S3(e.to_string()))?;
-
-        resp.upload_id()
-            .map(str::to_owned)
-            .ok_or_else(|| StorageError::S3("S3 did not return a multipart upload id".to_owned()))
+        multipart::create_multipart_upload(self, key, content_type).await
     }
 
     async fn upload_part(
@@ -197,32 +94,7 @@ impl ObjectStore for S3ObjectStore {
         part_number: i32,
         body: Vec<u8>,
     ) -> Result<UploadedPart, StorageError> {
-        let size_bytes = i64::try_from(body.len())
-            .map_err(|e| StorageError::S3(format!("invalid upload part size: {e}")))?;
-
-        let resp = traced_s3_request!(
-            self.client
-                .upload_part()
-                .bucket(&self.bucket)
-                .key(key)
-                .upload_id(multipart_upload_id)
-                .part_number(part_number)
-                .body(ByteStream::from(body))
-        )
-        .send()
-        .await
-        .map_err(|e| StorageError::S3(e.to_string()))?;
-
-        let etag = resp
-            .e_tag()
-            .map(str::to_owned)
-            .ok_or_else(|| StorageError::S3("S3 did not return an upload part ETag".to_owned()))?;
-
-        Ok(UploadedPart {
-            part_number,
-            etag,
-            size_bytes,
-        })
+        multipart::upload_part(self, key, multipart_upload_id, part_number, body).await
     }
 
     async fn complete_multipart_upload(
@@ -231,33 +103,7 @@ impl ObjectStore for S3ObjectStore {
         multipart_upload_id: &str,
         parts: &[CompletedUploadPart],
     ) -> Result<(), StorageError> {
-        let completed_parts = parts
-            .iter()
-            .map(|part| {
-                CompletedPart::builder()
-                    .part_number(part.part_number)
-                    .e_tag(&part.etag)
-                    .build()
-            })
-            .collect::<Vec<_>>();
-
-        let upload = CompletedMultipartUpload::builder()
-            .set_parts(Some(completed_parts))
-            .build();
-
-        traced_s3_request!(
-            self.client
-                .complete_multipart_upload()
-                .bucket(&self.bucket)
-                .key(key)
-                .upload_id(multipart_upload_id)
-                .multipart_upload(upload)
-        )
-        .send()
-        .await
-        .map_err(|e| StorageError::S3(e.to_string()))?;
-
-        Ok(())
+        multipart::complete_multipart_upload(self, key, multipart_upload_id, parts).await
     }
 
     async fn abort_multipart_upload(
@@ -265,18 +111,7 @@ impl ObjectStore for S3ObjectStore {
         key: &str,
         multipart_upload_id: &str,
     ) -> Result<(), StorageError> {
-        traced_s3_request!(
-            self.client
-                .abort_multipart_upload()
-                .bucket(&self.bucket)
-                .key(key)
-                .upload_id(multipart_upload_id)
-        )
-        .send()
-        .await
-        .map_err(|e| StorageError::S3(e.to_string()))?;
-
-        Ok(())
+        multipart::abort_multipart_upload(self, key, multipart_upload_id).await
     }
 
     async fn put_object(
@@ -285,74 +120,14 @@ impl ObjectStore for S3ObjectStore {
         content_type: Option<&str>,
         body: Vec<u8>,
     ) -> Result<(), StorageError> {
-        let mut req = self
-            .client
-            .put_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .body(ByteStream::from(body));
-
-        if let Some(ct) = content_type {
-            req = req.content_type(ct);
-        }
-
-        traced_s3_request!(req).send().await?;
-
-        Ok(())
+        objects::put_object(self, key, content_type, body).await
     }
 
     async fn delete_objects(&self, keys: &[String]) -> Result<(), StorageError> {
-        if keys.is_empty() {
-            return Ok(());
-        }
-
-        let mut builder = Delete::builder();
-        for key in keys {
-            builder =
-                builder.objects(ObjectIdentifier::builder().key(key).build().map_err(|e| {
-                    StorageError::S3(format!("failed to build object identifier: {e}"))
-                })?);
-        }
-
-        let delete = builder
-            .build()
-            .map_err(|e| StorageError::S3(format!("failed to build delete request: {e}")))?;
-
-        let response = traced_s3_request!(
-            self.client
-                .delete_objects()
-                .bucket(&self.bucket)
-                .delete(delete)
-        )
-        .send()
-        .await?;
-
-        let errors = response.errors();
-        if !errors.is_empty() {
-            let first_error = errors
-                .first()
-                .and_then(|error| error.code())
-                .unwrap_or("S3");
-            return Err(StorageError::S3(format!(
-                "failed to delete {} S3 object(s); first error code: {first_error}",
-                errors.len()
-            )));
-        }
-
-        debug!(count = keys.len(), bucket = %self.bucket, "S3 objects deleted");
-
-        Ok(())
+        objects::delete_objects(self, keys).await
     }
 
     async fn head_object(&self, key: &str) -> Result<ObjectMeta, StorageError> {
-        let resp = traced_s3_request!(self.client.head_object().bucket(&self.bucket).key(key))
-            .send()
-            .await?;
-
-        Ok(ObjectMeta {
-            size_bytes: resp.content_length().unwrap_or(0),
-            etag: resp.e_tag().map(|s| s.to_string()),
-            content_encoding: resp.content_encoding().map(str::to_owned),
-        })
+        objects::head_object(self, key).await
     }
 }

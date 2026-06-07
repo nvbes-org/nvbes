@@ -1,9 +1,13 @@
-import StepUpForm from '@/components/StepUpForm';
-import { generateRecoveryCodes } from '@nvbes/identity-sdk-web';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  copyRecoveryCodes,
+  downloadRecoveryCodes,
+  generateCodesWithPassword,
+} from './RecoveryCodesPage.actions';
+import { RecoveryCodesListStep } from './RecoveryCodesPage.list';
+import { RecoveryCodesPasswordStep } from './RecoveryCodesPage.password';
+import { RecoveryCodesStepUp } from './RecoveryCodesPage.stepup';
 
 export default function RecoveryCodesPage() {
   const navigate = useNavigate();
@@ -20,7 +24,7 @@ export default function RecoveryCodesPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await generateRecoveryCodes('', password);
+      const result = await generateCodesWithPassword(password);
       setCodes(result.codes ?? []);
       setStep('codes');
     } catch (err) {
@@ -31,101 +35,44 @@ export default function RecoveryCodesPage() {
   };
 
   const copyAll = () => {
-    void navigator.clipboard.writeText(codes.join('\n'));
+    void copyRecoveryCodes(codes);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const download = () => {
-    const blob = new Blob([codes.join('\n')], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'nvbes-recovery-codes.txt';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadRecoveryCodes(codes);
   };
 
   if (step === 'stepup') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <StepUpForm
-          onSuccess={() => setStep('password')}
-          onCancel={() => void navigate({ to: '/account/security' })}
-          description="Pour générer des codes de récupération, veuillez confirmer votre identité."
-        />
-      </div>
+      <RecoveryCodesStepUp
+        onSuccess={() => setStep('password')}
+        onCancel={() => void navigate({ to: '/account/security' })}
+      />
     );
   }
 
   if (step === 'password') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <form onSubmit={handleGenerate} className="w-full max-w-md space-y-4">
-          <h1 className="text-2xl font-bold">Codes de récupération</h1>
-          <p className="text-sm text-muted-foreground">
-            Confirmez votre mot de passe pour générer de nouveaux codes de récupération.
-          </p>
-          <Input
-            type="password"
-            placeholder="Mot de passe"
-            value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => void navigate({ to: '/account/security' })}
-            >
-              Annuler
-            </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? 'Génération...' : 'Générer'}
-            </Button>
-          </div>
-        </form>
-      </div>
+      <RecoveryCodesPasswordStep
+        error={error}
+        loading={loading}
+        password={password}
+        onCancel={() => void navigate({ to: '/account/security' })}
+        onPasswordChange={setPassword}
+        onSubmit={handleGenerate}
+      />
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-6">
-        <h1 className="text-2xl font-bold">Vos codes de récupération</h1>
-
-        <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
-          Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
-          être utilisé qu'une seule fois.
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          {codes.map((code, i) => (
-            <code
-              key={`${code}-${i}`}
-              className="rounded bg-muted px-3 py-2 text-sm font-mono text-center"
-            >
-              {code}
-            </code>
-          ))}
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={copyAll}>
-            {copied ? 'Copié !' : 'Copier'}
-          </Button>
-          <Button variant="outline" className="flex-1" onClick={download}>
-            Télécharger
-          </Button>
-        </div>
-
-        <Button className="w-full" onClick={() => void navigate({ to: '/account/security' })}>
-          Retour à la sécurité
-        </Button>
-      </div>
-    </div>
+    <RecoveryCodesListStep
+      codes={codes}
+      copied={copied}
+      onBack={() => void navigate({ to: '/account/security' })}
+      onCopy={copyAll}
+      onDownload={download}
+    />
   );
 }

@@ -4,6 +4,7 @@ use axum::{Json, Router, extract::State, http::HeaderMap, routing::get};
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 use sqlx::Row;
+use std::time::Duration;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/authorize", get(authorize))
@@ -40,6 +41,12 @@ struct ResolvedParams {
     code_challenge: Option<String>,
     code_challenge_method: Option<String>,
     consent_action: Option<String>,
+}
+
+struct AuthorizationSubject {
+    auth: crate::domains::auth::types::AuthContext,
+    workspace_id: uuid::Uuid,
+    tenant_id: uuid::Uuid,
 }
 
 #[utoipa::path(
@@ -94,13 +101,14 @@ pub(crate) async fn authorize(
         ));
     }
 
-    super::enforce_public_oauth_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_authorize",
         &request.client_id,
         30,
         20,
+        Duration::from_secs(60),
     )
     .await?;
 
@@ -152,35 +160,27 @@ pub(crate) async fn authorize(
         &resolved.redirect_uri,
     )?;
 
-    let authuser = request.authuser.as_deref().unwrap_or("0");
-    let token = crate::http::request::bearer_token_with_authuser(&headers, authuser)?;
-    let auth =
-        crate::domains::auth::sessions::authenticate(&state.db, &state.redis, &state.jwt, &token)
-            .await?;
-    let workspace_id = auth.workspace_id.ok_or_else(|| {
-        AppError::forbidden(
-            "workspace_context_required",
-            "Switch to a workspace before starting an authorization flow.",
-        )
-    })?;
-    let tenant_id = auth.tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "A tenant context is required before starting an authorization flow.",
-        )
-    })?;
+    let subject = authenticate_authorization_subject(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &headers,
+        request.authuser.as_deref(),
+    )
+    .await?;
 
     let code = crate::domains::oauth::flows::create_authorization_code(
-        &state,
-        auth.user_id,
-        auth.session_id,
+        &state.db,
+        &state.redis,
+        subject.auth.user_id,
+        subject.auth.session_id,
         crate::domains::oauth::service::CreateAuthorizationCodeInput {
             client_id: request.client_id.clone(),
-            user_id: auth.user_id,
-            session_id: Some(auth.session_id),
-            workspace_id: Some(workspace_id),
-            tenant_id: Some(tenant_id),
-            organization_id: auth.organization_id,
+            user_id: subject.auth.user_id,
+            session_id: Some(subject.auth.session_id),
+            workspace_id: Some(subject.workspace_id),
+            tenant_id: Some(subject.tenant_id),
+            organization_id: subject.auth.organization_id,
             scope: resolved.scope.unwrap_or_default(),
             redirect_uri: resolved.redirect_uri.clone(),
             audience: resolved.audience,
@@ -201,6 +201,35 @@ pub(crate) async fn authorize(
         "state": resolved.state,
         "expires_at": code.expires_at,
     })))
+}
+
+async fn authenticate_authorization_subject(
+    db: &sqlx::PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &crate::domains::auth::jwt::JwtService,
+    headers: &HeaderMap,
+    authuser: Option<&str>,
+) -> Result<AuthorizationSubject, AppError> {
+    let token = crate::http::request::bearer_token_with_authuser(headers, authuser.unwrap_or("0"))?;
+    let auth = crate::domains::auth::sessions::authenticate(db, redis, jwt, &token).await?;
+    let workspace_id = auth.workspace_id.ok_or_else(|| {
+        AppError::forbidden(
+            "workspace_context_required",
+            "Switch to a workspace before starting an authorization flow.",
+        )
+    })?;
+    let tenant_id = auth.tenant_id.ok_or_else(|| {
+        AppError::forbidden(
+            "tenant_context_required",
+            "A tenant context is required before starting an authorization flow.",
+        )
+    })?;
+
+    Ok(AuthorizationSubject {
+        auth,
+        workspace_id,
+        tenant_id,
+    })
 }
 
 fn build_params_from_map(

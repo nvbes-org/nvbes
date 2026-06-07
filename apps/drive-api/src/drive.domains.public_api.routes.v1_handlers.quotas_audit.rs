@@ -16,7 +16,7 @@ use crate::{
     http::error::AppError,
 };
 
-use super::super::routes_helpers::*;
+use super::super::routes_access::{log_ok, scoped_access};
 
 #[utoipa::path(
     get,
@@ -38,7 +38,7 @@ pub async fn get_quota(
     uri: Uri,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<Json<crate::domains::quotas::QuotaResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -50,11 +50,10 @@ pub async fn get_quota(
         ResourceContext::default(),
     )
     .await?;
-    let result = crate::domains::quotas::get_quota(&state.db, &access).await?;
+    let result = crate::domains::quotas::get_quota(&state.db, &authorized.access).await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "GET",
         "/v1/workspaces/:workspaceId/quota",
         &["quota:read"],
@@ -88,7 +87,7 @@ pub async fn list_audit_events(
     Path(workspace_id): Path<Uuid>,
     Query(query): Query<ListAuditEventsInput>,
 ) -> Result<Json<crate::domains::audit::AuditEventsResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -100,11 +99,10 @@ pub async fn list_audit_events(
         ResourceContext::default(),
     )
     .await?;
-    let result = crate::domains::audit::list_events(&state.db, &access, query).await?;
+    let result = crate::domains::audit::list_events(&state.db, &authorized.access, query).await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "GET",
         "/v1/workspaces/:workspaceId/audit-events",
         &["audit:read"],

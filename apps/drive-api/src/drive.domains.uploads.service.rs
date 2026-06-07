@@ -5,7 +5,11 @@ use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 
 use super::core;
 use super::lifecycle;
-pub use super::types::*;
+pub use super::types::{
+    AppendTusChunkInput, AppendTusChunkResponse, CancelUploadResponse, CompleteUploadInput,
+    CompleteUploadResponse, CreateTusUploadInput, CreateUploadInput, CreateUploadResponse,
+    TusUploadStatusView,
+};
 
 pub async fn create_upload(
     storage: &dyn nvbes_storage::ObjectStore,

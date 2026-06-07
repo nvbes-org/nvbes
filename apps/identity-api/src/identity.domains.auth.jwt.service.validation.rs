@@ -1,7 +1,7 @@
 use jsonwebtoken::{self as jwt, Algorithm, TokenData, Validation};
+use nvbes_redis::connection::RedisPool;
 
 use super::types::{JwtService, TokenClaims};
-use crate::app::AppState;
 use crate::http::error::AppError;
 
 const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-drive-api";
@@ -119,33 +119,35 @@ impl JwtService {
 
     pub async fn validate_token(
         &self,
-        state: Option<&AppState>,
+        redis: Option<&RedisPool>,
         token: &str,
         expected_type: &str,
     ) -> Result<TokenClaims, AppError> {
         let claims = self.decode_token(token, expected_type)?;
         if expected_type == "refresh" {
-            if let Some(state) = state {
-                let token =
-                    nvbes_redis::refresh_token::get_refresh_token(&state.redis, &claims.jti)
-                        .await
-                        .map_err(|e| {
-                            AppError::internal("refresh_token_lookup_failed", &format!("{}", e))
-                        })?;
-                let token = token.ok_or_else(|| {
-                    AppError::unauthorized(
-                        "refresh_token_not_registered",
-                        "Refresh token is not registered",
-                    )
-                })?;
-                if token.revoked_at.is_some() || token.reuse_detected_at.is_some() {
-                    return Err(AppError::unauthorized(
-                        "refresh_token_revoked",
-                        "Refresh token has been revoked",
-                    ));
-                }
+            if let Some(redis) = redis {
+                validate_refresh_token_registration(redis, &claims.jti).await?;
             }
         }
         Ok(claims)
     }
+}
+
+async fn validate_refresh_token_registration(redis: &RedisPool, jti: &str) -> Result<(), AppError> {
+    let token = nvbes_redis::refresh_token::get_refresh_token(redis, jti)
+        .await
+        .map_err(|e| AppError::internal("refresh_token_lookup_failed", &format!("{}", e)))?;
+    let token = token.ok_or_else(|| {
+        AppError::unauthorized(
+            "refresh_token_not_registered",
+            "Refresh token is not registered",
+        )
+    })?;
+    if token.revoked_at.is_some() || token.reuse_detected_at.is_some() {
+        return Err(AppError::unauthorized(
+            "refresh_token_revoked",
+            "Refresh token has been revoked",
+        ));
+    }
+    Ok(())
 }

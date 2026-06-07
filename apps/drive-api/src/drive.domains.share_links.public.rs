@@ -30,7 +30,7 @@ pub async fn get_public_share(
     .await?;
 
     let mut tx = db.begin().await?;
-    let hash = nvbes_core::auth::helpers::token_hash(token.trim());
+    let hash = nvbes_core::auth::token_hash(token.trim());
     let resolved = queries::resolve_public_share_for_update_tx(&mut tx, &hash).await?;
     if let Err(error) = logic::enforce_public_share_access(&resolved, require_clean_scan) {
         log_public_share_denied(
@@ -90,7 +90,7 @@ pub async fn create_public_download_url(
     .await?;
 
     let mut tx = db.begin().await?;
-    let hash = nvbes_core::auth::helpers::token_hash(token.trim());
+    let hash = nvbes_core::auth::token_hash(token.trim());
     let resolved = queries::resolve_public_share_for_update_tx(&mut tx, &hash).await?;
     if let Err(error) = logic::enforce_public_share_access(&resolved, require_clean_scan) {
         log_public_share_denied(

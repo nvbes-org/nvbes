@@ -6,7 +6,7 @@ use crate::{
 };
 use sqlx::PgPool;
 
-pub use super::types::*;
+use super::types::{DeleteObjectResponse, ObjectResponse, TrashListResponse};
 use super::{db_lifecycle as db, queries};
 
 pub async fn list_trash(

@@ -11,13 +11,13 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::domains::auth::sessions;
 use crate::domains::authz::{
-    ResourceContext, WorkspaceAction, authorize_workspace_action, ensure_email_verified, parse_role,
+    ResourceContext, WorkspaceAction, authorize_workspace_action, parse_role,
 };
 use crate::domains::members::service::{
     self, AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
 };
 use crate::http::error::AppError;
-use crate::http::request::{bearer_token, client_ip, user_agent};
+use crate::http::request::{client_ip, user_agent};
 use nvbes_product_analytics::ProductAnalyticsEvent;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
@@ -114,9 +114,9 @@ pub(crate) async fn accept_invitation(
     headers: HeaderMap,
     Json(request): Json<AcceptInvitationRequest>,
 ) -> Result<Json<AcceptInvitationResponse>, AppError> {
-    let token = bearer_token(&headers)?;
-    let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await?;
-    ensure_email_verified(&auth)?;
+    let auth =
+        sessions::authenticate_verified_bearer(&state.db, &state.redis, &state.jwt, &headers)
+            .await?;
 
     Ok(Json(
         service::accept_invitation(

@@ -18,6 +18,7 @@ function onWindowLoad(handler: () => void | Promise<void>) {
 }
 
 export function registerServiceWorker() {
+  if (import.meta.env.DEV) return;
   if (!('serviceWorker' in navigator)) return;
 
   onWindowLoad(async () => {
@@ -86,6 +87,109 @@ export function onInstallReady(callback: InstallPromptCallback) {
 
 export function getInstallPrompt(): (() => Promise<void>) | null {
   return deferredPrompt;
+}
+
+export type WebAppDisplayMode =
+  | 'browser'
+  | 'standalone'
+  | 'minimal-ui'
+  | 'fullscreen'
+  | 'window-controls-overlay';
+
+type StandaloneNavigator = Navigator & { standalone?: boolean };
+type BadgingNavigator = Navigator & {
+  setAppBadge?: (contents?: number) => Promise<void>;
+  clearAppBadge?: () => Promise<void>;
+};
+
+function matchesDisplayMode(mode: Exclude<WebAppDisplayMode, 'browser'>): boolean {
+  return window.matchMedia?.(`(display-mode: ${mode})`).matches ?? false;
+}
+
+export function getWebAppDisplayMode(): WebAppDisplayMode {
+  if (matchesDisplayMode('window-controls-overlay')) return 'window-controls-overlay';
+  if (matchesDisplayMode('fullscreen')) return 'fullscreen';
+  if (matchesDisplayMode('standalone')) return 'standalone';
+  if (matchesDisplayMode('minimal-ui')) return 'minimal-ui';
+
+  const navigatorWithStandalone = navigator as StandaloneNavigator;
+  return navigatorWithStandalone.standalone ? 'standalone' : 'browser';
+}
+
+export function isInstalledWebApp(): boolean {
+  return getWebAppDisplayMode() !== 'browser';
+}
+
+export function supportsAppBadging(): boolean {
+  const badgingNavigator = navigator as BadgingNavigator;
+  return (
+    typeof badgingNavigator.setAppBadge === 'function' &&
+    typeof badgingNavigator.clearAppBadge === 'function'
+  );
+}
+
+export async function setAppBadge(count?: number): Promise<boolean> {
+  const badgingNavigator = navigator as BadgingNavigator;
+  if (typeof badgingNavigator.setAppBadge !== 'function') return false;
+
+  try {
+    await badgingNavigator.setAppBadge(count);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function clearAppBadge(): Promise<boolean> {
+  const badgingNavigator = navigator as BadgingNavigator;
+  if (typeof badgingNavigator.clearAppBadge !== 'function') return false;
+
+  try {
+    await badgingNavigator.clearAppBadge();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export type WebPushSupport =
+  | { supported: true; permission: NotificationPermission }
+  | {
+      supported: false;
+      permission: NotificationPermission | 'unsupported';
+      reason: 'missing-notifications' | 'missing-service-worker' | 'missing-push-manager';
+    };
+
+export function getWebPushSupport(): WebPushSupport {
+  if (!('Notification' in window)) {
+    return { supported: false, permission: 'unsupported', reason: 'missing-notifications' };
+  }
+
+  if (!('serviceWorker' in navigator)) {
+    return {
+      supported: false,
+      permission: Notification.permission,
+      reason: 'missing-service-worker',
+    };
+  }
+
+  if (!('PushManager' in window)) {
+    return {
+      supported: false,
+      permission: Notification.permission,
+      reason: 'missing-push-manager',
+    };
+  }
+
+  return { supported: true, permission: Notification.permission };
+}
+
+export async function requestWebPushPermission(): Promise<NotificationPermission | 'unsupported'> {
+  const support = getWebPushSupport();
+  if (!support.supported) return support.permission;
+  if (support.permission !== 'default') return support.permission;
+
+  return Notification.requestPermission();
 }
 
 // ---------------------------------------------------------------------------
@@ -228,10 +332,18 @@ export async function queueMutation(tag: string, payload: unknown) {
     tx.onerror = () => reject(tx.error);
   });
 
-  if ('serviceWorker' in navigator && 'sync' in (navigator.serviceWorker as any).registration) {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+
+  const sw = await navigator.serviceWorker.ready;
+  const registration = sw as ServiceWorkerRegistration & {
+    sync?: { register(tag: string): Promise<void> };
+  };
+
+  if (registration.sync) {
     try {
-      const sw = await navigator.serviceWorker.ready;
-      await (sw as any).sync.register(tag);
+      await registration.sync.register(tag);
     } catch {
       // Background sync not available, will retry on next online event
     }

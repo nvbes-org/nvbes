@@ -5,6 +5,11 @@ use axum::{
     extract::{Extension, Path, State},
 };
 
+#[path = "identity.domains.auth.routes.session_mgmt.preferences.rs"]
+mod preferences;
+#[path = "identity.domains.auth.routes.session_mgmt.router.rs"]
+mod router_impl;
+
 #[path = "identity.domains.auth.routes.session_mgmt.accounts.rs"]
 pub mod accounts;
 #[path = "identity.domains.auth.routes.session_mgmt.export.rs"]
@@ -19,110 +24,7 @@ pub mod step_up;
 pub mod switch_workspace;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    Router::new()
-        .route(
-            "/logout",
-            axum::routing::post(logout).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/sessions",
-            axum::routing::get(list_sessions).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route("/accounts", axum::routing::get(get_accounts))
-        .route(
-            "/sessions/{sessionId}",
-            axum::routing::delete(revoke_session).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/sessions/revoke-others",
-            axum::routing::post(revoke_all_other_sessions).layer(
-                axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                ),
-            ),
-        )
-        .route(
-            "/me",
-            axum::routing::get(me).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me",
-            axum::routing::patch(me_update).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me/export",
-            axum::routing::post(me_export)
-                .get(me_export_download)
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                )),
-        )
-        .route(
-            "/me/delete",
-            axum::routing::post(me_delete).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me/preferences",
-            axum::routing::get(me_preferences_get).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me/preferences",
-            axum::routing::put(me_preferences_put).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me/notifications",
-            axum::routing::get(me_notifications_get).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/me/notifications",
-            axum::routing::put(me_notifications_put).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/step-up",
-            axum::routing::post(step_up).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/workspaces/{workspaceId}/switch",
-            axum::routing::post(switch_workspace).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
+    router_impl::router(state)
 }
 
 #[utoipa::path(
@@ -280,14 +182,14 @@ pub(crate) async fn me_update(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::auth::types::UpdateProfileInput>,
 ) -> Result<Json<crate::domains::auth::types::UpdateProfileResult>, crate::http::error::AppError> {
-    profile::me_update(State(state), Extension(auth), Json(request)).await
+    preferences::me_update(State(state), Extension(auth), Json(request)).await
 }
 
 pub(crate) async fn me_preferences_get(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<crate::domains::auth::types::UserPreferences>, crate::http::error::AppError> {
-    profile::me_preferences_get(State(state), Extension(auth)).await
+    preferences::me_preferences_get(State(state), Extension(auth)).await
 }
 
 pub(crate) async fn me_preferences_put(
@@ -295,14 +197,14 @@ pub(crate) async fn me_preferences_put(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::auth::types::UserPreferences>,
 ) -> Result<Json<crate::domains::auth::types::UserPreferences>, crate::http::error::AppError> {
-    profile::me_preferences_put(State(state), Extension(auth), Json(request)).await
+    preferences::me_preferences_put(State(state), Extension(auth), Json(request)).await
 }
 
 pub(crate) async fn me_notifications_get(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<crate::domains::auth::types::UserNotifications>, crate::http::error::AppError> {
-    profile::me_notifications_get(State(state), Extension(auth)).await
+    preferences::me_notifications_get(State(state), Extension(auth)).await
 }
 
 pub(crate) async fn me_notifications_put(
@@ -310,7 +212,7 @@ pub(crate) async fn me_notifications_put(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::auth::types::UserNotifications>,
 ) -> Result<Json<crate::domains::auth::types::UserNotifications>, crate::http::error::AppError> {
-    profile::me_notifications_put(State(state), Extension(auth), Json(request)).await
+    preferences::me_notifications_put(State(state), Extension(auth), Json(request)).await
 }
 
 #[utoipa::path(

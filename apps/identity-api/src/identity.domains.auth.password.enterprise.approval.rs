@@ -2,7 +2,6 @@ use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::super::risk::{self, RiskDecision, RiskEventInput};
 use super::rules::{
     enterprise_recovery_approval_status_is_selectable, enterprise_recovery_first_approval_metadata,
     enterprise_recovery_requires_second_approval, enterprise_recovery_review_delay,
@@ -11,6 +10,7 @@ use super::rules::{
 use crate::domains::auth::password::{
     db, generate_random_token, log_dev_token, normalize_email, token_hash,
 };
+use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
 use crate::domains::auth::types::*;
 use crate::http::error::AppError;
 

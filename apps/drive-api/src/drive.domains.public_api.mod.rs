@@ -4,16 +4,22 @@ pub mod api_key_signatures;
 pub mod auth;
 #[path = "drive.domains.public_api.db.rs"]
 pub mod db;
+#[path = "drive.domains.public_api.errors.rs"]
+pub mod errors;
 #[path = "drive.domains.public_api.http_signatures.rs"]
 pub mod http_signatures;
 #[path = "drive.domains.public_api.routes.mgmt_handlers.rs"]
 pub mod mgmt_handlers;
 #[path = "drive.domains.public_api.observability.rs"]
 pub mod observability;
+#[path = "drive.domains.public_api.request_meta.rs"]
+pub mod request_meta;
 #[path = "drive.domains.public_api.routes.rs"]
 pub mod routes;
-#[path = "drive.domains.public_api.routes.helpers.rs"]
-pub mod routes_helpers;
+#[path = "drive.domains.public_api.routes.access.rs"]
+pub mod routes_access;
+#[path = "drive.domains.public_api.routes.audit.rs"]
+pub mod routes_audit;
 #[path = "drive.domains.public_api.service.rs"]
 pub mod service;
 #[path = "drive.domains.public_api.types.rs"]
@@ -22,4 +28,7 @@ pub mod types;
 pub mod v1_handlers;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    authenticate, authorize_access, list_api_keys, list_workspaces, log_request, me,
+    record_api_audit_event, revoke_api_key,
+};

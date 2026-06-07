@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 
 use crate::http::error::AppError;
@@ -16,13 +16,7 @@ pub async fn list_client_policies(
     auth: &AuthContext,
     client_id: Option<String>,
 ) -> Result<OAuthClientPoliciesResult, AppError> {
-    let tenant_id = auth.tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "A tenant context is required before using OAuth management.",
-        )
-    })?;
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let tenant_id = require_oauth_management_tenant(db, auth).await?;
     let (scope_type, scope_id) = super::logic::resolve_management_scope(auth)?;
     let rows = if let Some(client_id) = client_id {
         sqlx::query(
@@ -50,7 +44,7 @@ pub async fn list_client_policies(
             "#,
         )
         .bind(client_id)
-        .bind(auth.tenant_id)
+        .bind(tenant_id)
         .bind(scope_type.as_str())
         .bind(scope_id)
         .fetch_all(db)
@@ -79,7 +73,7 @@ pub async fn list_client_policies(
             ORDER BY p.created_at DESC
             "#,
         )
-        .bind(auth.tenant_id)
+        .bind(tenant_id)
         .bind(scope_type.as_str())
         .bind(scope_id)
         .fetch_all(db)
@@ -89,18 +83,7 @@ pub async fn list_client_policies(
     Ok(OAuthClientPoliciesResult {
         policies: rows
             .into_iter()
-            .map(|row| OAuthClientPolicyView {
-                id: row.get("id"),
-                client_id: row.get("client_id"),
-                scope_type: row.get("scope_type"),
-                scope_id: row.get("scope_id"),
-                allowed_scopes: row.get("allowed_scopes"),
-                allowed_audiences: row.get("allowed_audiences"),
-                allowed_resources: row.get("allowed_resources"),
-                required_acr: row.get("required_acr"),
-                status: row.get("status"),
-                created_at: row.get("created_at"),
-            })
+            .map(|row| map_client_policy_row(&row))
             .collect(),
     })
 }
@@ -112,13 +95,7 @@ pub async fn create_client_policy(
     client_id: String,
     input: CreateOAuthClientPolicyInput,
 ) -> Result<OAuthClientPolicyView, AppError> {
-    let tenant_id = auth.tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "A tenant context is required before using OAuth management.",
-        )
-    })?;
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let tenant_id = require_oauth_management_tenant(db, auth).await?;
     let (scope_type, scope_id) =
         super::logic::resolve_policy_scope(auth, input.scope_type.as_deref(), input.scope_id)?;
     if input.allowed_scopes.is_empty() {
@@ -130,7 +107,7 @@ pub async fn create_client_policy(
     let required_acr = parse_step_up_level(input.required_acr.as_deref().unwrap_or("aal1"))?;
     let status = parse_client_policy_status(input.status.as_deref().unwrap_or("active"))?;
     let client_uuid =
-        super::logic::client_uuid_by_client_id(db, auth.tenant_id, &client_id).await?;
+        super::logic::client_uuid_by_client_id(db, Some(tenant_id), &client_id).await?;
 
     let row = sqlx::query(
         r#"
@@ -166,18 +143,7 @@ pub async fn create_client_policy(
     .fetch_one(db)
     .await?;
 
-    Ok(OAuthClientPolicyView {
-        id: row.get("id"),
-        client_id: client_uuid,
-        scope_type: row.get("scope_type"),
-        scope_id: row.get("scope_id"),
-        allowed_scopes: row.get("allowed_scopes"),
-        allowed_audiences: row.get("allowed_audiences"),
-        allowed_resources: row.get("allowed_resources"),
-        required_acr: row.get("required_acr"),
-        status: row.get("status"),
-        created_at: row.get("created_at"),
-    })
+    Ok(map_client_policy_row_with_client_id(&row, client_uuid))
 }
 
 /// Update a client policy.
@@ -187,13 +153,7 @@ pub async fn update_client_policy(
     policy_id: Uuid,
     input: UpdateOAuthClientPolicyInput,
 ) -> Result<OAuthClientPolicyView, AppError> {
-    let tenant_id = auth.tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "A tenant context is required before using OAuth management.",
-        )
-    })?;
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let tenant_id = require_oauth_management_tenant(db, auth).await?;
     let required_acr = input
         .required_acr
         .as_deref()
@@ -226,7 +186,7 @@ pub async fn update_client_policy(
     .bind(input.allowed_resources)
     .bind(required_acr.as_ref().map(|value| value.as_str()))
     .bind(status.as_ref().map(|value| value.as_str()))
-    .bind(auth.tenant_id)
+    .bind(tenant_id)
     .fetch_optional(db)
     .await?;
 
@@ -237,18 +197,7 @@ pub async fn update_client_policy(
         ));
     };
 
-    Ok(OAuthClientPolicyView {
-        id: row.get("id"),
-        client_id: row.get("client_id"),
-        scope_type: row.get("scope_type"),
-        scope_id: row.get("scope_id"),
-        allowed_scopes: row.get("allowed_scopes"),
-        allowed_audiences: row.get("allowed_audiences"),
-        allowed_resources: row.get("allowed_resources"),
-        required_acr: row.get("required_acr"),
-        status: row.get("status"),
-        created_at: row.get("created_at"),
-    })
+    Ok(map_client_policy_row(&row))
 }
 
 /// Delete a client policy.
@@ -257,13 +206,7 @@ pub async fn delete_client_policy(
     auth: &AuthContext,
     policy_id: Uuid,
 ) -> Result<DeleteOAuthClientPolicyResult, AppError> {
-    let tenant_id = auth.tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "A tenant context is required before using OAuth management.",
-        )
-    })?;
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let tenant_id = require_oauth_management_tenant(db, auth).await?;
     let row = sqlx::query(
         r#"
         DELETE FROM oauth_client_policies p
@@ -275,7 +218,7 @@ pub async fn delete_client_policy(
         "#,
     )
     .bind(policy_id)
-    .bind(auth.tenant_id)
+    .bind(tenant_id)
     .fetch_optional(db)
     .await?;
 
@@ -287,4 +230,40 @@ pub async fn delete_client_policy(
     }
 
     Ok(DeleteOAuthClientPolicyResult { success: true })
+}
+
+async fn require_oauth_management_tenant(
+    db: &PgPool,
+    auth: &AuthContext,
+) -> Result<Uuid, AppError> {
+    let tenant_id = auth.tenant_id.ok_or_else(|| {
+        AppError::forbidden(
+            "tenant_context_required",
+            "A tenant context is required before using OAuth management.",
+        )
+    })?;
+    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    Ok(tenant_id)
+}
+
+fn map_client_policy_row(row: &PgRow) -> OAuthClientPolicyView {
+    OAuthClientPolicyView {
+        id: row.get("id"),
+        client_id: row.get("client_id"),
+        scope_type: row.get("scope_type"),
+        scope_id: row.get("scope_id"),
+        allowed_scopes: row.get("allowed_scopes"),
+        allowed_audiences: row.get("allowed_audiences"),
+        allowed_resources: row.get("allowed_resources"),
+        required_acr: row.get("required_acr"),
+        status: row.get("status"),
+        created_at: row.get("created_at"),
+    }
+}
+
+fn map_client_policy_row_with_client_id(row: &PgRow, client_id: Uuid) -> OAuthClientPolicyView {
+    OAuthClientPolicyView {
+        client_id,
+        ..map_client_policy_row(row)
+    }
 }

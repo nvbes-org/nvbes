@@ -1,3 +1,4 @@
+use axum::http::HeaderMap;
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -78,6 +79,42 @@ pub async fn authenticate(
         claims.scope,
         claims.cnf.map(|c| c.jkt),
     ))
+}
+
+pub async fn authenticate_bearer(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    headers: &HeaderMap,
+) -> Result<AuthContext, AppError> {
+    let token = crate::http::request::bearer_token(headers)?;
+    authenticate(db, redis, jwt, &token).await
+}
+
+pub async fn try_authenticate_bearer(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    headers: &HeaderMap,
+) -> Option<AuthContext> {
+    let token = crate::http::request::bearer_token(headers).ok()?;
+    authenticate(db, redis, jwt, &token).await.ok()
+}
+
+pub async fn authenticate_verified_bearer(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    headers: &HeaderMap,
+) -> Result<AuthContext, AppError> {
+    let auth = authenticate_bearer(db, redis, jwt, headers).await?;
+    if auth.email_verified_at.is_none() {
+        return Err(AppError::forbidden(
+            "email_not_verified",
+            "Verify your email address before performing this action.",
+        ));
+    }
+    Ok(auth)
 }
 
 async fn get_cached_session(

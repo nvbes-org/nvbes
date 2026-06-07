@@ -16,6 +16,8 @@ pub mod observability;
 
 #[path = "identity.http.routes.csp_report.rs"]
 pub mod csp_report;
+#[path = "identity.http.routes.well_known.rs"]
+pub mod well_known;
 
 #[path = "identity.http.routes.rs"]
 pub mod routes;

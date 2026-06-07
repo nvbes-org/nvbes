@@ -7,6 +7,13 @@ use sqlx::PgPool;
 use super::service::PolicyEvaluation;
 use super::{normalize_resources, normalize_scopes};
 
+struct ClientPolicyRecord {
+    status: String,
+    allowed_scopes: Vec<String>,
+    allowed_audiences: Vec<String>,
+    allowed_resources: Vec<String>,
+}
+
 /// Ensure a client policy is met.
 pub async fn ensure_client_policy(
     db: &PgPool,
@@ -18,6 +25,69 @@ pub async fn ensure_client_policy(
     audience: Option<&str>,
     resource_indicators: &[String],
 ) -> Result<PolicyEvaluation, AppError> {
+    let client_uuid = resolve_client_uuid(db, client_id).await?;
+    let scope = normalize_scopes(
+        requested_scope
+            .split_whitespace()
+            .map(ToOwned::to_owned)
+            .collect(),
+    );
+
+    if client_id == "drive-web" || client_id == "drive-worker" {
+        return Ok(PolicyEvaluation {
+            status: "active".to_string(),
+            normalized_scope: scope,
+        });
+    }
+
+    let policy =
+        fetch_client_policy(db, client_uuid, tenant_id, organization_id, workspace_id).await?;
+    ensure_policy_status_allowed(&policy.status)?;
+
+    let allowed_scopes = normalize_scopes(policy.allowed_scopes);
+    if scope.is_empty()
+        || !scope
+            .iter()
+            .all(|requested| allowed_scopes.iter().any(|allowed| allowed == requested))
+    {
+        return Err(policy_denied(
+            "client_scope_not_allowed",
+            "The requested scope is not approved for this client.",
+        ));
+    }
+
+    let requested_resources = normalize_resources(resource_indicators.to_vec());
+    let allowed_audiences = normalize_resources(policy.allowed_audiences);
+    let allowed_resources = normalize_resources(policy.allowed_resources);
+    if let Some(audience) = audience.filter(|value| !value.trim().is_empty()) {
+        if !allowed_audiences.is_empty()
+            && !allowed_audiences.iter().any(|allowed| allowed == audience)
+        {
+            return Err(policy_denied(
+                "client_audience_not_allowed",
+                "The requested audience is not approved for this client.",
+            ));
+        }
+    }
+    if !requested_resources.is_empty()
+        && !allowed_resources.is_empty()
+        && !requested_resources
+            .iter()
+            .all(|requested| allowed_resources.iter().any(|allowed| allowed == requested))
+    {
+        return Err(policy_denied(
+            "client_resource_not_allowed",
+            "The requested resource indicator is not approved for this client.",
+        ));
+    }
+
+    Ok(PolicyEvaluation {
+        status: policy.status,
+        normalized_scope: scope,
+    })
+}
+
+async fn resolve_client_uuid(db: &PgPool, client_id: &str) -> Result<Uuid, AppError> {
     let client = sqlx::query(
         r#"
         SELECT id
@@ -37,30 +107,22 @@ pub async fn ensure_client_policy(
         ));
     };
 
-    let client_uuid: Uuid = client.get("id");
-    let scope = normalize_scopes(
-        requested_scope
-            .split_whitespace()
-            .map(ToOwned::to_owned)
-            .collect(),
-    );
+    Ok(client.get("id"))
+}
 
-    if client_id == "drive-web" || client_id == "drive-worker" {
-        return Ok(PolicyEvaluation {
-            status: "active".to_string(),
-            normalized_scope: scope,
-        });
-    }
-
+async fn fetch_client_policy(
+    db: &PgPool,
+    client_uuid: Uuid,
+    tenant_id: Option<Uuid>,
+    organization_id: Option<Uuid>,
+    workspace_id: Option<Uuid>,
+) -> Result<ClientPolicyRecord, AppError> {
     let policy = sqlx::query(
         r#"
         SELECT
-          scope_type::text AS scope_type,
-          scope_id,
           allowed_scopes,
           allowed_audiences,
           allowed_resources,
-          required_acr::text AS required_acr,
           status::text AS status
         FROM oauth_client_policies
         WHERE client_id = $1
@@ -86,96 +148,35 @@ pub async fn ensure_client_policy(
     .await?;
 
     let Some(policy) = policy else {
-        metrics::counter!(
-            "identity_oauth_policy_denied_total",
-            &[("reason", "client_approval_required")]
-        )
-        .increment(1);
-        return Err(AppError::forbidden(
+        return Err(policy_denied(
             "client_approval_required",
             "This OAuth client requires approval from a workspace administrator.",
         ));
     };
 
-    let status: String = policy.get("status");
-    if status == "blocked" {
-        metrics::counter!(
-            "identity_oauth_policy_denied_total",
-            &[("reason", "client_blocked")]
-        )
-        .increment(1);
-        return Err(AppError::forbidden(
+    Ok(ClientPolicyRecord {
+        status: policy.get("status"),
+        allowed_scopes: policy.get("allowed_scopes"),
+        allowed_audiences: policy.get("allowed_audiences"),
+        allowed_resources: policy.get("allowed_resources"),
+    })
+}
+
+fn ensure_policy_status_allowed(status: &str) -> Result<(), AppError> {
+    match status {
+        "blocked" => Err(policy_denied(
             "client_blocked",
             "This OAuth client has been blocked for this scope.",
-        ));
-    }
-
-    if status == "pending_approval" {
-        metrics::counter!(
-            "identity_oauth_policy_denied_total",
-            &[("reason", "client_approval_pending")]
-        )
-        .increment(1);
-        return Err(AppError::forbidden(
+        )),
+        "pending_approval" => Err(policy_denied(
             "client_approval_pending",
             "The approval for this OAuth client is currently pending.",
-        ));
+        )),
+        _ => Ok(()),
     }
+}
 
-    let allowed_scopes = normalize_scopes(policy.get::<Vec<String>, _>("allowed_scopes"));
-    if scope.is_empty()
-        || !scope
-            .iter()
-            .all(|requested| allowed_scopes.iter().any(|allowed| allowed == requested))
-    {
-        metrics::counter!(
-            "identity_oauth_policy_denied_total",
-            &[("reason", "client_scope_not_allowed")]
-        )
-        .increment(1);
-        return Err(AppError::forbidden(
-            "client_scope_not_allowed",
-            "The requested scope is not approved for this client.",
-        ));
-    }
-
-    let requested_resources = normalize_resources(resource_indicators.to_vec());
-    let allowed_audiences = normalize_resources(policy.get::<Vec<String>, _>("allowed_audiences"));
-    let allowed_resources = normalize_resources(policy.get::<Vec<String>, _>("allowed_resources"));
-    if let Some(audience) = audience.filter(|value| !value.trim().is_empty()) {
-        if !allowed_audiences.is_empty()
-            && !allowed_audiences.iter().any(|allowed| allowed == audience)
-        {
-            metrics::counter!(
-                "identity_oauth_policy_denied_total",
-                &[("reason", "client_audience_not_allowed")]
-            )
-            .increment(1);
-            return Err(AppError::forbidden(
-                "client_audience_not_allowed",
-                "The requested audience is not approved for this client.",
-            ));
-        }
-    }
-    if !requested_resources.is_empty()
-        && !allowed_resources.is_empty()
-        && !requested_resources
-            .iter()
-            .all(|requested| allowed_resources.iter().any(|allowed| allowed == requested))
-    {
-        metrics::counter!(
-            "identity_oauth_policy_denied_total",
-            &[("reason", "client_resource_not_allowed")]
-        )
-        .increment(1);
-        return Err(AppError::forbidden(
-            "client_resource_not_allowed",
-            "The requested resource indicator is not approved for this client.",
-        ));
-    }
-
-    Ok(PolicyEvaluation {
-        status,
-        normalized_scope: scope,
-    })
+fn policy_denied(code: &'static str, message: &'static str) -> AppError {
+    metrics::counter!("identity_oauth_policy_denied_total", &[("reason", code)]).increment(1);
+    AppError::forbidden(code, message)
 }

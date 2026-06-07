@@ -91,9 +91,11 @@ class CryptoHelper {
     }
 
     try {
+      const keyData = new ArrayBuffer(rawKey.byteLength);
+      new Uint8Array(keyData).set(rawKey);
       CryptoHelper.keyCache = await window.crypto.subtle.importKey(
         'raw',
-        rawKey as any,
+        keyData,
         { name: 'AES-GCM', length: 256 },
         false,
         ['encrypt', 'decrypt'],

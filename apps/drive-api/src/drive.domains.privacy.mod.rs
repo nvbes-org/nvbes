@@ -8,4 +8,7 @@ mod service;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    get_request, request_account_delete, request_account_export, request_workspace_delete,
+    request_workspace_export,
+};

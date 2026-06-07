@@ -142,7 +142,7 @@ pub(crate) async fn revoke_consent(
     path = "/legal/consents",
     tag = "legal",
     responses(
-        (status = 200, description = "Active consents listed successfully", body = Vec<UserConsent>),
+        (status = 200, description = "Consent history listed successfully", body = Vec<UserConsent>),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
     ),
 )]
@@ -150,7 +150,7 @@ pub(crate) async fn list_consents(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<Vec<UserConsent>>, AppError> {
-    let consents = service::get_active_consents(&state.db, auth.user_id).await?;
+    let consents = service::get_consents(&state.db, auth.user_id).await?;
     Ok(Json(consents))
 }
 

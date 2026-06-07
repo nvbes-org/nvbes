@@ -8,6 +8,7 @@ use axum::{
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
@@ -27,8 +28,8 @@ pub fn router() -> Router<AppState> {
 pub(crate) struct OidcCallbackRequest {
     id_token: String,
     nonce: Option<String>,
-    #[allow(dead_code)]
-    state: Option<String>,
+    #[serde(rename = "state")]
+    _state: Option<String>,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
@@ -61,11 +62,14 @@ pub(crate) async fn oidc_callback(
     Path((tenant_id, provider_id)): Path<(Uuid, Uuid)>,
     Form(request): Form<OidcCallbackRequest>,
 ) -> Result<Json<InboundFederationResponse>, AppError> {
-    super::enforce_federation_public_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "federation_oidc_callback",
         &format!("tenant:{tenant_id}:provider:{provider_id}"),
+        20,
+        40,
+        Duration::from_secs(60),
     )
     .await?;
 
@@ -142,11 +146,14 @@ pub(crate) async fn saml_acs(
     Path((tenant_id, provider_id)): Path<(Uuid, Uuid)>,
     Form(request): Form<SamlAcsRequest>,
 ) -> Result<Json<InboundFederationResponse>, AppError> {
-    super::enforce_federation_public_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "federation_saml_acs",
         &format!("tenant:{tenant_id}:provider:{provider_id}"),
+        20,
+        40,
+        Duration::from_secs(60),
     )
     .await?;
 

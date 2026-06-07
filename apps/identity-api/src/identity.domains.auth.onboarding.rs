@@ -21,7 +21,7 @@ pub async fn register(
     validate_password(&input.password)?;
 
     if let Some(bd) = input.birthdate {
-        nvbes_core::auth::helpers::validate_birthdate(bd, input.region.as_deref())?;
+        nvbes_core::auth::validate_birthdate(bd, input.region.as_deref())?;
     }
 
     nvbes_core::limiter::check_rate_limit(

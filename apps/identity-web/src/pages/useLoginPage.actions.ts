@@ -1,0 +1,81 @@
+import { useLoginPageAccountActions } from './useLoginPage.actions.account';
+import { type UseLoginPageActionsOptions } from './useLoginPage.actions.shared';
+import { useLoginPageSubmitActions } from './useLoginPage.actions.submit';
+
+export function useLoginPageActions({
+  navigate,
+  oauthRequest,
+  connectedAccounts,
+  email,
+  password,
+  loginStateToken,
+  sessionToken,
+  mfaMethod,
+  totpCode,
+  recoveryCode,
+  decoyRef,
+  mutations,
+  resetMfaState,
+  setCheckingAuth,
+  setStep,
+  setEmail,
+  setPassword,
+  setIdentifierSubmitting,
+  setLoginStateToken,
+  setSessionToken,
+  setAvailableMethods,
+  setMfaMethod,
+  setError,
+  navigateToAccount,
+}: UseLoginPageActionsOptions) {
+  const accountActions = useLoginPageAccountActions({
+    navigate,
+    oauthRequest,
+    connectedAccounts,
+    email,
+    password,
+    sessionToken,
+    setCheckingAuth,
+    setStep,
+    setEmail,
+    setPassword,
+    setSessionToken,
+    setError,
+    navigateToAccount,
+  });
+  const submitActions = useLoginPageSubmitActions(
+    {
+      navigate,
+      email,
+      password,
+      loginStateToken,
+      sessionToken,
+      mfaMethod,
+      totpCode,
+      recoveryCode,
+      decoyRef,
+      mutations,
+      resetMfaState,
+      setStep,
+      setPassword,
+      setIdentifierSubmitting,
+      setLoginStateToken,
+      setSessionToken,
+      setAvailableMethods,
+      setMfaMethod,
+      setError,
+    },
+    accountActions.finishLogin,
+  );
+
+  return {
+    handleAccountSelect: accountActions.handleAccountSelect,
+    handleUseAnotherAccount: accountActions.handleUseAnotherAccount,
+    handleConsentApprove: accountActions.handleConsentApprove,
+    handleConsentCancel: accountActions.handleConsentCancel,
+    handleIdentifierSubmit: submitActions.handleIdentifierSubmit,
+    handlePasswordSubmit: submitActions.handlePasswordSubmit,
+    handleMfaSubmit: submitActions.handleMfaSubmit,
+    resetToIdentifier: submitActions.resetToIdentifier,
+  };
+}

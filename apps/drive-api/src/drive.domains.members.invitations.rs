@@ -13,7 +13,7 @@ use nvbes_tenancy::role_as_db;
 
 use super::db::*;
 use super::types::*;
-use nvbes_core::auth::helpers::{
+use nvbes_core::auth::{
     generate_token, log_dev_token, normalize_email, token_hash, validate_email,
 };
 

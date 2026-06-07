@@ -132,6 +132,52 @@
   animation: fade-slide-up 0.5s ease-out both;
 }
 
+@keyframes login-card-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes login-card-enter-backward {
+  from {
+    opacity: 0;
+    transform: translateX(-18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@utility animate-login-card-enter-forward {
+  animation: login-card-enter-forward 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility animate-login-card-enter-backward {
+  animation: login-card-enter-backward 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes login-indeterminate {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(210%);
+  }
+}
+
+@utility animate-login-indeterminate {
+  animation: login-indeterminate 1.05s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

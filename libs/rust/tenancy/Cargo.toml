@@ -8,4 +8,5 @@ version.workspace = true
 nvbes-core = { path = "../core" }
 serde.workspace = true
 sqlx.workspace = true
+thiserror.workspace = true
 uuid.workspace = true

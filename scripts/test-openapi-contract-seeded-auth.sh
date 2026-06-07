@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 
 require_cmd cargo
 require_cmd node
+require_env NVBES_DATABASE_URL
 require_env NVBES_WEB_BASE_URL
 require_env NVBES_API_BASE_URL
 

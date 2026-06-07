@@ -1,3 +1,4 @@
+use crate::http::client_ip::client_ip;
 use crate::http::error::AppError;
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
 use std::time::Duration;
@@ -88,6 +89,43 @@ pub async fn check_rate_limit(
     RateLimiter::new(redis.clone())
         .check(action, key, max_hits, window)
         .await
+}
+
+pub async fn check_dual_rate_limit(
+    redis: &nvbes_redis::RedisPool,
+    headers: &HeaderMap,
+    action: &str,
+    scoped_key: &str,
+    ip_hits: usize,
+    scoped_hits: usize,
+    window: Duration,
+) -> Result<(), AppError> {
+    let ip_key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
+    check_rate_limit(redis, action, &format!("ip:{ip_key}"), ip_hits, window).await?;
+    check_rate_limit(
+        redis,
+        action,
+        &format!("key:{scoped_key}"),
+        scoped_hits,
+        window,
+    )
+    .await?;
+    Ok(())
+}
+
+pub async fn check_rate_limit_pair(
+    redis: &nvbes_redis::RedisPool,
+    action: &str,
+    first_key: &str,
+    first_hits: usize,
+    first_window: Duration,
+    second_key: &str,
+    second_hits: usize,
+    second_window: Duration,
+) -> Result<(), AppError> {
+    check_rate_limit(redis, action, first_key, first_hits, first_window).await?;
+    check_rate_limit(redis, action, second_key, second_hits, second_window).await?;
+    Ok(())
 }
 
 #[cfg(test)]

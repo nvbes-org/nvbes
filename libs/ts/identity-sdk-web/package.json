@@ -17,6 +17,7 @@
     "test": "vp test"
   },
   "dependencies": {
+    "@nvbes/http-client": "workspace:*",
     "@nvbes/identity-sdk-core": "workspace:*"
   },
   "devDependencies": {

@@ -4,6 +4,8 @@ use super::{
     get_challenge, prune_expired_challenges, record_failed_attempt, replace_challenge,
 };
 #[cfg(test)]
+use super::storage::set_challenge;
+#[cfg(test)]
 use crate::domains::auth::state::create_state;
 #[cfg(test)]
 use chrono::Utc;
@@ -80,7 +82,7 @@ async fn replace_challenge_prunes_expired_and_keeps_active_flow_unique() {
         expires_at: Utc::now() - chrono::Duration::minutes(5),
         consumed_at: None,
     };
-    super::set_challenge(&redis, &expired)
+    set_challenge(&redis, &expired)
         .await
         .expect("expired challenge should insert");
 

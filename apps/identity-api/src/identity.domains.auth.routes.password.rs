@@ -105,21 +105,12 @@ pub(crate) async fn forgot_password(
     headers: HeaderMap,
     Json(request): Json<ForgotPasswordRequest>,
 ) -> Result<Json<crate::domains::auth::types::ForgotPasswordResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
+        &headers,
         "auth_forgot_password",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
+        &request.email,
         15,
-        std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_forgot_password",
-        &format!("key:{}", request.email),
         5,
         std::time::Duration::from_secs(60),
     )
@@ -156,21 +147,12 @@ pub(crate) async fn reset_password(
     headers: HeaderMap,
     Json(request): Json<ResetPasswordRequest>,
 ) -> Result<Json<crate::domains::auth::types::ResetPasswordResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
+        &headers,
         "auth_reset_password",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
+        &request.token,
         20,
-        std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_reset_password",
-        &format!("key:{}", request.token),
         8,
         std::time::Duration::from_secs(60),
     )

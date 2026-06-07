@@ -4,6 +4,7 @@ use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 use sqlx::Row;
+use std::time::Duration;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/introspect", post(introspect))
@@ -32,13 +33,14 @@ pub(crate) async fn introspect(
     Json(request): Json<IntrospectRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let (client_id, client_secret) = parse_basic_client_auth(&headers)?;
-    super::enforce_public_oauth_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_introspect",
         &client_id,
         60,
         30,
+        Duration::from_secs(60),
     )
     .await?;
 
@@ -76,7 +78,9 @@ pub(crate) async fn introspect(
 
     let client_ip = nvbes_core::http::client_ip::client_ip(&headers);
     let response = crate::domains::oauth::flows::introspect_token(
-        &state,
+        &state.db,
+        &state.redis,
+        &state.jwt,
         &client_id,
         &request.token,
         request.token_type_hint,

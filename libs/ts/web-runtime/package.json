@@ -6,6 +6,8 @@
     "dist"
   ],
   "sideEffects": false,
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -16,8 +18,6 @@
       "import": "./dist/posthog.mjs"
     }
   },
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.mts",
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",

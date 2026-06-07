@@ -3,7 +3,7 @@ import { ArrowRight, ServerCog } from 'lucide-react';
 import { useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/classnames';
 import type { ServiceAccount } from '../identity.service-accounts.api';
 import { badgeVariantForStatus, statusLabel } from './WorkspaceServiceAccounts.helpers';
 

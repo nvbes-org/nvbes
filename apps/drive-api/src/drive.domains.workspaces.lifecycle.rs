@@ -162,7 +162,7 @@ pub async fn create_workspace(
 
     tx.commit().await?;
 
-    super::get_workspace_by_id(db, workspace_id, "owner").await
+    super::service::get_workspace_by_id(db, workspace_id, "owner").await
 }
 
 pub async fn update_workspace(
@@ -256,7 +256,7 @@ pub async fn update_workspace(
 
     tx.commit().await?;
 
-    super::get_workspace_by_id(
+    super::service::get_workspace_by_id(
         db,
         access.workspace_id,
         nvbes_tenancy::role_as_str(access.role),

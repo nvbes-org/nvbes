@@ -33,7 +33,7 @@ export interface WorkspaceView {
 export interface MfaFactorView {
   id: string;
   factor_type: string;
-  kind?: 'passkey' | 'security_key' | string;
+  kind?: string;
   status: string;
   label?: string;
   created_at: string;

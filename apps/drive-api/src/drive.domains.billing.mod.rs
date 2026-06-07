@@ -8,8 +8,8 @@ pub mod manage;
 pub mod manage_checkout;
 #[path = "drive.domains.billing.manage.core.rs"]
 pub mod manage_core;
-#[path = "drive.domains.billing.manage.utils.rs"]
-pub mod manage_utils;
+#[path = "drive.domains.billing.manage.redirect_urls.rs"]
+pub mod manage_redirect_urls;
 #[path = "drive.domains.billing.models.rs"]
 pub mod models;
 #[path = "drive.domains.billing.routes.rs"]
@@ -24,4 +24,7 @@ pub mod types;
 pub mod webhooks;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    create_checkout_session, create_portal_session, get_billing, get_invoice_estimate, get_usage,
+    handle_webhook,
+};

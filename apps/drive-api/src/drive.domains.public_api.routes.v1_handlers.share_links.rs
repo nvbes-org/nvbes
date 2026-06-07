@@ -15,10 +15,12 @@ use crate::{
     domains::authz::{ResourceContext, WorkspaceAction},
     domains::share_links::{CreateShareLinkInput, UpdateShareLinkInput},
     http::error::AppError,
-    http::request::{client_ip, user_agent},
 };
 
-use super::super::routes_helpers::*;
+use super::super::{
+    routes_access::{log_ok, scoped_access, scoped_object_access, scoped_share_link_access},
+    routes_audit::record_api_event,
+};
 
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -54,7 +56,7 @@ pub async fn list_share_links(
     uri: Uri,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<Json<crate::domains::share_links::ShareLinkListResponse>, AppError> {
-    let (ctx, access) = scoped_access(
+    let authorized = scoped_access(
         &state.db,
         &state.redis,
         &headers,
@@ -66,11 +68,11 @@ pub async fn list_share_links(
         ResourceContext::default(),
     )
     .await?;
-    let result = crate::domains::share_links::list_share_links(&state.db, &access).await?;
+    let result =
+        crate::domains::share_links::list_share_links(&state.db, &authorized.access).await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "GET",
         "/v1/workspaces/:workspaceId/share-links",
         &["share_links:read"],
@@ -104,7 +106,7 @@ pub async fn create_share_link(
     Path((workspace_id, object_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<CreateShareLinkRequest>,
 ) -> Result<Json<crate::domains::share_links::ShareLinkResponse>, AppError> {
-    let (ctx, access) = scoped_object_access(
+    let authorized = scoped_object_access(
         &state.db,
         &state.redis,
         &headers,
@@ -118,7 +120,7 @@ pub async fn create_share_link(
     .await?;
     let result = crate::domains::share_links::create_share_link(
         &state.db,
-        &access,
+        &authorized.access,
         object_id,
         CreateShareLinkInput {
             expires_at: request.expires_at,
@@ -127,14 +129,13 @@ pub async fn create_share_link(
         crate::domains::share_links::logic::public_share_requires_clean_scan(
             &state.config.environment,
         ),
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
     )
     .await?;
     record_api_event(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "api.share_link.created",
         "share_link",
         Some(result.share_link.id),
@@ -143,8 +144,7 @@ pub async fn create_share_link(
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "POST",
         "/v1/workspaces/:workspaceId/objects/:objectId/share-links",
         &["share_links:write"],
@@ -178,7 +178,7 @@ pub async fn update_share_link(
     Path((workspace_id, share_link_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<UpdateShareLinkRequest>,
 ) -> Result<Json<crate::domains::share_links::ShareLinkResponse>, AppError> {
-    let (ctx, access) = scoped_share_link_access(
+    let authorized = scoped_share_link_access(
         &state.db,
         &state.redis,
         &headers,
@@ -192,20 +192,19 @@ pub async fn update_share_link(
     .await?;
     let result = crate::domains::share_links::update_share_link(
         &state.db,
-        &access,
+        &authorized.access,
         share_link_id,
         UpdateShareLinkInput {
             expires_at: request.expires_at,
             max_downloads: request.max_downloads,
         },
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
     )
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "PATCH",
         "/v1/workspaces/:workspaceId/share-links/:shareLinkId",
         &["share_links:write"],
@@ -236,7 +235,7 @@ pub async fn revoke_share_link(
     uri: Uri,
     Path((workspace_id, share_link_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<crate::domains::share_links::ShareLinkResponse>, AppError> {
-    let (ctx, access) = scoped_share_link_access(
+    let authorized = scoped_share_link_access(
         &state.db,
         &state.redis,
         &headers,
@@ -250,16 +249,15 @@ pub async fn revoke_share_link(
     .await?;
     let result = crate::domains::share_links::revoke_share_link(
         &state.db,
-        &access,
+        &authorized.access,
         share_link_id,
-        client_ip(&headers),
-        user_agent(&headers),
+        authorized.request.meta.ip_owned(),
+        authorized.request.meta.user_agent_owned(),
     )
     .await?;
     record_api_event(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "api.share_link.revoked",
         "share_link",
         Some(result.share_link.id),
@@ -268,8 +266,7 @@ pub async fn revoke_share_link(
     .await?;
     log_ok(
         &state.db,
-        &headers,
-        &ctx,
+        &authorized.request,
         "DELETE",
         "/v1/workspaces/:workspaceId/share-links/:shareLinkId",
         &["share_links:write"],

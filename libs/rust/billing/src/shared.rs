@@ -1,10 +1,20 @@
 use chrono::{Datelike, NaiveDate, Utc};
+use thiserror::Error;
+use url::Url;
 use uuid::Uuid;
 
 pub const EUR: &str = "EUR";
 pub const STORAGE_OVERAGE_CENTS_PER_GB_MONTH: i64 = 4;
 pub const EXTRA_SEAT_CENTS_PER_MONTH: i64 = 900;
 pub const STRIPE_WEBHOOK_TOLERANCE_SECONDS: i64 = 300;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum BillingRedirectUrlError {
+    #[error("invalid_absolute_url")]
+    InvalidAbsoluteUrl,
+    #[error("invalid_origin")]
+    InvalidOrigin,
+}
 
 pub fn current_billing_period() -> (NaiveDate, NaiveDate) {
     let today = Utc::now().date_naive();
@@ -83,4 +93,83 @@ pub fn hex_encode(bytes: &[u8]) -> String {
 
 pub fn parse_uuid(value: &str) -> Option<Uuid> {
     Uuid::parse_str(value).ok()
+}
+
+pub fn resolve_billing_redirect_url(
+    value: Option<&str>,
+    default_url: &str,
+    primary_origin: &str,
+    staging_origin: Option<&str>,
+) -> Result<String, BillingRedirectUrlError> {
+    let candidate = value.unwrap_or(default_url).trim();
+    let candidate_url =
+        Url::parse(candidate).map_err(|_| BillingRedirectUrlError::InvalidAbsoluteUrl)?;
+
+    let on_primary_origin = url_matches_allowed_origin(&candidate_url, primary_origin);
+    let on_staging_origin =
+        staging_origin.is_some_and(|origin| url_matches_allowed_origin(&candidate_url, origin));
+
+    if !on_primary_origin && !on_staging_origin {
+        return Err(BillingRedirectUrlError::InvalidOrigin);
+    }
+
+    Ok(candidate_url.to_string())
+}
+
+pub fn subscription_status_requires_lock(status: &str) -> bool {
+    matches!(status, "past_due" | "canceled" | "suspended" | "incomplete")
+}
+
+fn url_matches_allowed_origin(candidate: &Url, allowed: &str) -> bool {
+    let allowed = match Url::parse(allowed.trim()) {
+        Ok(url) => url,
+        Err(_) => return false,
+    };
+
+    candidate.scheme() == allowed.scheme()
+        && candidate.host_str() == allowed.host_str()
+        && candidate.port_or_known_default() == allowed.port_or_known_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BillingRedirectUrlError, resolve_billing_redirect_url, subscription_status_requires_lock,
+    };
+
+    #[test]
+    fn resolve_billing_redirect_url_accepts_allowed_origin() {
+        let url = resolve_billing_redirect_url(
+            Some("https://app.example.com/billing/success?workspace=1"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            Some("https://staging.example.com"),
+        )
+        .expect("expected allowed origin to be accepted");
+
+        assert_eq!(url, "https://app.example.com/billing/success?workspace=1");
+    }
+
+    #[test]
+    fn resolve_billing_redirect_url_rejects_external_origin() {
+        let err = resolve_billing_redirect_url(
+            Some("https://evil.example/phish"),
+            "https://app.example.com/billing/success",
+            "https://app.example.com",
+            Some("https://staging.example.com"),
+        )
+        .expect_err("expected external origin to be rejected");
+
+        assert_eq!(err, BillingRedirectUrlError::InvalidOrigin);
+    }
+
+    #[test]
+    fn subscription_status_requires_lock_blocks_degraded_states() {
+        assert!(subscription_status_requires_lock("past_due"));
+        assert!(subscription_status_requires_lock("canceled"));
+        assert!(subscription_status_requires_lock("suspended"));
+        assert!(subscription_status_requires_lock("incomplete"));
+        assert!(!subscription_status_requires_lock("active"));
+        assert!(!subscription_status_requires_lock("trialing"));
+    }
 }

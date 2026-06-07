@@ -4,6 +4,9 @@ use uuid::Uuid;
 #[path = "identity.domains.auth.data_export.query.rs"]
 mod query;
 
+use crate::domains::auth::types::AuthContext;
+use crate::domains::auth::types::StepUpSubject;
+use crate::domains::auth::{check_rate_limit, verification};
 use crate::http::error::AppError;
 
 pub const DATA_EXPORT_TTL_SECONDS: u64 = 24 * 60 * 60;
@@ -41,6 +44,46 @@ pub async fn load_account_export(
     nvbes_redis::cache::cache_get_json(redis, &account_export_cache_key(principal_id))
         .await
         .map_err(|error| AppError::internal("data_export_load_failed", &error.to_string()))
+}
+
+pub async fn request_account_export(
+    db: &sqlx::PgPool,
+    redis: &nvbes_redis::RedisPool,
+    auth: &AuthContext,
+) -> Result<(), AppError> {
+    check_rate_limit(
+        redis,
+        "auth_me_export",
+        &format!("user:{}", auth.user_id()),
+        3,
+        std::time::Duration::from_secs(86400),
+    )
+    .await?;
+
+    verification::require_recent_step_up(redis, auth, None).await?;
+
+    let display_name = auth.display_name.as_str();
+    let html_body = format!(
+        "<p>Bonjour {},</p><p>Votre demande d'export de donnees personnelles a bien ete enregistree. Une notification vous sera envoyee quand le fichier sera pret. Le fichier devra etre recupere depuis votre session authentifiee.</p><p>L'equipe nvbes</p>",
+        display_name
+    );
+
+    crate::email::jobs::enqueue_email_job_tx(
+        db,
+        redis,
+        crate::email::jobs::EmailSendPayload {
+            to_email: auth.user_email.clone(),
+            to_name: Some(display_name.to_string()),
+            subject: "Demande d'export de donnees - nvbes".to_string(),
+            html_body,
+            text_body: None,
+            business_type: "data_export".to_string(),
+        },
+        &format!("export-confirm:{}", auth.user_id()),
+    )
+    .await?;
+
+    crate::email::jobs::enqueue_data_export_job_tx(redis, auth.user_id(), &auth.user_email).await
 }
 
 #[cfg(test)]

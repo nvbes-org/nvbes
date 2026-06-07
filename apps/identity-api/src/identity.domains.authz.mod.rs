@@ -8,5 +8,11 @@ pub mod service;
 pub mod types;
 
 pub use db::target_role_for_member;
-pub use service::*;
-pub use types::*;
+pub use service::{
+    authorize_workspace_action, decide_workspace_action, ensure_email_verified,
+    ensure_tenant_management_access,
+};
+pub use types::{
+    ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction, WorkspaceDecision,
+    WorkspacePolicy, WorkspaceRole, parse_action, parse_role,
+};

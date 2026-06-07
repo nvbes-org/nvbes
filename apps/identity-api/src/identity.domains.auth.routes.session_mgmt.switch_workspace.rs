@@ -1,6 +1,5 @@
 use crate::app::AppState;
 use crate::domains::auth::sessions_context;
-use crate::domains::auth::types::AuthContext as DomainAuthContext;
 use crate::domains::auth::types::{SwitchWorkspaceInput, SwitchWorkspaceResult};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -39,26 +38,7 @@ pub(crate) async fn switch_workspace(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<SwitchWorkspaceRequest>,
 ) -> Result<Json<SwitchWorkspaceResult>, AppError> {
-    let domain_auth = DomainAuthContext {
-        user_id: auth.user_id,
-        user_email: auth.user_email.clone(),
-        display_name: auth.display_name.clone(),
-        email_verified_at: auth.email_verified_at,
-        mfa_enabled: auth.mfa_enabled,
-        tenant_id: auth.tenant_id,
-        organization_id: auth.organization_id,
-        session_id: auth.session_id,
-        workspace_id: auth.workspace_id,
-        workspace_region: auth.workspace_region.clone(),
-        scope: auth.scope.clone(),
-        acr: auth.acr.clone(),
-        amr: auth.amr.clone(),
-        auth_time: auth
-            .auth_time
-            .and_then(|value| chrono::DateTime::<chrono::Utc>::from_timestamp(value, 0)),
-        client_id: auth.client_id.clone(),
-        cnf_jkt: auth.cnf_jkt.clone(),
-    };
+    let domain_auth = crate::domains::auth::types::AuthContext::from(&auth);
     let webauthn = crate::domains::auth::webauthn::build_webauthn(&state.config)?;
     let result = sessions_context::switch_workspace(
         &state.db,

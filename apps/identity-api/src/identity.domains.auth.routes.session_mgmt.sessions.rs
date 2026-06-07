@@ -11,7 +11,6 @@ use axum::{
     http::{HeaderMap, StatusCode, header::SET_COOKIE},
     response::{IntoResponse, Response},
 };
-use std::collections::HashSet;
 
 #[utoipa::path(
     post,
@@ -27,7 +26,7 @@ pub(crate) async fn logout(
     Extension(auth): Extension<AuthContext>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    logout_browser_sessions(&state, &auth, &headers).await?;
+    sessions::logout_browser_sessions(&state.db, &state.redis, &state.jwt, &auth, &headers).await?;
     let result = LogoutResult { success: true };
 
     let mut response = (StatusCode::OK, Json(result)).into_response();
@@ -43,34 +42,6 @@ pub(crate) async fn logout(
     nvbes_core::security::insert_clear_site_data_header(response.headers_mut());
 
     Ok(response)
-}
-
-async fn logout_browser_sessions(
-    state: &AppState,
-    auth: &AuthContext,
-    headers: &HeaderMap,
-) -> Result<(), AppError> {
-    let mut seen = HashSet::from([(auth.session_id(), auth.user_id())]);
-    sessions_mgmt::logout(&state.db, &state.redis, auth.session_id(), auth.user_id()).await?;
-
-    for token in crate::http::request::session_cookie_values(headers) {
-        if let Ok(cookie_auth) =
-            sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await
-        {
-            let key = (cookie_auth.session_id, cookie_auth.user_id);
-            if seen.insert(key) {
-                sessions_mgmt::logout(
-                    &state.db,
-                    &state.redis,
-                    cookie_auth.session_id,
-                    cookie_auth.user_id,
-                )
-                .await?;
-            }
-        }
-    }
-
-    Ok(())
 }
 
 #[utoipa::path(

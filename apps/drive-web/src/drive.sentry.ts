@@ -62,6 +62,23 @@ export function initSentry(): boolean {
   return true;
 }
 
+export async function syncSentryConsent(): Promise<void> {
+  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  const sentryAccepted = isVendorAccepted('sentry');
+
+  if (sentryAccepted) {
+    initSentry();
+    return;
+  }
+
+  if (initialized) {
+    await Sentry.close(2000);
+    initialized = false;
+  }
+
+  installSentrySmoke(false, Boolean(dsn));
+}
+
 export function captureSentryException(error: Error, context: ClientErrorReportContext) {
   Sentry.captureException(error, context);
 }

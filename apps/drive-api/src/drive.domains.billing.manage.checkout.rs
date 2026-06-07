@@ -7,7 +7,7 @@ use super::db::{
     fetch_active_price_mapping_tx, fetch_billing_state_tx, fetch_plan_by_code_tx,
     upsert_billing_customer_tx,
 };
-use super::manage_utils::resolve_billing_redirect_url;
+use super::manage_redirect_urls::resolve_billing_redirect_url;
 use super::stripe::{
     create_stripe_checkout_session, create_stripe_customer, create_stripe_portal_session,
 };

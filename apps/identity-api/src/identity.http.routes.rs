@@ -6,14 +6,14 @@ use axum::{
     middleware::Next,
     routing::{get, post},
 };
-use nvbes_core::http::error::ErrorEnvelope;
 use serde::Serialize;
 
 use super::csp_report;
 use super::middleware::{csrf, dpop, idempotency, origin};
 use super::observability;
 use super::openapi;
-use crate::{app::AppState, http::error::AppError};
+use super::well_known;
+use crate::app::AppState;
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -63,7 +63,7 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
         .route("/.well-known/dpop-nonce", get(dpop_nonce_handler))
         .route(
             "/.well-known/change-password",
-            get(change_password_well_known),
+            get(well_known::change_password_well_known),
         )
         .route(
             "/.well-known/oauth-authorization-server",
@@ -73,13 +73,19 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
             "/.well-known/openid-configuration",
             get(crate::domains::oauth::metadata::openid_configuration),
         )
-        .route("/.well-known/gpc.json", get(gpc_well_known))
+        .route("/.well-known/gpc.json", get(well_known::gpc_well_known))
         .route(
             "/.well-known/passkey-endpoints",
-            get(passkey_endpoints_well_known),
+            get(well_known::passkey_endpoints_well_known),
         )
-        .route("/.well-known/webauthn", get(webauthn_well_known))
-        .route("/.well-known/security.txt", get(security_txt_well_known))
+        .route(
+            "/.well-known/webauthn",
+            get(well_known::webauthn_well_known),
+        )
+        .route(
+            "/.well-known/security.txt",
+            get(well_known::security_txt_well_known),
+        )
         .merge(private_observability_routes)
         .merge(public_report_routes)
         .merge(crate::domains::router(state))
@@ -163,169 +169,4 @@ async fn dpop_nonce_handler(State(state): State<crate::app::AppState>) -> axum::
         .status(axum::http::StatusCode::OK)
         .body(axum::body::Body::empty())
         .unwrap()
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-#[serde(rename_all = "kebab-case")]
-struct ChangePasswordWellKnownResponse {
-    change_password: String,
-}
-
-#[utoipa::path(
-    get,
-    path = "/.well-known/change-password",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Password change URL", body = ChangePasswordWellKnownResponse),
-        (status = 500, description = "Internal server error", body = ErrorEnvelope),
-    ),
-)]
-async fn change_password_well_known(
-    State(state): State<AppState>,
-) -> Result<Json<ChangePasswordWellKnownResponse>, AppError> {
-    Ok(Json(ChangePasswordWellKnownResponse {
-        change_password: change_password_url(&state.config.web_base_url),
-    }))
-}
-
-fn change_password_url(web_base_url: &str) -> String {
-    format!(
-        "{}/account/security/password",
-        web_base_url.trim_end_matches('/')
-    )
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-struct GpcWellKnownResponse {
-    gpc: bool,
-    version: u32,
-}
-
-#[utoipa::path(
-    get,
-    path = "/.well-known/gpc.json",
-    tag = "auth",
-    responses(
-        (status = 200, description = "GPC support status", body = GpcWellKnownResponse),
-    ),
-)]
-async fn gpc_well_known() -> Json<GpcWellKnownResponse> {
-    Json(GpcWellKnownResponse {
-        gpc: true,
-        version: 1,
-    })
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-struct PasskeyEndpointsWellKnownResponse {
-    enroll: String,
-    manage: String,
-}
-
-#[utoipa::path(
-    get,
-    path = "/.well-known/passkey-endpoints",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Passkey enrollment and management endpoints", body = PasskeyEndpointsWellKnownResponse),
-        (status = 500, description = "Internal server error", body = ErrorEnvelope),
-    ),
-)]
-async fn passkey_endpoints_well_known(
-    State(state): State<AppState>,
-) -> Result<Json<PasskeyEndpointsWellKnownResponse>, AppError> {
-    let base = state.config.web_base_url.trim_end_matches('/').to_string();
-    Ok(Json(PasskeyEndpointsWellKnownResponse {
-        enroll: format!("{}/account/mfa/passkey/setup", base),
-        manage: format!("{}/account/mfa", base),
-    }))
-}
-
-#[derive(Serialize, utoipa::ToSchema)]
-struct WebAuthnWellKnownResponse {
-    origins: Vec<String>,
-}
-
-#[utoipa::path(
-    get,
-    path = "/.well-known/webauthn",
-    tag = "auth",
-    responses(
-        (status = 200, description = "WebAuthn related origins for cross-domain passkey sharing", body = WebAuthnWellKnownResponse),
-        (status = 500, description = "Internal server error", body = ErrorEnvelope),
-    ),
-)]
-async fn webauthn_well_known(
-    State(state): State<AppState>,
-) -> Result<Json<WebAuthnWellKnownResponse>, AppError> {
-    Ok(Json(WebAuthnWellKnownResponse {
-        origins: state.config.webauthn_related_origins.clone(),
-    }))
-}
-
-async fn security_txt_well_known(
-    State(state): State<AppState>,
-) -> Result<
-    (
-        axum::http::StatusCode,
-        [(axum::http::HeaderName, &'static str); 1],
-        String,
-    ),
-    AppError,
-> {
-    let base = state.config.web_base_url.trim_end_matches('/').to_string();
-    let contact = match &state.config.security_contact_email {
-        Some(email) => format!("mailto:{}", email),
-        None => {
-            let domain = state
-                .config
-                .web_base_url
-                .trim_start_matches("https://")
-                .trim_start_matches("http://")
-                .split('/')
-                .next()
-                .unwrap_or("nvbes.fr");
-            format!("mailto:security@{}", domain)
-        }
-    };
-    let policy = format!("{}/.well-known/security-policy", base);
-    let expires = "2027-06-01T00:00:00.000Z";
-    let body = format!(
-        "Contact: {}\nPolicy: {}\nExpires: {}\n",
-        contact, policy, expires
-    );
-    Ok((
-        axum::http::StatusCode::OK,
-        [(
-            axum::http::header::CONTENT_TYPE,
-            "text/plain; charset=utf-8",
-        )],
-        body,
-    ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::WebAuthnWellKnownResponse;
-    use super::change_password_url;
-
-    #[test]
-    fn webauthn_well_known_serializes_origins() {
-        let response = WebAuthnWellKnownResponse {
-            origins: vec!["https://drive.nvbes.io".into()],
-        };
-        let json = serde_json::to_value(&response).unwrap();
-        assert_eq!(
-            json,
-            serde_json::json!({"origins": ["https://drive.nvbes.io"]})
-        );
-    }
-
-    #[test]
-    fn change_password_url_trims_web_base_url() {
-        assert_eq!(
-            change_password_url("https://identity.example/"),
-            "https://identity.example/account/security/password"
-        );
-    }
 }

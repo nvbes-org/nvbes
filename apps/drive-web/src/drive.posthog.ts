@@ -1,5 +1,4 @@
 import {
-  EMPTY_POSTHOG_CONSENT,
   capturePostHogException,
   getFeatureFlag,
   getFeatureFlagPayload,
@@ -11,96 +10,17 @@ import {
   stopPrivacySafeReplay,
   trackExperimentExposure,
   trackProductEvent,
-  type PostHogPurposeConsent,
 } from '@nvbes/web-runtime/posthog';
+import { getPostHogConsent } from './tracking-consent';
 import {
-  TRACKING_CONSENT_CHANGED_EVENT,
-  type CookieConsentState,
-  getPostHogConsent,
-} from './tracking-consent';
-
-const DRIVE_SENSITIVE_ROUTES = [
-  /^\/callback(?:\/|$)/u,
-  /\/(?:files?|folders?|previews?|uploads?|downloads?|share-links?)(?:\/|$)/u,
-  /\/(?:billing|checkout|portal)(?:\/|$)/u,
-  /\/(?:privacy|export|delete|tokens?|service-accounts?)(?:\/|$)/u,
-] as const;
+  blockedRoutePatterns,
+  captureCurrentPageView,
+  currentPath,
+  installPageTracking,
+} from './drive.posthog.pageview';
+import { subscribeToConsent } from './drive.posthog.consent';
 
 let initialized = false;
-let pageTrackingInstalled = false;
-let lastTrackedPath: string | null = null;
-
-function currentPath(): string {
-  if (typeof window === 'undefined') {
-    return '/';
-  }
-  return window.location.pathname || '/';
-}
-
-function subscribeToConsent(listener: (consent: PostHogPurposeConsent) => void): () => void {
-  if (typeof window === 'undefined') {
-    return () => {};
-  }
-
-  const handleConsentChange = (event: Event) => {
-    if (!(event instanceof CustomEvent)) {
-      return;
-    }
-
-    const detail = event.detail as { consent?: CookieConsentState };
-    listener(detail.consent?.posthog ?? EMPTY_POSTHOG_CONSENT);
-  };
-
-  window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
-  return () => window.removeEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
-}
-
-function captureCurrentPageView(): void {
-  const routePath = currentPath();
-  if (routePath === lastTrackedPath) {
-    return;
-  }
-
-  lastTrackedPath = routePath;
-  void trackProductEvent('marketing.page_viewed', {
-    event_source: 'router',
-    source: 'drive-web',
-  });
-}
-
-function schedulePageView(): void {
-  window.requestAnimationFrame(captureCurrentPageView);
-}
-
-function installPageTracking(): void {
-  if (pageTrackingInstalled || typeof window === 'undefined') {
-    return;
-  }
-
-  const originalPushState: History['pushState'] = window.history.pushState.bind(window.history);
-  const originalReplaceState: History['replaceState'] = window.history.replaceState.bind(
-    window.history,
-  );
-
-  window.history.pushState = function pushStateWithPostHogTracking(
-    ...args: Parameters<History['pushState']>
-  ) {
-    const result = originalPushState(...args);
-    schedulePageView();
-    return result;
-  };
-
-  window.history.replaceState = function replaceStateWithPostHogTracking(
-    ...args: Parameters<History['replaceState']>
-  ) {
-    const result = originalReplaceState(...args);
-    schedulePageView();
-    return result;
-  };
-
-  window.addEventListener('popstate', schedulePageView);
-  pageTrackingInstalled = true;
-}
 
 export function initPostHog() {
   if (initialized) {
@@ -123,7 +43,7 @@ export function initPostHog() {
       app_name: 'drive-web',
       event_source: 'browser',
     }),
-    blockedRoutePatterns: [...DRIVE_SENSITIVE_ROUTES],
+    blockedRoutePatterns,
   });
 
   captureCurrentPageView();

@@ -1,4 +1,4 @@
-use nvbes_core::auth::helpers::normalize_email;
+use nvbes_core::auth::normalize_email;
 use sqlx::PgPool;
 use uuid::Uuid;
 

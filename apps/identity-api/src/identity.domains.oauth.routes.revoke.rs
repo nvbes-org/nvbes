@@ -1,5 +1,6 @@
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{app::AppState, http::error::AppError};
@@ -25,13 +26,14 @@ pub(crate) async fn revoke(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let _client_auth = super::parse_basic_client_auth(&headers)?;
 
-    super::enforce_public_oauth_rate_limit_db(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_revoke",
         &_client_auth.0,
         60,
         30,
+        Duration::from_secs(60),
     )
     .await?;
 

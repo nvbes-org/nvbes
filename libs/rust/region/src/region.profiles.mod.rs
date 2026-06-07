@@ -11,15 +11,20 @@ mod asia_pacific;
 mod europe;
 
 pub static ALL_PROFILES: LazyLock<Vec<RegionProfile>> = LazyLock::new(|| {
-    let mut v = Vec::with_capacity(
-        europe::EUROPE_PROFILES.len()
-            + americas::AMERICAS_PROFILES.len()
-            + asia_pacific::ASIA_PACIFIC_PROFILES.len()
-            + africa_me::AFRICA_ME_PROFILES.len(),
-    );
-    v.extend_from_slice(europe::EUROPE_PROFILES);
-    v.extend_from_slice(americas::AMERICAS_PROFILES);
-    v.extend_from_slice(asia_pacific::ASIA_PACIFIC_PROFILES);
-    v.extend_from_slice(africa_me::AFRICA_ME_PROFILES);
+    let slices = [
+        europe::EUROPE_PROFILES_SLICES,
+        americas::AMERICAS_PROFILES_SLICES,
+        asia_pacific::ASIA_PACIFIC_PROFILES_SLICES,
+        africa_me::AFRICA_ME_PROFILES_SLICES,
+    ];
+    let capacity = slices
+        .iter()
+        .flat_map(|group| group.iter().copied())
+        .map(|slice| slice.len())
+        .sum();
+    let mut v = Vec::with_capacity(capacity);
+    for slice in slices.iter().flat_map(|group| group.iter().copied()) {
+        v.extend_from_slice(slice);
+    }
     v
 });

@@ -51,7 +51,10 @@ pub(crate) async fn device_authorize(
     Json(request): Json<DeviceAuthorizeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let result = crate::domains::oauth::device_authorization::device_authorization(
-        &state,
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &state.config.web_base_url,
         &headers,
         crate::domains::oauth::service::DeviceAuthorizationInput {
             client_id: request.client_id,
@@ -81,9 +84,13 @@ pub(crate) async fn device_verify(
     headers: HeaderMap,
     Json(request): Json<crate::domains::oauth::service::DeviceVerificationInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let result =
-        crate::domains::oauth::device_verification::verify_device_code(&state, &headers, request)
-            .await?;
+    let result = crate::domains::oauth::device_verification::verify_device_code(
+        &state.db,
+        &state.redis,
+        &headers,
+        request,
+    )
+    .await?;
     Ok(Json(serde_json::to_value(result)?))
 }
 
@@ -104,7 +111,13 @@ pub(crate) async fn device_approve(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::oauth::service::DeviceApprovalInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    crate::domains::oauth::device_verification::approve_device_code(&state, &auth, request).await?;
+    crate::domains::oauth::device_verification::approve_device_code(
+        &state.db,
+        &state.redis,
+        &auth,
+        request,
+    )
+    .await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
@@ -125,6 +138,7 @@ pub(crate) async fn device_deny(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<crate::domains::oauth::service::DeviceVerificationInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    crate::domains::oauth::device_verification::deny_device_code(&state, &auth, request).await?;
+    crate::domains::oauth::device_verification::deny_device_code(&state.redis, &auth, request)
+        .await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }

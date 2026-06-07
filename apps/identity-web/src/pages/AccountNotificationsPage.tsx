@@ -1,5 +1,11 @@
+import {
+  getWebPushSupport,
+  requestWebPushPermission,
+  type WebPushSupport,
+} from '@nvbes/web-runtime';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Bell, Mail, Smartphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +19,36 @@ const NotificationsSchema = z.object({
 });
 
 type NotificationPrefs = z.infer<typeof NotificationsSchema>;
+
+function pushDescription(support: WebPushSupport): string {
+  if (support.supported && support.permission === 'granted') {
+    return 'Notifications push autorisees dans ce navigateur.';
+  }
+
+  if (support.supported && support.permission === 'denied') {
+    return 'Notifications bloquees dans les reglages du navigateur.';
+  }
+
+  if (support.supported) {
+    return 'Notifications push dans le navigateur.';
+  }
+
+  if (support.reason === 'missing-push-manager') {
+    return "Indisponible dans ce contexte. Sur iPhone ou iPad, ajoutez l'app a l'ecran d'accueil.";
+  }
+
+  return 'Notifications push indisponibles dans ce navigateur.';
+}
+
+function pushButtonLabel(enabled: boolean, support: WebPushSupport): string {
+  if (!support.supported) return 'Indisponible';
+  if (support.permission === 'denied') return 'Bloque';
+  return enabled ? 'Active' : 'Desactive';
+}
+
+function canTogglePush(support: WebPushSupport): boolean {
+  return support.supported && support.permission !== 'denied';
+}
 
 function fetchNotifications() {
   return identityHttpClient.request('/auth/me/notifications', NotificationsSchema, {
@@ -29,6 +65,17 @@ function updateNotifications(prefs: NotificationPrefs) {
 
 export default function AccountNotificationsPage() {
   const queryClient = useQueryClient();
+  const [webPushSupport, setWebPushSupport] = useState<WebPushSupport>(() => getWebPushSupport());
+
+  useEffect(() => {
+    const refreshSupport = () => setWebPushSupport(getWebPushSupport());
+    window.addEventListener('focus', refreshSupport);
+    document.addEventListener('visibilitychange', refreshSupport);
+    return () => {
+      window.removeEventListener('focus', refreshSupport);
+      document.removeEventListener('visibilitychange', refreshSupport);
+    };
+  }, []);
 
   const { data } = useSuspenseQuery({
     queryKey: ['notifications'],
@@ -47,7 +94,13 @@ export default function AccountNotificationsPage() {
 
   const prefs = data;
 
-  const togglePref = (key: keyof NotificationPrefs) => {
+  const togglePref = async (key: keyof NotificationPrefs) => {
+    if (key === 'push' && !prefs.push) {
+      const permission = await requestWebPushPermission();
+      setWebPushSupport(getWebPushSupport());
+      if (permission !== 'granted') return;
+    }
+
     mutation.mutate({ ...prefs, [key]: !prefs[key] });
   };
 
@@ -61,7 +114,7 @@ export default function AccountNotificationsPage() {
     {
       key: 'push' as const,
       label: 'Push',
-      desc: 'Notifications push dans le navigateur.',
+      desc: pushDescription(webPushSupport),
       Icon: Smartphone,
     },
     {
@@ -104,10 +157,16 @@ export default function AccountNotificationsPage() {
                   variant={prefs[key] ? 'default' : 'outline'}
                   size="sm"
                   className="shrink-0"
-                  onClick={() => togglePref(key)}
-                  disabled={mutation.isPending}
+                  onClick={() => void togglePref(key)}
+                  disabled={
+                    mutation.isPending || (key === 'push' && !canTogglePush(webPushSupport))
+                  }
                 >
-                  {prefs[key] ? 'Active' : 'Desactive'}
+                  {key === 'push'
+                    ? pushButtonLabel(prefs.push, webPushSupport)
+                    : prefs[key]
+                      ? 'Active'
+                      : 'Desactive'}
                 </Button>
               </div>
             </div>

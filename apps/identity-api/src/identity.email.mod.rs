@@ -9,4 +9,4 @@ pub mod templates;
 #[path = "identity.email.webhooks.rs"]
 pub mod webhooks;
 
-pub use templates::*;
+pub use templates::{invitation_email, password_reset_email, verification_email};

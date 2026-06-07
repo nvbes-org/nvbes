@@ -63,32 +63,20 @@ pub(crate) async fn register(
     Json(request): Json<RegisterRequest>,
 ) -> Result<Json<crate::domains::auth::types::RegisterResult>, AppError> {
     if state.config.auth_pow_enabled {
-        let nonce = request
-            .pow_nonce
-            .as_deref()
-            .ok_or_else(|| AppError::bad_request("pow_missing", "PoW challenge required."))?;
-        let solution = request
-            .pow_solution
-            .as_deref()
-            .ok_or_else(|| AppError::bad_request("pow_missing", "PoW solution required."))?;
-        crate::domains::auth::pow::verify_solution(&state.db, nonce, solution).await?;
+        crate::domains::auth::challenge_proof::require_pow_solution(
+            &state.db,
+            request.pow_nonce.as_deref(),
+            request.pow_solution.as_deref(),
+        )
+        .await?;
     }
 
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
+        &headers,
         "auth_register",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
+        &request.email,
         8,
-        std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_register",
-        &format!("key:{}", request.email),
         4,
         std::time::Duration::from_secs(60),
     )
@@ -121,7 +109,7 @@ pub(crate) async fn register(
         .as_str()
         .to_string();
 
-    let birthdate = nvbes_core::auth::helpers::parse_birthdate(request.birthdate.as_deref())?;
+    let birthdate = nvbes_core::auth::parse_birthdate(request.birthdate.as_deref())?;
 
     let result = onboarding::register(
         &state.db,
@@ -242,21 +230,12 @@ pub(crate) async fn verify_email(
     headers: HeaderMap,
     Json(request): Json<VerifyEmailRequest>,
 ) -> Result<Json<crate::domains::auth::types::VerifyEmailResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
+    nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
+        &headers,
         "auth_verify_email",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
+        &request.token,
         30,
-        std::time::Duration::from_secs(60),
-    )
-    .await?;
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_verify_email",
-        &format!("key:{}", request.token),
         10,
         std::time::Duration::from_secs(60),
     )

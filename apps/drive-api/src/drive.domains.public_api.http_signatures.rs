@@ -3,6 +3,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use chrono::Utc;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 
+use crate::domains::public_api::errors::PublicApiErrorKind;
 use crate::http::error::AppError;
 
 const SIGNATURE: &str = "signature";
@@ -54,28 +55,19 @@ pub fn verify(
 
     public_key
         .verify(base.as_bytes(), &signature)
-        .map_err(|_| AppError::unauthorized("http_signature_invalid", "HTTP signature is invalid."))
+        .map_err(|_| PublicApiErrorKind::HttpSignatureInvalid.app_error())
 }
 
 fn validate_time_window(params: &SignatureParams) -> Result<(), AppError> {
     let now = Utc::now().timestamp();
     if params.created < now - MAX_CLOCK_SKEW_SECS {
-        return Err(AppError::unauthorized(
-            "http_signature_expired",
-            "HTTP signature is too old.",
-        ));
+        return Err(PublicApiErrorKind::HttpSignatureExpired.app_error());
     }
     if params.created > now + MAX_CLOCK_SKEW_SECS {
-        return Err(AppError::unauthorized(
-            "http_signature_future",
-            "HTTP signature was created in the future.",
-        ));
+        return Err(PublicApiErrorKind::HttpSignatureFuture.app_error());
     }
     if params.expires.is_some_and(|expires| expires < now) {
-        return Err(AppError::unauthorized(
-            "http_signature_expired",
-            "HTTP signature has expired.",
-        ));
+        return Err(PublicApiErrorKind::HttpSignatureExpired.app_error());
     }
     Ok(())
 }
@@ -93,10 +85,7 @@ fn require_component(params: &SignatureParams, component: &str) -> Result<(), Ap
     if params.components.iter().any(|item| item == component) {
         return Ok(());
     }
-    Err(AppError::unauthorized(
-        "http_signature_component_missing",
-        format!("HTTP signature must cover {component}."),
-    ))
+    Err(PublicApiErrorKind::HttpSignatureInvalid.component_missing(component))
 }
 
 fn signature_base(
@@ -202,41 +191,28 @@ fn header<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>, App
     headers
         .get(name)
         .map(|value| {
-            value.to_str().map_err(|_| {
-                AppError::unauthorized(
-                    "http_signature_header_invalid",
-                    format!("HTTP signature header {name} is invalid."),
-                )
-            })
+            value
+                .to_str()
+                .map_err(|_| PublicApiErrorKind::HttpSignatureInvalid.header_invalid(name))
         })
         .transpose()
 }
 
 fn required_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<&'a str, AppError> {
-    header(headers, name)?.ok_or_else(|| {
-        AppError::unauthorized(
-            "http_signature_header_missing",
-            format!("HTTP signature requires header {name}."),
-        )
-    })
+    header(headers, name)?
+        .ok_or_else(|| PublicApiErrorKind::HttpSignatureInvalid.header_missing(name))
 }
 
 fn invalid_input() -> AppError {
-    AppError::unauthorized(
-        "http_signature_input_invalid",
-        "Signature-Input header is invalid.",
-    )
+    PublicApiErrorKind::HttpSignatureInputInvalid.app_error()
 }
 
 fn invalid_signature() -> AppError {
-    AppError::unauthorized("http_signature_invalid", "HTTP signature is invalid.")
+    PublicApiErrorKind::HttpSignatureInvalid.app_error()
 }
 
 fn invalid_key() -> AppError {
-    AppError::unauthorized(
-        "http_signature_key_invalid",
-        "HTTP signature public key is invalid.",
-    )
+    PublicApiErrorKind::HttpSignatureKeyInvalid.app_error()
 }
 
 #[cfg(test)]

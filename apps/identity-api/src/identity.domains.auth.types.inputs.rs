@@ -64,6 +64,18 @@ pub struct SwitchWorkspaceInput {
     pub recovery_code: Option<String>,
 }
 
+impl SwitchWorkspaceInput {
+    pub fn into_step_up_input(self) -> StepUpInput {
+        StepUpInput {
+            password: self.password,
+            totp_code: self.totp_code,
+            webauthn_response: self.webauthn_response,
+            webauthn_challenge_id: self.webauthn_challenge_id,
+            recovery_code: self.recovery_code,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct TotpSetupInput {
     pub label: Option<String>,
@@ -155,5 +167,30 @@ impl StepUpSubject for AuthContext {
 
     fn workspace_id(&self) -> Option<Uuid> {
         self.workspace_id
+    }
+}
+
+impl From<&crate::http::middleware::jwt::AuthContext> for AuthContext {
+    fn from(value: &crate::http::middleware::jwt::AuthContext) -> Self {
+        Self {
+            user_id: value.user_id,
+            user_email: value.user_email.clone(),
+            display_name: value.display_name.clone(),
+            email_verified_at: value.email_verified_at,
+            mfa_enabled: value.mfa_enabled,
+            tenant_id: value.tenant_id,
+            organization_id: value.organization_id,
+            session_id: value.session_id,
+            workspace_id: value.workspace_id,
+            workspace_region: value.workspace_region.clone(),
+            scope: value.scope.clone(),
+            acr: value.acr.clone(),
+            amr: value.amr.clone(),
+            auth_time: value
+                .auth_time
+                .and_then(|seconds| DateTime::<Utc>::from_timestamp(seconds, 0)),
+            client_id: value.client_id.clone(),
+            cnf_jkt: value.cnf_jkt.clone(),
+        }
     }
 }

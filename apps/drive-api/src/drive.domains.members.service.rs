@@ -11,7 +11,10 @@ use nvbes_tenancy::role_as_db;
 
 use super::db;
 use super::invitations;
-pub use super::types::*;
+pub use super::types::{
+    AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
+    MemberListResponse, RemoveMemberResponse, UpdateMemberInput, UpdateMemberResponse,
+};
 
 pub async fn list_members(
     db: &sqlx::PgPool,

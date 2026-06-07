@@ -14,7 +14,10 @@ pub mod service;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    ensure_upload_allowed_tx, get_quota, record_bandwidth_out_tx, record_file_uploaded_tx,
+    release_storage_tx,
+};
 pub use types::{
     BandwidthOutUsageInput, FileUploadedUsageInput, QuotaResponse, StorageReleasedUsageInput,
 };

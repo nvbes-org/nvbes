@@ -1,31 +1,16 @@
 use crate::http::error::AppError;
+use nvbes_tenancy::workspace::WorkspaceInputError;
 
 pub fn validate_workspace_name(name: &str) -> Result<String, AppError> {
-    let trimmed = name.trim();
-    if trimmed.is_empty() {
-        return Err(AppError::bad_request(
-            "validation_failed",
-            "Workspace name cannot be empty.",
-        ));
-    }
-    if trimmed.chars().count() > 120 {
-        return Err(AppError::bad_request(
-            "validation_failed",
-            "Workspace name must be 120 characters or fewer.",
-        ));
-    }
-    Ok(trimmed.to_owned())
+    nvbes_tenancy::workspace::validate_workspace_name(name).map_err(map_workspace_input_error)
 }
 
 pub fn parse_workspace_type(value: Option<&str>) -> Result<&'static str, AppError> {
-    match value.unwrap_or("team").trim() {
-        "personal" => Ok("personal"),
-        "team" => Ok("team"),
-        _ => Err(AppError::bad_request(
-            "validation_failed",
-            "workspace_type must be personal or team.",
-        )),
-    }
+    nvbes_tenancy::workspace::parse_workspace_type(value).map_err(map_workspace_input_error)
+}
+
+fn map_workspace_input_error(error: WorkspaceInputError) -> AppError {
+    AppError::bad_request("validation_failed", error.to_string())
 }
 
 #[cfg(test)]

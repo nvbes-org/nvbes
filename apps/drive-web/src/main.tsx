@@ -8,14 +8,18 @@ import {
   type ClientErrorReporter,
 } from '@nvbes/web-runtime';
 import { capturePostHogException, initPostHog } from './drive.posthog';
-import { captureSentryException, initSentry } from './drive.sentry';
+import { captureSentryException, initSentry, syncSentryConsent } from './drive.sentry';
 import { syncDriveServiceWorkerSentryConsent } from './drive.sw.consent';
-import { syncTrackingConsent } from './tracking-consent';
+import { syncTrackingConsent, TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 
 const sentryInitialized = initSentry();
 initPostHog();
 
 void syncTrackingConsent();
+window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
+  void syncSentryConsent();
+  void syncDriveServiceWorkerSentryConsent();
+});
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {

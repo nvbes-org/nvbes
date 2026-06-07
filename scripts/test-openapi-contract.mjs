@@ -612,8 +612,11 @@ function seededCredentialsFromEnv() {
 async function seedAuthContext(apiBaseUrl) {
 	const credentials = seededCredentialsFromEnv();
 	const turnstileToken = process.env.NVBES_SMOKE_AUTH_TURNSTILE_TOKEN;
+	let workspaceName =
+		process.env.NVBES_SMOKE_AUTH_WORKSPACE ?? "Smoke Contract Workspace";
 
 	if (credentials.shouldRegister) {
+		workspaceName = `Smoke Contract ${randomUUID().slice(0, 8)}`;
 		const registerPow = await fetchPowSolution(apiBaseUrl);
 		const registerBody = {
 			email: credentials.email,
@@ -622,7 +625,7 @@ async function seedAuthContext(apiBaseUrl) {
 			lastname: "Contract",
 			username: `smoke_${randomUUID().slice(0, 8)}`,
 			region: "FR",
-			workspace_name: `Smoke Contract ${randomUUID().slice(0, 8)}`,
+			workspace_name: workspaceName,
 			...registerPow,
 		};
 
@@ -640,6 +643,8 @@ async function seedAuthContext(apiBaseUrl) {
 			[200, 409],
 		);
 	}
+
+	prepareSeededAuthAccount(credentials, workspaceName);
 
 	const identifierPow = await fetchPowSolution(apiBaseUrl);
 	const identifierBody = {
@@ -738,6 +743,41 @@ async function seedAuthContext(apiBaseUrl) {
 			mfaEnabled: Boolean(loginBody?.user?.mfa_enabled),
 		},
 	};
+}
+
+function prepareSeededAuthAccount(credentials, workspaceName) {
+	const databaseUrl = process.env.NVBES_DATABASE_URL;
+	if (!databaseUrl) {
+		fail("NVBES_DATABASE_URL is required for seeded-auth smoke preparation");
+	}
+
+	execFileSync(
+		"cargo",
+		[
+			"run",
+			"-q",
+			"-p",
+			"nvbes-identity-api",
+			"--",
+			"--prepare-beta-e2e-account",
+			"--email",
+			credentials.email,
+			"--password",
+			credentials.password,
+			"--workspace-name",
+			workspaceName,
+		],
+		{
+			cwd: ROOT_DIR,
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "pipe"],
+			env: {
+				...process.env,
+				NVBES_ENV: "staging",
+				NVBES_DATABASE_URL: databaseUrl,
+			},
+		},
+	);
 }
 
 async function probe(

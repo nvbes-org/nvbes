@@ -4,7 +4,7 @@ use sqlx::PgPool;
 
 use super::core;
 use super::security;
-pub use super::types::*;
+use super::types::{AuthContext, LogoutResult, MeResult};
 
 pub async fn authenticate(
     db: &PgPool,

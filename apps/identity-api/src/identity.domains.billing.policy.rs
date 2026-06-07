@@ -1,7 +1,8 @@
 use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
 use crate::http::error::AppError;
-use nvbes_billing::models::BillingStateRecord;
-use url::Url;
+use nvbes_billing::{
+    BillingRedirectUrlError, models::BillingStateRecord, subscription_status_requires_lock,
+};
 use uuid::Uuid;
 
 pub fn resolve_billing_redirect_url(
@@ -12,43 +13,19 @@ pub fn resolve_billing_redirect_url(
     field_name: &'static str,
     env_name: &'static str,
 ) -> Result<String, AppError> {
-    let candidate = value.unwrap_or(default_url).trim();
-    let candidate_url = Url::parse(candidate).map_err(|_| {
-        AppError::bad_request(
-            "invalid_billing_return_url",
-            &format!("{field_name} must be a valid absolute URL."),
-        )
-    })?;
-
-    let on_primary_origin = url_matches_allowed_origin(&candidate_url, primary_origin);
-    let on_staging_origin =
-        staging_origin.is_some_and(|origin| url_matches_allowed_origin(&candidate_url, origin));
-
-    if !on_primary_origin && !on_staging_origin {
-        return Err(AppError::bad_request(
-            "invalid_billing_return_url",
-            &format!(
-                "{field_name} must stay on the configured application origin. Set {env_name} to an allowed URL."
+    nvbes_billing::resolve_billing_redirect_url(value, default_url, primary_origin, staging_origin)
+        .map_err(|error| match error {
+            BillingRedirectUrlError::InvalidAbsoluteUrl => AppError::bad_request(
+                "invalid_billing_return_url",
+                &format!("{field_name} must be a valid absolute URL."),
             ),
-        ));
-    }
-
-    Ok(candidate_url.to_string())
-}
-
-pub fn url_matches_allowed_origin(candidate: &Url, allowed: &str) -> bool {
-    let allowed = match Url::parse(allowed.trim()) {
-        Ok(url) => url,
-        Err(_) => return false,
-    };
-
-    candidate.scheme() == allowed.scheme()
-        && candidate.host_str() == allowed.host_str()
-        && candidate.port_or_known_default() == allowed.port_or_known_default()
-}
-
-pub fn subscription_status_requires_lock(status: &str) -> bool {
-    matches!(status, "past_due" | "canceled" | "suspended" | "incomplete")
+            BillingRedirectUrlError::InvalidOrigin => AppError::bad_request(
+                "invalid_billing_return_url",
+                &format!(
+                    "{field_name} must stay on the configured application origin. Set {env_name} to an allowed URL."
+                ),
+            ),
+        })
 }
 
 pub async fn enforce_billing_rate_limits(
@@ -117,49 +94,4 @@ pub async fn enforce_billing_risk_policy(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{resolve_billing_redirect_url, subscription_status_requires_lock};
-
-    #[test]
-    fn resolve_billing_redirect_url_accepts_allowed_origin() {
-        let url = resolve_billing_redirect_url(
-            Some("https://app.example.com/billing/success?workspace=1"),
-            "https://app.example.com/billing/success",
-            "https://app.example.com",
-            Some("https://staging.example.com"),
-            "success_url",
-            "NVBES_BILLING_SUCCESS_URL",
-        )
-        .expect("expected allowed origin to be accepted");
-
-        assert_eq!(url, "https://app.example.com/billing/success?workspace=1");
-    }
-
-    #[test]
-    fn resolve_billing_redirect_url_rejects_external_origin() {
-        let err = resolve_billing_redirect_url(
-            Some("https://evil.example/phish"),
-            "https://app.example.com/billing/success",
-            "https://app.example.com",
-            Some("https://staging.example.com"),
-            "success_url",
-            "NVBES_BILLING_SUCCESS_URL",
-        )
-        .expect_err("expected external origin to be rejected");
-
-        assert_eq!(err.code, "invalid_billing_return_url");
-    }
-
-    #[test]
-    fn subscription_status_requires_lock_blocks_degraded_states() {
-        assert!(subscription_status_requires_lock("past_due"));
-        assert!(subscription_status_requires_lock("canceled"));
-        assert!(subscription_status_requires_lock("suspended"));
-        assert!(subscription_status_requires_lock("incomplete"));
-        assert!(!subscription_status_requires_lock("active"));
-        assert!(!subscription_status_requires_lock("trialing"));
-    }
 }

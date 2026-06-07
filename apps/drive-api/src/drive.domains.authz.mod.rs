@@ -11,5 +11,5 @@ pub use db::{
     resource_context_for_object, resource_context_for_share_link, target_role_for_member,
 };
 pub use rls::begin_workspace_transaction;
-pub use service::*;
-pub use types::*;
+pub use service::{authorize_workspace_action, ensure_email_verified};
+pub use types::{ResourceContext, WorkspaceAccess, WorkspaceAction, WorkspaceRole, parse_role};

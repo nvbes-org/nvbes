@@ -1,7 +1,4 @@
-import type {
-  FeatureFlagResult,
-  JsonType,
-} from 'posthog-js/dist/module.full.no-external';
+import type { FeatureFlagResult, JsonType } from 'posthog-js/dist/module.full.no-external';
 import { hasAnyPostHogConsent } from './posthog.privacy';
 import { RuntimePostHog } from './posthog.runtime';
 import type { PostHogRuntime, PostHogRuntimeOptions } from './posthog.types';

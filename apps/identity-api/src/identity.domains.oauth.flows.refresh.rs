@@ -1,8 +1,9 @@
 use chrono::Utc;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
-use crate::app::AppState;
+use crate::domains::auth::jwt::JwtService;
 use crate::http::error::AppError;
 use nvbes_redis::refresh_token as refresh_store;
 
@@ -10,11 +11,14 @@ use super::{ClientAuthentication, TokenView};
 
 /// Refresh an access token.
 pub async fn refresh_token(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    auth_refresh_token_ttl_hours: i64,
     refresh_token: &str,
     client_auth: ClientAuthentication,
 ) -> Result<TokenView, AppError> {
-    let claims = state.jwt.decode_token(refresh_token, "refresh")?;
+    let claims = jwt.decode_token(refresh_token, "refresh")?;
     if claims.client_id.as_deref() != Some(client_auth.client_id.as_str()) {
         return Err(AppError::unauthorized(
             "invalid_client",
@@ -28,7 +32,7 @@ pub async fn refresh_token(
         .map_err(|e| AppError::internal("invalid_session_id", &format!("{}", e)))?;
 
     let lock_key = format!("oauth-refresh-token:{}", claims.jti);
-    let locked = nvbes_redis::lock::acquire(&state.redis, &lock_key, 15)
+    let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
         .map_err(|err| AppError::internal("refresh_token_lock_failed", &format!("{}", err)))?;
     if !locked {
@@ -39,11 +43,11 @@ pub async fn refresh_token(
     }
 
     let result = async {
-        let Some(session) = refresh_store::get_refresh_token(&state.redis, &claims.jti)
+        let Some(session) = refresh_store::get_refresh_token(redis, &claims.jti)
             .await
             .map_err(|err| AppError::internal("refresh_token_lookup_failed", &format!("{}", err)))?
         else {
-            refresh_store::revoke_refresh_family(&state.redis, user_id, session_id, &claims.jti)
+            refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
             return Err(AppError::unauthorized(
@@ -71,11 +75,11 @@ pub async fn refresh_token(
             "#,
         )
         .bind(client_uuid)
-        .fetch_optional(&state.db)
+        .fetch_optional(db)
         .await?;
 
         let Some(client_row) = client_row else {
-            refresh_store::revoke_refresh_family(&state.redis, user_id, session_id, &claims.jti)
+            refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
             return Err(AppError::unauthorized(
@@ -87,7 +91,7 @@ pub async fn refresh_token(
         let oauth_client_id: String = client_row.get("client_id");
         let client_revoked_at: Option<chrono::DateTime<Utc>> = client_row.get("revoked_at");
         if oauth_client_id != client_auth.client_id || client_revoked_at.is_some() {
-            refresh_store::revoke_refresh_family(&state.redis, user_id, session_id, &claims.jti)
+            refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
             return Err(AppError::unauthorized(
@@ -126,7 +130,7 @@ pub async fn refresh_token(
             || session.reuse_detected_at.is_some()
             || session.replaced_by_jti.is_some()
         {
-            refresh_store::revoke_refresh_family(&state.redis, user_id, session_id, &claims.jti)
+            refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
             return Err(AppError::unauthorized(
@@ -148,8 +152,8 @@ pub async fn refresh_token(
         };
 
         let refreshed_assurance = crate::domains::oauth::assurance::resolve_assurance_context(
-            &state.db,
-            &state.redis,
+            db,
+            redis,
             user_id,
             Some(session_id),
             claims.client_id.as_deref(),
@@ -170,14 +174,14 @@ pub async fn refresh_token(
                 "SELECT data_region::text FROM workspaces WHERE id = $1",
             )
             .bind(workspace_id)
-            .fetch_optional(&state.db)
+            .fetch_optional(db)
             .await?
             .flatten()
         } else {
             None
         };
 
-        let tokens = state.jwt.generate_token_pair_with_authorization_details(
+        let tokens = jwt.generate_token_pair_with_authorization_details(
             user_id,
             next_workspace_id,
             workspace_region,
@@ -194,7 +198,7 @@ pub async fn refresh_token(
         )?;
 
         refresh_store::mark_refresh_token_used(
-            &state.redis,
+            redis,
             &claims.jti,
             Some(&tokens.refresh_jti),
         )
@@ -211,7 +215,7 @@ pub async fn refresh_token(
             client_id: Some(client_uuid),
             scope: refresh_scope.clone(),
             authorization_details: authorization_details.clone(),
-            expires_at: Utc::now() + chrono::Duration::hours(state.config.auth_refresh_token_ttl_hours),
+            expires_at: Utc::now() + chrono::Duration::hours(auth_refresh_token_ttl_hours),
             rotated_from_jti: Some(claims.jti.clone()),
             replaced_by_jti: None,
             reuse_detected_at: None,
@@ -219,7 +223,7 @@ pub async fn refresh_token(
             revoked_at: None,
         };
 
-        refresh_store::store_refresh_token(&state.redis, &new_refresh)
+        refresh_store::store_refresh_token(redis, &new_refresh)
             .await
             .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
 
@@ -235,7 +239,7 @@ pub async fn refresh_token(
     }
     .await;
 
-    let release_result = nvbes_redis::lock::release(&state.redis, &lock_key)
+    let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
         .map_err(|err| AppError::internal("refresh_token_lock_failed", &format!("{}", err)));
     release_result?;

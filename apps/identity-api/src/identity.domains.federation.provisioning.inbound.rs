@@ -17,7 +17,7 @@ use crate::{
     },
     http::error::AppError,
 };
-use nvbes_core::auth::helpers::{normalize_email, validate_email};
+use nvbes_core::auth::{normalize_email, validate_email};
 use sqlx::PgPool;
 
 pub async fn jit_provision(
@@ -157,7 +157,7 @@ pub async fn handle_inbound_federation(
         workspace_id,
         workspace_region.clone(),
         Some(provider.name.clone()),
-        nvbes_core::auth::helpers::token_hash(&token_pair.access_token),
+        nvbes_core::auth::token_hash(&token_pair.access_token),
         Some("aal1".to_string()),
         amr.clone(),
         now,

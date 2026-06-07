@@ -1,16 +1,21 @@
-import { configureErrorReporting, type ClientErrorReporter } from '@nvbes/web-runtime';
+import {
+  configureErrorReporting,
+  registerServiceWorker,
+  type ClientErrorReporter,
+} from '@nvbes/web-runtime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { capturePostHogException, initPostHog } from './identity.posthog';
-import { captureSentryException, initSentry } from './identity.sentry';
-import { syncTrackingConsent } from './tracking-consent';
+import { captureSentryException, initSentry, syncSentryConsent } from './identity.sentry';
+import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
 const sentryInitialized = initSentry();
 initPostHog();
-
-void syncTrackingConsent();
+window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
+  void syncSentryConsent();
+});
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {
@@ -40,3 +45,5 @@ ReactDOM.createRoot(rootEl).render(
     <App />
   </React.StrictMode>,
 );
+
+registerServiceWorker();

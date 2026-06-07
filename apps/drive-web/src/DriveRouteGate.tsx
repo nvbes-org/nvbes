@@ -5,6 +5,7 @@ import { DriveShell } from './DriveShell';
 import { driveMeQueryOptions } from './drive.queries';
 import { getAccessToken, subscribeToSessionChanges } from './drive.session';
 import { startDriveLoginWorkflow } from './drive.workflow';
+import { syncTrackingConsent } from './tracking-consent';
 
 export function DriveRouteGate() {
   const [accessToken, setAccessTokenState] = useState(getAccessToken());
@@ -19,6 +20,14 @@ export function DriveRouteGate() {
     if (!accessToken) {
       void runClientEffect(startDriveLoginWorkflow());
     }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+
+    void syncTrackingConsent();
   }, [accessToken]);
 
   if (!accessToken) {

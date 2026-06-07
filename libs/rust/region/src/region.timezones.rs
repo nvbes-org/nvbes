@@ -1,370 +1,112 @@
-use crate::Timezone;
+#[path = "region.timezones.africa.rs"]
+mod africa;
+#[path = "region.timezones.america.rs"]
+mod america;
+#[path = "region.timezones.asia.rs"]
+mod asia;
+#[path = "region.timezones.europe.rs"]
+mod europe;
+#[path = "region.timezones.oceania.rs"]
+mod oceania;
+#[path = "region.timezones.other.rs"]
+mod other;
 
-pub const TZ_EUROPE_LONDON: Timezone = Timezone("Europe/London");
-pub const TZ_EUROPE_PARIS: Timezone = Timezone("Europe/Paris");
-pub const TZ_EUROPE_BERLIN: Timezone = Timezone("Europe/Berlin");
-pub const TZ_EUROPE_ROME: Timezone = Timezone("Europe/Rome");
-pub const TZ_EUROPE_MADRID: Timezone = Timezone("Europe/Madrid");
-pub const TZ_EUROPE_LISBON: Timezone = Timezone("Europe/Lisbon");
-pub const TZ_EUROPE_AMSTERDAM: Timezone = Timezone("Europe/Amsterdam");
-pub const TZ_EUROPE_BRUSSELS: Timezone = Timezone("Europe/Brussels");
-pub const TZ_EUROPE_VIENNA: Timezone = Timezone("Europe/Vienna");
-pub const TZ_EUROPE_ZURICH: Timezone = Timezone("Europe/Zurich");
-pub const TZ_EUROPE_STOCKHOLM: Timezone = Timezone("Europe/Stockholm");
-pub const TZ_EUROPE_OSLO: Timezone = Timezone("Europe/Oslo");
-pub const TZ_EUROPE_COPENHAGEN: Timezone = Timezone("Europe/Copenhagen");
-pub const TZ_EUROPE_HELSINKI: Timezone = Timezone("Europe/Helsinki");
-pub const TZ_EUROPE_WARSAW: Timezone = Timezone("Europe/Warsaw");
-pub const TZ_EUROPE_PRAGUE: Timezone = Timezone("Europe/Prague");
-pub const TZ_EUROPE_BRATISLAVA: Timezone = Timezone("Europe/Bratislava");
-pub const TZ_EUROPE_BUDAPEST: Timezone = Timezone("Europe/Budapest");
-pub const TZ_EUROPE_BUCHAREST: Timezone = Timezone("Europe/Bucharest");
-pub const TZ_EUROPE_SOFIA: Timezone = Timezone("Europe/Sofia");
-pub const TZ_EUROPE_ATHENS: Timezone = Timezone("Europe/Athens");
-pub const TZ_EUROPE_NICOSIA: Timezone = Timezone("Europe/Nicosia");
-pub const TZ_EUROPE_DUBLIN: Timezone = Timezone("Europe/Dublin");
-pub const TZ_EUROPE_LUXEMBOURG: Timezone = Timezone("Europe/Luxembourg");
-pub const TZ_EUROPE_MALTA: Timezone = Timezone("Europe/Malta");
-pub const TZ_EUROPE_RIGA: Timezone = Timezone("Europe/Riga");
-pub const TZ_EUROPE_VILNIUS: Timezone = Timezone("Europe/Vilnius");
-pub const TZ_EUROPE_TALLINN: Timezone = Timezone("Europe/Tallinn");
-pub const TZ_EUROPE_ZAGREB: Timezone = Timezone("Europe/Zagreb");
-pub const TZ_EUROPE_LJUBLJANA: Timezone = Timezone("Europe/Ljubljana");
-pub const TZ_EUROPE_MOSCOW: Timezone = Timezone("Europe/Moscow");
-pub const TZ_EUROPE_KYIV: Timezone = Timezone("Europe/Kyiv");
-pub const TZ_EUROPE_CHISINAU: Timezone = Timezone("Europe/Chisinau");
-pub const TZ_EUROPE_MINSK: Timezone = Timezone("Europe/Minsk");
-pub const TZ_EUROPE_ISTANBUL: Timezone = Timezone("Europe/Istanbul");
-pub const TZ_EUROPE_BELGRADE: Timezone = Timezone("Europe/Belgrade");
-pub const TZ_EUROPE_SARAJEVO: Timezone = Timezone("Europe/Sarajevo");
-pub const TZ_EUROPE_SKOPJE: Timezone = Timezone("Europe/Skopje");
-pub const TZ_EUROPE_TIRANA: Timezone = Timezone("Europe/Tirana");
-pub const TZ_EUROPE_PODGORICA: Timezone = Timezone("Europe/Podgorica");
-pub const TZ_EUROPE_ANDORRA: Timezone = Timezone("Europe/Andorra");
-pub const TZ_EUROPE_MONACO: Timezone = Timezone("Europe/Monaco");
-pub const TZ_EUROPE_VATICAN: Timezone = Timezone("Europe/Vatican");
-pub const TZ_EUROPE_GIBRALTAR: Timezone = Timezone("Europe/Gibraltar");
-pub const TZ_EUROPE_SAN_MARINO: Timezone = Timezone("Europe/San_Marino");
-pub const TZ_EUROPE_KALININGRAD: Timezone = Timezone("Europe/Kaliningrad");
-pub const TZ_EUROPE_SAMARA: Timezone = Timezone("Europe/Samara");
-pub const TZ_EUROPE_ASTRAKHAN: Timezone = Timezone("Europe/Astrakhan");
-pub const TZ_EUROPE_ULYANOVSK: Timezone = Timezone("Europe/Ulyanovsk");
-pub const TZ_EUROPE_SARATOV: Timezone = Timezone("Europe/Saratov");
-pub const TZ_EUROPE_KIROV: Timezone = Timezone("Europe/Kirov");
-pub const TZ_EUROPE_VOLGOGRAD: Timezone = Timezone("Europe/Volgograd");
-pub const TZ_ATLANTIC_REYKJAVIK: Timezone = Timezone("Atlantic/Reykjavik");
-pub const TZ_ATLANTIC_CANARY: Timezone = Timezone("Atlantic/Canary");
-pub const TZ_ATLANTIC_MADEIRA: Timezone = Timezone("Atlantic/Madeira");
-pub const TZ_ATLANTIC_AZORES: Timezone = Timezone("Atlantic/Azores");
-pub const TZ_ATLANTIC_FAROE: Timezone = Timezone("Atlantic/Faroe");
-pub const TZ_ATLANTIC_ST_HELENA: Timezone = Timezone("Atlantic/St_Helena");
-pub const TZ_ATLANTIC_CAPE_VERDE: Timezone = Timezone("Atlantic/Cape_Verde");
-pub const TZ_ATLANTIC_SOUTH_GEORGIA: Timezone = Timezone("Atlantic/South_Georgia");
-pub const TZ_ATLANTIC_STANLEY: Timezone = Timezone("Atlantic/Stanley");
-
-pub const TZ_ASIA_YEKATERINBURG: Timezone = Timezone("Asia/Yekaterinburg");
-pub const TZ_ASIA_OMSK: Timezone = Timezone("Asia/Omsk");
-pub const TZ_ASIA_KRASNOYARSK: Timezone = Timezone("Asia/Krasnoyarsk");
-pub const TZ_ASIA_IRKUTSK: Timezone = Timezone("Asia/Irkutsk");
-pub const TZ_ASIA_YAKUTSK: Timezone = Timezone("Asia/Yakutsk");
-pub const TZ_ASIA_VLADIVOSTOK: Timezone = Timezone("Asia/Vladivostok");
-pub const TZ_ASIA_MAGADAN: Timezone = Timezone("Asia/Magadan");
-pub const TZ_ASIA_KAMCHATKA: Timezone = Timezone("Asia/Kamchatka");
-pub const TZ_ASIA_ANADYR: Timezone = Timezone("Asia/Anadyr");
-pub const TZ_ASIA_SAKHALIN: Timezone = Timezone("Asia/Sakhalin");
-pub const TZ_ASIA_BAKU: Timezone = Timezone("Asia/Baku");
-pub const TZ_ASIA_TBILISI: Timezone = Timezone("Asia/Tbilisi");
-pub const TZ_ASIA_YEREVAN: Timezone = Timezone("Asia/Yerevan");
-pub const TZ_ASIA_ASHGABAT: Timezone = Timezone("Asia/Ashgabat");
-pub const TZ_ASIA_DUSHANBE: Timezone = Timezone("Asia/Dushanbe");
-pub const TZ_ASIA_TASHKENT: Timezone = Timezone("Asia/Tashkent");
-pub const TZ_ASIA_BISHKEK: Timezone = Timezone("Asia/Bishkek");
-pub const TZ_ASIA_ALMATY: Timezone = Timezone("Asia/Almaty");
-pub const TZ_ASIA_AQTOBE: Timezone = Timezone("Asia/Aqtobe");
-pub const TZ_ASIA_ATYRAU: Timezone = Timezone("Asia/Atyrau");
-pub const TZ_ASIA_QOSTANAY: Timezone = Timezone("Asia/Qostanay");
-pub const TZ_ASIA_QYZYLORDA: Timezone = Timezone("Asia/Qyzylorda");
-pub const TZ_ASIA_ORAL: Timezone = Timezone("Asia/Oral");
-pub const TZ_ASIA_KABUL: Timezone = Timezone("Asia/Kabul");
-pub const TZ_ASIA_TEHRAN: Timezone = Timezone("Asia/Tehran");
-pub const TZ_ASIA_BAGHDAD: Timezone = Timezone("Asia/Baghdad");
-pub const TZ_ASIA_DAMASCUS: Timezone = Timezone("Asia/Damascus");
-pub const TZ_ASIA_BEIRUT: Timezone = Timezone("Asia/Beirut");
-pub const TZ_ASIA_AMMAN: Timezone = Timezone("Asia/Amman");
-pub const TZ_ASIA_JERUSALEM: Timezone = Timezone("Asia/Jerusalem");
-pub const TZ_ASIA_RIYADH: Timezone = Timezone("Asia/Riyadh");
-pub const TZ_ASIA_KUWAIT: Timezone = Timezone("Asia/Kuwait");
-pub const TZ_ASIA_DOHA: Timezone = Timezone("Asia/Qatar");
-pub const TZ_ASIA_MUSCAT: Timezone = Timezone("Asia/Muscat");
-pub const TZ_ASIA_DUBAI: Timezone = Timezone("Asia/Dubai");
-pub const TZ_ASIA_ADEN: Timezone = Timezone("Asia/Aden");
-pub const TZ_ASIA_KOLKATA: Timezone = Timezone("Asia/Kolkata");
-pub const TZ_ASIA_KARACHI: Timezone = Timezone("Asia/Karachi");
-pub const TZ_ASIA_DHAKA: Timezone = Timezone("Asia/Dhaka");
-pub const TZ_ASIA_THIMPHU: Timezone = Timezone("Asia/Thimphu");
-pub const TZ_ASIA_COLOMBO: Timezone = Timezone("Asia/Colombo");
-pub const TZ_ASIA_KATHMANDU: Timezone = Timezone("Asia/Kathmandu");
-pub const TZ_ASIA_YANGON: Timezone = Timezone("Asia/Yangon");
-pub const TZ_ASIA_BANGKOK: Timezone = Timezone("Asia/Bangkok");
-pub const TZ_ASIA_JAKARTA: Timezone = Timezone("Asia/Jakarta");
-pub const TZ_ASIA_PONTIANAK: Timezone = Timezone("Asia/Pontianak");
-pub const TZ_ASIA_MAKASSAR: Timezone = Timezone("Asia/Makassar");
-pub const TZ_ASIA_JAYAPURA: Timezone = Timezone("Asia/Jayapura");
-pub const TZ_ASIA_SINGAPORE: Timezone = Timezone("Asia/Singapore");
-pub const TZ_ASIA_KUALA_LUMPUR: Timezone = Timezone("Asia/Kuala_Lumpur");
-pub const TZ_ASIA_PHNOM_PENH: Timezone = Timezone("Asia/Phnom_Penh");
-pub const TZ_ASIA_VIENTIANE: Timezone = Timezone("Asia/Vientiane");
-pub const TZ_ASIA_HANOI: Timezone = Timezone("Asia/Ho_Chi_Minh");
-pub const TZ_ASIA_MANILA: Timezone = Timezone("Asia/Manila");
-pub const TZ_ASIA_BANDAR_SERI_BEGAWAN: Timezone = Timezone("Asia/Brunei");
-pub const TZ_ASIA_SHANGHAI: Timezone = Timezone("Asia/Shanghai");
-pub const TZ_ASIA_TAIPEI: Timezone = Timezone("Asia/Taipei");
-pub const TZ_ASIA_HONG_KONG: Timezone = Timezone("Asia/Hong_Kong");
-pub const TZ_ASIA_MACAU: Timezone = Timezone("Asia/Macau");
-pub const TZ_ASIA_ULAANBAATAR: Timezone = Timezone("Asia/Ulaanbaatar");
-pub const TZ_ASIA_TOKYO: Timezone = Timezone("Asia/Tokyo");
-pub const TZ_ASIA_SEOUL: Timezone = Timezone("Asia/Seoul");
-pub const TZ_ASIA_PYONGYANG: Timezone = Timezone("Asia/Pyongyang");
-pub const TZ_ASIA_HOVD: Timezone = Timezone("Asia/Hovd");
-pub const TZ_ASIA_CHOIBALSAN: Timezone = Timezone("Asia/Choibalsan");
-
-pub const TZ_AUSTRALIA_SYDNEY: Timezone = Timezone("Australia/Sydney");
-pub const TZ_AUSTRALIA_MELBOURNE: Timezone = Timezone("Australia/Melbourne");
-pub const TZ_AUSTRALIA_BRISBANE: Timezone = Timezone("Australia/Brisbane");
-pub const TZ_AUSTRALIA_ADELAIDE: Timezone = Timezone("Australia/Adelaide");
-pub const TZ_AUSTRALIA_DARWIN: Timezone = Timezone("Australia/Darwin");
-pub const TZ_AUSTRALIA_PERTH: Timezone = Timezone("Australia/Perth");
-pub const TZ_AUSTRALIA_HOBART: Timezone = Timezone("Australia/Hobart");
-pub const TZ_AUSTRALIA_LORD_HOWE: Timezone = Timezone("Australia/Lord_Howe");
-pub const TZ_AUSTRALIA_BROKEN_HILL: Timezone = Timezone("Australia/Broken_Hill");
-pub const TZ_AUSTRALIA_EUCLA: Timezone = Timezone("Australia/Eucla");
-pub const TZ_PACIFIC_AUCKLAND: Timezone = Timezone("Pacific/Auckland");
-pub const TZ_PACIFIC_CHATHAM: Timezone = Timezone("Pacific/Chatham");
-pub const TZ_PACIFIC_APIA: Timezone = Timezone("Pacific/Apia");
-pub const TZ_PACIFIC_FIJI: Timezone = Timezone("Pacific/Fiji");
-pub const TZ_PACIFIC_TARAWA: Timezone = Timezone("Pacific/Tarawa");
-pub const TZ_PACIFIC_MAJURO: Timezone = Timezone("Pacific/Majuro");
-pub const TZ_PACIFIC_KWAJALEIN: Timezone = Timezone("Pacific/Kwajalein");
-pub const TZ_PACIFIC_PALAU: Timezone = Timezone("Pacific/Palau");
-pub const TZ_PACIFIC_GUADALCANAL: Timezone = Timezone("Pacific/Guadalcanal");
-pub const TZ_PACIFIC_EFATE: Timezone = Timezone("Pacific/Efate");
-pub const TZ_PACIFIC_NOUMEA: Timezone = Timezone("Pacific/Noumea");
-pub const TZ_PACIFIC_NORFOLK: Timezone = Timezone("Pacific/Norfolk");
-pub const TZ_PACIFIC_PORT_MORESBY: Timezone = Timezone("Pacific/Port_Moresby");
-pub const TZ_PACIFIC_BOUGAINVILLE: Timezone = Timezone("Pacific/Bougainville");
-pub const TZ_PACIFIC_TAHITI: Timezone = Timezone("Pacific/Tahiti");
-pub const TZ_PACIFIC_GAMBIER: Timezone = Timezone("Pacific/Gambier");
-pub const TZ_PACIFIC_MARQUESAS: Timezone = Timezone("Pacific/Marquesas");
-pub const TZ_PACIFIC_RAROTONGA: Timezone = Timezone("Pacific/Rarotonga");
-pub const TZ_PACIFIC_NIUE: Timezone = Timezone("Pacific/Niue");
-pub const TZ_PACIFIC_TONGATAPU: Timezone = Timezone("Pacific/Tongatapu");
-pub const TZ_PACIFIC_PAGO_PAGO: Timezone = Timezone("Pacific/Pago_Pago");
-pub const TZ_PACIFIC_POHNPEI: Timezone = Timezone("Pacific/Pohnpei");
-pub const TZ_PACIFIC_KOSRAE: Timezone = Timezone("Pacific/Kosrae");
-pub const TZ_PACIFIC_NAURU: Timezone = Timezone("Pacific/Nauru");
-pub const TZ_PACIFIC_FUNAFUTI: Timezone = Timezone("Pacific/Funafuti");
-pub const TZ_PACIFIC_WAKE: Timezone = Timezone("Pacific/Wake");
-pub const TZ_PACIFIC_WALLIS: Timezone = Timezone("Pacific/Wallis");
-pub const TZ_PACIFIC_FAKAOFO: Timezone = Timezone("Pacific/Fakaofo");
-pub const TZ_PACIFIC_GUAM: Timezone = Timezone("Pacific/Guam");
-pub const TZ_PACIFIC_SAIPAN: Timezone = Timezone("Pacific/Saipan");
-pub const TZ_PACIFIC_CHUUK: Timezone = Timezone("Pacific/Chuuk");
-pub const TZ_PACIFIC_YAP: Timezone = Timezone("Pacific/Chuuk");
-pub const TZ_PACIFIC_KIRITIMATI: Timezone = Timezone("Pacific/Kiritimati");
-pub const TZ_PACIFIC_ENDERBURY: Timezone = Timezone("Pacific/Enderbury");
-pub const TZ_PACIFIC_TAHITI_DUP: Timezone = Timezone("Pacific/Tahiti");
-
-pub const TZ_AFRICA_ALGIERS: Timezone = Timezone("Africa/Algiers");
-pub const TZ_AFRICA_TUNIS: Timezone = Timezone("Africa/Tunis");
-pub const TZ_AFRICA_TRIPOLI: Timezone = Timezone("Africa/Tripoli");
-pub const TZ_AFRICA_CAIRO: Timezone = Timezone("Africa/Cairo");
-pub const TZ_AFRICA_KHARTOUM: Timezone = Timezone("Africa/Khartoum");
-pub const TZ_AFRICA_JUBA: Timezone = Timezone("Africa/Juba");
-pub const TZ_AFRICA_ASMARA: Timezone = Timezone("Africa/Asmara");
-pub const TZ_AFRICA_ADDIS_ABABA: Timezone = Timezone("Africa/Addis_Ababa");
-pub const TZ_AFRICA_MOGADISHU: Timezone = Timezone("Africa/Mogadishu");
-pub const TZ_AFRICA_NAIROBI: Timezone = Timezone("Africa/Nairobi");
-pub const TZ_AFRICA_DAR_ES_SALAAM: Timezone = Timezone("Africa/Dar_es_Salaam");
-pub const TZ_AFRICA_KAMPALA: Timezone = Timezone("Africa/Kampala");
-pub const TZ_AFRICA_KIGALI: Timezone = Timezone("Africa/Kigali");
-pub const TZ_AFRICA_BUJUMBURA: Timezone = Timezone("Africa/Bujumbura");
-pub const TZ_AFRICA_LUSAKA: Timezone = Timezone("Africa/Lusaka");
-pub const TZ_AFRICA_HARARE: Timezone = Timezone("Africa/Harare");
-pub const TZ_AFRICA_LILONGWE: Timezone = Timezone("Africa/Blantyre");
-pub const TZ_AFRICA_MAPUTO: Timezone = Timezone("Africa/Maputo");
-pub const TZ_AFRICA_WINDHOEK: Timezone = Timezone("Africa/Windhoek");
-pub const TZ_AFRICA_GABORONE: Timezone = Timezone("Africa/Gaborone");
-pub const TZ_AFRICA_JOHANNESBURG: Timezone = Timezone("Africa/Johannesburg");
-pub const TZ_AFRICA_MASERU: Timezone = Timezone("Africa/Maseru");
-pub const TZ_AFRICA_MBABANE: Timezone = Timezone("Africa/Mbabane");
-pub const TZ_AFRICA_LUANDA: Timezone = Timezone("Africa/Luanda");
-pub const TZ_AFRICA_BRAZZAVILLE: Timezone = Timezone("Africa/Brazzaville");
-pub const TZ_AFRICA_KINSHASA: Timezone = Timezone("Africa/Kinshasa");
-pub const TZ_AFRICA_LUBUMBASHI: Timezone = Timezone("Africa/Lubumbashi");
-pub const TZ_AFRICA_LIBREVILLE: Timezone = Timezone("Africa/Libreville");
-pub const TZ_AFRICA_MALABO: Timezone = Timezone("Africa/Malabo");
-pub const TZ_AFRICA_SAO_TOME: Timezone = Timezone("Africa/Sao_Tome");
-pub const TZ_AFRICA_YAOUNDE: Timezone = Timezone("Africa/Douala");
-pub const TZ_AFRICA_BANGUI: Timezone = Timezone("Africa/Bangui");
-pub const TZ_AFRICA_NDJAMENA: Timezone = Timezone("Africa/Ndjamena");
-pub const TZ_AFRICA_NIAMEY: Timezone = Timezone("Africa/Niamey");
-pub const TZ_AFRICA_OUAGADOUGOU: Timezone = Timezone("Africa/Ouagadougou");
-pub const TZ_AFRICA_BAMAKO: Timezone = Timezone("Africa/Bamako");
-pub const TZ_AFRICA_NOUAKCHOTT: Timezone = Timezone("Africa/Nouakchott");
-pub const TZ_AFRICA_DAKAR: Timezone = Timezone("Africa/Dakar");
-pub const TZ_AFRICA_BANJUL: Timezone = Timezone("Africa/Banjul");
-pub const TZ_AFRICA_BISSAU: Timezone = Timezone("Africa/Bissau");
-pub const TZ_AFRICA_CONAKRY: Timezone = Timezone("Africa/Conakry");
-pub const TZ_AFRICA_FREETOWN: Timezone = Timezone("Africa/Freetown");
-pub const TZ_AFRICA_MONROVIA: Timezone = Timezone("Africa/Monrovia");
-pub const TZ_AFRICA_ABIDJAN: Timezone = Timezone("Africa/Abidjan");
-pub const TZ_AFRICA_ACCRA: Timezone = Timezone("Africa/Accra");
-pub const TZ_AFRICA_LOME: Timezone = Timezone("Africa/Lome");
-pub const TZ_AFRICA_PORTO_NOVO: Timezone = Timezone("Africa/Porto-Novo");
-pub const TZ_AFRICA_LAGOS: Timezone = Timezone("Africa/Lagos");
-pub const TZ_AFRICA_CASABLANCA: Timezone = Timezone("Africa/Casablanca");
-pub const TZ_AFRICA_EL_AAIUN: Timezone = Timezone("Africa/El_Aaiun");
-pub const TZ_AFRICA_CEUTA: Timezone = Timezone("Africa/Ceuta");
-pub const TZ_AFRICA_ANTANANARIVO: Timezone = Timezone("Indian/Antananarivo");
-pub const TZ_AFRICA_MAURITIUS: Timezone = Timezone("Indian/Mauritius");
-pub const TZ_AFRICA_COMORO: Timezone = Timezone("Indian/Comoro");
-pub const TZ_AFRICA_SEYCHELLES: Timezone = Timezone("Indian/Mahe");
-pub const TZ_AFRICA_MAYOTTE: Timezone = Timezone("Indian/Mayotte");
-pub const TZ_AFRICA_REUNION: Timezone = Timezone("Indian/Reunion");
-
-pub const TZ_AMERICA_NEW_YORK: Timezone = Timezone("America/New_York");
-pub const TZ_AMERICA_CHICAGO: Timezone = Timezone("America/Chicago");
-pub const TZ_AMERICA_DENVER: Timezone = Timezone("America/Denver");
-pub const TZ_AMERICA_PHOENIX: Timezone = Timezone("America/Phoenix");
-pub const TZ_AMERICA_LOS_ANGELES: Timezone = Timezone("America/Los_Angeles");
-pub const TZ_AMERICA_ANCHORAGE: Timezone = Timezone("America/Anchorage");
-pub const TZ_AMERICA_ADAK: Timezone = Timezone("America/Adak");
-pub const TZ_AMERICA_HONOLULU: Timezone = Timezone("Pacific/Honolulu");
-pub const TZ_AMERICA_JUNEAU: Timezone = Timezone("America/Juneau");
-pub const TZ_AMERICA_NOME: Timezone = Timezone("America/Nome");
-pub const TZ_AMERICA_METLAKATLA: Timezone = Timezone("America/Metlakatla");
-pub const TZ_AMERICA_SITKA: Timezone = Timezone("America/Sitka");
-pub const TZ_AMERICA_YAKUTAT: Timezone = Timezone("America/Yakutat");
-pub const TZ_AMERICA_BOISE: Timezone = Timezone("America/Boise");
-pub const TZ_AMERICA_INDIANA_INDIANAPOLIS: Timezone = Timezone("America/Indiana/Indianapolis");
-pub const TZ_AMERICA_PUERTO_RICO: Timezone = Timezone("America/Puerto_Rico");
-pub const TZ_AMERICA_ST_THOMAS: Timezone = Timezone("America/St_Thomas");
-pub const TZ_AMERICA_TORONTO: Timezone = Timezone("America/Toronto");
-pub const TZ_AMERICA_VANCOUVER: Timezone = Timezone("America/Vancouver");
-pub const TZ_AMERICA_EDMONTON: Timezone = Timezone("America/Edmonton");
-pub const TZ_AMERICA_WINNIPEG: Timezone = Timezone("America/Winnipeg");
-pub const TZ_AMERICA_HALIFAX: Timezone = Timezone("America/Halifax");
-pub const TZ_AMERICA_ST_JOHNS: Timezone = Timezone("America/St_Johns");
-pub const TZ_AMERICA_GOOSE_BAY: Timezone = Timezone("America/Goose_Bay");
-pub const TZ_AMERICA_BLANC_SABLON: Timezone = Timezone("America/Blanc-Sablon");
-pub const TZ_AMERICA_WHITEHORSE: Timezone = Timezone("America/Whitehorse");
-pub const TZ_AMERICA_DAWSON: Timezone = Timezone("America/Dawson");
-pub const TZ_AMERICA_CRESTON: Timezone = Timezone("America/Creston");
-pub const TZ_AMERICA_FORT_NELSON: Timezone = Timezone("America/Fort_Nelson");
-pub const TZ_AMERICA_RESOLUTE: Timezone = Timezone("America/Resolute");
-pub const TZ_AMERICA_RANKIN_INLET: Timezone = Timezone("America/Rankin_Inlet");
-pub const TZ_AMERICA_CAMBRIDGE_BAY: Timezone = Timezone("America/Cambridge_Bay");
-pub const TZ_AMERICA_IQALUIT: Timezone = Timezone("America/Iqaluit");
-pub const TZ_AMERICA_INUVIK: Timezone = Timezone("America/Inuvik");
-pub const TZ_AMERICA_YELLOWKNIFE: Timezone = Timezone("America/Yellowknife");
-pub const TZ_AMERICA_REGINA: Timezone = Timezone("America/Regina");
-pub const TZ_AMERICA_MEXICO_CITY: Timezone = Timezone("America/Mexico_City");
-pub const TZ_AMERICA_CANCUN: Timezone = Timezone("America/Cancun");
-pub const TZ_AMERICA_MERIDA: Timezone = Timezone("America/Merida");
-pub const TZ_AMERICA_MONTERREY: Timezone = Timezone("America/Monterrey");
-pub const TZ_AMERICA_CHIHUAHUA: Timezone = Timezone("America/Chihuahua");
-pub const TZ_AMERICA_HERMOSILLO: Timezone = Timezone("America/Hermosillo");
-pub const TZ_AMERICA_MAZATLAN: Timezone = Timezone("America/Mazatlan");
-pub const TZ_AMERICA_TIJUANA: Timezone = Timezone("America/Tijuana");
-pub const TZ_AMERICA_CIUDAD_JUAREZ: Timezone = Timezone("America/Ciudad_Juarez");
-pub const TZ_AMERICA_BELIZE: Timezone = Timezone("America/Belize");
-pub const TZ_AMERICA_GUATEMALA: Timezone = Timezone("America/Guatemala");
-pub const TZ_AMERICA_TEGUCIGALPA: Timezone = Timezone("America/Tegucigalpa");
-pub const TZ_AMERICA_EL_SALVADOR: Timezone = Timezone("America/El_Salvador");
-pub const TZ_AMERICA_MANAGUA: Timezone = Timezone("America/Managua");
-pub const TZ_AMERICA_COSTA_RICA: Timezone = Timezone("America/Costa_Rica");
-pub const TZ_AMERICA_PANAMA: Timezone = Timezone("America/Panama");
-pub const TZ_AMERICA_HAVANA: Timezone = Timezone("America/Havana");
-pub const TZ_AMERICA_NASSAU: Timezone = Timezone("America/Nassau");
-pub const TZ_AMERICA_PORT_AU_PRINCE: Timezone = Timezone("America/Port-au-Prince");
-pub const TZ_AMERICA_SANTO_DOMINGO: Timezone = Timezone("America/Santo_Domingo");
-pub const TZ_AMERICA_JAMAICA: Timezone = Timezone("America/Jamaica");
-pub const TZ_AMERICA_GRAND_TURK: Timezone = Timezone("America/Grand_Turk");
-pub const TZ_AMERICA_BARBADOS: Timezone = Timezone("America/Barbados");
-pub const TZ_AMERICA_PORT_OF_SPAIN: Timezone = Timezone("America/Port_of_Spain");
-pub const TZ_AMERICA_ST_LUCIA: Timezone = Timezone("America/St_Lucia");
-pub const TZ_AMERICA_ST_VINCENT: Timezone = Timezone("America/St_Vincent");
-pub const TZ_AMERICA_GRENADA: Timezone = Timezone("America/Grenada");
-pub const TZ_AMERICA_ANTIGUA: Timezone = Timezone("America/Antigua");
-pub const TZ_AMERICA_ST_KITTS: Timezone = Timezone("America/St_Kitts");
-pub const TZ_AMERICA_DOMINICA: Timezone = Timezone("America/Dominica");
-pub const TZ_AMERICA_CURACAO: Timezone = Timezone("America/Curacao");
-pub const TZ_AMERICA_ARUBA: Timezone = Timezone("America/Aruba");
-pub const TZ_AMERICA_ANGUILLA: Timezone = Timezone("America/Anguilla");
-pub const TZ_AMERICA_MONTSERRAT: Timezone = Timezone("America/Montserrat");
-pub const TZ_AMERICA_TORTOLA: Timezone = Timezone("America/Tortola");
-pub const TZ_AMERICA_MARTINIQUE: Timezone = Timezone("America/Martinique");
-pub const TZ_AMERICA_GUADELOUPE: Timezone = Timezone("America/Guadeloupe");
-pub const TZ_AMERICA_MIQUELON: Timezone = Timezone("America/Miquelon");
-pub const TZ_AMERICA_ST_BARTHELEMY: Timezone = Timezone("America/St_Barthelemy");
-pub const TZ_AMERICA_MARIGOT: Timezone = Timezone("America/Marigot");
-pub const TZ_AMERICA_CAYENNE: Timezone = Timezone("America/Cayenne");
-pub const TZ_AMERICA_BOGOTA: Timezone = Timezone("America/Bogota");
-pub const TZ_AMERICA_CARACAS: Timezone = Timezone("America/Caracas");
-pub const TZ_AMERICA_GUYANA: Timezone = Timezone("America/Guyana");
-pub const TZ_AMERICA_PARAMARIBO: Timezone = Timezone("America/Paramaribo");
-pub const TZ_AMERICA_LA_PAZ: Timezone = Timezone("America/La_Paz");
-pub const TZ_AMERICA_ASUNCION: Timezone = Timezone("America/Asuncion");
-pub const TZ_AMERICA_SANTIAGO: Timezone = Timezone("America/Santiago");
-pub const TZ_AMERICA_PUNTA_ARENAS: Timezone = Timezone("America/Punta_Arenas");
-pub const TZ_AMERICA_EASTER: Timezone = Timezone("Pacific/Easter");
-pub const TZ_AMERICA_ARGENTINA_BUENOS_AIRES: Timezone = Timezone("America/Argentina/Buenos_Aires");
-pub const TZ_AMERICA_ARGENTINA_MENDOZA: Timezone = Timezone("America/Argentina/Mendoza");
-pub const TZ_AMERICA_ARGENTINA_USHUAIA: Timezone = Timezone("America/Argentina/Ushuaia");
-pub const TZ_AMERICA_ARGENTINA_RIO_GALLEGOS: Timezone = Timezone("America/Argentina/Rio_Gallegos");
-pub const TZ_AMERICA_MONTEVIDEO: Timezone = Timezone("America/Montevideo");
-pub const TZ_AMERICA_SAO_PAULO: Timezone = Timezone("America/Sao_Paulo");
-pub const TZ_AMERICA_NORONHA: Timezone = Timezone("America/Noronha");
-pub const TZ_AMERICA_MANAUS: Timezone = Timezone("America/Manaus");
-pub const TZ_AMERICA_RIO_BRANCO: Timezone = Timezone("America/Rio_Branco");
-pub const TZ_AMERICA_EIRUNEPE: Timezone = Timezone("America/Eirunepe");
-pub const TZ_AMERICA_BOA_VISTA: Timezone = Timezone("America/Boa_Vista");
-pub const TZ_AMERICA_CAMPO_GRANDE: Timezone = Timezone("America/Campo_Grande");
-pub const TZ_AMERICA_CUIABA: Timezone = Timezone("America/Cuiaba");
-pub const TZ_AMERICA_PORTO_VELHO: Timezone = Timezone("America/Porto_Velho");
-pub const TZ_AMERICA_BELEM: Timezone = Timezone("America/Belem");
-pub const TZ_AMERICA_FORTALEZA: Timezone = Timezone("America/Fortaleza");
-pub const TZ_AMERICA_ARAGUAINA: Timezone = Timezone("America/Araguaina");
-pub const TZ_AMERICA_RECIFE: Timezone = Timezone("America/Recife");
-pub const TZ_AMERICA_BAHIA: Timezone = Timezone("America/Bahia");
-pub const TZ_AMERICA_MACEIO: Timezone = Timezone("America/Maceio");
-pub const TZ_AMERICA_SANTAREM: Timezone = Timezone("America/Santarem");
-pub const TZ_AMERICA_NUUK: Timezone = Timezone("America/Nuuk");
-pub const TZ_AMERICA_THULE: Timezone = Timezone("America/Thule");
-pub const TZ_AMERICA_GODTHAB: Timezone = Timezone("America/Nuuk");
-pub const TZ_AMERICA_DANMARKSHAVN: Timezone = Timezone("America/Danmarkshavn");
-pub const TZ_AMERICA_SCORESBYSUND: Timezone = Timezone("America/Scoresbysund");
-
-pub const TZ_ANTARCTICA_MCMURDO: Timezone = Timezone("Antarctica/McMurdo");
-pub const TZ_ANTARCTICA_SOUTH_POLE: Timezone = Timezone("Antarctica/South_Pole");
-pub const TZ_ANTARCTICA_ROTHERA: Timezone = Timezone("Antarctica/Rothera");
-pub const TZ_ANTARCTICA_PALMER: Timezone = Timezone("Antarctica/Palmer");
-pub const TZ_ANTARCTICA_MAWSON: Timezone = Timezone("Antarctica/Mawson");
-pub const TZ_ANTARCTICA_DAVIS: Timezone = Timezone("Antarctica/Davis");
-pub const TZ_ANTARCTICA_CASEY: Timezone = Timezone("Antarctica/Casey");
-pub const TZ_ANTARCTICA_VOSTOK: Timezone = Timezone("Antarctica/Vostok");
-pub const TZ_ANTARCTICA_DUMONTDURVILLE: Timezone = Timezone("Antarctica/DumontDUrville");
-pub const TZ_ANTARCTICA_TROLL: Timezone = Timezone("Antarctica/Troll");
-pub const TZ_ANTARCTICA_SYOWA: Timezone = Timezone("Antarctica/Syowa");
-
-pub const TZ_INDIAN_CHAGOS: Timezone = Timezone("Indian/Chagos");
-pub const TZ_INDIAN_MALDIVES: Timezone = Timezone("Indian/Maldives");
-pub const TZ_AMERICA_GUAYAQUIL: Timezone = Timezone("America/Guayaquil");
-pub const TZ_PACIFIC_GALAPAGOS: Timezone = Timezone("Pacific/Galapagos");
-pub const TZ_AMERICA_LIMA: Timezone = Timezone("America/Lima");
-pub const TZ_AMERICA_HAMILTON: Timezone = Timezone("Atlantic/Bermuda");
-pub const TZ_AMERICA_KRALENDIJK: Timezone = Timezone("America/Kralendijk");
-pub const TZ_ASIA_DILI: Timezone = Timezone("Asia/Dili");
-pub const TZ_PACIFIC_PITCAIRN: Timezone = Timezone("Pacific/Pitcairn");
-pub const TZ_ETC_UTC: Timezone = Timezone("Etc/UTC");
-pub const TZ_PACIFIC_KANTON: Timezone = Timezone("Pacific/Kanton");
+pub use africa::{
+    TZ_AFRICA_ABIDJAN, TZ_AFRICA_ACCRA, TZ_AFRICA_ADDIS_ABABA, TZ_AFRICA_ALGIERS,
+    TZ_AFRICA_ANTANANARIVO, TZ_AFRICA_ASMARA, TZ_AFRICA_BAMAKO, TZ_AFRICA_BANGUI, TZ_AFRICA_BANJUL,
+    TZ_AFRICA_BISSAU, TZ_AFRICA_BRAZZAVILLE, TZ_AFRICA_BUJUMBURA, TZ_AFRICA_CAIRO,
+    TZ_AFRICA_CASABLANCA, TZ_AFRICA_CEUTA, TZ_AFRICA_COMORO, TZ_AFRICA_CONAKRY, TZ_AFRICA_DAKAR,
+    TZ_AFRICA_DAR_ES_SALAAM, TZ_AFRICA_EL_AAIUN, TZ_AFRICA_FREETOWN, TZ_AFRICA_GABORONE,
+    TZ_AFRICA_HARARE, TZ_AFRICA_JOHANNESBURG, TZ_AFRICA_JUBA, TZ_AFRICA_KAMPALA,
+    TZ_AFRICA_KHARTOUM, TZ_AFRICA_KIGALI, TZ_AFRICA_KINSHASA, TZ_AFRICA_LAGOS,
+    TZ_AFRICA_LIBREVILLE, TZ_AFRICA_LILONGWE, TZ_AFRICA_LOME, TZ_AFRICA_LUANDA,
+    TZ_AFRICA_LUBUMBASHI, TZ_AFRICA_LUSAKA, TZ_AFRICA_MALABO, TZ_AFRICA_MAPUTO, TZ_AFRICA_MASERU,
+    TZ_AFRICA_MAURITIUS, TZ_AFRICA_MAYOTTE, TZ_AFRICA_MBABANE, TZ_AFRICA_MOGADISHU,
+    TZ_AFRICA_MONROVIA, TZ_AFRICA_NAIROBI, TZ_AFRICA_NDJAMENA, TZ_AFRICA_NIAMEY,
+    TZ_AFRICA_NOUAKCHOTT, TZ_AFRICA_OUAGADOUGOU, TZ_AFRICA_PORTO_NOVO, TZ_AFRICA_REUNION,
+    TZ_AFRICA_SAO_TOME, TZ_AFRICA_SEYCHELLES, TZ_AFRICA_TRIPOLI, TZ_AFRICA_TUNIS,
+    TZ_AFRICA_WINDHOEK, TZ_AFRICA_YAOUNDE,
+};
+pub use america::{
+    TZ_AMERICA_ADAK, TZ_AMERICA_ANCHORAGE, TZ_AMERICA_ANGUILLA, TZ_AMERICA_ANTIGUA,
+    TZ_AMERICA_ARAGUAINA, TZ_AMERICA_ARGENTINA_BUENOS_AIRES, TZ_AMERICA_ARGENTINA_MENDOZA,
+    TZ_AMERICA_ARGENTINA_RIO_GALLEGOS, TZ_AMERICA_ARGENTINA_USHUAIA, TZ_AMERICA_ARUBA,
+    TZ_AMERICA_ASUNCION, TZ_AMERICA_BAHIA, TZ_AMERICA_BARBADOS, TZ_AMERICA_BELEM,
+    TZ_AMERICA_BELIZE, TZ_AMERICA_BLANC_SABLON, TZ_AMERICA_BOA_VISTA, TZ_AMERICA_BOGOTA,
+    TZ_AMERICA_BOISE, TZ_AMERICA_CAMBRIDGE_BAY, TZ_AMERICA_CAMPO_GRANDE, TZ_AMERICA_CANCUN,
+    TZ_AMERICA_CARACAS, TZ_AMERICA_CAYENNE, TZ_AMERICA_CHICAGO, TZ_AMERICA_CHIHUAHUA,
+    TZ_AMERICA_CIUDAD_JUAREZ, TZ_AMERICA_COSTA_RICA, TZ_AMERICA_CRESTON, TZ_AMERICA_CUIABA,
+    TZ_AMERICA_CURACAO, TZ_AMERICA_DANMARKSHAVN, TZ_AMERICA_DAWSON, TZ_AMERICA_DENVER,
+    TZ_AMERICA_DOMINICA, TZ_AMERICA_EASTER, TZ_AMERICA_EDMONTON, TZ_AMERICA_EIRUNEPE,
+    TZ_AMERICA_EL_SALVADOR, TZ_AMERICA_FORT_NELSON, TZ_AMERICA_FORTALEZA, TZ_AMERICA_GODTHAB,
+    TZ_AMERICA_GOOSE_BAY, TZ_AMERICA_GRAND_TURK, TZ_AMERICA_GRENADA, TZ_AMERICA_GUADELOUPE,
+    TZ_AMERICA_GUATEMALA, TZ_AMERICA_GUAYAQUIL, TZ_AMERICA_GUYANA, TZ_AMERICA_HALIFAX,
+    TZ_AMERICA_HAMILTON, TZ_AMERICA_HAVANA, TZ_AMERICA_HERMOSILLO, TZ_AMERICA_HONOLULU,
+    TZ_AMERICA_INDIANA_INDIANAPOLIS, TZ_AMERICA_INUVIK, TZ_AMERICA_IQALUIT, TZ_AMERICA_JAMAICA,
+    TZ_AMERICA_JUNEAU, TZ_AMERICA_KRALENDIJK, TZ_AMERICA_LA_PAZ, TZ_AMERICA_LIMA,
+    TZ_AMERICA_LOS_ANGELES, TZ_AMERICA_MACEIO, TZ_AMERICA_MANAGUA, TZ_AMERICA_MANAUS,
+    TZ_AMERICA_MARIGOT, TZ_AMERICA_MARTINIQUE, TZ_AMERICA_MAZATLAN, TZ_AMERICA_MERIDA,
+    TZ_AMERICA_METLAKATLA, TZ_AMERICA_MEXICO_CITY, TZ_AMERICA_MIQUELON, TZ_AMERICA_MONTERREY,
+    TZ_AMERICA_MONTEVIDEO, TZ_AMERICA_MONTSERRAT, TZ_AMERICA_NASSAU, TZ_AMERICA_NEW_YORK,
+    TZ_AMERICA_NOME, TZ_AMERICA_NORONHA, TZ_AMERICA_NUUK, TZ_AMERICA_PANAMA, TZ_AMERICA_PARAMARIBO,
+    TZ_AMERICA_PHOENIX, TZ_AMERICA_PORT_AU_PRINCE, TZ_AMERICA_PORT_OF_SPAIN,
+    TZ_AMERICA_PORTO_VELHO, TZ_AMERICA_PUERTO_RICO, TZ_AMERICA_PUNTA_ARENAS,
+    TZ_AMERICA_RANKIN_INLET, TZ_AMERICA_RECIFE, TZ_AMERICA_REGINA, TZ_AMERICA_RESOLUTE,
+    TZ_AMERICA_RIO_BRANCO, TZ_AMERICA_SANTAREM, TZ_AMERICA_SANTIAGO, TZ_AMERICA_SANTO_DOMINGO,
+    TZ_AMERICA_SAO_PAULO, TZ_AMERICA_SCORESBYSUND, TZ_AMERICA_SITKA, TZ_AMERICA_ST_BARTHELEMY,
+    TZ_AMERICA_ST_JOHNS, TZ_AMERICA_ST_KITTS, TZ_AMERICA_ST_LUCIA, TZ_AMERICA_ST_THOMAS,
+    TZ_AMERICA_ST_VINCENT, TZ_AMERICA_TEGUCIGALPA, TZ_AMERICA_THULE, TZ_AMERICA_TIJUANA,
+    TZ_AMERICA_TORONTO, TZ_AMERICA_TORTOLA, TZ_AMERICA_VANCOUVER, TZ_AMERICA_WHITEHORSE,
+    TZ_AMERICA_WINNIPEG, TZ_AMERICA_YAKUTAT, TZ_AMERICA_YELLOWKNIFE,
+};
+pub use asia::{
+    TZ_ASIA_ADEN, TZ_ASIA_ALMATY, TZ_ASIA_AMMAN, TZ_ASIA_ANADYR, TZ_ASIA_AQTOBE, TZ_ASIA_ASHGABAT,
+    TZ_ASIA_ATYRAU, TZ_ASIA_BAGHDAD, TZ_ASIA_BAKU, TZ_ASIA_BANDAR_SERI_BEGAWAN, TZ_ASIA_BANGKOK,
+    TZ_ASIA_BEIRUT, TZ_ASIA_BISHKEK, TZ_ASIA_CHOIBALSAN, TZ_ASIA_COLOMBO, TZ_ASIA_DAMASCUS,
+    TZ_ASIA_DHAKA, TZ_ASIA_DILI, TZ_ASIA_DOHA, TZ_ASIA_DUBAI, TZ_ASIA_DUSHANBE, TZ_ASIA_HANOI,
+    TZ_ASIA_HONG_KONG, TZ_ASIA_HOVD, TZ_ASIA_IRKUTSK, TZ_ASIA_JAKARTA, TZ_ASIA_JAYAPURA,
+    TZ_ASIA_JERUSALEM, TZ_ASIA_KABUL, TZ_ASIA_KAMCHATKA, TZ_ASIA_KARACHI, TZ_ASIA_KATHMANDU,
+    TZ_ASIA_KOLKATA, TZ_ASIA_KRASNOYARSK, TZ_ASIA_KUALA_LUMPUR, TZ_ASIA_KUWAIT, TZ_ASIA_MACAU,
+    TZ_ASIA_MAGADAN, TZ_ASIA_MAKASSAR, TZ_ASIA_MANILA, TZ_ASIA_MUSCAT, TZ_ASIA_OMSK, TZ_ASIA_ORAL,
+    TZ_ASIA_PHNOM_PENH, TZ_ASIA_PONTIANAK, TZ_ASIA_PYONGYANG, TZ_ASIA_QOSTANAY, TZ_ASIA_QYZYLORDA,
+    TZ_ASIA_RIYADH, TZ_ASIA_SAKHALIN, TZ_ASIA_SEOUL, TZ_ASIA_SHANGHAI, TZ_ASIA_SINGAPORE,
+    TZ_ASIA_TAIPEI, TZ_ASIA_TASHKENT, TZ_ASIA_TBILISI, TZ_ASIA_TEHRAN, TZ_ASIA_THIMPHU,
+    TZ_ASIA_TOKYO, TZ_ASIA_ULAANBAATAR, TZ_ASIA_VIENTIANE, TZ_ASIA_VLADIVOSTOK, TZ_ASIA_YAKUTSK,
+    TZ_ASIA_YANGON, TZ_ASIA_YEKATERINBURG, TZ_ASIA_YEREVAN,
+};
+pub use europe::{
+    TZ_ATLANTIC_AZORES, TZ_ATLANTIC_CANARY, TZ_ATLANTIC_CAPE_VERDE, TZ_ATLANTIC_FAROE,
+    TZ_ATLANTIC_MADEIRA, TZ_ATLANTIC_REYKJAVIK, TZ_ATLANTIC_SOUTH_GEORGIA, TZ_ATLANTIC_ST_HELENA,
+    TZ_ATLANTIC_STANLEY, TZ_EUROPE_AMSTERDAM, TZ_EUROPE_ANDORRA, TZ_EUROPE_ASTRAKHAN,
+    TZ_EUROPE_ATHENS, TZ_EUROPE_BELGRADE, TZ_EUROPE_BERLIN, TZ_EUROPE_BRATISLAVA,
+    TZ_EUROPE_BRUSSELS, TZ_EUROPE_BUCHAREST, TZ_EUROPE_BUDAPEST, TZ_EUROPE_CHISINAU,
+    TZ_EUROPE_COPENHAGEN, TZ_EUROPE_DUBLIN, TZ_EUROPE_GIBRALTAR, TZ_EUROPE_HELSINKI,
+    TZ_EUROPE_ISTANBUL, TZ_EUROPE_KALININGRAD, TZ_EUROPE_KIROV, TZ_EUROPE_KYIV, TZ_EUROPE_LISBON,
+    TZ_EUROPE_LJUBLJANA, TZ_EUROPE_LONDON, TZ_EUROPE_LUXEMBOURG, TZ_EUROPE_MADRID, TZ_EUROPE_MALTA,
+    TZ_EUROPE_MINSK, TZ_EUROPE_MONACO, TZ_EUROPE_MOSCOW, TZ_EUROPE_NICOSIA, TZ_EUROPE_OSLO,
+    TZ_EUROPE_PARIS, TZ_EUROPE_PODGORICA, TZ_EUROPE_PRAGUE, TZ_EUROPE_RIGA, TZ_EUROPE_ROME,
+    TZ_EUROPE_SAMARA, TZ_EUROPE_SAN_MARINO, TZ_EUROPE_SARAJEVO, TZ_EUROPE_SARATOV,
+    TZ_EUROPE_SKOPJE, TZ_EUROPE_SOFIA, TZ_EUROPE_STOCKHOLM, TZ_EUROPE_TALLINN, TZ_EUROPE_TIRANA,
+    TZ_EUROPE_ULYANOVSK, TZ_EUROPE_VATICAN, TZ_EUROPE_VIENNA, TZ_EUROPE_VILNIUS,
+    TZ_EUROPE_VOLGOGRAD, TZ_EUROPE_WARSAW, TZ_EUROPE_ZAGREB, TZ_EUROPE_ZURICH,
+};
+pub use oceania::{
+    TZ_AUSTRALIA_ADELAIDE, TZ_AUSTRALIA_BRISBANE, TZ_AUSTRALIA_BROKEN_HILL, TZ_AUSTRALIA_DARWIN,
+    TZ_AUSTRALIA_EUCLA, TZ_AUSTRALIA_HOBART, TZ_AUSTRALIA_LORD_HOWE, TZ_AUSTRALIA_MELBOURNE,
+    TZ_AUSTRALIA_PERTH, TZ_AUSTRALIA_SYDNEY, TZ_PACIFIC_APIA, TZ_PACIFIC_AUCKLAND,
+    TZ_PACIFIC_BOUGAINVILLE, TZ_PACIFIC_CHATHAM, TZ_PACIFIC_CHUUK, TZ_PACIFIC_EFATE,
+    TZ_PACIFIC_ENDERBURY, TZ_PACIFIC_FAKAOFO, TZ_PACIFIC_FIJI, TZ_PACIFIC_FUNAFUTI,
+    TZ_PACIFIC_GALAPAGOS, TZ_PACIFIC_GAMBIER, TZ_PACIFIC_GUADALCANAL, TZ_PACIFIC_GUAM,
+    TZ_PACIFIC_KANTON, TZ_PACIFIC_KIRITIMATI, TZ_PACIFIC_KOSRAE, TZ_PACIFIC_KWAJALEIN,
+    TZ_PACIFIC_MAJURO, TZ_PACIFIC_MARQUESAS, TZ_PACIFIC_NAURU, TZ_PACIFIC_NIUE, TZ_PACIFIC_NORFOLK,
+    TZ_PACIFIC_NOUMEA, TZ_PACIFIC_PAGO_PAGO, TZ_PACIFIC_PALAU, TZ_PACIFIC_PITCAIRN,
+    TZ_PACIFIC_POHNPEI, TZ_PACIFIC_PORT_MORESBY, TZ_PACIFIC_RAROTONGA, TZ_PACIFIC_SAIPAN,
+    TZ_PACIFIC_TAHITI, TZ_PACIFIC_TAHITI_DUP, TZ_PACIFIC_TARAWA, TZ_PACIFIC_TONGATAPU,
+    TZ_PACIFIC_WAKE, TZ_PACIFIC_WALLIS, TZ_PACIFIC_YAP,
+};
+pub use other::{
+    TZ_ANTARCTICA_CASEY, TZ_ANTARCTICA_DAVIS, TZ_ANTARCTICA_DUMONTDURVILLE, TZ_ANTARCTICA_MAWSON,
+    TZ_ANTARCTICA_MCMURDO, TZ_ANTARCTICA_PALMER, TZ_ANTARCTICA_ROTHERA, TZ_ANTARCTICA_SOUTH_POLE,
+    TZ_ANTARCTICA_SYOWA, TZ_ANTARCTICA_TROLL, TZ_ANTARCTICA_VOSTOK, TZ_ETC_UTC, TZ_INDIAN_CHAGOS,
+    TZ_INDIAN_MALDIVES,
+};

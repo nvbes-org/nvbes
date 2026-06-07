@@ -12,7 +12,9 @@
     "build": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json",
     "dev": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json --watch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@nvbes/http-client": "workspace:*"
+  },
   "devDependencies": {
     "tsup": "catalog:",
     "typescript": "catalog:"

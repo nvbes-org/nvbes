@@ -1,21 +1,25 @@
 use axum::http::HeaderMap;
 use chrono::{Duration, Utc};
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
 use super::device_validation::enforce_device_authorization_rate_limit_db;
 use super::logic::generate_user_code;
 use super::service::types::{DeviceAuthorizationInput, DeviceAuthorizationView};
-use crate::app::AppState;
+use crate::domains::auth::jwt::JwtService;
 use crate::domains::oauth::device_codes::{CachedDeviceCode, store_device_code};
 use crate::http::error::AppError;
 
 pub async fn device_authorization(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    _jwt: &JwtService,
+    web_base_url: &str,
     headers: &HeaderMap,
     input: DeviceAuthorizationInput,
 ) -> Result<DeviceAuthorizationView, AppError> {
-    enforce_device_authorization_rate_limit_db(&state.redis, headers, &input.client_id).await?;
+    enforce_device_authorization_rate_limit_db(redis, headers, &input.client_id).await?;
 
     let client = sqlx::query(
         r#"
@@ -25,7 +29,7 @@ pub async fn device_authorization(
         "#,
     )
     .bind(&input.client_id)
-    .fetch_optional(&state.db)
+    .fetch_optional(db)
     .await?
     .ok_or_else(|| AppError::unauthorized("invalid_client", "Client not found."))?;
 
@@ -50,14 +54,12 @@ pub async fn device_authorization(
     let expires_at = Utc::now() + Duration::seconds(expires_in);
     let interval = 5_i64;
 
-    let verification_uri = format!("{}/activate", state.config.web_base_url);
-    let verification_uri_complete = Some(format!(
-        "{}/activate?user_code={}",
-        state.config.web_base_url, user_code
-    ));
+    let verification_uri = format!("{}/activate", web_base_url);
+    let verification_uri_complete =
+        Some(format!("{}/activate?user_code={}", web_base_url, user_code));
 
     store_device_code(
-        &state.redis,
+        redis,
         &CachedDeviceCode {
             device_code: device_code.clone(),
             user_code: user_code.clone(),

@@ -93,12 +93,20 @@ pub async fn revoke_consent(
     Ok(())
 }
 
-/// Lists all active consents for a principal.
+/// Lists all consent records for a principal, including revoked entries.
+pub async fn get_consents(
+    db: &PgPool,
+    principal_id: Uuid,
+) -> Result<Vec<UserConsent>, AppError> {
+    db::list_consents(db, principal_id).await
+}
+
+/// Backwards-compatible alias for callers that still expect the old name.
 pub async fn get_active_consents(
     db: &PgPool,
     principal_id: Uuid,
 ) -> Result<Vec<UserConsent>, AppError> {
-    db::list_active_consents(db, principal_id).await
+    get_consents(db, principal_id).await
 }
 
 /// Auto-records a GPC opt-out consent when the Sec-GPC header is present.

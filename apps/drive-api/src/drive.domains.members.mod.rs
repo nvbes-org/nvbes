@@ -12,4 +12,6 @@ pub mod service;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
+pub use service::{
+    accept_invitation, invite_member, list_members, remove_member, update_member_role,
+};

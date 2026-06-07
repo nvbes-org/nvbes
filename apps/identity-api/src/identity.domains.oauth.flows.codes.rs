@@ -1,4 +1,4 @@
-use crate::app::AppState;
+use crate::domains::auth::jwt::JwtService;
 use crate::domains::oauth::authorization_codes::{
     CachedAuthorizationCode, delete_authorization_code, get_authorization_code,
     mark_authorization_code_consumed, store_authorization_code,
@@ -9,19 +9,21 @@ use crate::http::error::AppError;
 use chrono::Utc;
 use nvbes_redis::refresh_token as refresh_store;
 use sqlx::Row;
+use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
 use super::{AuthorizationCodeView, CreateAuthorizationCodeInput, ExchangeCodeInput, TokenView};
 
 /// Create an authorization code.
 pub async fn create_authorization_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
     user_id: Uuid,
     session_id: Uuid,
     input: CreateAuthorizationCodeInput,
 ) -> Result<AuthorizationCodeView, AppError> {
     let policy = crate::domains::oauth::policies_eval::ensure_client_policy(
-        &state.db,
+        db,
         &input.client_id,
         input.tenant_id,
         input.organization_id,
@@ -33,11 +35,10 @@ pub async fn create_authorization_code(
     .await?;
 
     let client_uuid =
-        crate::domains::oauth::logic::client_uuid_by_client_id(&state.db, None, &input.client_id)
-            .await?;
+        crate::domains::oauth::logic::client_uuid_by_client_id(db, None, &input.client_id).await?;
 
     crate::domains::oauth::consent::ensure_consent(
-        &state.db,
+        db,
         ConsentRequirementInput {
             user_id,
             client_id: client_uuid,
@@ -58,7 +59,7 @@ pub async fn create_authorization_code(
     let scope = policy.normalized_scope.join(" ");
 
     store_authorization_code(
-        &state.redis,
+        redis,
         &CachedAuthorizationCode {
             code: code.clone(),
             client_id: input.client_id.clone(),
@@ -86,11 +87,14 @@ pub async fn create_authorization_code(
 
 /// Exchange an authorization code for tokens.
 pub async fn exchange_code(
-    state: &AppState,
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    auth_refresh_token_ttl_hours: i64,
     input: ExchangeCodeInput,
 ) -> Result<TokenView, AppError> {
     let lock_key = format!("oauth-authorization-code:{}", input.code);
-    let locked = nvbes_redis::lock::acquire(&state.redis, &lock_key, 15)
+    let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
         .map_err(|err| AppError::internal("authorization_code_lock_failed", &format!("{}", err)))?;
     if !locked {
@@ -101,7 +105,7 @@ pub async fn exchange_code(
     }
 
     let result = async {
-        let Some(code) = get_authorization_code(&state.redis, &input.code).await? else {
+        let Some(code) = get_authorization_code(redis, &input.code).await? else {
             return Err(AppError::bad_request("invalid_grant", "Invalid code."));
         };
 
@@ -129,7 +133,7 @@ pub async fn exchange_code(
             "#,
         )
         .bind(&code.client_id)
-        .fetch_optional(&state.db)
+        .fetch_optional(db)
         .await?;
 
         let Some(client_row) = client_row else {
@@ -183,7 +187,7 @@ pub async fn exchange_code(
         )?;
 
         crate::domains::oauth::policies_eval::ensure_client_policy(
-            &state.db,
+            db,
             &code.client_id,
             code.tenant_id,
             code.organization_id,
@@ -194,11 +198,11 @@ pub async fn exchange_code(
         )
         .await?;
 
-        mark_authorization_code_consumed(&state.redis, &input.code).await?;
+        mark_authorization_code_consumed(redis, &input.code).await?;
 
         let assurance = crate::domains::oauth::assurance::resolve_assurance_context(
-            &state.db,
-            &state.redis,
+            db,
+            redis,
             code.user_id,
             code.client_session_id,
             Some(&code.client_id),
@@ -219,14 +223,14 @@ pub async fn exchange_code(
                 "SELECT data_region::text FROM workspaces WHERE id = $1",
             )
             .bind(workspace_id)
-            .fetch_optional(&state.db)
+            .fetch_optional(db)
             .await?
             .flatten()
         } else {
             None
         };
 
-        let tokens = state.jwt.generate_token_pair_with_authorization_details(
+        let tokens = jwt.generate_token_pair_with_authorization_details(
             code.user_id,
             code.workspace_id,
             workspace_region,
@@ -243,7 +247,7 @@ pub async fn exchange_code(
         )?;
 
         refresh_store::store_refresh_token(
-            &state.redis,
+            redis,
             &refresh_store::CachedRefreshToken {
                 jti: tokens.refresh_jti.clone(),
                 session_id: tokens.session_id,
@@ -254,7 +258,7 @@ pub async fn exchange_code(
                 client_id: Some(code.client_uuid),
                 scope: code.scope.clone(),
                 authorization_details: code.authorization_details.clone(),
-                expires_at: Utc::now() + chrono::Duration::days(30),
+                expires_at: Utc::now() + chrono::Duration::hours(auth_refresh_token_ttl_hours),
                 rotated_from_jti: None,
                 replaced_by_jti: None,
                 reuse_detected_at: None,
@@ -265,7 +269,7 @@ pub async fn exchange_code(
         .await
         .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
 
-        let _ = delete_authorization_code(&state.redis, &code).await;
+        let _ = delete_authorization_code(redis, &code).await;
 
         Ok(TokenView {
             access_token: tokens.access_token,
@@ -279,7 +283,7 @@ pub async fn exchange_code(
     }
     .await;
 
-    let release_result = nvbes_redis::lock::release(&state.redis, &lock_key)
+    let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
         .map_err(|err| AppError::internal("authorization_code_lock_failed", &format!("{}", err)));
     release_result?;

@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-use nvbes_core::auth::helpers::token_hash;
+use nvbes_core::auth::token_hash;
 
 use super::{PublicDownloadUrlResponse, PublicShareResponse};
 

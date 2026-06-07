@@ -5,7 +5,11 @@ use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 use super::core;
 use super::lifecycle;
 use super::transfer;
-pub use super::types::*;
+pub use super::types::{
+    CreateFolderInput, DeleteObjectResponse, DownloadObjectInput, DownloadObjectResponse,
+    DownloadObjectStatus, DownloadUrlResponse, ListObjectsInput, ListObjectsResponse,
+    MoveObjectInput, ObjectResponse, RenameObjectInput, TrashListResponse,
+};
 
 pub async fn list_objects(
     db: &sqlx::PgPool,

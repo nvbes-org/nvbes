@@ -24,6 +24,7 @@ fi
 
 IDENTITY_API_BASE_URL="$(normalize_url "${NVBES_IDENTITY_API_BASE_URL:-${NVBES_STAGING_IDENTITY_API_BASE_URL:-$NVBES_API_BASE_URL}}")"
 DRIVE_API_BASE_URL="$(normalize_url "${NVBES_DRIVE_API_BASE_URL:-${NVBES_STAGING_DRIVE_API_BASE_URL:-$NVBES_API_BASE_URL}}")"
+IDENTITY_API_ORIGIN="${IDENTITY_API_BASE_URL}"
 SEED_WORKSPACE="${NVBES_BETA_SEED_WORKSPACE:-Beta Staging Workspace}"
 SEED_FIRSTNAME="${NVBES_BETA_SEED_FIRSTNAME:-Beta}"
 SEED_LASTNAME="${NVBES_BETA_SEED_LASTNAME:-Owner}"
@@ -45,6 +46,7 @@ json_post() {
   else
     curl --fail --silent --show-error --location --max-time 20 \
       --header "content-type: application/json" \
+      --header "origin: $IDENTITY_API_ORIGIN" \
       --data "$body" \
       "$IDENTITY_API_BASE_URL$path"
   fi
@@ -136,6 +138,14 @@ else
     exit 1
   fi
 fi
+
+log_step "prepare beta browser account"
+NVBES_ENV=staging \
+  NVBES_DATABASE_URL="$NVBES_DATABASE_URL" \
+  cargo run -q -p nvbes-identity-api -- --prepare-beta-e2e-account \
+    --email "$NVBES_BETA_SEED_EMAIL" \
+    --password "$NVBES_BETA_SEED_PASSWORD" \
+    --workspace-name "$SEED_WORKSPACE"
 
 log_step "login beta owner"
 identifier_pow="$(pow_body)"

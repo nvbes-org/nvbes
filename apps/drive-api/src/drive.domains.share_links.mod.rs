@@ -16,5 +16,10 @@ mod service;
 pub mod types;
 
 pub use routes::router;
-pub use service::*;
-pub use types::*;
+pub use service::{
+    create_public_download_url, create_share_link, get_public_share, list_share_links,
+    revoke_share_link, update_share_link,
+};
+pub use types::{
+    CreateShareLinkInput, ShareLinkListResponse, ShareLinkResponse, UpdateShareLinkInput,
+};
