@@ -8,7 +8,7 @@ catalog:
   '@tanstack/react-query': ^5.90.12
   '@tanstack/react-query-devtools': ^5.91.0
   '@tanstack/react-router': ^1.139.10
-  '@tanstack/router-devtools': ^1.139.10
+  '@tanstack/react-router-devtools': ^1.139.10
   effect: ^3.21.2
   typescript: ^6.0.3
   vite: npm:@voidzero-dev/vite-plus-core@0.1.24
