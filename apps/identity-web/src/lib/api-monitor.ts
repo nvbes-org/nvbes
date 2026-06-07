@@ -67,10 +67,10 @@ class ApiMonitor {
   private startProbing() {
     if (this.probeIntervalId !== null) return;
 
-      this.probeIntervalId = window.setInterval(async () => {
-        if (this.isChecking) return;
-        this.isChecking = true;
-        try {
+    this.probeIntervalId = window.setInterval(async () => {
+      if (this.isChecking) return;
+      this.isChecking = true;
+      try {
         const identityApiBaseUrl =
           import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000';
         const response = await fetch(`${identityApiBaseUrl}/health`, {

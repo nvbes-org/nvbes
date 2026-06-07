@@ -1,10 +1,10 @@
 #[cfg(test)]
+use super::storage::set_challenge;
+#[cfg(test)]
 use super::{
     CachedLoginChallenge, CreateLoginChallengeInput, LoginChallenge, fetch_active_challenge,
     get_challenge, prune_expired_challenges, record_failed_attempt, replace_challenge,
 };
-#[cfg(test)]
-use super::storage::set_challenge;
 #[cfg(test)]
 use crate::domains::auth::state::create_state;
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use super::*;
-use chrono::Utc;
 use crate::domains::oauth::service::{ClientAuthentication, TokenExchangeInput};
 use axum::{extract::State, http::HeaderMap};
+use chrono::Utc;
 use uuid::Uuid;
 
 #[path = "identity.domains.oauth.flows.token_exchange.tests.seed.rs"]

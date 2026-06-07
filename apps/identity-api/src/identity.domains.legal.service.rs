@@ -94,10 +94,7 @@ pub async fn revoke_consent(
 }
 
 /// Lists all consent records for a principal, including revoked entries.
-pub async fn get_consents(
-    db: &PgPool,
-    principal_id: Uuid,
-) -> Result<Vec<UserConsent>, AppError> {
+pub async fn get_consents(db: &PgPool, principal_id: Uuid) -> Result<Vec<UserConsent>, AppError> {
     db::list_consents(db, principal_id).await
 }
 

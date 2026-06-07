@@ -135,10 +135,7 @@ pub async fn is_consent_active(
 }
 
 /// Lists all consent records for a principal, including revoked entries.
-pub async fn list_consents(
-    db: &PgPool,
-    principal_id: Uuid,
-) -> Result<Vec<UserConsent>, AppError> {
+pub async fn list_consents(db: &PgPool, principal_id: Uuid) -> Result<Vec<UserConsent>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT id, principal_id, consent_type, document_version, ip_address::text, granted_at, revoked_at
