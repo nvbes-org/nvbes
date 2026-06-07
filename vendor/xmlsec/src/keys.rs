@@ -6,6 +6,7 @@ use crate::bindings;
 use crate::XmlSecError;
 use crate::XmlSecResult;
 
+use std::convert::TryInto;
 use std::ptr::null;
 use std::ptr::null_mut;
 
@@ -58,14 +59,28 @@ impl XmlSecKey
             .unwrap_or(null());
 
         // Load key from file
-        let key = unsafe { bindings::xmlSecOpenSSLAppKeyLoadEx(
-            cpath.as_ptr(),
-            bindings::xmlSecKeyDataTypeAny,
-            format as u32,
-            cpasswd_ptr,
-            null_mut(),
-            null_mut()
-        ) };
+        #[cfg(xmlsec_key_load_ex)]
+        let key = unsafe {
+            bindings::xmlSecOpenSSLAppKeyLoadEx(
+                cpath.as_ptr(),
+                bindings::xmlSecKeyDataTypeAny,
+                format as u32,
+                cpasswd_ptr,
+                null_mut(),
+                null_mut(),
+            )
+        };
+
+        #[cfg(not(xmlsec_key_load_ex))]
+        let key = unsafe {
+            bindings::xmlSecOpenSSLAppKeyLoad(
+                cpath.as_ptr(),
+                format as u32,
+                cpasswd_ptr,
+                null_mut(),
+                null_mut(),
+            )
+        };
 
         if key.is_null() {
             return Err(XmlSecError::KeyLoadError);
@@ -88,7 +103,7 @@ impl XmlSecKey
         // Load key from buffer
         let key = unsafe { bindings::xmlSecOpenSSLAppKeyLoadMemory(
             buffer.as_ptr(),
-            buffer.len(),
+            buffer.len().try_into().unwrap(),
             format as u32,
             cpasswd_ptr,
             null_mut(),
@@ -123,7 +138,7 @@ impl XmlSecKey
             bindings::xmlSecOpenSSLAppKeyCertLoadMemory(
                 self.0,
                 buff.as_ptr(),
-                buff.len(),
+                buff.len().try_into().unwrap(),
                 format as u32
             )
         };
