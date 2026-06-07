@@ -5,6 +5,10 @@ on:
     branches: ['main']
   pull_request:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   bootstrap-check:
     runs-on: ubuntu-latest
