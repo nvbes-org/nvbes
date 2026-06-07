@@ -27,9 +27,14 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    if config.environment != "development" && config.turnstile_secret_key.is_none() {
+    if login_protection_required(&config.environment) && config.turnstile_secret_key.is_none() {
         panic!(
-            "TURNSTILE_SECRET_KEY is required outside development. Refusing to start with fail-open login protection."
+            "TURNSTILE_SECRET_KEY is required outside development/test. Refusing to start with fail-open login protection."
+        );
+    }
+    if login_protection_required(&config.environment) && !config.auth_pow_enabled {
+        panic!(
+            "NVBES_AUTH_POW_ENABLED=true is required outside development/test. Refusing to start with fail-open login protection."
         );
     }
 
@@ -95,4 +100,25 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn login_protection_required(environment: &str) -> bool {
+    !matches!(environment, "development" | "test")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::login_protection_required;
+
+    #[test]
+    fn login_protection_is_not_required_for_local_envs() {
+        assert!(!login_protection_required("development"));
+        assert!(!login_protection_required("test"));
+    }
+
+    #[test]
+    fn login_protection_is_required_for_deployed_envs() {
+        assert!(login_protection_required("staging"));
+        assert!(login_protection_required("production"));
+    }
 }

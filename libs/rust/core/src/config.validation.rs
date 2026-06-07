@@ -9,12 +9,16 @@ mod urls;
 
 use super::AppConfig;
 
+#[cfg(test)]
 pub(crate) use basics::validate_positive_integer;
+#[cfg(test)]
 pub(crate) use observability::{
     validate_grafana_export_path, validate_observability_internal_token, validate_posthog_analytics,
     validate_profiling,
 };
+#[cfg(test)]
 pub(crate) use request_e2ee::validate_request_e2ee;
+#[cfg(test)]
 pub(crate) use urls::{
     validate_database_url, validate_jwt_secret, validate_profiling_endpoint, validate_public_url,
     validate_webauthn_rp_id,
