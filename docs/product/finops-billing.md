@@ -6,6 +6,10 @@ Ce document definit les exigences economiques, FinOps, Stripe et fiscales minima
 
 Le produit ne doit pas seulement etre techniquement fiable: il doit rester rentable a mesure que le stockage, l'egress, les logs, les backups et le support augmentent.
 
+Audit complementaire:
+
+- [Audit FinOps: trajectoire production à coût fixe quasi nul](finops-zero-cost-production-audit.md)
+
 ## Hypothese Billing V1
 
 Stripe est le provider billing cible pour la V1.

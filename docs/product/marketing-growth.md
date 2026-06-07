@@ -4,6 +4,13 @@
 
 Ce document definit la strategie marketing V1, le funnel de conversion, les objectifs cles, les KPIs, l'observabilite produit et les contraintes analytics RGPD.
 
+## Travaux de Recherche
+
+Les travaux marketing non techniques sont suivis dans:
+
+- [Plan de Travail Marketing](marketing-workplan.md)
+- [Analyse Concurrentielle](competitive-analysis.md)
+
 ## ICP de Lancement
 
 ICP prioritaire V1:

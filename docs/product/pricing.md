@@ -6,6 +6,8 @@ nvbes Drive ne doit pas etre positionne comme du stockage brut moins cher.
 
 Les exigences FinOps, Stripe, TVA et unit economics sont definies dans [FinOps et Billing](finops-billing.md).
 
+La revue critique des couts, des quotas et de la pertinence marketing est documentee dans [Audit FinOps: trajectoire production à coût fixe quasi nul](finops-zero-cost-production-audit.md).
+
 Le produit vend:
 
 - Hebergement europeen.
