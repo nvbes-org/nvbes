@@ -12,6 +12,16 @@ permissions:
 jobs:
   bootstrap-check:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: Install xmlsec system dependencies
@@ -19,6 +29,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
           node-version: 25
@@ -45,7 +56,7 @@ jobs:
         run: |
           pnpm exec nx run-many -t check --projects=drive-web,identity-web,web-runtime,email-templates
           pnpm --dir libs/ts/email-templates build
-          cargo check --workspace
+          cargo check --workspace --locked
       - name: Unit tests
         run: pnpm exec nx affected -t test
       - name: Integration tests
