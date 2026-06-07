@@ -13,7 +13,9 @@ dist/
 coverage/
 
 target/
-vendor/
+vendor/*
+!vendor/xmlsec/
+!vendor/xmlsec/**
 debug/
 Cargo.lock
 **/*.rs.bk
