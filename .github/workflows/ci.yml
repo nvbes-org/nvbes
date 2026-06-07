@@ -44,6 +44,7 @@ jobs:
       - name: Type and compile checks
         run: |
           pnpm exec nx run-many -t check --projects=drive-web,identity-web,web-runtime,email-templates
+          pnpm --dir libs/ts/email-templates build
           cargo check --workspace
       - name: Unit tests
         run: pnpm exec nx affected -t test
