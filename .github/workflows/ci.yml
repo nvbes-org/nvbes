@@ -42,7 +42,7 @@ jobs:
       - name: Lint
         run: pnpm exec nx affected -t lint
       - name: Type and compile checks
-        run: pnpm exec nx affected -t check
+        run: pnpm exec nx affected -t check --parallel=1
       - name: Unit tests
         run: pnpm exec nx affected -t test
       - name: Integration tests
