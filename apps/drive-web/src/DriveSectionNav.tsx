@@ -12,18 +12,9 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from './lib/classnames';
+import type { DriveModuleId, DriveSectionId } from './drive.workspace.types';
 
-export type DriveModuleId = 'drive' | 'sharing' | 'admin' | 'account';
-
-export type DriveSectionId =
-  | 'files'
-  | 'trash'
-  | 'shared-links'
-  | 'members'
-  | 'security'
-  | 'billing'
-  | 'api'
-  | 'account';
+export type { DriveModuleId, DriveSectionId };
 
 type DriveSection = {
   id: DriveSectionId;
@@ -127,6 +118,7 @@ export function DriveSectionNav({
                 'h-auto min-w-44 justify-start gap-3 rounded-xl px-3 py-3 text-left md:min-w-0',
                 isActive && 'bg-muted text-foreground shadow-sm',
               )}
+              aria-current={isActive ? 'page' : undefined}
               onClick={() => onSectionChange(section.id)}
             >
               <Icon className="size-4" aria-hidden="true" />

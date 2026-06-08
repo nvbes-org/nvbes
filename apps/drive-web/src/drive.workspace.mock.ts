@@ -2,8 +2,8 @@ import type { DriveWorkspaceState } from './drive.workspace.types';
 
 export function createInitialDriveWorkspace(): DriveWorkspaceState {
   return {
-    activeModuleId: 'workspace',
-    activeSectionId: 'my-files',
+    activeModuleId: 'drive',
+    activeSectionId: 'files',
     currentFolderId: 'folder-clients',
     query: '',
     viewMode: 'list',

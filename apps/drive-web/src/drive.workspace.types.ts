@@ -1,15 +1,14 @@
-export type DriveModuleId = 'workspace' | 'sharing' | 'members' | 'billing' | 'security' | 'api';
+export type DriveModuleId = 'drive' | 'sharing' | 'admin' | 'account';
 
 export type DriveSectionId =
-  | 'my-files'
-  | 'recent'
-  | 'favorites'
-  | 'shared'
+  | 'files'
   | 'trash'
+  | 'shared-links'
   | 'members'
-  | 'billing'
   | 'security'
-  | 'api-keys';
+  | 'billing'
+  | 'api'
+  | 'account';
 
 export type DriveEntryKind = 'folder' | 'document' | 'image' | 'video' | 'archive' | 'spreadsheet';
 
