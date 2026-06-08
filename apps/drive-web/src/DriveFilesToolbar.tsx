@@ -28,9 +28,15 @@ export function DriveFilesToolbar({
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-background/90 p-3 shadow-sm md:flex-row md:items-center md:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline">
+        <Button
+          type="button"
+          variant="outline"
+          disabled
+          aria-disabled="true"
+          title="Import disponible dans une prochaine tache"
+        >
           <Upload className="size-4" aria-hidden="true" />
-          Importer
+          Importer bientot
         </Button>
         <Button type="button" onClick={onCreateFolder}>
           <FolderPlus className="size-4" aria-hidden="true" />
