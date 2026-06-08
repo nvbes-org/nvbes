@@ -81,6 +81,7 @@ export function createInitialDriveWorkspace(): DriveWorkspaceState {
         permission: 'view',
         createdAt: '2026-06-02T08:30:00.000Z',
         expiresAt: '2026-07-02T08:30:00.000Z',
+        accessCount: 12,
         lastAccessedAt: '2026-06-07T09:05:00.000Z',
       },
     ],

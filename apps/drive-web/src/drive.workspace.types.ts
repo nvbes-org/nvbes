@@ -50,6 +50,7 @@ export type DriveShareLink = {
   permission: 'view' | 'edit';
   createdAt: string;
   expiresAt: string | null;
+  accessCount: number;
   lastAccessedAt: string | null;
 };
 

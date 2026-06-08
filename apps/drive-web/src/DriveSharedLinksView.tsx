@@ -73,7 +73,7 @@ export function DriveSharedLinksView({
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">Acces</dt>
-                  <dd className="font-medium">{accessCountLabel(link)}</dd>
+                  <dd className="font-medium">{link.accessCount} acces</dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-muted-foreground">Statut</dt>
@@ -123,10 +123,6 @@ function shareLinkUrl(link: DriveShareLink): string {
 
 function formatNullableDate(value: string | null): string {
   return value ? DATE_FORMATTER.format(new Date(value)) : 'Sans expiration';
-}
-
-function accessCountLabel(link: DriveShareLink): string {
-  return link.lastAccessedAt ? '1+ acces' : '0 acces';
 }
 
 function shareStatusLabel(status: DriveShareStatus): string {
