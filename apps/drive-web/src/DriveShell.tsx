@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { DriveAppLayout } from './DriveAppLayout';
 import { DriveDetailsPanel } from './DriveDetailsPanel';
 import { DriveFilesView } from './DriveFilesView';
+import { DriveSharedLinksView } from './DriveSharedLinksView';
 import { DriveEmptyState } from './DriveViewState';
+import { DriveTrashView } from './DriveTrashView';
 import type { DriveMeResponse } from './drive.api';
 import { createInitialDriveWorkspace } from './drive.workspace.mock';
 import type { DriveWorkspaceState } from './drive.workspace.types';
@@ -66,6 +68,10 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
     >
       {activeSection === 'files' ? (
         <DriveFilesView state={workspace} onStateChange={setWorkspace} />
+      ) : activeSection === 'shared-links' ? (
+        <DriveSharedLinksView state={workspace} onStateChange={setWorkspace} />
+      ) : activeSection === 'trash' ? (
+        <DriveTrashView state={workspace} onStateChange={setWorkspace} />
       ) : (
         <DriveEmptyState
           title={`${labelForSection(activeSection)} arrive bientot`}
