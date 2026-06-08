@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { DriveAccountView } from './DriveAccountView';
+import { DriveApiKeysView } from './DriveApiKeysView';
 import { DriveAppLayout } from './DriveAppLayout';
+import { DriveBillingView } from './DriveBillingView';
 import { DriveDetailsPanel } from './DriveDetailsPanel';
 import { DriveFilesView } from './DriveFilesView';
+import { DriveMembersView } from './DriveMembersView';
+import { DriveSecurityView } from './DriveSecurityView';
 import { DriveSharedLinksView } from './DriveSharedLinksView';
 import { DriveEmptyState } from './DriveViewState';
 import { DriveTrashView } from './DriveTrashView';
@@ -72,6 +77,16 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
         <DriveSharedLinksView state={workspace} onStateChange={setWorkspace} />
       ) : activeSection === 'trash' ? (
         <DriveTrashView state={workspace} onStateChange={setWorkspace} />
+      ) : activeSection === 'members' ? (
+        <DriveMembersView state={workspace} onStateChange={setWorkspace} />
+      ) : activeSection === 'security' ? (
+        <DriveSecurityView state={workspace} />
+      ) : activeSection === 'billing' ? (
+        <DriveBillingView state={workspace} />
+      ) : activeSection === 'api' ? (
+        <DriveApiKeysView state={workspace} onStateChange={setWorkspace} />
+      ) : activeSection === 'account' ? (
+        <DriveAccountView me={me} />
       ) : (
         <DriveEmptyState
           title={`${labelForSection(activeSection)} arrive bientot`}
