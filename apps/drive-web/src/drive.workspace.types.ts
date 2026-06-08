@@ -104,6 +104,7 @@ export type DriveWorkspaceState = {
   activeModuleId: DriveModuleId;
   activeSectionId: DriveSectionId;
   currentFolderId: string | null;
+  query: string;
   viewMode: DriveViewMode;
   sort: DriveSortKey;
   selectedEntryIds: string[];

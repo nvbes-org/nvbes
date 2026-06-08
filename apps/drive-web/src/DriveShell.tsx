@@ -19,11 +19,9 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
   const [workspace, setWorkspace] = useState<DriveWorkspaceState>(() => createInitialDriveWorkspace());
   const [activeModule, setActiveModule] = useState<DriveModuleId>('drive');
   const [activeSection, setActiveSection] = useState<DriveSectionId>(() => firstSectionForModule('drive'));
-  const [query, setQuery] = useState('');
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
   const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
-  const viewWorkspace = { ...workspace, query };
 
   function handleModuleChange(moduleId: DriveModuleId) {
     setActiveModule(moduleId);
@@ -50,15 +48,15 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
       activeSection={activeSection}
       workspaceName={workspaceName}
       sectionLabel={labelForSection(activeSection)}
-      query={query}
+      query={workspace.query}
       billing={workspace.billing}
       toast={workspace.toast}
       onModuleChange={handleModuleChange}
       onSectionChange={handleSectionChange}
-      onQueryChange={setQuery}
+      onQueryChange={(query) => setWorkspace((current) => ({ ...current, query }))}
     >
       {activeSection === 'files' ? (
-        <DriveFilesView state={viewWorkspace} onStateChange={setWorkspace} />
+        <DriveFilesView state={workspace} onStateChange={setWorkspace} />
       ) : (
         <DriveEmptyState
           title={`${labelForSection(activeSection)} arrive bientot`}

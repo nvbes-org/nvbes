@@ -5,6 +5,7 @@ export function createInitialDriveWorkspace(): DriveWorkspaceState {
     activeModuleId: 'workspace',
     activeSectionId: 'my-files',
     currentFolderId: 'folder-clients',
+    query: '',
     viewMode: 'list',
     sort: 'updated',
     selectedEntryIds: [],

@@ -11,8 +11,6 @@ import {
 } from './drive.workspace.store';
 import type { DriveSortKey, DriveViewMode, DriveWorkspaceState } from './drive.workspace.types';
 
-type DriveFilesViewState = DriveWorkspaceState & { query?: string };
-
 export function DriveFilesView({
   state,
   onStateChange,
@@ -20,39 +18,38 @@ export function DriveFilesView({
   state: DriveWorkspaceState;
   onStateChange: (state: DriveWorkspaceState) => void;
 }) {
-  const filesState = state as DriveFilesViewState;
-  const entries = filterDriveEntries(filesState.entries, {
-    query: filesState.query,
+  const entries = filterDriveEntries(state.entries, {
+    query: state.query,
     status: 'active',
-    sort: filesState.sort,
+    sort: state.sort,
   });
 
   function handleCreateFolder() {
-    onStateChange(createFolder(filesState, 'Nouveau dossier'));
+    onStateChange(createFolder(state, 'Nouveau dossier'));
   }
 
   function handleViewModeChange(viewMode: DriveViewMode) {
-    onStateChange({ ...filesState, viewMode });
+    onStateChange({ ...state, viewMode });
   }
 
   function handleSortChange(sort: DriveSortKey) {
-    onStateChange({ ...filesState, sort });
+    onStateChange({ ...state, sort });
   }
 
   function handleOpenDetails(entryId: string) {
-    onStateChange(selectEntry(filesState, entryId));
+    onStateChange(selectEntry(state, entryId));
   }
 
   function handleToggleSelection(entryId: string) {
-    onStateChange(toggleEntrySelection(filesState, entryId));
+    onStateChange(toggleEntrySelection(state, entryId));
   }
 
   return (
     <section className="grid gap-4">
       <DriveFilesToolbar
-        selectedCount={filesState.selectedEntryIds.length}
-        viewMode={filesState.viewMode}
-        sort={filesState.sort}
+        selectedCount={state.selectedEntryIds.length}
+        viewMode={state.viewMode}
+        sort={state.sort}
         onCreateFolder={handleCreateFolder}
         onViewModeChange={handleViewModeChange}
         onSortChange={handleSortChange}
@@ -67,19 +64,19 @@ export function DriveFilesView({
             </Button>
           }
         />
-      ) : filesState.viewMode === 'grid' ? (
+      ) : state.viewMode === 'grid' ? (
         <DriveFilesGrid
           entries={entries}
-          members={filesState.members}
-          selectedEntryIds={filesState.selectedEntryIds}
+          members={state.members}
+          selectedEntryIds={state.selectedEntryIds}
           onOpenDetails={handleOpenDetails}
           onToggleSelection={handleToggleSelection}
         />
       ) : (
         <DriveFilesTable
           entries={entries}
-          members={filesState.members}
-          selectedEntryIds={filesState.selectedEntryIds}
+          members={state.members}
+          selectedEntryIds={state.selectedEntryIds}
           onOpenDetails={handleOpenDetails}
           onToggleSelection={handleToggleSelection}
         />
