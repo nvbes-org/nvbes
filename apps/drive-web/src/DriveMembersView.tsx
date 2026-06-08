@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { inviteMember, setMemberRole } from './drive.workspace.store';
 import type { DriveRole, DriveWorkspaceState } from './drive.workspace.types';
 
-const ROLE_OPTIONS: DriveRole[] = ['owner', 'admin', 'member', 'viewer'];
+const INVITE_EMAIL = 'invite@studio.test';
+const ASSIGNABLE_ROLE_OPTIONS: Array<Exclude<DriveRole, 'owner'>> = ['admin', 'member', 'viewer'];
 
 export function DriveMembersView({
   state,
@@ -13,7 +14,23 @@ export function DriveMembersView({
   onStateChange: (state: DriveWorkspaceState) => void;
 }) {
   function handleInvite() {
-    onStateChange(inviteMember(state, 'invite@studio.test', 'member'));
+    const invitedEmailExists = state.members.some(
+      (member) => member.email.toLocaleLowerCase() === INVITE_EMAIL,
+    );
+
+    if (invitedEmailExists) {
+      onStateChange({
+        ...state,
+        toast: {
+          id: `toast-invite-existing-${INVITE_EMAIL}`,
+          message: 'Invitation deja presente',
+          tone: 'info',
+        },
+      });
+      return;
+    }
+
+    onStateChange(inviteMember(state, INVITE_EMAIL, 'member'));
   }
 
   function handleRoleChange(memberId: string, role: DriveRole) {
@@ -34,7 +51,7 @@ export function DriveMembersView({
         </div>
         <Button type="button" onClick={handleInvite}>
           <MailPlus className="size-4" aria-hidden="true" />
-          Inviter invite@studio.test
+          Inviter {INVITE_EMAIL}
         </Button>
       </div>
 
@@ -80,7 +97,8 @@ export function DriveMembersView({
                     title={isOwner ? 'Le proprietaire ne peut pas etre modifie ici.' : undefined}
                     onChange={(event) => handleRoleChange(member.id, event.target.value as DriveRole)}
                   >
-                    {ROLE_OPTIONS.map((role) => (
+                    {isOwner ? <option value="owner">{roleLabel('owner')}</option> : null}
+                    {ASSIGNABLE_ROLE_OPTIONS.map((role) => (
                       <option key={role} value={role}>
                         {roleLabel(role)}
                       </option>
