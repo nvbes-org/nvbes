@@ -1,59 +1,69 @@
-import { useDeferredValue, useState } from 'react';
-import { SidebarInset } from '@/components/ui/sidebar';
-import { type DriveFileItem, DriveFileList } from './DriveFileList';
-import { DriveSidebarProvider, DriveWorkspaceSidebar } from './DriveWorkspaceSidebar';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { DriveAppLayout } from './DriveAppLayout';
+import { DriveEmptyState } from './DriveViewState';
 import type { DriveMeResponse } from './drive.api';
-import { DriveSessionContextCard, DriveShellHeader, DriveShellToolbar } from './DriveShell.shared';
+import { createInitialDriveWorkspace } from './drive.workspace.mock';
+import type { DriveWorkspaceState } from './drive.workspace.types';
+import {
+  firstSectionForModule,
+  labelForSection,
+  type DriveModuleId,
+  type DriveSectionId,
+} from './DriveSectionNav';
 
-const files: DriveFileItem[] = [
-  { name: 'Documents', detail: '-', type: 'folder' },
-  { name: 'Images', detail: '-', type: 'folder' },
-  {
-    name: 'Presentation_Client.pptx',
-    detail: '12 Mo',
-    type: 'document',
-    shareUrl: 'https://nvbes.app/s/abc123',
-  },
-  {
-    name: 'Backup_Base_Donnees.sql',
-    detail: '256 Mo',
-    type: 'code',
-    shareUrl: 'https://nvbes.app/s/def456',
-  },
-];
+const MOCK_WORKSPACE_NAME = 'Workspace personnel';
 
 export function DriveShell({ accessToken, me }: { accessToken: string; me: DriveMeResponse }) {
-  const [search, setSearch] = useState('');
-  const deferredSearch = useDeferredValue(search);
-  const user = me.user;
+  const [workspace, setWorkspace] = useState<DriveWorkspaceState>(() => createInitialDriveWorkspace());
+  const [activeModule, setActiveModule] = useState<DriveModuleId>('drive');
+  const [activeSection, setActiveSection] = useState<DriveSectionId>(() => firstSectionForModule('drive'));
+  const [query, setQuery] = useState('');
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
-  const normalizedSearch = deferredSearch.trim().toLowerCase();
-  const visibleFiles = normalizedSearch
-    ? files.filter((file) => file.name.toLowerCase().includes(normalizedSearch))
-    : files;
+  const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
+
+  function handleModuleChange(moduleId: DriveModuleId) {
+    setActiveModule(moduleId);
+    setActiveSection(firstSectionForModule(moduleId));
+    setWorkspace((current) => ({
+      ...current,
+      detailsSelection: null,
+      selectedEntryIds: [],
+    }));
+  }
+
+  function handleSectionChange(sectionId: DriveSectionId) {
+    setActiveSection(sectionId);
+    setWorkspace((current) => ({
+      ...current,
+      detailsSelection: null,
+      selectedEntryIds: [],
+    }));
+  }
 
   return (
-    <DriveSidebarProvider>
-      <DriveWorkspaceSidebar workspaceName={currentWorkspace?.name ?? 'Workspace personnel'} />
-      <SidebarInset className="min-h-svh">
-        <DriveShellHeader
-          accessToken={accessToken}
-          user={user}
-          search={search}
-          deferredSearch={deferredSearch}
-          onSearchChange={setSearch}
-        />
-
-        <main className="flex flex-1 flex-col bg-muted/30">
-          <DriveShellToolbar currentWorkspaceId={currentWorkspace?.id} />
-
-          <section className="grid flex-1 gap-4 p-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
-            <DriveFileList files={visibleFiles} query={deferredSearch} />
-            <DriveSessionContextCard user={user} currentWorkspace={currentWorkspace} />
-          </section>
-        </main>
-      </SidebarInset>
-    </DriveSidebarProvider>
+    <DriveAppLayout
+      activeModule={activeModule}
+      activeSection={activeSection}
+      workspaceName={workspaceName}
+      sectionLabel={labelForSection(activeSection)}
+      query={query}
+      billing={workspace.billing}
+      toast={workspace.toast}
+      onModuleChange={handleModuleChange}
+      onSectionChange={handleSectionChange}
+      onQueryChange={setQuery}
+    >
+      <DriveEmptyState
+        title={`${labelForSection(activeSection)} arrive bientot`}
+        description="La navigation applicative est en place. Les vues metier seront connectees aux donnees Drive dans les prochaines taches du redesign."
+        action={
+          <Button type="button" variant="outline" data-session-state={accessToken.length > 0 ? 'active' : 'missing'}>
+            Session {me.user.email}
+          </Button>
+        }
+      />
+    </DriveAppLayout>
   );
 }
