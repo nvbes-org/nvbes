@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DriveAppLayout } from './DriveAppLayout';
+import { DriveDetailsPanel } from './DriveDetailsPanel';
 import { DriveFilesView } from './DriveFilesView';
 import { DriveEmptyState } from './DriveViewState';
 import type { DriveMeResponse } from './drive.api';
 import { createInitialDriveWorkspace } from './drive.workspace.mock';
-import type { DriveEntry, DriveMember, DriveWorkspaceState } from './drive.workspace.types';
+import type { DriveWorkspaceState } from './drive.workspace.types';
 import {
   firstSectionForModule,
   labelForSection,
@@ -22,10 +23,6 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
   const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
-  const selectedEntry =
-    workspace.detailsSelection?.type === 'entry'
-      ? workspace.entries.find((entry) => entry.id === workspace.detailsSelection?.id)
-      : null;
 
   function handleModuleChange(moduleId: DriveModuleId) {
     setActiveModule(moduleId);
@@ -56,8 +53,11 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
       billing={workspace.billing}
       toast={workspace.toast}
       details={
-        selectedEntry ? (
-          <DriveInterimDetails entry={selectedEntry} members={workspace.members} />
+        workspace.detailsSelection ? (
+          <DriveDetailsPanel
+            state={workspace}
+            onClose={() => setWorkspace((current) => ({ ...current, detailsSelection: null }))}
+          />
         ) : undefined
       }
       onModuleChange={handleModuleChange}
@@ -78,37 +78,5 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
         />
       )}
     </DriveAppLayout>
-  );
-}
-
-function DriveInterimDetails({ entry, members }: { entry: DriveEntry; members: DriveMember[] }) {
-  const owner = members.find((member) => member.id === entry.ownerId)?.name ?? 'Inconnu';
-
-  return (
-    <section className="grid gap-4">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Details provisoires
-        </p>
-        <h2 className="mt-1 break-words text-lg font-semibold">{entry.name}</h2>
-      </div>
-      <dl className="grid gap-3 text-sm">
-        <div>
-          <dt className="text-muted-foreground">Type</dt>
-          <dd className="font-medium">{entry.kind}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Proprietaire</dt>
-          <dd className="font-medium">{owner}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Statut</dt>
-          <dd className="font-medium">{entry.shareStatus === 'shared' ? 'Partage' : 'Prive'}</dd>
-        </div>
-      </dl>
-      <p className="text-xs text-muted-foreground">
-        Le panneau de details complet arrive dans la prochaine tache.
-      </p>
-    </section>
   );
 }
