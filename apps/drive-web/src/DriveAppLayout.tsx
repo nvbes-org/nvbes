@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { DriveCommandHeader } from './DriveCommandHeader';
-import { DriveModuleRail } from './DriveModuleRail';
+import { DriveMobileModuleSwitcher, DriveModuleRail } from './DriveModuleRail';
 import { DriveSectionNav } from './DriveSectionNav';
 import type { DriveModuleId, DriveSectionId } from './DriveSectionNav';
 import type { DriveBillingState, DriveToast } from './drive.workspace.types';
@@ -45,6 +45,7 @@ export function DriveAppLayout({
             toast={toast}
             onQueryChange={onQueryChange}
           />
+          <DriveMobileModuleSwitcher activeModule={activeModule} onModuleChange={onModuleChange} />
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
             <DriveSectionNav
               activeModule={activeModule}

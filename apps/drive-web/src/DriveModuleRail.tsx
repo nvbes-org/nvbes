@@ -70,3 +70,37 @@ export function DriveModuleRail({
     </TooltipProvider>
   );
 }
+
+export function DriveMobileModuleSwitcher({
+  activeModule,
+  onModuleChange,
+}: {
+  activeModule: DriveModuleId;
+  onModuleChange: (moduleId: DriveModuleId) => void;
+}) {
+  return (
+    <nav
+      className="flex gap-2 overflow-x-auto border-b border-border/70 bg-background/95 p-3 md:hidden"
+      aria-label="Modules Drive"
+    >
+      {DRIVE_MODULES.map((module) => {
+        const Icon = module.icon;
+        const isActive = module.id === activeModule;
+
+        return (
+          <Button
+            key={module.id}
+            type="button"
+            variant={isActive ? 'secondary' : 'outline'}
+            className={cn('shrink-0 rounded-2xl', isActive && 'bg-muted text-foreground shadow-sm')}
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => onModuleChange(module.id)}
+          >
+            <Icon className="size-4" aria-hidden="true" />
+            {module.label}
+          </Button>
+        );
+      })}
+    </nav>
+  );
+}
