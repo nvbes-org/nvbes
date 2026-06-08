@@ -1,8 +1,8 @@
 import { Bell, CheckCircle2, Database, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
 import type { DriveBillingState, DriveToast } from './drive.workspace.types';
+import { cn } from './lib/classnames';
 
 function formatBytes(bytes: number): string {
   const gib = bytes / 1_073_741_824;

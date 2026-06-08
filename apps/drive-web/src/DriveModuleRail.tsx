@@ -7,8 +7,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import type { DriveModuleId } from './DriveSectionNav';
+import { cn } from './lib/classnames';
 
 type DriveModule = {
   id: DriveModuleId;
