@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DriveAppLayout } from './DriveAppLayout';
+import { DriveFilesView } from './DriveFilesView';
 import { DriveEmptyState } from './DriveViewState';
 import type { DriveMeResponse } from './drive.api';
 import { createInitialDriveWorkspace } from './drive.workspace.mock';
@@ -22,6 +23,7 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
   const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
+  const viewWorkspace = { ...workspace, query };
 
   function handleModuleChange(moduleId: DriveModuleId) {
     setActiveModule(moduleId);
@@ -55,15 +57,19 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
       onSectionChange={handleSectionChange}
       onQueryChange={setQuery}
     >
-      <DriveEmptyState
-        title={`${labelForSection(activeSection)} arrive bientot`}
-        description="La navigation applicative est en place. Les vues metier seront connectees aux donnees Drive dans les prochaines taches du redesign."
-        action={
-          <Button type="button" variant="outline" data-session-state={accessToken.length > 0 ? 'active' : 'missing'}>
-            Session {me.user.email}
-          </Button>
-        }
-      />
+      {activeSection === 'files' ? (
+        <DriveFilesView state={viewWorkspace} onStateChange={setWorkspace} />
+      ) : (
+        <DriveEmptyState
+          title={`${labelForSection(activeSection)} arrive bientot`}
+          description="La navigation applicative est en place. Les vues metier seront connectees aux donnees Drive dans les prochaines taches du redesign."
+          action={
+            <Button type="button" variant="outline" data-session-state={accessToken.length > 0 ? 'active' : 'missing'}>
+              Session {me.user.email}
+            </Button>
+          }
+        />
+      )}
     </DriveAppLayout>
   );
 }
