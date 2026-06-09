@@ -92,6 +92,10 @@ pub async fn jit_provision(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Inbound federation keeps provider, session, and protocol context explicit."
+)]
 pub async fn handle_inbound_federation(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -166,12 +170,9 @@ pub async fn handle_inbound_federation(
         None,
         now + chrono::Duration::hours(auth_session_ttl_hours),
     );
-    let _ = nvbes_redis::session::set_session(
-        redis,
-        &cached_session,
-        current_session_ttl(&cached_session),
-    )
-    .await;
+    nvbes_redis::session::set_session(redis, &cached_session, current_session_ttl(&cached_session))
+        .await
+        .map_err(|err| AppError::internal("session_cache_write_failed", err.to_string()))?;
 
     Ok(InboundFederationResponse {
         principal_id,

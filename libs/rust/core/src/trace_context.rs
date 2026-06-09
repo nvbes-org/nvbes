@@ -166,10 +166,10 @@ pub fn inject_traceparent_into(
         headers.insert(traceparent_header_name(), header_value);
     }
 
-    if let Some(tracestate) = tracestate {
-        if let Ok(header_value) = HeaderValue::from_str(tracestate) {
-            headers.insert(tracestate_header_name(), header_value);
-        }
+    if let Some(tracestate) = tracestate
+        && let Ok(header_value) = HeaderValue::from_str(tracestate)
+    {
+        headers.insert(tracestate_header_name(), header_value);
     }
 }
 

@@ -1,4 +1,5 @@
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export function ClientTextarea({
   id,
@@ -18,12 +19,9 @@ export function ClientTextarea({
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <textarea
+      <Textarea
         id={id}
-        className={
-          className ??
-          'flex min-h-20 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
-        }
+        className={className ?? 'min-h-20'}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}

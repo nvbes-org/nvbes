@@ -1,14 +1,4 @@
-export type DriveModuleId = 'drive' | 'sharing' | 'admin' | 'account';
-
-export type DriveSectionId =
-  | 'files'
-  | 'trash'
-  | 'shared-links'
-  | 'members'
-  | 'security'
-  | 'billing'
-  | 'api'
-  | 'account';
+export type DriveModuleId = 'drive' | 'sharing' | 'shared-with-me' | 'starred' | 'trash';
 
 export type DriveEntryKind = 'folder' | 'document' | 'image' | 'video' | 'archive' | 'spreadsheet';
 
@@ -92,17 +82,10 @@ export type DriveApiKey = {
   revokedAt: string | null;
 };
 
-export type DriveToast = {
-  id: string;
-  message: string;
-  tone: 'success' | 'error' | 'info';
-};
-
 export type DriveDetailsSelection = { type: 'entry'; id: string } | { type: 'member'; id: string } | null;
 
 export type DriveWorkspaceState = {
   activeModuleId: DriveModuleId;
-  activeSectionId: DriveSectionId;
   currentFolderId: string | null;
   query: string;
   viewMode: DriveViewMode;
@@ -115,5 +98,4 @@ export type DriveWorkspaceState = {
   securityEvents: DriveSecurityEvent[];
   billing: DriveBillingState;
   apiKeys: DriveApiKey[];
-  toast: DriveToast | null;
 };

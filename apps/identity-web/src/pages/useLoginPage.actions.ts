@@ -6,6 +6,7 @@ export function useLoginPageActions({
   navigate,
   oauthRequest,
   connectedAccounts,
+  setConnectedAccounts,
   email,
   password,
   loginStateToken,
@@ -32,6 +33,7 @@ export function useLoginPageActions({
     navigate,
     oauthRequest,
     connectedAccounts,
+    setConnectedAccounts,
     email,
     password,
     sessionToken,
@@ -69,7 +71,10 @@ export function useLoginPageActions({
   );
 
   return {
+    finishLogin: accountActions.finishLogin,
     handleAccountSelect: accountActions.handleAccountSelect,
+    handleDisconnectAccount: accountActions.handleDisconnectAccount,
+    handleDisconnectAllAccounts: accountActions.handleDisconnectAllAccounts,
     handleUseAnotherAccount: accountActions.handleUseAnotherAccount,
     handleConsentApprove: accountActions.handleConsentApprove,
     handleConsentCancel: accountActions.handleConsentCancel,

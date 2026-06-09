@@ -1,20 +1,26 @@
 import { useLocation } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { MultiAccountSwitcher, initialsForDisplayName, type SharedAccountOption } from '@nvbes/web-ui';
+import { useMemo, useState } from 'react';
+import type { AccountEntry } from '@/lib/account-context';
 
-import {
-  AccountChooserMenu,
-  AccountChooserTrigger,
-  type AccountChooserProps,
-} from './AccountChooser.shared';
+interface AccountChooserProps {
+  accounts: AccountEntry[];
+  loading: boolean;
+}
 
 export function AccountChooser({ accounts, loading }: AccountChooserProps) {
   const location = useLocation();
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
 
-  const currentAccount = useMemo(
-    () => accounts.find((account) => account.session.current) ?? accounts[0] ?? null,
+  const mappedAccounts = useMemo<SharedAccountOption[]>(
+    () =>
+      accounts.map((account) => ({
+        id: account.authuser,
+        email: account.user.email,
+        displayName: account.user.display_name,
+        isActive: account.session.current,
+        avatarFallback: initialsForDisplayName(account.user.display_name),
+      })),
     [accounts],
   );
 
@@ -26,46 +32,19 @@ export function AccountChooser({ accounts, loading }: AccountChooserProps) {
     window.location.assign(url.toString());
   };
 
-  useEffect(() => {
-    if (!open) {
-      return undefined;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (!rootRef.current?.contains(target)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDown);
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-    };
-  }, [open]);
+  const handleConnectAnotherAccount = () => {
+    window.location.assign('/login');
+  };
 
   return (
-    <div ref={rootRef} className="relative z-20 bg-card px-4 py-4">
-      <AccountChooserTrigger
-        currentAccount={currentAccount}
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
+    <div className="bg-card px-4 py-4">
+      <MultiAccountSwitcher
+        accounts={mappedAccounts}
+        loading={loading}
+        switchingAccountId={switchingTo}
+        onSelectAccount={handleSwitch}
+        onAddAccount={handleConnectAnotherAccount}
       />
-
-      {open && (
-        <AccountChooserMenu
-          accounts={accounts}
-          loading={loading}
-          switchingTo={switchingTo}
-          onSwitch={handleSwitch}
-        />
-      )}
     </div>
   );
 }

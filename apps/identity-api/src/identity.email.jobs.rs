@@ -39,22 +39,81 @@ pub async fn enqueue_email_job_tx(
 
     nvbes_redis::worker_queue::enqueue_job(
         redis,
-        JOB_EMAIL_SEND,
-        JOB_EMAIL_SEND,
-        json!(payload),
-        Some(idempotency_key),
-        3,
-        false,
-        None,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_EMAIL_SEND.to_string(),
+            job_type: JOB_EMAIL_SEND.to_string(),
+            payload: json!(payload),
+            idempotency_key: Some(idempotency_key.to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
     )
     .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
 
     Ok(())
 }
 
 pub fn is_essential_transactional_email(business_type: &str) -> bool {
     matches!(business_type, "verification" | "password_reset")
+}
+
+pub async fn enqueue_email_event_job_tx(
+    redis: &nvbes_redis::RedisPool,
+    event: &ScalewayEmailEvent,
+) -> Result<(), AppError> {
+    let payload = serde_json::json!({
+        "provider_event_id": event.id,
+        "provider_email_id": event.email_id,
+        "email": event.email,
+        "event_type": event.event_type,
+    });
+
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_EMAIL_WEBHOOK_PROCESS.to_string(),
+            job_type: JOB_EMAIL_WEBHOOK_PROCESS.to_string(),
+            payload,
+            idempotency_key: Some(format!("scw:{}", event.id)),
+            max_attempts: 2,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await
+    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
+
+    Ok(())
+}
+
+pub async fn enqueue_data_export_job_tx(
+    redis: &nvbes_redis::RedisPool,
+    user_id: uuid::Uuid,
+    email: &str,
+) -> Result<(), AppError> {
+    let payload = serde_json::json!({
+        "user_id": user_id,
+        "email": email,
+    });
+
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_DATA_EXPORT.to_string(),
+            job_type: JOB_DATA_EXPORT.to_string(),
+            payload,
+            idempotency_key: Some(format!("export:{}", user_id)),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await
+    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -72,57 +131,4 @@ mod tests {
         assert!(!is_essential_transactional_email("data_export"));
         assert!(!is_essential_transactional_email("invitation"));
     }
-}
-
-pub async fn enqueue_email_event_job_tx(
-    redis: &nvbes_redis::RedisPool,
-    event: &ScalewayEmailEvent,
-) -> Result<(), AppError> {
-    let payload = serde_json::json!({
-        "provider_event_id": event.id,
-        "provider_email_id": event.email_id,
-        "email": event.email,
-        "event_type": event.event_type,
-    });
-
-    nvbes_redis::worker_queue::enqueue_job(
-        redis,
-        JOB_EMAIL_WEBHOOK_PROCESS,
-        JOB_EMAIL_WEBHOOK_PROCESS,
-        payload,
-        Some(&format!("scw:{}", event.id)),
-        2,
-        false,
-        None,
-    )
-    .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", &err.to_string()))?;
-
-    Ok(())
-}
-
-pub async fn enqueue_data_export_job_tx(
-    redis: &nvbes_redis::RedisPool,
-    user_id: uuid::Uuid,
-    email: &str,
-) -> Result<(), AppError> {
-    let payload = serde_json::json!({
-        "user_id": user_id,
-        "email": email,
-    });
-
-    nvbes_redis::worker_queue::enqueue_job(
-        redis,
-        JOB_DATA_EXPORT,
-        JOB_DATA_EXPORT,
-        payload,
-        Some(&format!("export:{}", user_id)),
-        3,
-        false,
-        None,
-    )
-    .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", &err.to_string()))?;
-
-    Ok(())
 }

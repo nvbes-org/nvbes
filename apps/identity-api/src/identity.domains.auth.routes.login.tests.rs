@@ -5,10 +5,7 @@ use chrono::Utc;
 use sqlx::PgPool;
 
 fn test_pool() -> PgPool {
-    let url = std::env::var("DATABASE_URL")
-        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-    PgPool::connect_lazy(&url).expect("valid pool")
+    crate::test_support::shared_test_pool()
 }
 
 async fn test_config(pool: &PgPool) -> AppState {

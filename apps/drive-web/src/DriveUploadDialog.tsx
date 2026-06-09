@@ -21,6 +21,7 @@ export function DriveUploadDialog({
   onClear,
   onUploadFiles,
   onUploadFolder,
+  onUploadDroppedFiles,
 }: DriveUploadDialogProps) {
   const hasCompleted = summary.completedFiles > 0 || summary.failedFiles > 0;
 
@@ -43,6 +44,8 @@ export function DriveUploadDialog({
           <DriveUploadDialogEmptyState
             onUploadFiles={onUploadFiles}
             onUploadFolder={onUploadFolder}
+            onUploadDroppedFiles={onUploadDroppedFiles}
+            isUploading={isUploading}
           />
         ) : (
           <div className="mt-4 space-y-3">

@@ -3,25 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/identity-sdk-web",
   "sourceRoot": "libs/ts/identity-sdk-web/src",
-  "tags": ["type:lib", "domain:identity", "layer:sdk"],
-  "targets": {
-    "build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir libs/ts/identity-sdk-web build"
-      }
-    },
-    "dev": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir libs/ts/identity-sdk-web dev"
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir libs/ts/identity-sdk-web test"
-      }
-    }
-  }
+  "tags": ["type:lib", "domain:identity", "layer:sdk"]
 }

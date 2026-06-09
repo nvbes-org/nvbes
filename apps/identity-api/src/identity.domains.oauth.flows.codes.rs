@@ -96,7 +96,7 @@ pub async fn exchange_code(
     let lock_key = format!("oauth-authorization-code:{}", input.code);
     let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
-        .map_err(|err| AppError::internal("authorization_code_lock_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("authorization_code_lock_failed", format!("{}", err)))?;
     if !locked {
         return Err(AppError::conflict(
             "authorization_code_locked",
@@ -267,7 +267,7 @@ pub async fn exchange_code(
             },
         )
         .await
-        .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("refresh_token_store_failed", format!("{}", err)))?;
 
         let _ = delete_authorization_code(redis, &code).await;
 
@@ -285,7 +285,7 @@ pub async fn exchange_code(
 
     let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
-        .map_err(|err| AppError::internal("authorization_code_lock_failed", &format!("{}", err)));
+        .map_err(|err| AppError::internal("authorization_code_lock_failed", format!("{}", err)));
     release_result?;
 
     result

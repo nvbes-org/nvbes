@@ -1,4 +1,14 @@
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { DeviceActivationApproveProps } from '@/pages/DeviceActivationPage.types';
 
 export function DeviceActivationApproveStep({
@@ -13,7 +23,7 @@ export function DeviceActivationApproveStep({
 }: DeviceActivationApproveProps) {
   return (
     <div className="space-y-6">
-      <div className="space-y-2 rounded-lg bg-muted p-4">
+      <Card className="space-y-2 p-4">
         <p className="text-sm font-medium">
           Application: <span className="font-bold">{deviceInfo.client_name}</span>
         </p>
@@ -25,25 +35,30 @@ export function DeviceActivationApproveStep({
             <li key={scope}>{scope}</li>
           ))}
         </ul>
-      </div>
+      </Card>
 
       <div className="space-y-2">
-        <label htmlFor="workspace-select" className="text-sm font-medium">
+        <Label htmlFor="workspace-select">
           Workspace courant
-        </label>
-        <select
-          id="workspace-select"
+        </Label>
+        <Select
           value={selectedWorkspace}
-          onChange={(event) => onWorkspaceChange(event.target.value)}
+          onValueChange={onWorkspaceChange}
           disabled={lockedWorkspace}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {workspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.id}>
-              {workspace.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="workspace-select" className="w-full">
+            <SelectValue placeholder="Selectionner un workspace" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {workspaces.map((workspace) => (
+                <SelectItem key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         {lockedWorkspace ? (
           <p className="text-xs text-muted-foreground">
             Le workspace courant est utilisé automatiquement.

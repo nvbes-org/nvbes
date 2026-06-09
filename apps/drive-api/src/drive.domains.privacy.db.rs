@@ -115,18 +115,20 @@ pub async fn insert_worker_job_tx(
     payload: Value,
     job_id: Uuid,
 ) -> Result<Uuid, AppError> {
-    Ok(nvbes_redis::worker_queue::enqueue_job(
+    nvbes_redis::worker_queue::enqueue_job(
         redis,
-        queue,
-        job_type,
-        payload,
-        Some(idempotency_key),
-        3,
-        true,
-        Some(job_id),
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: queue.to_string(),
+            job_type: job_type.to_string(),
+            payload,
+            idempotency_key: Some(idempotency_key.to_string()),
+            max_attempts: 3,
+            overwrite_terminal: true,
+            job_id: Some(job_id),
+        },
     )
     .await
-    .map_err(|error| AppError::internal("redis_worker_queue_enqueue_failed", &error.to_string()))?)
+    .map_err(|error| AppError::internal("redis_worker_queue_enqueue_failed", error.to_string()))
 }
 
 pub async fn update_privacy_request_job_tx(

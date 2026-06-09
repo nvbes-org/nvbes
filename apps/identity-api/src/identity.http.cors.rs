@@ -1,0 +1,349 @@
+use std::collections::HashSet;
+use std::sync::{Arc, RwLock};
+
+use axum::{
+    body::Body,
+    extract::State,
+    http::{
+        HeaderMap, HeaderName, HeaderValue, Method, Request, Response, StatusCode, Uri, header,
+    },
+    middleware::Next,
+};
+use sqlx::Row;
+
+use crate::{app::AppState, http::error::AppError};
+
+const ALLOWED_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
+const ALLOWED_HEADERS: &str = "content-type, authorization, accept, x-requested-with, idempotency-key, x-request-id, x-csrf-token, sentry-trace, baggage, traceparent, tracestate";
+const EXPOSED_HEADERS: &str = "x-request-id, traceparent, tracestate";
+
+#[derive(Clone, Default)]
+pub struct AllowedOriginRegistry {
+    origins: Arc<RwLock<HashSet<String>>>,
+}
+
+impl AllowedOriginRegistry {
+    pub fn contains(&self, origin: &str) -> bool {
+        self.origins
+            .read()
+            .expect("allowed origin registry lock should not be poisoned")
+            .iter()
+            .any(|allowed| same_origin(origin, allowed))
+    }
+
+    pub fn replace(&self, origins: Vec<String>) {
+        let mut guard = self
+            .origins
+            .write()
+            .expect("allowed origin registry lock should not be poisoned");
+        *guard = origins.into_iter().collect();
+    }
+
+    pub async fn refresh_from_db(
+        &self,
+        db: &sqlx::PgPool,
+        config: &nvbes_core::config::AppConfig,
+    ) -> Result<(), AppError> {
+        let rows = sqlx::query(
+            r#"
+            SELECT redirect_uris, client_type::text AS client_type
+            FROM oauth_clients
+            WHERE revoked_at IS NULL
+            "#,
+        )
+        .fetch_all(db)
+        .await?;
+
+        let mut origins = config_allowed_origins(config);
+        for row in rows {
+            let client_type: String = row.get("client_type");
+            if !is_browser_client_type(&client_type) {
+                continue;
+            }
+
+            let redirect_uris: Vec<String> = row.get("redirect_uris");
+            origins.extend(
+                redirect_uris
+                    .iter()
+                    .filter_map(|redirect_uri| origin_from_redirect_uri(redirect_uri)),
+            );
+        }
+
+        self.replace(expand_loopback_aliases(origins));
+        Ok(())
+    }
+}
+
+pub async fn cors_middleware(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Result<Response<Body>, AppError> {
+    let origin = request
+        .headers()
+        .get(header::ORIGIN)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+
+    let is_preflight = request.method() == Method::OPTIONS
+        && request
+            .headers()
+            .contains_key(header::ACCESS_CONTROL_REQUEST_METHOD);
+
+    let Some(origin) = origin else {
+        return Ok(next.run(request).await);
+    };
+
+    if !state.allowed_browser_origins.contains(&origin) {
+        if is_preflight {
+            return Err(AppError::forbidden(
+                "invalid_origin",
+                "Request origin is not allowed.",
+            ));
+        }
+
+        return Ok(next.run(request).await);
+    }
+
+    if is_preflight {
+        return Ok(preflight_response(&origin, request.headers()));
+    }
+
+    let mut response = next.run(request).await;
+    apply_cors_headers(response.headers_mut(), &origin);
+    Ok(response)
+}
+
+pub fn config_allowed_origins(config: &nvbes_core::config::AppConfig) -> Vec<String> {
+    let mut origins = vec![config.web_base_url.clone(), config.api_base_url.clone()];
+
+    if let Some(origin) = &config.staging_web_base_url {
+        origins.push(origin.clone());
+    }
+
+    if let Some(origin) = &config.staging_api_base_url {
+        origins.push(origin.clone());
+    }
+
+    origins.extend(config.additional_cors_origins.iter().cloned());
+    origins
+}
+
+fn preflight_response(origin: &str, request_headers: &HeaderMap) -> Response<Body> {
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::NO_CONTENT;
+
+    apply_cors_headers(response.headers_mut(), origin);
+    response.headers_mut().insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static(ALLOWED_METHODS),
+    );
+
+    let allow_headers = request_headers
+        .get(header::ACCESS_CONTROL_REQUEST_HEADERS)
+        .cloned()
+        .unwrap_or_else(|| HeaderValue::from_static(ALLOWED_HEADERS));
+    response
+        .headers_mut()
+        .insert(header::ACCESS_CONTROL_ALLOW_HEADERS, allow_headers);
+
+    response
+}
+
+fn apply_cors_headers(headers: &mut HeaderMap, origin: &str) {
+    if let Ok(origin) = HeaderValue::from_str(origin) {
+        headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+    }
+
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+        HeaderValue::from_static("true"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_EXPOSE_HEADERS,
+        HeaderValue::from_static(EXPOSED_HEADERS),
+    );
+    append_vary(headers, header::ORIGIN);
+    append_vary(headers, header::ACCESS_CONTROL_REQUEST_METHOD);
+    append_vary(headers, header::ACCESS_CONTROL_REQUEST_HEADERS);
+}
+
+fn append_vary(headers: &mut HeaderMap, value: HeaderName) {
+    if let Some(existing) = headers
+        .get(header::VARY)
+        .and_then(|header| header.to_str().ok())
+    {
+        let needle = value.as_str();
+        if existing
+            .split(',')
+            .map(str::trim)
+            .any(|entry| entry.eq_ignore_ascii_case(needle))
+        {
+            return;
+        }
+
+        let updated = format!("{existing}, {needle}");
+        if let Ok(updated) = HeaderValue::from_str(&updated) {
+            headers.insert(header::VARY, updated);
+        }
+        return;
+    }
+
+    headers.insert(header::VARY, HeaderValue::from_str(value.as_str()).unwrap());
+}
+
+fn is_browser_client_type(client_type: &str) -> bool {
+    matches!(
+        client_type,
+        "public" | "native" | "desktop" | "device" | "mobile" | "iot"
+    )
+}
+
+pub fn origin_from_redirect_uri(redirect_uri: &str) -> Option<String> {
+    let uri = redirect_uri.parse::<Uri>().ok()?;
+    let parts = origin_parts(&uri)?;
+    let port = parts
+        .port
+        .map(|port| format!(":{port}"))
+        .unwrap_or_default();
+    Some(format!(
+        "{}://{}{}",
+        parts.scheme,
+        origin_host(&parts.host),
+        port
+    ))
+}
+
+fn origin_host(host: &str) -> String {
+    if host.contains(':') && !host.starts_with('[') {
+        return format!("[{host}]");
+    }
+
+    host.to_string()
+}
+
+fn expand_loopback_aliases(origins: Vec<String>) -> Vec<String> {
+    let mut expanded = Vec::with_capacity(origins.len() * 3);
+    for origin in origins {
+        if origin.is_empty() {
+            continue;
+        }
+
+        expanded.push(origin.clone());
+
+        if let Some(aliases) = loopback_aliases(&origin) {
+            expanded.extend(aliases);
+        }
+    }
+    expanded
+}
+
+fn loopback_aliases(origin: &str) -> Option<Vec<String>> {
+    let uri = origin.parse::<Uri>().ok()?;
+    let parts = origin_parts(&uri)?;
+    if !is_loopback_host(&parts.host) {
+        return None;
+    }
+
+    let port = parts
+        .port
+        .map(|port| format!(":{}", port))
+        .unwrap_or_default();
+    let scheme = parts.scheme;
+    Some(vec![
+        format!("{scheme}://localhost{port}"),
+        format!("{scheme}://127.0.0.1{port}"),
+        format!("{scheme}://[::1]{port}"),
+    ])
+}
+
+pub fn same_origin(candidate: &str, allowed: &str) -> bool {
+    let candidate = match candidate.parse::<Uri>() {
+        Ok(uri) => uri,
+        Err(_) => return false,
+    };
+    let allowed = match allowed.parse::<Uri>() {
+        Ok(uri) => uri,
+        Err(_) => return false,
+    };
+
+    origin_parts(&candidate).is_some_and(|candidate_origin| {
+        origin_parts(&allowed).is_some_and(|allowed_origin| {
+            candidate_origin == allowed_origin
+                || same_loopback_origin(&candidate_origin, &allowed_origin)
+        })
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct UriOrigin {
+    scheme: String,
+    host: String,
+    port: Option<u16>,
+}
+
+fn same_loopback_origin(candidate: &UriOrigin, allowed: &UriOrigin) -> bool {
+    candidate.scheme == allowed.scheme
+        && candidate.port == allowed.port
+        && is_loopback_host(&candidate.host)
+        && is_loopback_host(&allowed.host)
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    matches!(host, "localhost" | "127.0.0.1" | "::1")
+}
+
+fn origin_parts(uri: &Uri) -> Option<UriOrigin> {
+    let scheme = uri.scheme_str()?.to_ascii_lowercase();
+    let authority = uri.authority()?;
+    Some(UriOrigin {
+        scheme,
+        host: authority.host().to_ascii_lowercase(),
+        port: authority.port_u16(),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{expand_loopback_aliases, origin_from_redirect_uri, same_origin};
+
+    #[test]
+    fn origin_from_redirect_uri_extracts_scheme_host_and_port() {
+        assert_eq!(
+            origin_from_redirect_uri("http://localhost:5173/callback?code=abc"),
+            Some("http://localhost:5173".to_string())
+        );
+
+        assert_eq!(
+            origin_from_redirect_uri("http://[::1]:5173/callback?code=abc"),
+            Some("http://[::1]:5173".to_string())
+        );
+    }
+
+    #[test]
+    fn same_origin_accepts_loopback_aliases() {
+        assert!(same_origin(
+            "http://127.0.0.1:3001/path",
+            "http://localhost:3001"
+        ));
+    }
+
+    #[test]
+    fn expand_loopback_aliases_keeps_original_and_aliases() {
+        let origins = expand_loopback_aliases(vec![
+            "https://files.example.com".to_string(),
+            "http://localhost:3001".to_string(),
+        ]);
+
+        assert!(
+            origins
+                .iter()
+                .any(|origin| origin == "https://files.example.com")
+        );
+        assert!(
+            origins
+                .iter()
+                .any(|origin| origin == "http://127.0.0.1:3001")
+        );
+    }
+}

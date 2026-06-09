@@ -3,19 +3,31 @@ import { describe, expect, it } from 'vite-plus/test';
 import { z } from 'zod';
 
 describe('http-client idempotency headers', () => {
+  it('preserves a base URL path prefix for absolute request paths', async () => {
+    const observed = new ObservedRequest();
+    const client = createHttpClient({
+      baseUrl: 'http://localhost:5173/api',
+      fetchImpl: buildJsonFetch(observed),
+    });
+
+    await client.get('/auth/me', z.object({ ok: z.boolean() }));
+
+    expect(observed.url).toBe('http://localhost:5173/api/auth/me');
+  });
+
   it('adds an Idempotency-Key to POST requests by default', async () => {
-    const observed = new Headers();
+    const observed = new ObservedRequest();
     const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
 
     await client.post('/mutations', z.object({ ok: z.boolean() }), {
       ok: true,
     });
 
-    expect(observed.get('Idempotency-Key')).toMatch(/^[0-9a-f-]+$/i);
+    expect(observed.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]+$/i);
   });
 
   it('preserves an explicit Idempotency-Key header', async () => {
-    const observed = new Headers();
+    const observed = new ObservedRequest();
     const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
 
     await client.request('/mutations', z.object({ ok: z.boolean() }), {
@@ -24,11 +36,11 @@ describe('http-client idempotency headers', () => {
       method: 'PATCH',
     });
 
-    expect(observed.get('Idempotency-Key')).toBe('custom-key-123');
+    expect(observed.headers.get('Idempotency-Key')).toBe('custom-key-123');
   });
 
   it('adds an Idempotency-Key to PUT requests by default', async () => {
-    const observed = new Headers();
+    const observed = new ObservedRequest();
     const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
 
     await client.request('/mutations', z.object({ ok: z.boolean() }), {
@@ -36,11 +48,11 @@ describe('http-client idempotency headers', () => {
       method: 'PUT',
     });
 
-    expect(observed.get('Idempotency-Key')).toMatch(/^[0-9a-f-]+$/i);
+    expect(observed.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]+$/i);
   });
 
   it('can disable automatic Idempotency-Key generation per request', async () => {
-    const observed = new Headers();
+    const observed = new ObservedRequest();
     const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
 
     await client.request('/mutations', z.object({ ok: z.boolean() }), {
@@ -49,15 +61,21 @@ describe('http-client idempotency headers', () => {
       method: 'POST',
     });
 
-    expect(observed.get('Idempotency-Key')).toBeNull();
+    expect(observed.headers.get('Idempotency-Key')).toBeNull();
   });
 });
 
-function buildJsonFetch(observed: Headers): typeof fetch {
-  return async (_input, init) => {
+class ObservedRequest {
+  readonly headers = new Headers();
+  url = '';
+}
+
+function buildJsonFetch(observed: ObservedRequest): typeof fetch {
+  return async (input, init) => {
+    observed.url = input.toString();
     const requestHeaders = new Headers(init?.headers);
     requestHeaders.forEach((value, key) => {
-      observed.set(key, value);
+      observed.headers.set(key, value);
     });
 
     return new Response(JSON.stringify({ ok: true }), {

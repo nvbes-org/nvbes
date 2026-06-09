@@ -60,13 +60,13 @@ pub fn ensure_subscription_update_consistency(object: &Value) -> Result<(), AppE
             "Subscription update is missing the current billing period.",
         ));
     }
-    if let (Some(start), Some(end)) = (current_period_start, current_period_end) {
-        if end < start {
-            return Err(AppError::bad_request(
-                "webhook_subscription_period_invalid",
-                "Subscription update contains an invalid billing period.",
-            ));
-        }
+    if let (Some(start), Some(end)) = (current_period_start, current_period_end)
+        && end < start
+    {
+        return Err(AppError::bad_request(
+            "webhook_subscription_period_invalid",
+            "Subscription update contains an invalid billing period.",
+        ));
     }
 
     let latest_invoice = object.get("latest_invoice").and_then(Value::as_str);

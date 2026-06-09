@@ -11,6 +11,10 @@ pub fn session_ttl_seconds(expires_at: DateTime<Utc>) -> u64 {
     ttl as u64
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Cached session materialization keeps auth context fields explicit."
+)]
 pub fn cached_session_from_login(
     session_id: Uuid,
     principal_id: Uuid,

@@ -1,6 +1,7 @@
 import { MailIcon } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -25,13 +26,13 @@ export function LoginPagePasswordForm({
 }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
-      <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+      <Card className="flex flex-row items-center gap-2 p-3">
         <MailIcon className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate text-sm font-medium">{email}</span>
-      </div>
+      </Card>
       <div className="flex flex-col gap-2">
         <Label htmlFor="login-password">Mot de passe</Label>
-        <input
+        <Input
           type="email"
           name="username"
           autoComplete="username"

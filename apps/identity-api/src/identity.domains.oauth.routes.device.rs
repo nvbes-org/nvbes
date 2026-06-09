@@ -14,7 +14,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/approve",
             post(device_approve).layer(axum::middleware::from_fn_with_state(
                 state.clone(),
-                auth_middleware.clone(),
+                auth_middleware,
             )),
         )
         .route(

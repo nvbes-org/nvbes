@@ -8,6 +8,8 @@ export function LoginPageStepContent({
   email,
   error,
   handleAccountSelect,
+  handleDisconnectAccount,
+  handleDisconnectAllAccounts,
   handleConsentApprove,
   handleConsentCancel,
   handleIdentifierSubmit,
@@ -40,6 +42,8 @@ export function LoginPageStepContent({
         email={email}
         error={error}
         handleAccountSelect={handleAccountSelect}
+        handleDisconnectAccount={handleDisconnectAccount}
+        handleDisconnectAllAccounts={handleDisconnectAllAccounts}
         handleIdentifierSubmit={handleIdentifierSubmit}
         handlePasswordSubmit={handlePasswordSubmit}
         handleUseAnotherAccount={handleUseAnotherAccount}
@@ -73,6 +77,7 @@ export function LoginPageStepContent({
       setMfaMethod={setMfaMethod}
       setRecoveryCode={setRecoveryCode}
       setTotpCode={setTotpCode}
+      step={step}
       totpCode={totpCode}
     />
   );

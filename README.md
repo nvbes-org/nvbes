@@ -61,6 +61,7 @@ pnpm dev:web
 pnpm dev:api
 pnpm dev:identity-worker
 pnpm dev:drive-worker
+pnpm dev:drive-db:reset
 ```
 
 Conventions de scripts:
@@ -70,6 +71,7 @@ Conventions de scripts:
 - `pnpm dev:api`: lance les deux APIs Rust et le worker Identity historique.
 - `pnpm dev:identity-api` / `pnpm dev:drive-api`: lancent une API ciblee.
 - `pnpm dev:identity-worker` / `pnpm dev:drive-worker`: lancent un worker cible.
+- `pnpm dev:drive-db:reset`: recree la base Drive locale quand une migration dev a change.
 - `pnpm db:migrate`: applique les migrations locales configurees.
 - `pnpm generate:openapi`: regenere les specs OpenAPI et le SDK core.
 - `pnpm format`: reformate TypeScript, JSON, Markdown et Rust.

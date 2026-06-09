@@ -1,0 +1,7 @@
+{
+  "name": "web-ui",
+  "projectType": "library",
+  "root": "libs/ts/web-ui",
+  "sourceRoot": "libs/ts/web-ui/src",
+  "tags": ["type:lib", "domain:shared", "layer:ui"]
+}

@@ -2,6 +2,7 @@ import type { AccountWorkspace } from '@nvbes/identity-client';
 import { KeyRound, Plus, RefreshCw, ServerCog, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -10,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Stat, StatDescription, StatIndicator, StatLabel, StatValue } from '@/components/ui/stat';
 
 function MetricCard({
   label,
@@ -23,18 +25,14 @@ function MetricCard({
   icon: typeof ServerCog;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-          <p className="mt-2 text-2xl font-semibold">{value}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-        </div>
-        <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="size-4" />
-        </div>
-      </div>
-    </div>
+    <Stat>
+      <StatLabel>{label}</StatLabel>
+      <StatValue>{value}</StatValue>
+      <StatIndicator variant="icon" color="info">
+        <Icon />
+      </StatIndicator>
+      <StatDescription>{hint}</StatDescription>
+    </Stat>
   );
 }
 
@@ -62,9 +60,9 @@ export function WorkspaceServiceAccountsHero({
   onRefresh: () => void;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-primary/10 via-background to-muted/50 p-6 shadow-sm">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-muted/50">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.45),transparent_28%),linear-gradient(135deg,transparent_0%,transparent_65%,rgba(255,255,255,0.12)_100%)] opacity-70 dark:opacity-40" />
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <CardHeader className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">Admin workspace</Badge>
@@ -96,17 +94,17 @@ export function WorkspaceServiceAccountsHero({
             </Select>
           </div>
           <Button className="h-10" onClick={onCreate} disabled={!workspaceId || !canManage}>
-            <Plus className="size-4" />
+            <Plus data-icon="inline-start" />
             Nouveau service account
           </Button>
           <Button variant="outline" className="h-10" onClick={onRefresh} disabled={!workspaceId}>
-            <RefreshCw className="size-4" />
+            <RefreshCw data-icon="inline-start" />
             Rafraichir
           </Button>
         </div>
-      </div>
+      </CardHeader>
 
-      <div className="relative mt-6 grid gap-3 sm:grid-cols-3">
+      <CardContent className="relative grid gap-3 sm:grid-cols-3">
         <MetricCard
           label="Service accounts"
           value={String(serviceAccountsCount)}
@@ -125,7 +123,7 @@ export function WorkspaceServiceAccountsHero({
           hint="Clients attachés ou generes pour ces principals."
           icon={KeyRound}
         />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

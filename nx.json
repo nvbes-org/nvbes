@@ -1,32 +1,65 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "defaultBase": "main",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/dist/**",
+      "!{projectRoot}/coverage/**",
+      "!{projectRoot}/playwright-report/**",
+      "!{projectRoot}/test-results/**",
+      "!{projectRoot}/**/__tests__/**",
+      "!{projectRoot}/**/*.spec.*",
+      "!{projectRoot}/**/*.test.*",
+      "!{projectRoot}/e2e/**",
+      "!{projectRoot}/README.md",
+      "!{projectRoot}/docs/**"
+    ],
     "sharedGlobals": [
-      "{workspaceRoot}/AGENTS.md",
-      "{workspaceRoot}/README.md",
       "{workspaceRoot}/package.json",
       "{workspaceRoot}/pnpm-lock.yaml",
       "{workspaceRoot}/pnpm-workspace.yaml",
-      "{workspaceRoot}/nx.json"
+      "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/vite.config.ts"
     ]
   },
   "targetDefaults": {
     "build": {
       "cache": true,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"]
     },
     "check": {
-      "cache": true
+      "cache": true,
+      "inputs": ["production", "^production"]
     },
     "dev": {
       "cache": false
     },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "cache": true,
+      "inputs": ["default"]
+    },
     "lint": {
-      "cache": true
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "preview": {
+      "cache": false
     },
     "test": {
-      "cache": true
+      "cache": true,
+      "inputs": ["default", "^production"]
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["production", "^production"]
     }
   },
   "analytics": false

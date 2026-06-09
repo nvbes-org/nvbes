@@ -10,4 +10,5 @@ export type DriveUploadDialogProps = {
   onClear: () => void;
   onUploadFiles: () => void;
   onUploadFolder: () => void;
+  onUploadDroppedFiles: (files: File[]) => void | Promise<void>;
 };

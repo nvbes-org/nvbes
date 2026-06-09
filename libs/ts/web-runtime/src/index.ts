@@ -1,12 +1,5 @@
-import {
-  type MutationFunction,
-  QueryClient,
-  keepPreviousData,
-  type QueryFunction,
-  type QueryKey,
-} from '@tanstack/react-query';
+import { QueryClient, keepPreviousData } from '@tanstack/react-query';
 import { DtoValidationError, HttpError } from '@nvbes/http-client';
-import { Effect } from 'effect';
 
 export type ClientErrorKind = 'api' | 'dto' | 'unexpected';
 
@@ -84,28 +77,6 @@ export function normalizeClientError(error: unknown): ClientRuntimeError {
   }
 
   return new ClientRuntimeError('unexpected', 'Unexpected client runtime error', error);
-}
-
-export function effectQueryFn<TData>(
-  effectFactory: () => Effect.Effect<TData, unknown, never>,
-): QueryFunction<TData, QueryKey> {
-  return async () => runClientEffect(effectFactory());
-}
-
-export function effectMutationFn<TVariables, TData>(
-  effectFactory: (variables: TVariables) => Effect.Effect<TData, unknown, never>,
-): MutationFunction<TData, TVariables> {
-  return async (variables) => runClientEffect(effectFactory(variables));
-}
-
-export async function runClientEffect<TData>(
-  effect: Effect.Effect<TData, unknown, never>,
-): Promise<TData> {
-  try {
-    return await Effect.runPromise(effect);
-  } catch (error) {
-    throw normalizeClientError(error);
-  }
 }
 
 export { ErrorBoundary } from './ErrorBoundary';

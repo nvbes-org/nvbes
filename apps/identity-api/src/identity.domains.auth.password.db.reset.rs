@@ -21,7 +21,7 @@ pub async fn insert_password_reset_token(
         },
     )
     .await
-    .map_err(|err| AppError::internal("password_reset_token_store_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("password_reset_token_store_failed", err.to_string()))?;
     Ok(())
 }
 
@@ -55,7 +55,7 @@ pub async fn find_token_for_reset(
 ) -> Result<Option<(Uuid, DateTime<Utc>, Option<DateTime<Utc>>)>, AppError> {
     nvbes_redis::password_reset::get_password_reset_token(redis, token_hash)
         .await
-        .map_err(|err| AppError::internal("password_reset_token_read_failed", &err.to_string()))
+        .map_err(|err| AppError::internal("password_reset_token_read_failed", err.to_string()))
         .map(|token| token.map(|token| (token.principal_id, token.expires_at, token.consumed_at)))
 }
 

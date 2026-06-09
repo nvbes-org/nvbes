@@ -24,9 +24,9 @@ pub async fn authenticate(
     }
 
     let principal_id = Uuid::parse_str(&claims.sub)
-        .map_err(|e| AppError::unauthorized("invalid_subject", &format!("{}", e)))?;
+        .map_err(|e| AppError::unauthorized("invalid_subject", format!("{}", e)))?;
     let session_id = Uuid::parse_str(&claims.sid)
-        .map_err(|e| AppError::unauthorized("invalid_session", &format!("{}", e)))?;
+        .map_err(|e| AppError::unauthorized("invalid_session", format!("{}", e)))?;
     let token_hash = password::token_hash(token);
 
     let mut session = get_cached_session(redis, session_id)
@@ -47,7 +47,7 @@ pub async fn authenticate(
     if nvbes_redis::session::is_session_revoked(redis, &session.session_id)
         .await
         .map_err(|err| {
-            AppError::internal("redis_session_revocation_lookup_failed", &err.to_string())
+            AppError::internal("redis_session_revocation_lookup_failed", err.to_string())
         })?
         || session.expires_at <= Utc::now()
     {
@@ -123,7 +123,7 @@ async fn get_cached_session(
 ) -> Result<Option<cache::CachedSession>, AppError> {
     nvbes_redis::session::get_session(redis, &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_cache_read_failed", &err.to_string()))
+        .map_err(|err| AppError::internal("redis_session_cache_read_failed", err.to_string()))
 }
 
 async fn build_user_record_from_cache(

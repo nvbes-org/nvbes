@@ -41,6 +41,17 @@ pub struct QueueStatusEntry {
     pub oldest_age_seconds: Option<f64>,
 }
 
+#[derive(Debug, Clone)]
+pub struct EnqueueJobInput {
+    pub queue: String,
+    pub job_type: String,
+    pub payload: Value,
+    pub idempotency_key: Option<String>,
+    pub max_attempts: u32,
+    pub overwrite_terminal: bool,
+    pub job_id: Option<Uuid>,
+}
+
 pub use find::{find_latest_job, find_matching_jobs};
 pub use lifecycle::{
     claim_next_job, enqueue_job, mark_job_failed, mark_job_succeeded, promote_due_jobs,

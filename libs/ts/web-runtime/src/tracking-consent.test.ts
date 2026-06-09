@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vite-plus/test';
+import { HttpError } from '@nvbes/http-client';
 import {
   ACCEPT_ALL_CONSENT,
   DECLINE_ALL_CONSENT,
@@ -173,5 +174,33 @@ describe('tracking consent sync', () => {
       consent?: unknown;
     };
     expect(stored.savedAt).toBe(backendRevokedAt);
+  });
+
+  it('ignores consent sync when the backend returns unauthorized', async () => {
+    installTestWindow();
+    installStoredConsent();
+
+    const response = new Response(JSON.stringify({ error: { message: 'Unauthorized' } }), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => {
+          throw new HttpError('Failed to list consents: Unauthorized', response, {
+            error: { message: 'Unauthorized' },
+          });
+        },
+        grantConsent: async () => ({}),
+        revokeConsent: async () => ({}),
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    await expect(api.syncTrackingConsent()).resolves.toBeUndefined();
+    expect(api.getTrackingConsent()).toEqual(ACCEPT_ALL_CONSENT);
   });
 });

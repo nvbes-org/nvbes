@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import type { DriveEntry, DriveMember, DriveShareStatus, DriveWorkspaceState } from './drive.workspace.types';
 
 const BYTE_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -53,7 +55,7 @@ function DetailsFrame({
           <h2 className="mt-1 break-words text-lg font-semibold">{title}</h2>
         </div>
         <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} aria-label="Fermer les details">
-          <X className="size-4" aria-hidden="true" />
+          <X aria-hidden="true" />
         </Button>
       </div>
       {children}
@@ -107,9 +109,14 @@ function MemberDetails({ member }: { member: DriveMember }) {
 
 function NotFoundDetails({ label }: { label: string }) {
   return (
-    <p className="rounded-2xl border border-dashed border-border/80 bg-muted/30 p-4 text-sm text-muted-foreground">
-      {label} n'est plus disponible dans l'etat courant du workspace.
-    </p>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyTitle>Selection indisponible</EmptyTitle>
+        <EmptyDescription>
+          {label} n'est plus disponible dans l'etat courant du workspace.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -126,10 +133,10 @@ function DetailsList({ items }: { items: Array<[string, string]> }) {
   return (
     <dl className="grid gap-3 text-sm">
       {items.map(([label, value]) => (
-        <div key={label} className="grid gap-1 rounded-xl border border-border/60 bg-background/70 p-3">
+        <Card key={label} className="grid gap-1 p-3">
           <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
           <dd className="break-words font-medium">{value}</dd>
-        </div>
+        </Card>
       ))}
     </dl>
   );
@@ -152,7 +159,7 @@ function sharingLabel(entry: DriveEntry, linkCount: number): string {
 }
 
 function shareStatusLabel(status: DriveShareStatus): string {
-  if (status === 'revoked') return 'Partage revoque';
+  if (status === 'revoked') return 'Partage desactive';
   if (status === 'expired') return 'Partage expire';
   return status;
 }

@@ -7,6 +7,8 @@ export function LoginPagePrimaryStepContent({
   email,
   error,
   handleAccountSelect,
+  handleDisconnectAccount,
+  handleDisconnectAllAccounts,
   handleIdentifierSubmit,
   handlePasswordSubmit,
   handleUseAnotherAccount,
@@ -23,6 +25,8 @@ export function LoginPagePrimaryStepContent({
   | 'email'
   | 'error'
   | 'handleAccountSelect'
+  | 'handleDisconnectAccount'
+  | 'handleDisconnectAllAccounts'
   | 'handleIdentifierSubmit'
   | 'handlePasswordSubmit'
   | 'handleUseAnotherAccount'
@@ -39,6 +43,8 @@ export function LoginPagePrimaryStepContent({
       <LoginPageChooser
         accounts={connectedAccounts}
         onAccountSelect={handleAccountSelect}
+        onDisconnectAccount={handleDisconnectAccount}
+        onDisconnectAllAccounts={handleDisconnectAllAccounts}
         onUseAnotherAccount={handleUseAnotherAccount}
       />
     );

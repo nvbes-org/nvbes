@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { CheckCircle2Icon, CircleAlertIcon, MailCheckIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { VerificationStatus } from './VerifyEmailPage.shared';
 
 export function VerifyEmailStatusBanner({
@@ -29,28 +30,6 @@ export function VerifyEmailStatusBanner({
         ? CircleAlertIcon
         : MailCheckIcon;
 
-  const colors =
-    status === 'verified' || status === 'sent'
-      ? {
-          border: 'border-emerald-500/30',
-          bg: 'bg-emerald-500/5',
-          text: 'text-emerald-700',
-          icon: 'text-emerald-500',
-        }
-      : status === 'error'
-        ? {
-            border: 'border-red-500/30',
-            bg: 'bg-red-500/5',
-            text: 'text-red-700',
-            icon: 'text-red-500',
-          }
-        : {
-            border: 'border-blue-500/30',
-            bg: 'bg-blue-500/5',
-            text: 'text-blue-700',
-            icon: 'text-blue-500',
-          };
-
   return (
     <>
       <style>{`
@@ -70,13 +49,14 @@ export function VerifyEmailStatusBanner({
           animation: nvbes-icon-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
       `}</style>
-      <div
+      <Alert
         ref={bannerRef}
-        className={`nvbes-banner-enter flex items-start gap-3 rounded-lg border ${colors.border} ${colors.bg} px-4 py-3 text-sm`}
+        variant={status === 'error' ? 'destructive' : 'default'}
+        className="nvbes-banner-enter"
       >
-        <Icon className={`nvbes-icon-pop mt-0.5 size-4 shrink-0 ${colors.icon}`} />
-        <p className={colors.text}>{message}</p>
-      </div>
+        <Icon className="nvbes-icon-pop" />
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
     </>
   );
 }

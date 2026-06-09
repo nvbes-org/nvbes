@@ -30,6 +30,10 @@ impl JwtService {
         )
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Token issuance keeps claims sources explicit across flows."
+    )]
     pub fn generate_token_pair_with_session(
         &self,
         user_id: Uuid,
@@ -62,6 +66,10 @@ impl JwtService {
         )
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Authorization details issuance keeps all claim inputs explicit."
+    )]
     pub fn generate_token_pair_with_authorization_details(
         &self,
         user_id: Uuid,
@@ -161,6 +169,10 @@ impl JwtService {
         self.encode_token(&new_claims)
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "M2M issuance keeps subject, workspace, and audience explicit."
+    )]
     pub fn generate_m2m_access_token(
         &self,
         client_id: &str,

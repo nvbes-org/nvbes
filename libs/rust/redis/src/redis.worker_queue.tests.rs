@@ -19,18 +19,20 @@ async fn find_latest_job_returns_most_recent_match() {
 
     let older_job_id = enqueue_job(
         &redis,
-        &queue,
-        "email.send",
-        serde_json::json!({
-            "to_email": "old@example.test",
-            "business_type": "verification",
-            "html_body": "<a href=\"https://example.test/verify-result?token=old_token\">",
-            "text_body": "verify-result?token=old_token",
-        }),
-        None,
-        3,
-        false,
-        None,
+        EnqueueJobInput {
+            queue: queue.clone(),
+            job_type: "email.send".to_string(),
+            payload: serde_json::json!({
+                "to_email": "old@example.test",
+                "business_type": "verification",
+                "html_body": "<a href=\"https://example.test/verify-result?token=old_token\">",
+                "text_body": "verify-result?token=old_token",
+            }),
+            idempotency_key: None,
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
     )
     .await
     .expect("older job");
@@ -39,18 +41,20 @@ async fn find_latest_job_returns_most_recent_match() {
 
     let newer_job_id = enqueue_job(
         &redis,
-        &queue,
-        "email.send",
-        serde_json::json!({
-            "to_email": "new@example.test",
-            "business_type": "verification",
-            "html_body": "<a href=\"https://example.test/verify-result?token=new_token\">",
-            "text_body": "verify-result?token=new_token",
-        }),
-        None,
-        3,
-        false,
-        None,
+        EnqueueJobInput {
+            queue: queue.clone(),
+            job_type: "email.send".to_string(),
+            payload: serde_json::json!({
+                "to_email": "new@example.test",
+                "business_type": "verification",
+                "html_body": "<a href=\"https://example.test/verify-result?token=new_token\">",
+                "text_body": "verify-result?token=new_token",
+            }),
+            idempotency_key: None,
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
     )
     .await
     .expect("newer job");

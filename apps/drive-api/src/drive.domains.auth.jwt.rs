@@ -67,7 +67,7 @@ fn identity_base_url() -> String {
 
 pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClaims, AppError> {
     let header = decode_header(token).map_err(|error| {
-        AppError::unauthorized("invalid_token", &format!("Invalid token header: {error}"))
+        AppError::unauthorized("invalid_token", format!("Invalid token header: {error}"))
     })?;
     if header.alg != Algorithm::RS256 {
         return Err(AppError::unauthorized(
@@ -93,7 +93,7 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     let data = decode::<IdentityJwtClaims>(token, &decoding_key, &validation).map_err(|error| {
         AppError::unauthorized(
             "invalid_token",
-            &format!("Identity token validation failed: {error}"),
+            format!("Identity token validation failed: {error}"),
         )
     })?;
     let claims = data.claims;
@@ -163,13 +163,13 @@ async fn refresh_jwks() -> Result<(), AppError> {
         .map_err(|error| {
             AppError::internal(
                 "jwks_fetch_failed",
-                &format!("Failed to fetch Identity JWKS: {error}"),
+                format!("Failed to fetch Identity JWKS: {error}"),
             )
         })?;
     if !response.status().is_success() {
         return Err(AppError::internal(
             "jwks_fetch_failed",
-            &format!(
+            format!(
                 "Identity JWKS fetch failed with status {}",
                 response.status()
             ),
@@ -179,7 +179,7 @@ async fn refresh_jwks() -> Result<(), AppError> {
     let jwks = response.json::<JwksResponse>().await.map_err(|error| {
         AppError::internal(
             "jwks_invalid",
-            &format!("Identity JWKS payload is invalid: {error}"),
+            format!("Identity JWKS payload is invalid: {error}"),
         )
     })?;
 
@@ -192,7 +192,7 @@ async fn refresh_jwks() -> Result<(), AppError> {
                 .map_err(|error| {
                     AppError::internal(
                         "jwks_invalid",
-                        &format!("Identity JWKS contains an invalid RSA key: {error}"),
+                        format!("Identity JWKS contains an invalid RSA key: {error}"),
                     )
                 })
         })

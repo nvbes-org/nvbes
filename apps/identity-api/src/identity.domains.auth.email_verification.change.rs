@@ -137,7 +137,7 @@ pub async fn change_verification_email(
     )
     .await
     .map_err(|err| {
-        AppError::internal("email_verification_token_consume_failed", &err.to_string())
+        AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
     let verification_created_at = issue_verification_email_tx(
         redis,

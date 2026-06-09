@@ -1,12 +1,17 @@
+import { Button } from '@/components/ui/button';
 import { navItems } from './LandingPage.product.data';
 
 export function ProductMockupSidebar() {
   return (
     <aside className="flex flex-col bg-zinc-950 p-4 text-white">
       <div className="text-xl font-semibold tracking-normal">nvbes</div>
-      <button className="mt-6 flex items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-zinc-200">
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-6 justify-between border-white/10 bg-white/5 text-left text-xs text-zinc-200 hover:bg-white/10 hover:text-white"
+      >
         Acme Corp <span className="text-zinc-500">⌄</span>
-      </button>
+      </Button>
       <nav className="mt-4 space-y-1 text-sm text-zinc-300">
         {navItems.map((item, index) => (
           <div

@@ -20,7 +20,7 @@ pub async fn prune_expired_challenges(
     let challenge_ids: Vec<String> = client
         .smembers(&auth_state_index_id(auth_state_id))
         .await
-        .map_err(|err| AppError::internal("login_challenge_prune_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_prune_failed", format!("{}", err)))?;
 
     for challenge_id in challenge_ids {
         let Some(challenge) = nvbes_redis::cache::cache_get_json::<CachedLoginChallenge>(
@@ -28,7 +28,7 @@ pub async fn prune_expired_challenges(
             &super::keys::challenge_key(&challenge_id),
         )
         .await
-        .map_err(|err| AppError::internal("login_challenge_prune_failed", &format!("{}", err)))?
+        .map_err(|err| AppError::internal("login_challenge_prune_failed", format!("{}", err)))?
         else {
             remove_challenge_reference(redis, auth_state_id, &challenge_id).await?;
             continue;
@@ -50,7 +50,7 @@ pub async fn replace_challenge(
     let lock_key = format!("login-challenges:{}:{}", input.auth_state_id, input.purpose);
     let locked = nvbes_redis::lock::acquire(redis, &lock_key, 10)
         .await
-        .map_err(|err| AppError::internal("login_challenge_replace_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_replace_failed", format!("{}", err)))?;
     if !locked {
         return Err(AppError::conflict(
             "challenge_locked",
@@ -106,7 +106,7 @@ pub async fn replace_challenge(
 
     let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
-        .map_err(|err| AppError::internal("login_challenge_replace_failed", &format!("{}", err)));
+        .map_err(|err| AppError::internal("login_challenge_replace_failed", format!("{}", err)));
     release_result?;
 
     result

@@ -12,6 +12,10 @@ use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Checkout creation keeps limiter, auth, config, and request metadata explicit."
+)]
 pub async fn create_checkout_session(
     limiter: &RateLimiter,
     db: &PgPool,

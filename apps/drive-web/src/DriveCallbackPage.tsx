@@ -1,7 +1,10 @@
-import { AuthErrorBoundary, clientErrorMessage, runClientEffect } from '@nvbes/web-runtime';
+import { AuthErrorBoundary, clientErrorMessage } from '@nvbes/web-runtime';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { completeDriveCallbackWorkflow } from './drive.workflow';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { completeDriveCallback } from './drive.auth.functions';
 
 export function DriveCallbackPage() {
   return (
@@ -28,7 +31,7 @@ function CallbackContent() {
 
     async function run() {
       try {
-        await runClientEffect(completeDriveCallbackWorkflow(searchParams));
+        await completeDriveCallback(searchParams);
         void navigateRef.current({ to: '/', replace: true });
       } catch (err) {
         if (!cancelled) {
@@ -52,44 +55,45 @@ function CallbackContent() {
   if (error) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_35%),linear-gradient(180deg,_#fbfcfe_0%,_#f3f6fb_100%)] px-4">
-        <div className="w-full max-w-md rounded-3xl border border-border/60 bg-background/95 p-8 shadow-2xl shadow-black/5">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Authentification
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-            Impossible de terminer la connexion
-          </h1>
-          <p className="mt-4 text-sm leading-6 text-muted-foreground">{error}</p>
-          <div className="mt-6 flex items-center gap-3">
-            <a
-              href="/"
-              className="inline-flex h-10 items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition hover:opacity-90"
-            >
-              Retourner à Drive
-            </a>
-            <a
-              href="mailto:support@nvbes.fr?subject=Erreur%20Drive%20callback"
-              className="inline-flex h-10 items-center rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-muted"
-            >
-              Signaler
-            </a>
-          </div>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              Authentification
+            </p>
+            <CardTitle className="text-3xl">Impossible de terminer la connexion</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <Alert variant="destructive">
+              <AlertTitle>Erreur OAuth</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <div className="flex items-center gap-3">
+              <Button asChild>
+                <a href="/">Retourner à Drive</a>
+              </Button>
+              <Button asChild variant="outline">
+                <a href="mailto:support@nvbes.fr?subject=Erreur%20Drive%20callback">Signaler</a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_35%),linear-gradient(180deg,_#fbfcfe_0%,_#f3f6fb_100%)] px-4">
-      <div className="w-full max-w-md rounded-3xl border border-border/60 bg-background/95 p-8 shadow-2xl shadow-black/5">
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-          Authentification
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Connexion en cours</h1>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+            Authentification
+          </p>
+          <CardTitle className="text-3xl">Connexion en cours</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm leading-6 text-muted-foreground">
           Nous validons votre session Identity et préparons votre espace Drive.
-        </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

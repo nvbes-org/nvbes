@@ -19,7 +19,7 @@ pub(super) async fn set_challenge(
             challenge_ttl_seconds(challenge.expires_at),
         )
         .await
-        .map_err(|err| AppError::internal("login_challenge_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_store_failed", format!("{}", err)))?;
 
     client
         .sadd(
@@ -27,14 +27,14 @@ pub(super) async fn set_challenge(
             &challenge.id.to_string(),
         )
         .await
-        .map_err(|err| AppError::internal("login_challenge_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_store_failed", format!("{}", err)))?;
     client
         .expire(
             &auth_state_index_id(challenge.auth_state_id),
             challenge_ttl_seconds(challenge.expires_at) as i64,
         )
         .await
-        .map_err(|err| AppError::internal("login_challenge_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_store_failed", format!("{}", err)))?;
 
     Ok(())
 }
@@ -57,7 +57,7 @@ pub(super) async fn delete_challenge(
     client
         .del_key(&challenge_key(&challenge.id.to_string()))
         .await
-        .map_err(|err| AppError::internal("login_challenge_delete_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("login_challenge_delete_failed", format!("{}", err)))?;
     remove_challenge_reference(redis, challenge.auth_state_id, &challenge.id.to_string()).await?;
     clear_active_challenge_if_current(
         redis,
@@ -78,7 +78,7 @@ pub(super) async fn remove_challenge_reference(
         .srem(&auth_state_index_id(auth_state_id), challenge_id)
         .await
         .map_err(|err| {
-            AppError::internal("login_challenge_index_delete_failed", &format!("{}", err))
+            AppError::internal("login_challenge_index_delete_failed", format!("{}", err))
         })?;
     Ok(())
 }
@@ -95,11 +95,11 @@ pub(super) async fn clear_active_challenge_if_current(
         .cache_get_json::<String>(&active_key)
         .await
         .map_err(|err| {
-            AppError::internal("login_challenge_active_load_failed", &format!("{}", err))
+            AppError::internal("login_challenge_active_load_failed", format!("{}", err))
         })?;
     if current.as_deref() == Some(challenge_id) {
         client.del_key(&active_key).await.map_err(|err| {
-            AppError::internal("login_challenge_active_delete_failed", &format!("{}", err))
+            AppError::internal("login_challenge_active_delete_failed", format!("{}", err))
         })?;
     }
     Ok(())
@@ -122,7 +122,7 @@ pub(super) async fn set_active_challenge_id(
         )
         .await
         .map_err(|err| {
-            AppError::internal("login_challenge_active_store_failed", &format!("{}", err))
+            AppError::internal("login_challenge_active_store_failed", format!("{}", err))
         })
 }
 
@@ -136,7 +136,7 @@ pub(super) async fn current_active_challenge_id(
         .cache_get_json::<String>(&active_challenge_key(auth_state_id, purpose))
         .await
         .map_err(|err| {
-            AppError::internal("login_challenge_active_load_failed", &format!("{}", err))
+            AppError::internal("login_challenge_active_load_failed", format!("{}", err))
         })?;
 
     Ok(current.and_then(|value| Uuid::parse_str(&value).ok()))

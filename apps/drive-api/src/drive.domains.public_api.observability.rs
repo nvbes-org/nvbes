@@ -56,6 +56,10 @@ pub async fn record_api_audit_event(
     .map_err(AppError::from)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Audit insertion keeps each field explicit for call-site readability."
+)]
 async fn insert_audit_event_pool(
     pool: &sqlx::Pool<Postgres>,
     workspace_id: Uuid,

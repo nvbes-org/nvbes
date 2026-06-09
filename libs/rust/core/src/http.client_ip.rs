@@ -70,10 +70,10 @@ pub fn set_trusted_client_ip(
     };
 
     let selected = selected.map(|ip| ip.to_string());
-    if let Some(ip) = &selected {
-        if let Ok(value) = HeaderValue::from_str(ip) {
-            headers.insert(TRUSTED_CLIENT_IP_HEADER, value);
-        }
+    if let Some(ip) = &selected
+        && let Ok(value) = HeaderValue::from_str(ip)
+    {
+        headers.insert(TRUSTED_CLIENT_IP_HEADER, value);
     }
 
     selected

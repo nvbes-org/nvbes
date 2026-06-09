@@ -9,7 +9,7 @@ const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-drive-api";
 impl JwtService {
     pub fn decode_token(&self, token: &str, expected_type: &str) -> Result<TokenClaims, AppError> {
         let header = jwt::decode_header(token).map_err(|e| {
-            AppError::unauthorized("invalid_token", &format!("Invalid token header: {}", e))
+            AppError::unauthorized("invalid_token", format!("Invalid token header: {}", e))
         })?;
         if header.alg != Algorithm::RS256 {
             return Err(AppError::unauthorized(
@@ -42,13 +42,13 @@ impl JwtService {
                 jsonwebtoken::errors::ErrorKind::InvalidToken => {
                     AppError::unauthorized("invalid_token", "Invalid token format")
                 }
-                _ => AppError::unauthorized("token_validation_failed", &format!("{}", e)),
+                _ => AppError::unauthorized("token_validation_failed", format!("{}", e)),
             })?;
         let claims = token_data.claims;
         if claims.token_type != expected_type {
             return Err(AppError::unauthorized(
                 "invalid_token_type",
-                &format!("Expected {}, got {}", expected_type, claims.token_type),
+                format!("Expected {}, got {}", expected_type, claims.token_type),
             ));
         }
         if claims.iss != self.issuer {
@@ -68,7 +68,7 @@ impl JwtService {
 
     pub fn decode_token_ignore_expiry(&self, token: &str) -> Result<TokenClaims, AppError> {
         let header = jwt::decode_header(token).map_err(|e| {
-            AppError::unauthorized("invalid_token", &format!("Invalid token header: {}", e))
+            AppError::unauthorized("invalid_token", format!("Invalid token header: {}", e))
         })?;
         if header.alg != Algorithm::RS256 {
             return Err(AppError::unauthorized(
@@ -94,12 +94,12 @@ impl JwtService {
         validation.validate_exp = false;
         validation.validate_nbf = true;
         let token_data: TokenData<TokenClaims> = jwt::decode(token, &decoding_key, &validation)
-            .map_err(|e| AppError::unauthorized("invalid_token", &format!("{}", e)))?;
+            .map_err(|e| AppError::unauthorized("invalid_token", format!("{}", e)))?;
         let claims = token_data.claims;
         if claims.token_type != "access" {
             return Err(AppError::unauthorized(
                 "invalid_token_type",
-                &format!("Expected access, got {}", claims.token_type),
+                format!("Expected access, got {}", claims.token_type),
             ));
         }
         if claims.iss != self.issuer {
@@ -124,10 +124,10 @@ impl JwtService {
         expected_type: &str,
     ) -> Result<TokenClaims, AppError> {
         let claims = self.decode_token(token, expected_type)?;
-        if expected_type == "refresh" {
-            if let Some(redis) = redis {
-                validate_refresh_token_registration(redis, &claims.jti).await?;
-            }
+        if expected_type == "refresh"
+            && let Some(redis) = redis
+        {
+            validate_refresh_token_registration(redis, &claims.jti).await?;
         }
         Ok(claims)
     }
@@ -136,7 +136,7 @@ impl JwtService {
 async fn validate_refresh_token_registration(redis: &RedisPool, jti: &str) -> Result<(), AppError> {
     let token = nvbes_redis::refresh_token::get_refresh_token(redis, jti)
         .await
-        .map_err(|e| AppError::internal("refresh_token_lookup_failed", &format!("{}", e)))?;
+        .map_err(|e| AppError::internal("refresh_token_lookup_failed", format!("{}", e)))?;
     let token = token.ok_or_else(|| {
         AppError::unauthorized(
             "refresh_token_not_registered",

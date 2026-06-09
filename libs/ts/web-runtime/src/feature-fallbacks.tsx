@@ -59,6 +59,60 @@ function FallbackLayout({
   );
 }
 
+type FallbackCopy = {
+  title: string;
+  description: string;
+};
+
+const AUTHENTICATION_ERROR_COPY: FallbackCopy = {
+  title: "Probleme d'authentification",
+  description:
+    "Impossible de verifier votre identite. Reconnectez-vous ou verifiez votre session.",
+};
+
+const SERVICE_UNAVAILABLE_COPY: FallbackCopy = {
+  title: 'Service indisponible',
+  description:
+    "Impossible de joindre le service requis. Verifiez que l'API est demarree puis reessayez.",
+};
+
+type ErrorWithClientRuntimeShape = Error & {
+  kind?: 'api' | 'dto' | 'unexpected';
+  status?: number;
+};
+
+function asClientRuntimeError(error: Error): ErrorWithClientRuntimeShape | null {
+  if (!('kind' in error)) {
+    return null;
+  }
+
+  return error as ErrorWithClientRuntimeShape;
+}
+
+export function resolveAuthFallbackCopy(error: Error): FallbackCopy {
+  const clientError = asClientRuntimeError(error);
+  if (clientError) {
+    if (clientError.kind === 'api' && (clientError.status === 401 || clientError.status === 403)) {
+      return AUTHENTICATION_ERROR_COPY;
+    }
+
+    if (
+      (clientError.kind === 'api' &&
+        typeof clientError.status === 'number' &&
+        clientError.status >= 500) ||
+      (clientError.kind === 'unexpected' && error.message === 'Failed to fetch')
+    ) {
+      return SERVICE_UNAVAILABLE_COPY;
+    }
+  }
+
+  if (error.message === 'Failed to fetch') {
+    return SERVICE_UNAVAILABLE_COPY;
+  }
+
+  return AUTHENTICATION_ERROR_COPY;
+}
+
 export function AuthErrorFallback({
   error,
   onReset,
@@ -66,6 +120,8 @@ export function AuthErrorFallback({
   canReport,
   reported,
 }: FeatureFallbackProps) {
+  const copy = resolveAuthFallbackCopy(error);
+
   return (
     <FallbackLayout
       error={error}
@@ -73,8 +129,8 @@ export function AuthErrorFallback({
       onReport={onReport}
       canReport={canReport}
       reported={reported}
-      title="Probleme d'authentification"
-      description="Impossible de verifier votre identite. Verifiez votre connexion internet."
+      title={copy.title}
+      description={copy.description}
     />
   );
 }

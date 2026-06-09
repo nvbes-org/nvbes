@@ -1,16 +1,17 @@
 import { AuthErrorBoundary, BillingErrorBoundary } from '@nvbes/web-runtime';
 import { lazy, type ReactElement, Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function RouteSkeleton() {
   return (
     <div className="flex animate-fade-slide-up flex-col gap-6">
       <div>
-        <div className="h-6 w-48 rounded bg-muted" />
-        <div className="mt-2 h-4 w-80 rounded bg-muted" />
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="mt-2 h-4 w-80" />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="h-40 rounded-3xl bg-muted" />
+          <Skeleton key={index} className="h-40 rounded-3xl" />
         ))}
       </div>
     </div>

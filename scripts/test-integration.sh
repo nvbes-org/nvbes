@@ -10,7 +10,7 @@ require_cmd tofu
 cd "$ROOT_DIR"
 
 log_step "rust integration test targets"
-cargo test --workspace --tests
+RUST_TEST_THREADS=1 cargo test --workspace --tests --locked
 
 log_step "infrastructure validation"
 tofu -chdir=infrastructure/environments/development init -backend=false >/dev/null

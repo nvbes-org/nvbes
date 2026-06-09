@@ -38,21 +38,15 @@ pub async fn store_authorization_code(
     client
         .cache_set_json(&code_key(&code.code), code, ttl_seconds)
         .await
-        .map_err(|err| {
-            AppError::internal("authorization_code_store_failed", &format!("{}", err))
-        })?;
+        .map_err(|err| AppError::internal("authorization_code_store_failed", format!("{}", err)))?;
     client
         .sadd(&client_index_key(&code.client_id), &code.code)
         .await
-        .map_err(|err| {
-            AppError::internal("authorization_code_store_failed", &format!("{}", err))
-        })?;
+        .map_err(|err| AppError::internal("authorization_code_store_failed", format!("{}", err)))?;
     client
         .expire(&client_index_key(&code.client_id), ttl_seconds as i64)
         .await
-        .map_err(|err| {
-            AppError::internal("authorization_code_store_failed", &format!("{}", err))
-        })?;
+        .map_err(|err| AppError::internal("authorization_code_store_failed", format!("{}", err)))?;
 
     Ok(())
 }
@@ -65,7 +59,7 @@ pub async fn get_authorization_code(
     client
         .cache_get_json(&code_key(code))
         .await
-        .map_err(|err| AppError::internal("authorization_code_load_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("authorization_code_load_failed", format!("{}", err)))
 }
 
 pub async fn mark_authorization_code_consumed(
@@ -89,7 +83,7 @@ pub async fn mark_authorization_code_consumed(
     client
         .cache_set_json(&code_key(code), &authorization_code, ttl_seconds)
         .await
-        .map_err(|err| AppError::internal("authorization_code_store_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("authorization_code_store_failed", format!("{}", err)))
 }
 
 pub async fn delete_authorization_code(
@@ -98,13 +92,13 @@ pub async fn delete_authorization_code(
 ) -> Result<(), AppError> {
     let client = nvbes_redis::RedisClient::new(redis.clone());
     client.del_key(&code_key(&code.code)).await.map_err(|err| {
-        AppError::internal("authorization_code_delete_failed", &format!("{}", err))
+        AppError::internal("authorization_code_delete_failed", format!("{}", err))
     })?;
     client
         .srem(&client_index_key(&code.client_id), &code.code)
         .await
         .map_err(|err| {
-            AppError::internal("authorization_code_delete_failed", &format!("{}", err))
+            AppError::internal("authorization_code_delete_failed", format!("{}", err))
         })?;
     Ok(())
 }
@@ -118,22 +112,22 @@ pub async fn revoke_authorization_codes_for_client(
         .smembers(&client_index_key(client_id))
         .await
         .map_err(|err| {
-            AppError::internal("authorization_code_revoke_failed", &format!("{}", err))
+            AppError::internal("authorization_code_revoke_failed", format!("{}", err))
         })?;
 
     let mut revoked = 0;
     for code in code_ids {
-        let _ = client.del_key(&code_key(&code)).await.map_err(|err| {
-            AppError::internal("authorization_code_revoke_failed", &format!("{}", err))
+        client.del_key(&code_key(&code)).await.map_err(|err| {
+            AppError::internal("authorization_code_revoke_failed", format!("{}", err))
         })?;
         revoked += 1;
     }
 
-    let _ = client
+    client
         .del_key(&client_index_key(client_id))
         .await
         .map_err(|err| {
-            AppError::internal("authorization_code_revoke_failed", &format!("{}", err))
+            AppError::internal("authorization_code_revoke_failed", format!("{}", err))
         })?;
 
     Ok(revoked)

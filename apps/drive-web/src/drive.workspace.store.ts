@@ -2,7 +2,6 @@ import type {
   DriveEntry,
   DriveEntryKind,
   DriveEntryStatus,
-  DriveRole,
   DriveSortKey,
   DriveWorkspaceState,
 } from './drive.workspace.types';
@@ -16,7 +15,10 @@ export type DriveEntryFilters = {
   sort?: DriveSortKey;
 };
 
-export function filterDriveEntries(entries: DriveEntry[], filters: DriveEntryFilters): DriveEntry[] {
+export function filterDriveEntries(
+  entries: DriveEntry[],
+  filters: DriveEntryFilters,
+): DriveEntry[] {
   const normalizedQuery = filters.query?.trim().toLocaleLowerCase() ?? '';
 
   return entries
@@ -39,7 +41,10 @@ export function selectEntry(state: DriveWorkspaceState, entryId: string): DriveW
   };
 }
 
-export function toggleEntrySelection(state: DriveWorkspaceState, entryId: string): DriveWorkspaceState {
+export function toggleEntrySelection(
+  state: DriveWorkspaceState,
+  entryId: string,
+): DriveWorkspaceState {
   const isSelected = state.selectedEntryIds.includes(entryId);
 
   return {
@@ -48,6 +53,24 @@ export function toggleEntrySelection(state: DriveWorkspaceState, entryId: string
       ? state.selectedEntryIds.filter((selectedId) => selectedId !== entryId)
       : [...state.selectedEntryIds, entryId],
     detailsSelection: { type: 'entry', id: entryId },
+  };
+}
+
+export function selectEntryFromSecondaryAction(
+  state: DriveWorkspaceState,
+  entryId: string,
+): DriveWorkspaceState {
+  if (state.selectedEntryIds.includes(entryId)) {
+    return state;
+  }
+
+  if (state.selectedEntryIds.length === 0) {
+    return selectEntry(state, entryId);
+  }
+
+  return {
+    ...state,
+    selectedEntryIds: [...state.selectedEntryIds, entryId],
   };
 }
 
@@ -74,7 +97,6 @@ export function createFolder(state: DriveWorkspaceState, name: string): DriveWor
         sharedWithCount: 0,
       },
     ],
-    toast: { id: `toast-${folderId}`, message: 'Dossier cree', tone: 'success' },
   };
 }
 
@@ -84,11 +106,13 @@ export function revokeShareLink(state: DriveWorkspaceState, linkId: string): Dri
     shareLinks: state.shareLinks.map((link) =>
       link.id === linkId ? { ...link, status: 'revoked' } : link,
     ),
-    toast: { id: `toast-revoke-${linkId}`, message: 'Lien revoque', tone: 'success' },
   };
 }
 
-export function restoreTrashEntry(state: DriveWorkspaceState, entryId: string): DriveWorkspaceState {
+export function restoreTrashEntry(
+  state: DriveWorkspaceState,
+  entryId: string,
+): DriveWorkspaceState {
   return {
     ...state,
     entries: state.entries.map((entry) =>
@@ -100,68 +124,6 @@ export function restoreTrashEntry(state: DriveWorkspaceState, entryId: string): 
           }
         : entry,
     ),
-    toast: { id: `toast-restore-${entryId}`, message: 'Element restaure', tone: 'success' },
-  };
-}
-
-export function inviteMember(
-  state: DriveWorkspaceState,
-  email: string,
-  role: Exclude<DriveRole, 'owner'>,
-): DriveWorkspaceState {
-  const normalizedEmail = email.trim().toLocaleLowerCase();
-  const memberId = `member-${normalizedEmail.replaceAll(/[^a-z0-9]+/g, '-')}`;
-
-  return {
-    ...state,
-    members: [
-      ...state.members,
-      {
-        id: memberId,
-        name: normalizedEmail,
-        email: normalizedEmail,
-        role,
-        status: 'invited',
-        joinedAt: null,
-        invitedAt: WORKSPACE_EVENT_TIME,
-      },
-    ],
-    toast: { id: `toast-invite-${memberId}`, message: 'Invitation envoyee', tone: 'success' },
-  };
-}
-
-export function setMemberRole(
-  state: DriveWorkspaceState,
-  memberId: string,
-  role: DriveRole,
-): DriveWorkspaceState {
-  return {
-    ...state,
-    members: state.members.map((member) =>
-      member.id === memberId
-        ? {
-            ...member,
-            role,
-          }
-        : member,
-    ),
-    toast: { id: `toast-role-${memberId}`, message: 'Role mis a jour', tone: 'success' },
-  };
-}
-
-export function revokeApiKey(state: DriveWorkspaceState, keyId: string): DriveWorkspaceState {
-  return {
-    ...state,
-    apiKeys: state.apiKeys.map((apiKey) =>
-      apiKey.id === keyId
-        ? {
-            ...apiKey,
-            status: 'revoked',
-            revokedAt: WORKSPACE_EVENT_TIME,
-          }
-        : apiKey,
-    ),
-    toast: { id: `toast-key-${keyId}`, message: 'Cle API revoquee', tone: 'success' },
   };
 }
 

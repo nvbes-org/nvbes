@@ -7,6 +7,8 @@ export type LoginPageStepContentProps = Pick<
   | 'email'
   | 'error'
   | 'handleAccountSelect'
+  | 'handleDisconnectAccount'
+  | 'handleDisconnectAllAccounts'
   | 'handleConsentApprove'
   | 'handleConsentCancel'
   | 'handleIdentifierSubmit'

@@ -9,8 +9,8 @@ catalog:
   '@tanstack/react-query-devtools': ^5.91.0
   '@tanstack/react-router': ^1.139.10
   '@tanstack/react-router-devtools': ^1.139.10
-  effect: ^3.21.2
   typescript: ^6.0.3
+  '@typescript/native-preview': npm:@typescript/native-preview@beta
   vite: npm:@voidzero-dev/vite-plus-core@0.1.24
   vite-plus: ^0.1.24
   vitest: npm:@voidzero-dev/vite-plus-test@0.1.24

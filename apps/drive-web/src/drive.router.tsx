@@ -1,10 +1,11 @@
 import { RouterErrorFallback } from '@nvbes/web-runtime';
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { lazy, type ReactElement, Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DriveRouteGate } from './DriveRouteGate';
 
 function RouteSkeleton() {
-  return <div className="min-h-svh animate-pulse bg-muted/30" />;
+  return <Skeleton className="min-h-svh rounded-none" />;
 }
 
 function lazyPage(loader: () => Promise<{ default: () => ReactElement }>) {

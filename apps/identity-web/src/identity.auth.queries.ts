@@ -1,15 +1,13 @@
-import { effectMutationFn, effectQueryFn } from '@nvbes/web-runtime';
 import {
-  detectRegionWorkflow,
-  fetchSupportedRegionsWorkflow,
-  logoutIdentitySessionWorkflow,
-  type RegisterInput,
-  startLoginWebAuthnWorkflow,
-  submitLoginIdentifierWorkflow,
-  submitLoginMfaWorkflow,
-  submitLoginPasswordWorkflow,
-  submitRegisterWorkflow,
-} from './identity.auth.workflow';
+  detectRegistrationRegion,
+  loadSupportedRegions,
+  logoutIdentitySessionFn,
+  registerIdentityAccount,
+  startLoginWebauthnStep,
+  submitLoginIdentifierStep,
+  submitLoginMfaStep,
+  submitLoginPasswordStep,
+} from './identity.auth.functions';
 
 export const identityAuthMutationKeys = {
   loginIdentifier: ['identity', 'auth', 'login-identifier'] as const,
@@ -22,68 +20,17 @@ export const identityAuthMutationKeys = {
   supportedRegions: ['identity', 'auth', 'supported-regions'] as const,
 };
 
-export const submitRegisterMutationFn = effectMutationFn(
-  (input: { data: RegisterInput; powNonce?: string; powSolution?: string }) =>
-    submitRegisterWorkflow(input.data, input.powNonce, input.powSolution),
-);
+export const submitRegisterMutationFn = registerIdentityAccount;
 
-export const detectRegionQueryFn = effectQueryFn(() => detectRegionWorkflow());
-export const supportedRegionsQueryFn = effectQueryFn(() => fetchSupportedRegionsWorkflow());
+export const detectRegionQueryFn = detectRegistrationRegion;
+export const supportedRegionsQueryFn = loadSupportedRegions;
 
-export const submitLoginIdentifierMutationFn = effectMutationFn(
-  (vars: {
-    email: string;
-    powNonce?: string;
-    powSolution?: string;
-    decoy_link_clicked?: boolean;
-  }) =>
-    submitLoginIdentifierWorkflow(
-      vars.email,
-      vars.powNonce,
-      vars.powSolution,
-      vars.decoy_link_clicked,
-    ),
-);
+export const submitLoginIdentifierMutationFn = submitLoginIdentifierStep;
 
-export const submitLoginPasswordMutationFn = effectMutationFn(
-  (variables: { stateToken: string; password: string }) =>
-    submitLoginPasswordWorkflow(variables.stateToken, variables.password),
-);
+export const submitLoginPasswordMutationFn = submitLoginPasswordStep;
 
-export const startLoginWebAuthnMutationFn = effectMutationFn((stateToken: string) =>
-  startLoginWebAuthnWorkflow(stateToken),
-);
+export const startLoginWebAuthnMutationFn = startLoginWebauthnStep;
 
-export const submitLoginMfaMutationFn = effectMutationFn(
-  (
-    variables:
-      | { stateToken: string; totpCode: string }
-      | { stateToken: string; recoveryCode: string }
-      | {
-          stateToken: string;
-          webauthnResponse: unknown;
-          webauthnChallengeId: string;
-        },
-  ) => {
-    if ('totpCode' in variables) {
-      return submitLoginMfaWorkflow(variables.stateToken, {
-        totp_code: variables.totpCode,
-      });
-    }
+export const submitLoginMfaMutationFn = submitLoginMfaStep;
 
-    if ('recoveryCode' in variables) {
-      return submitLoginMfaWorkflow(variables.stateToken, {
-        recovery_code: variables.recoveryCode,
-      });
-    }
-
-    return submitLoginMfaWorkflow(variables.stateToken, {
-      webauthn_response: variables.webauthnResponse,
-      webauthn_challenge_id: variables.webauthnChallengeId,
-    });
-  },
-);
-
-export const logoutIdentitySessionMutationFn = effectMutationFn(() =>
-  logoutIdentitySessionWorkflow(),
-);
+export const logoutIdentitySessionMutationFn = logoutIdentitySessionFn;

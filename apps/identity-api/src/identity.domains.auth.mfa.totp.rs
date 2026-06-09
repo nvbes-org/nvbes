@@ -125,15 +125,14 @@ pub async fn verify_totp(db: &PgPool, user_id: Uuid, code: &str) -> Result<(), A
         let last_counter: i64 = row.get("totp_last_used_counter");
         if let Some(counter) =
             nvbes_core::mfa::verify_totp_code(&secret, code, Utc::now(), TOTP_WINDOW)
+            && counter as i64 > last_counter
         {
-            if counter as i64 > last_counter {
-                sqlx::query("UPDATE mfa_factors SET totp_last_used_counter = $2, last_used_at = NOW() WHERE id = $1")
+            sqlx::query("UPDATE mfa_factors SET totp_last_used_counter = $2, last_used_at = NOW() WHERE id = $1")
                     .bind(row.get::<Uuid, _>("id"))
                     .bind(counter as i64)
                     .execute(db)
                     .await?;
-                return Ok(());
-            }
+            return Ok(());
         }
     }
 

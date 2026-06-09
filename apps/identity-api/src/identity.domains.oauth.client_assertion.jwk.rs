@@ -18,22 +18,22 @@ pub(crate) fn validate_jwk_header_consistency(
     header_kid: Option<&str>,
     algorithm: Algorithm,
 ) -> Result<(), AppError> {
-    if let (Some(header_kid), Some(jwk_kid)) = (header_kid, jwk.kid.as_deref()) {
-        if header_kid != jwk_kid {
-            return Err(AppError::unauthorized(
-                "invalid_client",
-                "The client_assertion kid does not match the registered client key.",
-            ));
-        }
+    if let (Some(header_kid), Some(jwk_kid)) = (header_kid, jwk.kid.as_deref())
+        && header_kid != jwk_kid
+    {
+        return Err(AppError::unauthorized(
+            "invalid_client",
+            "The client_assertion kid does not match the registered client key.",
+        ));
     }
 
-    if let Some(jwk_alg) = jwk.alg.as_deref() {
-        if algorithm_from_name(jwk_alg) != Some(algorithm) {
-            return Err(AppError::unauthorized(
-                "invalid_client",
-                "The client_assertion alg does not match the registered client key.",
-            ));
-        }
+    if let Some(jwk_alg) = jwk.alg.as_deref()
+        && algorithm_from_name(jwk_alg) != Some(algorithm)
+    {
+        return Err(AppError::unauthorized(
+            "invalid_client",
+            "The client_assertion alg does not match the registered client key.",
+        ));
     }
 
     Ok(())

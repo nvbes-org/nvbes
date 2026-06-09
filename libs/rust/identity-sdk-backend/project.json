@@ -3,25 +3,5 @@
   "projectType": "library",
   "root": "libs/rust/identity-sdk-backend",
   "sourceRoot": "libs/rust/identity-sdk-backend/src",
-  "tags": ["type:lib", "domain:identity", "layer:sdk"],
-  "targets": {
-    "build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "cargo build --manifest-path libs/rust/identity-sdk-backend/Cargo.toml"
-      }
-    },
-    "check": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "cargo check --manifest-path libs/rust/identity-sdk-backend/Cargo.toml"
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "cargo test --manifest-path libs/rust/identity-sdk-backend/Cargo.toml"
-      }
-    }
-  }
+  "tags": ["type:lib", "domain:identity", "layer:sdk"]
 }

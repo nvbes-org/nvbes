@@ -4,6 +4,10 @@ use uuid::Uuid;
 
 use crate::{domains::uploads::models::StorageObjectRecord, http::error::AppError};
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Pending object creation persists explicit upload ownership and storage metadata."
+)]
 pub async fn insert_pending_storage_object_tx(
     tx: &mut Transaction<'_, Postgres>,
     id: Uuid,
@@ -113,6 +117,10 @@ pub async fn activate_storage_object_tx(
     Ok(storage_object)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Quarantine persistence keeps scan outcome fields explicit."
+)]
 pub async fn quarantine_storage_object_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,

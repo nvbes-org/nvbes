@@ -68,13 +68,13 @@ pub async fn link_identity(
         .fetch_optional(db)
         .await?;
 
-        if let Some(existing_principal_id) = identity_owner {
-            if existing_principal_id != input.principal_id {
-                return Err(AppError::conflict(
-                    crate::domains::federation::contract::IDENTITY_CONFLICT,
-                    "The email is already linked to another principal.",
-                ));
-            }
+        if let Some(existing_principal_id) = identity_owner
+            && existing_principal_id != input.principal_id
+        {
+            return Err(AppError::conflict(
+                crate::domains::federation::contract::IDENTITY_CONFLICT,
+                "The email is already linked to another principal.",
+            ));
         }
     }
 

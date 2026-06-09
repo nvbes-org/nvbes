@@ -20,7 +20,7 @@ pub async fn finish_registration(
 ) -> Result<(), AppError> {
     let challenge = nvbes_redis::auth_challenge::get_auth_challenge(redis, factor_id)
         .await
-        .map_err(|err| AppError::internal("webauthn_challenge_load_failed", &format!("{}", err)))?
+        .map_err(|err| AppError::internal("webauthn_challenge_load_failed", format!("{}", err)))?
         .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
 
     if challenge.principal_id != user_id
@@ -95,7 +95,7 @@ pub async fn finish_registration(
     nvbes_redis::auth_challenge::consume_auth_challenge(redis, factor_id)
         .await
         .map_err(|err| {
-            AppError::internal("webauthn_challenge_consume_failed", &format!("{}", err))
+            AppError::internal("webauthn_challenge_consume_failed", format!("{}", err))
         })?;
 
     let _ = risk::record_event(

@@ -1,5 +1,6 @@
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { DriveEmptyState } from './DriveViewState';
 import { restoreTrashEntry } from './drive.workspace.store';
 import type { DriveEntry, DriveWorkspaceState } from './drive.workspace.types';
@@ -35,9 +36,9 @@ export function DriveTrashView({
   return (
     <section className="grid gap-3">
       {trashedEntries.map((entry) => (
-        <article
+        <Card
           key={entry.id}
-          className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -53,10 +54,10 @@ export function DriveTrashView({
             onClick={() => handleRestore(entry.id)}
             aria-label={`Restaurer ${entry.name}`}
           >
-            <RotateCcw className="size-4" aria-hidden="true" />
+            <RotateCcw data-icon="inline-start" aria-hidden="true" />
             Restaurer
           </Button>
-        </article>
+        </Card>
       ))}
     </section>
   );

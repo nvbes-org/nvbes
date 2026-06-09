@@ -1,6 +1,17 @@
 import { FolderPlus, Grid2X2, List, Upload } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from './lib/classnames';
+import { Card } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { DriveSortKey, DriveViewMode } from './drive.workspace.types';
 
 const SORT_OPTIONS: Array<{ value: DriveSortKey; label: string }> = [
@@ -14,6 +25,7 @@ export function DriveFilesToolbar({
   selectedCount,
   viewMode,
   sort,
+  uploadActions,
   onCreateFolder,
   onViewModeChange,
   onSortChange,
@@ -21,74 +33,80 @@ export function DriveFilesToolbar({
   selectedCount: number;
   viewMode: DriveViewMode;
   sort: DriveSortKey;
+  uploadActions?: ReactNode;
   onCreateFolder: () => void;
   onViewModeChange: (viewMode: DriveViewMode) => void;
   onSortChange: (sort: DriveSortKey) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-background/90 p-3 shadow-sm md:flex-row md:items-center md:justify-between">
+    <Card className="flex flex-col gap-3 p-3 md:flex-row md:items-center md:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled
-          aria-disabled="true"
-          title="Import disponible dans une prochaine tache"
-        >
-          <Upload className="size-4" aria-hidden="true" />
-          Importer bientot
-        </Button>
+        {uploadActions ?? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            aria-disabled="true"
+            title="Import disponible dans une prochaine tache"
+          >
+            <Upload data-icon="inline-start" aria-hidden="true" />
+            Importer bientot
+          </Button>
+        )}
         <Button type="button" onClick={onCreateFolder}>
-          <FolderPlus className="size-4" aria-hidden="true" />
+          <FolderPlus data-icon="inline-start" aria-hidden="true" />
           Nouveau dossier
         </Button>
         {selectedCount > 0 ? (
-          <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+          <Badge variant="secondary">
             {selectedCount} selectionne{selectedCount > 1 ? 's' : ''}
-          </span>
+          </Badge>
         ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-sm text-muted-foreground" htmlFor="drive-files-sort">
+        <Label className="text-muted-foreground" htmlFor="drive-files-sort">
           Trier
-        </label>
-        <select
-          id="drive-files-sort"
-          value={sort}
-          onChange={(event) => onSortChange(event.target.value as DriveSortKey)}
-          className="h-8 rounded-lg border border-border bg-background px-2 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30"
+        </Label>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button id="drive-files-sort" type="button" variant="outline">
+              {SORT_OPTIONS.find((option) => option.value === sort)?.label ?? 'Trier'}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuRadioGroup
+              value={sort}
+              onValueChange={(value) => onSortChange(value as DriveSortKey)}
+            >
+              {SORT_OPTIONS.map((option) => (
+                <DropdownMenuRadioItem key={option.value} value={option.value}>
+                  {option.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value === 'grid' || value === 'list') {
+              onViewModeChange(value);
+            }
+          }}
+          variant="outline"
+          size="sm"
+          spacing={0}
+          aria-label="Mode d'affichage"
         >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <div className="flex rounded-lg border border-border bg-background p-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className={cn(viewMode === 'list' && 'bg-muted text-foreground')}
-            aria-label="Vue tableau"
-            aria-pressed={viewMode === 'list'}
-            onClick={() => onViewModeChange('list')}
-          >
-            <List className="size-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className={cn(viewMode === 'grid' && 'bg-muted text-foreground')}
-            aria-label="Vue grille"
-            aria-pressed={viewMode === 'grid'}
-            onClick={() => onViewModeChange('grid')}
-          >
-            <Grid2X2 className="size-4" aria-hidden="true" />
-          </Button>
-        </div>
+          <ToggleGroupItem value="list" aria-label="Vue tableau">
+            <List aria-hidden="true" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label="Vue grille">
+            <Grid2X2 aria-hidden="true" />
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
-    </div>
+    </Card>
   );
 }

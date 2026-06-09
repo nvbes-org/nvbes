@@ -29,10 +29,10 @@ pub async fn extract_latest_email_token(
             .get("html_body")
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default();
-        if let Some(token) = extract_token_from_body(html_body, marker) {
-            if token_is_active(pool, redis, email, business_type, &token).await? {
-                return Ok(token);
-            }
+        if let Some(token) = extract_token_from_body(html_body, marker)
+            && token_is_active(pool, redis, email, business_type, &token).await?
+        {
+            return Ok(token);
         }
 
         let text_body = job
@@ -40,10 +40,10 @@ pub async fn extract_latest_email_token(
             .get("text_body")
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default();
-        if let Some(token) = extract_token_from_body(text_body, marker) {
-            if token_is_active(pool, redis, email, business_type, &token).await? {
-                return Ok(token);
-            }
+        if let Some(token) = extract_token_from_body(text_body, marker)
+            && token_is_active(pool, redis, email, business_type, &token).await?
+        {
+            return Ok(token);
         }
     }
 

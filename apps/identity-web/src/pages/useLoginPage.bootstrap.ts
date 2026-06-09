@@ -30,6 +30,7 @@ export function useLoginPageBootstrap({
       navigateToAccount,
       setCheckingAuth,
       setConnectedAccounts,
+      setEmail,
       setError,
       setStep,
     });
@@ -40,6 +41,7 @@ export function useLoginPageBootstrap({
     navigateToAccount,
     setCheckingAuth,
     setConnectedAccounts,
+    setEmail,
     setError,
     setStep,
   ]);

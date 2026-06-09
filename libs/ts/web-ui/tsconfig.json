@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+    "ignoreDeprecations": "6.0",
+    "skipLibCheck": true,
+    "types": ["vite-plus/client", "node"]
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

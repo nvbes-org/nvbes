@@ -13,7 +13,7 @@ use nvbes_core::idempotency::{
 use crate::app::AppState;
 use crate::http::error::AppError;
 
-const MAX_BUFFERED_BODY: usize = 1 * 1024 * 1024;
+const MAX_BUFFERED_BODY: usize = 1024 * 1024;
 
 pub async fn idempotency_guard(
     State(state): State<AppState>,
@@ -57,7 +57,7 @@ pub async fn idempotency_guard(
         .map_err(|e| {
             AppError::internal(
                 "idempotency_lookup_error",
-                &format!("Failed to check idempotency key: {e}"),
+                format!("Failed to check idempotency key: {e}"),
             )
         })?
     {

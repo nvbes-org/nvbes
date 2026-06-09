@@ -1,19 +1,14 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum DataClassification {
     Public,
     Internal,
     Confidential,
+    #[default]
     Restricted,
-}
-
-impl Default for DataClassification {
-    fn default() -> Self {
-        Self::Restricted
-    }
 }
 
 impl DataClassification {

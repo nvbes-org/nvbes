@@ -8,6 +8,10 @@ pub use super::models::{
 use super::types::{PublicShareView, ShareLinkView};
 use crate::http::error::AppError;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Share-link persistence keeps each domain field explicit."
+)]
 pub async fn insert_share_link_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,

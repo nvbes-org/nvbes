@@ -1,6 +1,7 @@
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function MfaPageSkeleton() {
@@ -49,12 +50,16 @@ export function MfaPageHeader({ onBack }: { onBack: () => void }) {
 
 export function MfaPageEmptyState() {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed py-12 text-center">
-      <ShieldAlert className="size-8 text-muted-foreground/50" />
-      <p className="text-sm text-muted-foreground">Aucun facteur configuré.</p>
-      <p className="text-xs text-muted-foreground/60">
-        Ajoutez une méthode ci-dessous pour sécuriser votre compte.
-      </p>
-    </div>
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <ShieldAlert />
+        </EmptyMedia>
+        <EmptyTitle>Aucun facteur configuré.</EmptyTitle>
+        <EmptyDescription>
+          Ajoutez une méthode ci-dessous pour sécuriser votre compte.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

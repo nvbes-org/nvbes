@@ -143,13 +143,14 @@ pub async fn revoke_refresh_family(
         .smembers(refresh_token_session_index_key(&session_id))
         .await?;
     for token_jti in session_tokens {
-        if let Some(mut token) = get_refresh_token(pool, &token_jti).await? {
-            if token.principal_id == principal_id && token.session_id == session_id {
-                token.revoked_at = Some(Utc::now());
-                token.reuse_detected_at = Some(Utc::now());
-                token.replaced_by_jti = Some(jti.to_string());
-                set_refresh_token(pool, &token).await?;
-            }
+        if let Some(mut token) = get_refresh_token(pool, &token_jti).await?
+            && token.principal_id == principal_id
+            && token.session_id == session_id
+        {
+            token.revoked_at = Some(Utc::now());
+            token.reuse_detected_at = Some(Utc::now());
+            token.replaced_by_jti = Some(jti.to_string());
+            set_refresh_token(pool, &token).await?;
         }
     }
     Ok(())
@@ -165,11 +166,12 @@ pub async fn revoke_session_refresh_tokens(
         .smembers(refresh_token_session_index_key(&session_id))
         .await?;
     for token_jti in session_tokens {
-        if let Some(mut token) = get_refresh_token(pool, &token_jti).await? {
-            if token.principal_id == principal_id && token.session_id == session_id {
-                token.revoked_at = Some(Utc::now());
-                set_refresh_token(pool, &token).await?;
-            }
+        if let Some(mut token) = get_refresh_token(pool, &token_jti).await?
+            && token.principal_id == principal_id
+            && token.session_id == session_id
+        {
+            token.revoked_at = Some(Utc::now());
+            set_refresh_token(pool, &token).await?;
         }
     }
     Ok(())
@@ -184,11 +186,11 @@ pub async fn revoke_all_user_refresh_tokens(
         .smembers(refresh_token_principal_index_key(&principal_id))
         .await?;
     for token_jti in tokens {
-        if let Some(mut token) = get_refresh_token(pool, &token_jti).await? {
-            if token.principal_id == principal_id {
-                token.revoked_at = Some(Utc::now());
-                set_refresh_token(pool, &token).await?;
-            }
+        if let Some(mut token) = get_refresh_token(pool, &token_jti).await?
+            && token.principal_id == principal_id
+        {
+            token.revoked_at = Some(Utc::now());
+            set_refresh_token(pool, &token).await?;
         }
     }
     Ok(())
@@ -204,12 +206,12 @@ pub async fn revoke_all_client_refresh_tokens(
         .await?;
     let mut revoked = 0;
     for token_jti in tokens {
-        if let Some(mut token) = get_refresh_token(pool, &token_jti).await? {
-            if token.client_id == Some(client_id) {
-                token.revoked_at = Some(Utc::now());
-                set_refresh_token(pool, &token).await?;
-                revoked += 1;
-            }
+        if let Some(mut token) = get_refresh_token(pool, &token_jti).await?
+            && token.client_id == Some(client_id)
+        {
+            token.revoked_at = Some(Utc::now());
+            set_refresh_token(pool, &token).await?;
+            revoked += 1;
         }
     }
     Ok(revoked)
@@ -233,12 +235,13 @@ pub async fn latest_refresh_token_for_session(
         .await?;
     let mut latest: Option<CachedRefreshToken> = None;
     for token_jti in tokens {
-        if let Some(token) = get_refresh_token(pool, &token_jti).await? {
-            if token.principal_id == principal_id && token.session_id == session_id {
-                match latest {
-                    Some(ref current) if current.expires_at >= token.expires_at => {}
-                    _ => latest = Some(token),
-                }
+        if let Some(token) = get_refresh_token(pool, &token_jti).await?
+            && token.principal_id == principal_id
+            && token.session_id == session_id
+        {
+            match latest {
+                Some(ref current) if current.expires_at >= token.expires_at => {}
+                _ => latest = Some(token),
             }
         }
     }

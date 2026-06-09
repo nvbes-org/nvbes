@@ -1,6 +1,7 @@
 import type { ChangeEvent, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function DeviceActivationInputStep({
   userCode,
@@ -16,9 +17,9 @@ export function DeviceActivationInputStep({
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="userCode" className="text-sm font-medium">
+        <Label htmlFor="userCode">
           Code d&apos;activation
-        </label>
+        </Label>
         <Input
           id="userCode"
           placeholder="XXXX-XXXX"

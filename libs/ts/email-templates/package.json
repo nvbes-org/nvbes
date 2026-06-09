@@ -10,8 +10,10 @@
   },
   "scripts": {
     "build": "tsx scripts/build-templates.ts",
-    "check": "tsc --noEmit",
-    "lint": "vp lint src"
+    "check": "pnpm run typecheck",
+    "format:check": "vp fmt --check src scripts package.json",
+    "lint": "vp lint src scripts",
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@json-render/react-email": "latest",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
+    "@typescript/native-preview": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"

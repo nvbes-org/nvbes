@@ -3,6 +3,9 @@
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
 
+@source '../../../libs/ts/web-runtime/src';
+@source './';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -122,6 +125,7 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -182,12 +186,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
+
   [content-visibility-auto] {
     content-visibility: auto;
     contain-intrinsic-size: auto 500px;

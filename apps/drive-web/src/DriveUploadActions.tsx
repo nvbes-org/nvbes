@@ -1,7 +1,7 @@
 import { FolderOpen, Loader2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { toUploadFileInputs } from './drive.uploads.prepare';
+import { toDroppedUploadFileInputs, toUploadFileInputs } from './drive.uploads.prepare';
 import { useFileSystemAccess } from './hooks/use-file-system-access';
 import { useUpload } from './hooks/use-upload';
 import { DriveUploadDialog } from './DriveUploadDialog';
@@ -29,6 +29,12 @@ export function DriveUploadActions({ workspaceId, parentId }: DriveUploadActions
   async function handleUploadFolder() {
     const results = await openDirectory();
     const items = toUploadFileInputs(results, parentId);
+    setDialogOpen(true);
+    await uploadFiles(items);
+  }
+
+  async function handleUploadDroppedFiles(files: File[]) {
+    const items = toDroppedUploadFileInputs(files, parentId);
     setDialogOpen(true);
     await uploadFiles(items);
   }
@@ -92,6 +98,7 @@ export function DriveUploadActions({ workspaceId, parentId }: DriveUploadActions
         onClear={handleClear}
         onUploadFiles={handleUploadFiles}
         onUploadFolder={handleUploadFolder}
+        onUploadDroppedFiles={handleUploadDroppedFiles}
       />
     </>
   );

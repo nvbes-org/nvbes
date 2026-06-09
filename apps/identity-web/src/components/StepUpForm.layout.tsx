@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 export function StepUpFormHeader({ description }: { description?: string }) {
   return (
@@ -23,11 +24,8 @@ export function StepUpFormCard({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form
-      onSubmit={onSubmit}
-      className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-sm"
-    >
-      {children}
+    <form onSubmit={onSubmit} className="w-full max-w-md">
+      <Card className="space-y-4 p-6">{children}</Card>
     </form>
   );
 }

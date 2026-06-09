@@ -70,6 +70,10 @@ pub async fn get_public_share(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Public download URL creation keeps infrastructure dependencies explicit."
+)]
 pub async fn create_public_download_url(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

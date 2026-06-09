@@ -27,14 +27,14 @@ pub async fn refresh_token(
     }
 
     let user_id = Uuid::parse_str(&claims.sub)
-        .map_err(|e| AppError::internal("invalid_user_id", &format!("{}", e)))?;
+        .map_err(|e| AppError::internal("invalid_user_id", format!("{}", e)))?;
     let session_id = Uuid::parse_str(&claims.sid)
-        .map_err(|e| AppError::internal("invalid_session_id", &format!("{}", e)))?;
+        .map_err(|e| AppError::internal("invalid_session_id", format!("{}", e)))?;
 
     let lock_key = format!("oauth-refresh-token:{}", claims.jti);
     let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
-        .map_err(|err| AppError::internal("refresh_token_lock_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("refresh_token_lock_failed", format!("{}", err)))?;
     if !locked {
         return Err(AppError::conflict(
             "refresh_token_locked",
@@ -45,11 +45,11 @@ pub async fn refresh_token(
     let result = async {
         let Some(session) = refresh_store::get_refresh_token(redis, &claims.jti)
             .await
-            .map_err(|err| AppError::internal("refresh_token_lookup_failed", &format!("{}", err)))?
+            .map_err(|err| AppError::internal("refresh_token_lookup_failed", format!("{}", err)))?
         else {
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
-                .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
+                .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
             return Err(AppError::unauthorized(
                 "refresh_token_not_registered",
                 "Refresh token is not registered",
@@ -81,7 +81,7 @@ pub async fn refresh_token(
         let Some(client_row) = client_row else {
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
-                .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
+                .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
             return Err(AppError::unauthorized(
                 "invalid_client",
                 "The OAuth client is invalid or revoked.",
@@ -93,7 +93,7 @@ pub async fn refresh_token(
         if oauth_client_id != client_auth.client_id || client_revoked_at.is_some() {
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
-                .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
+                .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
             return Err(AppError::unauthorized(
                 "invalid_client",
                 "The OAuth client is invalid or revoked.",
@@ -132,7 +132,7 @@ pub async fn refresh_token(
         {
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
-                .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))?;
+                .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
             return Err(AppError::unauthorized(
                 "refresh_token_reused",
                 "Refresh token reuse was detected and the session has been revoked.",
@@ -145,7 +145,7 @@ pub async fn refresh_token(
         let next_workspace_id = if let Some(wid) = claims.workspace_id {
             Some(
                 Uuid::parse_str(&wid)
-                    .map_err(|e| AppError::internal("invalid_workspace_id", &format!("{}", e)))?,
+                    .map_err(|e| AppError::internal("invalid_workspace_id", format!("{}", e)))?,
             )
         } else {
             session_workspace_id
@@ -203,7 +203,7 @@ pub async fn refresh_token(
             Some(&tokens.refresh_jti),
         )
         .await
-        .map_err(|err| AppError::internal("refresh_token_update_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("refresh_token_update_failed", format!("{}", err)))?;
 
         let new_refresh = refresh_store::CachedRefreshToken {
             jti: tokens.refresh_jti.clone(),
@@ -225,7 +225,7 @@ pub async fn refresh_token(
 
         refresh_store::store_refresh_token(redis, &new_refresh)
             .await
-            .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
+            .map_err(|err| AppError::internal("refresh_token_store_failed", format!("{}", err)))?;
 
         Ok(TokenView {
             access_token: tokens.access_token,
@@ -241,7 +241,7 @@ pub async fn refresh_token(
 
     let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
-        .map_err(|err| AppError::internal("refresh_token_lock_failed", &format!("{}", err)));
+        .map_err(|err| AppError::internal("refresh_token_lock_failed", format!("{}", err)));
     release_result?;
 
     result
@@ -256,5 +256,5 @@ pub async fn revoke_refresh_family(
 ) -> Result<(), AppError> {
     refresh_store::revoke_refresh_family(redis, user_id, session_id, jti)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))
 }

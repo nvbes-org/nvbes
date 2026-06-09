@@ -4,6 +4,10 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Upload session creation persists explicit ownership and checksum metadata."
+)]
 pub async fn insert_upload_session_tx(
     tx: &mut Transaction<'_, Postgres>,
     id: Uuid,

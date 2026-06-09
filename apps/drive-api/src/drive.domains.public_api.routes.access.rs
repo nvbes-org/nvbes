@@ -42,6 +42,10 @@ pub async fn authenticate(
     Ok(PublicApiRequestContext { meta, ctx })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Scoped access keeps request, workspace, scope, and resource explicit."
+)]
 pub async fn scoped_access(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -78,6 +82,10 @@ enum ScopedResourceTarget {
     ShareLink(Uuid),
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Scoped resource resolution needs explicit request and target context."
+)]
 async fn scoped_resource_access(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -128,6 +136,10 @@ async fn scoped_resource_access(
     Ok(authorized)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Object access keeps explicit request and authorization context."
+)]
 pub async fn scoped_object_access(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -153,6 +165,10 @@ pub async fn scoped_object_access(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Share-link access keeps explicit request and authorization context."
+)]
 pub async fn scoped_share_link_access(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

@@ -24,6 +24,7 @@ export type UseLoginPageActionsOptions = {
   navigate: NavigateFn;
   oauthRequest: OAuthAuthorizeRequest | null;
   connectedAccounts: AccountEntry[];
+  setConnectedAccounts: (value: AccountEntry[] | ((prev: AccountEntry[]) => AccountEntry[])) => void;
   email: string;
   password: string;
   loginStateToken: string | null;

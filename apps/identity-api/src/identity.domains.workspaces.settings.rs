@@ -55,7 +55,7 @@ pub async fn update_workspace(
     .await?;
 
     nvbes_audit::insert_audit_event_tx(
-        &mut *tx,
+        &mut tx,
         nvbes_audit::AuditEventInput {
             tenant_id: access.tenant_id.unwrap_or_default(),
             workspace_id: Some(access.workspace_id),

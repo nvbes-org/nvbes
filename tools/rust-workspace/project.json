@@ -1,0 +1,67 @@
+{
+  "name": "rust-workspace",
+  "projectType": "library",
+  "root": "tools/rust-workspace",
+  "sourceRoot": "tools/rust-workspace",
+  "tags": ["type:workspace", "domain:shared", "layer:tooling"],
+  "implicitDependencies": [
+    "drive-api",
+    "drive-worker",
+    "identity-api",
+    "identity-worker",
+    "audit",
+    "billing",
+    "core",
+    "identity-sdk-backend",
+    "observability",
+    "tenancy"
+  ],
+  "namedInputs": {
+    "default": [
+      "{workspaceRoot}/Cargo.toml",
+      "{workspaceRoot}/Cargo.lock",
+      "{workspaceRoot}/rustfmt.toml",
+      "{workspaceRoot}/.cargo/**/*",
+      "{workspaceRoot}/apps/**/Cargo.toml",
+      "{workspaceRoot}/apps/**/src/**/*",
+      "{workspaceRoot}/libs/rust/**/Cargo.toml",
+      "{workspaceRoot}/libs/rust/**/src/**/*",
+      "{workspaceRoot}/vendor/xmlsec/**/*"
+    ],
+    "production": ["default"]
+  },
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "inputs": ["production"],
+      "outputs": [],
+      "options": {
+        "command": "cargo build --workspace --release --locked"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "inputs": ["production"],
+      "outputs": [],
+      "options": {
+        "command": "cargo check --workspace --locked"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "inputs": ["production"],
+      "outputs": [],
+      "options": {
+        "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "outputs": [],
+      "options": {
+        "command": "cargo test --workspace --locked"
+      }
+    }
+  }
+}

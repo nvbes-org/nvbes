@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   LoginPageMfaMethodChoices,
@@ -48,13 +49,14 @@ export function LoginPageMfaStep({
 
       <Separator />
 
-      <button
+      <Button
         type="button"
-        className="text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+        variant="ghost"
+        className="text-muted-foreground hover:text-foreground"
         onClick={onResetToIdentifier}
       >
         Pas votre compte ? Revenir à l&apos;identification
-      </button>
+      </Button>
     </div>
   );
 }

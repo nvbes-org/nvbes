@@ -84,6 +84,10 @@ pub async fn get_public_share(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Public download orchestration keeps dependencies and request context explicit."
+)]
 pub async fn create_public_download_url(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

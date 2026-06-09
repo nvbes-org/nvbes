@@ -130,7 +130,7 @@ pub async fn worker_queue_status(
 ) -> Result<WorkerQueueStatusResponse, AppError> {
     let statuses = nvbes_redis::worker_queue::queue_status(redis, "billing.stripe.webhook.process")
         .await
-        .map_err(|err| AppError::internal("redis_worker_queue_status_failed", &err.to_string()))?
+        .map_err(|err| AppError::internal("redis_worker_queue_status_failed", err.to_string()))?
         .into_iter()
         .map(|entry| WorkerQueueStatusView {
             status: entry.status,

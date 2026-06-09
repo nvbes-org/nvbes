@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import type { ServiceAccountClient } from '../identity.service-accounts.api';
 
 export function OAuthClientRow({
@@ -12,7 +13,7 @@ export function OAuthClientRow({
   onRevokeClient: (client: ServiceAccountClient) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/10 p-4 xl:flex-row xl:items-start xl:justify-between">
+    <Card className="flex flex-col gap-3 p-4 xl:flex-row xl:items-start xl:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-medium">{client.name}</p>
@@ -48,6 +49,6 @@ export function OAuthClientRow({
           Revoquer
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

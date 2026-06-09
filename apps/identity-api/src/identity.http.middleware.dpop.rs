@@ -50,25 +50,23 @@ pub async fn dpop_auth_middleware(
 
     let jkt = nvbes_dpop::jwk_thumbprint(&dpop_proof.jwk);
 
-    if let Some(ref bound_jkt) = token_bound_jkt {
-        if bound_jkt != &jkt {
-            return Err(AppError::unauthorized(
-                "dpop_key_mismatch",
-                "DPoP key does not match the token-bound key",
-            ));
-        }
+    if let Some(ref bound_jkt) = token_bound_jkt
+        && bound_jkt != &jkt
+    {
+        return Err(AppError::unauthorized(
+            "dpop_key_mismatch",
+            "DPoP key does not match the token-bound key",
+        ));
     }
 
-    if let Some(ref nonce) = dpop_proof.claims.nonce {
-        if let Some(ref store) = state.dpop_nonce {
-            if !store
-                .consume(nonce)
-                .await
-                .map_err(|error| AppError::internal("dpop_nonce_store_error", &error.to_string()))?
-            {
-                return Err(dpop_bad_nonce_error(&state));
-            }
-        }
+    if let Some(ref nonce) = dpop_proof.claims.nonce
+        && let Some(ref store) = state.dpop_nonce
+        && !store
+            .consume(nonce)
+            .await
+            .map_err(|error| AppError::internal("dpop_nonce_store_error", error.to_string()))?
+    {
+        return Err(dpop_bad_nonce_error(&state));
     }
 
     let dpop_ctx = DpopContext { jkt };
@@ -80,7 +78,7 @@ pub async fn dpop_auth_middleware(
         let nonce = store
             .generate()
             .await
-            .map_err(|error| AppError::internal("dpop_nonce_store_error", &error.to_string()))?;
+            .map_err(|error| AppError::internal("dpop_nonce_store_error", error.to_string()))?;
         response.headers_mut().insert(
             axum::http::HeaderName::from_static(D_POP_NONCE_HEADER),
             nonce.parse().unwrap(),
@@ -91,14 +89,14 @@ pub async fn dpop_auth_middleware(
 }
 
 fn extract_access_token(headers: &HeaderMap) -> Option<String> {
-    if let Some(auth) = headers.get("Authorization") {
-        if let Ok(auth_str) = auth.to_str() {
-            if let Some(token) = auth_str.strip_prefix("DPoP ") {
-                return Some(token.to_string());
-            }
-            if let Some(token) = auth_str.strip_prefix("Bearer ") {
-                return Some(token.to_string());
-            }
+    if let Some(auth) = headers.get("Authorization")
+        && let Ok(auth_str) = auth.to_str()
+    {
+        if let Some(token) = auth_str.strip_prefix("DPoP ") {
+            return Some(token.to_string());
+        }
+        if let Some(token) = auth_str.strip_prefix("Bearer ") {
+            return Some(token.to_string());
         }
     }
     None
@@ -143,7 +141,7 @@ fn dpop_verification_response(_state: &AppState, error: &str, description: &str)
 }
 
 fn dpop_verification_error(e: &nvbes_dpop::proof::DpopError, _state: &AppState) -> AppError {
-    AppError::unauthorized("dpop_invalid", &e.to_string())
+    AppError::unauthorized("dpop_invalid", e.to_string())
 }
 
 fn missing_dpop_error(state: &AppState) -> AppError {

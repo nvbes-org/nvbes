@@ -25,6 +25,7 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust.
 - `dev-identity-worker.sh`: lance le worker Identity en isolation.
 - `dev-drive-worker.sh`: lance le worker Drive en isolation.
+- `dev-drive-db-reset.sh`: recree la base Drive locale `nvbes_drive` quand les checksums SQLx dev ne correspondent plus.
 - `dev-worker.sh`: alias historique vers le worker Identity.
 - `generate-openapi.sh`: regenere les specs OpenAPI et republie `libs/ts/identity-sdk-core/openapi.json`.
 

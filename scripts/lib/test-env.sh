@@ -9,6 +9,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/workspace-env.sh"
 load_workspace_env
 
+if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  export NVBES_REDIS_PASSWORD=""
+fi
+
 log_step() {
   printf '\n==> %s\n' "$1"
 }

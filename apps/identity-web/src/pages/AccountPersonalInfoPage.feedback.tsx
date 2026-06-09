@@ -1,6 +1,7 @@
 import { Calendar, Mail, MapPin, User } from 'lucide-react';
 import type { AccountPrincipal } from '@nvbes/identity-client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -26,15 +27,9 @@ export function PersonalInfoSkeleton() {
 
 function Message({ message, tone }: { message: string; tone: 'error' | 'success' }) {
   return (
-    <div
-      className={
-        tone === 'error'
-          ? 'rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive'
-          : 'rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600'
-      }
-    >
-      {message}
-    </div>
+    <Alert variant={tone === 'error' ? 'destructive' : 'default'}>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 

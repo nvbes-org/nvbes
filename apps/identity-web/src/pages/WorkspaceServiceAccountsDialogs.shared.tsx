@@ -1,7 +1,9 @@
 import { Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -15,9 +17,9 @@ import { formatDateTime, type SecretResult } from './WorkspaceServiceAccounts.he
 export function DialogError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      {message}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -53,7 +55,7 @@ export function SecretDialog({
         </DialogHeader>
         {result && (
           <div className="flex flex-col gap-4">
-            <div className="rounded-2xl border border-border/70 bg-muted/40 p-4">
+            <Card className="p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -66,15 +68,15 @@ export function SecretDialog({
                   {formatDateTime(result.timestamp)}
                 </Badge>
               </div>
-              <div className="mt-4 break-all rounded-xl border border-border/70 bg-background p-3 font-mono text-sm">
+              <Card className="mt-4 break-all p-3 font-mono text-sm">
                 {result.client_secret}
-              </div>
-            </div>
+              </Card>
+            </Card>
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={handleCopy} disabled={!result}>
-            <Copy className="size-4" />
+            <Copy data-icon="inline-start" />
             {copied ? 'Copie' : 'Copier'}
           </Button>
           <Button onClick={() => onOpenChange(false)}>Fermer</Button>

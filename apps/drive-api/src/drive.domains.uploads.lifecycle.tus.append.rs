@@ -15,6 +15,10 @@ use super::super::super::types::{AppendTusChunkInput, AppendTusChunkResponse};
 
 const S3_MIN_NON_FINAL_PART_SIZE_BYTES: i64 = 5 * 1024 * 1024;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "TUS append coordinates storage, scan, audit, and caller context explicitly."
+)]
 pub async fn append_tus_chunk(
     storage: &dyn nvbes_storage::ObjectStore,
     scanner: &dyn nvbes_scan::ScanEngine,
@@ -205,13 +209,13 @@ pub async fn append_tus_chunk(
     }
 
     let computed_checksum = nvbes_billing::hex_encode(&Sha256::digest(&file_data));
-    if let Some(expected_checksum) = &upload.expected_checksum {
-        if computed_checksum != *expected_checksum {
-            return Err(AppError::bad_request(
-                "upload_checksum_mismatch",
-                "Uploaded checksum does not match the expected checksum.",
-            ));
-        }
+    if let Some(expected_checksum) = &upload.expected_checksum
+        && computed_checksum != *expected_checksum
+    {
+        return Err(AppError::bad_request(
+            "upload_checksum_mismatch",
+            "Uploaded checksum does not match the expected checksum.",
+        ));
     }
 
     crate::domains::quotas::ensure_upload_allowed_tx(&mut tx, access.workspace_id, actual_size)

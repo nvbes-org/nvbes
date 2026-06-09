@@ -42,18 +42,18 @@ pub fn hash_client_secret(secret: &str) -> Result<String, AppError> {
     use password_hash::rand_core::OsRng;
     let salt = SaltString::generate(&mut OsRng);
     let params = Params::new(65536, 3, 4, None)
-        .map_err(|e| AppError::internal("client_secret_hash_failed", &format!("{}", e)))?;
+        .map_err(|e| AppError::internal("client_secret_hash_failed", format!("{}", e)))?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     argon2
         .hash_password(secret.as_bytes(), &salt)
         .map(|hash| hash.to_string())
-        .map_err(|e| AppError::internal("client_secret_hash_failed", &format!("{}", e)))
+        .map_err(|e| AppError::internal("client_secret_hash_failed", format!("{}", e)))
 }
 
 pub fn verify_client_secret(secret: &str, hash_value: &str) -> Result<(), AppError> {
     use argon2::{Argon2, PasswordVerifier, password_hash::PasswordHash};
     let parsed_hash = PasswordHash::new(hash_value)
-        .map_err(|e| AppError::internal("client_secret_hash_invalid", &format!("{}", e)))?;
+        .map_err(|e| AppError::internal("client_secret_hash_invalid", format!("{}", e)))?;
     Argon2::default()
         .verify_password(secret.as_bytes(), &parsed_hash)
         .map_err(|_| AppError::unauthorized("invalid_client", "The client secret is invalid."))
@@ -124,18 +124,16 @@ pub fn resolve_policy_scope(
     match (requested_scope_type, requested_scope_id) {
         (Some(scope_type), Some(scope_id)) => {
             let scope_type = scope_type.trim().to_lowercase();
-            if scope_type == "workspace" {
-                if auth
+            if scope_type == "workspace"
+                && auth
                     .workspace_id()
                     .is_some_and(|current| current == scope_id)
-                {
-                    return Ok((scope_type, scope_id));
-                }
+            {
+                return Ok((scope_type, scope_id));
             }
-            if scope_type == "tenant" {
-                if auth.tenant_id().is_some_and(|current| current == scope_id) {
-                    return Ok((scope_type, scope_id));
-                }
+            if scope_type == "tenant" && auth.tenant_id().is_some_and(|current| current == scope_id)
+            {
+                return Ok((scope_type, scope_id));
             }
             Err(AppError::forbidden(
                 "scope_forbidden",

@@ -52,6 +52,10 @@ pub async fn reactivate_service_account(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Status update keeps persisted states and audit metadata explicit."
+)]
 async fn update_service_account_status(
     db: &PgPool,
     access: &WorkspaceAccess,

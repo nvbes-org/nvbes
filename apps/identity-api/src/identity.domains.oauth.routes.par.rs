@@ -111,10 +111,10 @@ async fn par(
             serde_json::Value::String(audience.clone()),
         );
     }
-    if let Some(ref resource) = request.resource {
-        if !resource.is_empty() {
-            parameters.insert("resource".to_string(), serde_json::json!(resource));
-        }
+    if let Some(ref resource) = request.resource
+        && !resource.is_empty()
+    {
+        parameters.insert("resource".to_string(), serde_json::json!(resource));
     }
     let authorization_details = crate::domains::oauth::rar::parse_authorization_details(
         request.authorization_details.as_deref(),
@@ -163,10 +163,7 @@ async fn par(
     )
     .await
     .map_err(|err| {
-        AppError::internal(
-            "pushed_authorization_request_store_failed",
-            &err.to_string(),
-        )
+        AppError::internal("pushed_authorization_request_store_failed", err.to_string())
     })?;
 
     Ok((

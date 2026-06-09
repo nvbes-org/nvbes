@@ -105,13 +105,13 @@ async fn request_with_pinned_ip(
         .timeout(Duration::from_secs(10))
         .resolve(host, SocketAddr::new(ip, 0))
         .build()
-        .map_err(|err| AppError::internal("federation_client_unavailable", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("federation_client_unavailable", format!("{}", err)))?;
 
     let request = client.get(url);
     nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
-        .map_err(|err| AppError::internal("federation_request_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("federation_request_failed", format!("{}", err)))
 }
 
 async fn request(url: &str) -> Result<reqwest::Response, AppError> {
@@ -119,11 +119,11 @@ async fn request(url: &str) -> Result<reqwest::Response, AppError> {
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(10))
         .build()
-        .map_err(|err| AppError::internal("federation_client_unavailable", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("federation_client_unavailable", format!("{}", err)))?;
 
     let request = client.get(url);
     nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()
         .await
-        .map_err(|err| AppError::internal("federation_request_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("federation_request_failed", format!("{}", err)))
 }

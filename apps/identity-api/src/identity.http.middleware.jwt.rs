@@ -15,7 +15,7 @@ use crate::http::error::AppError;
 #[path = "identity.http.middleware.jwt.authuser.rs"]
 mod authuser;
 #[path = "identity.http.middleware.jwt.session_refresh.rs"]
-mod session_refresh;
+pub(crate) mod session_refresh;
 
 /// Extracted authentication context from JWT
 #[derive(Clone, Debug)]

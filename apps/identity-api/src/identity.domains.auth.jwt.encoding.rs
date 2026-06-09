@@ -12,7 +12,7 @@ impl JwtService {
 
         match &self.signer {
             Signer::Local { encoding_key } => jsonwebtoken::encode(&header, claims, encoding_key)
-                .map_err(|e| AppError::internal("token_generation_failed", &e.to_string())),
+                .map_err(|e| AppError::internal("token_generation_failed", e.to_string())),
             Signer::Kms {
                 backend,
                 kms_key_id,
@@ -34,7 +34,7 @@ impl JwtService {
                 let sign_resp = tokio::task::block_in_place(|| {
                     tokio::runtime::Handle::current().block_on(client.sign(kms_key_id, &digest))
                 })
-                .map_err(|e| AppError::internal("kms_signing_failed", &e.to_string()))?;
+                .map_err(|e| AppError::internal("kms_signing_failed", e.to_string()))?;
 
                 let sig_b64 = sign_resp.signature;
                 Ok(format!("{}.{}.{}", header_b64, payload_b64, sig_b64))

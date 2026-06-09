@@ -14,6 +14,9 @@ pub mod storage;
 pub mod types;
 
 pub use authentication::{finish_authentication, start_authentication};
-pub use login::{finish_login_authentication, start_login_authentication};
+pub use login::{
+    finish_discoverable_login_authentication, finish_login_authentication,
+    start_discoverable_login_authentication, start_login_authentication,
+};
 pub use registration::{finish_registration, start_registration};
 pub use setup::build_webauthn;

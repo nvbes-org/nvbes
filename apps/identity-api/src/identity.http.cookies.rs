@@ -12,7 +12,7 @@ pub fn auth_cookie(
     );
 
     axum::http::HeaderValue::from_str(&cookie)
-        .map_err(|e| AppError::internal("cookie_header_invalid", &format!("{}", e)))
+        .map_err(|e| AppError::internal("cookie_header_invalid", format!("{}", e)))
 }
 
 pub fn csrf_cookie(
@@ -26,7 +26,7 @@ pub fn csrf_cookie(
         format!("{name}={value}; SameSite=Strict; Path=/; Max-Age={max_age_seconds}{secure_flag}");
 
     axum::http::HeaderValue::from_str(&cookie)
-        .map_err(|e| AppError::internal("cookie_header_invalid", &format!("{}", e)))
+        .map_err(|e| AppError::internal("cookie_header_invalid", format!("{}", e)))
 }
 
 pub fn auth_cookie_name(base: &str, secure: bool) -> String {

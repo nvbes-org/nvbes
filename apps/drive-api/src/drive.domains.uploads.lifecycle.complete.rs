@@ -14,6 +14,10 @@ use crate::{
 use super::super::types::{CompleteUploadInput, CompleteUploadResponse};
 use super::super::{db, logic, queries, scan};
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Upload completion coordinates storage, scan, audit, and caller context explicitly."
+)]
 pub async fn complete_upload(
     storage: &dyn nvbes_storage::ObjectStore,
     scanner: &dyn nvbes_scan::ScanEngine,
@@ -63,7 +67,7 @@ pub async fn complete_upload(
     let storage_meta = storage.head_object(object_key).await.map_err(|e| {
         AppError::internal(
             "storage_head_failed",
-            &format!("Failed to read uploaded object metadata: {e}"),
+            format!("Failed to read uploaded object metadata: {e}"),
         )
     })?;
 
@@ -80,14 +84,14 @@ pub async fn complete_upload(
     let file_data = storage.get_object(object_key).await.map_err(|e| {
         AppError::internal(
             "storage_download_failed",
-            &format!("Failed to download uploaded object: {e}"),
+            format!("Failed to download uploaded object: {e}"),
         )
     })?;
 
     let actual_size = i64::try_from(file_data.len()).map_err(|e| {
         AppError::internal(
             "storage_size_invalid",
-            &format!("Uploaded object size is invalid: {e}"),
+            format!("Uploaded object size is invalid: {e}"),
         )
     })?;
     if actual_size != storage_meta.size_bytes {
@@ -99,22 +103,22 @@ pub async fn complete_upload(
 
     let computed_checksum = nvbes_billing::hex_encode(&Sha256::digest(&file_data));
 
-    if let Some(expected_checksum) = &upload.expected_checksum {
-        if computed_checksum != *expected_checksum {
-            return Err(AppError::bad_request(
-                "upload_checksum_mismatch",
-                "Uploaded checksum does not match the expected checksum.",
-            ));
-        }
+    if let Some(expected_checksum) = &upload.expected_checksum
+        && computed_checksum != *expected_checksum
+    {
+        return Err(AppError::bad_request(
+            "upload_checksum_mismatch",
+            "Uploaded checksum does not match the expected checksum.",
+        ));
     }
 
-    if let Some(request_checksum) = checksum.as_deref() {
-        if request_checksum != computed_checksum {
-            return Err(AppError::bad_request(
-                "upload_checksum_mismatch",
-                "Uploaded checksum does not match the stored object.",
-            ));
-        }
+    if let Some(request_checksum) = checksum.as_deref()
+        && request_checksum != computed_checksum
+    {
+        return Err(AppError::bad_request(
+            "upload_checksum_mismatch",
+            "Uploaded checksum does not match the stored object.",
+        ));
     }
 
     crate::domains::quotas::ensure_upload_allowed_tx(&mut tx, access.workspace_id, actual_size)

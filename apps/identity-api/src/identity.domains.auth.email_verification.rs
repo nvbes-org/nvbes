@@ -38,7 +38,7 @@ pub async fn issue_verification_email_tx(
         },
     )
     .await
-    .map_err(|err| AppError::internal("email_verification_token_store_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("email_verification_token_store_failed", err.to_string()))?;
 
     Ok(now)
 }
@@ -94,7 +94,7 @@ pub async fn resend_verification_email(
         )
         .await
         .map_err(|err| {
-            AppError::internal("email_verification_token_read_failed", &err.to_string())
+            AppError::internal("email_verification_token_read_failed", err.to_string())
         })?;
 
     let now = Utc::now();
@@ -122,7 +122,7 @@ pub async fn resend_verification_email(
     )
     .await
     .map_err(|err| {
-        AppError::internal("email_verification_token_consume_failed", &err.to_string())
+        AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
 
     let firstname: Option<String> = row.get("firstname");

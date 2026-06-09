@@ -1,5 +1,6 @@
 import { KeyRound } from 'lucide-react';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { SecurityOverview } from './useAccountSecurityPage';
 
@@ -39,13 +40,11 @@ export function SecuritySignInOptionsCard({
             </div>
           </div>
           <div className="flex shrink-0 items-center">
-            <input
+            <Checkbox
               id="skip-password-toggle"
-              type="checkbox"
-              className="size-4 cursor-pointer rounded border-border text-primary focus:ring-ring disabled:cursor-not-allowed"
               disabled={!overview.has_webauthn || pending}
               checked={overview.skip_password}
-              onChange={(event) => onSkipPasswordChange(event.target.checked)}
+              onCheckedChange={(checked) => onSkipPasswordChange(checked === true)}
             />
           </div>
         </div>

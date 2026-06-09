@@ -20,8 +20,7 @@ pub(crate) use observability::{
 pub(crate) use request_e2ee::validate_request_e2ee;
 #[cfg(test)]
 pub(crate) use urls::{
-    validate_database_url, validate_jwt_secret, validate_profiling_endpoint, validate_public_url,
-    validate_webauthn_rp_id,
+    validate_jwt_secret, validate_profiling_endpoint, validate_public_url, validate_webauthn_rp_id,
 };
 
 pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(), String> {

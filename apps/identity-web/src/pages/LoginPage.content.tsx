@@ -11,6 +11,8 @@ export function LoginPageContent({
   email,
   error,
   handleAccountSelect,
+  handleDisconnectAccount,
+  handleDisconnectAllAccounts,
   handleConsentApprove,
   handleConsentCancel,
   handleIdentifierSubmit,
@@ -66,6 +68,8 @@ export function LoginPageContent({
               email={email}
               error={error}
               handleAccountSelect={handleAccountSelect}
+              handleDisconnectAccount={handleDisconnectAccount}
+              handleDisconnectAllAccounts={handleDisconnectAllAccounts}
               handleConsentApprove={handleConsentApprove}
               handleConsentCancel={handleConsentCancel}
               handleIdentifierSubmit={handleIdentifierSubmit}

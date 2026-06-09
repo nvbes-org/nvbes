@@ -12,6 +12,10 @@ use super::super::super::{
 };
 use super::PublicApiCredential;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Public API authentication keeps request and principal context explicit."
+)]
 pub(super) async fn authenticate_api_key(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -90,6 +94,10 @@ pub(super) async fn authenticate_api_key(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Denied audit paths keep explicit request context for logs."
+)]
 async fn ensure_api_key_allowed(
     db: &PgPool,
     headers: &axum::http::HeaderMap,
@@ -159,6 +167,10 @@ async fn ensure_api_key_allowed(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Denied audit logging needs explicit request metadata and actor context."
+)]
 async fn denied(
     db: &PgPool,
     headers: &axum::http::HeaderMap,

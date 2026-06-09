@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { MfaPageAddFactorCard } from './MfaPageAddFactorCard';
 import { MfaPageFactorList } from './MfaPageFactorList';
@@ -40,9 +41,9 @@ export default function MfaPage() {
       <MfaPageHeader onBack={navigateBack} />
 
       {error && (
-        <div className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {factors.length === 0 ? <MfaPageEmptyState /> : null}

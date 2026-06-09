@@ -167,6 +167,6 @@ async fn validate_oidc_id_token_accepts_real_rs256_token() {
     assert_eq!(validated.email.as_deref(), Some("alice@example.com"));
     assert_eq!(validated.username(), "alice");
     assert_eq!(validated.iss, format!("{}/issuer", base_url));
-    assert_eq!(validated.audience_contains("client-123"), true);
+    assert!(validated.audience_contains("client-123"));
     assert_eq!(validated.nonce.as_deref(), Some("nonce-456"));
 }

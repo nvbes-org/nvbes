@@ -16,25 +16,29 @@ pub const JOB_STORAGE_PURGE_QUARANTINED: &str = "storage.purge_quarantined";
 pub async fn enqueue_maintenance_jobs(redis: &nvbes_redis::RedisPool) -> anyhow::Result<()> {
     nvbes_redis::worker_queue::enqueue_job(
         redis,
-        JOB_UPLOADS_PURGE_EXPIRED,
-        JOB_UPLOADS_PURGE_EXPIRED,
-        serde_json::json!({}),
-        Some("uploads.purge_expired.daily"),
-        3,
-        false,
-        None,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_UPLOADS_PURGE_EXPIRED.to_string(),
+            job_type: JOB_UPLOADS_PURGE_EXPIRED.to_string(),
+            payload: serde_json::json!({}),
+            idempotency_key: Some("uploads.purge_expired.daily".to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
     )
     .await?;
 
     nvbes_redis::worker_queue::enqueue_job(
         redis,
-        JOB_STORAGE_PURGE_DELETED,
-        JOB_STORAGE_PURGE_DELETED,
-        serde_json::json!({}),
-        Some("storage.purge_deleted.daily"),
-        3,
-        false,
-        None,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_STORAGE_PURGE_DELETED.to_string(),
+            job_type: JOB_STORAGE_PURGE_DELETED.to_string(),
+            payload: serde_json::json!({}),
+            idempotency_key: Some("storage.purge_deleted.daily".to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
     )
     .await?;
 
@@ -105,18 +109,17 @@ pub async fn purge_expired_uploads(
             continue;
         };
 
-        if let Some(multipart_upload_id) = candidate.storage_multipart_upload_id.as_deref() {
-            if let Err(err) = storage
+        if let Some(multipart_upload_id) = candidate.storage_multipart_upload_id.as_deref()
+            && let Err(err) = storage
                 .abort_multipart_upload(object_key, multipart_upload_id)
                 .await
-            {
-                tracing::warn!(
-                    upload_id = %candidate.upload_id,
-                    storage_object_id = %candidate.storage_object_id,
-                    error = %err,
-                    "failed to abort expired multipart upload before object cleanup"
-                );
-            }
+        {
+            tracing::warn!(
+                upload_id = %candidate.upload_id,
+                storage_object_id = %candidate.storage_object_id,
+                error = %err,
+                "failed to abort expired multipart upload before object cleanup"
+            );
         }
 
         match storage.delete_objects(&[object_key.to_owned()]).await {

@@ -16,7 +16,7 @@ type SubmitIdentifierStepOptions = {
   setSessionToken: (value: string | null) => void;
   setAvailableMethods: (value: MfaMethod[]) => void;
   setMfaMethod: (value: MfaMethod | null) => void;
-  setStep: (value: 'identifier' | 'password' | 'mfa') => void;
+  setStep: (value: 'identifier' | 'password' | 'webauthn' | 'mfa') => void;
   setError: (value: string | null) => void;
 };
 
@@ -51,9 +51,11 @@ export async function submitIdentifierStep({
       return;
     }
 
-    setAvailableMethods(normalizeMfaMethods(result.available_methods));
-    setMfaMethod(preferredMfaMethod(result.available_methods));
-    setStep('mfa');
+    const availableMethods = normalizeMfaMethods(result.available_methods);
+    const preferredMethod = preferredMfaMethod(result.available_methods);
+    setAvailableMethods(availableMethods);
+    setMfaMethod(preferredMethod);
+    setStep(preferredMethod === 'webauthn' ? 'webauthn' : 'mfa');
   } catch (err) {
     if (isInvalidSignatureError(err)) {
       setLoginStateToken(null);

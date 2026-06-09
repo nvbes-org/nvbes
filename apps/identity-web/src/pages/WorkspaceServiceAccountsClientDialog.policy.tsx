@@ -1,3 +1,4 @@
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DialogError } from './WorkspaceServiceAccountsDialogs.shared';
@@ -35,12 +36,10 @@ export function WorkspaceServiceAccountsClientPolicyFields({
       </div>
 
       <div className="flex items-center gap-2">
-        <input
+        <Checkbox
           id="client-assertion-required"
-          type="checkbox"
-          className="size-4 rounded border-border text-primary focus:ring-ring"
           checked={clientAssertionRequired}
-          onChange={(event) => setClientAssertionRequired(event.target.checked)}
+          onCheckedChange={(checked) => setClientAssertionRequired(checked === true)}
         />
         <Label htmlFor="client-assertion-required">Client assertion requise</Label>
       </div>
@@ -51,7 +50,7 @@ export function WorkspaceServiceAccountsClientPolicyFields({
         value={clientAssertionJwk}
         onChange={setClientAssertionJwk}
         placeholder='{"kty":"RSA",...}'
-        className="flex min-h-28 w-full rounded-lg border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="min-h-28 font-mono text-xs"
       />
 
       <DialogError message={clientError} />

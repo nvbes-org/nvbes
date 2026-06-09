@@ -192,7 +192,7 @@ pub async fn insert_audit_event(
     input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
     nvbes_audit::insert_audit_event_tx(
-        &mut **tx,
+        tx,
         nvbes_audit::AuditEventInput {
             tenant_id: input.tenant_id,
             workspace_id: input.workspace_id,

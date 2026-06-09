@@ -86,7 +86,7 @@ fn ensure_scope_allowed(auth: &AuthContext, action: WorkspaceAction) -> Result<(
     let required_scope = required_scope_for_action(action);
     if auth.amr.iter().any(|method| method == "m2m") || auth.actor.is_some() {
         let scopes = auth.scope_list();
-        if scopes.iter().any(|scope| *scope == required_scope) {
+        if scopes.contains(&required_scope) {
             return Ok(());
         }
 

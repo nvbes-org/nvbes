@@ -138,7 +138,7 @@ pub struct LoginResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoginPasswordResult {
-    Success(LoginResult),
+    Success(Box<LoginResult>),
     MfaRequired(IdentifierResult),
 }
 

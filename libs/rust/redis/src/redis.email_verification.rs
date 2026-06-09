@@ -70,12 +70,12 @@ pub async fn latest_unconsumed_email_verification_token_for_principal(
 
     let mut latest: Option<CachedEmailVerificationToken> = None;
     for token_hash in token_hashes {
-        if let Some(token) = get_email_verification_token(pool, &token_hash).await? {
-            if token.consumed_at.is_none() {
-                match latest {
-                    Some(ref current) if current.created_at >= token.created_at => {}
-                    _ => latest = Some(token),
-                }
+        if let Some(token) = get_email_verification_token(pool, &token_hash).await?
+            && token.consumed_at.is_none()
+        {
+            match latest {
+                Some(ref current) if current.created_at >= token.created_at => {}
+                _ => latest = Some(token),
             }
         }
     }

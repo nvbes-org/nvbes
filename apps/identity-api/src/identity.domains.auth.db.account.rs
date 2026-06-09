@@ -7,6 +7,10 @@ use crate::domains::auth::{email_verification, password, types::derive_display_n
 use crate::domains::billing;
 use crate::http::error::AppError;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Account creation keeps registration, workspace, and audit inputs explicit."
+)]
 pub async fn create_user_account(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

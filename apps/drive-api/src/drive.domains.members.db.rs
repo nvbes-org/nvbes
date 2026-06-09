@@ -72,7 +72,7 @@ pub async fn revoke_user_sessions(
 ) -> Result<(), AppError> {
     nvbes_redis::session::clear_user_sessions(redis, &user_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))
 }
 
 pub async fn list_members(

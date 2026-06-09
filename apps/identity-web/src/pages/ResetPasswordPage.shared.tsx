@@ -1,4 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -27,14 +28,15 @@ export function ResetPasswordPageCard({
 }: ResetPasswordPageModel) {
   return (
     <div className="w-full max-w-sm animate-fade-slide-up [animation-delay:150ms]">
-      <button
+      <Button
         type="button"
-        className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        variant="ghost"
+        className="mb-6 px-0 text-muted-foreground hover:text-foreground"
         onClick={navigateToLogin}
       >
-        <ArrowLeft className="size-3.5" />
+        <ArrowLeft data-icon="inline-start" />
         Retour a la connexion
-      </button>
+      </Button>
 
       <Card>
         <CardHeader>

@@ -17,11 +17,11 @@ pub fn resolve_billing_redirect_url(
         .map_err(|error| match error {
             BillingRedirectUrlError::InvalidAbsoluteUrl => AppError::bad_request(
                 "invalid_billing_return_url",
-                &format!("{field_name} must be a valid absolute URL."),
+                format!("{field_name} must be a valid absolute URL."),
             ),
             BillingRedirectUrlError::InvalidOrigin => AppError::bad_request(
                 "invalid_billing_return_url",
-                &format!(
+                format!(
                     "{field_name} must stay on the configured application origin. Set {env_name} to an allowed URL."
                 ),
             ),

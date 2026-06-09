@@ -118,6 +118,10 @@ async fn attach_existing_service_account(
     Ok(principal_id)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Service-account creation keeps workspace, auth, and client metadata explicit."
+)]
 async fn create_service_account_for_client(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     auth: &impl OAuthManagementAuth,
@@ -227,6 +231,10 @@ async fn insert_organization_membership(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Service-account persistence keeps ownership and OAuth metadata explicit."
+)]
 async fn insert_service_account(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     auth: &impl OAuthManagementAuth,

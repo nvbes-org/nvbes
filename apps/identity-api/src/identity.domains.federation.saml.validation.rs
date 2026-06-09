@@ -36,13 +36,13 @@ fn verify_signed_element(
 ) -> Result<String, AppError> {
     let doc = libxml::parser::Parser::default()
         .parse_string(xml)
-        .map_err(|err| AppError::bad_request("saml_xml_invalid", &format!("{}", err)))?;
+        .map_err(|err| AppError::bad_request("saml_xml_invalid", format!("{}", err)))?;
     let saml_ns = [
         ("saml", "urn:oasis:names:tc:SAML:2.0:assertion"),
         ("samlp", "urn:oasis:names:tc:SAML:2.0:protocol"),
     ];
     doc.specify_idattr("//saml:Assertion", "ID", Some(&saml_ns))
-        .map_err(|err| AppError::bad_request("saml_id_invalid", &format!("{}", err)))?;
+        .map_err(|err| AppError::bad_request("saml_id_invalid", format!("{}", err)))?;
     let _ = doc.specify_idattr("//samlp:Response", "ID", Some(&saml_ns));
 
     let mut context = Context::new(&doc).map_err(|_| {
@@ -104,7 +104,7 @@ fn verify_signed_element(
 
     Err(AppError::bad_request(
         "saml_signature_invalid",
-        &format!(
+        format!(
             "The SAML {} signature could not be verified. {}",
             element_type,
             last_error.unwrap_or_default()
@@ -151,16 +151,16 @@ pub fn validate_assertion_issuer(
         .and_then(|n| n.text())
         .map(|t| t.trim());
 
-    if let Some(expected) = expected_issuer {
-        if assertion_issuer != Some(expected.as_str()) {
-            return Err(AppError::bad_request(
-                "saml_issuer_mismatch",
-                &format!(
-                    "The SAML assertion issuer '{:?}' does not match the expected issuer '{}'.",
-                    assertion_issuer, expected
-                ),
-            ));
-        }
+    if let Some(expected) = expected_issuer
+        && assertion_issuer != Some(expected.as_str())
+    {
+        return Err(AppError::bad_request(
+            "saml_issuer_mismatch",
+            format!(
+                "The SAML assertion issuer '{:?}' does not match the expected issuer '{}'.",
+                assertion_issuer, expected
+            ),
+        ));
     }
 
     Ok(())
@@ -179,26 +179,24 @@ pub fn validate_assertion_conditions(
 
     let now = chrono::Utc::now();
 
-    if let Some(not_before_str) = conditions.attribute("NotBefore") {
-        if let Ok(not_before) = chrono::DateTime::parse_from_rfc3339(not_before_str) {
-            if now < not_before {
-                return Err(AppError::bad_request(
-                    "saml_assertion_too_early",
-                    "The SAML assertion is not yet valid (NotBefore).",
-                ));
-            }
-        }
+    if let Some(not_before_str) = conditions.attribute("NotBefore")
+        && let Ok(not_before) = chrono::DateTime::parse_from_rfc3339(not_before_str)
+        && now < not_before
+    {
+        return Err(AppError::bad_request(
+            "saml_assertion_too_early",
+            "The SAML assertion is not yet valid (NotBefore).",
+        ));
     }
 
-    if let Some(not_on_or_after_str) = conditions.attribute("NotOnOrAfter") {
-        if let Ok(not_on_or_after) = chrono::DateTime::parse_from_rfc3339(not_on_or_after_str) {
-            if now >= not_on_or_after {
-                return Err(AppError::bad_request(
-                    "saml_assertion_expired",
-                    "The SAML assertion has expired (NotOnOrAfter).",
-                ));
-            }
-        }
+    if let Some(not_on_or_after_str) = conditions.attribute("NotOnOrAfter")
+        && let Ok(not_on_or_after) = chrono::DateTime::parse_from_rfc3339(not_on_or_after_str)
+        && now >= not_on_or_after
+    {
+        return Err(AppError::bad_request(
+            "saml_assertion_expired",
+            "The SAML assertion has expired (NotOnOrAfter).",
+        ));
     }
 
     if let Some(expected_audience) = expected_audience {
@@ -215,7 +213,7 @@ pub fn validate_assertion_conditions(
             if !has_audience {
                 return Err(AppError::bad_request(
                     "saml_audience_mismatch",
-                    &format!(
+                    format!(
                         "The SAML assertion audience does not match the expected audience '{}'.",
                         expected_audience
                     ),

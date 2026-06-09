@@ -54,9 +54,8 @@ pub async fn verify_primary_credentials(
     if let Some(max_age_days) = config.auth_password_max_age_days {
         let last_changed: Option<chrono::DateTime<chrono::Utc>> =
             row.get("password_last_changed_at");
-        let expired = last_changed.map_or(true, |lc| {
-            lc + chrono::Duration::days(max_age_days) <= Utc::now()
-        });
+        let expired =
+            last_changed.is_none_or(|lc| lc + chrono::Duration::days(max_age_days) <= Utc::now());
         if expired {
             return Err(AppError::forbidden(
                 "password_expired",

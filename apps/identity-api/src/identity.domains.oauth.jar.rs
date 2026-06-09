@@ -35,7 +35,7 @@ pub fn validate_request_object(
     let header = decode_header(request_jwt).map_err(|e| {
         AppError::bad_request(
             "invalid_request_object",
-            &format!("Invalid request object header: {}", e),
+            format!("Invalid request object header: {}", e),
         )
     })?;
 
@@ -82,7 +82,7 @@ pub fn validate_request_object(
                 if message.is_empty() {
                     AppError::bad_request(
                         "invalid_request_object",
-                        &format!("Invalid request object: {}", e),
+                        format!("Invalid request object: {}", e),
                     )
                 } else {
                     AppError::bad_request("invalid_request_object", message)
@@ -91,22 +91,22 @@ pub fn validate_request_object(
 
     let claims = token_data.claims;
 
-    if let Some(req_resp_type) = claims.response_type.as_deref() {
-        if req_resp_type != "code" {
-            return Err(AppError::bad_request(
-                "invalid_request_object",
-                "Only response_type=code is supported",
-            ));
-        }
+    if let Some(req_resp_type) = claims.response_type.as_deref()
+        && req_resp_type != "code"
+    {
+        return Err(AppError::bad_request(
+            "invalid_request_object",
+            "Only response_type=code is supported",
+        ));
     }
 
-    if let Some(ref req_client_id) = claims.client_id {
-        if req_client_id != client_id {
-            return Err(AppError::bad_request(
-                "invalid_request_object",
-                "client_id in request object does not match the request",
-            ));
-        }
+    if let Some(ref req_client_id) = claims.client_id
+        && req_client_id != client_id
+    {
+        return Err(AppError::bad_request(
+            "invalid_request_object",
+            "client_id in request object does not match the request",
+        ));
     }
 
     Ok(claims)
@@ -131,7 +131,7 @@ pub async fn fetch_request_object_from_uri(uri: &str) -> Result<String, AppError
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
-        .map_err(|e| AppError::internal("http_client_error", &e.to_string()))?;
+        .map_err(|e| AppError::internal("http_client_error", e.to_string()))?;
 
     let request = client.get(uri);
     let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
@@ -140,21 +140,21 @@ pub async fn fetch_request_object_from_uri(uri: &str) -> Result<String, AppError
         .map_err(|e| {
             AppError::bad_request(
                 "invalid_request_uri",
-                &format!("Failed to fetch request_uri: {}", e),
+                format!("Failed to fetch request_uri: {}", e),
             )
         })?;
 
     if !response.status().is_success() {
         return Err(AppError::bad_request(
             "invalid_request_uri",
-            &format!("Failed to fetch request_uri: HTTP {}", response.status()),
+            format!("Failed to fetch request_uri: HTTP {}", response.status()),
         ));
     }
 
     let body = response.text().await.map_err(|e| {
         AppError::bad_request(
             "invalid_request_uri",
-            &format!("Failed to read request_uri response: {}", e),
+            format!("Failed to read request_uri response: {}", e),
         )
     })?;
 

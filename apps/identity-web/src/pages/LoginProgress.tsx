@@ -1,29 +1,34 @@
 import { KeyRoundIcon, type LucideIcon, MailIcon, ShieldCheckIcon } from 'lucide-react';
 import { cn } from '@/lib/classnames';
 
-export type LoginStep = 'chooser' | 'identifier' | 'password' | 'mfa' | 'consent';
+export type LoginStep = 'chooser' | 'identifier' | 'password' | 'webauthn' | 'mfa' | 'consent';
 
-const STEPS: { key: Exclude<LoginStep, 'consent' | 'chooser'>; label: string; icon: LucideIcon }[] =
-  [
-    { key: 'identifier', label: 'Identification', icon: MailIcon },
-    { key: 'password', label: 'Authentification', icon: KeyRoundIcon },
-    { key: 'mfa', label: 'Vérification', icon: ShieldCheckIcon },
-  ];
+const STEPS: {
+  key: 'identifier' | 'password' | 'mfa';
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { key: 'identifier', label: 'Identification', icon: MailIcon },
+  { key: 'password', label: 'Authentification', icon: KeyRoundIcon },
+  { key: 'mfa', label: 'Vérification', icon: ShieldCheckIcon },
+];
 
 export function LoginProgress({ step }: { step: LoginStep }) {
   if (step === 'consent' || step === 'chooser') {
     return null;
   }
-  const stepIndex = STEPS.findIndex((s) => s.key === step);
+  const progressStep = step === 'webauthn' ? 'password' : step;
+  const stepIndex = STEPS.findIndex((s) => s.key === progressStep);
 
   return (
     <div className="mb-8">
       <div className="flex items-center gap-1.5">
         {STEPS.map((s, i) => {
-          const active = step === s.key;
+          const active = progressStep === s.key;
           const complete =
-            (s.key === 'identifier' && (step === 'password' || step === 'mfa')) ||
-            (s.key === 'password' && step === 'mfa');
+            (s.key === 'identifier' &&
+              (progressStep === 'password' || progressStep === 'mfa')) ||
+            (s.key === 'password' && progressStep === 'mfa');
           const Icon = s.icon;
           return (
             <div key={s.key} className="flex items-center gap-1.5">

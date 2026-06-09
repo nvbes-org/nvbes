@@ -8,8 +8,8 @@ pub fn bearer_token_with_authuser(headers: &HeaderMap, authuser: &str) -> Result
             .to_str()
             .map_err(|_| AppError::unauthorized("invalid_token", "Invalid Authorization header"))?;
 
-        if auth_str.starts_with("Bearer ") {
-            return Ok(auth_str[7..].to_string());
+        if let Some(token) = auth_str.strip_prefix("Bearer ") {
+            return Ok(token.to_string());
         }
     }
 

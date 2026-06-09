@@ -1,27 +1,29 @@
 import { UserCog } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 
 export function EmptyState() {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/70 px-6 py-10 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <UserCog className="size-5 text-muted-foreground" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Aucun principal selectionne</p>
-        <p className="text-sm text-muted-foreground">
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <UserCog />
+        </EmptyMedia>
+        <EmptyTitle>Aucun principal selectionne</EmptyTitle>
+        <EmptyDescription>
           Choisissez un service account dans la liste pour voir ses details.
-        </p>
-      </div>
-    </div>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+    <Card className="p-4">
       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
       <p className="mt-2 break-all text-sm font-medium">{value}</p>
-    </div>
+    </Card>
   );
 }
 

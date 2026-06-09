@@ -15,6 +15,7 @@ export async function bootstrapLoginAuth({
   navigateToAccount,
   setCheckingAuth,
   setConnectedAccounts,
+  setEmail,
   setError,
   setStep,
 }: Pick<
@@ -27,15 +28,26 @@ export async function bootstrapLoginAuth({
   | 'setConnectedAccounts'
   | 'setError'
   | 'setStep'
+  | 'setEmail'
 >) {
   try {
     const accountsList = await identityClient.listAccounts().catch(() => []);
     setConnectedAccounts(accountsList);
 
     const searchParams = new URLSearchParams(locationSearchStr);
-    const hasAuthUserQuery = searchParams.has('authuser');
+    const authuser = searchParams.get('authuser');
+    const hasAuthUserQuery = authuser !== null;
 
     if (hasAuthUserQuery) {
+      const selectedAccount = accountsList.find((account) => account.authuser === authuser);
+      if (selectedAccount?.status === 'expired') {
+        setEmail(selectedAccount.user.email);
+        setError(selectedAccount.message ?? 'Session expirée, veuillez vous reconnecter.');
+        setStep('identifier');
+        setCheckingAuth(false);
+        return;
+      }
+
       await identityClient.getMe();
       await syncTrackingConsent();
       if (hasOAuthRequest) {

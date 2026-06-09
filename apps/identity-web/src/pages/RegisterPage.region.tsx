@@ -1,5 +1,6 @@
 import { MapPinIcon } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -10,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/classnames';
 import type { SupportedRegion } from '../identity.auth.api';
 
 function countryCodeToFlag(code: string): string {
@@ -51,20 +51,12 @@ export function RegionSelect({
           </span>
         )}
         {!loading && detectedRegion && (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
-              reliability === 'high' && 'border-emerald-500/30 bg-emerald-500/5 text-emerald-600',
-              reliability === 'medium' && 'border-amber-500/30 bg-amber-500/5 text-amber-600',
-              reliability === 'low' && 'border-blue-500/30 bg-blue-500/5 text-blue-600',
-              reliability === 'none' && 'border-border bg-muted text-muted-foreground',
-            )}
-          >
-            <MapPinIcon className="size-3" />
+          <Badge variant={reliability === 'none' ? 'secondary' : 'outline'}>
+            <MapPinIcon data-icon="inline-start" />
             Détecté (
             {reliability === 'high' ? 'IP' : reliability === 'medium' ? 'Timezone' : 'Locale'}) :{' '}
             {detectedRegion}
-          </span>
+          </Badge>
         )}
       </div>
       <Select value={value} onValueChange={onValueChange}>

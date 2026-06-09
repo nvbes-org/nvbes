@@ -46,6 +46,10 @@ function errorsForProject(_name, meta) {
   if (!domain) errors.push(`missing domain tag`);
   if (!layer) errors.push(`missing layer tag`);
 
+  if (type && !['app', 'lib', 'workspace'].includes(type)) {
+    errors.push(`unsupported type tag ${type}`);
+  }
+
   if (type === 'app' && layer !== 'app') {
     errors.push(`app projects must use layer:app`);
   }
@@ -56,6 +60,10 @@ function errorsForProject(_name, meta) {
 
   if (layer === 'core' && domain !== 'shared') {
     errors.push(`core layer must use domain:shared`);
+  }
+
+  if (type === 'workspace' && layer !== 'tooling') {
+    errors.push(`workspace projects must use layer:tooling`);
   }
 
   return errors;
@@ -82,9 +90,14 @@ for (const [source, deps] of Object.entries(depsBySource)) {
     const targetDomain = getDomain(targetMeta);
     const sourceLayer = getLayer(sourceMeta);
     const targetLayer = getLayer(targetMeta);
+    const sourceType = tag(sourceMeta, 'type');
 
     if (source === dep.target) {
       dependencyErrors.push(`${source} depends on itself`);
+      continue;
+    }
+
+    if (sourceType === 'workspace') {
       continue;
     }
 

@@ -38,7 +38,7 @@ pub async fn create_state(
         15 * 60,
     )
     .await
-    .map_err(|err| AppError::internal("auth_state_store_failed", &format!("{}", err)))?;
+    .map_err(|err| AppError::internal("auth_state_store_failed", format!("{}", err)))?;
 
     Ok(id)
 }
@@ -60,7 +60,7 @@ pub async fn fetch_state(
 ) -> Result<AuthState, AppError> {
     let state = nvbes_redis::auth_state::get_auth_state(redis, &id.to_string())
         .await
-        .map_err(|err| AppError::internal("auth_state_load_failed", &format!("{}", err)))?
+        .map_err(|err| AppError::internal("auth_state_load_failed", format!("{}", err)))?
         .ok_or_else(|| {
             AppError::unauthorized(
                 "invalid_auth_state",
@@ -96,6 +96,6 @@ pub async fn fetch_state(
 pub async fn delete_state(redis: &nvbes_redis::RedisPool, id: Uuid) -> Result<(), AppError> {
     nvbes_redis::auth_state::delete_auth_state(redis, &id.to_string())
         .await
-        .map_err(|err| AppError::internal("auth_state_delete_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("auth_state_delete_failed", format!("{}", err)))?;
     Ok(())
 }

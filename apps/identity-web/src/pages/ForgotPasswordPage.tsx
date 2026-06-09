@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -17,17 +18,17 @@ import { forgotPassword } from '../identity.password.api';
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      {message}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
 function SuccessMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600">
-      {message}
-    </div>
+    <Alert>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -52,14 +53,15 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4 sm:p-8">
       <div className="w-full max-w-sm animate-fade-slide-up [animation-delay:150ms]">
-        <button
+        <Button
           type="button"
-          className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          variant="ghost"
+          className="mb-6 px-0 text-muted-foreground hover:text-foreground"
           onClick={() => navigate({ to: '/login' })}
         >
-          <ArrowLeft className="size-3.5" />
+          <ArrowLeft data-icon="inline-start" />
           Retour a la connexion
-        </button>
+        </Button>
 
         <Card>
           <CardHeader>
