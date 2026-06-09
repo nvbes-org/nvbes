@@ -17,9 +17,7 @@ export function DeviceActivationInputStep({
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="userCode">
-          Code d&apos;activation
-        </Label>
+        <Label htmlFor="userCode">Code d&apos;activation</Label>
         <Input
           id="userCode"
           placeholder="XXXX-XXXX"

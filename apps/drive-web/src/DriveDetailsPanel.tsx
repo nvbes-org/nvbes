@@ -3,7 +3,12 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
-import type { DriveEntry, DriveMember, DriveShareStatus, DriveWorkspaceState } from './drive.workspace.types';
+import type {
+  DriveEntry,
+  DriveMember,
+  DriveShareStatus,
+  DriveWorkspaceState,
+} from './drive.workspace.types';
 
 const BYTE_FORMATTER = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 1,
@@ -16,7 +21,13 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 
-export function DriveDetailsPanel({ state, onClose }: { state: DriveWorkspaceState; onClose: () => void }) {
+export function DriveDetailsPanel({
+  state,
+  onClose,
+}: {
+  state: DriveWorkspaceState;
+  onClose: () => void;
+}) {
   if (state.detailsSelection === null) return null;
 
   if (state.detailsSelection.type === 'entry') {
@@ -24,7 +35,11 @@ export function DriveDetailsPanel({ state, onClose }: { state: DriveWorkspaceSta
 
     return (
       <DetailsFrame title={entry?.name ?? 'Element introuvable'} onClose={onClose}>
-        {entry ? <EntryDetails entry={entry} state={state} /> : <NotFoundDetails label="Ce fichier ou dossier" />}
+        {entry ? (
+          <EntryDetails entry={entry} state={state} />
+        ) : (
+          <NotFoundDetails label="Ce fichier ou dossier" />
+        )}
       </DetailsFrame>
     );
   }
@@ -51,10 +66,18 @@ function DetailsFrame({
     <section className="grid gap-5" aria-label="Details de la selection">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Details</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Details
+          </p>
           <h2 className="mt-1 break-words text-lg font-semibold">{title}</h2>
         </div>
-        <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} aria-label="Fermer les details">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onClose}
+          aria-label="Fermer les details"
+        >
           <X aria-hidden="true" />
         </Button>
       </div>
@@ -134,7 +157,9 @@ function DetailsList({ items }: { items: Array<[string, string]> }) {
     <dl className="grid gap-3 text-sm">
       {items.map(([label, value]) => (
         <Card key={label} className="grid gap-1 p-3">
-          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+          <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {label}
+          </dt>
           <dd className="break-words font-medium">{value}</dd>
         </Card>
       ))}
@@ -151,7 +176,8 @@ function entryStatusLabel(entry: DriveEntry): string {
 function sharingLabel(entry: DriveEntry, linkCount: number): string {
   if (entry.shareStatus === 'private') return 'Prive';
   if (entry.shareStatus === 'shared') {
-    const linkText = linkCount > 0 ? `${linkCount} lien${linkCount > 1 ? 's' : ''}` : 'aucun lien actif';
+    const linkText =
+      linkCount > 0 ? `${linkCount} lien${linkCount > 1 ? 's' : ''}` : 'aucun lien actif';
     return `Partage avec ${entry.sharedWithCount} membre${entry.sharedWithCount > 1 ? 's' : ''}, ${linkText}`;
   }
 

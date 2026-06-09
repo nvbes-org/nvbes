@@ -38,9 +38,7 @@ export function DeviceActivationApproveStep({
       </Card>
 
       <div className="space-y-2">
-        <Label htmlFor="workspace-select">
-          Workspace courant
-        </Label>
+        <Label htmlFor="workspace-select">Workspace courant</Label>
         <Select
           value={selectedWorkspace}
           onValueChange={onWorkspaceChange}

@@ -22,7 +22,7 @@ describe('auth fallback copy', () => {
     expect(copy).toEqual({
       title: "Probleme d'authentification",
       description:
-        "Impossible de verifier votre identite. Reconnectez-vous ou verifiez votre session.",
+        'Impossible de verifier votre identite. Reconnectez-vous ou verifiez votre session.',
     });
   });
 

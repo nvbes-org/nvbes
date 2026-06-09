@@ -100,7 +100,9 @@ export function DriveFilesTable({
                 <TableCell className="text-muted-foreground">
                   {formatBytes(entry.sizeBytes)}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{formatDate(entry.updatedAt)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(entry.updatedAt)}
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     type="button"

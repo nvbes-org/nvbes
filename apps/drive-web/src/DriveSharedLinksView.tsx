@@ -3,7 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DriveEmptyState } from './DriveViewState';
 import { revokeShareLink } from './drive.workspace.store';
-import type { DriveEntry, DriveShareLink, DriveShareStatus, DriveWorkspaceState } from './drive.workspace.types';
+import type {
+  DriveEntry,
+  DriveShareLink,
+  DriveShareStatus,
+  DriveWorkspaceState,
+} from './drive.workspace.types';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
@@ -47,10 +52,7 @@ export function DriveSharedLinksView({
         const isRevoked = link.status === 'revoked';
 
         return (
-          <Card
-            key={link.id}
-            className="p-4 transition hover:shadow-md"
-          >
+          <Card key={link.id} className="p-4 transition hover:shadow-md">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -62,7 +64,9 @@ export function DriveSharedLinksView({
 
               <dl className="grid gap-3 text-sm sm:grid-cols-3 lg:min-w-[420px]">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">Expiration</dt>
+                  <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Expiration
+                  </dt>
                   <dd className="font-medium">{formatNullableDate(link.expiresAt)}</dd>
                 </div>
                 <div>

@@ -23,7 +23,10 @@ function identityApiBaseUrl(): string {
   );
 }
 
-export async function switchDriveWorkspace(accessToken: string, workspaceId: string): Promise<void> {
+export async function switchDriveWorkspace(
+  accessToken: string,
+  workspaceId: string,
+): Promise<void> {
   const response = await fetch(`${identityApiBaseUrl()}/auth/workspaces/${workspaceId}/switch`, {
     method: 'POST',
     headers: createRequestHeaders('POST', {

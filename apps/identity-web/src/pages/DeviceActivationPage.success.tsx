@@ -22,9 +22,9 @@ export function DeviceActivationSuccessStep({ onGoAccount }: { onGoAccount: () =
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent className="w-full">
-      <Button variant="outline" onClick={onGoAccount} className="w-full">
-        Aller à mon compte
-      </Button>
+        <Button variant="outline" onClick={onGoAccount} className="w-full">
+          Aller à mon compte
+        </Button>
       </EmptyContent>
     </Empty>
   );

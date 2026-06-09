@@ -26,8 +26,7 @@ export function LoginProgress({ step }: { step: LoginStep }) {
         {STEPS.map((s, i) => {
           const active = progressStep === s.key;
           const complete =
-            (s.key === 'identifier' &&
-              (progressStep === 'password' || progressStep === 'mfa')) ||
+            (s.key === 'identifier' && (progressStep === 'password' || progressStep === 'mfa')) ||
             (s.key === 'password' && progressStep === 'mfa');
           const Icon = s.icon;
           return (

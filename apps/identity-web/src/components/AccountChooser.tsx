@@ -1,5 +1,9 @@
 import { useLocation } from '@tanstack/react-router';
-import { MultiAccountSwitcher, initialsForDisplayName, type SharedAccountOption } from '@nvbes/web-ui';
+import {
+  MultiAccountSwitcher,
+  initialsForDisplayName,
+  type SharedAccountOption,
+} from '@nvbes/web-ui';
 import { useMemo, useState } from 'react';
 import type { AccountEntry } from '@/lib/account-context';
 

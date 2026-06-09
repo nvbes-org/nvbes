@@ -60,9 +60,7 @@ export function TotpConfirmCard({
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="totp-confirm-code">
-              Code de vérification
-            </Label>
+            <Label htmlFor="totp-confirm-code">Code de vérification</Label>
             <Input
               id="totp-confirm-code"
               type="text"

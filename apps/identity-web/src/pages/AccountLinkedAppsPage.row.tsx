@@ -37,11 +37,7 @@ export function LinkedAppRow({
           disabled={revoking === client.id}
           aria-label={`Revoquer ${client.name}`}
         >
-          {revoking === client.id ? (
-            <Spinner className="size-3" />
-          ) : (
-            <X className="size-3.5" />
-          )}
+          {revoking === client.id ? <Spinner className="size-3" /> : <X className="size-3.5" />}
         </Button>
       </div>
     </div>

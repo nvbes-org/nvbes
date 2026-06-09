@@ -57,9 +57,7 @@ export function ServiceAccountConfiguration({
 
       <div className="mt-4 grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="service-account-name">
-            Nom
-          </Label>
+          <Label htmlFor="service-account-name">Nom</Label>
           <Input
             id="service-account-name"
             value={updateName}
@@ -68,9 +66,7 @@ export function ServiceAccountConfiguration({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="service-account-description">
-            Description
-          </Label>
+          <Label htmlFor="service-account-description">Description</Label>
           <Textarea
             id="service-account-description"
             className="min-h-24"
@@ -80,13 +76,8 @@ export function ServiceAccountConfiguration({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="service-account-role">
-            Role RBAC
-          </Label>
-          <Select
-            value={updateRole}
-            onValueChange={setUpdateRole}
-          >
+          <Label htmlFor="service-account-role">Role RBAC</Label>
+          <Select value={updateRole} onValueChange={setUpdateRole}>
             <SelectTrigger id="service-account-role" className="w-full">
               <SelectValue placeholder="Choisir un role" />
             </SelectTrigger>

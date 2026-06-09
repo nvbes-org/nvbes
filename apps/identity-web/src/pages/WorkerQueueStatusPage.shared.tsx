@@ -68,10 +68,7 @@ export function WorkerQueueStatusPageContent({
 
             <div className="grid gap-4 md:grid-cols-2">
               {snapshot.statuses.map((status) => (
-                <Card
-                  key={status.status}
-                  className="border-white/10 bg-white/5 p-5 text-slate-100"
-                >
+                <Card key={status.status} className="border-white/10 bg-white/5 p-5 text-slate-100">
                   <h3 className="text-lg font-medium">{status.status}</h3>
                   <p className="mt-2 text-3xl font-semibold">{status.depth}</p>
                   <p className="mt-2 text-sm text-slate-400">

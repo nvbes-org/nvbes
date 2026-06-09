@@ -21,8 +21,8 @@ export function RecoveryCodesListStep({
 
         <Alert variant="destructive">
           <AlertDescription>
-            Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
-            être utilisé qu&apos;une seule fois.
+            Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne
+            peut être utilisé qu&apos;une seule fois.
           </AlertDescription>
         </Alert>
 

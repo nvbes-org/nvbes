@@ -82,7 +82,10 @@ export type DriveApiKey = {
   revokedAt: string | null;
 };
 
-export type DriveDetailsSelection = { type: 'entry'; id: string } | { type: 'member'; id: string } | null;
+export type DriveDetailsSelection =
+  | { type: 'entry'; id: string }
+  | { type: 'member'; id: string }
+  | null;
 
 export type DriveWorkspaceState = {
   activeModuleId: DriveModuleId;

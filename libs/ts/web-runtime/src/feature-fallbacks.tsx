@@ -66,8 +66,7 @@ type FallbackCopy = {
 
 const AUTHENTICATION_ERROR_COPY: FallbackCopy = {
   title: "Probleme d'authentification",
-  description:
-    "Impossible de verifier votre identite. Reconnectez-vous ou verifiez votre session.",
+  description: 'Impossible de verifier votre identite. Reconnectez-vous ou verifiez votre session.',
 };
 
 const SERVICE_UNAVAILABLE_COPY: FallbackCopy = {

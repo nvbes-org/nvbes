@@ -23,9 +23,7 @@ export function TotpSetupCard({
       <div className="w-full max-w-md space-y-4">
         <h1 className="text-2xl font-bold">Configurer TOTP</h1>
         <div className="space-y-2">
-          <Label htmlFor="totp-label">
-            Nom (optionnel)
-          </Label>
+          <Label htmlFor="totp-label">Nom (optionnel)</Label>
           <Input
             id="totp-label"
             placeholder="Ex: Mon téléphone"

@@ -16,9 +16,7 @@ type UploadDropzoneProps = {
         maxFiles?: number;
       }
     | string;
-  uploadOverride?: (
-    ...args: Parameters<UploadHookControl<true>['upload']>
-  ) => void;
+  uploadOverride?: (...args: Parameters<UploadHookControl<true>['upload']>) => void;
 
   // Add any additional props you need.
 };
@@ -39,7 +37,7 @@ export function UploadDropzone({
         if (uploadOverride) {
           uploadOverride(files, { metadata });
         } else {
-          upload(files, { metadata });
+          void upload(files, { metadata });
         }
       }
       inputRef.current.value = '';
@@ -53,7 +51,7 @@ export function UploadDropzone({
         'border-input text-foreground relative rounded-lg border border-dashed transition-colors',
         {
           'border-primary/80': isDragActive,
-        }
+        },
       )}
     >
       <label
@@ -64,16 +62,12 @@ export function UploadDropzone({
             'text-muted-foreground cursor-not-allowed': isPending,
             'hover:bg-accent dark:hover:bg-accent/40': !isPending,
             'opacity-0': isDragActive,
-          }
+          },
         )}
         htmlFor={_id || id}
       >
         <div className="my-2">
-          {isPending ? (
-            <Loader2 className="size-6 animate-spin" />
-          ) : (
-            <Upload className="size-6" />
-          )}
+          {isPending ? <Loader2 className="size-6 animate-spin" /> : <Upload className="size-6" />}
         </div>
 
         <div className="mt-3 space-y-1 text-center">

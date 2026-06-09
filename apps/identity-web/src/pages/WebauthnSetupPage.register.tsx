@@ -35,9 +35,7 @@ export function WebauthnSetupRegisterCard({
       <div className="w-full max-w-md space-y-4">
         <h1 className="text-2xl font-bold">{title}</h1>
         <div className="space-y-2">
-          <Label htmlFor="webauthn-label">
-            Nom de la clé
-          </Label>
+          <Label htmlFor="webauthn-label">Nom de la clé</Label>
           <Input
             id="webauthn-label"
             placeholder={labelPlaceholder}

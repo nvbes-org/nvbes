@@ -45,7 +45,9 @@ export function DriveTrashView({
               <Trash2 className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <h3 className="truncate font-medium">{entry.name}</h3>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Supprime le {formatDate(entry.updatedAt)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Supprime le {formatDate(entry.updatedAt)}
+            </p>
           </div>
           <Button
             type="button"

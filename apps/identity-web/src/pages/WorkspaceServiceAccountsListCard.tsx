@@ -4,7 +4,13 @@ import { useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/classnames';
 import type { ServiceAccount } from '../identity.service-accounts.api';
@@ -18,9 +24,7 @@ function EmptyState() {
           <ServerCog />
         </EmptyMedia>
         <EmptyTitle>Aucun service account</EmptyTitle>
-        <EmptyDescription>
-          Creer le premier principal machine pour ce workspace.
-        </EmptyDescription>
+        <EmptyDescription>Creer le premier principal machine pour ce workspace.</EmptyDescription>
       </EmptyHeader>
     </Empty>
   );

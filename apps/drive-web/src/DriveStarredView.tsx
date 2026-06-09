@@ -15,7 +15,9 @@ export function DriveStarredView({
   state: DriveWorkspaceState;
   onStateChange: (state: DriveWorkspaceState) => void;
 }) {
-  const starredEntries = state.entries.filter((entry) => entry.status === 'active' && entry.starred);
+  const starredEntries = state.entries.filter(
+    (entry) => entry.status === 'active' && entry.starred,
+  );
 
   if (starredEntries.length === 0) {
     return (
@@ -43,7 +45,8 @@ export function DriveStarredView({
               <div className="min-w-0">
                 <h3 className="truncate font-medium">{entry.name}</h3>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  {entry.kind === 'folder' ? 'Dossier' : 'Fichier'} &middot; {owner?.name ?? 'Membre inconnu'} &middot;{' '}
+                  {entry.kind === 'folder' ? 'Dossier' : 'Fichier'} &middot;{' '}
+                  {owner?.name ?? 'Membre inconnu'} &middot;{' '}
                   {DATE_FORMATTER.format(new Date(entry.updatedAt))}
                 </p>
               </div>

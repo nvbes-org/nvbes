@@ -68,9 +68,7 @@ export function SecretDialog({
                   {formatDateTime(result.timestamp)}
                 </Badge>
               </div>
-              <Card className="mt-4 break-all p-3 font-mono text-sm">
-                {result.client_secret}
-              </Card>
+              <Card className="mt-4 break-all p-3 font-mono text-sm">{result.client_secret}</Card>
             </Card>
           </div>
         )}

@@ -39,21 +39,22 @@ export function WorkspaceServiceAccountsAccessDenied({
         <CardContent className="flex flex-col gap-4">
           <Alert>
             <AlertDescription>
-            {workspace ? (
-              <>
-                Workspace courant:{' '}
-                <span className="font-medium text-foreground">{workspace.name}</span>{' '}
-                <span className="text-muted-foreground">({workspaceId})</span>
-                <br />
-                Role detecte: <span className="font-medium text-foreground">{workspace.role}</span>
-              </>
-            ) : (
-              <>
-                Workspace courant introuvable.
-                <br />
-                Verifiez que la session contient bien un workspace actif.
-              </>
-            )}
+              {workspace ? (
+                <>
+                  Workspace courant:{' '}
+                  <span className="font-medium text-foreground">{workspace.name}</span>{' '}
+                  <span className="text-muted-foreground">({workspaceId})</span>
+                  <br />
+                  Role detecte:{' '}
+                  <span className="font-medium text-foreground">{workspace.role}</span>
+                </>
+              ) : (
+                <>
+                  Workspace courant introuvable.
+                  <br />
+                  Verifiez que la session contient bien un workspace actif.
+                </>
+              )}
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-2">
