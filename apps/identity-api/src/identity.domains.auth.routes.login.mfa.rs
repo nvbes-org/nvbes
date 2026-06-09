@@ -37,12 +37,16 @@ pub(crate) async fn challenge_mfa(
     nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_login_mfa",
-        &meta.rate_limit_ip_key(),
-        20,
-        std::time::Duration::from_secs(60),
-        &format!("state:{}", request.state_token),
-        8,
-        std::time::Duration::from_secs(300),
+        nvbes_core::limiter::RateLimitRule {
+            key: &meta.rate_limit_ip_key(),
+            max_hits: 20,
+            window: std::time::Duration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("state:{}", request.state_token),
+            max_hits: 8,
+            window: std::time::Duration::from_secs(300),
+        },
     )
     .await?;
 

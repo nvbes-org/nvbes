@@ -55,13 +55,13 @@ pub async fn create_client(
             "A client_assertion_public_key_jwk is required when private_key_jwt is mandatory.",
         ));
     }
-    if let Some(ref jwk) = input.client_assertion_public_key_jwk {
-        if !crate::domains::oauth::client_assertion::is_supported_client_assertion_public_jwk(jwk) {
-            return Err(AppError::bad_request(
-                "validation_failed",
-                "client_assertion_public_key_jwk must be a supported RSA or P-256 public JWK.",
-            ));
-        }
+    if let Some(ref jwk) = input.client_assertion_public_key_jwk
+        && !crate::domains::oauth::client_assertion::is_supported_client_assertion_public_jwk(jwk)
+    {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            "client_assertion_public_key_jwk must be a supported RSA or P-256 public JWK.",
+        ));
     }
     let client_assertion_public_key_configured = input.client_assertion_public_key_jwk.is_some();
     let requested_service_account_role = input

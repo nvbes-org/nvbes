@@ -15,10 +15,10 @@ fn get_introspection_cache()
 
 pub fn get_cached_introspection(token_hash: &str) -> Option<IdentityIntrospectionResponse> {
     let cache = get_introspection_cache().read().ok()?;
-    if let Some((response, expires_at)) = cache.get(token_hash) {
-        if Instant::now() < *expires_at {
-            return Some(response.clone());
-        }
+    if let Some((response, expires_at)) = cache.get(token_hash)
+        && Instant::now() < *expires_at
+    {
+        return Some(response.clone());
     }
     None
 }

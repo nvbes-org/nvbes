@@ -15,13 +15,15 @@ pub async fn enqueue_job(
 ) -> anyhow::Result<Uuid> {
     Ok(nvbes_redis::worker_queue::enqueue_job(
         redis,
-        queue,
-        job_type,
-        payload,
-        Some(idempotency_key),
-        max_attempts as u32,
-        true,
-        None,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: queue.to_string(),
+            job_type: job_type.to_string(),
+            payload,
+            idempotency_key: Some(idempotency_key.to_string()),
+            max_attempts: max_attempts as u32,
+            overwrite_terminal: true,
+            job_id: None,
+        },
     )
     .await?)
 }

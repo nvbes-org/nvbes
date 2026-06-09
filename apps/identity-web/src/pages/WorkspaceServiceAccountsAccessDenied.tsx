@@ -1,6 +1,7 @@
 import type { AccountWorkspace } from '@nvbes/identity-client';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +37,8 @@ export function WorkspaceServiceAccountsAccessDenied({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <div className="rounded-2xl border border-border/70 bg-background/80 p-4 text-sm text-muted-foreground">
+          <Alert>
+            <AlertDescription>
             {workspace ? (
               <>
                 Workspace courant:{' '}
@@ -52,11 +54,12 @@ export function WorkspaceServiceAccountsAccessDenied({
                 Verifiez que la session contient bien un workspace actif.
               </>
             )}
-          </div>
+            </AlertDescription>
+          </Alert>
           <div className="flex flex-wrap gap-2">
             <Button asChild>
               <Link to="/account/workspaces">
-                <ArrowLeft className="size-4" />
+                <ArrowLeft data-icon="inline-start" />
                 Retour aux workspaces
               </Link>
             </Button>

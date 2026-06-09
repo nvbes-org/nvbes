@@ -57,7 +57,7 @@ pub async fn start_authentication(
     .map_err(|err| {
         AppError::internal(
             "webauthn_challenge_store_failed",
-            &format!("Failed to store WebAuthn challenge: {err}"),
+            format!("Failed to store WebAuthn challenge: {err}"),
         )
     })?;
 
@@ -91,6 +91,10 @@ pub async fn start_authentication(
     Ok((challenge_id, options))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "WebAuthn finish keeps challenge ownership and verifier inputs explicit."
+)]
 pub async fn finish_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -104,7 +108,7 @@ pub async fn finish_authentication(
 ) -> Result<String, AppError> {
     let challenge = nvbes_redis::auth_challenge::get_auth_challenge(redis, challenge_id)
         .await
-        .map_err(|err| AppError::internal("webauthn_challenge_load_failed", &format!("{}", err)))?
+        .map_err(|err| AppError::internal("webauthn_challenge_load_failed", format!("{}", err)))?
         .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
 
     if challenge.principal_id != user_id
@@ -145,7 +149,7 @@ pub async fn finish_authentication(
     nvbes_redis::auth_challenge::consume_auth_challenge(redis, challenge_id)
         .await
         .map_err(|err| {
-            AppError::internal("webauthn_challenge_consume_failed", &format!("{}", err))
+            AppError::internal("webauthn_challenge_consume_failed", format!("{}", err))
         })?;
 
     let _ = risk::record_event(
@@ -171,13 +175,13 @@ pub async fn finish_authentication(
 }
 
 fn shape_authentication_options(mut options: serde_json::Value) -> serde_json::Value {
-    if let Some(public_key) = options.get_mut("publicKey") {
-        if let Some(public_key_object) = public_key.as_object_mut() {
-            public_key_object.insert(
-                "hints".to_string(),
-                json!(["security-key", "client-device", "hybrid"]),
-            );
-        }
+    if let Some(public_key) = options.get_mut("publicKey")
+        && let Some(public_key_object) = public_key.as_object_mut()
+    {
+        public_key_object.insert(
+            "hints".to_string(),
+            json!(["security-key", "client-device", "hybrid"]),
+        );
     }
     options
 }

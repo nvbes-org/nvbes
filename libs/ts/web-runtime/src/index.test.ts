@@ -1,11 +1,8 @@
 import { DtoValidationError, HttpError } from '@nvbes/http-client';
-import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
   ClientRuntimeError,
   createSentryFeedbackOptions,
-  effectMutationFn,
-  effectQueryFn,
   installBrowserSentrySmoke,
   isBrowserSentrySmokeEnabled,
   normalizeClientError,
@@ -17,26 +14,7 @@ import {
 } from './index';
 import { z } from 'zod';
 
-describe('web-runtime Effect adapters', () => {
-  it('runs a successful Effect as a query function', async () => {
-    const queryFn = effectQueryFn(() => Effect.succeed('ok'));
-
-    await expect(
-      queryFn({
-        queryKey: ['test'],
-        client: {} as never,
-        signal: new AbortController().signal,
-        meta: undefined,
-      }),
-    ).resolves.toBe('ok');
-  });
-
-  it('runs a successful Effect as a mutation function', async () => {
-    const mutationFn = effectMutationFn((value: string) => Effect.succeed(value.toUpperCase()));
-
-    await expect(mutationFn('nvbes', {} as never)).resolves.toBe('NVBES');
-  });
-
+describe('web-runtime client errors', () => {
   it('normalizes HttpError', () => {
     const response = new Response(JSON.stringify({ error: { message: 'Nope' } }), {
       status: 401,

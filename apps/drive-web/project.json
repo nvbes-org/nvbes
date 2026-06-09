@@ -3,31 +3,5 @@
   "projectType": "application",
   "root": "apps/drive-web",
   "sourceRoot": "apps/drive-web/src",
-  "tags": ["type:app", "domain:drive", "layer:app"],
-  "targets": {
-    "dev": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir apps/drive-web dev"
-      }
-    },
-    "build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir apps/drive-web build"
-      }
-    },
-    "check": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir apps/drive-web typecheck"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm --dir apps/drive-web lint"
-      }
-    }
-  }
+  "tags": ["type:app", "domain:drive", "layer:app"]
 }

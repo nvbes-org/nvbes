@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 import { ErrorMessage } from './AccountPrivacyPage.cards';
 
@@ -38,9 +39,8 @@ export function DeleteAccountDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
-          <input
+          <Input
             type="text"
-            className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             placeholder="SUPPRIMER"
             value={deleteConfirmText}
             onChange={(event) => onDeleteConfirmTextChange(event.target.value)}
@@ -59,8 +59,7 @@ export function DeleteAccountDialog({
           </Button>
           <Button
             type="button"
-            variant="default"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
             onClick={onDelete}
             disabled={deleting || deleteConfirmText !== 'SUPPRIMER'}
           >

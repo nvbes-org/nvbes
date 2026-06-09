@@ -58,6 +58,8 @@ const SessionsResponseSchema = z.object({
 
 const AccountEntrySchema = z.object({
   authuser: z.string(),
+  status: z.enum(['active', 'expired']).optional(),
+  message: NullableStringSchema.optional(),
   user: AccountPrincipalSchema,
   session: AccountSessionSchema,
 });
@@ -144,6 +146,12 @@ export class IdentityClient {
 
   revokeSession(sessionId: string): Promise<void> {
     return this.http.delete(`/auth/sessions/${sessionId}`, SuccessSchema).then(() => undefined);
+  }
+
+  forgetAccount(authuser: string): Promise<void> {
+    return this.http
+      .delete(`/auth/accounts/${encodeURIComponent(authuser)}`, SuccessSchema)
+      .then(() => undefined);
   }
 
   revokeOtherSessions(): Promise<void> {

@@ -75,12 +75,12 @@ pub(crate) async fn me_export_download(
     let filename = format!("nvbes-identity-export-{}.json", auth.user_id());
     let content_disposition =
         HeaderValue::from_str(&format!("attachment; filename=\"{filename}\""))
-            .map_err(|error| AppError::internal("invalid_export_filename", &error.to_string()))?;
+            .map_err(|error| AppError::internal("invalid_export_filename", error.to_string()))?;
 
     Response::builder()
         .header(header::CONTENT_TYPE, "application/json")
         .header(header::CACHE_CONTROL, "no-store")
         .header(header::CONTENT_DISPOSITION, content_disposition)
         .body(Body::from(body))
-        .map_err(|error| AppError::internal("data_export_response_failed", &error.to_string()))
+        .map_err(|error| AppError::internal("data_export_response_failed", error.to_string()))
 }

@@ -1,5 +1,7 @@
 import { ShieldCheckIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 const SCOPE_DESCRIPTIONS: Record<string, { label: string; desc: string }> = {
   openid: { label: 'Authentification', desc: 'Confirmer votre identité' },
@@ -33,7 +35,7 @@ export function LoginPageConsent({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-2xl border bg-muted/20 p-4">
+      <Card className="p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/80">
           Autorisations demandées :
         </p>
@@ -56,11 +58,11 @@ export function LoginPageConsent({
             );
           })}
         </div>
-      </div>
+      </Card>
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       <div className="flex gap-2">
         <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>

@@ -122,7 +122,7 @@ pub async fn token_exchange(
         if !subject_scopes.contains(requested) {
             return Err(AppError::forbidden(
                 "invalid_scope",
-                &format!(
+                format!(
                     "The requested scope '{}' exceeds the subject token scope.",
                     requested
                 ),
@@ -141,7 +141,7 @@ pub async fn token_exchange(
             if !actor_scopes.contains(requested) {
                 return Err(AppError::forbidden(
                     "invalid_scope",
-                    &format!(
+                    format!(
                         "The requested scope '{}' exceeds the actor token scope.",
                         requested
                     ),
@@ -212,7 +212,7 @@ async fn validate_subject_token(
     {
         return Err(AppError::bad_request(
             "invalid_request",
-            &format!("Unsupported subject_token_type: {}", token_type),
+            format!("Unsupported subject_token_type: {}", token_type),
         ));
     }
 
@@ -258,7 +258,7 @@ async fn validate_actor_token(
     if token_type != "urn:ietf:params:oauth:token-type:access_token" {
         return Err(AppError::bad_request(
             "invalid_request",
-            &format!("Unsupported actor_token_type: {}", token_type),
+            format!("Unsupported actor_token_type: {}", token_type),
         ));
     }
 

@@ -17,7 +17,7 @@ pub async fn record_audit_event(
     user_agent: Option<&str>,
 ) -> Result<(), AppError> {
     nvbes_audit::insert_audit_event_tx(
-        &mut **tx,
+        tx,
         AuditEventInput {
             tenant_id: required_tenant_id(access)?,
             workspace_id: Some(access.workspace_id),
@@ -31,5 +31,5 @@ pub async fn record_audit_event(
         },
     )
     .await
-    .map_err(|error| AppError::internal("audit_insert_failed", &format!("{error}")))
+    .map_err(|error| AppError::internal("audit_insert_failed", format!("{error}")))
 }

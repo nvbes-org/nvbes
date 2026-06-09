@@ -66,7 +66,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 uuid = { version = "1.23.1", features = ["serde", "v4"] }
 urlencoding = "2.1.3"
-webauthn-rs = { version = "0.5.0", features = ["danger-allow-state-serialisation"] }
+webauthn-rs = { version = "0.5.0", features = ["conditional-ui", "danger-allow-state-serialisation"] }
 thiserror = "2"
 metrics = "0.24.6"
 metrics-exporter-prometheus = "0.16"
@@ -82,3 +82,17 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 [patch.crates-io]
 xmlsec = { path = "vendor/xmlsec" }
+
+[profile.dev]
+incremental = true
+opt-level = 0
+debug = 1
+
+[profile.dev.package."*"]
+opt-level = 1
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

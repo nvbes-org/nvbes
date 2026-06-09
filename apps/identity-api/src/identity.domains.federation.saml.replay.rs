@@ -76,10 +76,11 @@ pub fn extract_assertion_id(xml: &str) -> Option<String> {
     let doc = roxmltree::Document::parse(xml).ok()?;
 
     for node in doc.descendants() {
-        if node.is_element() && node.tag_name().name() == "Assertion" {
-            if let Some(id) = node.attribute("ID") {
-                return Some(id.trim().to_string());
-            }
+        if node.is_element()
+            && node.tag_name().name() == "Assertion"
+            && let Some(id) = node.attribute("ID")
+        {
+            return Some(id.trim().to_string());
         }
     }
 

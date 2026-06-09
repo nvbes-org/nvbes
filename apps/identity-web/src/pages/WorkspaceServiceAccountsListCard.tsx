@@ -2,24 +2,27 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowRight, ServerCog } from 'lucide-react';
 import { useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/classnames';
 import type { ServiceAccount } from '../identity.service-accounts.api';
 import { badgeVariantForStatus, statusLabel } from './WorkspaceServiceAccounts.helpers';
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border/70 px-6 py-10 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <ServerCog className="size-5 text-muted-foreground" />
-      </div>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Aucun service account</p>
-        <p className="text-sm text-muted-foreground">
+    <Empty className="border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <ServerCog />
+        </EmptyMedia>
+        <EmptyTitle>Aucun service account</EmptyTitle>
+        <EmptyDescription>
           Creer le premier principal machine pour ce workspace.
-        </p>
-      </div>
-    </div>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -66,13 +69,11 @@ export function WorkspaceServiceAccountsListCard({
             {virtualizer.getVirtualItems().map((virtualItem) => {
               if (virtualItem.index % 2 === 1) {
                 return (
-                  <div
+                  <Separator
                     key={`separator-${virtualItem.index}`}
-                    className="absolute left-0 right-0 px-6"
+                    className="absolute left-6 right-6 w-auto"
                     style={{ transform: `translateY(${virtualItem.start}px)` }}
-                  >
-                    <div className="my-1 h-px bg-border/70" />
-                  </div>
+                  />
                 );
               }
 
@@ -87,10 +88,11 @@ export function WorkspaceServiceAccountsListCard({
                   className="absolute left-0 right-0 px-6"
                   style={{ transform: `translateY(${virtualItem.start}px)` }}
                 >
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     className={cn(
-                      'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition',
+                      'h-auto w-full justify-between gap-3 px-3 py-3 text-left',
                       selected
                         ? 'bg-primary/10 text-primary'
                         : 'hover:bg-muted/60 hover:text-foreground',
@@ -110,7 +112,7 @@ export function WorkspaceServiceAccountsListCard({
                       </p>
                     </div>
                     <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                  </button>
+                  </Button>
                 </div>
               );
             })}

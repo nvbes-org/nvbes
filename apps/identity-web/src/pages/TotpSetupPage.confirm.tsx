@@ -1,5 +1,9 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { QRCode } from '@/components/kibo-ui/qr-code';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 export function TotpConfirmCard({
@@ -30,13 +34,9 @@ export function TotpConfirmCard({
 
         {qrUrl ? (
           <div className="flex justify-center">
-            <img
-              src={qrUrl}
-              alt="QR code TOTP"
-              className="rounded-lg border"
-              width={200}
-              height={200}
-            />
+            <Card className="p-2">
+              <QRCode data={qrUrl} aria-label="QR code TOTP" className="size-[200px]" />
+            </Card>
           </div>
         ) : null}
 
@@ -60,9 +60,9 @@ export function TotpConfirmCard({
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="totp-confirm-code" className="text-sm font-medium">
+            <Label htmlFor="totp-confirm-code">
               Code de vérification
-            </label>
+            </Label>
             <Input
               id="totp-confirm-code"
               type="text"
@@ -77,7 +77,11 @@ export function TotpConfirmCard({
               required
             />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
               Annuler

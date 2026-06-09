@@ -149,20 +149,20 @@ pub async fn verify_token(
     }
 
     // 3. Validate token age via challenge_ts (Cloudflare tokens live 5 mins max)
-    if let Some(ts_str) = &parsed.challenge_ts {
-        if let Ok(challenge_time) = chrono::DateTime::parse_from_rfc3339(ts_str) {
-            let now = chrono::Utc::now();
-            let duration = now.signed_duration_since(challenge_time.with_timezone(&chrono::Utc));
-            if duration.num_seconds() > 300 {
-                tracing::warn!(
-                    "Turnstile token is too old: {} seconds",
-                    duration.num_seconds()
-                );
-                return Err(AppError::forbidden(
-                    "turnstile_token_expired",
-                    "Bot protection token has expired.",
-                ));
-            }
+    if let Some(ts_str) = &parsed.challenge_ts
+        && let Ok(challenge_time) = chrono::DateTime::parse_from_rfc3339(ts_str)
+    {
+        let now = chrono::Utc::now();
+        let duration = now.signed_duration_since(challenge_time.with_timezone(&chrono::Utc));
+        if duration.num_seconds() > 300 {
+            tracing::warn!(
+                "Turnstile token is too old: {} seconds",
+                duration.num_seconds()
+            );
+            return Err(AppError::forbidden(
+                "turnstile_token_expired",
+                "Bot protection token has expired.",
+            ));
         }
     }
 

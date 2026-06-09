@@ -5,6 +5,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Profiler, useState } from 'react';
 import { NetworkQualityInit } from './components/NetworkQualityInit';
+import { TooltipProvider } from './components/ui/tooltip';
 import { router } from './drive.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
 
@@ -37,17 +38,19 @@ export function App() {
   return (
     <ErrorBoundary name="global">
       <QueryClientProvider client={queryClient}>
-        <NetworkQualityInit />
-        <TrackingConsentBanner />
-        {import.meta.env.DEV ? (
-          <Profiler id="drive-web" onRender={handleRenderProfiler}>
+        <TooltipProvider>
+          <NetworkQualityInit />
+          <TrackingConsentBanner />
+          {import.meta.env.DEV ? (
+            <Profiler id="drive-web" onRender={handleRenderProfiler}>
+              <RouterProvider router={router} />
+              <ReactQueryDevtools initialIsOpen={false} />
+              <TanStackRouterDevtools router={router} position="bottom-right" />
+            </Profiler>
+          ) : (
             <RouterProvider router={router} />
-            <ReactQueryDevtools initialIsOpen={false} />
-            <TanStackRouterDevtools router={router} position="bottom-right" />
-          </Profiler>
-        ) : (
-          <RouterProvider router={router} />
-        )}
+          )}
+        </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -65,7 +65,7 @@ pub(crate) async fn revoke(
     if claims.token_type == "refresh" {
         nvbes_redis::refresh_token::revoke_refresh_token(&state.redis, &claims.jti)
             .await
-            .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+            .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
     }
 
     revoke_refresh_family(&state.redis, user_id, session_id, &claims.jti).await?;
@@ -87,7 +87,7 @@ async fn revoke_refresh_family(
 ) -> Result<(), AppError> {
     nvbes_redis::refresh_token::revoke_refresh_family(redis, user_id, session_id, jti)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
     let _ =
         nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
             .await;

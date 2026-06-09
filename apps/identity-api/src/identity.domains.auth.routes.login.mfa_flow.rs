@@ -89,10 +89,9 @@ async fn resolve_webauthn_method(
                 "webauthn_login",
             )
             .await
+                && failed_attempts >= 5
             {
-                if failed_attempts >= 5 {
-                    return Err(super::challenge_locked());
-                }
+                return Err(super::challenge_locked());
             }
             Err(err)
         }

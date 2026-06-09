@@ -56,15 +56,19 @@ pub async fn create_oauth_client(
     )
     .await?;
 
-    Ok(Json(
-        crate::domains::service_accounts::service::create_service_account_oauth_client(
-            &state.db,
-            &access,
-            service_account_id,
-            request,
-        )
-        .await?,
-    ))
+    let result = crate::domains::service_accounts::service::create_service_account_oauth_client(
+        &state.db,
+        &access,
+        service_account_id,
+        request,
+    )
+    .await?;
+    state
+        .allowed_browser_origins
+        .refresh_from_db(&state.db, &state.config)
+        .await?;
+
+    Ok(Json(result))
 }
 
 #[utoipa::path(
@@ -191,16 +195,20 @@ pub async fn revoke_oauth_client(
     )
     .await?;
 
-    Ok(Json(
-        crate::domains::service_accounts::service::revoke_oauth_client(
-            &state.db,
-            &state.redis,
-            &access,
-            service_account_id,
-            &client_id,
-            client_ip(&headers).as_deref(),
-            user_agent(&headers).as_deref(),
-        )
-        .await?,
-    ))
+    let result = crate::domains::service_accounts::service::revoke_oauth_client(
+        &state.db,
+        &state.redis,
+        &access,
+        service_account_id,
+        &client_id,
+        client_ip(&headers).as_deref(),
+        user_agent(&headers).as_deref(),
+    )
+    .await?;
+    state
+        .allowed_browser_origins
+        .refresh_from_db(&state.db, &state.config)
+        .await?;
+
+    Ok(Json(result))
 }

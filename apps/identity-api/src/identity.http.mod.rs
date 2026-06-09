@@ -1,5 +1,7 @@
 #[path = "identity.http.cookies.rs"]
 pub mod cookies;
+#[path = "identity.http.cors.rs"]
+pub mod cors;
 #[path = "identity.http.error.rs"]
 pub mod error;
 #[path = "identity.http.middleware.mod.rs"]

@@ -36,7 +36,7 @@ pub(super) async fn attach_export_download(
     let signed = storage
         .presign_download(&object_key, Duration::from_secs(expires_in))
         .await
-        .map_err(|error| AppError::internal("privacy_export_presign_failed", &error.to_string()))?;
+        .map_err(|error| AppError::internal("privacy_export_presign_failed", error.to_string()))?;
 
     delivery.remove("object_key");
     delivery.insert(

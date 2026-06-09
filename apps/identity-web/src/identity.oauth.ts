@@ -108,7 +108,7 @@ export async function authorizeIdentitySession(
     'Content-Type': 'application/x-www-form-urlencoded',
   };
   if (sessionToken) {
-    parHeaders['Authorization'] = `Bearer ${sessionToken}`;
+    parHeaders.Authorization = `Bearer ${sessionToken}`;
   }
 
   const parData = await identityHttpClient.post('/oauth/par', ParResponseSchema, parBody, {
@@ -120,13 +120,13 @@ export async function authorizeIdentitySession(
   url.searchParams.set('client_id', request.clientId);
   url.searchParams.set('request_uri', parData.request_uri);
 
-  const headers: Record<string, string> = {};
+  const authorizeHeaders: Record<string, string> = {};
   if (sessionToken) {
-    headers['Authorization'] = `Bearer ${sessionToken}`;
+    authorizeHeaders.Authorization = `Bearer ${sessionToken}`;
   }
 
   const data = await identityHttpClient.get(url.toString(), OAuthAuthorizeResponseSchema, {
-    headers,
+    headers: authorizeHeaders,
   });
   window.location.assign(buildRedirectUrl(data.redirect_uri, data.code, data.state));
 }

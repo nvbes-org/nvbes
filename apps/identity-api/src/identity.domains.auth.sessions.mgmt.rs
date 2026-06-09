@@ -1,5 +1,6 @@
 use chrono::Utc;
 use sqlx::{PgPool, Postgres};
+use std::cmp::Reverse;
 use uuid::Uuid;
 
 use super::types::*;
@@ -15,11 +16,11 @@ pub async fn logout(
     let _ = db;
     nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
 
     nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     Ok(())
 }
 
@@ -30,7 +31,7 @@ pub async fn list(
 ) -> Result<SessionsResult, AppError> {
     let session_ids = nvbes_redis::session::list_user_sessions(redis, &user_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_list_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_list_failed", err.to_string()))?;
     let mut sessions = Vec::new();
 
     for session_id in session_ids {
@@ -49,7 +50,7 @@ pub async fn list(
         ));
     }
 
-    sessions.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    sessions.sort_by_key(|session| Reverse(session.created_at));
 
     Ok(SessionsResult { sessions })
 }
@@ -66,7 +67,7 @@ pub async fn revoke(
     let _ = db;
     nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
 
     Ok(())
 }
@@ -83,11 +84,11 @@ pub async fn revoke_all_others(
         &current_session_id.to_string(),
     )
     .await
-    .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     let _ = db;
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
 
     Ok(())
 }
@@ -99,7 +100,7 @@ pub async fn fetch_view(
 ) -> Result<SessionView, AppError> {
     let session = nvbes_redis::session::get_session(redis, &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
         .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found."))?;
     if session.revoked_at.is_some() || session.expires_at <= Utc::now() {
         let _ =
@@ -123,7 +124,7 @@ pub async fn revoke_all_user_sessions(
     tx.commit().await?;
     nvbes_redis::session::clear_user_sessions(redis, &user_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     Ok(())
 }
 

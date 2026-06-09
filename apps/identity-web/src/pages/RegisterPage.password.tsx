@@ -3,7 +3,7 @@ import { adjacencyGraphs, dictionary as commonDictionary } from '@zxcvbn-ts/lang
 import { dictionary as frDictionary, translations } from '@zxcvbn-ts/language-fr';
 import { useMemo } from 'react';
 
-import { cn } from '@/lib/classnames';
+import { Progress } from '@/components/ui/progress';
 
 zxcvbnOptions.setOptions({
   dictionary: {
@@ -27,43 +27,9 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
     return null;
   }
 
-  const bars = [
-    { score: 1, label: 'très faible' },
-    { score: 2, label: 'faible' },
-    { score: 3, label: 'bon' },
-    { score: 4, label: 'fort' },
-  ];
-
-  const getBarColor = (barScore: number) => {
-    if (result.score >= barScore) {
-      if (result.score <= 1) {
-        return 'bg-destructive';
-      }
-      if (result.score === 2) {
-        return 'bg-orange-500';
-      }
-      if (result.score === 3) {
-        return 'bg-blue-500';
-      }
-      return 'bg-emerald-500';
-    }
-
-    return 'bg-muted';
-  };
-
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex h-1.5 gap-1">
-        {bars.map((bar) => (
-          <div
-            key={bar.score}
-            className={cn(
-              'flex-1 rounded-full transition-colors duration-300',
-              getBarColor(bar.score),
-            )}
-          />
-        ))}
-      </div>
+      <Progress value={(result.score / 4) * 100} />
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
           {result.score <= 1

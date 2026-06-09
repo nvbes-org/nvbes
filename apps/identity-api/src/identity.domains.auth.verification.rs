@@ -59,7 +59,7 @@ pub async fn require_recent_step_up(
     let required = required.unwrap_or(Aal::Aal2);
     let session = nvbes_redis::session::get_session(redis, &auth.session_id().to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
         .ok_or_else(|| {
             crate::http::error::AppError::from(nvbes_core::auth::step_up_required_error())
         })?;

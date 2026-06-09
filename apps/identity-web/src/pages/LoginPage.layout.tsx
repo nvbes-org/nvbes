@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Card,
   CardContent,
@@ -8,12 +9,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import type { LoginStep } from './LoginProgress';
 
 export function LoginPageLoading() {
   return (
     <div className="flex flex-1 items-center justify-center bg-muted/30">
-      <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <Spinner className="size-6 text-primary" />
     </div>
   );
 }
@@ -31,9 +33,9 @@ export function LoginPageMobileBrand() {
 
 export function LoginPageError({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      {message}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -46,6 +48,7 @@ function titleForStep(step: LoginStep) {
 function descriptionForStep(step: LoginStep) {
   if (step === 'identifier') return 'Entrez votre email pour commencer.';
   if (step === 'password') return 'Saisissez votre mot de passe.';
+  if (step === 'webauthn') return 'Utilisez votre clé de sécurité.';
   if (step === 'consent') return "L'application souhaite accéder à votre compte.";
   if (step === 'chooser') return 'pour continuer sur nvbes';
   return 'Vérification en deux étapes.';

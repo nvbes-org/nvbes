@@ -1,6 +1,6 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
-use webauthn_rs::prelude::Passkey;
+use webauthn_rs::prelude::{DiscoverableKey, Passkey};
 
 use crate::http::error::AppError;
 
@@ -48,4 +48,23 @@ pub(crate) async fn persist_passkey(
     .await?;
 
     Ok(())
+}
+
+pub(crate) async fn fetch_user_email(db: &PgPool, principal_id: Uuid) -> Result<String, AppError> {
+    sqlx::query_scalar(
+        r#"
+        SELECT email
+        FROM users
+        WHERE principal_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(db)
+    .await
+    .map_err(Into::into)
+}
+
+pub(crate) fn discoverable_keys(passkeys: &[Passkey]) -> Vec<DiscoverableKey> {
+    passkeys.iter().map(DiscoverableKey::from).collect()
 }

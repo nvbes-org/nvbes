@@ -20,6 +20,7 @@ pub struct AppState {
     pub dpop_nonce: Option<std::sync::Arc<nvbes_dpop::DpopNonceStore>>,
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
+    pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -123,9 +124,15 @@ impl AppState {
             dpop_nonce,
             redis,
             rate_limiter,
+            allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
         };
 
         crate::database::ensure_default_oauth_clients_seeded(&state.db).await?;
+        state
+            .allowed_browser_origins
+            .refresh_from_db(&state.db, &state.config)
+            .await
+            .map_err(|err| anyhow::anyhow!(err.message))?;
 
         state.observability.record_postgres_pool(
             &state.config.app_name,
@@ -190,8 +197,6 @@ fn build_email_sender(config: &AppConfig) -> std::sync::Arc<dyn nvbes_email::Ema
 }
 
 pub fn build_router(state: AppState) -> axum::Router {
-    let cors = nvbes_core::security::cors_layer(&state.config);
-
     crate::http::router(&state)
         .layer(CompressionLayer::new())
         .layer(axum::middleware::from_fn_with_state(
@@ -212,7 +217,10 @@ pub fn build_router(state: AppState) -> axum::Router {
             StatusCode::REQUEST_TIMEOUT,
             Duration::from_secs(state.config.http_request_timeout_secs),
         ))
-        .layer(cors)
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::http::cors::cors_middleware,
+        ))
         .layer(ConcurrencyLimitLayer::new(
             state.config.api_max_concurrent_requests as usize,
         ))

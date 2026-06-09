@@ -46,17 +46,21 @@ fn provider(base_url: &str) -> FederatedIdentityProviderRecord {
 #[tokio::test]
 async fn fetch_saml_metadata_parses_entity_id_and_sso_url() {
     let base_url = spawn_server(|base_url| {
+        let acs_url = format!("{}/acs", base_url);
         Router::new().route(
             "/metadata",
-            get(move || async move {
-                format!(
-                    r#"<EntityDescriptor entityID="https://idp.example.com">
+            get(move || {
+                let acs_url = acs_url.clone();
+                async move {
+                    format!(
+                        r#"<EntityDescriptor entityID="https://idp.example.com">
   <IDPSSODescriptor>
     <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="{acs}"/>
   </IDPSSODescriptor>
 </EntityDescriptor>"#,
-                    acs = format!("{}/acs", base_url)
-                )
+                        acs = acs_url
+                    )
+                }
             }),
         )
     })

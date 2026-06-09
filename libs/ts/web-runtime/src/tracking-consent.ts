@@ -18,6 +18,7 @@ import {
   type CookieConsentState,
   type TrackingConsentStoredValue,
 } from './tracking-consent.storage';
+import { HttpError } from '@nvbes/http-client';
 
 export type BackendConsent = {
   consent_type: string;
@@ -218,12 +219,25 @@ function dispatchTrackingConsentChange(consent: CookieConsentState, source: stri
   );
 }
 
+function isSkippableConsentSyncError(error: unknown): boolean {
+  return error instanceof HttpError && (error.status === 401 || error.status === 403);
+}
+
 async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<void> {
   if (typeof client.isAuthenticated === 'function' && !(await client.isAuthenticated())) {
     return;
   }
 
-  const backendConsents = await client.listConsents();
+  let backendConsents: BackendConsent[];
+  try {
+    backendConsents = await client.listConsents();
+  } catch (error) {
+    if (isSkippableConsentSyncError(error)) {
+      return;
+    }
+    throw error;
+  }
+
   const backendChangedAt = latestBackendConsentChangeAt(backendConsents);
   const backendConsent = backendConsentState(backendConsents);
   const storedValue = readTrackingConsentStoredValue();

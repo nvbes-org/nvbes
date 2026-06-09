@@ -18,10 +18,7 @@ use uuid::Uuid;
 
 #[cfg(test)]
 fn test_pool() -> PgPool {
-    let url = env::var("DATABASE_URL")
-        .or_else(|_| env::var("NVBES_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-    PgPool::connect_lazy(&url).expect("valid pool")
+    crate::test_support::shared_test_pool()
 }
 
 #[cfg(test)]

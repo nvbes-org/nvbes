@@ -81,13 +81,13 @@ pub async fn revoke_pushed_authorization_requests_for_client(
 
     let mut revoked = 0;
     for request_uri in request_uris {
-        if let Some(request) = get_pushed_authorization_request(pool, &request_uri).await? {
-            if request.client_id == client_id {
-                let _: () = conn
-                    .del(pushed_authorization_request_key(&request_uri))
-                    .await?;
-                revoked += 1;
-            }
+        if let Some(request) = get_pushed_authorization_request(pool, &request_uri).await?
+            && request.client_id == client_id
+        {
+            let _: () = conn
+                .del(pushed_authorization_request_key(&request_uri))
+                .await?;
+            revoked += 1;
         }
     }
 

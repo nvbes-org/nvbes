@@ -188,6 +188,20 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_POSTHOG_HOST ||
     'https://eu.i.posthog.com';
   const posthogHost = getPostHogHost(posthogKey, posthogApiHost);
+  const configuredDriveApiBaseUrl =
+    process.env.VITE_DRIVE_API_BASE_URL ||
+    localEnv.VITE_DRIVE_API_BASE_URL ||
+    rootEnv.VITE_DRIVE_API_BASE_URL ||
+    '';
+  const driveApiProxyTarget =
+    process.env.VITE_DRIVE_API_PROXY_TARGET ||
+    localEnv.VITE_DRIVE_API_PROXY_TARGET ||
+    rootEnv.VITE_DRIVE_API_PROXY_TARGET ||
+    process.env.NVBES_DRIVE_API_BASE_URL ||
+    localEnv.NVBES_DRIVE_API_BASE_URL ||
+    rootEnv.NVBES_DRIVE_API_BASE_URL ||
+    (configuredDriveApiBaseUrl.startsWith('http') ? configuredDriveApiBaseUrl : '') ||
+    'http://localhost:4002';
 
   const cspHeader = getCsp(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost);
   const sentryOrg = process.env.SENTRY_ORG || localEnv.SENTRY_ORG || rootEnv.SENTRY_ORG || 'nvbes';
@@ -285,6 +299,10 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk/src/index.ts'),
         },
         {
+          find: '@nvbes/web-ui',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts'),
+        },
+        {
           find: '@nvbes/web-runtime/posthog',
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/posthog.ts'),
         },
@@ -308,6 +326,13 @@ export default defineConfig(({ mode }) => {
         'X-XSS-Protection': '1; mode=block',
         'Cross-Origin-Opener-Policy': 'same-origin',
         'Cross-Origin-Resource-Policy': 'same-origin',
+      },
+      proxy: {
+        '/api': {
+          target: driveApiProxyTarget,
+          changeOrigin: true,
+          rewrite: (requestPath: string) => requestPath.replace(/^\/api/u, ''),
+        },
       },
     },
     preview: {

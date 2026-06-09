@@ -1,6 +1,7 @@
 import { ExternalLink, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import type { LinkedApp } from '@/pages/AccountLinkedAppsPage.api';
 import { formatLinkedAppDate } from './AccountLinkedAppsPage.utils';
 
@@ -37,7 +38,7 @@ export function LinkedAppRow({
           aria-label={`Revoquer ${client.name}`}
         >
           {revoking === client.id ? (
-            <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <Spinner className="size-3" />
           ) : (
             <X className="size-3.5" />
           )}

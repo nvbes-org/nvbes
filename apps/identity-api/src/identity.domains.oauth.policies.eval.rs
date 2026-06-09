@@ -15,6 +15,10 @@ struct ClientPolicyRecord {
 }
 
 /// Ensure a client policy is met.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Client policy evaluation keeps scope resolution inputs explicit."
+)]
 pub async fn ensure_client_policy(
     db: &PgPool,
     client_id: &str,
@@ -59,15 +63,14 @@ pub async fn ensure_client_policy(
     let requested_resources = normalize_resources(resource_indicators.to_vec());
     let allowed_audiences = normalize_resources(policy.allowed_audiences);
     let allowed_resources = normalize_resources(policy.allowed_resources);
-    if let Some(audience) = audience.filter(|value| !value.trim().is_empty()) {
-        if !allowed_audiences.is_empty()
-            && !allowed_audiences.iter().any(|allowed| allowed == audience)
-        {
-            return Err(policy_denied(
-                "client_audience_not_allowed",
-                "The requested audience is not approved for this client.",
-            ));
-        }
+    if let Some(audience) = audience.filter(|value| !value.trim().is_empty())
+        && !allowed_audiences.is_empty()
+        && !allowed_audiences.iter().any(|allowed| allowed == audience)
+    {
+        return Err(policy_denied(
+            "client_audience_not_allowed",
+            "The requested audience is not approved for this client.",
+        ));
     }
     if !requested_resources.is_empty()
         && !allowed_resources.is_empty()

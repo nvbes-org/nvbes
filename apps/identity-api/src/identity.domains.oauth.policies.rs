@@ -184,8 +184,8 @@ pub async fn update_client_policy(
     .bind(input.allowed_scopes)
     .bind(input.allowed_audiences)
     .bind(input.allowed_resources)
-    .bind(required_acr.as_ref().map(|value| value.as_str()))
-    .bind(status.as_ref().map(|value| value.as_str()))
+    .bind(required_acr.as_deref())
+    .bind(status.as_deref())
     .bind(tenant_id)
     .fetch_optional(db)
     .await?;

@@ -47,11 +47,12 @@ pub fn score_client_signals(signals: &BotSignals) -> BotScore {
             factors.push("mouse_absent");
         }
     }
-    if let Some(variance) = signals.mouse_variance {
-        if variance < 0.01 && signals.mouse_event_count.unwrap_or(0) > 5 {
-            score += weights::W_MOUSE_LINEAR;
-            factors.push("mouse_linear");
-        }
+    if let Some(variance) = signals.mouse_variance
+        && variance < 0.01
+        && signals.mouse_event_count.unwrap_or(0) > 5
+    {
+        score += weights::W_MOUSE_LINEAR;
+        factors.push("mouse_linear");
     }
     if let Some(path_len) = signals.mouse_path_length {
         let is_touch = signals.nav_touch_points.unwrap_or(0) > 0;
@@ -62,29 +63,30 @@ pub fn score_client_signals(signals: &BotSignals) -> BotScore {
     }
 
     // --- Keyboard biometrics ---
-    if let Some(sample_count) = signals.kb_sample_count {
-        if sample_count >= 3 {
-            if let Some(dwell_var) = signals.kb_dwell_variance {
-                if dwell_var < 5.0 {
-                    score += weights::W_KB_ROBOTIC;
-                    factors.push("kb_robotic_timing");
-                }
-            }
-            if let Some(dwell_mean) = signals.kb_dwell_mean {
-                if dwell_mean < 30.0 || dwell_mean > 500.0 {
-                    score += weights::W_KB_ROBOTIC;
-                    factors.push("kb_dwell_anomalous");
-                }
-            }
+    if let Some(sample_count) = signals.kb_sample_count
+        && sample_count >= 3
+    {
+        if let Some(dwell_var) = signals.kb_dwell_variance
+            && dwell_var < 5.0
+        {
+            score += weights::W_KB_ROBOTIC;
+            factors.push("kb_robotic_timing");
+        }
+        if let Some(dwell_mean) = signals.kb_dwell_mean
+            && (!(30.0..=500.0).contains(&dwell_mean))
+        {
+            score += weights::W_KB_ROBOTIC;
+            factors.push("kb_dwell_anomalous");
         }
     }
 
     // --- Scroll speed ---
-    if let Some(speed_var) = signals.scroll_speed_variance {
-        if speed_var == 0.0 && signals.scroll_event_count.unwrap_or(0) > 3 {
-            score += weights::W_SCROLL_UNIFORM;
-            factors.push("scroll_uniform_speed");
-        }
+    if let Some(speed_var) = signals.scroll_speed_variance
+        && speed_var == 0.0
+        && signals.scroll_event_count.unwrap_or(0) > 3
+    {
+        score += weights::W_SCROLL_UNIFORM;
+        factors.push("scroll_uniform_speed");
     }
 
     // --- Visibility (IntersectionObserver) ---
@@ -109,20 +111,20 @@ pub fn score_client_signals(signals: &BotSignals) -> BotScore {
     }
 
     // --- Focus sequence ---
-    if let Some(had_focus) = signals.email_had_focus {
-        if !had_focus {
-            score += weights::W_NO_FOCUS;
-            factors.push("no_email_focus");
-        }
+    if let Some(had_focus) = signals.email_had_focus
+        && !had_focus
+    {
+        score += weights::W_NO_FOCUS;
+        factors.push("no_email_focus");
     }
 
     // --- Speech synthesis ---
     // -1 means API unavailable (not scored). 0 means API available but no voices.
-    if let Some(voices) = signals.speech_voices_count {
-        if voices == 0 {
-            score += weights::W_SPEECH_HEADLESS;
-            factors.push("speech_no_voices");
-        }
+    if let Some(voices) = signals.speech_voices_count
+        && voices == 0
+    {
+        score += weights::W_SPEECH_HEADLESS;
+        factors.push("speech_no_voices");
     }
 
     // --- Navigator consistency ---
@@ -132,24 +134,24 @@ pub fn score_client_signals(signals: &BotSignals) -> BotScore {
         // Here we flag impossible hw_concurrency values.
         let _ = touch_pts; // used by http_signals scorer instead
     }
-    if let Some(hw) = signals.nav_hw_concurrency {
-        if hw == 0 || hw > 128 {
-            score += weights::W_NAV_INCONSISTENT;
-            factors.push("nav_hw_impossible");
-        }
+    if let Some(hw) = signals.nav_hw_concurrency
+        && (hw == 0 || hw > 128)
+    {
+        score += weights::W_NAV_INCONSISTENT;
+        factors.push("nav_hw_impossible");
     }
 
     // --- Language / Timezone consistency ---
     check_tz_consistency(signals, &mut score, &mut factors);
 
     // --- Canvas fingerprint ---
-    if let Some(hash) = &signals.canvas_hash {
-        if weights::HEADLESS_CANVAS_HASHES.contains(&hash.as_str()) {
-            score += weights::W_CANVAS_HEADLESS;
-            factors.push("canvas_headless_hash");
-        }
-        // "unknown" hash is NOT scored — we only flag known headless signatures.
+    if let Some(hash) = &signals.canvas_hash
+        && weights::HEADLESS_CANVAS_HASHES.contains(&hash.as_str())
+    {
+        score += weights::W_CANVAS_HEADLESS;
+        factors.push("canvas_headless_hash");
     }
+    // "unknown" hash is NOT scored — we only flag known headless signatures.
 
     // --- WebGL renderer ---
     if let Some(renderer) = &signals.webgl_renderer {
@@ -164,11 +166,11 @@ pub fn score_client_signals(signals: &BotSignals) -> BotScore {
     }
 
     // --- Font count ---
-    if let Some(font_count) = signals.font_count {
-        if font_count <= 3 {
-            score += weights::W_FONT_MINIMAL;
-            factors.push("font_minimal");
-        }
+    if let Some(font_count) = signals.font_count
+        && font_count <= 3
+    {
+        score += weights::W_FONT_MINIMAL;
+        factors.push("font_minimal");
     }
 
     // --- Known Automation & Stealth Bypasses ---

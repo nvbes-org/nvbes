@@ -54,11 +54,11 @@ pub async fn observe_request(
         req.headers_mut()
             .insert(trace_context::sentry_trace_header_name(), value);
     }
-    if let Some(ref ts) = tracestate {
-        if let Ok(value) = axum::http::HeaderValue::from_str(ts) {
-            req.headers_mut()
-                .insert(trace_context::tracestate_header_name(), value);
-        }
+    if let Some(ref ts) = tracestate
+        && let Ok(value) = axum::http::HeaderValue::from_str(ts)
+    {
+        req.headers_mut()
+            .insert(trace_context::tracestate_header_name(), value);
     }
 
     // --- Request ID (keep backward compat) ---
@@ -99,12 +99,12 @@ pub async fn observe_request(
             .headers_mut()
             .insert(trace_context::sentry_trace_header_name(), value);
     }
-    if let Some(ts) = &tracestate {
-        if let Ok(value) = HeaderValue::from_str(ts) {
-            response
-                .headers_mut()
-                .insert(trace_context::tracestate_header_name(), value);
-        }
+    if let Some(ts) = &tracestate
+        && let Ok(value) = HeaderValue::from_str(ts)
+    {
+        response
+            .headers_mut()
+            .insert(trace_context::tracestate_header_name(), value);
     }
     if let Ok(value) = HeaderValue::from_str(&server_timing_value(duration_ms)) {
         response.headers_mut().insert(SERVER_TIMING_HEADER, value);
@@ -190,18 +190,18 @@ fn build_otel_span(incoming: &Option<TraceParent>, current: &TraceParent) -> Opt
         span_id = %current.span_id,
     );
 
-    if let Some(parent) = incoming {
-        if let Ok(parent_span_id) = SpanId::from_hex(&parent.span_id) {
-            let parent_ctx = SpanContext::new(
-                trace_id,
-                parent_span_id,
-                trace_flags,
-                true,
-                TraceState::default(),
-            );
-            let cx = opentelemetry::Context::new().with_remote_span_context(parent_ctx);
-            span.set_parent(cx).ok();
-        }
+    if let Some(parent) = incoming
+        && let Ok(parent_span_id) = SpanId::from_hex(&parent.span_id)
+    {
+        let parent_ctx = SpanContext::new(
+            trace_id,
+            parent_span_id,
+            trace_flags,
+            true,
+            TraceState::default(),
+        );
+        let cx = opentelemetry::Context::new().with_remote_span_context(parent_ctx);
+        span.set_parent(cx).ok();
     }
 
     Some(span)

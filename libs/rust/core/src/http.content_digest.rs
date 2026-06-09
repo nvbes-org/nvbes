@@ -80,7 +80,7 @@ pub fn sha256_digest_base64(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     let hash = hasher.finalize();
-    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &hash)
+    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hash)
 }
 
 pub fn content_digest_header_value(bytes: &[u8]) -> String {

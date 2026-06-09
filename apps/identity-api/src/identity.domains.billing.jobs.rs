@@ -11,16 +11,18 @@ pub async fn enqueue_stripe_webhook_job_tx(
 ) -> Result<(), AppError> {
     nvbes_redis::worker_queue::enqueue_job(
         redis,
-        JOB_STRIPE_WEBHOOK_PROCESS,
-        JOB_STRIPE_WEBHOOK_PROCESS,
-        payload,
-        Some(provider_event_id),
-        DEFAULT_MAX_ATTEMPTS,
-        true,
-        None,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_STRIPE_WEBHOOK_PROCESS.to_string(),
+            job_type: JOB_STRIPE_WEBHOOK_PROCESS.to_string(),
+            payload,
+            idempotency_key: Some(provider_event_id.to_string()),
+            max_attempts: DEFAULT_MAX_ATTEMPTS,
+            overwrite_terminal: true,
+            job_id: None,
+        },
     )
     .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
 
     Ok(())
 }

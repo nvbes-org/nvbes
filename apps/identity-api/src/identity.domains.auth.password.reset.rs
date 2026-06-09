@@ -54,11 +54,11 @@ pub async fn reset(
 
     nvbes_redis::session::clear_user_sessions(redis, &principal_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     nvbes_redis::password_reset::mark_password_reset_token_consumed(redis, &token_hash)
         .await
         .map_err(|err| {
-            AppError::internal("password_reset_token_consume_failed", &err.to_string())
+            AppError::internal("password_reset_token_consume_failed", err.to_string())
         })?;
 
     history::insert_password_hash(db, principal_id, &new_hash).await?;
@@ -83,7 +83,7 @@ pub async fn reset(
 
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, principal_id)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
 
     Ok(ResetPasswordResult { success: true })
 }

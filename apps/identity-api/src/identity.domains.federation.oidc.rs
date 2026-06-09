@@ -98,7 +98,7 @@ pub async fn fetch_oidc_discovery(
         .map_err(|err| {
             AppError::bad_request(
                 crate::domains::federation::contract::OIDC_DISCOVERY_INVALID,
-                &format!("{}", err),
+                format!("{}", err),
             )
         })
 }
@@ -132,7 +132,7 @@ pub async fn validate_oidc_id_token(
     let header = decode_header(id_token).map_err(|err| {
         AppError::bad_request(
             crate::domains::federation::contract::INVALID_ID_TOKEN,
-            &format!("{}", err),
+            format!("{}", err),
         )
     })?;
     let algorithm = match header.alg {
@@ -160,7 +160,7 @@ pub async fn validate_oidc_id_token(
         .await?
         .json::<OidcJwks>()
         .await
-        .map_err(|err| AppError::bad_request("jwks_invalid", &format!("{}", err)))?;
+        .map_err(|err| AppError::bad_request("jwks_invalid", format!("{}", err)))?;
     let key = jwks
         .keys
         .into_iter()
@@ -198,7 +198,7 @@ pub async fn validate_oidc_id_token(
             AppError::bad_request("invalid_jwk", "The JWKS key is missing exponent data.")
         })?,
     )
-    .map_err(|err| AppError::bad_request("invalid_jwk", &format!("{}", err)))?;
+    .map_err(|err| AppError::bad_request("invalid_jwk", format!("{}", err)))?;
     let mut validation = Validation::new(algorithm);
     validation.set_issuer(&[discovery.issuer.as_str()]);
     validation.set_audience(&[client_id.as_str()]);
@@ -206,20 +206,20 @@ pub async fn validate_oidc_id_token(
         .map_err(|err| {
             AppError::bad_request(
                 crate::domains::federation::contract::INVALID_ID_TOKEN,
-                &format!("{}", err),
+                format!("{}", err),
             )
         })?
         .claims;
     let _ = (&claims.iss, &claims.azp);
     let _ = claims.audience_contains(client_id);
     let _ = claims.is_multi_audience();
-    if let Some(expected_nonce) = expected_nonce {
-        if claims.nonce.as_deref() != Some(expected_nonce) {
-            return Err(AppError::bad_request(
-                crate::domains::federation::contract::INVALID_ID_TOKEN,
-                "The ID token nonce does not match the request.",
-            ));
-        }
+    if let Some(expected_nonce) = expected_nonce
+        && claims.nonce.as_deref() != Some(expected_nonce)
+    {
+        return Err(AppError::bad_request(
+            crate::domains::federation::contract::INVALID_ID_TOKEN,
+            "The ID token nonce does not match the request.",
+        ));
     }
     Ok(claims)
 }

@@ -108,9 +108,7 @@ pub async fn verify_email(
     let token_hash = token_hash(&input.token);
     let row = nvbes_redis::email_verification::get_email_verification_token(redis, &token_hash)
         .await
-        .map_err(|err| {
-            AppError::internal("email_verification_token_read_failed", &err.to_string())
-        })?
+        .map_err(|err| AppError::internal("email_verification_token_read_failed", err.to_string()))?
         .ok_or_else(|| {
             AppError::not_found(
                 "verification_token_not_found",
@@ -131,7 +129,7 @@ pub async fn verify_email(
     nvbes_redis::email_verification::mark_email_verification_token_consumed(redis, &token_hash)
         .await
         .map_err(|err| {
-            AppError::internal("email_verification_token_consume_failed", &err.to_string())
+            AppError::internal("email_verification_token_consume_failed", err.to_string())
         })?;
     sqlx::query("UPDATE users SET email_verified_at = NOW(), status = 'active', updated_at = NOW() WHERE principal_id = $1")
         .bind(principal_id)

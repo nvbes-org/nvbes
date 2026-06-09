@@ -38,6 +38,10 @@ pub async fn create_stripe_customer(
     Ok(StripeCustomer { id: id.to_string() })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Stripe checkout requires explicit metadata and redirect parameters."
+)]
 pub async fn create_stripe_checkout_session(
     config: &AppConfig,
     customer_id: &str,
@@ -161,7 +165,7 @@ async fn stripe_post_form(
         .map_err(|e| {
             AppError::internal(
                 "stripe_request_failed",
-                &format!("Stripe request failed: {}", e),
+                format!("Stripe request failed: {}", e),
             )
         })?;
 
@@ -170,14 +174,14 @@ async fn stripe_post_form(
         let body = response.text().await.unwrap_or_default();
         return Err(AppError::internal(
             "stripe_api_error",
-            &format!("Stripe API error ({}): {}", status, body),
+            format!("Stripe API error ({}): {}", status, body),
         ));
     }
 
     let json: Value = response.json().await.map_err(|e| {
         AppError::internal(
             "stripe_response_invalid",
-            &format!("Failed to parse Stripe response: {}", e),
+            format!("Failed to parse Stripe response: {}", e),
         )
     })?;
 

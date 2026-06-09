@@ -181,6 +181,10 @@ pub fn ensure_upload_is_completable(upload: &UploadSessionRecord) -> Result<(), 
     Ok(())
 }
 
+pub fn ensure_upload_is_appendable(upload: &UploadSessionRecord) -> Result<(), AppError> {
+    ensure_upload_is_completable(upload)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,8 +209,4 @@ mod tests {
 
         assert!(result.is_err());
     }
-}
-
-pub fn ensure_upload_is_appendable(upload: &UploadSessionRecord) -> Result<(), AppError> {
-    ensure_upload_is_completable(upload)
 }

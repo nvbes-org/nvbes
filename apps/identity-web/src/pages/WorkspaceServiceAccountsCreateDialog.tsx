@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import { DialogError } from './WorkspaceServiceAccountsDialogs.shared';
 
 export function WorkspaceServiceAccountsCreateDialog({
@@ -73,9 +74,9 @@ export function WorkspaceServiceAccountsCreateDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="create-service-account-description">Description</Label>
-            <textarea
+            <Textarea
               id="create-service-account-description"
-              className="flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="min-h-24"
               value={createDescription}
               onChange={(event) => setCreateDescription(event.target.value)}
               placeholder="Provisionnement M2M pour Drive"
@@ -111,7 +112,7 @@ export function WorkspaceServiceAccountsCreateDialog({
           <Button onClick={onCreate} disabled={busyAction === 'create-service-account'}>
             {busyAction === 'create-service-account' ? (
               <>
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner />
                 Creation...
               </>
             ) : (

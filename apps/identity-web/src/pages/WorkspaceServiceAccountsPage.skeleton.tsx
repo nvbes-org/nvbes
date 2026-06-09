@@ -1,4 +1,6 @@
 import { WorkspaceServiceAccountsAccessDenied } from './WorkspaceServiceAccountsAccessDenied';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useWorkspaceServiceAccountsPage } from './useWorkspaceServiceAccountsPage';
 
 type WorkspaceServiceAccountsPageModel = ReturnType<typeof useWorkspaceServiceAccountsPage>;
@@ -6,18 +8,18 @@ type WorkspaceServiceAccountsPageModel = ReturnType<typeof useWorkspaceServiceAc
 export function WorkspaceServiceAccountsSkeleton() {
   return (
     <div className="flex animate-fade-slide-up flex-col gap-6">
-      <div className="rounded-3xl border border-border/70 bg-card p-6">
-        <div className="h-6 w-48 rounded bg-muted" />
-        <div className="mt-2 h-4 w-80 rounded bg-muted" />
+      <Card className="p-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="mt-2 h-4 w-80" />
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="h-20 rounded-2xl bg-muted" />
+            <Skeleton key={index} className="h-20 rounded-2xl" />
           ))}
         </div>
-      </div>
+      </Card>
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="h-[28rem] rounded-3xl bg-muted" />
-        <div className="h-[28rem] rounded-3xl bg-muted" />
+        <Skeleton className="h-[28rem] rounded-3xl" />
+        <Skeleton className="h-[28rem] rounded-3xl" />
       </div>
     </div>
   );

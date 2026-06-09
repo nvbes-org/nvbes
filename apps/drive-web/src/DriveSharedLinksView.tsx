@@ -1,5 +1,6 @@
 import { Copy, Link2, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { DriveEmptyState } from './DriveViewState';
 import { revokeShareLink } from './drive.workspace.store';
 import type { DriveEntry, DriveShareLink, DriveShareStatus, DriveWorkspaceState } from './drive.workspace.types';
@@ -29,15 +30,8 @@ export function DriveSharedLinksView({
   async function handleCopy(link: DriveShareLink) {
     try {
       await navigator.clipboard?.writeText(shareLinkUrl(link));
-      onStateChange({
-        ...state,
-        toast: { id: `toast-copy-${link.id}`, message: 'Lien copie', tone: 'success' },
-      });
     } catch {
-      onStateChange({
-        ...state,
-        toast: { id: `toast-copy-error-${link.id}`, message: 'Copie impossible', tone: 'error' },
-      });
+      return;
     }
   }
 
@@ -53,9 +47,9 @@ export function DriveSharedLinksView({
         const isRevoked = link.status === 'revoked';
 
         return (
-          <article
+          <Card
             key={link.id}
-            className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm transition hover:shadow-md"
+            className="p-4 transition hover:shadow-md"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
@@ -90,7 +84,7 @@ export function DriveSharedLinksView({
                   onClick={() => void handleCopy(link)}
                   aria-label={`Copier le lien ${entry?.name ?? link.label}`}
                 >
-                  <Copy className="size-4" aria-hidden="true" />
+                  <Copy data-icon="inline-start" aria-hidden="true" />
                   Copier
                 </Button>
                 <Button
@@ -101,12 +95,12 @@ export function DriveSharedLinksView({
                   onClick={() => handleRevoke(link.id)}
                   aria-label={`Revoquer le lien ${entry?.name ?? link.label}`}
                 >
-                  <ShieldOff className="size-4" aria-hidden="true" />
+                  <ShieldOff data-icon="inline-start" aria-hidden="true" />
                   {isRevoked ? 'Revoque' : 'Revoquer'}
                 </Button>
               </div>
             </div>
-          </article>
+          </Card>
         );
       })}
     </section>

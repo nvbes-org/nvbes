@@ -1,50 +1,39 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { DriveAccountView } from './DriveAccountView';
-import { DriveApiKeysView } from './DriveApiKeysView';
+import { DriveAccountMenu } from './DriveAccountMenu';
 import { DriveAppLayout } from './DriveAppLayout';
-import { DriveBillingView } from './DriveBillingView';
 import { DriveDetailsPanel } from './DriveDetailsPanel';
 import { DriveFilesView } from './DriveFilesView';
-import { DriveMembersView } from './DriveMembersView';
-import { DriveSecurityView } from './DriveSecurityView';
 import { DriveSharedLinksView } from './DriveSharedLinksView';
-import { DriveEmptyState } from './DriveViewState';
+import { DriveSharedWithMeView } from './DriveSharedWithMeView';
+import { DriveStarredView } from './DriveStarredView';
 import { DriveTrashView } from './DriveTrashView';
+import { DriveWorkspaceSwitcher } from './DriveWorkspaceSwitcher';
 import type { DriveMeResponse } from './drive.api';
 import { createInitialDriveWorkspace } from './drive.workspace.mock';
 import type { DriveWorkspaceState } from './drive.workspace.types';
-import {
-  firstSectionForModule,
-  labelForSection,
-  type DriveModuleId,
-  type DriveSectionId,
-} from './DriveSectionNav';
 
 const MOCK_WORKSPACE_NAME = 'Workspace personnel';
 
+function labelForModule(moduleId: DriveWorkspaceState['activeModuleId']): string {
+  if (moduleId === 'sharing') return 'Liens partages';
+  if (moduleId === 'shared-with-me') return 'Partages avec moi';
+  if (moduleId === 'starred') return 'Suivis';
+  if (moduleId === 'trash') return 'Corbeille';
+  return 'Fichiers';
+}
+
 export function DriveShell({ accessToken, me }: { accessToken: string; me: DriveMeResponse }) {
-  const [workspace, setWorkspace] = useState<DriveWorkspaceState>(() => createInitialDriveWorkspace());
-  const [activeModule, setActiveModule] = useState<DriveModuleId>('drive');
-  const [activeSection, setActiveSection] = useState<DriveSectionId>(() => firstSectionForModule('drive'));
+  const [workspace, setWorkspace] = useState<DriveWorkspaceState>(() =>
+    createInitialDriveWorkspace(),
+  );
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
   const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
 
-  function handleModuleChange(moduleId: DriveModuleId) {
-    setActiveModule(moduleId);
-    setActiveSection(firstSectionForModule(moduleId));
+  function handleModuleChange(moduleId: DriveWorkspaceState['activeModuleId']) {
     setWorkspace((current) => ({
       ...current,
-      detailsSelection: null,
-      selectedEntryIds: [],
-    }));
-  }
-
-  function handleSectionChange(sectionId: DriveSectionId) {
-    setActiveSection(sectionId);
-    setWorkspace((current) => ({
-      ...current,
+      activeModuleId: moduleId,
       detailsSelection: null,
       selectedEntryIds: [],
     }));
@@ -52,13 +41,20 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
 
   return (
     <DriveAppLayout
-      activeModule={activeModule}
-      activeSection={activeSection}
+      activeModule={workspace.activeModuleId}
       workspaceName={workspaceName}
-      sectionLabel={labelForSection(activeSection)}
+      sectionLabel={labelForModule(workspace.activeModuleId)}
       query={workspace.query}
       billing={workspace.billing}
-      toast={workspace.toast}
+      topbarActions={<DriveAccountMenu accessToken={accessToken} user={me.user} />}
+      workspaceSwitcher={
+        <DriveWorkspaceSwitcher
+          accessToken={accessToken}
+          workspaceName={workspaceName}
+          workspaceId={me.current_workspace_id}
+          workspaces={me.workspaces}
+        />
+      }
       details={
         workspace.detailsSelection ? (
           <DriveDetailsPanel
@@ -68,34 +64,21 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
         ) : undefined
       }
       onModuleChange={handleModuleChange}
-      onSectionChange={handleSectionChange}
       onQueryChange={(query) => setWorkspace((current) => ({ ...current, query }))}
     >
-      {activeSection === 'files' ? (
-        <DriveFilesView state={workspace} onStateChange={setWorkspace} />
-      ) : activeSection === 'shared-links' ? (
-        <DriveSharedLinksView state={workspace} onStateChange={setWorkspace} />
-      ) : activeSection === 'trash' ? (
+      {workspace.activeModuleId === 'trash' ? (
         <DriveTrashView state={workspace} onStateChange={setWorkspace} />
-      ) : activeSection === 'members' ? (
-        <DriveMembersView state={workspace} onStateChange={setWorkspace} />
-      ) : activeSection === 'security' ? (
-        <DriveSecurityView state={workspace} />
-      ) : activeSection === 'billing' ? (
-        <DriveBillingView state={workspace} />
-      ) : activeSection === 'api' ? (
-        <DriveApiKeysView state={workspace} onStateChange={setWorkspace} />
-      ) : activeSection === 'account' ? (
-        <DriveAccountView me={me} />
+      ) : workspace.activeModuleId === 'sharing' ? (
+        <DriveSharedLinksView state={workspace} onStateChange={setWorkspace} />
+      ) : workspace.activeModuleId === 'shared-with-me' ? (
+        <DriveSharedWithMeView state={workspace} onStateChange={setWorkspace} />
+      ) : workspace.activeModuleId === 'starred' ? (
+        <DriveStarredView state={workspace} onStateChange={setWorkspace} />
       ) : (
-        <DriveEmptyState
-          title={`${labelForSection(activeSection)} arrive bientot`}
-          description="La navigation applicative est en place. Les vues metier seront connectees aux donnees Drive dans les prochaines taches du redesign."
-          action={
-            <Button type="button" variant="outline" data-session-state={accessToken.length > 0 ? 'active' : 'missing'}>
-              Session {me.user.email}
-            </Button>
-          }
+        <DriveFilesView
+          workspaceId={me.current_workspace_id ?? currentWorkspace?.id ?? 'demo-workspace'}
+          state={workspace}
+          onStateChange={setWorkspace}
         />
       )}
     </DriveAppLayout>

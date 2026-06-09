@@ -34,7 +34,7 @@ pub async fn store_account_export(
         DATA_EXPORT_TTL_SECONDS,
     )
     .await
-    .map_err(|error| AppError::internal("data_export_store_failed", &error.to_string()))
+    .map_err(|error| AppError::internal("data_export_store_failed", error.to_string()))
 }
 
 pub async fn load_account_export(
@@ -43,7 +43,7 @@ pub async fn load_account_export(
 ) -> Result<Option<JsonValue>, AppError> {
     nvbes_redis::cache::cache_get_json(redis, &account_export_cache_key(principal_id))
         .await
-        .map_err(|error| AppError::internal("data_export_load_failed", &error.to_string()))
+        .map_err(|error| AppError::internal("data_export_load_failed", error.to_string()))
 }
 
 pub async fn request_account_export(

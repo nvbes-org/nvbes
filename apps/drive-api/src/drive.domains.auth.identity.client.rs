@@ -135,7 +135,7 @@ impl IdentityAuthClient {
             .map_err(|err| {
                 AppError::internal(
                     "identity_introspection_failed",
-                    &format!("Failed to contact Identity: {err}"),
+                    format!("Failed to contact Identity: {err}"),
                 )
             })?;
 
@@ -155,7 +155,7 @@ impl IdentityAuthClient {
                 .record(started_at.elapsed().as_secs_f64());
             return Err(AppError::internal(
                 "identity_introspection_failed",
-                &format!("Identity introspection failed ({status}): {body}"),
+                format!("Identity introspection failed ({status}): {body}"),
             ));
         }
 
@@ -165,7 +165,7 @@ impl IdentityAuthClient {
             .map_err(|err| {
                 AppError::internal(
                     "identity_introspection_invalid_response",
-                    &format!("Identity introspection returned invalid JSON: {err}"),
+                    format!("Identity introspection returned invalid JSON: {err}"),
                 )
             })?;
         metrics::histogram!("drive_identity_introspection_duration_seconds")
@@ -202,7 +202,7 @@ impl IdentityAuthClient {
         let response = builder.send().await.map_err(|err| {
             AppError::internal(
                 "identity_create_workspace_failed",
-                &format!("Failed to contact Identity: {err}"),
+                format!("Failed to contact Identity: {err}"),
             )
         })?;
 
@@ -211,14 +211,14 @@ impl IdentityAuthClient {
             let body = response.text().await.unwrap_or_default();
             return Err(AppError::internal(
                 "identity_create_workspace_failed",
-                &format!("Identity workspace creation failed ({status}): {body}"),
+                format!("Identity workspace creation failed ({status}): {body}"),
             ));
         }
 
         let body = response.json::<serde_json::Value>().await.map_err(|err| {
             AppError::internal(
                 "identity_create_workspace_invalid_response",
-                &format!("Identity workspace creation returned invalid JSON: {err}"),
+                format!("Identity workspace creation returned invalid JSON: {err}"),
             )
         })?;
 

@@ -55,7 +55,7 @@ pub async fn delete_account(
 
     nvbes_redis::session::clear_user_sessions(redis, &auth.user_id().to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
 
     let _ = nvbes_redis::pubsub::publish_user_suspended(redis, &auth.user_id().to_string()).await;
     for workspace_id in owned_workspace_ids {

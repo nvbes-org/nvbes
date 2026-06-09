@@ -156,7 +156,7 @@ fn ensure_optional_uuid_matches(
     if verified != introspected {
         return Err(AppError::unauthorized(
             "invalid_token",
-            &format!("Identity introspection does not match the verified {label} context."),
+            format!("Identity introspection does not match the verified {label} context."),
         ));
     }
 

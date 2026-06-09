@@ -13,4 +13,4 @@ pnpm --dir apps/identity-web typecheck
 pnpm --dir libs/ts/identity-sdk-web test
 
 log_step "rust unit tests"
-cargo test --workspace --lib --bins
+RUST_TEST_THREADS=1 cargo test --workspace --lib --bins --locked

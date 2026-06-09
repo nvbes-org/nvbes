@@ -1,7 +1,7 @@
 {
   "name": "@nvbes/web-runtime",
   "version": "0.1.0",
-  "description": "Shared frontend runtime for TanStack Query and Effect workflows",
+  "description": "Shared frontend runtime for TanStack Query and client errors",
   "files": [
     "dist"
   ],
@@ -20,21 +20,24 @@
   },
   "scripts": {
     "build": "vp pack",
+    "check": "pnpm run typecheck",
     "dev": "vp pack --watch",
+    "format:check": "vp fmt --check src package.json tsconfig.json",
+    "lint": "vp lint src",
     "test": "vp test",
-    "typecheck": "tsc -p tsconfig.json --pretty false"
+    "typecheck": "tsgo -p tsconfig.json --pretty false"
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "effect": "catalog:",
     "posthog-js": "catalog:",
     "react": "catalog:",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
+    "@typescript/native-preview": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"

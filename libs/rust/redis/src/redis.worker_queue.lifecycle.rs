@@ -7,24 +7,26 @@ use uuid::Uuid;
 use crate::connection::{RedisError, RedisPool};
 
 use super::{
-    QueuedJob,
+    EnqueueJobInput, QueuedJob,
     keys::*,
     store::{load_job, move_to_pending, remove_from_indexes, save_job},
 };
 
-pub async fn enqueue_job(
-    pool: &RedisPool,
-    queue: &str,
-    job_type: &str,
-    payload: Value,
-    idempotency_key: Option<&str>,
-    max_attempts: u32,
-    overwrite_terminal: bool,
-    job_id: Option<Uuid>,
-) -> Result<Uuid, RedisError> {
+pub async fn enqueue_job(pool: &RedisPool, input: EnqueueJobInput) -> Result<Uuid, RedisError> {
     let now = now_ts();
+    let EnqueueJobInput {
+        queue,
+        job_type,
+        payload,
+        idempotency_key,
+        max_attempts,
+        overwrite_terminal,
+        job_id,
+    } = input;
     let job_id = job_id.unwrap_or_else(Uuid::new_v4);
-    let key = idempotency_key.map(|key| dedupe_key(queue, job_type, key));
+    let key = idempotency_key
+        .as_deref()
+        .map(|key| dedupe_key(&queue, &job_type, key));
 
     if let Some(dedupe_key) = key.as_deref() {
         let mut conn = pool.get().await?;
@@ -32,7 +34,7 @@ pub async fn enqueue_job(
         if let Some(existing_id) = existing_id {
             let existing_job_id = Uuid::parse_str(&existing_id)
                 .map_err(|error| RedisError::Connection(error.to_string()))?;
-            let mut job = load_job(pool, queue, existing_job_id).await?;
+            let mut job = load_job(pool, &queue, existing_job_id).await?;
             if overwrite_terminal
                 && matches!(job.status.as_str(), STATUS_FAILED | STATUS_DEAD_LETTER)
             {
@@ -55,9 +57,9 @@ pub async fn enqueue_job(
 
     let job = QueuedJob {
         id: job_id,
-        queue: queue.to_string(),
-        job_type: job_type.to_string(),
-        idempotency_key: idempotency_key.map(ToOwned::to_owned),
+        queue,
+        job_type,
+        idempotency_key,
         payload,
         max_attempts,
         attempts: 0,

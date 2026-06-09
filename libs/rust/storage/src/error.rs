@@ -24,10 +24,10 @@ impl From<aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::get_object::GetObje
     fn from(
         err: aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::get_object::GetObjectError>,
     ) -> Self {
-        if let aws_sdk_s3::error::SdkError::ServiceError(ref e) = err {
-            if e.err().is_no_such_key() {
-                return Self::NotFound { key: String::new() };
-            }
+        if let aws_sdk_s3::error::SdkError::ServiceError(ref e) = err
+            && e.err().is_no_such_key()
+        {
+            return Self::NotFound { key: String::new() };
         }
         Self::S3(err.to_string())
     }
@@ -39,10 +39,10 @@ impl From<aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::head_object::HeadOb
     fn from(
         err: aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::head_object::HeadObjectError>,
     ) -> Self {
-        if let aws_sdk_s3::error::SdkError::ServiceError(ref e) = err {
-            if e.err().is_not_found() {
-                return Self::NotFound { key: String::new() };
-            }
+        if let aws_sdk_s3::error::SdkError::ServiceError(ref e) = err
+            && e.err().is_not_found()
+        {
+            return Self::NotFound { key: String::new() };
         }
         Self::S3(err.to_string())
     }

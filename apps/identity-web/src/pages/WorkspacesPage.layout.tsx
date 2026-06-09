@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,9 +25,9 @@ export function WorkspacesSkeleton() {
 
 export function WorkspacesError({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      {message}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 

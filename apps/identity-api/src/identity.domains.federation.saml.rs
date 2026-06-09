@@ -39,13 +39,13 @@ pub async fn fetch_saml_metadata(
     let xml = response.text().await.map_err(|err| {
         AppError::bad_request(
             crate::domains::federation::contract::SAML_METADATA_INVALID,
-            &format!("{}", err),
+            format!("{}", err),
         )
     })?;
     let doc = roxmltree::Document::parse(&xml).map_err(|err| {
         AppError::bad_request(
             crate::domains::federation::contract::SAML_METADATA_INVALID,
-            &format!("{}", err),
+            format!("{}", err),
         )
     })?;
     let root = doc.root_element();
@@ -89,6 +89,10 @@ pub async fn fetch_saml_metadata(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "SAML response validation keeps tenant, provider, recipient, and transport context explicit."
+)]
 pub async fn validate_saml_response(
     db: &PgPool,
     tenant_id: Uuid,
@@ -106,19 +110,19 @@ pub async fn validate_saml_response(
         .map_err(|err| {
             AppError::bad_request(
                 crate::domains::federation::contract::INVALID_SAML_RESPONSE,
-                &format!("{}", err),
+                format!("{}", err),
             )
         })?;
     let xml = String::from_utf8(decoded).map_err(|err| {
         AppError::bad_request(
             crate::domains::federation::contract::INVALID_SAML_RESPONSE,
-            &format!("{}", err),
+            format!("{}", err),
         )
     })?;
     let doc = roxmltree::Document::parse(&xml).map_err(|err| {
         AppError::bad_request(
             crate::domains::federation::contract::INVALID_SAML_RESPONSE,
-            &format!("{}", err),
+            format!("{}", err),
         )
     })?;
 

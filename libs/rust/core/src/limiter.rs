@@ -14,6 +14,13 @@ pub struct RateLimitInfo {
     pub reset: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct RateLimitRule<'a> {
+    pub key: &'a str,
+    pub max_hits: usize,
+    pub window: Duration,
+}
+
 impl RateLimitInfo {
     pub fn append_headers(&self, headers: &mut HeaderMap) {
         if let Ok(v) = HeaderValue::from_str(&self.limit.to_string()) {
@@ -116,15 +123,11 @@ pub async fn check_dual_rate_limit(
 pub async fn check_rate_limit_pair(
     redis: &nvbes_redis::RedisPool,
     action: &str,
-    first_key: &str,
-    first_hits: usize,
-    first_window: Duration,
-    second_key: &str,
-    second_hits: usize,
-    second_window: Duration,
+    first: RateLimitRule<'_>,
+    second: RateLimitRule<'_>,
 ) -> Result<(), AppError> {
-    check_rate_limit(redis, action, first_key, first_hits, first_window).await?;
-    check_rate_limit(redis, action, second_key, second_hits, second_window).await?;
+    check_rate_limit(redis, action, first.key, first.max_hits, first.window).await?;
+    check_rate_limit(redis, action, second.key, second.max_hits, second.window).await?;
     Ok(())
 }
 

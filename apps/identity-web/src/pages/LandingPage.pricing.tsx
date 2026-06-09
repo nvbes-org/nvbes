@@ -1,12 +1,14 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { CheckList } from './LandingPage.ui';
 
 export function LandingPagePricing() {
   return (
     <section className="mx-auto max-w-7xl px-6 pb-14 lg:px-10" id="pricing">
-      <div className="grid gap-8 rounded-lg bg-teal-800 px-8 py-9 text-white md:grid-cols-[1.4fr_0.6fr_1fr_0.8fr] md:items-center">
+      <Card className="bg-teal-800 text-white">
+        <CardContent className="grid gap-8 px-8 py-9 md:grid-cols-[1.4fr_0.6fr_1fr_0.8fr] md:items-center">
         <div>
           <h2 className="text-3xl font-semibold tracking-normal">
             Simple pricing that scales with your team
@@ -41,7 +43,8 @@ export function LandingPagePricing() {
             Contact sales <ArrowRight className="size-4" />
           </a>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }

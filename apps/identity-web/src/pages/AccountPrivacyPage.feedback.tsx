@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -25,16 +26,16 @@ export function PrivacySkeleton() {
 
 export function ErrorMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-      {message}
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }
 
 export function SuccessMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-600">
-      {message}
-    </div>
+    <Alert>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   );
 }

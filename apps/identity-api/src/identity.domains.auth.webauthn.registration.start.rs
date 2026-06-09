@@ -10,6 +10,10 @@ use crate::domains::auth::{
 };
 use crate::http::error::AppError;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "WebAuthn registration start keeps challenge ownership and label inputs explicit."
+)]
 pub async fn start_registration(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -113,7 +117,7 @@ pub async fn start_registration(
     .map_err(|err| {
         AppError::internal(
             "webauthn_challenge_store_failed",
-            &format!("Failed to store WebAuthn challenge: {err}"),
+            format!("Failed to store WebAuthn challenge: {err}"),
         )
     })?;
 

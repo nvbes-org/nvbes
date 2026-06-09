@@ -1,14 +1,16 @@
 import { ShieldAlert } from 'lucide-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { StepUpMethod } from './useStepUpForm';
 
 export function StepUpError({ error }: { error: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
-      <ShieldAlert className="size-4 shrink-0" />
-      <span>{error}</span>
-    </div>
+    <Alert variant="destructive">
+      <ShieldAlert />
+      <AlertTitle>Vérification impossible</AlertTitle>
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
   );
 }
 

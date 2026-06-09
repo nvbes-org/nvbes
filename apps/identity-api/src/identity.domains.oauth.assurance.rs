@@ -16,6 +16,10 @@ struct RequiredAssuranceInputs<'a> {
 }
 
 /// Resolve the assurance context for a given user and session.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Assurance resolution keeps policy scope and session context explicit."
+)]
 pub async fn resolve_assurance_context(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -207,7 +211,7 @@ pub async fn fetch_session_assurance_state(
 ) -> Result<Option<SessionAssuranceState>, AppError> {
     let session = nvbes_redis::session::get_session(redis, &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?;
     Ok(session.and_then(|session| {
         if session.principal_id != user_id.to_string()
             || session.revoked_at.is_some()

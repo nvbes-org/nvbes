@@ -109,5 +109,5 @@ pub async fn get_challenge(
     client
         .cache_get_json(&challenge_key(&challenge_id.to_string()))
         .await
-        .map_err(|err| AppError::internal("login_challenge_load_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("login_challenge_load_failed", format!("{}", err)))
 }

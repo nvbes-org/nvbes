@@ -153,7 +153,7 @@ pub async fn create_workspace(
     .await?;
 
     nvbes_audit::insert_audit_event_tx(
-        &mut *tx,
+        &mut tx,
         nvbes_audit::AuditEventInput {
             tenant_id,
             workspace_id: Some(workspace_id),

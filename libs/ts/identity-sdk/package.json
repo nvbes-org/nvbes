@@ -10,7 +10,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json --watch"
+    "check": "pnpm run typecheck",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json --watch",
+    "format:check": "vp fmt --check src package.json tsconfig.json vite.config.ts",
+    "lint": "vp lint src",
+    "typecheck": "vp check src package.json tsconfig.json vite.config.ts"
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*"

@@ -5,6 +5,7 @@ const LOGIN_STEP_ORDER: Record<LoginStep, number> = {
   chooser: 0,
   identifier: 1,
   password: 2,
+  webauthn: 2,
   mfa: 3,
   consent: 4,
 };

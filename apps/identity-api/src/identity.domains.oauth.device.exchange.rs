@@ -21,7 +21,7 @@ pub async fn exchange_device_code(
     let lock_key = format!("oauth-device-code:{}", input.device_code);
     let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
         .await
-        .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_lock_failed", format!("{}", err)))?;
     if !locked {
         return Err(AppError::conflict(
             "device_code_locked",
@@ -193,7 +193,7 @@ pub async fn exchange_device_code(
             },
         )
         .await
-        .map_err(|err| AppError::internal("refresh_token_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("refresh_token_store_failed", format!("{}", err)))?;
 
         delete_device_code(redis, &code).await?;
 
@@ -213,7 +213,7 @@ pub async fn exchange_device_code(
 
     let release_result = nvbes_redis::lock::release(redis, &lock_key)
         .await
-        .map_err(|err| AppError::internal("device_code_lock_failed", &format!("{}", err)));
+        .map_err(|err| AppError::internal("device_code_lock_failed", format!("{}", err)));
     release_result?;
 
     result

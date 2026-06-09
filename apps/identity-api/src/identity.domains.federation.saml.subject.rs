@@ -41,7 +41,7 @@ pub fn validate_subject_confirmation(
     if method != SAML2_BEARER_METHOD {
         return Err(AppError::bad_request(
             "saml_invalid_confirmation_method",
-            &format!(
+            format!(
                 "Expected SubjectConfirmation method '{}', got '{}'.",
                 SAML2_BEARER_METHOD, method
             ),
@@ -106,7 +106,7 @@ pub fn validate_subject_confirmation(
     if recipient != expected_recipient {
         return Err(AppError::bad_request(
             "saml_recipient_mismatch",
-            &format!(
+            format!(
                 "The SubjectConfirmation recipient '{}' does not match the ACS URL '{}'.",
                 recipient, expected_recipient
             ),

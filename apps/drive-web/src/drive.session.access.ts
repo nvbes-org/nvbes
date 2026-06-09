@@ -19,6 +19,8 @@ type SaveSessionFn = (
 ) => void;
 type RemoveSessionFn = (userId: string) => void;
 
+let refreshInFlight: Promise<string | null> | null = null;
+
 function ensureIdentityClientToken() {
   if (!identityClient.isAuthenticated()) {
     const active = getActiveSession();
@@ -55,59 +57,67 @@ export async function getValidAccessToken({
     return null;
   }
 
-  try {
-    const active = getActiveSession();
-    const token = await identityClient.getAccessToken();
-    if (token && isJwtExpired(token)) {
-      throw { status: 401, message: 'Access token expired' };
-    }
+  const active = getActiveSession();
+  const currentTokenObj = identityRuntimeClient.token;
+  const token = currentTokenObj?.accessToken ?? null;
+  if (token && !isJwtExpired(token)) {
+    return token;
+  }
 
-    const currentTokenObj = identityRuntimeClient.token;
-    if (active && currentTokenObj && currentTokenObj.accessToken !== active.accessToken) {
+  if (!active?.refreshToken) {
+    removeActiveSession(removeSession);
+    return null;
+  }
+
+  if (!refreshInFlight) {
+    refreshInFlight = refreshAndPersistAccessToken(active, saveSession, removeSession).finally(
+      () => {
+        refreshInFlight = null;
+      },
+    );
+  }
+
+  return refreshInFlight;
+}
+
+async function refreshAndPersistAccessToken(
+  active: NonNullable<ReturnType<typeof getActiveSession>>,
+  saveSession: SaveSessionFn,
+  removeSession: RemoveSessionFn,
+): Promise<string | null> {
+  const refreshToken = active.refreshToken;
+  if (!refreshToken) {
+    removeActiveSession(removeSession);
+    return null;
+  }
+
+  try {
+    const refreshed = await refreshAccessToken(identityRuntimeClient, refreshToken);
+    if (refreshed.accessToken) {
       saveSession(
         active.userId,
         active.email,
         active.name,
-        currentTokenObj.accessToken,
-        currentTokenObj.refreshToken || active.refreshToken,
+        refreshed.accessToken,
+        refreshed.refreshToken || refreshToken,
       );
+      return refreshed.accessToken;
     }
-    return token;
-  } catch (error: unknown) {
-    console.error('Failed to get valid access token via SDK', error);
-
-    const active = getActiveSession();
-    let isSessionRevoked = isUnauthorizedSessionError(error);
-
-    if (active && active.refreshToken) {
-      try {
-        const refreshed = await refreshAccessToken(identityRuntimeClient, active.refreshToken);
-        if (refreshed && refreshed.accessToken) {
-          saveSession(
-            active.userId,
-            active.email,
-            active.name,
-            refreshed.accessToken,
-            refreshed.refreshToken || active.refreshToken,
-          );
-          return refreshed.accessToken;
-        }
-      } catch (refreshError: unknown) {
-        console.error('Failed to manually refresh token', refreshError);
-        if (isUnauthorizedSessionError(refreshError)) {
-          isSessionRevoked = true;
-        }
-      }
-    } else {
-      isSessionRevoked = true;
-    }
-
-    if (isSessionRevoked) {
-      const activeSession = getActiveSession();
-      if (activeSession) {
-        removeSession(activeSession.userId);
+  } catch (refreshError: unknown) {
+    console.error('Failed to refresh Drive token', refreshError);
+    if (isUnauthorizedSessionError(refreshError)) {
+      const current = getActiveSession();
+      if (current?.userId === active.userId) {
+        removeSession(active.userId);
       }
     }
-    return null;
+  }
+  return null;
+}
+
+function removeActiveSession(removeSession: RemoveSessionFn): void {
+  const activeSession = getActiveSession();
+  if (activeSession) {
+    removeSession(activeSession.userId);
   }
 }

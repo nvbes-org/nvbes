@@ -13,8 +13,12 @@
   },
   "scripts": {
     "build": "vp pack",
+    "check": "pnpm run typecheck",
     "dev": "vp pack --watch",
-    "test": "vp test"
+    "format:check": "vp fmt --check src package.json tsconfig.json",
+    "lint": "vp lint src --ignore-pattern 'src/**/*.test.ts' --ignore-pattern 'src/**/*.spec.ts' --ignore-pattern 'src/**/__tests__/**'",
+    "test": "vp test",
+    "typecheck": "tsc --pretty false --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*",

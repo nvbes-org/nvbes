@@ -40,3 +40,15 @@ export function toUploadFileInputs(files: FileWithHandle[], parentId?: string): 
     parentId,
   }));
 }
+
+export function toDroppedUploadFileInputs(
+  files: Iterable<File>,
+  parentId?: string,
+): UploadFileInput[] {
+  return Array.from(files, (file) => ({
+    file,
+    name: file.name,
+    mimeType: file.type || guessMimeType(file.name),
+    parentId,
+  }));
+}

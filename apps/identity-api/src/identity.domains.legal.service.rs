@@ -5,6 +5,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 /// Records a new legal consent for a user, masks their IP, and writes a compliance audit log event.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Consent recording keeps legal, tenant, workspace, and request metadata explicit."
+)]
 pub async fn grant_consent(
     db: &PgPool,
     principal_id: Uuid,
@@ -51,6 +55,10 @@ pub async fn grant_consent(
 }
 
 /// Revokes an existing legal consent for a user and writes a compliance audit log event.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Consent revocation keeps legal, tenant, workspace, and request metadata explicit."
+)]
 pub async fn revoke_consent(
     db: &PgPool,
     principal_id: Uuid,

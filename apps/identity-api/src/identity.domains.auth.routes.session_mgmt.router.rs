@@ -2,9 +2,10 @@ use crate::app::AppState;
 use axum::Router;
 
 use super::{
-    get_accounts, list_sessions, logout, me, me_delete, me_export, me_export_download,
-    me_notifications_get, me_notifications_put, me_preferences_get, me_preferences_put, me_update,
-    revoke_all_other_sessions, revoke_session, step_up, switch_workspace,
+    forget_account_cookie, get_accounts, list_sessions, logout, me, me_delete, me_export,
+    me_export_download, me_notifications_get, me_notifications_put, me_preferences_get,
+    me_preferences_put, me_update, revoke_all_other_sessions, revoke_session, step_up,
+    switch_workspace,
 };
 
 pub(super) fn router(state: &AppState) -> Router<AppState> {
@@ -24,6 +25,10 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
             )),
         )
         .route("/accounts", axum::routing::get(get_accounts))
+        .route(
+            "/accounts/{authuser}",
+            axum::routing::delete(forget_account_cookie),
+        )
         .route(
             "/sessions/{sessionId}",
             axum::routing::delete(revoke_session).layer(axum::middleware::from_fn_with_state(

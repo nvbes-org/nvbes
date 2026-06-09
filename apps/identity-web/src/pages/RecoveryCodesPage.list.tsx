@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 export function RecoveryCodesListStep({
@@ -18,10 +19,12 @@ export function RecoveryCodesListStep({
       <div className="w-full max-w-md space-y-6">
         <h1 className="text-2xl font-bold">Vos codes de récupération</h1>
 
-        <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
-          Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
-          être utilisé qu&apos;une seule fois.
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
+            être utilisé qu&apos;une seule fois.
+          </AlertDescription>
+        </Alert>
 
         <div className="grid grid-cols-2 gap-2">
           {codes.map((code, index) => (

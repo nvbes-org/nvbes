@@ -20,6 +20,7 @@ export function LoginPageSecondaryStepContent({
   setMfaMethod,
   setRecoveryCode,
   setTotpCode,
+  step,
   totpCode,
 }: Pick<
   LoginPageStepContentProps,
@@ -40,12 +41,13 @@ export function LoginPageSecondaryStepContent({
   | 'setMfaMethod'
   | 'setRecoveryCode'
   | 'setTotpCode'
+  | 'step'
   | 'totpCode'
 >) {
-  if (oauthRequest) {
+  if (step === 'consent') {
     return (
       <LoginPageConsent
-        scope={oauthRequest.scope}
+        scope={oauthRequest?.scope}
         error={error}
         onApprove={handleConsentApprove}
         onCancel={handleConsentCancel}

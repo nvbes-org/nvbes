@@ -1,5 +1,7 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function TotpSetupCard({
   label,
@@ -21,9 +23,9 @@ export function TotpSetupCard({
       <div className="w-full max-w-md space-y-4">
         <h1 className="text-2xl font-bold">Configurer TOTP</h1>
         <div className="space-y-2">
-          <label htmlFor="totp-label" className="text-sm font-medium">
+          <Label htmlFor="totp-label">
             Nom (optionnel)
-          </label>
+          </Label>
           <Input
             id="totp-label"
             placeholder="Ex: Mon téléphone"
@@ -33,7 +35,11 @@ export function TotpSetupCard({
             }
           />
         </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         <div className="flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onCancel}>
             Annuler

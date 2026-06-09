@@ -34,12 +34,16 @@ pub async fn enforce_device_authorization_rate_limit(
     nvbes_core::limiter::check_rate_limit_pair(
         redis,
         "oauth_device_authorize",
-        &format!("ip:{ip_key}"),
-        12,
-        StdDuration::from_secs(60),
-        &format!("key:{client_id}"),
-        24,
-        StdDuration::from_secs(60),
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("ip:{ip_key}"),
+            max_hits: 12,
+            window: StdDuration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("key:{client_id}"),
+            max_hits: 24,
+            window: StdDuration::from_secs(60),
+        },
     )
     .await?;
     Ok(())
@@ -54,12 +58,16 @@ pub async fn enforce_device_action_rate_limit(
     nvbes_core::limiter::check_rate_limit_pair(
         redis,
         action,
-        &format!("user:{user_id}"),
-        12,
-        StdDuration::from_secs(60),
-        &format!("code:{user_code}"),
-        6,
-        StdDuration::from_secs(60),
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("user:{user_id}"),
+            max_hits: 12,
+            window: StdDuration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("code:{user_code}"),
+            max_hits: 6,
+            window: StdDuration::from_secs(60),
+        },
     )
     .await?;
     Ok(())
@@ -75,7 +83,7 @@ pub async fn ensure_device_approval_context(
 ) -> Result<DeviceApprovalContext, AppError> {
     let session = nvbes_redis::session::get_session(redis, &input.auth.session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?;
     let Some(session) = session else {
         return Err(AppError::unauthorized(
             "invalid_session",
@@ -172,7 +180,7 @@ pub async fn ensure_device_deny_context(
 ) -> Result<(), AppError> {
     let session = nvbes_redis::session::get_session(redis, &auth.session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?;
     let Some(session) = session else {
         return Err(AppError::unauthorized(
             "invalid_session",

@@ -162,7 +162,7 @@ export class HttpClient {
   }
 
   private resolveUrl(path: string): string {
-    const url = new URL(path, this.baseUrl);
+    const url = resolveRequestUrl(path, this.baseUrl);
     if (typeof window !== 'undefined' && window.location) {
       const pageParams = new URLSearchParams(window.location.search);
       const authuser = pageParams.get('authuser');
@@ -172,6 +172,25 @@ export class HttpClient {
     }
     return url.toString();
   }
+}
+
+export function resolveRequestUrl(path: string, baseUrl: string): URL {
+  if (isAbsoluteUrl(path)) {
+    return new URL(path);
+  }
+
+  const base = new URL(baseUrl);
+  if (!path.startsWith('/') || base.pathname === '/') {
+    return new URL(path, base);
+  }
+
+  const normalizedBase = new URL(base);
+  normalizedBase.pathname = `${base.pathname.replace(/\/+$/u, '')}/`;
+  return new URL(path.replace(/^\/+/u, ''), normalizedBase);
+}
+
+function isAbsoluteUrl(value: string): boolean {
+  return /^[a-z][a-z\d+\-.]*:\/\//iu.test(value);
 }
 
 export async function encryptRequestBody(input: {

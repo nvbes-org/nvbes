@@ -1,6 +1,24 @@
-import { Archive, FileText, FileType2, Folder, Image, MoreHorizontal, Table2, Video } from 'lucide-react';
+import {
+  Archive,
+  FileText,
+  FileType2,
+  Folder,
+  Image,
+  MoreHorizontal,
+  Table2,
+  Video,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from './lib/classnames';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { DriveEntry, DriveEntryKind, DriveMember } from './drive.workspace.types';
 
 const BYTE_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -19,80 +37,87 @@ export function DriveFilesTable({
   members,
   selectedEntryIds,
   onOpenDetails,
+  onSecondarySelect,
   onToggleSelection,
 }: {
   entries: DriveEntry[];
   members: DriveMember[];
   selectedEntryIds: string[];
   onOpenDetails: (entryId: string) => void;
+  onSecondarySelect: (entryId: string) => void;
   onToggleSelection: (entryId: string) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="border-b border-border/70 bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="w-10 px-3 py-2" aria-label="Selection" />
-              <th className="px-3 py-2 font-medium">Nom</th>
-              <th className="px-3 py-2 font-medium">Statut</th>
-              <th className="px-3 py-2 font-medium">Proprietaire</th>
-              <th className="px-3 py-2 font-medium">Taille</th>
-              <th className="px-3 py-2 font-medium">Modifie le</th>
-              <th className="w-24 px-3 py-2 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => {
-              const Icon = iconForKind(entry.kind);
-              const isSelected = selectedEntryIds.includes(entry.id);
+    <Card className="overflow-hidden py-0">
+      <Table className="min-w-[760px]">
+        <TableHeader className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+          <TableRow>
+            <TableHead className="w-10" aria-label="Selection" />
+            <TableHead>Nom</TableHead>
+            <TableHead>Statut</TableHead>
+            <TableHead>Proprietaire</TableHead>
+            <TableHead>Taille</TableHead>
+            <TableHead>Modifie le</TableHead>
+            <TableHead className="w-24 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map((entry) => {
+            const Icon = iconForKind(entry.kind);
+            const isSelected = selectedEntryIds.includes(entry.id);
 
-              return (
-                <tr
-                  key={entry.id}
-                  className={cn('border-b border-border/50 last:border-0', isSelected && 'bg-muted/45')}
-                >
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => onToggleSelection(entry.id)}
-                      aria-label={`Selectionner ${entry.name}`}
-                      className="size-4 rounded border-border"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="flex min-w-0 items-center gap-2 text-left font-medium hover:text-primary"
-                      onClick={() => onOpenDetails(entry.id)}
-                    >
-                      <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                      <span className="truncate">{entry.name}</span>
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">{statusLabel(entry)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{ownerName(entry.ownerId, members)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatBytes(entry.sizeBytes)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(entry.updatedAt)}</td>
-                  <td className="px-3 py-2 text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onOpenDetails(entry.id)}
-                    >
-                      Details
-                      <MoreHorizontal className="size-4" aria-hidden="true" />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            return (
+              <TableRow
+                key={entry.id}
+                data-state={isSelected ? 'selected' : undefined}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onSecondarySelect(entry.id);
+                }}
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSelection(entry.id)}
+                    aria-label={`Selectionner ${entry.name}`}
+                  />
+                </TableCell>
+                <TableCell>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto min-w-0 justify-start px-0 font-medium hover:bg-transparent"
+                    onClick={() => onOpenDetails(entry.id)}
+                  >
+                    <Icon data-icon="inline-start" className="text-primary" aria-hidden="true" />
+                    <span className="truncate">{entry.name}</span>
+                  </Button>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{statusLabel(entry)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {ownerName(entry.ownerId, members)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatBytes(entry.sizeBytes)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{formatDate(entry.updatedAt)}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onOpenDetails(entry.id)}
+                  >
+                    Details
+                    <MoreHorizontal data-icon="inline-end" aria-hidden="true" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 

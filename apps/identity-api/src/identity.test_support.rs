@@ -1,8 +1,10 @@
 use std::{process::Command, sync::OnceLock, time::Duration};
 
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::time::sleep;
 
 static LOCAL_REDIS_STARTED: OnceLock<()> = OnceLock::new();
+static TEST_DATABASE_POOL: OnceLock<PgPool> = OnceLock::new();
 static TEST_DATABASE_BOOTSTRAPPED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 
 fn uses_local_default_redis() -> bool {
@@ -23,11 +25,11 @@ fn redis_start_args() -> Vec<String> {
         "127.0.0.1".to_string(),
     ];
 
-    if let Ok(password) = std::env::var("NVBES_REDIS_PASSWORD") {
-        if !password.trim().is_empty() {
-            args.push("--requirepass".to_string());
-            args.push(password);
-        }
+    if let Ok(password) = std::env::var("NVBES_REDIS_PASSWORD")
+        && !password.trim().is_empty()
+    {
+        args.push("--requirepass".to_string());
+        args.push(password);
     }
 
     args
@@ -45,6 +47,12 @@ async fn wait_for_redis_ready(config: &nvbes_redis::RedisConfig) {
     }
 
     panic!("Redis is not reachable at {}", config.url);
+}
+
+fn test_database_url() -> String {
+    std::env::var("DATABASE_URL")
+        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string())
 }
 
 async fn ensure_local_redis_started() {
@@ -77,24 +85,30 @@ pub async fn test_redis_pool() -> nvbes_redis::RedisPool {
 }
 
 pub async fn ensure_test_database(pool: &sqlx::PgPool) {
-    let pool = pool.clone();
     TEST_DATABASE_BOOTSTRAPPED
         .get_or_init(move || async move {
-            sqlx::query("DROP SCHEMA IF EXISTS public CASCADE")
-                .execute(&pool)
+            sqlx::query("CREATE SCHEMA IF NOT EXISTS public")
+                .execute(pool)
                 .await
-                .expect("public schema should drop cleanly");
-            sqlx::query("CREATE SCHEMA public")
-                .execute(&pool)
-                .await
-                .expect("public schema should be recreated");
+                .expect("public schema should exist");
             sqlx::query("CREATE EXTENSION IF NOT EXISTS pgcrypto")
-                .execute(&pool)
+                .execute(pool)
                 .await
                 .expect("pgcrypto extension should exist");
-            crate::database::run_migrations(&pool)
+            crate::database::run_migrations(pool)
                 .await
                 .expect("migrations should run");
         })
         .await;
+}
+
+pub fn shared_test_pool() -> PgPool {
+    TEST_DATABASE_POOL
+        .get_or_init(|| {
+            PgPoolOptions::new()
+                .max_connections(1)
+                .connect_lazy(&test_database_url())
+                .expect("valid pool")
+        })
+        .clone()
 }

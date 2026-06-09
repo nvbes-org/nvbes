@@ -22,6 +22,14 @@ pub struct JwkEntry {
     pub e: String,
 }
 
+type SigningKeyRow = (
+    String,
+    Option<String>,
+    String,
+    String,
+    chrono::DateTime<chrono::Utc>,
+);
+
 pub enum KeyBackend {
     Kms(KmsClient),
     Local,
@@ -53,12 +61,12 @@ pub async fn create_initial_key(pool: &PgPool, backend: &KeyBackend) -> Result<(
             let kms_key = client
                 .create_key("nvbes-jwt-signing")
                 .await
-                .map_err(|e| AppError::internal("kms_key_creation_failed", &e.to_string()))?;
+                .map_err(|e| AppError::internal("kms_key_creation_failed", e.to_string()))?;
 
             let public_key_resp = client
                 .get_public_key(&kms_key.id)
                 .await
-                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", &e.to_string()))?;
+                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", e.to_string()))?;
 
             sqlx::query(
                 "INSERT INTO signing_keys (kid, kms_key_id, public_key_pem, status) VALUES ($1, $2, $3, 'active')",
@@ -106,12 +114,12 @@ pub async fn rotate_key(pool: &PgPool, backend: &KeyBackend) -> Result<SigningKe
             let rotated = client
                 .rotate_key(kms_key_id)
                 .await
-                .map_err(|e| AppError::internal("kms_rotation_failed", &e.to_string()))?;
+                .map_err(|e| AppError::internal("kms_rotation_failed", e.to_string()))?;
 
             let public_key_resp = client
                 .get_public_key(kms_key_id)
                 .await
-                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", &e.to_string()))?;
+                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", e.to_string()))?;
 
             (
                 format!("kid-{}", rotated.rotation_count),
@@ -125,7 +133,7 @@ pub async fn rotate_key(pool: &PgPool, backend: &KeyBackend) -> Result<SigningKe
         }
     };
 
-    let row: (String, Option<String>, String, String, chrono::DateTime<chrono::Utc>) = sqlx::query_as(
+    let row: SigningKeyRow = sqlx::query_as(
         "INSERT INTO signing_keys (kid, kms_key_id, public_key_pem, status) VALUES ($1, $2, $3, 'active') RETURNING kid, kms_key_id, public_key_pem, status, activated_at",
     )
     .bind(&kid)
@@ -145,7 +153,7 @@ pub async fn rotate_key(pool: &PgPool, backend: &KeyBackend) -> Result<SigningKe
 }
 
 pub async fn get_active_key(pool: &PgPool) -> Result<Option<SigningKey>, AppError> {
-    let row: Option<(String, Option<String>, String, String, chrono::DateTime<chrono::Utc>)> =
+    let row: Option<SigningKeyRow> =
         sqlx::query_as(
             "SELECT kid, kms_key_id, public_key_pem, status, activated_at FROM signing_keys WHERE status = 'active' ORDER BY activated_at DESC LIMIT 1",
         )
@@ -205,23 +213,23 @@ pub fn generate_local_key_pair() -> Result<(String, String), AppError> {
     use sha2::Digest;
 
     let private_key = openssl::rsa::Rsa::generate(4096)
-        .map_err(|e| AppError::internal("key_generation_failed", &e.to_string()))?;
+        .map_err(|e| AppError::internal("key_generation_failed", e.to_string()))?;
     let key = openssl::pkey::PKey::from_rsa(private_key)
-        .map_err(|e| AppError::internal("key_encoding_failed", &e.to_string()))?;
+        .map_err(|e| AppError::internal("key_encoding_failed", e.to_string()))?;
 
     let public_pem = key
         .public_key_to_pem()
-        .map_err(|e| AppError::internal("key_encoding_failed", &e.to_string()))?;
+        .map_err(|e| AppError::internal("key_encoding_failed", e.to_string()))?;
 
     let der = key
         .public_key_to_der()
-        .map_err(|e| AppError::internal("key_der_failed", &e.to_string()))?;
+        .map_err(|e| AppError::internal("key_der_failed", e.to_string()))?;
     let mut hasher = sha2::Sha256::new();
     hasher.update(&der);
     let kid = format!("kid-local-{}", hex::encode(&hasher.finalize()[..8]));
 
     let public_pem = String::from_utf8(public_pem)
-        .map_err(|e| AppError::internal("key_encoding_failed", &e.to_string()))?;
+        .map_err(|e| AppError::internal("key_encoding_failed", e.to_string()))?;
 
     Ok((kid, public_pem))
 }
@@ -239,6 +247,6 @@ impl SigningKey {
 
 impl From<KmsError> for AppError {
     fn from(e: KmsError) -> Self {
-        AppError::internal("kms_error", &e.to_string())
+        AppError::internal("kms_error", e.to_string())
     }
 }

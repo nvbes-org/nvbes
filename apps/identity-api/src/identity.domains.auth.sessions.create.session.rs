@@ -55,7 +55,7 @@ pub async fn create_session_for_principal(
                 principal_id,
             )
             .await
-            .map_err(|err| AppError::internal("email_verification_token_read_failed", &err.to_string()))?;
+            .map_err(|err| AppError::internal("email_verification_token_read_failed", err.to_string()))?;
 
         resend_token.map(|token| {
             email_verification::verification_resend_available_at(
@@ -101,12 +101,9 @@ pub async fn create_session_for_principal(
         context.user_agent.clone(),
         now + chrono::Duration::hours(config.auth_session_ttl_hours),
     );
-    let _ = nvbes_redis::session::set_session(
-        redis,
-        &cached_session,
-        current_session_ttl(&cached_session),
-    )
-    .await;
+    nvbes_redis::session::set_session(redis, &cached_session, current_session_ttl(&cached_session))
+        .await
+        .map_err(|err| AppError::internal("session_cache_write_failed", err.to_string()))?;
 
     let (score, decision, factors) = risk::current_state_summary(db, principal_id).await?;
     let _ = risk::record_event(

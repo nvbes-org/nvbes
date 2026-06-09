@@ -15,13 +15,13 @@ Portail React/TypeScript pour nvbes Identity.
 
 - Router: TanStack Router dans `src/identity.router.tsx`.
 - Server state: TanStack Query via `*.queries.ts`.
-- Workflows multi-etapes: Effect via `*.workflow.ts`.
+- Mutations et orchestration async: fonctions TanStack-friendly via `*.functions.ts`.
 - HTTP valide: `@nvbes/http-client`, `@nvbes/identity-client` et `@nvbes/identity-sdk-web`.
 
 Les composants ne devraient pas ajouter de nouveaux `fetch` directs. Ajouter plutot:
 
 - `*.api.ts` pour les appels HTTP valides par Zod;
-- `*.workflow.ts` pour l'orchestration;
+- `*.functions.ts` pour l'orchestration async;
 - `*.queries.ts` pour les query/mutation keys.
 
 ## Structure
@@ -32,7 +32,7 @@ src/
 ├── App.tsx
 ├── identity.router.tsx
 ├── identity.auth.api.ts
-├── identity.auth.workflow.ts
+├── identity.auth.functions.ts
 ├── identity.auth.queries.ts
 ├── identity.email-verification.ts
 ├── account.queries.ts

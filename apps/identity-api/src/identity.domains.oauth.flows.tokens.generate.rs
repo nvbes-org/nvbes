@@ -6,6 +6,10 @@ use uuid::Uuid;
 
 use crate::domains::oauth::flows::TokenView;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "OAuth token generation keeps scope, audience, and session context explicit."
+)]
 pub async fn generate_tokens(
     db: &PgPool,
     jwt: &JwtService,

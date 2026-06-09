@@ -16,7 +16,7 @@ impl IdentityClient {
             .submit_login_password(&identifier.state_token, &input.password)
             .await?
         {
-            LoginPasswordResult::Success(result) => Ok(result),
+            LoginPasswordResult::Success(result) => Ok(*result),
             LoginPasswordResult::MfaRequired(challenge) => Err(SdkError::MfaRequired(format!(
                 "MFA challenge required with methods: {}",
                 challenge.available_methods.unwrap_or_default().join(", ")
@@ -55,7 +55,9 @@ impl IdentityClient {
             return Err(http::auth_error(response).await);
         }
 
-        Ok(LoginPasswordResult::Success(response.json().await?))
+        Ok(LoginPasswordResult::Success(Box::new(
+            response.json().await?,
+        )))
     }
 
     pub async fn submit_login_mfa(

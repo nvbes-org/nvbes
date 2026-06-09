@@ -10,7 +10,11 @@
   "types": "dist/index.d.mts",
   "scripts": {
     "build": "vp pack",
-    "dev": "vp pack --watch"
+    "check": "pnpm run typecheck",
+    "dev": "vp pack --watch",
+    "format:check": "vp fmt --check src package.json tsconfig.json",
+    "lint": "vp lint src",
+    "typecheck": "tsc --pretty false --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "zod": "^3.25.76"

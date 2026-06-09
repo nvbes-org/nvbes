@@ -29,7 +29,7 @@ export function LoginPageIdentifierForm({
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
           required
-          autoComplete="email"
+          autoComplete="username webauthn"
           autoFocus
         />
       </div>

@@ -183,7 +183,7 @@ pub async fn update_member_role(
     tx.commit().await?;
     nvbes_redis::session::clear_user_sessions(redis, &member_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
 
     Ok(UpdateMemberResponse {
         member: updated_member.into_view(),
@@ -264,7 +264,7 @@ pub async fn remove_member(
     tx.commit().await?;
     nvbes_redis::session::clear_user_sessions(redis, &member_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
 
     Ok(RemoveMemberResponse {
         removed_user_id: member_id,

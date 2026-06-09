@@ -1,10 +1,12 @@
 import { TrackingConsentToggle } from '@nvbes/web-runtime';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import type { CookieConsentState } from '../tracking-consent';
 import { essentialVendors, posthogPurposes } from './CookieConsentSettings.shared';
 
 export function CookieConsentEssentialSection() {
   return (
-    <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-4">
+    <Card className="space-y-2 p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -14,9 +16,9 @@ export function CookieConsentEssentialSection() {
             Nécessaires au fonctionnement technique et à la sécurité.
           </p>
         </div>
-        <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+        <Badge variant="secondary" className="uppercase tracking-wider">
           Obligatoire
-        </span>
+        </Badge>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20 pl-5 pt-1.5">
         {essentialVendors.map((vendor) => (
@@ -25,7 +27,7 @@ export function CookieConsentEssentialSection() {
           </span>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -41,7 +43,7 @@ export function CookieConsentAnalyticsSection({
   onTogglePostHogPurpose: (purpose: keyof CookieConsentState['posthog']) => void;
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-border/40 p-4">
+    <Card className="space-y-3 p-4">
       <TrackingConsentToggle
         checked={cookieConsent.categories.analytics}
         onChange={() => onToggleCategory('analytics')}
@@ -68,7 +70,7 @@ export function CookieConsentAnalyticsSection({
             />
           ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -86,7 +88,7 @@ export function CookieConsentPerformanceSection({
   const errorTracking = posthogPurposes.find((purpose) => purpose.key === 'errorTracking');
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/40 p-4">
+    <Card className="space-y-3 p-4">
       <TrackingConsentToggle
         checked={cookieConsent.categories.performance}
         onChange={() => onToggleCategory('performance')}
@@ -110,6 +112,6 @@ export function CookieConsentPerformanceSection({
           />
         ) : null}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -86,10 +86,10 @@ pub async fn change(
         &current_session_id.to_string(),
     )
     .await
-    .map_err(|err| AppError::internal("redis_session_revoke_failed", &err.to_string()))?;
+    .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
         .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
 
     Ok(ChangePasswordResult { success: true })
 }

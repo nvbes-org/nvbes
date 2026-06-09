@@ -1,3 +1,7 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import type { RecoveryReviewView } from '@/pages/RecoveryReviewsPage.api';
 import { formatRecoveryReviewDateTime, recoveryReviewStatus } from './RecoveryReviewsPage.utils';
 
@@ -12,30 +16,30 @@ export function RecoveryReviewsList(props: {
   return (
     <>
       {error ? (
-        <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {workspaceId ? (
-        <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-6">
+        <Card className="border-white/10 bg-slate-950/70 p-6 text-slate-100">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Demandes</h2>
               <p className="text-sm text-slate-400">Workspace: {workspaceId}</p>
             </div>
             {loading ? (
-              <span className="text-sm text-slate-400">Chargement...</span>
+              <Badge variant="secondary">Chargement...</Badge>
             ) : (
-              <span className="text-sm text-slate-400">{reviews.length} entrée(s)</span>
+              <Badge variant="secondary">{reviews.length} entrée(s)</Badge>
             )}
           </div>
 
           <div className="grid gap-4">
             {reviews.map((review) => (
-              <article
+              <Card
                 key={review.request_id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                className="border-white/10 bg-white/5 p-5 text-slate-100"
               >
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -71,16 +75,21 @@ export function RecoveryReviewsList(props: {
                     </dd>
                   </div>
                 </dl>
-              </article>
+              </Card>
             ))}
 
             {!loading && reviews.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-slate-400">
-                Aucune demande de recovery en revue pour ce workspace.
-              </p>
+              <Empty className="border border-white/10 text-slate-400">
+                <EmptyHeader>
+                  <EmptyTitle>Aucune demande</EmptyTitle>
+                  <EmptyDescription>
+                    Aucune demande de recovery en revue pour ce workspace.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : null}
           </div>
-        </div>
+        </Card>
       ) : null}
     </>
   );

@@ -32,23 +32,18 @@ pub async fn authenticate_or_refresh_session(
             if error.status == axum::http::StatusCode::UNAUTHORIZED
                 && error.code == "token_expired" =>
         {
-            refresh_expired_session(state, authuser, &token).await
+            let (auth, cookies) = refresh_expired_session(state, authuser, &token).await?;
+            Ok((auth, Some(cookies)))
         }
         Err(error) => Err(error),
     }
 }
 
-async fn refresh_expired_session(
+pub async fn refresh_expired_session(
     state: &AppState,
     authuser: &str,
     expired_token: &str,
-) -> Result<
-    (
-        crate::domains::auth::types::AuthContext,
-        Option<RefreshedCookies>,
-    ),
-    AppError,
-> {
+) -> Result<(crate::domains::auth::types::AuthContext, RefreshedCookies), AppError> {
     let claims = state.jwt.decode_token_ignore_expiry(expired_token)?;
 
     let session_id = Uuid::parse_str(&claims.sid)
@@ -58,7 +53,7 @@ async fn refresh_expired_session(
 
     let session = nvbes_redis::session::get_session(&state.redis, &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", &err.to_string()))?
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
         .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found"))?;
 
     if session.principal_id != principal_id.to_string()
@@ -74,7 +69,7 @@ async fn refresh_expired_session(
     let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &new_token).await?;
     let cookies = build_refreshed_cookies(state, authuser, &new_token)?;
 
-    Ok((auth, Some(cookies)))
+    Ok((auth, cookies))
 }
 
 async fn rotate_session_token_hash(
@@ -103,7 +98,7 @@ async fn rotate_session_token_hash(
             &session_id.to_string(),
         )
         .await
-        .map_err(|err| AppError::internal("redis_session_cache_reset_failed", &err.to_string()))?;
+        .map_err(|err| AppError::internal("redis_session_cache_reset_failed", err.to_string()))?;
     }
 
     Ok(())

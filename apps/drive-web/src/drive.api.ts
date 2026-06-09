@@ -33,7 +33,12 @@ export type DriveWorkspaceView = z.infer<typeof DriveWorkspaceViewSchema>;
 export type DriveMeResponse = z.infer<typeof DriveMeResponseSchema>;
 
 function driveApiBaseUrl(): string {
-  return import.meta.env.VITE_DRIVE_API_BASE_URL || 'http://localhost:4000';
+  const configuredBaseUrl = import.meta.env.VITE_DRIVE_API_BASE_URL || '/api';
+  if (configuredBaseUrl.startsWith('/')) {
+    return `${window.location.origin}${configuredBaseUrl}`;
+  }
+
+  return configuredBaseUrl;
 }
 
 import { getValidAccessToken } from './drive.session';

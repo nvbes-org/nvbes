@@ -1,6 +1,6 @@
 import { type AccountEntry } from '@nvbes/identity-client';
 import { useLocation, useNavigate } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   authorizeIdentitySession,
@@ -12,6 +12,7 @@ import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
 import { useLoginPageState } from './useLoginPage.state';
+import { completeConditionalWebAuthnLogin } from './useLoginPage.webauthn.conditional';
 
 export function useLoginPage() {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ export function useLoginPage() {
     navigate,
     oauthRequest,
     connectedAccounts: state.connectedAccounts,
+    setConnectedAccounts: state.setConnectedAccounts,
     email: state.email,
     password: state.password,
     loginStateToken: state.loginStateToken,
@@ -86,6 +88,34 @@ export function useLoginPage() {
     setError: state.setError,
     navigateToAccount,
   });
+  const conditionalWebAuthnStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      state.checkingAuth ||
+      state.step !== 'identifier' ||
+      state.connectedAccounts.length > 0 ||
+      conditionalWebAuthnStartedRef.current
+    ) {
+      return;
+    }
+
+    conditionalWebAuthnStartedRef.current = true;
+    void completeConditionalWebAuthnLogin({
+      finishLogin: actions.finishLogin,
+      setSessionToken: state.setSessionToken,
+      setError: state.setError,
+    }).catch(() => {
+      conditionalWebAuthnStartedRef.current = false;
+    });
+  }, [
+    actions.finishLogin,
+    state.checkingAuth,
+    state.connectedAccounts.length,
+    state.setError,
+    state.setSessionToken,
+    state.step,
+  ]);
 
   return {
     checkingAuth: state.checkingAuth,
@@ -94,6 +124,8 @@ export function useLoginPage() {
     error: state.error,
     identifierSubmitting: state.identifierSubmitting,
     handleAccountSelect: actions.handleAccountSelect,
+    handleDisconnectAccount: actions.handleDisconnectAccount,
+    handleDisconnectAllAccounts: actions.handleDisconnectAllAccounts,
     handleConsentApprove: actions.handleConsentApprove,
     handleConsentCancel: actions.handleConsentCancel,
     handleIdentifierSubmit: actions.handleIdentifierSubmit,

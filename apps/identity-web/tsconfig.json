@@ -7,6 +7,7 @@
       "@nvbes/identity-client": ["../../libs/ts/identity-client/src/index.ts"],
       "@nvbes/identity-sdk-web": ["../../libs/ts/identity-sdk-web/src/index.ts"],
       "@nvbes/identity-sdk-web/src/*": ["../../libs/ts/identity-sdk-web/src/*"],
+      "@nvbes/web-ui": ["../../libs/ts/web-ui/src/index.ts"],
       "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
       "@nvbes/web-runtime/posthog": ["../../libs/ts/web-runtime/src/posthog.ts"],
       "@nvbes/identity-sdk-core/src/*": ["../../libs/ts/identity-sdk-core/src/*"],

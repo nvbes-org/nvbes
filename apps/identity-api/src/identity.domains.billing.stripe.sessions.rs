@@ -4,6 +4,10 @@ use crate::http::error::AppError;
 use nvbes_billing::stripe::StripeSession;
 use nvbes_core::config::AppConfig;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Stripe checkout field construction keeps explicit metadata inputs."
+)]
 pub async fn create_stripe_checkout_session(
     config: &AppConfig,
     customer_id: &str,

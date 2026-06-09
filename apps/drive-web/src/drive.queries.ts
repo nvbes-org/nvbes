@@ -1,7 +1,6 @@
-import { effectQueryFn } from '@nvbes/web-runtime';
 import { queryOptions } from '@tanstack/react-query';
 import { fetchDriveMe } from './drive.api';
-import { fetchDriveMeWorkflow } from './drive.workflow';
+import { fetchDriveMeWithRefresh } from './drive.auth.functions';
 
 export const driveQueryKeys = {
   all: ['drive'] as const,
@@ -13,10 +12,12 @@ export const driveQueryKeys = {
 export function driveMeQueryOptions(accessToken: string) {
   return queryOptions({
     queryKey: driveQueryKeys.me(accessToken),
-    queryFn: effectQueryFn(() => fetchDriveMeWorkflow(accessToken)),
+    queryFn: () => fetchDriveMeWithRefresh(accessToken),
+    retry: false,
     staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 

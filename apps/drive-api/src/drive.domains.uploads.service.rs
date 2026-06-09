@@ -41,6 +41,10 @@ pub async fn get_tus_upload_status(
     lifecycle::get_tus_upload_status(db, access, upload_id).await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Upload service keeps infrastructure and scan toggles explicit."
+)]
 pub async fn append_tus_chunk(
     storage: &dyn nvbes_storage::ObjectStore,
     scanner: &dyn nvbes_scan::ScanEngine,
@@ -70,6 +74,10 @@ pub async fn append_tus_chunk(
     .await
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Upload service keeps infrastructure and scan toggles explicit."
+)]
 pub async fn complete_upload(
     storage: &dyn nvbes_storage::ObjectStore,
     scanner: &dyn nvbes_scan::ScanEngine,

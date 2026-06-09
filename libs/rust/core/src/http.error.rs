@@ -27,7 +27,7 @@ pub struct AppError {
     pub message: String,
     pub retry_after_seconds: Option<u64>,
     pub request_id: Option<String>,
-    pub rate_limit_info: Option<RateLimitInfo>,
+    pub rate_limit_info: Option<Box<RateLimitInfo>>,
 }
 
 impl AppError {
@@ -78,7 +78,7 @@ impl AppError {
             message: message.into(),
             retry_after_seconds,
             request_id: None,
-            rate_limit_info,
+            rate_limit_info: rate_limit_info.map(Box::new),
         }
     }
 
@@ -133,7 +133,7 @@ macro_rules! impl_app_error {
             pub message: String,
             pub retry_after_seconds: Option<u64>,
             pub request_id: Option<String>,
-            pub rate_limit_info: Option<RateLimitInfo>,
+            pub rate_limit_info: Option<Box<RateLimitInfo>>,
         }
 
         impl AppError {
@@ -191,7 +191,7 @@ macro_rules! impl_app_error {
                     message: message.into(),
                     retry_after_seconds,
                     request_id: None,
-                    rate_limit_info,
+                    rate_limit_info: rate_limit_info.map(Box::new),
                 }
             }
 

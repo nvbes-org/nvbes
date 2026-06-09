@@ -52,14 +52,14 @@ pub async fn revoke_client(
     let tokens_revoked =
         nvbes_redis::refresh_token::revoke_all_client_refresh_tokens(redis, client_uuid)
             .await
-            .map_err(|err| AppError::internal("refresh_token_revoke_failed", &err.to_string()))?;
+            .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
     let par_revoked =
         nvbes_redis::par::revoke_pushed_authorization_requests_for_client(redis, client_id_str)
             .await
             .map_err(|err| {
                 AppError::internal(
                     "pushed_authorization_request_revoke_failed",
-                    &err.to_string(),
+                    err.to_string(),
                 )
             })?;
 

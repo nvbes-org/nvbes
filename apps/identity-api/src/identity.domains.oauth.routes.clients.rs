@@ -20,13 +20,13 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 .post(create_client)
                 .layer(axum::middleware::from_fn_with_state(
                     state.clone(),
-                    auth_middleware.clone(),
+                    auth_middleware,
                 )),
         )
         .route(
             "/{clientId}/policies",
             get(list_client_policies).post(create_client_policy).layer(
-                axum::middleware::from_fn_with_state(state.clone(), auth_middleware.clone()),
+                axum::middleware::from_fn_with_state(state.clone(), auth_middleware),
             ),
         )
         .route(
@@ -101,6 +101,10 @@ pub(crate) async fn create_client(
 ) -> Result<Json<serde_json::Value>, AppError> {
     require_management_step_up(&state.redis, &auth).await?;
     let result = crate::domains::oauth::clients::create_client(&state.db, &auth, request).await?;
+    state
+        .allowed_browser_origins
+        .refresh_from_db(&state.db, &state.config)
+        .await?;
     json_value(result)
 }
 
@@ -239,5 +243,9 @@ pub(crate) async fn revoke_client(
     let result =
         crate::domains::oauth::clients::revoke_client(&state.db, &state.redis, &auth, &client_id)
             .await?;
+    state
+        .allowed_browser_origins
+        .refresh_from_db(&state.db, &state.config)
+        .await?;
     json_value(result)
 }

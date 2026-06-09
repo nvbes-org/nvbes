@@ -42,15 +42,19 @@ pub(crate) async fn resend_verify_email(
     nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_verify_email_resend",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
-        10,
-        std::time::Duration::from_secs(60),
-        &format!("key:{}", request.email),
-        4,
-        std::time::Duration::from_secs(300),
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!(
+                "ip:{}",
+                crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
+            ),
+            max_hits: 10,
+            window: std::time::Duration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("key:{}", request.email),
+            max_hits: 4,
+            window: std::time::Duration::from_secs(300),
+        },
     )
     .await?;
 
@@ -100,15 +104,19 @@ pub(crate) async fn change_verify_email(
     nvbes_core::limiter::check_rate_limit_pair(
         &state.redis,
         "auth_verify_email_change",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
-        10,
-        std::time::Duration::from_secs(60),
-        &rate_limit_key,
-        4,
-        std::time::Duration::from_secs(300),
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!(
+                "ip:{}",
+                crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
+            ),
+            max_hits: 10,
+            window: std::time::Duration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &rate_limit_key,
+            max_hits: 4,
+            window: std::time::Duration::from_secs(300),
+        },
     )
     .await?;
 

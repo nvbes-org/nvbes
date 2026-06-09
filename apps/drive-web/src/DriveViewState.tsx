@@ -1,7 +1,17 @@
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Spinner } from '@/components/ui/spinner';
 
 export function DriveEmptyState({
   title,
@@ -13,39 +23,33 @@ export function DriveEmptyState({
   action?: ReactNode;
 }) {
   return (
-    <Card className="border-dashed bg-background/80 shadow-sm">
-      <CardHeader className="items-center text-center">
-        <div className="mb-2 grid size-12 place-items-center rounded-2xl bg-muted">
-          <span className="text-lg" aria-hidden="true">
-            //
-          </span>
-        </div>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription className="max-w-md">{description}</CardDescription>
-      </CardHeader>
-      {action ? <CardContent className="flex justify-center">{action}</CardContent> : null}
-    </Card>
+    <Empty className="border border-dashed">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <span aria-hidden="true">//</span>
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+      {action ? <EmptyContent>{action}</EmptyContent> : null}
+    </Empty>
   );
 }
 
 export function DriveErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <Card className="border-destructive/30 bg-destructive/5 shadow-sm">
-      <CardHeader className="items-center text-center">
-        <div className="mb-2 grid size-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
-          <AlertTriangle className="size-5" aria-hidden="true" />
-        </div>
-        <CardTitle>Impossible de charger Drive</CardTitle>
-        <CardDescription className="max-w-md">{message}</CardDescription>
-      </CardHeader>
+    <Alert variant="destructive">
+      <AlertTriangle />
+      <AlertTitle>Impossible de charger Drive</AlertTitle>
+      <AlertDescription>{message}</AlertDescription>
       {onRetry ? (
-        <CardContent className="flex justify-center">
+        <div className="mt-3">
           <Button type="button" variant="outline" onClick={onRetry}>
             Reessayer
           </Button>
-        </CardContent>
+        </div>
       ) : null}
-    </Card>
+    </Alert>
   );
 }
 
@@ -53,7 +57,7 @@ export function DriveLoadingState({ label = 'Chargement de Drive...' }: { label?
   return (
     <Card className="bg-background/80 shadow-sm">
       <CardContent className="flex items-center justify-center gap-3 p-8 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <Spinner />
         {label}
       </CardContent>
     </Card>

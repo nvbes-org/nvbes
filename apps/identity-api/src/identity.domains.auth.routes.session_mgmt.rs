@@ -42,6 +42,13 @@ pub(crate) async fn get_accounts(
     accounts::get_accounts(State(state), headers).await
 }
 
+pub(crate) async fn forget_account_cookie(
+    State(state): State<AppState>,
+    Path(authuser): Path<String>,
+) -> Result<axum::response::Response, crate::http::error::AppError> {
+    accounts::forget_account_cookie(State(state), Path(authuser)).await
+}
+
 #[utoipa::path(
     post,
     path = "/auth/logout",

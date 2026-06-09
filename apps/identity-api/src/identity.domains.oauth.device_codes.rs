@@ -45,7 +45,7 @@ pub async fn store_device_code(
             ttl_seconds,
         )
         .await
-        .map_err(|err| AppError::internal("device_code_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_store_failed", format!("{}", err)))?;
     client
         .set_with_ttl(
             &user_code_index_key(&device_code.user_code),
@@ -53,21 +53,21 @@ pub async fn store_device_code(
             ttl_seconds,
         )
         .await
-        .map_err(|err| AppError::internal("device_code_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_store_failed", format!("{}", err)))?;
     client
         .sadd(
             &client_index_key(&device_code.client_id),
             &device_code.device_code,
         )
         .await
-        .map_err(|err| AppError::internal("device_code_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_store_failed", format!("{}", err)))?;
     client
         .expire(
             &client_index_key(&device_code.client_id),
             ttl_seconds as i64,
         )
         .await
-        .map_err(|err| AppError::internal("device_code_store_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_store_failed", format!("{}", err)))?;
     Ok(())
 }
 
@@ -79,7 +79,7 @@ pub async fn get_device_code_by_device_code(
     client
         .cache_get_json(&device_code_key(device_code))
         .await
-        .map_err(|err| AppError::internal("device_code_load_failed", &format!("{}", err)))
+        .map_err(|err| AppError::internal("device_code_load_failed", format!("{}", err)))
 }
 
 pub async fn get_device_code_by_user_code(
@@ -90,7 +90,7 @@ pub async fn get_device_code_by_user_code(
     let device_code = client
         .get(&user_code_index_key(user_code))
         .await
-        .map_err(|err| AppError::internal("device_code_load_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_load_failed", format!("{}", err)))?;
 
     let Some(device_code) = device_code else {
         return Ok(None);
@@ -117,14 +117,14 @@ pub async fn delete_device_code(
             &user_code_index_key(&device_code.user_code),
         ])
         .await
-        .map_err(|err| AppError::internal("device_code_delete_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_delete_failed", format!("{}", err)))?;
     client
         .srem(
             &client_index_key(&device_code.client_id),
             &device_code.device_code,
         )
         .await
-        .map_err(|err| AppError::internal("device_code_delete_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_delete_failed", format!("{}", err)))?;
     Ok(())
 }
 
@@ -136,7 +136,7 @@ pub async fn revoke_device_codes_for_client(
     let device_codes = client
         .smembers(&client_index_key(client_id))
         .await
-        .map_err(|err| AppError::internal("device_code_revoke_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_revoke_failed", format!("{}", err)))?;
 
     let mut revoked = 0;
     for device_code in device_codes {
@@ -149,22 +149,22 @@ pub async fn revoke_device_codes_for_client(
                 ])
                 .await
                 .map_err(|err| {
-                    AppError::internal("device_code_revoke_failed", &format!("{}", err))
+                    AppError::internal("device_code_revoke_failed", format!("{}", err))
                 })?;
             client
                 .srem(&client_index_key(&code.client_id), &code.device_code)
                 .await
                 .map_err(|err| {
-                    AppError::internal("device_code_revoke_failed", &format!("{}", err))
+                    AppError::internal("device_code_revoke_failed", format!("{}", err))
                 })?;
             revoked += 1;
         }
     }
 
-    let _ = client
+    client
         .del_key(&client_index_key(client_id))
         .await
-        .map_err(|err| AppError::internal("device_code_revoke_failed", &format!("{}", err)))?;
+        .map_err(|err| AppError::internal("device_code_revoke_failed", format!("{}", err)))?;
 
     Ok(revoked)
 }

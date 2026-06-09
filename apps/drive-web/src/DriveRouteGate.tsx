@@ -1,14 +1,16 @@
-import { AuthErrorBoundary, runClientEffect } from '@nvbes/web-runtime';
+import { AuthErrorBoundary } from '@nvbes/web-runtime';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Suspense, useEffect, useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
+import { startDriveLogin } from './drive.auth.functions';
 import { DriveShell } from './DriveShell';
 import { driveMeQueryOptions } from './drive.queries';
-import { getAccessToken, subscribeToSessionChanges } from './drive.session';
-import { startDriveLoginWorkflow } from './drive.workflow';
+import { getAccessToken, getValidAccessToken, subscribeToSessionChanges } from './drive.session';
 import { syncTrackingConsent } from './tracking-consent';
 
 export function DriveRouteGate() {
   const [accessToken, setAccessTokenState] = useState(getAccessToken());
+  const [checkingRefresh, setCheckingRefresh] = useState(false);
 
   useEffect(() => {
     return subscribeToSessionChanges(() => {
@@ -18,8 +20,30 @@ export function DriveRouteGate() {
 
   useEffect(() => {
     if (!accessToken) {
-      void runClientEffect(startDriveLoginWorkflow());
+      let cancelled = false;
+      setCheckingRefresh(true);
+      void getValidAccessToken()
+        .then((token) => {
+          if (cancelled) {
+            return;
+          }
+          if (token) {
+            setAccessTokenState(token);
+            return;
+          }
+          void startDriveLogin();
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setCheckingRefresh(false);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
     }
+    setCheckingRefresh(false);
+    return undefined;
   }, [accessToken]);
 
   useEffect(() => {
@@ -27,14 +51,16 @@ export function DriveRouteGate() {
       return;
     }
 
-    void syncTrackingConsent();
+    void syncTrackingConsent().catch(() => {
+      // Tracking consent sync is best-effort and must not break Drive bootstrap.
+    });
   }, [accessToken]);
 
-  if (!accessToken) {
+  if (!accessToken || checkingRefresh) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="text-center">
-          <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <Spinner className="mx-auto size-8 text-primary" />
           <p className="mt-4 text-sm text-muted-foreground">Redirection vers nvbes Identity...</p>
         </div>
       </div>
@@ -46,7 +72,7 @@ export function DriveRouteGate() {
       fallback={
         <div className="flex min-h-svh items-center justify-center bg-background">
           <div className="text-center">
-            <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+            <Spinner className="mx-auto size-8 text-primary" />
             <p className="mt-4 text-sm text-muted-foreground">Chargement...</p>
           </div>
         </div>
@@ -64,7 +90,7 @@ function DriveSessionGate({ accessToken }: { accessToken: string }) {
 
   useEffect(() => {
     if (!data) {
-      void runClientEffect(startDriveLoginWorkflow());
+      void startDriveLogin();
     }
   }, [data]);
 
@@ -72,7 +98,7 @@ function DriveSessionGate({ accessToken }: { accessToken: string }) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-background">
         <div className="text-center">
-          <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+          <Spinner className="mx-auto size-8 text-primary" />
           <p className="mt-4 text-sm text-muted-foreground">Redirection vers nvbes Identity...</p>
         </div>
       </div>

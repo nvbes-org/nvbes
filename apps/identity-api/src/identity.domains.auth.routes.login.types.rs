@@ -45,3 +45,10 @@ pub struct MfaRequest {
 pub struct WebauthnStartRequest {
     pub state_token: Uuid,
 }
+
+#[derive(Deserialize, ToSchema)]
+pub struct WebauthnDiscoverableFinishRequest {
+    pub challenge_id: Uuid,
+    #[schema(value_type = Object)]
+    pub webauthn_response: PublicKeyCredential,
+}

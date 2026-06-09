@@ -115,6 +115,28 @@ export function startLoginWebAuthn(stateToken: string): Promise<WebauthnAuthStar
   });
 }
 
+export function startDiscoverableLoginWebAuthn(): Promise<WebauthnAuthStartResult> {
+  return identityHttpClient.post(
+    '/auth/challenge/webauthn/discoverable/start',
+    WebauthnAuthStartResultSchema,
+    {},
+  );
+}
+
+export function finishDiscoverableLoginWebAuthn(
+  challengeId: string,
+  webauthnResponse: unknown,
+): Promise<LoginPasswordResult> {
+  return identityHttpClient.post(
+    '/auth/challenge/webauthn/discoverable/finish',
+    LoginPasswordResultSchema,
+    {
+      challenge_id: challengeId,
+      webauthn_response: webauthnResponse,
+    },
+  );
+}
+
 export function submitLoginMfa(
   stateToken: string,
   input:

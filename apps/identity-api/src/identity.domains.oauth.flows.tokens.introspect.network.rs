@@ -28,20 +28,20 @@ pub async fn resolve_network_valid(
     }
 
     let mut valid = false;
-    if let Some(ip_str) = client_ip {
-        if let Ok(client_addr) = ip_str.parse::<std::net::IpAddr>() {
-            for cidr in ips {
-                if let Ok(net) = cidr.parse::<ipnet::IpNet>() {
-                    if net.contains(&client_addr) {
-                        valid = true;
-                        break;
-                    }
-                } else if let Ok(allowed_ip) = cidr.parse::<std::net::IpAddr>() {
-                    if allowed_ip == client_addr {
-                        valid = true;
-                        break;
-                    }
+    if let Some(ip_str) = client_ip
+        && let Ok(client_addr) = ip_str.parse::<std::net::IpAddr>()
+    {
+        for cidr in ips {
+            if let Ok(net) = cidr.parse::<ipnet::IpNet>() {
+                if net.contains(&client_addr) {
+                    valid = true;
+                    break;
                 }
+            } else if let Ok(allowed_ip) = cidr.parse::<std::net::IpAddr>()
+                && allowed_ip == client_addr
+            {
+                valid = true;
+                break;
             }
         }
     }

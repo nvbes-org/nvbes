@@ -26,12 +26,16 @@ pub(super) async fn enforce_plan_rate_limit(
     nvbes_core::limiter::check_rate_limit_pair(
         redis,
         action,
-        &format!("minute:{subject_key}"),
-        limits.requests_per_minute,
-        Duration::from_secs(60),
-        &format!("day:{subject_key}"),
-        limits.requests_per_day,
-        Duration::from_secs(86_400),
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("minute:{subject_key}"),
+            max_hits: limits.requests_per_minute,
+            window: Duration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("day:{subject_key}"),
+            max_hits: limits.requests_per_day,
+            window: Duration::from_secs(86_400),
+        },
     )
     .await
     .map_err(AppError::from)?;

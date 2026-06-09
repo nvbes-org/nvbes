@@ -1,6 +1,20 @@
-import { Loader2, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import type { ServiceAccount } from '../identity.service-accounts.api';
 import { badgeVariantForStatus, statusLabel } from './WorkspaceServiceAccounts.helpers';
 
@@ -28,7 +42,7 @@ export function ServiceAccountConfiguration({
   onSave: () => void;
 }) {
   return (
-    <div className="rounded-3xl border border-border/70 bg-background p-5">
+    <Card className="p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium">Configuration</p>
@@ -43,50 +57,54 @@ export function ServiceAccountConfiguration({
 
       <div className="mt-4 grid gap-4">
         <div className="grid gap-2">
-          <label htmlFor="service-account-name" className="text-sm font-medium">
+          <Label htmlFor="service-account-name">
             Nom
-          </label>
-          <input
+          </Label>
+          <Input
             id="service-account-name"
-            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             value={updateName}
             onChange={(event) => setUpdateName(event.target.value)}
           />
         </div>
 
         <div className="grid gap-2">
-          <label htmlFor="service-account-description" className="text-sm font-medium">
+          <Label htmlFor="service-account-description">
             Description
-          </label>
-          <textarea
+          </Label>
+          <Textarea
             id="service-account-description"
-            className="flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="min-h-24"
             value={updateDescription}
             onChange={(event) => setUpdateDescription(event.target.value)}
           />
         </div>
 
         <div className="grid gap-2">
-          <label htmlFor="service-account-role" className="text-sm font-medium">
+          <Label htmlFor="service-account-role">
             Role RBAC
-          </label>
-          <select
-            id="service-account-role"
-            className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          </Label>
+          <Select
             value={updateRole}
-            onChange={(event) => setUpdateRole(event.target.value)}
+            onValueChange={setUpdateRole}
           >
-            <option value="viewer">viewer</option>
-            <option value="member">member</option>
-            <option value="admin">admin</option>
-            <option value="owner">owner</option>
-          </select>
+            <SelectTrigger id="service-account-role" className="w-full">
+              <SelectValue placeholder="Choisir un role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="viewer">viewer</SelectItem>
+                <SelectItem value="member">member</SelectItem>
+                <SelectItem value="admin">admin</SelectItem>
+                <SelectItem value="owner">owner</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
 
         {editError ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {editError}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{editError}</AlertDescription>
+          </Alert>
         ) : null}
       </div>
 
@@ -94,17 +112,17 @@ export function ServiceAccountConfiguration({
         <Button onClick={onSave} disabled={busyAction === 'update-service-account'}>
           {busyAction === 'update-service-account' ? (
             <>
-              <Loader2 className="size-4 animate-spin" />
+              <Spinner />
               Sauvegarde...
             </>
           ) : (
             <>
-              <Shield className="size-4" />
+              <Shield data-icon="inline-start" />
               Sauvegarder
             </>
           )}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }
