@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router';
 import {
-  BadgeCheck,
   Bell,
   Building,
   CreditCard,
@@ -43,7 +42,6 @@ export const accountNavSections = [
       { to: '/account/workspaces/service-accounts', icon: KeyRound, label: 'Comptes de service' },
       { to: '/account/billing', icon: CreditCard, label: 'Facturation' },
       { to: '/account/subscriptions', icon: Receipt, label: 'Abonnements' },
-      { to: '/account/standing', icon: BadgeCheck, label: 'Statut du compte' },
     ],
   },
   {

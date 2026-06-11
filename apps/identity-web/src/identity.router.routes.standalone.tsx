@@ -1,10 +1,9 @@
-import { createRoute } from '@tanstack/react-router';
+import { createRoute, redirect } from '@tanstack/react-router';
 
 import type { rootRoute } from './identity.router';
 import {
   LazyDeviceActivationPage,
   LazyForgotPasswordPage,
-  LazyLandingPage,
   LazyLoginPage,
   LazyRecoveryReviewsPage,
   LazyRegisterPage,
@@ -20,7 +19,9 @@ export function createStandaloneRoutes(root: typeof rootRoute) {
     createRoute({
       getParentRoute: () => root,
       path: '/',
-      component: LazyLandingPage,
+      beforeLoad: () => {
+        throw redirect({ to: '/login' });
+      },
     }),
     createRoute({
       getParentRoute: () => root,

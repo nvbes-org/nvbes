@@ -4,6 +4,5 @@ export {
   PersonalInfoSkeleton,
   PersonalInfoError,
   PersonalInfoSuccess,
-  PersonalInfoSummary,
 } from './AccountPersonalInfoPage.feedback';
-export { PersonalInfoForm } from './AccountPersonalInfoPage.form';
+export { PersonalInfoCard } from './AccountPersonalInfoPage.form';

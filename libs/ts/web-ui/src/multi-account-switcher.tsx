@@ -13,6 +13,7 @@ import {
 } from './multi-account-switcher.parts';
 import {
   findActiveAccount,
+  getSwitcherMenuStyle,
   initialsForDisplayName,
   type SharedAccountOption,
 } from './multi-account-switcher.utils';
@@ -61,12 +62,7 @@ export function MultiAccountSwitcher({
     }
 
     const rect = rootRef.current.getBoundingClientRect();
-    setStyle({
-      position: 'fixed',
-      top: `${rect.bottom + 4}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-    });
+    setStyle(getSwitcherMenuStyle(rect));
   }, [open]);
 
   useEffect(() => {
@@ -147,7 +143,7 @@ export function MultiAccountSwitcher({
         ? createPortal(
             <SwitcherCard
               data-switcher-portal="true"
-              className="fixed z-[9999] min-w-[22rem] p-4 shadow-lg shadow-black/10 md:min-w-[24rem] lg:min-w-[26rem]"
+              className="fixed z-[9999] max-w-[calc(100vw-2rem)] p-4 shadow-lg shadow-black/10"
               style={style}
             >
               <div className="flex items-center justify-between gap-3 pb-3">

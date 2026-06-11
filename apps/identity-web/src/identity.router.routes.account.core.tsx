@@ -12,7 +12,6 @@ import {
   LazyAccountSecurityPage,
   LazyAccountSessionsPage,
   LazyAccountSocialPage,
-  LazyAccountStandingPage,
   LazyAccountSubscriptionsPage,
   LazyBillingPage,
   LazyWorkspacesPage,
@@ -86,11 +85,6 @@ export function createAccountCoreRoutes(account: typeof accountRoute) {
       getParentRoute: () => account,
       path: '/preferences',
       component: LazyAccountPreferencesPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/standing',
-      component: LazyAccountStandingPage,
     }),
     createRoute({
       getParentRoute: () => account,

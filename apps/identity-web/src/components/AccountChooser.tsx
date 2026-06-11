@@ -41,7 +41,7 @@ export function AccountChooser({ accounts, loading }: AccountChooserProps) {
   };
 
   return (
-    <div className="bg-card px-4 py-4">
+    <div className="bg-card px-2 py-2">
       <MultiAccountSwitcher
         accounts={mappedAccounts}
         loading={loading}

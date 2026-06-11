@@ -1,18 +1,17 @@
 import { TrackingConsentToggle } from '@nvbes/web-runtime';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import type { CookieConsentState } from '../tracking-consent';
 import { essentialVendors, posthogPurposes } from './CookieConsentSettings.shared';
 
 export function CookieConsentEssentialSection() {
   return (
-    <Card className="space-y-2 p-4">
+    <div className="space-y-2 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <p className="flex items-center gap-1.5 font-semibold text-foreground">
             <span>🔒</span> Essentiels et Sécurité
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-muted-foreground">
             Nécessaires au fonctionnement technique et à la sécurité.
           </p>
         </div>
@@ -20,14 +19,14 @@ export function CookieConsentEssentialSection() {
           Obligatoire
         </Badge>
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20 pl-5 pt-1.5">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20">
         {essentialVendors.map((vendor) => (
-          <span key={vendor} className="text-xs text-muted-foreground">
+          <span key={vendor} className="text-muted-foreground">
             {vendor}
           </span>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -43,7 +42,7 @@ export function CookieConsentAnalyticsSection({
   onTogglePostHogPurpose: (purpose: keyof CookieConsentState['posthog']) => void;
 }) {
   return (
-    <Card className="space-y-3 p-4">
+    <div className="space-y-3 p-4">
       <TrackingConsentToggle
         checked={cookieConsent.categories.analytics}
         onChange={() => onToggleCategory('analytics')}
@@ -51,7 +50,7 @@ export function CookieConsentAnalyticsSection({
         description="Mesure l'utilisation pour l'amélioration continue."
         large
       />
-      <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
+      <div className="space-y-2 border-t border-border/20 px-2">
         <TrackingConsentToggle
           checked={cookieConsent.vendors.posthog}
           onChange={() => onToggleVendor('posthog')}
@@ -70,7 +69,7 @@ export function CookieConsentAnalyticsSection({
             />
           ))}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -88,7 +87,7 @@ export function CookieConsentPerformanceSection({
   const errorTracking = posthogPurposes.find((purpose) => purpose.key === 'errorTracking');
 
   return (
-    <Card className="space-y-3 p-4">
+    <div className="space-y-3 p-4">
       <TrackingConsentToggle
         checked={cookieConsent.categories.performance}
         onChange={() => onToggleCategory('performance')}
@@ -96,7 +95,7 @@ export function CookieConsentPerformanceSection({
         description="Suivi de la stabilité et diagnostics techniques."
         large
       />
-      <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
+      <div className="space-y-2 border-t border-border/20 px-2">
         <TrackingConsentToggle
           checked={cookieConsent.vendors.sentry}
           onChange={() => onToggleVendor('sentry')}
@@ -112,6 +111,6 @@ export function CookieConsentPerformanceSection({
           />
         ) : null}
       </div>
-    </Card>
+    </div>
   );
 }

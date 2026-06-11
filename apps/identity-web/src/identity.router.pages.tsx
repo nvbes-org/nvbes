@@ -1,7 +1,6 @@
 import { lazyPage } from './identity.router.shared';
 
 export const LazyLoginPage = lazyPage(() => import('./pages/LoginPage'));
-export const LazyLandingPage = lazyPage(() => import('./pages/LandingPage'));
 export const LazyRegisterPage = lazyPage(() => import('./pages/RegisterPage'));
 export const LazyVerifyEmailPage = lazyPage(() => import('./pages/VerifyEmailPage'));
 export const LazyVerifyEmailResultPage = lazyPage(() => import('./pages/VerifyEmailResultPage'));
@@ -31,7 +30,6 @@ export const LazyAccountNotificationsPage = lazyPage(
   () => import('./pages/AccountNotificationsPage'),
 );
 export const LazyAccountPreferencesPage = lazyPage(() => import('./pages/AccountPreferencesPage'));
-export const LazyAccountStandingPage = lazyPage(() => import('./pages/AccountStandingPage'));
 export const LazyAccountSocialPage = lazyPage(() => import('./pages/AccountSocialPage'));
 export const LazyMfaPage = lazyPage(() => import('./pages/MfaPage'));
 export const LazyTotpSetupPage = lazyPage(() => import('./pages/TotpSetupPage'));

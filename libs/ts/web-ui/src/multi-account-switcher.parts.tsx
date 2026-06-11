@@ -31,7 +31,7 @@ export function SwitcherButton({
     <button
       type={type}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition outline-none disabled:pointer-events-none disabled:opacity-50',
+        'p-6 inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition outline-none disabled:pointer-events-none disabled:opacity-50',
         buttonVariantClass[variant],
         buttonSizeClass[size],
         className,

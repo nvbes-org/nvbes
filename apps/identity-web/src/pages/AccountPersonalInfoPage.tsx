@@ -1,8 +1,4 @@
-import {
-  PersonalInfoForm,
-  PersonalInfoSkeleton,
-  PersonalInfoSummary,
-} from './AccountPersonalInfoPage.shared';
+import { PersonalInfoCard, PersonalInfoSkeleton } from './AccountPersonalInfoPage.shared';
 import { useAccountPersonalInfoPage } from './useAccountPersonalInfoPage';
 
 export default function AccountPersonalInfoPage() {
@@ -40,8 +36,10 @@ export default function AccountPersonalInfoPage() {
       </div>
 
       <div className="flex flex-col gap-6">
-        <PersonalInfoSummary user={selectedUser} fullName={fullName} memberSince={memberSince} />
-        <PersonalInfoForm
+        <PersonalInfoCard
+          user={selectedUser}
+          fullName={fullName}
+          memberSince={memberSince}
           firstname={firstname}
           lastname={lastname}
           username={username}
