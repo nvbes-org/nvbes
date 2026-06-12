@@ -14,9 +14,12 @@ CREATE TABLE developer_role_assignments (
   role developer_role NOT NULL,
   assigned_by uuid REFERENCES principals(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz,
-  UNIQUE (tenant_id, principal_id, role)
+  revoked_at timestamptz
 );
+
+CREATE UNIQUE INDEX idx_developer_role_assignments_active_unique
+  ON developer_role_assignments (tenant_id, principal_id, role)
+  WHERE revoked_at IS NULL;
 
 CREATE INDEX idx_developer_role_assignments_tenant_principal
   ON developer_role_assignments (tenant_id, principal_id)
@@ -35,7 +38,9 @@ CREATE TABLE developer_webhook_endpoints (
   updated_at timestamptz NOT NULL DEFAULT now(),
   revoked_at timestamptz,
   CONSTRAINT developer_webhook_endpoints_status_check
-    CHECK (status IN ('active', 'paused', 'revoked'))
+    CHECK (status IN ('active', 'paused', 'revoked')),
+  CONSTRAINT developer_webhook_endpoints_revoked_status_check
+    CHECK ((status = 'revoked') = (revoked_at IS NOT NULL))
 );
 
 CREATE INDEX idx_developer_webhook_endpoints_tenant
@@ -64,6 +69,8 @@ CREATE TABLE developer_webhook_deliveries (
   error_message text,
   created_at timestamptz NOT NULL DEFAULT now(),
   delivered_at timestamptz,
+  CONSTRAINT developer_webhook_deliveries_attempt_count_check
+    CHECK (attempt_count >= 0),
   CONSTRAINT developer_webhook_deliveries_status_check
     CHECK (status IN ('pending', 'delivered', 'failed'))
 );
@@ -73,3 +80,33 @@ CREATE INDEX idx_developer_webhook_deliveries_endpoint_created
 
 CREATE INDEX idx_developer_webhook_deliveries_tenant_event
   ON developer_webhook_deliveries (tenant_id, event_type, created_at DESC);
+
+ALTER TABLE developer_role_assignments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY developer_role_assignment_isolation ON developer_role_assignments
+  FOR ALL
+  USING (tenant_id = current_setting('nvbes.tenant_id')::uuid)
+  WITH CHECK (tenant_id = current_setting('nvbes.tenant_id')::uuid);
+
+ALTER TABLE developer_webhook_endpoints ENABLE ROW LEVEL SECURITY;
+CREATE POLICY developer_webhook_endpoint_isolation ON developer_webhook_endpoints
+  FOR ALL
+  USING (tenant_id = current_setting('nvbes.tenant_id')::uuid)
+  WITH CHECK (tenant_id = current_setting('nvbes.tenant_id')::uuid);
+
+ALTER TABLE developer_webhook_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY developer_webhook_subscription_isolation ON developer_webhook_subscriptions
+  FOR ALL
+  USING (endpoint_id IN (
+    SELECT id FROM developer_webhook_endpoints
+    WHERE tenant_id = current_setting('nvbes.tenant_id')::uuid
+  ))
+  WITH CHECK (endpoint_id IN (
+    SELECT id FROM developer_webhook_endpoints
+    WHERE tenant_id = current_setting('nvbes.tenant_id')::uuid
+  ));
+
+ALTER TABLE developer_webhook_deliveries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY developer_webhook_delivery_isolation ON developer_webhook_deliveries
+  FOR ALL
+  USING (tenant_id = current_setting('nvbes.tenant_id')::uuid)
+  WITH CHECK (tenant_id = current_setting('nvbes.tenant_id')::uuid);
