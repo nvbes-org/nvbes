@@ -10,3 +10,17 @@ pub struct DeveloperMeResponse {
     pub roles: Vec<DeveloperRole>,
     pub permissions: Vec<DeveloperPermission>,
 }
+
+impl DeveloperMeResponse {
+    pub fn new(
+        tenant_id: Uuid,
+        roles: Vec<DeveloperRole>,
+        permissions: Vec<DeveloperPermission>,
+    ) -> Self {
+        Self {
+            tenant_id,
+            roles,
+            permissions,
+        }
+    }
+}

@@ -1,4 +1,5 @@
 use super::rbac::{DeveloperPermission, DeveloperRole, permissions_for_role};
+use super::rbac_db::{parse_developer_role, permissions_for_roles};
 
 #[test]
 fn developer_admin_has_all_developer_permissions() {
@@ -102,4 +103,42 @@ fn developer_permission_serializes_as_dotted_scope() {
     let serialized = serde_json::to_string(&DeveloperPermission::AppsRead).unwrap();
 
     assert_eq!(serialized, "\"developer.apps.read\"");
+}
+
+#[test]
+fn parses_all_developer_role_database_values() {
+    let roles = [
+        DeveloperRole::DeveloperAdmin,
+        DeveloperRole::AppManager,
+        DeveloperRole::WebhookManager,
+        DeveloperRole::LogViewer,
+        DeveloperRole::IntegrationTester,
+        DeveloperRole::DocsViewer,
+    ];
+
+    for role in roles {
+        assert_eq!(parse_developer_role(role.as_db_str()).unwrap(), role);
+    }
+}
+
+#[test]
+fn permissions_for_roles_dedupes_overlapping_permissions() {
+    let permissions = permissions_for_roles(&[
+        DeveloperRole::AppManager,
+        DeveloperRole::WebhookManager,
+        DeveloperRole::DocsViewer,
+    ]);
+
+    assert_eq!(
+        permissions,
+        vec![
+            DeveloperPermission::AppsRead,
+            DeveloperPermission::AppsCreate,
+            DeveloperPermission::AppsUpdateRedirects,
+            DeveloperPermission::AppsRevoke,
+            DeveloperPermission::WebhooksRead,
+            DeveloperPermission::WebhooksManage,
+            DeveloperPermission::DocsRead,
+        ]
+    );
 }

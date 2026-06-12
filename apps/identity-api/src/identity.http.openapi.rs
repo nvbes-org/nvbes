@@ -25,6 +25,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "billing", description = "Billing & subscriptions"),
         (name = "security", description = "Security events & audit"),
         (name = "authz", description = "Authorization decisions"),
+        (name = "developer", description = "Developer portal, apps, webhooks, logs, and integration tools"),
     ),
     paths(
         crate::domains::auth::routes::register::register,
@@ -79,6 +80,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::security::routes::list_recovery_reviews,
         crate::domains::security::routes::worker_queue_status,
         crate::domains::authz::routes::decide,
+        crate::domains::developer::routes::me,
         crate::domains::legal::routes::grant_consent,
         crate::domains::legal::routes::list_consents,
         crate::domains::legal::routes::revoke_consent,
