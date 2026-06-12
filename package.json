@@ -35,7 +35,7 @@
     "nx:show-projects": "pnpm exec nx show projects --json",
     "nx:show-project": "pnpm exec nx show project",
     "nx:affected": "pnpm exec nx affected -t lint,typecheck,test,build --base=origin/main --head=HEAD",
-    "format": "pnpm --dir apps/drive-web format && pnpm --dir apps/identity-web format && vp fmt --write libs/ts package.json pnpm-workspace.yaml vite.config.ts && cargo fmt --all",
+    "format": "pnpm --dir apps/drive-web format && pnpm --dir apps/identity-web format && pnpm --dir apps/developer-web format && vp fmt --write libs/ts package.json pnpm-workspace.yaml vite.config.ts && cargo fmt --all",
     "format:check": "pnpm exec nx run-many -t format:check --projects=drive-web,identity-web,developer-web,http-client,identity-client,identity-sdk,identity-sdk-web,web-runtime,web-ui,email-templates && vp fmt --check package.json pnpm-workspace.yaml vite.config.ts tsconfig.base.json nx.json && cargo fmt --all --check",
     "lint": "pnpm lint:web && pnpm exec nx run rust-workspace:lint",
     "lint:web": "pnpm exec nx run-many -t lint --projects=drive-web,identity-web,developer-web,http-client,identity-client,identity-sdk,identity-sdk-web,web-runtime,web-ui,email-templates",

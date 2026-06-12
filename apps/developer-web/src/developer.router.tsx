@@ -29,18 +29,18 @@ function HomePage() {
               from one developer console.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a
-                href="/portal/apps"
+              <Link
+                to="/portal"
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
               >
-                Create app
-              </a>
-              <a
-                href="/quickstarts/react"
+                Open portal preview
+              </Link>
+              <Link
+                to="/"
                 className="rounded-md border border-border px-4 py-2 text-sm font-medium"
               >
-                React quickstart
-              </a>
+                View overview
+              </Link>
             </div>
           </div>
           <div className="grid content-start gap-3 rounded-lg border border-border bg-card p-4">
