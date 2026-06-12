@@ -7,14 +7,21 @@ CREATE TYPE developer_role AS ENUM (
   'docs_viewer'
 );
 
+CREATE UNIQUE INDEX idx_principals_id_tenant_id_unique
+  ON principals (id, tenant_id);
+
 CREATE TABLE developer_role_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  principal_id uuid NOT NULL REFERENCES principals(id) ON DELETE CASCADE,
+  principal_id uuid NOT NULL,
   role developer_role NOT NULL,
-  assigned_by uuid REFERENCES principals(id) ON DELETE SET NULL,
+  assigned_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
-  revoked_at timestamptz
+  revoked_at timestamptz,
+  CONSTRAINT developer_role_assignments_principal_tenant_fk
+    FOREIGN KEY (principal_id, tenant_id) REFERENCES principals(id, tenant_id) ON DELETE CASCADE,
+  CONSTRAINT developer_role_assignments_assigned_by_tenant_fk
+    FOREIGN KEY (assigned_by, tenant_id) REFERENCES principals(id, tenant_id) ON DELETE SET NULL (assigned_by)
 );
 
 CREATE UNIQUE INDEX idx_developer_role_assignments_active_unique
@@ -33,10 +40,12 @@ CREATE TABLE developer_webhook_endpoints (
   signing_secret_ciphertext text NOT NULL,
   signing_secret_last4 text NOT NULL,
   status text NOT NULL DEFAULT 'active',
-  created_by uuid REFERENCES principals(id) ON DELETE SET NULL,
+  created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   revoked_at timestamptz,
+  CONSTRAINT developer_webhook_endpoints_created_by_tenant_fk
+    FOREIGN KEY (created_by, tenant_id) REFERENCES principals(id, tenant_id) ON DELETE SET NULL (created_by),
   CONSTRAINT developer_webhook_endpoints_status_check
     CHECK (status IN ('active', 'paused', 'revoked')),
   CONSTRAINT developer_webhook_endpoints_revoked_status_check
@@ -46,6 +55,9 @@ CREATE TABLE developer_webhook_endpoints (
 CREATE INDEX idx_developer_webhook_endpoints_tenant
   ON developer_webhook_endpoints (tenant_id)
   WHERE revoked_at IS NULL;
+
+CREATE UNIQUE INDEX idx_developer_webhook_endpoints_id_tenant_unique
+  ON developer_webhook_endpoints (id, tenant_id);
 
 CREATE TABLE developer_webhook_subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,7 +71,7 @@ CREATE TABLE developer_webhook_subscriptions (
 
 CREATE TABLE developer_webhook_deliveries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  endpoint_id uuid NOT NULL REFERENCES developer_webhook_endpoints(id) ON DELETE CASCADE,
+  endpoint_id uuid NOT NULL,
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   event_type text NOT NULL,
   event_id uuid NOT NULL,
@@ -69,6 +81,8 @@ CREATE TABLE developer_webhook_deliveries (
   error_message text,
   created_at timestamptz NOT NULL DEFAULT now(),
   delivered_at timestamptz,
+  CONSTRAINT developer_webhook_deliveries_endpoint_tenant_fk
+    FOREIGN KEY (endpoint_id, tenant_id) REFERENCES developer_webhook_endpoints(id, tenant_id) ON DELETE CASCADE,
   CONSTRAINT developer_webhook_deliveries_attempt_count_check
     CHECK (attempt_count >= 0),
   CONSTRAINT developer_webhook_deliveries_status_check
