@@ -1,3 +1,4 @@
+import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import devtoolsJson from 'vite-plugin-devtools-json';
@@ -14,6 +15,42 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss(), devtoolsJson()],
+    resolve: {
+      alias: [
+        {
+          find: '@',
+          replacement: path.resolve(__dirname, './src'),
+        },
+        {
+          find: '@nvbes/http-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/http-client/src/index.ts'),
+        },
+        {
+          find: '@nvbes/identity-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
+        },
+        {
+          find: '@nvbes/identity-sdk-web',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
+        },
+        {
+          find: '@nvbes/web-runtime/posthog',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/posthog.ts'),
+        },
+        {
+          find: '@nvbes/web-runtime',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/index.ts'),
+        },
+        {
+          find: '@nvbes/web-ui',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts'),
+        },
+        {
+          find: /^@nvbes\/identity-sdk-web\/src\//,
+          replacement: `${path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/')}/`,
+        },
+      ],
+    },
     server: {
       port: 5175,
       proxy: {
