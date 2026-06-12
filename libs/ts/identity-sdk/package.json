@@ -12,9 +12,9 @@
     "build": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json",
     "check": "pnpm run typecheck",
     "dev": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json --watch",
-    "format:check": "vp fmt --check src package.json tsconfig.json vite.config.ts",
-    "lint": "vp lint src",
-    "typecheck": "vp check src package.json tsconfig.json vite.config.ts"
+    "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json vite.config.ts",
+    "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
+    "typecheck": "node ../../../node_modules/vite-plus/bin/vp check src package.json tsconfig.json vite.config.ts"
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*"

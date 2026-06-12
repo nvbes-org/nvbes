@@ -22,6 +22,7 @@ const WORKER_QUEUES: [&str; 4] = [
     JOB_DATA_EXPORT,
 ];
 const SENTRY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
+const TRANSIENT_INFRA_ERROR_SLEEP: TokioDuration = TokioDuration::from_secs(5);
 const SENTRY_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 5,
     checkin_margin_minutes: 2,
@@ -41,11 +42,26 @@ where
 
         tokio::select! {
             _ = &mut shutdown => return Ok(()),
-            result = super::housekeeping::run_if_due(&state, &mut housekeeping_last_run) => result?,
+            result = super::housekeeping::run_if_due(&state, &mut housekeeping_last_run) => {
+                if let Err(error) = result {
+                    tracing::warn!(%error, "identity worker housekeeping failed; retrying after backoff");
+                    sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                    continue;
+                }
+            },
         }
         let ran = tokio::select! {
             _ = &mut shutdown => return Ok(()),
-            result = run_once(&state, &observability) => result?,
+            result = run_once(&state, &observability) => {
+                match result {
+                    Ok(ran) => ran,
+                    Err(error) => {
+                        tracing::warn!(%error, "identity worker loop failed; retrying after backoff");
+                        sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                        continue;
+                    }
+                }
+            },
         };
         let sleep_for = if ran {
             TokioDuration::from_secs(1)

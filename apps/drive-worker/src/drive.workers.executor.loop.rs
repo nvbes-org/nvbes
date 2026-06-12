@@ -20,6 +20,7 @@ const WORKER_QUEUES: [&str; 9] = [
     super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT,
 ];
 const SENTRY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
+const TRANSIENT_INFRA_ERROR_SLEEP: Duration = Duration::from_secs(5);
 const SENTRY_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 5,
     checkin_margin_minutes: 2,
@@ -86,15 +87,31 @@ pub async fn run_loop(
     let environment = worker_environment();
     let mut sentry_heartbeat_last_run = Instant::now() - SENTRY_HEARTBEAT_INTERVAL;
     tokio::spawn(async move {
-        if let Err(error) = super::pubsub::run_pubsub_listener(db_clone, redis_clone).await {
-            tracing::error!("Redis PubSub listener failed: {:?}", error);
+        loop {
+            if let Err(error) =
+                super::pubsub::run_pubsub_listener(db_clone.clone(), redis_clone.clone()).await
+            {
+                tracing::warn!(%error, "Redis PubSub listener failed; restarting after backoff");
+                tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                continue;
+            }
+
+            tracing::warn!("Redis PubSub listener exited; restarting after backoff");
+            tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
         }
     });
 
     loop {
         capture_sentry_heartbeat_if_due(&environment, &mut sentry_heartbeat_last_run);
 
-        let processed = run_once(database, redis, storage.clone(), observability).await?;
+        let processed = match run_once(database, redis, storage.clone(), observability).await {
+            Ok(processed) => processed,
+            Err(error) => {
+                tracing::warn!(%error, "drive worker loop failed; retrying after backoff");
+                tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                continue;
+            }
+        };
 
         if !processed {
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;

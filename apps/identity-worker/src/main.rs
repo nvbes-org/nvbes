@@ -3,7 +3,6 @@ use nvbes_observability::{
     capture_sentry_smoke, init_sentry, init_tracing, install_safe_panic_hook,
     start_continuous_profiling,
 };
-use sqlx::postgres::PgPoolOptions;
 
 #[path = "identity.worker.rs"]
 mod worker;
@@ -36,10 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let _profiling_guard =
         start_continuous_profiling(&config, "identity-worker").map_err(anyhow::Error::msg)?;
 
-    let db = PgPoolOptions::new()
-        .max_connections(20)
-        .connect(&config.database_url)
-        .await?;
+    let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
 
     nvbes_identity_api::database::run_migrations(&db).await?;
 

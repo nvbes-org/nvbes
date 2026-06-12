@@ -11,8 +11,8 @@
   "scripts": {
     "build": "tsx scripts/build-templates.ts",
     "check": "pnpm run typecheck",
-    "format:check": "vp fmt --check src scripts package.json",
-    "lint": "vp lint src scripts",
+    "format:check": "node ./node_modules/vite-plus/bin/vp fmt --check src scripts package.json",
+    "lint": "node ./node_modules/vite-plus/bin/vp lint src scripts",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
