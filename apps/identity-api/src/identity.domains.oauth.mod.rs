@@ -11,6 +11,9 @@ pub mod device_exchange;
 pub mod device_validation;
 #[path = "identity.domains.oauth.device.verification.rs"]
 pub mod device_verification;
+#[cfg(test)]
+#[path = "identity.domains.oauth.hosted.tests.rs"]
+mod hosted_tests;
 #[path = "identity.domains.oauth.logic.rs"]
 pub mod logic;
 #[path = "identity.domains.oauth.metadata.rs"]
@@ -36,6 +39,16 @@ pub mod consent;
 pub mod device_codes;
 #[path = "identity.domains.oauth.flows.rs"]
 pub mod flows;
+#[path = "identity.domains.oauth.hosted.keys.rs"]
+pub mod hosted_keys;
+#[path = "identity.domains.oauth.hosted.routes.rs"]
+pub mod hosted_routes;
+#[path = "identity.domains.oauth.hosted.service.rs"]
+pub mod hosted_service;
+#[path = "identity.domains.oauth.hosted.store.rs"]
+pub mod hosted_store;
+#[path = "identity.domains.oauth.hosted.types.rs"]
+pub mod hosted_types;
 #[path = "identity.domains.oauth.jar.rs"]
 pub mod jar;
 #[path = "identity.domains.oauth.policies.rs"]
