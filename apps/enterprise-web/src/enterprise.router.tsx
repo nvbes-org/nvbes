@@ -1,13 +1,18 @@
-import { RouterErrorFallback } from '@nvbes/web-runtime';
-import { createRootRoute, createRouter } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
+import { EnterpriseLayout } from './components/EnterpriseLayout';
+import { createEnterpriseRoutes } from './enterprise.routes';
 
-// Temporary Task 1 bootstrap route tree. Task 2 owns the real enterprise routes.
-const rootRoute = createRootRoute({
-  component: () => null,
-  errorComponent: RouterErrorFallback,
+const rootRoute = createRootRoute({ component: Outlet });
+
+export const enterpriseRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'enterprise',
+  component: EnterpriseLayout,
 });
 
-const routeTree = rootRoute;
+const routeTree = rootRoute.addChildren([
+  enterpriseRoute.addChildren(createEnterpriseRoutes(enterpriseRoute)),
+]);
 
 export const router = createRouter({ routeTree });
 
