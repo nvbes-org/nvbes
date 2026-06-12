@@ -49,7 +49,6 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-devtools-json": "^1.0.0",
-    "vite-plugin-pwa": "^1.3.0",
     "vite-plus": "catalog:"
   }
 }

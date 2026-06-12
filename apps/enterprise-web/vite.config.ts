@@ -6,7 +6,6 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import devtoolsJson from 'vite-plugin-devtools-json';
-import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite-plus';
 
 const permissionsPolicy =
@@ -216,20 +215,6 @@ export default defineConfig(({ mode }) => {
       devtoolsJson(),
       cspPlugin(mode, sentryHost, stripeJsUrl, stripeApiUrl, posthogHost),
       sriPlugin(),
-      ...pluginList(
-        VitePWA({
-          registerType: 'autoUpdate',
-          injectRegister: false,
-          strategies: 'injectManifest',
-          srcDir: 'src',
-          filename: 'sw.ts',
-          injectManifest: {
-            sourcemap: false,
-          },
-          includeAssets: ['icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'],
-          manifest: false,
-        }),
-      ),
       ...(sentryAuthToken
         ? pluginList(
             sentryVitePlugin({
@@ -294,16 +279,8 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/index.ts'),
         },
         {
-          find: '@nvbes/identity-sdk-web',
-          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
-        },
-        {
           find: '@nvbes/web-ui',
           replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts'),
-        },
-        {
-          find: /^@nvbes\/identity-sdk-web\/src\//,
-          replacement: `${path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/')}/`,
         },
       ],
     },
