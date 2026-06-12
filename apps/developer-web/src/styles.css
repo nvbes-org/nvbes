@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+
+@source '../../../libs/ts/web-runtime/src';
+@source '../../../libs/ts/web-ui/src';
+@source './';
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --background: oklch(0.985 0.003 214);
+  --foreground: oklch(0.15 0.01 235);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 235);
+  --primary: oklch(0.5 0.11 184);
+  --primary-foreground: oklch(0.98 0.01 180);
+  --muted: oklch(0.94 0.006 210);
+  --muted-foreground: oklch(0.46 0.03 220);
+  --border: oklch(0.88 0.01 214);
+  --input: oklch(0.88 0.01 214);
+  --ring: oklch(0.65 0.05 190);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
