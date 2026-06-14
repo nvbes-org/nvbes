@@ -127,3 +127,81 @@ pub struct BillingSummaryRow {
     pub status: String,
     pub billing_email: Option<String>,
 }
+
+#[derive(Debug, FromRow)]
+pub struct DeveloperCredentialRow {
+    pub id: Uuid,
+    pub name: String,
+    pub owner_email: Option<String>,
+    pub scopes: Vec<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl DeveloperCredentialRow {
+    pub fn into_view(self) -> EnterpriseDeveloperCredentialSummary {
+        EnterpriseDeveloperCredentialSummary {
+            id: self.id,
+            name: self.name,
+            owner_email: self.owner_email,
+            scopes: self.scopes,
+            last_used_at: None,
+            created_at: self.created_at,
+            expires_at: None,
+        }
+    }
+}
+
+#[derive(Debug, FromRow)]
+pub struct PolicySummaryRow {
+    pub id: Uuid,
+    pub name: String,
+    pub category: String,
+    pub enabled: bool,
+    pub configuration: Value,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl PolicySummaryRow {
+    pub fn into_view(self) -> EnterprisePolicySummary {
+        let configuration = match serde_json::from_value(self.configuration) {
+            Ok(configuration) => configuration,
+            Err(_) => Default::default(),
+        };
+        EnterprisePolicySummary {
+            id: self.id,
+            name: self.name,
+            category: self.category,
+            enabled: self.enabled,
+            configuration,
+            updated_at: self.updated_at,
+        }
+    }
+}
+
+#[derive(Debug, FromRow)]
+pub struct SecuritySummaryRow {
+    pub mfa_factor_count: i64,
+    pub passkey_count: i64,
+    pub high_risk_event_count: i64,
+}
+
+#[derive(Debug, FromRow)]
+pub struct InvoiceRow {
+    pub id: Uuid,
+    pub status: String,
+    pub amount_due_cents: i64,
+    pub issued_at: DateTime<Utc>,
+}
+
+impl InvoiceRow {
+    pub fn into_view(self) -> EnterpriseInvoice {
+        EnterpriseInvoice {
+            id: self.id.to_string(),
+            status: self.status,
+            amount_due_cents: self.amount_due_cents,
+            currency: "usd".to_string(),
+            issued_at: self.issued_at,
+            hosted_invoice_url: None,
+        }
+    }
+}

@@ -2,7 +2,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::records::{
-    ActorAccessRow, AuditEventRow, BillingSummaryRow, EnterpriseInvitationRow, EnterpriseUserRow,
+    ActorAccessRow, AuditEventRow, BillingSummaryRow, DeveloperCredentialRow,
+    EnterpriseInvitationRow, EnterpriseUserRow, InvoiceRow, PolicySummaryRow, SecuritySummaryRow,
     WorkspaceSummaryRow,
 };
 use crate::http::error::AppError;
@@ -147,6 +148,99 @@ pub async fn billing_summary(
         "#)
     .bind(tenant_id)
     .fetch_optional(db)
+    .await?)
+}
+
+pub async fn list_developers(
+    db: &PgPool,
+    tenant_id: Uuid,
+) -> Result<Vec<DeveloperCredentialRow>, AppError> {
+    Ok(sqlx::query_as::<_, DeveloperCredentialRow>(
+        r#"
+        SELECT oc.id, oc.name, NULL::text AS owner_email,
+          COALESCE(policy.scopes, ARRAY[]::text[]) AS scopes,
+          oc.created_at
+        FROM oauth_clients oc
+        LEFT JOIN LATERAL (
+          SELECT array_agg(DISTINCT scope) AS scopes
+          FROM oauth_client_policies ocp
+          CROSS JOIN LATERAL unnest(ocp.allowed_scopes) AS scope(scope)
+          WHERE ocp.client_id = oc.id AND ocp.status = 'active'
+        ) policy ON true
+        WHERE oc.tenant_id = $1 AND oc.revoked_at IS NULL
+        ORDER BY oc.created_at DESC
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_all(db)
+    .await?)
+}
+
+pub async fn list_policies(
+    db: &PgPool,
+    tenant_id: Uuid,
+) -> Result<Vec<PolicySummaryRow>, AppError> {
+    Ok(sqlx::query_as::<_, PolicySummaryRow>(
+        r#"
+        SELECT wp.workspace_id AS id,
+          CONCAT('Workspace policy: ', w.name) AS name,
+          'workspace'::text AS category,
+          true AS enabled,
+          jsonb_build_object(
+            'member_can_create_share_links', wp.member_can_create_share_links,
+            'require_admin_approval_for_member_share', wp.require_admin_approval_for_member_share,
+            'default_share_link_ttl_days', wp.default_share_link_ttl_days,
+            'max_share_link_ttl_days', wp.max_share_link_ttl_days,
+            'required_acr', wp.required_acr::text
+          ) AS configuration,
+          wp.updated_at
+        FROM workspace_policies wp
+        INNER JOIN workspaces w ON w.id = wp.workspace_id
+        WHERE w.tenant_id = $1
+        ORDER BY wp.updated_at DESC
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_all(db)
+    .await?)
+}
+
+pub async fn security_summary(
+    db: &PgPool,
+    tenant_id: Uuid,
+) -> Result<SecuritySummaryRow, AppError> {
+    Ok(sqlx::query_as::<_, SecuritySummaryRow>(
+        r#"
+        SELECT
+          COUNT(DISTINCT mf.id) FILTER (WHERE mf.status = 'active')::bigint AS mfa_factor_count,
+          COUNT(DISTINCT mf.id) FILTER (WHERE mf.status = 'active' AND mf.factor_type = 'webauthn')::bigint AS passkey_count,
+          COUNT(DISTINCT re.id) FILTER (WHERE re.risk_score >= 0.7)::bigint AS high_risk_event_count
+        FROM tenant_memberships tm
+        LEFT JOIN mfa_factors mf ON mf.principal_id = tm.principal_id
+        LEFT JOIN risk_events re ON re.principal_id = tm.principal_id
+        WHERE tm.tenant_id = $1
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_one(db)
+    .await?)
+}
+
+pub async fn list_invoices(db: &PgPool, tenant_id: Uuid) -> Result<Vec<InvoiceRow>, AppError> {
+    Ok(sqlx::query_as::<_, InvoiceRow>(
+        r#"
+        SELECT ie.id, 'estimated'::text AS status,
+          ie.estimated_amount_cents AS amount_due_cents,
+          ie.created_at AS issued_at
+        FROM invoice_estimates ie
+        INNER JOIN workspaces w ON w.id = ie.workspace_id
+        WHERE w.tenant_id = $1
+        ORDER BY ie.created_at DESC
+        LIMIT 12
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_all(db)
     .await?)
 }
 

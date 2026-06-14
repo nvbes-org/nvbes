@@ -174,7 +174,11 @@ pub async fn get_billing(
             currency: "usd".to_string(),
             monthly_price_cents: 0,
         },
-        invoices: Vec::new(),
+        invoices: db::list_invoices(db, tenant_id)
+            .await?
+            .into_iter()
+            .map(db::InvoiceRow::into_view)
+            .collect(),
         billing_email: row.and_then(|row| row.billing_email),
     })
 }

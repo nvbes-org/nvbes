@@ -13,7 +13,8 @@ pub async fn create_invitations(
     tenant_id: Uuid,
     input: EnterpriseInvitationInput,
 ) -> Result<EnterpriseInvitationsResponse, AppError> {
-    ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
     if input.workspace_ids.is_empty() || input.emails.is_empty() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -69,7 +70,8 @@ pub async fn update_user_access(
     user_id: Uuid,
     input: EnterpriseAccessUpdateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
     if input.workspace_ids.is_empty() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -77,17 +79,26 @@ pub async fn update_user_access(
         ));
     }
     let mut tx = db.begin().await?;
+    db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids).await?;
     let current_role = db::target_role(&mut tx, tenant_id, user_id)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
         })?;
-    let owner_count = db::active_owner_count(&mut tx, tenant_id).await?;
-    if policy::is_last_owner_removal(owner_count, &current_role, policy::role_as_db(&input.role)) {
+    ensure_owner_target_allowed(&actor_access, &current_role)?;
+    let ownerless_count = db::ownerless_workspace_count_after_access(
+        &mut tx,
+        tenant_id,
+        user_id,
+        &input.workspace_ids,
+        policy::role_as_db(&input.role),
+    )
+    .await?;
+    if ownerless_count > 0 {
         return Err(AppError::conflict(
             "last_owner_removal",
-            "The final tenant owner cannot be downgraded.",
+            "Every workspace must retain at least one active owner.",
         ));
     }
     db::replace_access(
@@ -124,18 +135,21 @@ pub async fn suspend_user(
     user_id: Uuid,
     input: EnterpriseSuspendInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
     let mut tx = db.begin().await?;
+    db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     let current_role = db::target_role(&mut tx, tenant_id, user_id)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
         })?;
-    let owner_count = db::active_owner_count(&mut tx, tenant_id).await?;
-    if policy::is_last_owner_removal(owner_count, &current_role, "suspended") {
+    ensure_owner_target_allowed(&actor_access, &current_role)?;
+    let ownerless_count =
+        db::ownerless_workspace_count_after_status(&mut tx, tenant_id, user_id).await?;
+    if ownerless_count > 0 {
         return Err(AppError::conflict(
             "last_owner_removal",
-            "The final tenant owner cannot be suspended.",
+            "Every workspace must retain at least one active owner.",
         ));
     }
     let changed =
@@ -160,6 +174,32 @@ pub async fn suspend_user(
     Ok(EnterpriseAccessUpdateResponse {
         user: fetch_user_view(db, tenant_id, user_id).await?,
     })
+}
+
+fn ensure_owner_role_allowed(
+    actor_access: &super::access::ActorAccess,
+    requested_role: &str,
+) -> Result<(), AppError> {
+    if requested_role == "owner" && policy::role_as_db(&actor_access.role) != "owner" {
+        return Err(AppError::forbidden(
+            "owner_required",
+            "Only owners can grant owner access.",
+        ));
+    }
+    Ok(())
+}
+
+fn ensure_owner_target_allowed(
+    actor_access: &super::access::ActorAccess,
+    target_role: &str,
+) -> Result<(), AppError> {
+    if target_role == "owner" && policy::role_as_db(&actor_access.role) != "owner" {
+        return Err(AppError::forbidden(
+            "owner_required",
+            "Only owners can modify owner access.",
+        ));
+    }
+    Ok(())
 }
 
 pub async fn reactivate_user(

@@ -12,7 +12,7 @@ pub(super) async fn ensure_member_manager(
     db: &Database,
     auth: &AuthContext,
     tenant_id: Uuid,
-) -> Result<(), AppError> {
+) -> Result<ActorAccess, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let access = require_actor_access(db, auth, tenant_id).await?;
     if !policy::can_manage_members(
@@ -24,7 +24,7 @@ pub(super) async fn ensure_member_manager(
             "Members access is required.",
         ));
     }
-    Ok(())
+    Ok(access)
 }
 
 pub(super) async fn require_actor_access(

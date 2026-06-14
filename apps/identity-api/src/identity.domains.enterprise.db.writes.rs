@@ -48,23 +48,6 @@ pub async fn target_role(
     Ok(role)
 }
 
-pub async fn active_owner_count(
-    tx: &mut Transaction<'_, Postgres>,
-    tenant_id: Uuid,
-) -> Result<i64, AppError> {
-    Ok(sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(DISTINCT wm.principal_id)
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE w.tenant_id = $1 AND wm.role = 'owner' AND wm.status = 'active'
-        "#,
-    )
-    .bind(tenant_id)
-    .fetch_one(&mut **tx)
-    .await?)
-}
-
 pub async fn replace_access(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
