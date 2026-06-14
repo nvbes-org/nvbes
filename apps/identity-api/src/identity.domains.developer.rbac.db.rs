@@ -32,6 +32,14 @@ pub async fn load_developer_roles(
         .collect()
 }
 
+pub async fn list_active_roles_for_principal(
+    db: &PgPool,
+    tenant_id: Uuid,
+    principal_id: Uuid,
+) -> Result<Vec<DeveloperRole>, AppError> {
+    load_developer_roles(db, tenant_id, principal_id).await
+}
+
 pub fn permissions_for_roles(roles: &[DeveloperRole]) -> Vec<DeveloperPermission> {
     let mut seen = HashSet::new();
     let mut permissions = Vec::new();

@@ -2,8 +2,14 @@ import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/re
 
 import { DeveloperPortalLayout } from './layouts/DeveloperPortalLayout';
 import { DeveloperPublicLayout } from './layouts/DeveloperPublicLayout';
+import { DeveloperShell } from './layouts/DeveloperShell';
 import { ApiReferencePage } from './pages/ApiReferencePage';
+import { ConsentScreenPage } from './pages/ConsentScreenPage';
 import { DeveloperHomePage } from './pages/DeveloperHomePage';
+import { HealthChecksPage } from './pages/HealthChecksPage';
+import { LogsPage } from './pages/LogsPage';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { OAuthAppsPage } from './pages/OAuthAppsPage';
 import { PortalAppDetailPage } from './pages/PortalAppDetailPage';
 import { PortalAppsPage } from './pages/PortalAppsPage';
 import { PortalLogsPage } from './pages/PortalLogsPage';
@@ -13,6 +19,12 @@ import { PortalRolesPage } from './pages/PortalRolesPage';
 import { PortalTokenInspectorPage } from './pages/PortalTokenInspectorPage';
 import { PortalWebhooksPage } from './pages/PortalWebhooksPage';
 import { QuickstartPage } from './pages/QuickstartPage';
+import { SandboxPage } from './pages/SandboxPage';
+import { ScopesPage } from './pages/ScopesPage';
+import { SecretsPage } from './pages/SecretsPage';
+import { ServiceAccountsPage } from './pages/ServiceAccountsPage';
+import { TokenDebuggerPage } from './pages/TokenDebuggerPage';
+import { WebhooksPage } from './pages/WebhooksPage';
 
 function RootShell() {
   return <Outlet />;
@@ -116,6 +128,78 @@ const portalRolesRoute = createRoute({
   component: PortalRolesPage,
 });
 
+const consoleRootRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/console',
+  component: DeveloperShell,
+});
+
+const consoleOAuthClientsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/oauth-clients',
+  component: OAuthAppsPage,
+});
+
+const consoleMarketplaceRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/marketplace',
+  component: MarketplacePage,
+});
+
+const consoleScopesRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/scopes',
+  component: ScopesPage,
+});
+
+const consoleSecretsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/secrets',
+  component: SecretsPage,
+});
+
+const consoleServiceAccountsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/service-accounts',
+  component: ServiceAccountsPage,
+});
+
+const consoleWebhooksRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/webhooks',
+  component: WebhooksPage,
+});
+
+const consoleLogsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/logs',
+  component: LogsPage,
+});
+
+const consoleConsentRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/consent',
+  component: ConsentScreenPage,
+});
+
+const consoleSandboxRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/sandbox',
+  component: SandboxPage,
+});
+
+const consoleTokensRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/tokens',
+  component: TokenDebuggerPage,
+});
+
+const consoleHealthRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/health',
+  component: HealthChecksPage,
+});
+
 const routeTree = rootRoute.addChildren([
   publicRoute.addChildren([
     homeRoute,
@@ -134,6 +218,19 @@ const routeTree = rootRoute.addChildren([
     portalLogsRoute,
     portalWebhooksRoute,
     portalRolesRoute,
+  ]),
+  consoleRootRoute.addChildren([
+    consoleOAuthClientsRoute,
+    consoleMarketplaceRoute,
+    consoleScopesRoute,
+    consoleSecretsRoute,
+    consoleServiceAccountsRoute,
+    consoleWebhooksRoute,
+    consoleLogsRoute,
+    consoleConsentRoute,
+    consoleSandboxRoute,
+    consoleTokensRoute,
+    consoleHealthRoute,
   ]),
 ]);
 

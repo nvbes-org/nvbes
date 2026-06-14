@@ -4,7 +4,7 @@ use crate::domains::auth::jwt::JwtService;
 use crate::domains::auth::types::AuthContext;
 use crate::http::error::AppError;
 use axum::http::HeaderMap;
-use nvbes_core::authz::{action_requires_step_up, is_allowed};
+use nvbes_core::authz::{IdentityRole, action_requires_step_up, is_allowed, parse_identity_role};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -63,15 +63,13 @@ pub async fn ensure_tenant_management_access(
 ) -> Result<(), AppError> {
     ensure_tenant_context(auth, tenant_id)?;
 
-    let privileged_membership = sqlx::query(
+    let role = sqlx::query_scalar::<_, String>(
         r#"
-        SELECT 1
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE w.tenant_id = $1
-          AND wm.principal_id = $2
-          AND wm.status = 'active'
-          AND wm.role IN ('owner', 'admin')
+        SELECT role::text
+        FROM tenant_memberships
+        WHERE tenant_id = $1
+          AND principal_id = $2
+          AND status = 'active'
         LIMIT 1
         "#,
     )
@@ -80,7 +78,12 @@ pub async fn ensure_tenant_management_access(
     .fetch_optional(db)
     .await?;
 
-    if privileged_membership.is_none() {
+    let allowed = role
+        .as_deref()
+        .and_then(parse_identity_role)
+        .is_some_and(identity_role_allows_tenant_management);
+
+    if !allowed {
         return Err(AppError::forbidden(
             "tenant_management_denied",
             "You do not have permission to manage this tenant.",
@@ -88,6 +91,13 @@ pub async fn ensure_tenant_management_access(
     }
 
     Ok(())
+}
+
+pub(super) fn identity_role_allows_tenant_management(role: IdentityRole) -> bool {
+    matches!(
+        role,
+        IdentityRole::Owner | IdentityRole::Admin | IdentityRole::SecurityAdmin
+    )
 }
 
 async fn authenticate_workspace_bearer(
@@ -219,4 +229,25 @@ fn ensure_tenant_context(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domains::authz::service::identity_role_allows_tenant_management;
+    use nvbes_core::authz::IdentityRole;
+
+    #[test]
+    fn tenant_management_is_limited_to_identity_admin_roles() {
+        assert!(identity_role_allows_tenant_management(IdentityRole::Owner));
+        assert!(identity_role_allows_tenant_management(IdentityRole::Admin));
+        assert!(identity_role_allows_tenant_management(
+            IdentityRole::SecurityAdmin
+        ));
+        assert!(!identity_role_allows_tenant_management(
+            IdentityRole::BillingAdmin
+        ));
+        assert!(!identity_role_allows_tenant_management(
+            IdentityRole::Member
+        ));
+    }
 }

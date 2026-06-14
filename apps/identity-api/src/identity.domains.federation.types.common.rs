@@ -48,6 +48,14 @@ pub struct LinkedIdentityResponse {
 #[derive(Debug, ToSchema)]
 pub struct CreateTenantDomainInput {
     pub domain: String,
+    pub sso_required: Option<bool>,
+    pub sso_provider_id: Option<Uuid>,
+}
+
+#[derive(Debug, ToSchema)]
+pub struct UpdateTenantDomainInput {
+    pub sso_required: Option<bool>,
+    pub sso_provider_id: Option<Uuid>,
 }
 
 #[derive(Debug, ToSchema)]
@@ -58,6 +66,7 @@ pub struct VerifyTenantDomainInput {
 #[derive(Debug, ToSchema)]
 pub struct CreateFederatedIdentityProviderInput {
     pub provider_type: String,
+    pub provider_family: Option<String>,
     pub name: String,
     pub client_id: Option<String>,
     pub issuer: Option<String>,
@@ -68,6 +77,7 @@ pub struct CreateFederatedIdentityProviderInput {
 #[derive(Debug, ToSchema)]
 pub struct UpdateFederatedIdentityProviderInput {
     pub provider_type: Option<String>,
+    pub provider_family: Option<String>,
     pub name: Option<String>,
     pub client_id: Option<String>,
     pub issuer: Option<String>,
@@ -127,6 +137,8 @@ pub struct SamlMetadataResponse {
 pub struct TenantDomainView {
     pub id: Uuid,
     pub domain: String,
+    pub sso_required: bool,
+    pub sso_provider_id: Option<Uuid>,
     pub verified_at: Option<DateTime<Utc>>,
     pub verification_requested_at: Option<DateTime<Utc>>,
     pub verification_expires_at: Option<DateTime<Utc>>,
@@ -137,6 +149,7 @@ pub struct TenantDomainView {
 pub struct FederatedIdentityProviderView {
     pub id: Uuid,
     pub provider_type: String,
+    pub provider_family: String,
     pub name: String,
     pub client_id: Option<String>,
     pub issuer: Option<String>,
@@ -175,6 +188,8 @@ pub struct LinkedIdentityView {
 pub struct TenantDomainRecord {
     pub id: Uuid,
     pub domain: String,
+    pub sso_required: bool,
+    pub sso_provider_id: Option<Uuid>,
     pub verified_at: Option<DateTime<Utc>>,
     pub verification_requested_at: Option<DateTime<Utc>>,
     pub verification_expires_at: Option<DateTime<Utc>>,
@@ -187,6 +202,8 @@ impl TenantDomainRecord {
         TenantDomainView {
             id: self.id,
             domain: self.domain,
+            sso_required: self.sso_required,
+            sso_provider_id: self.sso_provider_id,
             verified_at: self.verified_at,
             verification_requested_at: self.verification_requested_at,
             verification_expires_at: self.verification_expires_at,
@@ -199,6 +216,7 @@ impl TenantDomainRecord {
 pub struct FederatedIdentityProviderRecord {
     pub id: Uuid,
     pub provider_type: String,
+    pub provider_family: String,
     pub name: String,
     pub client_id: Option<String>,
     pub issuer: Option<String>,
@@ -217,6 +235,7 @@ impl FederatedIdentityProviderRecord {
         FederatedIdentityProviderView {
             id: self.id,
             provider_type: self.provider_type,
+            provider_family: self.provider_family,
             name: self.name,
             client_id: self.client_id,
             issuer: self.issuer,

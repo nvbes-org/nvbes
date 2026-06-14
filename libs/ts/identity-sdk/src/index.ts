@@ -99,6 +99,41 @@ export class NvbesIdentity {
   }
 
   /**
+   * Rafraîchir un access token via refresh token rotatif.
+   */
+  async refreshToken(refreshToken: string): Promise<TokenResponse> {
+    const response = await fetch(this.config.tokenUrl, {
+      method: 'POST',
+      headers: createRequestHeaders('POST', {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }),
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: this.config.clientId,
+        ...(this.config.clientSecret && {
+          client_secret: this.config.clientSecret,
+        }),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    this.token = {
+      accessToken: data.access_token,
+      tokenType: data.token_type,
+      expiresIn: data.expires_in,
+      refreshToken: data.refresh_token,
+      scope: data.scope,
+    };
+
+    return this.token;
+  }
+
+  /**
    * Récupérer les informations de l'utilisateur connecté
    */
   async getUserInfo(): Promise<UserInfo> {

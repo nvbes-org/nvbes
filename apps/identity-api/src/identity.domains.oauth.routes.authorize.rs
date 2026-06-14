@@ -160,14 +160,42 @@ pub(crate) async fn authorize(
         &resolved.redirect_uri,
     )?;
 
-    let subject = authenticate_authorization_subject(
+    let subject = match authenticate_authorization_subject(
         &state.db,
         &state.redis,
         &state.jwt,
         &headers,
         request.authuser.as_deref(),
     )
-    .await?;
+    .await
+    {
+        Ok(subject) => subject,
+        Err(err) if err.status == axum::http::StatusCode::UNAUTHORIZED => {
+            let hosted = crate::domains::oauth::hosted_service::create_hosted_authorization_state(
+                &state.redis,
+                crate::domains::oauth::hosted_service::StartHostedAuthorizationInput {
+                    client_id: request.client_id.clone(),
+                    redirect_uri: resolved.redirect_uri.clone(),
+                    scope: resolved.scope.clone(),
+                    state: resolved.state.clone(),
+                    request_uri: Some(request_uri.clone()),
+                    code_challenge: resolved.code_challenge.clone(),
+                    code_challenge_method: resolved.code_challenge_method.clone(),
+                },
+            )
+            .await?;
+
+            return Ok(Json(serde_json::json!({
+                "kind": "login_required",
+                "login_url": crate::domains::oauth::hosted_service::build_hosted_login_url(
+                    &state.config.web_base_url,
+                    &hosted.state_id,
+                ),
+                "state_id": hosted.state_id,
+            })));
+        }
+        Err(err) => return Err(err),
+    };
 
     let code = crate::domains::oauth::flows::create_authorization_code(
         &state.db,

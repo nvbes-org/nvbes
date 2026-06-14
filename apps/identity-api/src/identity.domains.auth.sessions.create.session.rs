@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::domains::auth::jwt::JwtService;
 use crate::domains::auth::{
+    audit::{AuthAuditInput, record_auth_event},
     db as auth_db, email_verification, mfa, password, risk,
     sessions::cache::{
         cached_session_from_login, current_session_ttl, session_view_from_cached_session,
@@ -105,7 +106,49 @@ pub async fn create_session_for_principal(
         .await
         .map_err(|err| AppError::internal("session_cache_write_failed", err.to_string()))?;
 
-    let (score, decision, factors) = risk::current_state_summary(db, principal_id).await?;
+    let device_fingerprint_hash =
+        context
+            .device_fingerprint
+            .as_ref()
+            .and_then(|value| match value {
+                Value::Object(map) => map
+                    .get("visitor_id")
+                    .and_then(Value::as_str)
+                    .map(password::token_hash),
+                _ => None,
+            });
+    let country = context
+        .device_fingerprint
+        .as_ref()
+        .and_then(|value| value.get("country").and_then(Value::as_str));
+    let context_signals = risk::evaluate_login_context_signals(
+        db,
+        principal_id,
+        context.ip.as_deref(),
+        country,
+        device_fingerprint_hash.as_deref(),
+    )
+    .await?;
+    let (mut score, mut decision, mut factors) =
+        risk::current_state_summary(db, principal_id).await?;
+    score += context_signals.score_delta;
+    if context_signals.score_delta > 0.0 && matches!(decision, risk::RiskDecision::Allow) {
+        decision = risk::RiskDecision::StepUp;
+    }
+    if let Some(object) = factors.as_object_mut() {
+        object.insert(
+            "new_ip".to_string(),
+            serde_json::json!(context_signals.new_ip),
+        );
+        object.insert(
+            "new_device".to_string(),
+            serde_json::json!(context_signals.new_device),
+        );
+        object.insert(
+            "unusual_country".to_string(),
+            serde_json::json!(context_signals.unusual_country),
+        );
+    }
     let _ = risk::record_event(
         db,
         risk::RiskEventInput {
@@ -113,14 +156,36 @@ pub async fn create_session_for_principal(
             session_id: Some(session_id),
             device_id: None,
             event_type: "login_success".to_string(),
-            ip_address: context.ip,
-            user_agent: context.user_agent,
+            ip_address: context.ip.clone(),
+            user_agent: context.user_agent.clone(),
             risk_score: score,
             risk_factors: factors.clone(),
             decision,
             metadata: serde_json::json!({
                 "tenant_id": tenant_id,
                 "workspace_id": workspace_id,
+                "country": country,
+                "device_fingerprint_hash": device_fingerprint_hash,
+            }),
+        },
+    )
+    .await;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id,
+            action: "auth.login_success",
+            target_type: "session",
+            target_id: Some(session_id),
+            ip: context.ip.as_deref(),
+            user_agent: context.user_agent.as_deref(),
+            metadata: serde_json::json!({
+                "tenant_id": tenant_id,
+                "workspace_id": workspace_id,
+                "acr": context.acr,
+                "amr": context.amr.clone(),
+                "risk_score": score,
+                "risk_decision": decision.as_str(),
             }),
         },
     )

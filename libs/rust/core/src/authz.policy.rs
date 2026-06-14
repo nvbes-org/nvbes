@@ -4,6 +4,8 @@ pub fn is_allowed(role: WorkspaceRole, action: WorkspaceAction, ctx: ResourceCon
     match role {
         WorkspaceRole::Owner => owner_allows(action, ctx),
         WorkspaceRole::Admin => admin_allows(action, ctx),
+        WorkspaceRole::SecurityAdmin => security_admin_allows(action),
+        WorkspaceRole::BillingAdmin => billing_admin_allows(action),
         WorkspaceRole::Member => member_allows(action, ctx),
         WorkspaceRole::Viewer => viewer_allows(action),
     }
@@ -76,7 +78,12 @@ fn admin_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {
         WorkspaceAction::InviteMember | WorkspaceAction::RemoveMember => {
             matches!(
                 ctx.target_role,
-                Some(WorkspaceRole::Member | WorkspaceRole::Viewer)
+                Some(
+                    WorkspaceRole::Member
+                        | WorkspaceRole::Viewer
+                        | WorkspaceRole::SecurityAdmin
+                        | WorkspaceRole::BillingAdmin
+                )
             )
         }
         WorkspaceAction::ChangeMemberRole
@@ -87,6 +94,29 @@ fn admin_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {
         | WorkspaceAction::ExportWorkspaceData
         | WorkspaceAction::DeleteWorkspace => false,
     }
+}
+
+fn security_admin_allows(action: WorkspaceAction) -> bool {
+    matches!(
+        action,
+        WorkspaceAction::ViewWorkspace
+            | WorkspaceAction::ViewMembers
+            | WorkspaceAction::ViewAudit
+            | WorkspaceAction::ExportAudit
+            | WorkspaceAction::ViewFiles
+            | WorkspaceAction::ViewTrash
+            | WorkspaceAction::ViewQuota
+    )
+}
+
+fn billing_admin_allows(action: WorkspaceAction) -> bool {
+    matches!(
+        action,
+        WorkspaceAction::ViewWorkspace
+            | WorkspaceAction::ViewBilling
+            | WorkspaceAction::ManageBilling
+            | WorkspaceAction::ViewQuota
+    )
 }
 
 fn member_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {

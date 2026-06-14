@@ -26,6 +26,8 @@ pub mod saml_subject;
 pub mod saml_validation;
 #[path = "identity.domains.federation.scim.rs"]
 pub mod scim;
+#[path = "identity.domains.federation.sso_policy.rs"]
+pub mod sso_policy;
 #[path = "identity.domains.federation.types.rs"]
 pub mod types;
 #[path = "identity.domains.federation.validation.rs"]

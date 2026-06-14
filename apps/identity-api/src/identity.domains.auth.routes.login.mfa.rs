@@ -1,4 +1,5 @@
 use crate::app::AppState;
+use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
 use crate::domains::auth::sessions;
 use crate::domains::auth::state::delete_state;
 use crate::http::error::AppError;
@@ -53,7 +54,7 @@ pub(crate) async fn challenge_mfa(
     let (auth_state, principal_id) =
         super::require_mfa_state(&state.redis, request.state_token).await?;
 
-    let authenticated_method = super::mfa_flow::resolve_authenticated_method(
+    let authenticated_method = match super::mfa_flow::resolve_authenticated_method(
         &state.db,
         &state.redis,
         &state.config,
@@ -61,7 +62,47 @@ pub(crate) async fn challenge_mfa(
         auth_state.id,
         principal_id,
     )
-    .await?;
+    .await
+    {
+        Ok(method) => method,
+        Err(err) => {
+            let audit_ip = meta.ip();
+            let audit_user_agent = meta.user_agent();
+            let error_code = err.code.clone();
+            let _ = crate::domains::auth::risk::record_event(
+                &state.db,
+                crate::domains::auth::risk::RiskEventInput {
+                    principal_id,
+                    session_id: None,
+                    device_id: None,
+                    event_type: "mfa_failed".to_string(),
+                    ip_address: meta.ip(),
+                    user_agent: meta.user_agent(),
+                    risk_score: 35.0,
+                    risk_factors: serde_json::json!({ "reason": error_code }),
+                    decision: crate::domains::auth::risk::RiskDecision::StepUp,
+                    metadata: serde_json::json!({ "state_token": request.state_token }),
+                },
+            )
+            .await;
+            let _ = record_auth_event(
+                &state.db,
+                AuthAuditInput {
+                    principal_id,
+                    action: "auth.mfa_failed",
+                    target_type: "principal",
+                    target_id: Some(principal_id),
+                    ip: audit_ip.as_deref(),
+                    user_agent: audit_user_agent.as_deref(),
+                    metadata: serde_json::json!({
+                        "state_token": request.state_token,
+                    }),
+                },
+            )
+            .await;
+            return Err(err);
+        }
+    };
 
     let result = sessions::create_session_for_principal(
         &state.db,

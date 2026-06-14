@@ -57,6 +57,25 @@ pub fn normalize_federated_provider_type(input: &str) -> Result<String, AppError
     }
 }
 
+pub fn normalize_enterprise_provider_family(input: Option<&str>) -> Result<String, AppError> {
+    let value = input
+        .unwrap_or("custom")
+        .trim()
+        .to_ascii_lowercase()
+        .replace('-', "_");
+
+    match value.as_str() {
+        "" | "custom" => Ok("custom".to_string()),
+        "google" | "google_workspace" => Ok("google_workspace".to_string()),
+        "azure" | "azure_ad" | "microsoft_entra_id" => Ok("azure_ad".to_string()),
+        "okta" => Ok("okta".to_string()),
+        _ => Err(AppError::bad_request(
+            "validation_failed",
+            "The enterprise provider family is invalid.",
+        )),
+    }
+}
+
 pub fn normalize_registry_status(status: Option<&str>) -> Result<String, AppError> {
     let value = status.unwrap_or("active").trim().to_ascii_lowercase();
     match value.as_str() {
@@ -180,8 +199,9 @@ async fn validate_federation_url_policy(url: &Url, strict_mode: bool) -> Result<
 #[cfg(test)]
 mod tests {
     use super::{
-        normalize_domain, normalize_federated_provider_type, normalize_registry_status,
-        opt_trimmed, validate_federation_endpoint_url, validate_federation_endpoint_url_allowed,
+        normalize_domain, normalize_enterprise_provider_family, normalize_federated_provider_type,
+        normalize_registry_status, opt_trimmed, validate_federation_endpoint_url,
+        validate_federation_endpoint_url_allowed,
     };
 
     #[test]
@@ -198,6 +218,33 @@ mod tests {
             normalize_federated_provider_type(" OIDC ").expect("provider type should normalize"),
             "oidc"
         );
+    }
+
+    #[test]
+    fn normalize_enterprise_provider_family_accepts_supported_enterprise_idps() {
+        assert_eq!(
+            normalize_enterprise_provider_family(Some(" Google-Workspace "))
+                .expect("provider family should normalize"),
+            "google_workspace"
+        );
+        assert_eq!(
+            normalize_enterprise_provider_family(Some("azure_ad"))
+                .expect("provider family should normalize"),
+            "azure_ad"
+        );
+        assert_eq!(
+            normalize_enterprise_provider_family(Some("okta"))
+                .expect("provider family should normalize"),
+            "okta"
+        );
+    }
+
+    #[test]
+    fn normalize_enterprise_provider_family_rejects_unknown_values() {
+        let err = normalize_enterprise_provider_family(Some("github"))
+            .expect_err("unsupported provider family should fail");
+
+        assert_eq!(err.code, "validation_failed");
     }
 
     #[test]

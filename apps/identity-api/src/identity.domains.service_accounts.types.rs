@@ -29,6 +29,7 @@ pub struct ServiceAccountClientView {
     pub client_id: String,
     pub name: String,
     pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub client_assertion_required: bool,
     pub client_assertion_public_key_configured: bool,

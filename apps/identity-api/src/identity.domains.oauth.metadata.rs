@@ -138,4 +138,26 @@ mod tests {
             "https://identity.example/oauth/token"
         );
     }
+
+    #[test]
+    fn oauth_metadata_advertises_sellable_foundation_endpoints() {
+        let issuer = "https://identity.example";
+
+        assert_eq!(
+            endpoint(issuer, "/oauth/authorize"),
+            "https://identity.example/oauth/authorize"
+        );
+        assert_eq!(
+            endpoint(issuer, "/oauth/token"),
+            "https://identity.example/oauth/token"
+        );
+        assert_eq!(
+            endpoint(issuer, "/oauth/userinfo"),
+            "https://identity.example/oauth/userinfo"
+        );
+        assert_eq!(
+            endpoint(issuer, "/.well-known/jwks.json"),
+            "https://identity.example/.well-known/jwks.json"
+        );
+    }
 }

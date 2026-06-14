@@ -16,8 +16,9 @@ pub(super) fn narrow_role(left: WorkspaceRole, right: WorkspaceRole) -> Workspac
 
 fn role_rank(role: WorkspaceRole) -> u8 {
     match role {
-        WorkspaceRole::Owner => 3,
-        WorkspaceRole::Admin => 2,
+        WorkspaceRole::Owner => 4,
+        WorkspaceRole::Admin => 3,
+        WorkspaceRole::SecurityAdmin | WorkspaceRole::BillingAdmin => 2,
         WorkspaceRole::Member => 1,
         WorkspaceRole::Viewer => 0,
     }
@@ -31,5 +32,22 @@ pub(super) fn principal_type_label(kind: AuthPrincipalKind) -> &'static str {
     match kind {
         AuthPrincipalKind::User => "user",
         AuthPrincipalKind::ServiceAccount => "service_account",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{WorkspaceRole, narrow_role};
+
+    #[test]
+    fn specialized_admin_role_does_not_widen_to_admin() {
+        assert_eq!(
+            narrow_role(WorkspaceRole::SecurityAdmin, WorkspaceRole::Admin),
+            WorkspaceRole::SecurityAdmin
+        );
+        assert_eq!(
+            narrow_role(WorkspaceRole::Admin, WorkspaceRole::BillingAdmin),
+            WorkspaceRole::BillingAdmin
+        );
     }
 }

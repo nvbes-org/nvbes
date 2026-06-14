@@ -19,7 +19,10 @@ export function PortalLogsPage() {
 
   return (
     <section>
-      <PageHeader title="Logs" body="Filter tenant logs by user, client, tenant, event type, and date." />
+      <PageHeader
+        title="Logs"
+        body="Filter tenant logs by user, client, tenant, event type, and date."
+      />
       <form
         className="mb-6 grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-3"
         onSubmit={(event) => {
@@ -35,13 +38,28 @@ export function PortalLogsPage() {
           setTo(formString(form, 'to'));
         }}
       >
-        <Field label="User ID"><input name="user_id" className={inputClass} /></Field>
-        <Field label="Client ID"><input name="client_id" className={inputClass} /></Field>
-        <Field label="Tenant ID"><input name="tenant_id" className={inputClass} /></Field>
-        <Field label="Event type"><input name="event_type" className={inputClass} /></Field>
-        <Field label="From"><input name="from" type="datetime-local" className={inputClass} /></Field>
-        <Field label="To"><input name="to" type="datetime-local" className={inputClass} /></Field>
-        <button type="submit" className="rounded-md border border-border px-4 py-2 text-sm font-medium">
+        <Field label="User ID">
+          <input name="user_id" className={inputClass} />
+        </Field>
+        <Field label="Client ID">
+          <input name="client_id" className={inputClass} />
+        </Field>
+        <Field label="Tenant ID">
+          <input name="tenant_id" className={inputClass} />
+        </Field>
+        <Field label="Event type">
+          <input name="event_type" className={inputClass} />
+        </Field>
+        <Field label="From">
+          <input name="from" type="datetime-local" className={inputClass} />
+        </Field>
+        <Field label="To">
+          <input name="to" type="datetime-local" className={inputClass} />
+        </Field>
+        <button
+          type="submit"
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium"
+        >
           Apply filters
         </button>
       </form>

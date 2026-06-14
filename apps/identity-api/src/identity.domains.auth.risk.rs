@@ -4,6 +4,11 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+#[path = "identity.domains.auth.risk.signals.rs"]
+pub mod signals;
+
+pub use signals::evaluate_login_context_signals;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RiskDecision {
     Allow,

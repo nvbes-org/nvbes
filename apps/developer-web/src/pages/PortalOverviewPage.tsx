@@ -7,7 +7,11 @@ import { PageHeader } from './Portal.shared';
 const cards = [
   { to: '/portal/apps', title: 'Apps', body: 'OAuth client setup and redirect configuration.' },
   { to: '/portal/tokens/inspect', title: 'Tokens', body: 'JWT parsing and backend inspection.' },
-  { to: '/portal/oauth/playground', title: 'OAuth', body: 'PKCE URL generation and code exchange.' },
+  {
+    to: '/portal/oauth/playground',
+    title: 'OAuth',
+    body: 'PKCE URL generation and code exchange.',
+  },
   { to: '/portal/logs', title: 'Logs', body: 'Tenant-scoped activity and audit events.' },
   { to: '/portal/webhooks', title: 'Webhooks', body: 'Identity event subscriptions.' },
   { to: '/portal/roles', title: 'Roles', body: 'Fine-grained developer access model.' },

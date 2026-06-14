@@ -1,14 +1,15 @@
 use super::authenticate_tenant;
 use crate::app::AppState;
 use crate::domains::federation::types::{
-    CreateTenantDomainInput, TenantDomainResponse, TenantDomainsResponse, VerifyTenantDomainInput,
+    CreateTenantDomainInput, TenantDomainResponse, TenantDomainsResponse, UpdateTenantDomainInput,
+    VerifyTenantDomainInput,
 };
 use crate::http::error::AppError;
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::HeaderMap,
-    routing::{delete, get, post},
+    routing::{get, patch, post},
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
@@ -26,13 +27,21 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/tenants/{tenantId}/domains/{domainId}",
-            delete(delete_domain),
+            patch(update_domain).delete(delete_domain),
         )
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub(crate) struct CreateTenantDomainRequest {
     domain: String,
+    sso_required: Option<bool>,
+    sso_provider_id: Option<Uuid>,
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub(crate) struct UpdateTenantDomainRequest {
+    sso_required: Option<bool>,
+    sso_provider_id: Option<Uuid>,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
@@ -92,6 +101,46 @@ pub(crate) async fn create_domain(
             tenant_id,
             CreateTenantDomainInput {
                 domain: request.domain,
+                sso_required: request.sso_required,
+                sso_provider_id: request.sso_provider_id,
+            },
+        )
+        .await?,
+    ))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/tenants/{tenantId}/domains/{domainId}",
+    tag = "federation",
+    params(
+        ("tenantId" = Uuid, Path, description = "Tenant ID"),
+        ("domainId" = Uuid, Path, description = "Domain ID"),
+    ),
+    request_body = UpdateTenantDomainRequest,
+    responses(
+        (status = 200, description = "Domain policy updated", body = TenantDomainResponse),
+        (status = 400, description = "Bad request", body = ErrorEnvelope),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 404, description = "Not found", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn update_domain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((tenant_id, domain_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<UpdateTenantDomainRequest>,
+) -> Result<Json<TenantDomainResponse>, AppError> {
+    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    Ok(Json(
+        crate::domains::federation::domains::update_tenant_domain(
+            &state.db,
+            tenant_id,
+            domain_id,
+            UpdateTenantDomainInput {
+                sso_required: request.sso_required,
+                sso_provider_id: request.sso_provider_id,
             },
         )
         .await?,

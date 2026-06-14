@@ -28,6 +28,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(userinfo::router())
         .merge(introspect::router())
         .merge(revoke::router())
+        .merge(crate::domains::oauth::hosted_routes::router())
         .nest("/clients", clients::router(state))
         .nest("/device", device::router(state))
         .nest("/client-policies", clients::policies_router(state))

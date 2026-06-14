@@ -13,9 +13,9 @@ pnpm add @nvbes/identity-sdk
 ### 1. Initialiser le SDK
 
 ```typescript
-import { nvbesIdentity } from '@nvbes/identity-sdk';
+import { NvbesIdentity } from '@nvbes/identity-sdk';
 
-const identity = new nvbesIdentity({
+const identity = new NvbesIdentity({
   clientId: 'votre-client-id',
   clientSecret: 'votre-client-secret', // Optionnel pour les apps publiques
   redirectUri: 'https://votre-app.com/callback',
@@ -101,6 +101,10 @@ Génère l'URL d'autorisation pour le flux OAuth2.
 ### `exchangeCode(code)`
 
 Échange un code d'autorisation contre un token d'accès.
+
+### `refreshToken(refreshToken)`
+
+Rafraîchit un access token avec le grant OAuth `refresh_token`. Les refresh tokens nvbes sont rotatifs et doivent être remplacés par la nouvelle valeur retournée.
 
 ### `getUserInfo()`
 

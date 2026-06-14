@@ -1,17 +1,155 @@
 {
   "version": 1,
   "skills": {
+    "adr-drafting": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/adr-drafting/SKILL.md",
+      "computedHash": "c570fcd257bed65516adf0b658373092ec088b15c2d5513e2200b6b8a4225be5"
+    },
+    "advanced-retrieval": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/advanced-retrieval/SKILL.md",
+      "computedHash": "bb7cb9e4ff0fd76b7f92a58331f8d94d562397cf7ff3d2f682869848dbaa7d3a"
+    },
+    "age-encryption": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/age-encryption/SKILL.md",
+      "computedHash": "1e40aa12553298ef00bc0c76254bde76338c3024be3a7410489bcbdeff198d7a"
+    },
+    "agentic-architecture": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ai-systems/agentic-architecture/SKILL.md",
+      "computedHash": "e71960ca8ba80449b696eb6de3ddc400a60870f6f68f5960df64960f299e492a"
+    },
+    "agentic-rag": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/agentic-rag/SKILL.md",
+      "computedHash": "34ef1d702927027f5b5450d2a4ebf3a2fb028ae3c8c5702205811fc3eea39f4a"
+    },
     "agents-sdk": {
       "source": "cloudflare/skills",
       "sourceType": "github",
       "skillPath": "skills/agents-sdk/SKILL.md",
       "computedHash": "cb669fba9289d500872584ea0daab1c5114f1c8f12a991f90871431d3fadbf3c"
     },
+    "ann-algorithms": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/vector-stores/ann-algorithms/SKILL.md",
+      "computedHash": "b48e1f98afd7710d8a2aba90bcc24c0ee70f1d3321f0b64f04b535d414bfe3d3"
+    },
+    "api-gateway": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/api-gateway/SKILL.md",
+      "computedHash": "296ecea4647c6e2b469d8689712c166720c2d2b88ef4ea5f32cb87d508525706"
+    },
+    "api-versioning": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/api-versioning/SKILL.md",
+      "computedHash": "30d159ea70b5bf44a016ebb28cda2aa136b74d5db726a91fd8804e43db5e41e7"
+    },
+    "ares-framework": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/ares-framework/SKILL.md",
+      "computedHash": "36f83d0b800cb83ee1274bba235d422f621f4009302b98f73fbf09101f4c77d3"
+    },
+    "arti": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/network/arti/SKILL.md",
+      "computedHash": "43af34e398fd557aef7a3a92d0512e84bd6cbe82b7bee03ed065558160ec2f29"
+    },
+    "audit-logging": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/audit-logging/SKILL.md",
+      "computedHash": "8325d7ca83ebc059142e680318c6225beae3e3f321ced39be2b5696d6740cb7a"
+    },
+    "auth-flow-validation": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/auth-flow-validation/SKILL.md",
+      "computedHash": "e87bf2c3c961fcc9f8d3b3b9e9b92ec1ce980a5622ab00f85752dae0702fb4be"
+    },
+    "axum": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/backend-frameworks/axum/SKILL.md",
+      "computedHash": "e95e05c36ed7f38cd9bc890299b57991b218bd24887c7bb5915e0eb3cb19a5fb"
+    },
     "brainstorming": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/brainstorming/SKILL.md",
       "computedHash": "8df9b47092524833138b58682d03f2e153a242e550d1693657afdbee0cc9cdb0"
+    },
+    "bug-fix-brief": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/bug-fix-brief/SKILL.md",
+      "computedHash": "7d4fb51facdc100caef01759188f087acb8ef8d768a39c70ce047441fb33cf14"
+    },
+    "bulk-engineering": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/industrial/bulk-engineering/SKILL.md",
+      "computedHash": "1a0326d6a54c734486dd2bf8a4f66f6e3c1b24b52d07fb347d2f2531fe054697"
+    },
+    "caching-strategies": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/caching-strategies/SKILL.md",
+      "computedHash": "0140680cfb95fcf0cb23244a90982f8f1063a1ee731561d53b84e1f22c9c7bff"
+    },
+    "cdc-streaming-ingestion": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/cdc-streaming-ingestion/SKILL.md",
+      "computedHash": "4d301760f4e24e5055253e76a0ef0f9ff5dbbbbeb643d96b57581f4f113fb797"
+    },
+    "charting": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ui-libraries/charting/SKILL.md",
+      "computedHash": "6e330b29e20435cf9697709963b903bedb29a29832411a2ff7a06654907f45ad"
+    },
+    "chunking-strategies": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/chunking-strategies/SKILL.md",
+      "computedHash": "c02283c6611a29ad60bee4175e0bb79ba3f19e583a1a7641e1bda607775c7875"
+    },
+    "chunking-strategy": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-ai/skills/chunking-strategy/SKILL.md",
+      "computedHash": "39558dedfa82b30eec7409f2eb816dbf2c02941e1e90a73ed95859cc6cbe95d5"
+    },
+    "clean-architecture": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/clean-architecture/SKILL.md",
+      "computedHash": "930e4d5639e1a0afcebb0f2d43c6d90fedcbacb2c6844d6396ad0d324f758982"
+    },
+    "clean-code": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/clean-code/SKILL.md",
+      "computedHash": "dc48fa544872c7cfc6163d39145ffec0a157fa3e2f9d891c1a995f9a5b2db74e"
+    },
+    "cloud-storage": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/file-storage/cloud-storage/SKILL.md",
+      "computedHash": "4519deeabbf0294ab13e4e7141eb4c3a35c1e2df6d2da7576f49907d4d5bed14"
     },
     "cloudflare": {
       "source": "cloudflare/skills",
@@ -25,11 +163,191 @@
       "skillPath": "skills/cloudflare-email-service/SKILL.md",
       "computedHash": "6274be056fe5211aa220833c97ff6a7d96a1cdfd8854a53ca839ca758d35f356"
     },
+    "code-chunking": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/code-chunking/SKILL.md",
+      "computedHash": "e898443e5dd81960032d5e48a614fb69e4841b9bc96ad881f86ddaf3b142a1fa"
+    },
+    "codex": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-tools/skills/codex/SKILL.md",
+      "computedHash": "feaa13ad8da9f218853b3e5d2bccd7afe8d47284bd91ff7b5aef2dbda40357eb"
+    },
+    "constitution": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-specs/skills/constitution/SKILL.md",
+      "computedHash": "bf921e2326976132fdc942c3ebedddf4b1299b5396e9d3b49b4531714a787304"
+    },
+    "contextual-retrieval": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/contextual-retrieval/SKILL.md",
+      "computedHash": "69b658a3841474c0dd0e9aacfc2c9d425da1535830af5d14e45b2a3c3a4b19b9"
+    },
+    "continuous-evaluation": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/continuous-evaluation/SKILL.md",
+      "computedHash": "9a8eb30da484aeb1a848826893d422d3d21975669f1a377f063ac2012f4b7cde"
+    },
+    "contract-testing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/contract-testing/SKILL.md",
+      "computedHash": "dc71e160884747e1cbdf49772c1c622e9ef03e5b76c6be209cc3ae3a41735815"
+    },
+    "conversational-rag": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/conversational-rag/SKILL.md",
+      "computedHash": "37f240fa69ddfea5dfe03bcd7a9d217c4fd0f9addc3891223404b8ebacf17a7f"
+    },
+    "cors-security-headers": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/cors-security-headers/SKILL.md",
+      "computedHash": "88370bec83915a8ec7a4194adaf9812cb7f318ee9d66428ff8088767442d42b1"
+    },
+    "cost-allocation": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag-ops/cost-allocation/SKILL.md",
+      "computedHash": "2b18ed3ed1f075ce4ba44b4e445d76c4976c09975f88c28a0bb172add4a141a8"
+    },
+    "create-pr-from-spec": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-specs/skills/create-pr-from-spec/SKILL.md",
+      "computedHash": "7c71c165038c7e8f1ef3b66937bdb68e560e30f25faf8173451d64b23bc888d3"
+    },
+    "cron-scheduling": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/cron-scheduling/SKILL.md",
+      "computedHash": "b53f74dc21d6d09e3f3dd83131f42cd813bd09c1dbd502febe3e9d55be027b62"
+    },
+    "cross-encoder-training": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/retrieval/cross-encoder-training/SKILL.md",
+      "computedHash": "f5ad59604a9817d49b94247eefeac155e26f093b2575468346e4a7c6388ac00a"
+    },
+    "cryptography": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/cryptography/SKILL.md",
+      "computedHash": "0ccc69477873c3e22ab9ff64014d040e5271427f1a187927fcd35667af4acb2e"
+    },
+    "cyber-physical": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/cyber-physical/SKILL.md",
+      "computedHash": "5c4d9219240bf79a328b8e2617500a75cf77848a58e447e996e481527f3b510b"
+    },
+    "data-export": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/utilities/data-export/SKILL.md",
+      "computedHash": "0d1ba356ebd3202563f0b12b1ec259453faae73c6090557fd2b70aea9537a4d8"
+    },
+    "data-intensive": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/data-intensive/SKILL.md",
+      "computedHash": "95903361e82f0c541180fe9d5030ea2cd3af11c17343afa20e541544640acd2e"
+    },
+    "ddd": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/architecture/ddd/SKILL.md",
+      "computedHash": "f1de9a7292545b137151202ff4e4d48a41ea894ebda448d0e7d6de6d3686afe7"
+    },
+    "deployment-strategies": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/deployment-strategies/SKILL.md",
+      "computedHash": "cf14ba3403ace8463e99986885c2b2ed4fd4f9887e35d39937125f22ff4d91d0"
+    },
+    "design-systems": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ux/design-systems/SKILL.md",
+      "computedHash": "f62258bbf1687fceb85c6fa106b87436f756c93b7a691447e4f8eec19deaf45c"
+    },
     "dispatching-parallel-agents": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
       "computedHash": "e21044ae7496fc285f1df9ff3fb518a3a20bea6f5216c1f59f4987e12c769a0a"
+    },
+    "distributed-consensus": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/distributed-consensus/SKILL.md",
+      "computedHash": "8a964e3f023ff92d3f1b613608fb33095b409eb30c4605ab4b23d96434474af4"
+    },
+    "distributed-ledger": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/distributed-ledger/SKILL.md",
+      "computedHash": "ed654924a37b9ce0eec9b7c52ed88c0d5101fe2289d90e878f3760b43460099c"
+    },
+    "dns": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/dns/SKILL.md",
+      "computedHash": "0305bedbf31d8e0d206a796ee552bf1a8f100ab43f43deadd8b70d54064da574"
+    },
+    "docker": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/docker/SKILL.md",
+      "computedHash": "2a8f39df60d92b9aab6bb872cc668d13c248c0d80fe27e8e11752ed2f48bb912"
+    },
+    "docker-compose": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/docker-compose/SKILL.md",
+      "computedHash": "8be40e9eee4873e4f343575b46600ed87104f7dee8e1d260ed5717e2859e204c"
+    },
+    "docs-toolchain": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/documentation/docs-toolchain/SKILL.md",
+      "computedHash": "99c50e0861ed846cd701419990dfc8f6e5e1802f0eca3cad0ad939a2257feccc"
+    },
+    "docs-updater": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/docs-updater/SKILL.md",
+      "computedHash": "980123e630f0376f297059f754c8f079c972593384aba4870b37133a7d3fdaf5"
+    },
+    "domain-templates": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/domain-templates/SKILL.md",
+      "computedHash": "0029aa72e963fdbb19fd86f8d5c7f684ecb9dfb172af2c565c2e9ff75adf2a43"
+    },
+    "drawio-logical-diagrams": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/drawio-logical-diagrams/SKILL.md",
+      "computedHash": "cc9be80cb2718b656378763bf429332922445026f3e30809c56b7229636e2ae6"
+    },
+    "drizzle-orm-patterns": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/drizzle-orm-patterns/SKILL.md",
+      "computedHash": "d63e6d73a9f579b505a5694af2f3b3200c2b5eeea147e88b9b6d1e5fce23bcbb"
+    },
+    "dto-sync-patterns": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/dto-sync-patterns/SKILL.md",
+      "computedHash": "cca023dae428ac101cd70e09574a44c8352a68c264f605e15509e5d546c0399f"
     },
     "durable-objects": {
       "source": "cloudflare/skills",
@@ -37,11 +355,47 @@
       "skillPath": "skills/durable-objects/SKILL.md",
       "computedHash": "72efa2277fea08f43b393c74abaacc9fa575e20bc63bdc9d46829b8a39352852"
     },
+    "elasticsearch": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/elasticsearch/SKILL.md",
+      "computedHash": "1e6d742978d9afe04b1400cbeb69d95647e93e388943af57061cbad7b468691b"
+    },
+    "elasticsearch-vectors": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/vector-stores/elasticsearch-vectors/SKILL.md",
+      "computedHash": "df16c1ff2191d761b16c0ff6c8b55ef4a6ce13fa47613e22291786c9defbe64b"
+    },
+    "electron": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/desktop/electron/SKILL.md",
+      "computedHash": "6866471c2cd162f085309d74759056f948f9c28dba82e35f73f7eb43aac944bc"
+    },
     "email-best-practices": {
       "source": "resend/email-best-practices",
       "sourceType": "github",
       "skillPath": "SKILL.md",
       "computedHash": "6a88d51e8c8ffd7d5b70831c303878ad29a3734792db9b56456269c4d70c2ff8"
+    },
+    "email-infrastructure": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/email-infrastructure/SKILL.md",
+      "computedHash": "5d5e7eb3bf21d12d92c8e2caa19d1c4a507f307dedb092d5fb52c0bebd5c0397"
+    },
+    "email-ingestion": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/email-ingestion/SKILL.md",
+      "computedHash": "7974f51b6ff467074e6659065ee18d860a35d864832d52c6af051d30f42a04e9"
+    },
+    "email-sending": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/email/email-sending/SKILL.md",
+      "computedHash": "f068dd65f8b0f41250c72dc3fe1bfb38a9a18a81f9bc9fc6bb49f5b3eb833e38"
     },
     "email-systems": {
       "source": "sickn33/antigravity-awesome-skills",
@@ -49,11 +403,59 @@
       "skillPath": "skills/email-systems/SKILL.md",
       "computedHash": "56c3b0e7472238be0e1d7f5d81fdf89b2b23d4abd355f9fa2d8d4d6c32ad3731"
     },
+    "error-contract": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/error-contract/SKILL.md",
+      "computedHash": "76f9db93911d213f6d6ec0f95a7b5c4f13e5a0c098e076d609cd915688fdd8f8"
+    },
+    "error-handling": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/error-handling/SKILL.md",
+      "computedHash": "d1aae40185438489889b8418e2084e9eb0de60cf93dd78c7e7224010636b15bc"
+    },
+    "error-tracking": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/observability/error-tracking/SKILL.md",
+      "computedHash": "daf3919fd20705b07b9b6b556796b709fc019ecc5a02d084bbfb046e5329f2ff"
+    },
+    "event-driven": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/event-driven/SKILL.md",
+      "computedHash": "ed6a39a28cb2eca72de03594d1d94df1223d213ab961f6c03530cb397229fcf9"
+    },
+    "event-sourcing-cqrs": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/architecture/event-sourcing-cqrs/SKILL.md",
+      "computedHash": "ece8fe94277aba21dc7fa3bd2a767db2142a9ba1eed2feb89b7a82ce6f87f890"
+    },
     "executing-plans": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/executing-plans/SKILL.md",
       "computedHash": "b41c919caf1bb07fbacb0e29899ac513f9eb11cd4dd695975ad352c2c03cc4d7"
+    },
+    "feature-flags": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/feature-flags/SKILL.md",
+      "computedHash": "44e7d324693ae311d08f1aa08ef7ba6abdb25908d452ae2a4a0c6c1f62356153"
+    },
+    "feedback-loops": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/feedback-loops/SKILL.md",
+      "computedHash": "af06356f80823e3b66127130359b131f13d34bde0e9c8368a2e31eeb851e75e9"
+    },
+    "file-upload": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/file-storage/file-upload/SKILL.md",
+      "computedHash": "814d8c81cb748bd4ed5b084070e9d032e6a1de1743e0b9392f21732d30070e8e"
     },
     "find-skills": {
       "source": "vercel-labs/skills",
@@ -79,11 +481,191 @@
       "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
       "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
     },
+    "gdpr": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/gdpr/SKILL.md",
+      "computedHash": "c6659cdde33d531db4fbb2ba3936a56450099827bfe45c634e1d3b475eb1a77f"
+    },
+    "git-workflow": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/git-workflow/SKILL.md",
+      "computedHash": "99cf75674b6bbc71a8b1422c530225647a8fb9303b460f34b4a88d8e3a3d68d3"
+    },
+    "github-actions": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ci-cd/github-actions/SKILL.md",
+      "computedHash": "c3dbdeb8f3dc62c4f320e3fbc34c1e8c0f240053ebfd6888a9f3749e54c412b7"
+    },
+    "graph-rag": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/graph-rag/SKILL.md",
+      "computedHash": "2d2fdd8bb9b12b8aa848b3b141b0903d4e552c6cd6e1122b38690a738d8173ca"
+    },
+    "grpc": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-design/grpc/SKILL.md",
+      "computedHash": "d83722f79d096a19b68f1cca76196687a54a002e5c2ba880b078e643227a1c95"
+    },
+    "hard-negative-mining": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/embeddings/hard-negative-mining/SKILL.md",
+      "computedHash": "0561026737376fe7d31407e0da3a50846695a9201bcb43ba47c2c7745908495f"
+    },
+    "hardware-aware-design": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/hardware-aware-design/SKILL.md",
+      "computedHash": "ef2d2ba45215e5726ce1edaa6dfdad3be661e60373c3f61c4384838da8b69106"
+    },
+    "health-checks": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/health-checks/SKILL.md",
+      "computedHash": "8c38fee5370c687b1838b27c3908fdb86cff3d33b5a3fbebbe8f09aedeaa2071"
+    },
+    "hid-input-filter": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/windows/hid-input-filter/SKILL.md",
+      "computedHash": "63e2fe109745ba52dabc99fe1c6a0b0cc6e2a98901f2aa2767856028d3799dc9"
+    },
+    "http-clients": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-integration/http-clients/SKILL.md",
+      "computedHash": "8e9534cfc4f892648e1a27c5621571a72f7b9cfb3f4d5d510df356001f3cb0da"
+    },
+    "i18n": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/internationalization/i18n/SKILL.md",
+      "computedHash": "2c6d2dd620dfb3364d5df2a5c658e612759b0424c9e275a4dedb23fd696f28ec"
+    },
+    "iec61131": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/industrial/iec61131/SKILL.md",
+      "computedHash": "e912aafcb35dfea34abcc16ac4c71a1ed5e2e4cce05df10374f913b8e92f6f42"
+    },
+    "image-processing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/utilities/image-processing/SKILL.md",
+      "computedHash": "02afe812fcc4dbc34c0e7febb2f7a11ea3e9242f0fe29dd0e5804e9f9eb9ea92"
+    },
+    "ingestion-orchestration": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/ingestion-orchestration/SKILL.md",
+      "computedHash": "820ff5ade4e42350080e5d6d8b13a6f728784b25936741a60865a4b5d7521589"
+    },
+    "interaction-design": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ux/interaction-design/SKILL.md",
+      "computedHash": "2b5ca944e238ef23fa8a17f757e1353cb9448e13fb1103ca4d82beabb0a107c5"
+    },
     "iris-development": {
       "source": "redis/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/iris-development/SKILL.md",
       "computedHash": "677663bc77ea89c1ba7de7ced05a2d0f16bbe7b5e75efa47a10a40091eeb039d"
+    },
+    "javascript": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/languages/javascript/SKILL.md",
+      "computedHash": "0ae1f12634c5537c709a760f7567c8a2dabe51e817fac1944840121999337fb3"
+    },
+    "job-queues": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/job-queues/SKILL.md",
+      "computedHash": "367070117924b27a60fc9b6ea83d2a17af969c6ad75123de327ee65a98e95eff"
+    },
+    "jsdoc": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/documentation/jsdoc/SKILL.md",
+      "computedHash": "f9f8fb41925f1bb45416bd97447fe300fb8291db35a84c0f46acb95405850b0b"
+    },
+    "jsdoc-tsdoc": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/documentation/jsdoc-tsdoc/SKILL.md",
+      "computedHash": "4a9e9dd30e61086465a43830a0c30844afff605d80eb52980e2c7c133dfc7276"
+    },
+    "jwt": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/authentication/jwt/SKILL.md",
+      "computedHash": "8074e7504532d30aca31b1339b149f0e125fc91f0f190c804ddadaf98b33bac4"
+    },
+    "kafka": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/messaging/kafka/SKILL.md",
+      "computedHash": "71e29f7acc11b126c4b43a5d32cb21cd86d38702affbe108eded96899fcf5e7b"
+    },
+    "knowledge-graph": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-specs/skills/knowledge-graph/SKILL.md",
+      "computedHash": "c4d4300136fdc459f4e48e71943ec7803ee9eb4c002ad4f14095d6d50e774626"
+    },
+    "knowledge-graph-construction": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/knowledge-graph-construction/SKILL.md",
+      "computedHash": "6e27d2eac898ee10aa0a42d52a756fbaf2fb52c0ae41b34496c390e30fcbf00d"
+    },
+    "kubernetes": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/kubernetes/SKILL.md",
+      "computedHash": "d6354f34df9038add0fd9f92e1d75f37db9a49f139d4e587902d0dc1cd6713fd"
+    },
+    "learn": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/learn/SKILL.md",
+      "computedHash": "c8a11e67958e2f5ceccf65ec5de8588823d360279f83f1b7e305326adbc44729"
+    },
+    "libsodium": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/libsodium/SKILL.md",
+      "computedHash": "ae2529d89a7051a8bbc1002717337a3d8e57ca017439104e071bbf5ff63ccefb"
+    },
+    "license-compliance": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/license-compliance/SKILL.md",
+      "computedHash": "0e5a880505d8135e53a362024836bb39bc3c8847346ffcb123e2d725be9f2635"
+    },
+    "linux-server": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/linux-server/SKILL.md",
+      "computedHash": "ded81ac728a355e7d95c8c614900ca04cde3eef50f83a319c7ebb7c3820b3c11"
+    },
+    "load-balancer": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/load-balancer/SKILL.md",
+      "computedHash": "e0f36374a251cc997169c1ade608298eab47252ce81006b181e75a94d3d89686"
+    },
+    "load-testing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/load-testing/SKILL.md",
+      "computedHash": "ac6ce834bb620eeb6d5c680f80c21537c0c17b48f26ed37545d950e323664203"
     },
     "marketing-psychology": {
       "source": "coreyhaines31/marketingskills",
@@ -91,11 +673,221 @@
       "skillPath": "skills/marketing-psychology/SKILL.md",
       "computedHash": "50d735eb0f5c36f379ed2200f21aeacc9b9ad85667b5d33ec6111857352a1340"
     },
+    "mcp-authoring": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/claude-code-authoring/mcp-authoring/SKILL.md",
+      "computedHash": "b6cd4b3669b84ff9609ea97ca0e13efc0e4613c9fcff956553b44d7666a06b65"
+    },
+    "memory-md-management": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-core/skills/memory-md-management/SKILL.md",
+      "computedHash": "1b11a00079df4ee25e3cb4abb45be296d32794a2a7612f2aaf762cbd2e2c25b0"
+    },
+    "messaging-testing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/messaging-testing/SKILL.md",
+      "computedHash": "ffd919efe7a41856352138acc9e460202d29b8311b2c0b548aa61f152b26b230"
+    },
+    "messaging-testing-kafka": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/messaging-testing-kafka/SKILL.md",
+      "computedHash": "a57fe0764051d16a4369de1f48f5683d2f6f11a30a0c630def04bf5f1394243a"
+    },
+    "messaging-testing-rabbitmq": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/messaging-testing-rabbitmq/SKILL.md",
+      "computedHash": "011aba8ec59306324fadc421b49fcd46363dfd7cfe4e09a53f41ad81e9d68d2d"
+    },
+    "migrations": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/migrations/SKILL.md",
+      "computedHash": "e12dd839695ff475ed9b69c26d7d209dd5bb29b68ca5dedf00b73184eb3f2f38"
+    },
+    "multi-region": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag-ops/multi-region/SKILL.md",
+      "computedHash": "d5c3204b7fe2ad60e01f1f6eda2c83fac0456fec5ab09383cd1e706b5eeda7a0"
+    },
+    "multilingual-embeddings": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/embeddings/multilingual-embeddings/SKILL.md",
+      "computedHash": "114e34595d7ffe7ee2c941c2a10bdb83b4825926be8bcb4c938f3b652ab06329"
+    },
+    "multitenancy": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/architecture/multitenancy/SKILL.md",
+      "computedHash": "c90b9bf13094d70d7102fedfa505d51ae17ed8f5e668ab5e4adb3af081a82fc3"
+    },
+    "notebooklm": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-tools/skills/notebooklm/SKILL.md",
+      "computedHash": "8605679ee7737c2d9dca9336317850114ecd9d582402539eaa3dadc468ed1094"
+    },
+    "nx": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/build-tools/nx/SKILL.md",
+      "computedHash": "c4519b65365c5761a0df5241d459050f74da243213001780042ea6ae11c079d5"
+    },
+    "nx-monorepo": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/nx-monorepo/SKILL.md",
+      "computedHash": "50c6887ae2f141f1a47c0a791ba69df474b517ef6d1b04e89b4bb7dbaf8f9b42"
+    },
     "nx-workspace": {
       "source": "nrwl/nx-ai-agents-config",
       "sourceType": "github",
       "skillPath": "skills/nx-workspace/SKILL.md",
       "computedHash": "32b7b72c54c6644e97ac8c8491e3cfa936afa6f8a86798214258d631367b4add"
+    },
+    "oauth2": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/authentication/oauth2/SKILL.md",
+      "computedHash": "c26536854106c56a31edd7d91ab4ac42ac414cae55292b48ed43f3a26dc301ca"
+    },
+    "ocr": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/ocr/SKILL.md",
+      "computedHash": "5caf5c22421cad8ea122b5c4e53ebdd5e8afe31a3f7df01759a09c6a0afba9c7"
+    },
+    "office-docs": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/office-docs/SKILL.md",
+      "computedHash": "9307429bc34a6c8973297e2df479ca20200c4a8b9a0fbf0726d45ea0ec78360f"
+    },
+    "ontology-guided-retrieval": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/ontology-guided-retrieval/SKILL.md",
+      "computedHash": "81f0ad7f7860967b845d811990e9fd0a7584f6f640a66ebf1b8e1c6a1b2114df"
+    },
+    "open-source": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/open-source/SKILL.md",
+      "computedHash": "a5589e14deaf35b40cfe2ec5a081a5a31241d4740ac5b1bb24a9f3282c3bb021"
+    },
+    "openapi": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-design/openapi/SKILL.md",
+      "computedHash": "446b8420b1db59587923b0e9e19b265a401125946457251251d39d71c41bb08c"
+    },
+    "openapi-codegen": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-integration/openapi-codegen/SKILL.md",
+      "computedHash": "fae57c0daeb5e7b0f899a98164f53bc469e09d2a8a13bbf8c5ba26e8030921cc"
+    },
+    "openapi-contract": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/openapi-contract/SKILL.md",
+      "computedHash": "c62edc8302e64e931388fc6e8ab7a822dea2af985ebe4ef8d467cb71e29c1669"
+    },
+    "openapi-generator": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-integration/openapi-generator/SKILL.md",
+      "computedHash": "250de5c5eb3d07327c0d7ecbb4e0870143c7684c7b04a79e08602285926c57b8"
+    },
+    "opentelemetry": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/observability/opentelemetry/SKILL.md",
+      "computedHash": "859874e86b2c645f4e901c0f4f65da1a6e6c5cb168661963c0654aed5e988cd7"
+    },
+    "os-kernel-architecture": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/os-kernel-architecture/SKILL.md",
+      "computedHash": "76f4eab58132f45b32f1e0cefcea917d246f32b2bf22046e8d0d809e3568e379"
+    },
+    "osv-scanner": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/osv-scanner/SKILL.md",
+      "computedHash": "e482f1f76b6844184a33d083884fdb29690e5fb6eb30386595a163433efe4975"
+    },
+    "owasp": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/owasp/SKILL.md",
+      "computedHash": "ad28db719efa9aeceaf26edf09616b0b3dc4279d64c8ece65090eba3dd54511e"
+    },
+    "owasp-top-10": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/owasp-top-10/SKILL.md",
+      "computedHash": "091847b61d4d8e5b58315ff4efa93f3fa3011b2975ec27839551fac984e2c3af"
+    },
+    "pagination": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-design/pagination/SKILL.md",
+      "computedHash": "ab0a09e08378517ac88a7fd2907a03ee5b2b0e1c45132fdc192a7e7d8f4ebd32"
+    },
+    "pdf-extraction": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/pdf-extraction/SKILL.md",
+      "computedHash": "3ee8644685d70ba477e0c607862c739ec28e028a330f5fc4ebc6332bd2ebff5f"
+    },
+    "pdf-generation": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/utilities/pdf-generation/SKILL.md",
+      "computedHash": "3de9e0410b4946970a0e4c9afc85a5531864de48fdde68cb1aa34c9b025152c7"
+    },
+    "performance": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/performance/SKILL.md",
+      "computedHash": "a5c3a759171614575b322238710013c96c0487902fc8e2eb3cfe0eeca061b6e9"
+    },
+    "pgvector-advanced": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/vector-stores/pgvector-advanced/SKILL.md",
+      "computedHash": "1b08a4cfac3e1e915d8d9c52dfdc3ef409e64c3af813646f5a412a02137a38e8"
+    },
+    "playwright": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/playwright/SKILL.md",
+      "computedHash": "bc50504ee4efc26023a09a7c8abf54c33be5c68c57e7e7e501a88cea23aa4f66"
+    },
+    "plpgsql": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/plpgsql/SKILL.md",
+      "computedHash": "c435614d4ba76a6a6dfd54b880b1b7f74d7dde859fe0f72d27d455e333714c98"
+    },
+    "pnpm": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/build-tools/pnpm/SKILL.md",
+      "computedHash": "81f18cc52792c20d6b2d30e8e9dbaa4145ecf74a8ac771ad4d7793be8691cb6f"
+    },
+    "postgresql": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/postgresql/SKILL.md",
+      "computedHash": "97b82f4d9dbf166b3b509d8f990fd0a1d82ab85502c536a0583c9d41fdb8dba0"
     },
     "postgresql-code-review": {
       "source": "github/awesome-copilot",
@@ -109,17 +901,167 @@
       "skillPath": "skills/postgresql-optimization/SKILL.md",
       "computedHash": "8022448de70ba9a485e3b5bce34c5bbc644f93eb39b68431c9f7dabcf03aeb09"
     },
+    "prompt-engineering": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-ai/skills/prompt-engineering/SKILL.md",
+      "computedHash": "f67e9894b11492c03fb3c82d10cf59b8894aaac51e95b6241e077e33847aa36d"
+    },
+    "push-notifications": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/notifications/push-notifications/SKILL.md",
+      "computedHash": "284ac5cb705b0013b7f1b76ca446bb1f6c0cd04d5fe99ea4c45101879af138e9"
+    },
+    "pwa": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/pwa/SKILL.md",
+      "computedHash": "a2249f94385b5e79fe695c94260960bc1f325325d540c32bb5a26ea5e295128c"
+    },
+    "quality-common": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/common/SKILL.md",
+      "computedHash": "5159c9aafb64d3ff0226cae1269a1094996b922d3b858ded06a4b90bd427f7cb"
+    },
+    "query-transformations": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/query-transformations/SKILL.md",
+      "computedHash": "4c659872e6b7d5c0adafe36e19e89a71186e8a5d0fa3b80b0ffb11c4e28d33de"
+    },
+    "rabbitmq": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/messaging/rabbitmq/SKILL.md",
+      "computedHash": "092976ac33d513bb7be7859eb452ae04b438f8ffcd82b3c70a85d004b10f92fc"
+    },
+    "radix-ui": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/styling/radix-ui/SKILL.md",
+      "computedHash": "c18389f8bd5da06c05a01ce3cc46daf3fb10ef24881f9f951e9651a2fc0d9f20"
+    },
+    "rag": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-ai/skills/rag/SKILL.md",
+      "computedHash": "0659f2058a523bf6daa5e58296dc12cac32d7176fb35e03c31f90fa7bc48d798"
+    },
+    "rate-limiting": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/rate-limiting/SKILL.md",
+      "computedHash": "4d54ba891129f0c6c0af5719a8d2f199561805449464c2e139383591415d1e3b"
+    },
+    "react": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react/SKILL.md",
+      "computedHash": "b21f5056e31a600e36f2c576ae48800322d9d597002a582e7f9d82f721a3085a"
+    },
+    "react-19": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-19/SKILL.md",
+      "computedHash": "7f118a47f9c842afc52f88cb5a52959effe391f64bc9ab001855342369acf93d"
+    },
+    "react-api": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-api/SKILL.md",
+      "computedHash": "99ec81817dec7dfb76774ccf4589629956d77953a48f8753d7cbb90c666641b0"
+    },
+    "react-code-review": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/react-code-review/SKILL.md",
+      "computedHash": "3a6ca3a1755850a7d1de17314ecd431be724fe85ad33ef2ac2bbfe658244414a"
+    },
+    "react-concurrent": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-concurrent/SKILL.md",
+      "computedHash": "1941f0c773c1d105ffdee220d139c962e9983e97b554076b4de7536d3c626aa1"
+    },
+    "react-context": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-context/SKILL.md",
+      "computedHash": "806c5adbaf978c3d2c9c323c918a422086dd1e435e7e1b8de60bb1e120de5ccd"
+    },
     "react-email": {
       "source": "vercel-labs/json-render",
       "sourceType": "github",
       "skillPath": "skills/react-email/SKILL.md",
       "computedHash": "75441f1f69a7949aeb2208a6b5c22a7d2ce721bc8ee9b650371f0d8637778cd0"
     },
+    "react-forms": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-forms/SKILL.md",
+      "computedHash": "f6a438045b4014b648889d9f12c19b2498fbad1d4b761153664e84510d6040ae"
+    },
+    "react-hook-form": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-hook-form/SKILL.md",
+      "computedHash": "faf8af7ded7d51de1b6495597fb0aff4305cc75ae12e7ef86f1c610b9ee8b1df"
+    },
+    "react-hooks": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-hooks/SKILL.md",
+      "computedHash": "8492c7895859cbe9ab6debc3328d4562fe5322b6c7da3b09fde74a47cc366519"
+    },
+    "react-patterns": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-patterns/SKILL.md",
+      "computedHash": "791f143b4e301c66e337c78860c9d5c0cb0e2dc0a751d7273d356ce2d920111d"
+    },
+    "react-performance": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-performance/SKILL.md",
+      "computedHash": "df68d246e0725f1718dc5589101b824807ecdab22d8fd8d3563c4f66396315b0"
+    },
+    "react-server-components": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-server-components/SKILL.md",
+      "computedHash": "03f93cd2091e394cf7269fdfd5ae2497aadac4ffcc5cc2e236c1278330860cd1"
+    },
+    "react-suspense": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-suspense/SKILL.md",
+      "computedHash": "5063fe896c4b06141caf049d19018701d41f68062ec449c7ff8e3259d709dc22"
+    },
+    "react-testing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-testing/SKILL.md",
+      "computedHash": "3f731380972495145f68f7e4efa7b970d069433c538498faa172beae027db56a"
+    },
+    "react-websocket": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/react-websocket/SKILL.md",
+      "computedHash": "ebf37546561664eda35c0bf8122e72463551e89d2cc4c5f8575e107cd3920fb7"
+    },
     "receiving-code-review": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/receiving-code-review/SKILL.md",
       "computedHash": "2760c85d4f4117b0006e7ba755f4bbd61f8f4c185f347999763c97f507274e30"
+    },
+    "redis": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/redis/SKILL.md",
+      "computedHash": "fb5e72f573d862cbdef2f8862266b1a31e04e1724d2361d02cb20dde69ab27e1"
     },
     "redis-clustering": {
       "source": "redis/agent-skills",
@@ -145,6 +1087,12 @@
       "skillPath": "skills/redis-observability/SKILL.md",
       "computedHash": "29a9044c3e72ab9ea7145efe917584e3c2f3739b64d8a68e7c77fc6f4a70b1cb"
     },
+    "redis-pubsub": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/messaging/redis-pubsub/SKILL.md",
+      "computedHash": "4c65ebde495efe44d885fff33c0d3cb899845e9d63e9bbc91fed3a8f5a41d70f"
+    },
     "redis-query-engine": {
       "source": "redis/agent-skills",
       "sourceType": "github",
@@ -163,11 +1111,23 @@
       "skillPath": "skills/redis-semantic-cache/SKILL.md",
       "computedHash": "2096d785b796e7bf7ad8902f9798133aa7f40c21435c5e6d5beeb05c3de29145"
     },
+    "redis-vector": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/vector-stores/redis-vector/SKILL.md",
+      "computedHash": "6bbd36ab104632ae3f2956226985ddd7bc87545b0bc71a662c936f5a88d956cc"
+    },
     "redis-vector-search": {
       "source": "redis/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/redis-vector-search/SKILL.md",
       "computedHash": "2646c61374641845a5fa81b76319d60a4556a229e79eed54fc6f0faf376cddce"
+    },
+    "reproducible-builds": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/reproducible-builds/SKILL.md",
+      "computedHash": "7315a2be70a60b3e62eaceca90ff54766e94787ec976ae01d25bd8e75ee86d55"
     },
     "requesting-code-review": {
       "source": "obra/superpowers",
@@ -175,11 +1135,83 @@
       "skillPath": "skills/requesting-code-review/SKILL.md",
       "computedHash": "874f3786b05007a8b4a60452a4cd89b9917c645d34b6b1e40ea05037d12f0e67"
     },
+    "reranking": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/reranking/SKILL.md",
+      "computedHash": "c515a05c33592bc304c8426ee515db14afc66e9dc089daef642df5d1d2671c4b"
+    },
+    "resilience-patterns": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/resilience-patterns/SKILL.md",
+      "computedHash": "6465ae1da4f008d78df3ddc13aa4041ab4476715de6c394e72711954c7607261"
+    },
+    "rest-api": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-design/rest-api/SKILL.md",
+      "computedHash": "255d686310dedc2dd224b7a109c240067b93742ad6b7942d853a81c9dd772f7b"
+    },
+    "rust": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/languages/rust/SKILL.md",
+      "computedHash": "90c695316228b4423b65b4b76d4a5c20f95bcf2714af456da6f10aef92214164"
+    },
     "rust-best-practices": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/rust-best-practices/SKILL.md",
       "computedHash": "fd336f2f772eb46ddf8658de5f9dd8faa1f35615b316665307fc82eeb4b2e658"
+    },
+    "rust-cross-compile": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/build-tools/rust-cross-compile/SKILL.md",
+      "computedHash": "9f4f475c20a6abdaa1bd22f05ea42a6584b454fc133e3f2bc4b15290ad132b99"
+    },
+    "rust-decimal": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/data-processing/rust-decimal/SKILL.md",
+      "computedHash": "26404db33bac7f04c258df4626e0d1424e3f15745533adef35e854db1da7db58"
+    },
+    "rust-quality": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/rust-quality/SKILL.md",
+      "computedHash": "e41a86397aee8d702fdf7c496c117e866fac848f4dcd7b744b68a40921008e9c"
+    },
+    "rust-security": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/rust-security/SKILL.md",
+      "computedHash": "b47e0b09436e31e2926819ad6d0dcdcb4a3ff13cfb0b6e1e71b627a865be696f"
+    },
+    "rust-supply-chain": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/rust-supply-chain/SKILL.md",
+      "computedHash": "bd5fb4c6c288ffa322ccb6bcc4e299b0b074012297bd4f645d2a49b770172638"
+    },
+    "rust-testing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/rust-testing/SKILL.md",
+      "computedHash": "4ebce8359c093695f5eae0109a5b67a229a82845df46bb6e42b2230588abcdfe"
+    },
+    "rust-tracing": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/observability/rust-tracing/SKILL.md",
+      "computedHash": "7bdeb2aabac6244b6d2ffc0c35ad84fcfe3fc6ffc029ab28f829bb35c2d0572b"
+    },
+    "rustls": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/network/rustls/SKILL.md",
+      "computedHash": "2255d15c7cb6ab4d89348795cfe5a8b5e0c427717375f3f69c093b9c7e971f4e"
     },
     "sandbox-sdk": {
       "source": "cloudflare/skills",
@@ -187,11 +1219,65 @@
       "skillPath": "skills/sandbox-sdk/SKILL.md",
       "computedHash": "e44cceebe7e47d815034027c303315139d35c1d92a3ee287dc6d3e9a02f0667b"
     },
+    "secrets-management": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/secrets-management/SKILL.md",
+      "computedHash": "49406c1e37a794b56b41bcc67b36b2fcbe97e09d221fcd4ce1db6d689ad60470"
+    },
+    "security-architecture": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/security-architecture/SKILL.md",
+      "computedHash": "c27caacb4051eaa80cb850e63f75b4dbf52e8ce6a1fc3debe180a4e5aa455608"
+    },
     "security-expert": {
       "source": "personamanagmentlayer/pcl",
       "sourceType": "github",
       "skillPath": "stdlib/security/security-expert/SKILL.md",
       "computedHash": "81af21c7fc031d5c7043d35a2fe598432c2fd923c710490aafa6bb843216e21a"
+    },
+    "self-querying-retriever": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/self-querying-retriever/SKILL.md",
+      "computedHash": "93d8c3252b34386f23bd7f296673dd1de769c3ca92dea69887a1ebd1bb9278ac"
+    },
+    "semantic-dedup": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/embeddings/semantic-dedup/SKILL.md",
+      "computedHash": "5c6c86e2a812d55c6411463e226a78f796023e01bd10bc7c762644795256b9d8"
+    },
+    "server-hardening": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/server-hardening/SKILL.md",
+      "computedHash": "99ca934558012bd2fed9d525cc3f6a170a86ff91d9d6cd3d23f8c3fc2ae2ba1b"
+    },
+    "server-monitoring": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/server-monitoring/SKILL.md",
+      "computedHash": "38974ddecd7bdb89673ca888d5a828b22f7e27119a2b182508d33de743517b69"
+    },
+    "server-performance": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/server-performance/SKILL.md",
+      "computedHash": "d3a4017548285936ff60d069fd04c456f5aaa2a1bf482d10518186ca8ff8a406"
+    },
+    "serverless": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/cloud/serverless/SKILL.md",
+      "computedHash": "a3aa8cc2108f7a32db5c8fc10af42aa1d7c0857de88197ce038580e33815bc46"
+    },
+    "service-mesh": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/service-mesh/SKILL.md",
+      "computedHash": "b3aba02e27d270e158c0e303f94448db5a942a4adf2a9148651baafc0c932058"
     },
     "shadcn": {
       "source": "shadcn/ui",
@@ -200,16 +1286,100 @@
       "computedHash": "80a6226e78f6d1fe464214ae0ef449d49d8ffaa3e7704f011e9b418c678ad4d1"
     },
     "shadcn-ui": {
-      "source": "google-labs-code/stitch-skills",
+      "source": "claude-dev-suite/claude-dev-suite",
       "sourceType": "github",
-      "skillPath": "plugins/stitch-build/skills/shadcn-ui/SKILL.md",
-      "computedHash": "dadbca54d35a33fe73e40018611af2179689305bf6da812ab2643987fefd9da3"
+      "skillPath": "skills/styling/shadcn-ui/SKILL.md",
+      "computedHash": "0b8493b97b3c833a186c384eebfd123d4dcaf692016a37619b246b99d9d33bc0"
+    },
+    "shadow-mode-deployment": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/shadow-mode-deployment/SKILL.md",
+      "computedHash": "3991eadf050dacd0d21e7b230ea8d0e7278a179e615d9bc992e70a2d344b73be"
+    },
+    "sigstore-cosign": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/sigstore-cosign/SKILL.md",
+      "computedHash": "057175cf40b79c6dd42e0591446e03b24f78147a9458244ad6a12082530c12a7"
+    },
+    "skeleton": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ui-libraries/skeleton/SKILL.md",
+      "computedHash": "1b56ef4e9269a1bcce932cac04a14001c5526253c1c14ceedd9478bc04a2fdf4"
+    },
+    "skill-authoring": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/claude-code-authoring/skill-authoring/SKILL.md",
+      "computedHash": "5fedd5e03f7970af4899a25bb9450c6e7afc076447b96699365abd83e86b2fee"
+    },
+    "smoke-test": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/smoke-test/SKILL.md",
+      "computedHash": "f2732ca8ca577a2ec5eb1d6607b9969b5016d6b2c42ac52f6fae3be84ae19e8f"
+    },
+    "sonarqube": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/sonarqube/SKILL.md",
+      "computedHash": "fe94a55de3eb0c16127718fa917b7b4fe0c1c555581991377c4eb70badec9ef5"
+    },
+    "sonarqube-mcp": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-tools/skills/sonarqube-mcp/SKILL.md",
+      "computedHash": "9f1a35541258f286218e04d2ab8a2df7aa8ed45e4db8d3b932eef3fb09943492"
+    },
+    "specs-code-cleanup": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-specs/skills/specs-code-cleanup/SKILL.md",
+      "computedHash": "5ec5f3af595fc4d1fa02bd9639fe2488bd08ce1ee9e7cfab1e05b65b36c734e9"
+    },
+    "sql-advanced": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/sql-advanced/SKILL.md",
+      "computedHash": "af3534bf412af2de2021a97a6b78199be17bed29234a0101e19637f0408bbcc3"
+    },
+    "sql-fundamentals": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/databases/sql-fundamentals/SKILL.md",
+      "computedHash": "475252bf14a9e0356da9cc0f2ca59eb439ea2039057456d24b63ad5ab26a36a6"
     },
     "sqlx-code-review": {
       "source": "existential-birds/beagle",
       "sourceType": "github",
       "skillPath": "plugins/beagle-rust/skills/sqlx-code-review/SKILL.md",
       "computedHash": "bb506b4f9779bbd6bfad7a68675a7f5d3dda580f16dcda92df9ab8673655e4ef"
+    },
+    "sse": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/real-time/sse/SKILL.md",
+      "computedHash": "30477f6ddfadb705533d70a70dfcfe3513bfd862f8f0b8d8097e38c447a9b4ce"
+    },
+    "ssl-tls": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/ssl-tls/SKILL.md",
+      "computedHash": "eed532164fd75b480d89604602976c1163cae0c36a5a69f953dc5a4947606e8b"
+    },
+    "storage-engines": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/storage-engines/SKILL.md",
+      "computedHash": "b9afe98e558e0d2030c1ed780ae598c317b9183968e7ff8c07ecb698999891a5"
+    },
+    "stripe": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/payments/stripe/SKILL.md",
+      "computedHash": "4af78c9c2b99bd793ea87381582b302b9c7410861c1114ed85bfb8d1fec06ffd"
     },
     "stripe-best-practices": {
       "source": "stripe/ai",
@@ -223,11 +1393,65 @@
       "skillPath": "skills/subagent-driven-development/SKILL.md",
       "computedHash": "b38be2f3a092d758127f6d47e77c2493885aebf38aae359e4c786df2c343b837"
     },
+    "supply-chain": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/security/supply-chain/SKILL.md",
+      "computedHash": "df57bab8ddf4c6eda877a057a1bcc196a70f022e62733111bc9485c05c35a3a8"
+    },
+    "swr": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/state-management/swr/SKILL.md",
+      "computedHash": "13aff6f4fd0d53678008f0c951bf862757f9857c5c63ab9cccbdd5e4d4e81d95"
+    },
     "systematic-debugging": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/systematic-debugging/SKILL.md",
       "computedHash": "7246fdd3a795fc3daff0af72044ca99bf836e4e6a46844742858786fdfb86488"
+    },
+    "systemd": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/systemd/SKILL.md",
+      "computedHash": "390d6de6c0256fc765bcc10d58bb64675eff9a12493c64b3f28e94efb7153726"
+    },
+    "systems-networking": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/systems-networking/SKILL.md",
+      "computedHash": "3e26b54efa831711132f19e075274baeb20f29ee5cbf679e3217a1875c54f972"
+    },
+    "table-extraction": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/table-extraction/SKILL.md",
+      "computedHash": "5af0d1893f752987258de86b3e995fe4ba970bc3537232c391ef8dd83a76b41d"
+    },
+    "tailwind-css-patterns": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/tailwind-css-patterns/SKILL.md",
+      "computedHash": "6092620c3af955a46ea2b94ca8a40197ac8392e6bbdc8c7515659328b186c770"
+    },
+    "tailwind-design-system": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/tailwind-design-system/SKILL.md",
+      "computedHash": "fccc3f5d3e026ddc6a4dd41d57808ba5c9636ecff6eff0368fa4619aa89993c6"
+    },
+    "tailwindcss": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/styling/tailwindcss/SKILL.md",
+      "computedHash": "83e2b190cbce750233eddb30ce9b907d8157ed8fe1de7feba935c83a748a518b"
+    },
+    "tanstack-query": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/state-management/tanstack-query/SKILL.md",
+      "computedHash": "e083fd203e79fc655ecda9af9439941bd89febe56663058d1bd5ce3ca76a684a"
     },
     "tanstack-query-best-practices": {
       "source": "deckardger/tanstack-agent-skills",
@@ -235,11 +1459,53 @@
       "skillPath": "skills/tanstack-query/SKILL.md",
       "computedHash": "21d2e8b7468a81d772b6527ad8ca178cc2f3f08af777bb9061333013ee88a0c9"
     },
+    "tanstack-router": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-frameworks/tanstack-router/SKILL.md",
+      "computedHash": "7af20c60a942ca1595a8d84a02387aa34691a3527ecc5fe1c08d48fae8da1916"
+    },
+    "tauri": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/desktop/tauri/SKILL.md",
+      "computedHash": "146fb06c2b99a2739f94d6773885efc26aa2a7656b94329a051b5c53f31f7fb6"
+    },
+    "terraform": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/terraform/SKILL.md",
+      "computedHash": "826b63d9610012e9ea719504328ff8df0361a21707d9d15cd9e0d48f430fe740"
+    },
     "test-driven-development": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/test-driven-development/SKILL.md",
       "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
+    },
+    "testcontainers": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/testcontainers/SKILL.md",
+      "computedHash": "c921c50ce06cbd21821ea794815568b5088d132c3899b9563e91d0dbc8420418"
+    },
+    "testing-library": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/testing-library/SKILL.md",
+      "computedHash": "ab5fe2d871aa553a004a32da77a077150585871ecf4f0ef9cf31dade633f6f1e"
+    },
+    "time-aware-retrieval": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/rag/time-aware-retrieval/SKILL.md",
+      "computedHash": "501996b3871e84f7294d38dda492483aaa6dcca90b014d7c5acdfbfb875297c3"
+    },
+    "token-optimization": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/best-practices/token-optimization/SKILL.md",
+      "computedHash": "3b56f346b1e93998dc06d0c0c2bf4c84e1c2d603e8a40527a249fda978a4f2b7"
     },
     "turnstile-spin": {
       "source": "cloudflare/skills",
@@ -247,11 +1513,137 @@
       "skillPath": "skills/turnstile-spin/SKILL.md",
       "computedHash": "46ad17e8e09902993d88dc212e780e6aecd34cb3ad22fb9ae90d5e02a54e20d6"
     },
+    "type-generation": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/integration-validation/type-generation/SKILL.md",
+      "computedHash": "f53adb800ae0fdacc529337628f5cb73af996145d0e70cadd6888f71b20ec5e5"
+    },
+    "type-safe-api": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-integration/type-safe-api/SKILL.md",
+      "computedHash": "9ec18bcdb70739ae8d7d6843ad8028b411090c06fcdb105f073a54b1ce401a65"
+    },
+    "typescript": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/languages/typescript/SKILL.md",
+      "computedHash": "caae8430d4682c3a352a21909ff016c01b20d4b1ebc6fb4dd01b56ac89f322cb"
+    },
+    "typescript-docs": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/typescript-docs/SKILL.md",
+      "computedHash": "9e2c39b8a9ea569feb0c90080b10a71371e2d2d8ffb35de4fc5f7afe2a442f67"
+    },
+    "typescript-quality": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/quality/typescript-quality/SKILL.md",
+      "computedHash": "aa977536fca9f0d429efd33db2c3a37326250d7960452ce6b155972bbb76bd3d"
+    },
+    "typescript-security-review": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/typescript-security-review/SKILL.md",
+      "computedHash": "1ef288efeb6d74db9409e927c941d6d7530c8cac8ea6912061d6ab94395629dd"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
       "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
       "computedHash": "0a413bf988d06481f69bb81df2070741c3ba12dd9f1be2706d57f259c905992d"
+    },
+    "unit-test-application-events": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-application-events/SKILL.md",
+      "computedHash": "7779cb6182f7afca8b948516c4748878957a01e6d4359e719a96a8d934ac8461"
+    },
+    "unit-test-bean-validation": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-bean-validation/SKILL.md",
+      "computedHash": "2eaed25096c921d9dd7d96f7bc2536ae2645255ffedd773752b81b871066416f"
+    },
+    "unit-test-boundary-conditions": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-boundary-conditions/SKILL.md",
+      "computedHash": "a19b65853df56b1de36fc3a008691e92b1a654d0e2c8dfcd2a823492fbcf6f65"
+    },
+    "unit-test-caching": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-caching/SKILL.md",
+      "computedHash": "6eda196627507fd387c3e5b2c4ba461393c525e53c48447725b10b31345fb149"
+    },
+    "unit-test-config-properties": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-config-properties/SKILL.md",
+      "computedHash": "f79fa8d72a723919f46f9b60c00b505688b93fc89220c6af90a24e83385174e4"
+    },
+    "unit-test-controller-layer": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-controller-layer/SKILL.md",
+      "computedHash": "dd99f0b9ad568d187f79396448b3409f9482b45e2f096083c74bf9cf54c987b5"
+    },
+    "unit-test-exception-handler": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-exception-handler/SKILL.md",
+      "computedHash": "5d7c7b0f699101fd8dfb4c7e9a4cbbc86d3fd4fd922e412e60a3e3a50eddc7c9"
+    },
+    "unit-test-json-serialization": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-json-serialization/SKILL.md",
+      "computedHash": "f239ec36503816c28237fcc02fe12b666364337843a8b7088550a5d4ccf13e61"
+    },
+    "unit-test-mapper-converter": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-mapper-converter/SKILL.md",
+      "computedHash": "1e6e351eb6aefdc64ea8d1ee8d35f3888b925a1439063d2261b2bd6139758e24"
+    },
+    "unit-test-parameterized": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-parameterized/SKILL.md",
+      "computedHash": "3b43747a83bb47ca8dde9f2b9e555fd0cbae0e575ae6b796bc4abdca8674ef71"
+    },
+    "unit-test-scheduled-async": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-scheduled-async/SKILL.md",
+      "computedHash": "bf3ddbd2246aef53bce7f040c827303cda8629e531c7bb69ecfa8ed5bf39e17c"
+    },
+    "unit-test-security-authorization": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-security-authorization/SKILL.md",
+      "computedHash": "d33ab489cf4358ad3e372d643e6523b578ca3eae629ba7232db17bc80aa96479"
+    },
+    "unit-test-service-layer": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-service-layer/SKILL.md",
+      "computedHash": "e24d6b55c360cf55b8564a6ccc7bb743d83306db22ae6ec48d00a0ccc31cc898"
+    },
+    "unit-test-utility-methods": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-utility-methods/SKILL.md",
+      "computedHash": "a73711c9bdbd4b301a91d3c3edd654676e7166348010e139dbf434ce063aba9e"
+    },
+    "unit-test-wiremock-rest-api": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-java/skills/unit-test-wiremock-rest-api/SKILL.md",
+      "computedHash": "e9cd52018c3b66e11ddc5fb13b044782483b002a8021c8960202663b61607568"
     },
     "using-git-worktrees": {
       "source": "obra/superpowers",
@@ -265,23 +1657,83 @@
       "skillPath": "skills/using-superpowers/SKILL.md",
       "computedHash": "de10fd3ff46d797acc92b9df6b3ea456a5cd1d095b73c90bc921e83cce4c5bb9"
     },
+    "vector-databases": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ai-integration/vector-databases/SKILL.md",
+      "computedHash": "ea3892e733bb84d2b76b63b6b546108caafae51b16cf4da587844609c40a5809"
+    },
+    "vector-quantization": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/vector-stores/vector-quantization/SKILL.md",
+      "computedHash": "63458476506e8e8cbc4c5c1288e451a44aa0ed60cac18cbbbbba35069905e228"
+    },
     "verification-before-completion": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/verification-before-completion/SKILL.md",
       "computedHash": "9b446f0c7fe1cfb560b1d34439523b1a76d5f177290007b2c053a1c749a4a8ba"
     },
-    "vite": {
-      "source": "antfu/skills",
+    "video-rag": {
+      "source": "claude-dev-suite/claude-dev-suite",
       "sourceType": "github",
-      "skillPath": "skills/vite/SKILL.md",
-      "computedHash": "867ff66238f3152e9c494339ad08dc432dd0df5bcf5cc7a00b61a72b580eb908"
+      "skillPath": "skills/document-processing/video-rag/SKILL.md",
+      "computedHash": "a53ebbc4dcff20f891127fb000fd7331f2c26dcfeedd6987b41f22e8d7c2e377"
+    },
+    "virtualization": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/systems/virtualization/SKILL.md",
+      "computedHash": "427dd675f9d762836b6fedbd2b63293fbee02be6a72322b50b26e29b35b5b592"
+    },
+    "visual-hierarchy": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/ux/visual-hierarchy/SKILL.md",
+      "computedHash": "9d47ac9e7ca142b5fb730ef0095fb6d84b18efed03384b83942dcefb7e3624a9"
+    },
+    "vite": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/build-tools/vite/SKILL.md",
+      "computedHash": "44420a87f6d79dd210d571e250f9f363ba3a04bd6192c8e8fae653bd26a7f11d"
+    },
+    "vitest": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/testing/vitest/SKILL.md",
+      "computedHash": "c0e33d43e1ef6df3378a90e6647d5826b0b56724eb803e9226fb9f78ef07b753"
+    },
+    "waf": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/waf/SKILL.md",
+      "computedHash": "2a18c386e1a083f2e1442a8aec1234b02ddd176ee0f861873fb5d45fbf9f8255"
     },
     "web-perf": {
       "source": "cloudflare/skills",
       "sourceType": "github",
       "skillPath": "skills/web-perf/SKILL.md",
       "computedHash": "7ae53856c320574f7440f50aef7892f96837eec9fd49d329d049d432fb4b299a"
+    },
+    "web-scraping": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/document-processing/web-scraping/SKILL.md",
+      "computedHash": "f4aa57fccf17c0b89c9c9cdf1f97383cd4b7710a40bb2ad83ce746693d0090ad"
+    },
+    "webauthn": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/authentication/webauthn/SKILL.md",
+      "computedHash": "c5e50cb59b304f44878b63f93664c5ff0de5270e78622d2bd93592c084a25c15"
+    },
+    "webhooks": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/api-design/webhooks/SKILL.md",
+      "computedHash": "d6f90f55bb59644e6d7efc96a5c67cd6d65871fa134fc373d09dafa1f40d21a9"
     },
     "workers-best-practices": {
       "source": "cloudflare/skills",
@@ -306,6 +1758,24 @@
       "sourceType": "github",
       "skillPath": "skills/writing-skills/SKILL.md",
       "computedHash": "c0a92e629e39ea91b1f54da67a6aa92723008a8ef5b500c6de078f55485937c7"
+    },
+    "zero-downtime-deploy": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/infrastructure/zero-downtime-deploy/SKILL.md",
+      "computedHash": "00ced7d1690ffa7e094c2fc86d5a2f472a0592c2aacf45e4525aeb8b5af48399"
+    },
+    "zod": {
+      "source": "claude-dev-suite/claude-dev-suite",
+      "sourceType": "github",
+      "skillPath": "skills/validation/zod/SKILL.md",
+      "computedHash": "6c7828b02fabe027dac93dc0ccffb9f8b5d4899533344b384487124f2bb367ce"
+    },
+    "zod-validation-utilities": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/zod-validation-utilities/SKILL.md",
+      "computedHash": "9785b925118b719c6f2c34b3d1fb2052a272d2efee4853ced86b8d6be5a7b061"
     }
   }
 }

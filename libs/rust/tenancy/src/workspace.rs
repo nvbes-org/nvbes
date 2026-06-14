@@ -171,6 +171,8 @@ pub fn role_as_db(role: WorkspaceRole) -> &'static str {
     match role {
         WorkspaceRole::Owner => "owner",
         WorkspaceRole::Admin => "admin",
+        WorkspaceRole::SecurityAdmin => "security_admin",
+        WorkspaceRole::BillingAdmin => "billing_admin",
         WorkspaceRole::Member => "member",
         WorkspaceRole::Viewer => "viewer",
     }

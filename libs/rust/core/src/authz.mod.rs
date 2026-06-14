@@ -13,4 +13,4 @@ pub use action::{WorkspaceAction, action_requires_step_up, parse_action};
 pub use context::ResourceContext;
 pub use decision::WorkspaceDecision;
 pub use policy::is_allowed;
-pub use role::{WorkspaceRole, parse_role};
+pub use role::{IdentityRole, WorkspaceRole, parse_identity_role, parse_role};

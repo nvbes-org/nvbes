@@ -1,24 +1,90 @@
-use axum::{Extension, Json, Router, extract::State, routing::get};
+use axum::{Extension, Json, Router, extract::State, middleware::from_fn_with_state, routing::get};
 use nvbes_core::http::error::ErrorEnvelope;
 
-use crate::{
-    app::AppState,
-    http::{
-        error::AppError,
-        middleware::jwt::{AuthContext, jwt_auth_middleware},
-    },
-};
+use crate::app::AppState;
+use crate::http::{error::AppError, middleware::jwt::AuthContext};
 
 use super::{rbac_db, types::DeveloperMeResponse};
 
+#[path = "identity.domains.developer.routes.context.rs"]
+pub(crate) mod context;
+#[path = "identity.domains.developer.routes.health.rs"]
+pub(crate) mod health;
+#[path = "identity.domains.developer.routes.oauth.rs"]
+pub(crate) mod oauth;
+#[path = "identity.domains.developer.routes.sandbox.rs"]
+pub(crate) mod sandbox;
+#[path = "identity.domains.developer.routes.service_accounts.rs"]
+pub(crate) mod service_accounts;
+#[path = "identity.domains.developer.routes.tokens.rs"]
+pub(crate) mod tokens;
+#[path = "identity.domains.developer.routes.webhooks.rs"]
+pub(crate) mod webhooks;
+
 pub fn router(state: &AppState) -> Router<AppState> {
-    Router::new().route(
-        "/developer/me",
-        get(me).layer(axum::middleware::from_fn_with_state(
+    Router::new()
+        .route("/developer/me", get(me))
+        .route("/developer/console/context", get(context::get_context))
+        .route("/developer/console/overview", get(context::get_overview))
+        .route(
+            "/developer/console/oauth-clients",
+            get(oauth::list_oauth_clients),
+        )
+        .route(
+            "/developer/console/marketplace/apps",
+            get(oauth::list_marketplace_apps),
+        )
+        .route("/developer/console/scopes", get(oauth::list_scopes))
+        .route(
+            "/developer/console/oauth-clients/{clientId}/consent-screen",
+            get(oauth::get_consent_screen).put(oauth::upsert_consent_screen),
+        )
+        .route(
+            "/developer/console/service-accounts",
+            get(service_accounts::list_service_accounts),
+        )
+        .route(
+            "/developer/console/oauth-clients/{clientId}/secrets",
+            get(service_accounts::list_secret_versions),
+        )
+        .route(
+            "/developer/console/oauth-clients/{clientId}/secrets/rotation",
+            axum::routing::post(service_accounts::rotate_secret),
+        )
+        .route(
+            "/developer/console/oauth-clients/{clientId}/secrets/{versionId}/revoke",
+            axum::routing::post(service_accounts::revoke_secret_version),
+        )
+        .route("/developer/console/webhooks", get(webhooks::list_webhooks))
+        .route(
+            "/developer/console/webhooks/{endpointId}/deliveries",
+            get(webhooks::list_deliveries),
+        )
+        .route(
+            "/developer/console/webhooks/deliveries/{deliveryId}/replay",
+            axum::routing::post(webhooks::replay_delivery),
+        )
+        .route("/developer/console/logs", get(webhooks::list_logs))
+        .route(
+            "/developer/console/tokens/debug",
+            axum::routing::post(tokens::debug_token),
+        )
+        .route(
+            "/developer/console/sandbox",
+            get(sandbox::get_sandbox).put(sandbox::upsert_sandbox),
+        )
+        .route(
+            "/developer/console/sandbox/reset",
+            axum::routing::post(sandbox::reset_sandbox),
+        )
+        .route(
+            "/developer/console/health-checks",
+            get(health::list_health_checks).post(health::run_health_checks),
+        )
+        .layer(from_fn_with_state(
             state.clone(),
-            jwt_auth_middleware,
-        )),
-    )
+            crate::http::middleware::jwt::jwt_auth_middleware,
+        ))
 }
 
 #[utoipa::path(

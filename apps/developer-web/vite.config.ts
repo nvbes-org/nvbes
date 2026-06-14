@@ -6,12 +6,15 @@ import { defineConfig, loadEnv } from 'vite-plus';
 
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
-  const rootEnv = loadEnv(mode, '../../', '');
+  const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
   const identityApiProxyTarget =
     process.env.VITE_IDENTITY_API_PROXY_TARGET ||
     localEnv.VITE_IDENTITY_API_PROXY_TARGET ||
     rootEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    'http://localhost:8080';
+    process.env.VITE_IDENTITY_API_BASE_URL ||
+    localEnv.VITE_IDENTITY_API_BASE_URL ||
+    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+    'http://localhost:4000';
 
   return {
     plugins: [react(), tailwindcss(), devtoolsJson()],
@@ -34,10 +37,6 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
         },
         {
-          find: '@nvbes/web-runtime/posthog',
-          replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/posthog.ts'),
-        },
-        {
           find: '@nvbes/web-runtime',
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/index.ts'),
         },
@@ -45,18 +44,14 @@ export default defineConfig(({ mode }) => {
           find: '@nvbes/web-ui',
           replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts'),
         },
-        {
-          find: /^@nvbes\/identity-sdk-web\/src\//,
-          replacement: `${path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/')}/`,
-        },
       ],
     },
     server: {
       port: 5175,
       proxy: {
-        '^/api(?:/|$)': identityApiProxyTarget,
-        '/developer': identityApiProxyTarget,
+        '/api': identityApiProxyTarget,
         '/oauth': identityApiProxyTarget,
+        '/.well-known': identityApiProxyTarget,
       },
     },
   };

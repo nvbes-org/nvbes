@@ -1,0 +1,72 @@
+<h2>Design 2/5 - Navigation et modules</h2>
+<p class="subtitle">Validation demandee: est-ce que cette carte de navigation couvre la gestion entiere de l'entreprise sans melanger Workspace et Tenant ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">enterprise-web navigation</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:170px 1fr 170px;gap:14px;min-height:360px">
+      <div class="mock-sidebar">
+        <strong>Acme SAS</strong><br>
+        Enterprise admin<br><br>
+        <span class="label">Operate</span><br>
+        Overview<br>
+        Users<br>
+        Workspaces<br>
+        Developers<br><br>
+        <span class="label">Govern</span><br>
+        Policies<br>
+        Security<br>
+        Audit logs<br><br>
+        <span class="label">Commercial</span><br>
+        Billing<br>
+        Usage<br>
+        Settings
+      </div>
+
+      <div class="mock-content">
+        <div class="label">Primary V0 route</div>
+        <h3 style="margin:.35rem 0">Users</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div class="placeholder">Active users</div>
+          <div class="placeholder">Pending invites</div>
+          <div class="placeholder">Policy warnings</div>
+        </div>
+        <div class="placeholder">Search, role filter, workspace filter, status filter</div>
+        <div class="placeholder" style="margin-top:8px">User table: name, email, role, modules, workspaces, last active</div>
+        <div class="placeholder" style="margin-top:8px">Bulk actions: invite, change role, assign workspace, suspend</div>
+      </div>
+
+      <div class="mock-content">
+        <div class="label">Inspector</div>
+        <h3 style="margin:.35rem 0">Selected user</h3>
+        <div class="placeholder">Tenant role</div>
+        <div class="placeholder" style="margin-top:8px">Module permissions</div>
+        <div class="placeholder" style="margin-top:8px">Workspace access</div>
+        <div class="placeholder" style="margin-top:8px">Security state</div>
+        <div class="placeholder" style="margin-top:8px">Audit trail</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>V0 module boundaries</h3>
+  <p><strong>Users</strong> is complete first. <strong>Workspaces</strong>, <strong>Developers</strong>, <strong>Policies</strong>, <strong>Security</strong>, and <strong>Billing</strong> have route shells with real summary cards and clear empty states, then become complete in later slices.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="navigation-approved" onclick="toggleSelect(this)">
+    <div class="letter">OK</div>
+    <div class="content">
+      <h3>Valider la navigation</h3>
+      <p>On garde ces modules et Users comme route principale V0.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="navigation-revise" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content">
+      <h3>Reviser</h3>
+      <p>Un module manque, doit changer de nom, ou doit etre priorise autrement.</p>
+    </div>
+  </div>
+</div>

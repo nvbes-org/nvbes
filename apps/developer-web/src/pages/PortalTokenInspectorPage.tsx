@@ -55,7 +55,9 @@ export function PortalTokenInspectorPage() {
           {parsed === undefined ? 'No parsed claims yet.' : JSON.stringify(parsed, null, 2)}
         </pre>
         <pre className="overflow-auto rounded-md border border-border bg-card p-4 text-xs">
-          {inspectToken.data ? JSON.stringify(inspectToken.data, null, 2) : 'No backend result yet.'}
+          {inspectToken.data
+            ? JSON.stringify(inspectToken.data, null, 2)
+            : 'No backend result yet.'}
         </pre>
       </div>
     </section>

@@ -11,6 +11,7 @@ export function LoginPageSecondaryStepContent({
   hasRecovery,
   hasTotp,
   hasWebAuthn,
+  hostedConsent,
   loading,
   mfaMethod,
   oauthRequest,
@@ -32,6 +33,7 @@ export function LoginPageSecondaryStepContent({
   | 'hasRecovery'
   | 'hasTotp'
   | 'hasWebAuthn'
+  | 'hostedConsent'
   | 'loading'
   | 'mfaMethod'
   | 'oauthRequest'
@@ -47,7 +49,8 @@ export function LoginPageSecondaryStepContent({
   if (step === 'consent') {
     return (
       <LoginPageConsent
-        scope={oauthRequest?.scope}
+        clientName={hostedConsent?.client.name}
+        scope={hostedConsent?.scope ?? oauthRequest?.scope}
         error={error}
         onApprove={handleConsentApprove}
         onCancel={handleConsentCancel}

@@ -1,0 +1,104 @@
+<h2>Site dedie Enterprise / Tenant</h2>
+<p class="subtitle">Nouveau cadrage: Enterprise/Tenant est le niveau racine. Workspace devient une ressource administree par l'entreprise.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a-enterprise-web" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A - Nouvelle app enterprise-web</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;min-height:250px">
+            <div class="mock-sidebar">
+              <strong>Enterprise</strong><br>
+              Acme SAS<br><br>
+              Overview<br>
+              Users<br>
+              Workspaces<br>
+              Developers<br>
+              Policies<br>
+              Security<br>
+              Billing<br>
+              Audit
+            </div>
+            <div class="mock-content">
+              <div class="label">Tenant scope</div>
+              <h3 style="margin:.35rem 0">Users</h3>
+              <div class="placeholder">Table users: role, workspaces, status, security</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px">
+                <div class="placeholder">Invite user</div>
+                <div class="placeholder">Assign workspace</div>
+                <div class="placeholder">Policy impact</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A - Nouvelle app enterprise-web</h3>
+      <p>Produit dedie pour admins d'entreprise. Separation nette avec identity-web et drive-web. Recommande pour ton besoin.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b-identity-enterprise-shell" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B - Shell dedie dans identity-web</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;min-height:250px">
+            <div class="mock-sidebar">
+              <strong>Identity</strong><br><br>
+              Account<br>
+              Security<br>
+              Enterprise<br>
+              Billing<br>
+              Workspaces
+            </div>
+            <div class="mock-content">
+              <div class="label">/enterprise</div>
+              <h3 style="margin:.35rem 0">Enterprise admin</h3>
+              <div class="placeholder">Same domain app, separate route tree</div>
+              <div class="placeholder" style="margin-top:8px">Tenant modules live next to account settings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B - Dans identity-web</h3>
+      <p>Plus rapide techniquement, mais moins dedie. Le risque est de melanger compte personnel, identity et administration tenant.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c-shared-console-library" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C - Lib console partagee + apps</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:250px">
+            <div class="mock-content">
+              <div class="label">apps/enterprise-web</div>
+              <div class="placeholder">Tenant shell</div>
+              <div class="placeholder" style="margin-top:8px">Routes</div>
+            </div>
+            <div class="mock-content">
+              <div class="label">libs/ts/enterprise-ui</div>
+              <div class="placeholder">Members modules</div>
+              <div class="placeholder" style="margin-top:8px">Policy components</div>
+              <div class="placeholder" style="margin-top:8px">Billing widgets</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C - App + lib partagee</h3>
+      <p>Bon a terme si plusieurs produits reutilisent la console. Plus lourd pour V0 sauf si on sait deja qu'elle sera embeddee ailleurs.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation</h3>
+  <p>Je recommande A: creer une app dediee apps/enterprise-web avec Enterprise/Tenant comme racine produit. Les workspaces y sont geres comme des ressources, pas comme le contexte principal.</p>
+</div>

@@ -40,7 +40,10 @@ export function PortalAppsPage() {
 
   return (
     <section>
-      <PageHeader title="OAuth apps" body="Create apps, copy client IDs, and manage redirect URI configuration." />
+      <PageHeader
+        title="OAuth apps"
+        body="Create apps, copy client IDs, and manage redirect URI configuration."
+      />
       <form
         className="mb-6 grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2"
         onSubmit={(event) => {
@@ -59,7 +62,12 @@ export function PortalAppsPage() {
           <input name="name" className={inputClass} required />
         </Field>
         <Field label="Allowed scopes">
-          <input name="allowed_scopes" className={inputClass} placeholder="openid profile email" required />
+          <input
+            name="allowed_scopes"
+            className={inputClass}
+            placeholder="openid profile email"
+            required
+          />
         </Field>
         <Field label="Redirect URIs">
           <textarea name="redirect_uris" className={textareaClass} required />
@@ -79,7 +87,9 @@ export function PortalAppsPage() {
       {clientSecret ? (
         <div className="mb-6 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Client secret</h2>
-          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">{clientSecret}</code>
+          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">
+            {clientSecret}
+          </code>
         </div>
       ) : null}
       {appsQuery.data?.length ? (
@@ -102,7 +112,11 @@ export function PortalAppsPage() {
                   <td className="p-3">{app.client_type}</td>
                   <td className="p-3">{app.redirect_uris.length}</td>
                   <td className="p-3">
-                    <button type="button" className="text-primary" onClick={() => void copyClientId(app.client_id)}>
+                    <button
+                      type="button"
+                      className="text-primary"
+                      onClick={() => void copyClientId(app.client_id)}
+                    >
                       Copy
                     </button>
                   </td>

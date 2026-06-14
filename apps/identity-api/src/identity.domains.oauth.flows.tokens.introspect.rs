@@ -34,6 +34,11 @@ pub async fn introspect_token(
         Ok(claims) => claims,
         Err(_) => return Ok(IntrospectionResponse::inactive()),
     };
+    if claims.amr.iter().any(|method| method == "m2m")
+        && !machine_token_client_is_active(db, claims.client_id.as_deref()).await?
+    {
+        return Ok(IntrospectionResponse::inactive());
+    }
 
     crate::domains::oauth::policies_eval::ensure_client_policy(
         db,
@@ -256,4 +261,33 @@ pub async fn introspect_token(
         actor_tenant_id,
         network_valid,
     })
+}
+
+async fn machine_token_client_is_active(
+    db: &PgPool,
+    token_client_id: Option<&str>,
+) -> Result<bool, AppError> {
+    let Some(token_client_id) = token_client_id else {
+        return Ok(false);
+    };
+
+    let row = sqlx::query(
+        r#"
+        SELECT revoked_at
+        FROM oauth_clients
+        WHERE client_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(token_client_id)
+    .fetch_optional(db)
+    .await?;
+
+    let Some(row) = row else {
+        return Ok(false);
+    };
+
+    Ok(row
+        .get::<Option<chrono::DateTime<chrono::Utc>>, _>("revoked_at")
+        .is_none())
 }

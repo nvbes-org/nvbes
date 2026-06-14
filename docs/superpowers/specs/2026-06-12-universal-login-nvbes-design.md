@@ -1,10 +1,10 @@
-# Universal Login nvbes Design
+# Socle Identity vendable v1 Design
 
 ## Goal
 
-Build nvbes Identity Universal Login as the hosted authentication entrypoint for every nvbes product.
+Build nvbes Identity as a sellable identity foundation for every nvbes product, starting with Universal Login as the hosted authentication entrypoint.
 
-The first complete v1 must let a product start an OAuth authorization-code + PKCE flow, send the user to the hosted Identity login, let the user choose an account when relevant, approve consent when required, and return to the product with either a valid authorization code or a redirect-safe OAuth error.
+The first complete v1 must let a product start an OAuth authorization-code + PKCE flow, send the user to the hosted Identity login, let the user choose an account when relevant, approve consent when required, and return to the product with either a valid authorization code or a redirect-safe OAuth error. It must also prove that the existing OAuth/OIDC, client management, session management, refresh-token, password lifecycle, and SDK surfaces are coherent enough to integrate Drive and future products without bespoke auth code.
 
 ## Scope
 
@@ -16,6 +16,12 @@ In scope:
 - reuse of the existing challenge login flow: identifier, password, MFA;
 - PAR-compatible backend flow, because the current authorization endpoint already requires pushed authorization requests;
 - authorization-code issue after login and consent;
+- OAuth 2.1-aligned contract checks for authorization code + PKCE, refresh token, userinfo, JWKS, discovery, introspection, and revocation;
+- OIDC discovery and JWKS documentation suitable for product integration;
+- OAuth client management contracts for public, confidential, and service clients, with exact redirect URIs, scopes, hashed secrets, rotation, and revocation;
+- visible user sessions with device/IP/user-agent metadata and refresh-token revocation coupling;
+- email verification, reset password, password change, session invalidation, and audit documentation;
+- TypeScript and Rust SDK quickstart surfaces for Drive and future products;
 - targeted backend and frontend tests.
 
 Out of scope:
@@ -27,6 +33,8 @@ Out of scope:
 - admin consent workflows;
 - passkeys as a required first factor;
 - a new token format.
+- dynamic client registration exposed to third-party self-service users.
+- full third-party marketplace review flows.
 
 ## Architecture
 
@@ -76,6 +84,42 @@ The backend should expose a small hosted-login API under `/api/v1/oauth/hosted-l
 
 The exact route names may be adjusted to match existing module conventions, but the contract must preserve these boundaries.
 
+## Sellable Foundation Contracts
+
+The sellable foundation does not create a second identity stack. It hardens and documents the existing one:
+
+- OAuth/OIDC routes stay under `/oauth`, except well-known metadata under `/.well-known/*`.
+- Browser products use authorization code + PKCE through Universal Login.
+- Machine products use service accounts and OAuth client credentials.
+- Public clients must use PKCE with `S256`; confidential clients authenticate with hashed secrets or private key JWT.
+- Refresh tokens are one-time-use. Reuse detection revokes the token family and the session context.
+- Userinfo returns stable OIDC-style claims without leaking internal secrets.
+- JWKS exposes only public signing material and is referenced by discovery metadata.
+- Client management APIs remain authenticated and step-up protected.
+- Session management revokes both browser session state and matching refresh tokens.
+- Password lifecycle actions are audited and invalidate existing sessions when security-sensitive.
+- SDKs expose the product integration path instead of requiring products to hand-roll OAuth forms.
+
+## SDK Behavior
+
+The TypeScript SDK should support browser/product integration:
+
+- build authorization URLs from discovered endpoints or explicit config;
+- support PKCE helper generation;
+- exchange authorization codes;
+- refresh access tokens;
+- call userinfo;
+- revoke/logout when configured.
+
+The Rust backend SDK should support server-side product integration:
+
+- exchange authorization codes;
+- refresh tokens;
+- client credentials;
+- introspect tokens;
+- call userinfo;
+- expose typed errors.
+
 ## Frontend Behavior
 
 `identity-web` should treat `/login` as the Universal Login shell when an OAuth state or OAuth request is present.
@@ -112,6 +156,11 @@ Backend tests should cover:
 - authenticated approval issues an authorization code;
 - consent denial returns `access_denied`;
 - non-redirect-safe errors do not redirect.
+- discovery metadata advertises the intended endpoints;
+- JWKS route is mounted;
+- public authorization-code clients require PKCE;
+- refresh-token reuse detection revokes the family;
+- session revocation revokes refresh tokens.
 
 Frontend tests should cover:
 
@@ -120,6 +169,7 @@ Frontend tests should cover:
 - consent approval follows backend redirect;
 - consent cancellation follows backend error redirect;
 - hosted OAuth error renders without exposing raw internals.
+- SDK helper tests for PKCE, authorization URLs, token exchange mapping, refresh mapping, and userinfo mapping.
 
 ## Rollout
 
@@ -128,7 +178,9 @@ The feature should be built behind the existing local/staging Identity deploymen
 Validation after implementation:
 
 - targeted Rust tests for OAuth hosted login;
+- targeted Rust tests for OAuth/OIDC foundation contracts;
 - targeted React tests for login/consent state;
+- targeted TypeScript SDK tests;
 - `cargo check --workspace`;
 - targeted identity-web typecheck/test command;
 - update API docs if public route contracts change.

@@ -3,6 +3,7 @@ import { type UseNavigateResult } from '@tanstack/react-router';
 import { type MutableRefObject } from 'react';
 
 import { type OAuthAuthorizeRequest } from '../identity.oauth';
+import type { HostedLoginDecision } from '../identity.universal-login.api';
 import { type MfaMethod } from './LoginPage.mfa';
 import type {
   IdentifierMutateAsync,
@@ -23,6 +24,8 @@ export type NavigateFn = UseNavigateResult<string>;
 export type UseLoginPageActionsOptions = {
   navigate: NavigateFn;
   oauthRequest: OAuthAuthorizeRequest | null;
+  hostedStateId: string | null;
+  onHostedDecision: (decision: HostedLoginDecision) => void;
   connectedAccounts: AccountEntry[];
   setConnectedAccounts: (
     value: AccountEntry[] | ((prev: AccountEntry[]) => AccountEntry[]),

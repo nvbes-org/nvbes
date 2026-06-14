@@ -4,6 +4,7 @@ use std::cmp::Reverse;
 use uuid::Uuid;
 
 use super::types::*;
+use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
 use crate::domains::auth::sessions::cache::session_view_from_cached_session;
 use crate::http::error::AppError;
 
@@ -21,6 +22,19 @@ pub async fn logout(
     nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.session_revoked",
+            target_type: "session",
+            target_id: Some(session_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({ "reason": "logout" }),
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -68,6 +82,19 @@ pub async fn revoke(
     nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
         .await
         .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.session_revoked",
+            target_type: "session",
+            target_id: Some(session_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({ "reason": "manual_revoke" }),
+        },
+    )
+    .await;
 
     Ok(())
 }
@@ -89,6 +116,19 @@ pub async fn revoke_all_others(
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
         .await
         .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.session_revoked",
+            target_type: "session",
+            target_id: Some(current_session_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({ "reason": "revoke_others" }),
+        },
+    )
+    .await;
 
     Ok(())
 }

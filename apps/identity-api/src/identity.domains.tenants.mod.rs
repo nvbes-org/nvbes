@@ -1,0 +1,14 @@
+#[path = "identity.domains.tenants.invitations.rs"]
+pub mod invitations;
+#[path = "identity.domains.tenants.invitations.accept.rs"]
+pub mod invitations_accept;
+#[path = "identity.domains.tenants.routes.rs"]
+pub mod routes;
+#[path = "identity.domains.tenants.service.rs"]
+pub mod service;
+#[path = "identity.domains.tenants.types.rs"]
+pub mod types;
+#[path = "identity.domains.tenants.validation.rs"]
+pub mod validation;
+#[path = "identity.domains.tenants.views.rs"]
+pub mod views;

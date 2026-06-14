@@ -21,6 +21,7 @@ pub struct WorkspaceRecord {
     pub require_admin_approval_for_member_share: bool,
     pub default_share_link_ttl_days: i32,
     pub max_share_link_ttl_days: i32,
+    pub mfa_policy: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -43,6 +44,7 @@ impl WorkspaceRecord {
                     .require_admin_approval_for_member_share,
                 default_share_link_ttl_days: self.default_share_link_ttl_days,
                 max_share_link_ttl_days: self.max_share_link_ttl_days,
+                mfa_policy: parse_mfa_policy_setting(&self.mfa_policy),
             },
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -71,15 +73,19 @@ pub async fn get_workspace_by_id(
           $2::text AS role,
           p.code AS plan_code,
           w.trial_ends_at,
-          wp.member_can_create_share_links,
-          wp.require_admin_approval_for_member_share,
-          wp.default_share_link_ttl_days,
-          wp.max_share_link_ttl_days,
+          COALESCE(wp.member_can_create_share_links, op.member_can_create_share_links, tp.member_can_create_share_links, sp.member_can_create_share_links) AS member_can_create_share_links,
+          COALESCE(wp.require_admin_approval_for_member_share, op.require_admin_approval_for_member_share, tp.require_admin_approval_for_member_share, sp.require_admin_approval_for_member_share) AS require_admin_approval_for_member_share,
+          COALESCE(wp.default_share_link_ttl_days, op.default_share_link_ttl_days, tp.default_share_link_ttl_days, sp.default_share_link_ttl_days) AS default_share_link_ttl_days,
+          COALESCE(wp.max_share_link_ttl_days, op.max_share_link_ttl_days, tp.max_share_link_ttl_days, sp.max_share_link_ttl_days) AS max_share_link_ttl_days,
+          wp.mfa_policy,
           w.created_at,
           w.updated_at
         FROM workspaces w
         INNER JOIN plans p ON p.code = w.plan_code
         INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
+        INNER JOIN system_policies sp ON sp.id = TRUE
+        LEFT JOIN tenant_policies tp ON tp.tenant_id = w.tenant_id
+        LEFT JOIN organization_policies op ON op.organization_id = w.organization_id
         WHERE w.id = $1
         "#,
     )
@@ -101,6 +107,7 @@ pub struct CurrentWorkspaceRecord {
     pub require_admin_approval_for_member_share: bool,
     pub default_share_link_ttl_days: i32,
     pub max_share_link_ttl_days: i32,
+    pub mfa_policy: String,
 }
 
 pub async fn fetch_workspace_for_update(
@@ -121,7 +128,8 @@ pub async fn fetch_workspace_for_update(
           wp.member_can_create_share_links,
           wp.require_admin_approval_for_member_share,
           wp.default_share_link_ttl_days,
-          wp.max_share_link_ttl_days
+          wp.max_share_link_ttl_days,
+          wp.mfa_policy
         FROM workspaces w
         INNER JOIN plans p ON p.code = w.plan_code
         INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
@@ -144,5 +152,14 @@ pub async fn fetch_workspace_for_update(
         require_admin_approval_for_member_share: row.get("require_admin_approval_for_member_share"),
         default_share_link_ttl_days: row.get("default_share_link_ttl_days"),
         max_share_link_ttl_days: row.get("max_share_link_ttl_days"),
+        mfa_policy: row.get("mfa_policy"),
     })
+}
+
+fn parse_mfa_policy_setting(value: &str) -> MfaPolicySetting {
+    match value {
+        "required_admins" => MfaPolicySetting::RequiredAdmins,
+        "required_all" => MfaPolicySetting::RequiredAll,
+        _ => MfaPolicySetting::Optional,
+    }
 }

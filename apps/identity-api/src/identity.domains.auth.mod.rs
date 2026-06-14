@@ -2,6 +2,8 @@
 pub mod account_chooser;
 #[path = "identity.domains.auth.account_deletion.rs"]
 pub mod account_deletion;
+#[path = "identity.domains.auth.audit.rs"]
+pub mod audit;
 #[path = "identity.domains.auth.bot_guard.rs"]
 pub mod bot_guard;
 #[path = "identity.domains.auth.bot_scorer.rs"]
@@ -34,8 +36,12 @@ pub mod keys_local;
 pub mod login_challenges;
 #[path = "identity.domains.auth.login.delay.rs"]
 pub mod login_delay;
+#[path = "identity.domains.auth.login.throttle.rs"]
+pub mod login_throttle;
 #[path = "identity.domains.auth.mfa.rs"]
 pub mod mfa;
+#[path = "identity.domains.auth.mfa.policy.rs"]
+pub mod mfa_policy;
 #[path = "identity.domains.auth.onboarding.rs"]
 pub mod onboarding;
 #[path = "identity.domains.auth.password.rs"]

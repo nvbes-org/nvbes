@@ -1,0 +1,179 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  getDeveloperConsentScreen,
+  listDeveloperOAuthClients,
+  upsertDeveloperConsentScreen,
+  type DeveloperConsentScreenForm,
+} from '../developer.api';
+
+const emptyForm: DeveloperConsentScreenForm = {
+  productName: '',
+  description: '',
+  logoUrl: '',
+  supportUrl: '',
+  privacyUrl: '',
+  termsUrl: '',
+};
+
+export function ConsentScreenPage() {
+  const queryClient = useQueryClient();
+  const clientsQuery = useQuery({
+    queryKey: ['developer-oauth-clients'],
+    queryFn: ({ signal }) => listDeveloperOAuthClients(signal),
+    staleTime: 30_000,
+  });
+  const [clientId, setClientId] = useState('');
+  const selectedClientId = clientId || clientsQuery.data?.[0]?.client_id || '';
+  const consentQuery = useQuery({
+    queryKey: ['developer-consent-screen', selectedClientId],
+    queryFn: ({ signal }) => getDeveloperConsentScreen(selectedClientId, signal),
+    enabled: selectedClientId.length > 0,
+    staleTime: 30_000,
+  });
+  const [form, setForm] = useState<DeveloperConsentScreenForm>(emptyForm);
+  const upsertMutation = useMutation({
+    mutationFn: () => upsertDeveloperConsentScreen(selectedClientId, form),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['developer-consent-screen', selectedClientId] }),
+  });
+
+  useEffect(() => {
+    if (!consentQuery.data) {
+      return;
+    }
+    setForm({
+      productName: consentQuery.data.product_name,
+      description: consentQuery.data.description,
+      logoUrl: consentQuery.data.logo_url ?? '',
+      supportUrl: consentQuery.data.support_url ?? '',
+      privacyUrl: consentQuery.data.privacy_url ?? '',
+      termsUrl: consentQuery.data.terms_url ?? '',
+    });
+  }, [consentQuery.data]);
+
+  if (clientsQuery.isLoading) {
+    return <div className="h-72 animate-pulse rounded-lg border border-border bg-card" />;
+  }
+
+  if (clientsQuery.isError || !clientsQuery.data) {
+    return <ConsentUnavailable />;
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="rounded-md border border-border bg-card p-2">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">Consent screens</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Client-specific product identity, support, privacy, terms, and consent copy.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+        <aside className="rounded-lg border border-border bg-card p-4">
+          <label className="grid gap-2 text-sm font-medium">
+            OAuth client
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={selectedClientId}
+              onChange={(event) => setClientId(event.currentTarget.value)}
+            >
+              {clientsQuery.data.map((client) => (
+                <option key={client.client_id} value={client.client_id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="mt-4 text-xs text-muted-foreground">
+            {consentQuery.data?.configured ? 'Configured' : 'Not configured'}
+          </p>
+        </aside>
+        <form
+          className="rounded-lg border border-border bg-card p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            upsertMutation.mutate();
+          }}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              label="Product name"
+              value={form.productName}
+              onChange={(productName) => setForm((current) => ({ ...current, productName }))}
+            />
+            <TextField
+              label="Logo URL"
+              value={form.logoUrl}
+              onChange={(logoUrl) => setForm((current) => ({ ...current, logoUrl }))}
+            />
+            <TextField
+              label="Support URL"
+              value={form.supportUrl}
+              onChange={(supportUrl) => setForm((current) => ({ ...current, supportUrl }))}
+            />
+            <TextField
+              label="Privacy URL"
+              value={form.privacyUrl}
+              onChange={(privacyUrl) => setForm((current) => ({ ...current, privacyUrl }))}
+            />
+            <TextField
+              label="Terms URL"
+              value={form.termsUrl}
+              onChange={(termsUrl) => setForm((current) => ({ ...current, termsUrl }))}
+            />
+          </div>
+          <label className="mt-4 grid gap-2 text-sm font-medium">
+            Description
+            <textarea
+              className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.currentTarget.value }))
+              }
+            />
+          </label>
+          <button
+            className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            disabled={upsertMutation.isPending || selectedClientId.length === 0}
+            type="submit"
+          >
+            Save consent screen
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+function TextField(props: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="grid gap-2 text-sm font-medium">
+      {props.label}
+      <input
+        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+        value={props.value}
+        onChange={(event) => props.onChange(event.currentTarget.value)}
+      />
+    </label>
+  );
+}
+
+function ConsentUnavailable() {
+  return (
+    <section className="rounded-lg border border-border bg-card p-6">
+      <div className="flex items-center gap-3 text-red-600">
+        <AlertTriangle className="h-5 w-5" />
+        <h2 className="text-base font-semibold">Consent screens unavailable</h2>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The console could not load OAuth clients.
+      </p>
+    </section>
+  );
+}

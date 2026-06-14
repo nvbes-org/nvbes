@@ -43,7 +43,9 @@ pub(crate) async fn challenge_identifier(
     )
     .await?;
 
-    let challenge = super::identifier_flow::resolve_uniform_identifier_challenge(&request.email);
+    let challenge =
+        super::identifier_flow::resolve_uniform_identifier_challenge(&state.db, &request.email)
+            .await?;
 
     super::challenge_response(
         &state.redis,

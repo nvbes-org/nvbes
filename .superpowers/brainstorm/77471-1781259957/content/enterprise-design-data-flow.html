@@ -1,0 +1,81 @@
+<h2>Design 3/5 - Modele fonctionnel et donnees</h2>
+<p class="subtitle">Validation demandee: est-ce que ces objets et flux couvrent la console Enterprise sans transformer Workspace en Tenant ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Tenant data model - conceptual</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="mock-content" style="border:2px solid #111827">
+        <div class="label">Tenant</div>
+        <h3 style="margin:.35rem 0">Enterprise</h3>
+        <div class="placeholder">id, name, plan, region</div>
+        <div class="placeholder" style="margin-top:8px">security settings</div>
+        <div class="placeholder" style="margin-top:8px">billing account</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">People</div>
+        <h3 style="margin:.35rem 0">Memberships</h3>
+        <div class="placeholder">user_id + tenant_id</div>
+        <div class="placeholder" style="margin-top:8px">tenant role</div>
+        <div class="placeholder" style="margin-top:8px">module grants</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Invites</div>
+        <h3 style="margin:.35rem 0">Invitations</h3>
+        <div class="placeholder">email, role, modules</div>
+        <div class="placeholder" style="margin-top:8px">workspace assignments</div>
+        <div class="placeholder" style="margin-top:8px">expiry, status</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
+      <div class="mock-content">
+        <div class="label">Work</div>
+        <h3 style="margin:.35rem 0">Workspaces</h3>
+        <div class="placeholder">tenant_id owner</div>
+        <div class="placeholder" style="margin-top:8px">workspace memberships</div>
+        <div class="placeholder" style="margin-top:8px">product usage</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Developers</div>
+        <h3 style="margin:.35rem 0">Apps & service accounts</h3>
+        <div class="placeholder">API clients</div>
+        <div class="placeholder" style="margin-top:8px">keys and OAuth</div>
+        <div class="placeholder" style="margin-top:8px">scopes per tenant/workspace</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Governance</div>
+        <h3 style="margin:.35rem 0">Policies</h3>
+        <div class="placeholder">MFA requirement</div>
+        <div class="placeholder" style="margin-top:8px">data residency</div>
+        <div class="placeholder" style="margin-top:8px">least privilege rules</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="placeholder">Every enterprise-web request carries tenant context. Workspace context is optional and only used when editing a workspace-scoped resource.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>V0 API stance</h3>
+  <p>Build tenant-level read models for the console first: enterprise overview, users, invitations, workspace access, and policy summaries. Reuse existing workspace endpoints only behind enterprise-web adapters where the action is truly workspace-scoped.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="data-approved" onclick="toggleSelect(this)">
+    <div class="letter">OK</div>
+    <div class="content">
+      <h3>Valider le modele</h3>
+      <p>Tenant est le contexte obligatoire; Workspace reste une ressource rattachee.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="data-revise" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content">
+      <h3>Reviser</h3>
+      <p>Un objet, flux, ou niveau de contexte doit changer.</p>
+    </div>
+  </div>
+</div>

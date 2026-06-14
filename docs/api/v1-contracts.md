@@ -133,6 +133,13 @@ POST /oauth/device/deny
 Contraintes:
 
 - Les routes OAuth ne sont pas sous `/api/v1`.
+- Universal Login expose `POST /oauth/hosted-login/start`, `GET /oauth/hosted-login/:stateId`, `POST /oauth/hosted-login/:stateId/authorize` et `POST /oauth/hosted-login/:stateId/consent`.
+- Browser products use authorization code + PKCE through Universal Login.
+- Public clients require `S256` PKCE.
+- Implicit and password grants are not product contracts.
+- Refresh tokens are one-time-use; reuse revokes the refresh-token family.
+- OIDC discovery, OAuth authorization server metadata, JWKS, userinfo, introspection and revocation are product integration contracts.
+- Hosted-login state is short-lived, server-side, and never exposes raw PAR payloads or secrets to the browser.
 - `device/verify` est public et retourne les informations d'application a afficher.
 - `device/approve` et `device/deny` exigent une session utilisateur valide.
 - `device/approve` prend `user_code`, `workspace_id`, `organization_id?`, `consent_action?`.

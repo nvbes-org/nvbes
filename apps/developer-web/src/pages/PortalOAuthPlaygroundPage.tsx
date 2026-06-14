@@ -34,7 +34,10 @@ export function PortalOAuthPlaygroundPage() {
 
   return (
     <section>
-      <PageHeader title="OAuth playground" body="Generate PKCE inputs, open authorize, then exchange a returned code." />
+      <PageHeader
+        title="OAuth playground"
+        body="Generate PKCE inputs, open authorize, then exchange a returned code."
+      />
       <form
         className="grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-2"
         onSubmit={(event) => {
@@ -78,7 +81,9 @@ export function PortalOAuthPlaygroundPage() {
         </button>
       </form>
       <div className="mt-4 grid gap-3 rounded-md border border-border bg-card p-4 text-sm">
-        <code className="overflow-auto rounded-md bg-background p-3">{authorizeUrl || 'Authorize URL'}</code>
+        <code className="overflow-auto rounded-md bg-background p-3">
+          {authorizeUrl || 'Authorize URL'}
+        </code>
         <p>state: {state || '-'}</p>
         <p>nonce: {nonce || '-'}</p>
         <p>code verifier: {codeVerifier || '-'}</p>

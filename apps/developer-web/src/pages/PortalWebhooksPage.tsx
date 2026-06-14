@@ -1,8 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { createDeveloperWebhook, deleteDeveloperWebhook, listDeveloperWebhooks } from '@/developer.api';
-import { EmptyState, Field, PageHeader, buttonClass, formString, inputClass } from './Portal.shared';
+import {
+  createDeveloperWebhook,
+  deleteDeveloperWebhook,
+  listDeveloperWebhooks,
+} from '@/developer.api';
+import {
+  EmptyState,
+  Field,
+  PageHeader,
+  buttonClass,
+  formString,
+  inputClass,
+} from './Portal.shared';
 
 const eventOptions = ['user.created', 'login.failed', 'session.revoked', 'client.created'] as const;
 
@@ -43,8 +54,12 @@ export function PortalWebhooksPage() {
           });
         }}
       >
-        <Field label="Name"><input name="name" className={inputClass} required /></Field>
-        <Field label="Endpoint URL"><input name="url" className={inputClass} required /></Field>
+        <Field label="Name">
+          <input name="name" className={inputClass} required />
+        </Field>
+        <Field label="Endpoint URL">
+          <input name="url" className={inputClass} required />
+        </Field>
         <fieldset className="grid gap-2 text-sm">
           <legend className="font-medium">Events</legend>
           {eventOptions.map((eventType) => (
@@ -61,7 +76,9 @@ export function PortalWebhooksPage() {
       {signingSecret ? (
         <div className="mb-6 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Signing secret</h2>
-          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">{signingSecret}</code>
+          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">
+            {signingSecret}
+          </code>
         </div>
       ) : null}
       {webhooksQuery.data?.length ? (

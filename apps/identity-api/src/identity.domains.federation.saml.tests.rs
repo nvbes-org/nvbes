@@ -29,6 +29,7 @@ fn provider(base_url: &str) -> FederatedIdentityProviderRecord {
     FederatedIdentityProviderRecord {
         id: Uuid::new_v4(),
         provider_type: "saml".to_string(),
+        provider_family: "custom".to_string(),
         name: "Acme SAML".to_string(),
         client_id: Some("sp-entity".to_string()),
         issuer: Some("https://idp.example.com".to_string()),

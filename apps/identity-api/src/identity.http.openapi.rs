@@ -97,6 +97,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::legal::routes::revoke_consent,
         crate::domains::federation::routes::domains::list_domains,
         crate::domains::federation::routes::domains::create_domain,
+        crate::domains::federation::routes::domains::update_domain,
         crate::domains::federation::routes::domains::verify_domain,
         crate::domains::federation::routes::domains::delete_domain,
         crate::domains::federation::routes::idp::list_identity_providers,

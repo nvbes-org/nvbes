@@ -1,10 +1,10 @@
-# Universal Login nvbes Implementation Plan
+# Socle Identity vendable v1 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build nvbes Identity Universal Login as the hosted OAuth login, account chooser, consent, and redirect flow for browser-based nvbes products.
+**Goal:** Build nvbes Identity into a sellable foundation for nvbes products, starting with Universal Login and hardening the OAuth/OIDC, client, session, password lifecycle, and SDK surfaces products depend on.
 
-**Architecture:** Keep `identity-api` as the security boundary and `identity-web` as the hosted UI. Add a small OAuth hosted-login state machine backed by Redis, then adapt the existing `/login` challenge flow to resume the backend-approved authorization decision. Preserve the current PAR-first OAuth implementation and use hosted-login state as the bridge between browser `/oauth/authorize` entry and the React login shell.
+**Architecture:** Keep `identity-api` as the security boundary and `identity-web` as the hosted UI. Add a small OAuth hosted-login state machine backed by Redis, then adapt the existing `/login` challenge flow to resume the backend-approved authorization decision. Preserve the current PAR-first OAuth implementation and use hosted-login state as the bridge between browser `/oauth/authorize` entry and the React login shell. Then add contract tests and SDK polish around the already-existing OAuth/OIDC, client management, session management, refresh-token rotation, and password lifecycle modules.
 
 **Tech Stack:** Rust, Axum, SQLx, Redis session/cache helpers, React, TypeScript, TanStack Router, TanStack Query-style local API modules, Vitest/React Testing Library, Cargo tests.
 
@@ -1068,6 +1068,294 @@ rtk git commit -m "docs(identity): document universal login flow"
 
 ---
 
+## Task 8: OAuth/OIDC Sellable Contract Tests
+
+**Files:**
+
+- Modify: `apps/identity-api/src/identity.domains.oauth.metadata.rs`
+- Modify: `apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs`
+- Modify: `apps/identity-api/src/identity.domains.oauth.routes.rs`
+- Modify: `apps/identity-api/README.md`
+- Modify: `docs/api/v1-contracts.md`
+
+- [ ] **Step 1: Write the discovery metadata regression test**
+
+Append to `apps/identity-api/src/identity.domains.oauth.metadata.rs` tests:
+
+```rust
+#[test]
+fn oauth_metadata_advertises_sellable_foundation_endpoints() {
+    let issuer = "https://identity.example";
+
+    assert_eq!(
+        endpoint(issuer, "/oauth/authorize"),
+        "https://identity.example/oauth/authorize"
+    );
+    assert_eq!(
+        endpoint(issuer, "/oauth/token"),
+        "https://identity.example/oauth/token"
+    );
+    assert_eq!(
+        endpoint(issuer, "/oauth/userinfo"),
+        "https://identity.example/oauth/userinfo"
+    );
+    assert_eq!(
+        endpoint(issuer, "/.well-known/jwks.json"),
+        "https://identity.example/.well-known/jwks.json"
+    );
+}
+```
+
+- [ ] **Step 2: Run the focused metadata test**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api oauth_metadata_advertises_sellable_foundation_endpoints --lib
+```
+
+Expected: pass if metadata helper endpoints are coherent; fail if the helper or module is broken.
+
+- [ ] **Step 3: Add OAuth 2.1-aligned token tests**
+
+Add or extend tests in `apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs` so they assert:
+
+```rust
+// Public authorization-code clients must provide PKCE S256.
+// The password grant is rejected.
+// Refresh-token reuse returns refresh_token_reused and revokes the family.
+```
+
+Use existing test helpers in the same file. Do not create a parallel OAuth test harness.
+
+- [ ] **Step 4: Run token route tests**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api oauth_token --lib
+```
+
+Expected: pass after any required minimal fixes.
+
+- [ ] **Step 5: Document the contract**
+
+Add to `docs/api/v1-contracts.md` under OAuth:
+
+```markdown
+### OAuth/OIDC sellable foundation
+
+- Browser products use authorization code + PKCE through Universal Login.
+- Public clients require `S256` PKCE.
+- Implicit and password grants are not product contracts.
+- Refresh tokens are one-time-use; reuse revokes the refresh-token family.
+- OIDC discovery, OAuth authorization server metadata, JWKS, userinfo, introspection, and revocation are part of the product integration contract.
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+rtk git add apps/identity-api/src/identity.domains.oauth.metadata.rs apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs docs/api/v1-contracts.md
+rtk git commit -m "test(identity): lock OAuth OIDC foundation contracts"
+```
+
+---
+
+## Task 9: OAuth Client Management Product Surface
+
+**Files:**
+
+- Modify: `apps/identity-api/src/identity.domains.oauth.clients.rs`
+- Modify: `apps/identity-api/src/identity.domains.oauth.routes.clients.rs`
+- Modify: `apps/identity-api/src/identity.domains.oauth.service.types.rs`
+- Modify: `apps/identity-api/README.md`
+
+- [ ] **Step 1: Add client management tests**
+
+Extend existing OAuth client tests or create a focused test module beside `identity.domains.oauth.clients.rs` that asserts:
+
+```rust
+// Public clients can be created without returning a client secret.
+// Confidential clients return a secret once and persist only a hash.
+// Redirect URIs are exact-match strings.
+// Revoked clients cannot be used by authorize/token flows.
+```
+
+- [ ] **Step 2: Run client tests**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api oauth_client --lib
+```
+
+Expected: tests fail only for missing sellable-surface behavior.
+
+- [ ] **Step 3: Implement only missing behavior**
+
+Use the existing `oauth_clients` table, `hash_client_secret`, validation helpers, and route shapes. Do not add dynamic client registration. Keep management endpoints authenticated and step-up protected.
+
+- [ ] **Step 4: Run tests and check**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api oauth_client --lib
+rtk cargo check -p nvbes-identity-api
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit**
+
+```bash
+rtk git add apps/identity-api/src/identity.domains.oauth.clients.rs apps/identity-api/src/identity.domains.oauth.routes.clients.rs apps/identity-api/src/identity.domains.oauth.service.types.rs apps/identity-api/README.md
+rtk git commit -m "feat(identity): harden OAuth client management surface"
+```
+
+---
+
+## Task 10: Session And Password Lifecycle Contract
+
+**Files:**
+
+- Modify: `apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs`
+- Modify: `apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs`
+- Modify: `apps/identity-api/src/identity.domains.auth.password.change.rs`
+- Modify: `apps/identity-api/src/identity.domains.auth.password.reset.rs`
+- Modify: `apps/identity-api/README.md`
+
+- [ ] **Step 1: Add session lifecycle tests**
+
+Extend `apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs` with tests asserting:
+
+```rust
+// list_sessions hides expired and revoked sessions.
+// revoking one session revokes refresh tokens for that session only.
+// revoke_all_others keeps the current browser session and revokes refresh tokens for older sessions.
+```
+
+- [ ] **Step 2: Run session tests**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api sessions_mgmt --lib
+```
+
+Expected: pass for existing behavior or fail with a precise lifecycle gap.
+
+- [ ] **Step 3: Add password lifecycle contract tests**
+
+Add focused tests near the existing password modules asserting:
+
+```rust
+// email verification tokens are short-lived and one-time-use.
+// reset password tokens are short-lived and one-time-use.
+// password change invalidates existing sessions.
+// password reset writes an audit/security event.
+```
+
+- [ ] **Step 4: Implement only missing lifecycle behavior**
+
+Use existing password DB modules and audit/security-event helpers. Do not add a second audit store.
+
+- [ ] **Step 5: Run focused tests and check**
+
+Run:
+
+```bash
+rtk cargo test -p nvbes-identity-api password --lib
+rtk cargo test -p nvbes-identity-api sessions_mgmt --lib
+rtk cargo check -p nvbes-identity-api
+```
+
+Expected: pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+rtk git add apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs apps/identity-api/src/identity.domains.auth.password.change.rs apps/identity-api/src/identity.domains.auth.password.reset.rs apps/identity-api/README.md
+rtk git commit -m "test(identity): lock session and password lifecycle contracts"
+```
+
+---
+
+## Task 11: SDK Product Integration Surface
+
+**Files:**
+
+- Modify: `libs/ts/identity-sdk/src/index.ts`
+- Modify: `libs/ts/identity-sdk/src/storage.ts`
+- Modify: `libs/ts/identity-sdk/README.md`
+- Modify: `libs/rust/identity-sdk-backend/src/client.oauth.rs`
+- Modify: `libs/rust/identity-sdk-backend/src/types.rs`
+- Modify: `libs/rust/identity-sdk-backend/README.md` if present, otherwise `apps/identity-api/README.md`
+
+- [ ] **Step 1: Add TypeScript SDK tests**
+
+Create focused tests for:
+
+```typescript
+// authorization URL includes response_type=code, client_id, redirect_uri, scope, state, and S256 PKCE.
+// exchangeCode maps snake_case token response to camelCase TokenResponse.
+// refreshToken posts grant_type=refresh_token and maps response.
+// getUserInfo maps sub/email/email_verified/workspace_id.
+```
+
+- [ ] **Step 2: Run TypeScript SDK tests**
+
+Run:
+
+```bash
+rtk pnpm --dir libs/ts/identity-sdk test
+```
+
+Expected: fail for any missing SDK surface.
+
+- [ ] **Step 3: Implement missing TypeScript SDK helpers**
+
+Add:
+
+```typescript
+refreshToken(refreshToken: string): Promise<TokenResponse>
+revokeToken(token: string): Promise<void>
+```
+
+Keep token persistence memory-only unless the caller explicitly provides storage.
+
+- [ ] **Step 4: Add Rust SDK tests or compile checks**
+
+Extend Rust SDK coverage for:
+
+```rust
+// exchange_code form body
+// refresh_token form body
+// client_credentials form body
+// introspection request
+```
+
+- [ ] **Step 5: Run SDK validations**
+
+Run:
+
+```bash
+rtk pnpm --dir libs/ts/identity-sdk test
+rtk pnpm --dir libs/ts/identity-sdk check
+rtk cargo check -p nvbes-identity-sdk-backend
+```
+
+Expected: pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+rtk git add libs/ts/identity-sdk/src/index.ts libs/ts/identity-sdk/src/storage.ts libs/ts/identity-sdk/README.md libs/rust/identity-sdk-backend/src/client.oauth.rs libs/rust/identity-sdk-backend/src/types.rs apps/identity-api/README.md
+rtk git commit -m "feat(identity): expose product SDK integration surface"
+```
+
+---
+
 ## Self-Review
 
 Spec coverage:
@@ -1081,6 +1369,10 @@ Spec coverage:
 - Backend tests: Tasks 1 through 4.
 - Frontend tests: Tasks 5 and 6.
 - Docs: Task 7.
+- OAuth/OIDC sellable foundation: Task 8.
+- OAuth clients: Task 9.
+- Sessions and password lifecycle: Task 10.
+- SDK frontend and backend integration: Task 11.
 
 Forbidden marker scan:
 

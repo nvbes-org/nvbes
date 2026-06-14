@@ -11,8 +11,8 @@ export function DeveloperHomePage() {
           nvbes Developers
         </h1>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-          Build secure OAuth apps with nvbes Identity. Configure clients, redirects, webhooks,
-          logs, token inspection, SDKs, and quickstarts from one developer console.
+          Build secure OAuth apps with nvbes Identity. Configure clients, redirects, webhooks, logs,
+          token inspection, SDKs, and quickstarts from one developer console.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link

@@ -14,6 +14,7 @@ pub fn service_account_view_from_row(row: sqlx::postgres::PgRow) -> ServiceAccou
             client_id: row.get("client_id"),
             name: row.get("oauth_client_name"),
             created_at: row.get("oauth_client_created_at"),
+            last_used_at: row.get("oauth_client_last_used_at"),
             revoked_at: row.get("oauth_client_revoked_at"),
             client_assertion_required: row.get("client_assertion_required"),
             client_assertion_public_key_configured: row
@@ -57,6 +58,7 @@ pub fn service_account_client_view_from_oauth_result(
         client_id: result.client.client_id.clone(),
         name: result.client.name.clone(),
         created_at: result.client.created_at,
+        last_used_at: result.client.last_used_at,
         revoked_at: None,
         client_assertion_required: result.client.client_assertion_required,
         client_assertion_public_key_configured: result
