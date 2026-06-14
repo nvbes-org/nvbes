@@ -1,5 +1,39 @@
 import { createHttpClient, type HttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
+import {
+  createEnterpriseInvitations as createEnterpriseInvitationsRequest,
+  getEnterpriseAuditEvents as getEnterpriseAuditEventsRequest,
+  getEnterpriseBilling as getEnterpriseBillingRequest,
+  getEnterpriseContext as getEnterpriseContextRequest,
+  getEnterpriseDevelopers as getEnterpriseDevelopersRequest,
+  getEnterpriseOverview as getEnterpriseOverviewRequest,
+  getEnterprisePolicies as getEnterprisePoliciesRequest,
+  getEnterpriseSecurity as getEnterpriseSecurityRequest,
+  getEnterpriseUsage as getEnterpriseUsageRequest,
+  getEnterpriseUsers as getEnterpriseUsersRequest,
+  getEnterpriseWorkspaces as getEnterpriseWorkspacesRequest,
+  reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
+  suspendEnterpriseUser as suspendEnterpriseUserRequest,
+  updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
+} from './enterprise.client';
+import type {
+  EnterpriseAccessUpdateInput,
+  EnterpriseAccessUpdateResponse,
+  EnterpriseAuditEventsResponse,
+  EnterpriseBillingResponse,
+  EnterpriseContextResponse,
+  EnterpriseDevelopersResponse,
+  EnterpriseInvitationInput,
+  EnterpriseInvitationsResponse,
+  EnterpriseOverviewResponse,
+  EnterprisePoliciesResponse,
+  EnterpriseReactivateInput,
+  EnterpriseSecurityResponse,
+  EnterpriseSuspendInput,
+  EnterpriseUsageResponse,
+  EnterpriseUsersResponse,
+  EnterpriseWorkspacesResponse,
+} from './enterprise.schemas';
 
 type RequestOptions = { signal?: AbortSignal };
 
@@ -234,6 +268,77 @@ export class IdentityClient {
       new_password: newPassword,
     });
   }
+
+  getEnterpriseContext(options?: RequestOptions): Promise<EnterpriseContextResponse> {
+    return getEnterpriseContextRequest(this.http, options);
+  }
+
+  getEnterpriseOverview(options?: RequestOptions): Promise<EnterpriseOverviewResponse> {
+    return getEnterpriseOverviewRequest(this.http, options);
+  }
+
+  getEnterpriseUsers(options?: RequestOptions): Promise<EnterpriseUsersResponse> {
+    return getEnterpriseUsersRequest(this.http, options);
+  }
+
+  createEnterpriseInvitations(
+    input: EnterpriseInvitationInput,
+    options?: RequestOptions,
+  ): Promise<EnterpriseInvitationsResponse> {
+    return createEnterpriseInvitationsRequest(this.http, input, options);
+  }
+
+  updateEnterpriseUserAccess(
+    userId: string,
+    input: EnterpriseAccessUpdateInput,
+    options?: RequestOptions,
+  ): Promise<EnterpriseAccessUpdateResponse> {
+    return updateEnterpriseUserAccessRequest(this.http, userId, input, options);
+  }
+
+  suspendEnterpriseUser(
+    userId: string,
+    input: EnterpriseSuspendInput = {},
+    options?: RequestOptions,
+  ): Promise<EnterpriseAccessUpdateResponse> {
+    return suspendEnterpriseUserRequest(this.http, userId, input, options);
+  }
+
+  reactivateEnterpriseUser(
+    userId: string,
+    input: EnterpriseReactivateInput = {},
+    options?: RequestOptions,
+  ): Promise<EnterpriseAccessUpdateResponse> {
+    return reactivateEnterpriseUserRequest(this.http, userId, input, options);
+  }
+
+  getEnterpriseWorkspaces(options?: RequestOptions): Promise<EnterpriseWorkspacesResponse> {
+    return getEnterpriseWorkspacesRequest(this.http, options);
+  }
+
+  getEnterpriseDevelopers(options?: RequestOptions): Promise<EnterpriseDevelopersResponse> {
+    return getEnterpriseDevelopersRequest(this.http, options);
+  }
+
+  getEnterprisePolicies(options?: RequestOptions): Promise<EnterprisePoliciesResponse> {
+    return getEnterprisePoliciesRequest(this.http, options);
+  }
+
+  getEnterpriseSecurity(options?: RequestOptions): Promise<EnterpriseSecurityResponse> {
+    return getEnterpriseSecurityRequest(this.http, options);
+  }
+
+  getEnterpriseAuditEvents(options?: RequestOptions): Promise<EnterpriseAuditEventsResponse> {
+    return getEnterpriseAuditEventsRequest(this.http, options);
+  }
+
+  getEnterpriseBilling(options?: RequestOptions): Promise<EnterpriseBillingResponse> {
+    return getEnterpriseBillingRequest(this.http, options);
+  }
+
+  getEnterpriseUsage(options?: RequestOptions): Promise<EnterpriseUsageResponse> {
+    return getEnterpriseUsageRequest(this.http, options);
+  }
 }
 
 const OAuthClientSchema = z.object({
@@ -340,3 +445,6 @@ export const identityClient = new IdentityClient();
 export function createIdentityClient(options?: IdentityClientOptions): IdentityClient {
   return new IdentityClient(options);
 }
+
+export * from './enterprise.client';
+export * from './enterprise.schemas';
