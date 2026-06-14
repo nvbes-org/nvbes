@@ -2,6 +2,14 @@ import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanst
 
 import { DeveloperPortalLayout } from './layouts/DeveloperPortalLayout';
 import { DeveloperPublicLayout } from './layouts/DeveloperPublicLayout';
+import { PortalAppDetailPage } from './pages/PortalAppDetailPage';
+import { PortalAppsPage } from './pages/PortalAppsPage';
+import { PortalLogsPage } from './pages/PortalLogsPage';
+import { PortalOAuthPlaygroundPage } from './pages/PortalOAuthPlaygroundPage';
+import { PortalOverviewPage } from './pages/PortalOverviewPage';
+import { PortalRolesPage } from './pages/PortalRolesPage';
+import { PortalTokenInspectorPage } from './pages/PortalTokenInspectorPage';
+import { PortalWebhooksPage } from './pages/PortalWebhooksPage';
 
 function RootShell() {
   return <Outlet />;
@@ -63,15 +71,6 @@ function PublicPlaceholder({ title, body }: { title: string; body: string }) {
   );
 }
 
-function PortalPlaceholder({ title, body }: { title: string; body: string }) {
-  return (
-    <section className="rounded-md border border-border bg-card p-6">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{body}</p>
-    </section>
-  );
-}
-
 const rootRoute = createRootRoute({ component: RootShell });
 
 const publicRoute = createRoute({
@@ -117,67 +116,49 @@ const portalRoute = createRoute({
 const portalOverviewRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: '/',
-  component: () => (
-    <PortalPlaceholder
-      title="Developer portal"
-      body="Manage Identity integrations, inspect tokens, test OAuth flows, and review tenant-scoped logs."
-    />
-  ),
+  component: PortalOverviewPage,
 });
 
 const portalAppsRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: 'apps',
-  component: () => (
-    <PortalPlaceholder
-      title="OAuth apps"
-      body="Create apps, copy client IDs, and manage redirect URI configuration."
-    />
-  ),
+  component: PortalAppsPage,
+});
+
+const portalAppDetailRoute = createRoute({
+  getParentRoute: () => portalRoute,
+  path: 'apps/$clientId',
+  component: PortalAppDetailPage,
 });
 
 const portalTokensRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: 'tokens/inspect',
-  component: () => (
-    <PortalPlaceholder
-      title="Token inspector"
-      body="Inspect access tokens without persisting raw token bodies."
-    />
-  ),
+  component: PortalTokenInspectorPage,
 });
 
 const portalOAuthRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: 'oauth/playground',
-  component: () => (
-    <PortalPlaceholder
-      title="OAuth playground"
-      body="Exchange authorization codes and validate PKCE integration settings."
-    />
-  ),
+  component: PortalOAuthPlaygroundPage,
 });
 
 const portalLogsRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: 'logs',
-  component: () => (
-    <PortalPlaceholder
-      title="Logs"
-      body="Filter tenant logs by user, client, tenant, and event type."
-    />
-  ),
+  component: PortalLogsPage,
 });
 
 const portalWebhooksRoute = createRoute({
   getParentRoute: () => portalRoute,
   path: 'webhooks',
-  component: () => (
-    <PortalPlaceholder
-      title="Webhooks"
-      body="Subscribe endpoints to Identity events: user.created, login.failed, session.revoked, and client.created."
-    />
-  ),
+  component: PortalWebhooksPage,
+});
+
+const portalRolesRoute = createRoute({
+  getParentRoute: () => portalRoute,
+  path: 'roles',
+  component: PortalRolesPage,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -185,10 +166,12 @@ const routeTree = rootRoute.addChildren([
   portalRoute.addChildren([
     portalOverviewRoute,
     portalAppsRoute,
+    portalAppDetailRoute,
     portalTokensRoute,
     portalOAuthRoute,
     portalLogsRoute,
     portalWebhooksRoute,
+    portalRolesRoute,
   ]),
 ]);
 

@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet } from '@tanstack/react-router';
-import { AppWindow, FileJson, KeyRound, ListFilter, RadioTower, Webhook } from 'lucide-react';
+import {
+  AppWindow,
+  FileJson,
+  KeyRound,
+  ListFilter,
+  RadioTower,
+  ShieldCheck,
+  Webhook,
+} from 'lucide-react';
 
 import { getDeveloperMe } from '@/developer.api';
 
@@ -10,6 +18,7 @@ const navItems = [
   { to: '/portal/oauth/playground', label: 'OAuth', icon: RadioTower },
   { to: '/portal/logs', label: 'Logs', icon: ListFilter },
   { to: '/portal/webhooks', label: 'Webhooks', icon: Webhook },
+  { to: '/portal/roles', label: 'Roles', icon: ShieldCheck },
   { to: '/api-reference', label: 'OpenAPI', icon: FileJson },
 ] as const;
 

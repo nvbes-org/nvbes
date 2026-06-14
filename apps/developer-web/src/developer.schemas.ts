@@ -43,6 +43,11 @@ export const DeveloperAppsResponseSchema = z.object({
   apps: z.array(DeveloperAppSchema),
 });
 
+export const CreateDeveloperAppResponseSchema = z.object({
+  app: DeveloperAppSchema,
+  client_secret: z.string(),
+});
+
 export const DeveloperWebhookEndpointSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -59,8 +64,42 @@ export const DeveloperWebhooksResponseSchema = z.object({
   endpoints: z.array(DeveloperWebhookEndpointSchema),
 });
 
+export const CreateDeveloperWebhookEndpointResponseSchema = z.object({
+  endpoint: DeveloperWebhookEndpointSchema,
+  signing_secret: z.string(),
+});
+
+export const InspectDeveloperTokenResponseSchema = z.object({
+  active: z.boolean(),
+  subject: z.string().nullable(),
+  client_id: z.string().nullable(),
+  tenant_id: z.string().nullable(),
+  scopes: z.array(z.string()),
+  expires_at: z.string().nullable(),
+});
+
+export const OAuthPlaygroundExchangeResponseSchema = z.object({
+  token_type: z.string(),
+  expires_in: z.number(),
+  scope: z.string(),
+});
+
+export const DeveloperLogEntrySchema = z.object({
+  id: z.string(),
+  event_type: z.string(),
+  user_id: z.string().nullable(),
+  client_id: z.string().nullable(),
+  tenant_id: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export const DeveloperLogsResponseSchema = z.object({
+  logs: z.array(DeveloperLogEntrySchema),
+});
+
 export type DeveloperPermission = z.infer<typeof DeveloperPermissionSchema>;
 export type DeveloperRole = z.infer<typeof DeveloperRoleSchema>;
 export type DeveloperMe = z.infer<typeof DeveloperMeSchema>;
 export type DeveloperApp = z.infer<typeof DeveloperAppSchema>;
 export type DeveloperWebhookEndpoint = z.infer<typeof DeveloperWebhookEndpointSchema>;
+export type DeveloperLogEntry = z.infer<typeof DeveloperLogEntrySchema>;
