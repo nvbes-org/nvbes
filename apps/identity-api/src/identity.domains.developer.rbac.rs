@@ -82,6 +82,10 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
     }
 }
 
+pub fn has_permission(permissions: &[DeveloperPermission], required: DeveloperPermission) -> bool {
+    permissions.contains(&required)
+}
+
 impl DeveloperRole {
     pub fn as_db_str(self) -> &'static str {
         match self {
@@ -91,6 +95,24 @@ impl DeveloperRole {
             DeveloperRole::LogViewer => "log_viewer",
             DeveloperRole::IntegrationTester => "integration_tester",
             DeveloperRole::DocsViewer => "docs_viewer",
+        }
+    }
+}
+
+impl DeveloperPermission {
+    pub fn as_scope(self) -> &'static str {
+        match self {
+            DeveloperPermission::AppsRead => "developer.apps.read",
+            DeveloperPermission::AppsCreate => "developer.apps.create",
+            DeveloperPermission::AppsUpdateRedirects => "developer.apps.update_redirects",
+            DeveloperPermission::AppsRevoke => "developer.apps.revoke",
+            DeveloperPermission::WebhooksRead => "developer.webhooks.read",
+            DeveloperPermission::WebhooksManage => "developer.webhooks.manage",
+            DeveloperPermission::LogsRead => "developer.logs.read",
+            DeveloperPermission::TokensInspect => "developer.tokens.inspect",
+            DeveloperPermission::OAuthPlayground => "developer.oauth.playground",
+            DeveloperPermission::RbacManage => "developer.rbac.manage",
+            DeveloperPermission::DocsRead => "developer.docs.read",
         }
     }
 }

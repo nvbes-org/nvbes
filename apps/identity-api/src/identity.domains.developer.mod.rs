@@ -2,6 +2,10 @@ use axum::Router;
 
 use crate::app::AppState;
 
+#[path = "identity.domains.developer.apps.routes.rs"]
+pub mod apps_routes;
+#[path = "identity.domains.developer.apps.service.rs"]
+pub mod apps_service;
 #[path = "identity.domains.developer.rbac.rs"]
 pub mod rbac;
 #[path = "identity.domains.developer.rbac.db.rs"]
@@ -16,5 +20,7 @@ pub mod types;
 mod tests;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    routes::router(state)
+    Router::new()
+        .merge(routes::router(state))
+        .merge(apps_routes::router(state))
 }

@@ -1,4 +1,4 @@
-use super::rbac::{DeveloperPermission, DeveloperRole, permissions_for_role};
+use super::rbac::{DeveloperPermission, DeveloperRole, has_permission, permissions_for_role};
 use super::rbac_db::{parse_developer_role, permissions_for_roles};
 
 #[test]
@@ -103,6 +103,31 @@ fn developer_permission_serializes_as_dotted_scope() {
     let serialized = serde_json::to_string(&DeveloperPermission::AppsRead).unwrap();
 
     assert_eq!(serialized, "\"developer.apps.read\"");
+}
+
+#[test]
+fn developer_permission_scope_matches_serialized_scope() {
+    assert_eq!(
+        DeveloperPermission::AppsUpdateRedirects.as_scope(),
+        "developer.apps.update_redirects"
+    );
+}
+
+#[test]
+fn has_permission_matches_exact_permission() {
+    let permissions = [
+        DeveloperPermission::AppsRead,
+        DeveloperPermission::AppsUpdateRedirects,
+    ];
+
+    assert!(has_permission(
+        &permissions,
+        DeveloperPermission::AppsUpdateRedirects
+    ));
+    assert!(!has_permission(
+        &permissions,
+        DeveloperPermission::AppsRevoke
+    ));
 }
 
 #[test]
