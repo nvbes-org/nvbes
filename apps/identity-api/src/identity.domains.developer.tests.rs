@@ -1,5 +1,6 @@
 use super::rbac::{DeveloperPermission, DeveloperRole, has_permission, permissions_for_role};
 use super::rbac_db::{parse_developer_role, permissions_for_roles};
+use super::types::DeveloperWebhookEventType;
 
 #[test]
 fn developer_admin_has_all_developer_permissions() {
@@ -103,6 +104,21 @@ fn developer_permission_serializes_as_dotted_scope() {
     let serialized = serde_json::to_string(&DeveloperPermission::AppsRead).unwrap();
 
     assert_eq!(serialized, "\"developer.apps.read\"");
+}
+
+#[test]
+fn developer_webhook_event_serializes_as_dotted_event_type() {
+    let serialized = serde_json::to_string(&DeveloperWebhookEventType::UserCreated).unwrap();
+
+    assert_eq!(serialized, "\"user.created\"");
+}
+
+#[test]
+fn developer_webhook_event_exposes_database_event_type() {
+    assert_eq!(
+        DeveloperWebhookEventType::SessionRevoked.as_event_type(),
+        "session.revoked"
+    );
 }
 
 #[test]

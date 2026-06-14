@@ -14,6 +14,10 @@ pub mod rbac_db;
 pub mod routes;
 #[path = "identity.domains.developer.types.rs"]
 pub mod types;
+#[path = "identity.domains.developer.webhooks.routes.rs"]
+pub mod webhooks_routes;
+#[path = "identity.domains.developer.webhooks.service.rs"]
+pub mod webhooks_service;
 
 #[cfg(test)]
 #[path = "identity.domains.developer.tests.rs"]
@@ -23,4 +27,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .merge(routes::router(state))
         .merge(apps_routes::router(state))
+        .merge(webhooks_routes::router(state))
 }

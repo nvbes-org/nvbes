@@ -63,3 +63,55 @@ pub struct CreateDeveloperAppResponse {
 pub struct UpdateDeveloperRedirectsRequest {
     pub redirect_uris: Vec<String>,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+pub enum DeveloperWebhookEventType {
+    #[serde(rename = "user.created")]
+    UserCreated,
+    #[serde(rename = "login.failed")]
+    LoginFailed,
+    #[serde(rename = "session.revoked")]
+    SessionRevoked,
+    #[serde(rename = "client.created")]
+    ClientCreated,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeveloperWebhookEndpointView {
+    pub id: Uuid,
+    pub name: String,
+    pub url: String,
+    pub status: String,
+    pub events: Vec<DeveloperWebhookEventType>,
+    pub signing_secret_last4: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CreateDeveloperWebhookEndpointRequest {
+    pub name: String,
+    pub url: String,
+    pub events: Vec<DeveloperWebhookEventType>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CreateDeveloperWebhookEndpointResponse {
+    pub endpoint: DeveloperWebhookEndpointView,
+    pub signing_secret: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeveloperWebhooksResponse {
+    pub endpoints: Vec<DeveloperWebhookEndpointView>,
+}
+
+impl DeveloperWebhookEventType {
+    pub fn as_event_type(self) -> &'static str {
+        match self {
+            DeveloperWebhookEventType::UserCreated => "user.created",
+            DeveloperWebhookEventType::LoginFailed => "login.failed",
+            DeveloperWebhookEventType::SessionRevoked => "session.revoked",
+            DeveloperWebhookEventType::ClientCreated => "client.created",
+        }
+    }
+}
