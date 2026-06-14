@@ -207,10 +207,11 @@ export const EnterpriseAccessUpdateInputSchema = z.object({
 });
 
 export const EnterpriseSuspendInputSchema = z.object({
-  reason: z.string().min(1).optional(),
+  reason: z.string().min(1),
 });
 
 export const EnterpriseReactivateInputSchema = z.object({
+  reason: z.string().min(1),
   module_grants: z.array(EnterpriseModuleGrantSchema).optional(),
   workspace_ids: z.array(z.string()).optional(),
 });

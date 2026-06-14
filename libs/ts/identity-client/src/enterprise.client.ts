@@ -36,25 +36,27 @@ import {
 
 export type EnterpriseRequestOptions = Pick<HttpRequestOptions, 'signal'>;
 
+const EnterpriseApiBasePath = '/api/v1/enterprise';
+
 export function getEnterpriseContext(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseContextResponse> {
-  return http.get('/enterprise/context', EnterpriseContextResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/context`, EnterpriseContextResponseSchema, options);
 }
 
 export function getEnterpriseOverview(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseOverviewResponse> {
-  return http.get('/enterprise/overview', EnterpriseOverviewResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/overview`, EnterpriseOverviewResponseSchema, options);
 }
 
 export function getEnterpriseUsers(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseUsersResponse> {
-  return http.get('/enterprise/users', EnterpriseUsersResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/users`, EnterpriseUsersResponseSchema, options);
 }
 
 export function createEnterpriseInvitations(
@@ -63,7 +65,7 @@ export function createEnterpriseInvitations(
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseInvitationsResponse> {
   return http.post(
-    '/enterprise/invitations',
+    `${EnterpriseApiBasePath}/invitations`,
     EnterpriseInvitationsResponseSchema,
     EnterpriseInvitationInputSchema.parse(input),
     options,
@@ -76,22 +78,25 @@ export function updateEnterpriseUserAccess(
   input: EnterpriseAccessUpdateInput,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseAccessUpdateResponse> {
-  return http.post(
-    `/enterprise/users/${encodeURIComponent(userId)}/access`,
+  return http.request(
+    `${EnterpriseApiBasePath}/users/${encodeURIComponent(userId)}/access`,
     EnterpriseAccessUpdateResponseSchema,
-    EnterpriseAccessUpdateInputSchema.parse(input),
-    options,
+    {
+      ...options,
+      body: EnterpriseAccessUpdateInputSchema.parse(input),
+      method: 'PATCH',
+    },
   );
 }
 
 export function suspendEnterpriseUser(
   http: HttpClient,
   userId: string,
-  input: EnterpriseSuspendInput = {},
+  input: EnterpriseSuspendInput,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseAccessUpdateResponse> {
   return http.post(
-    `/enterprise/users/${encodeURIComponent(userId)}/suspend`,
+    `${EnterpriseApiBasePath}/users/${encodeURIComponent(userId)}/suspend`,
     EnterpriseAccessUpdateResponseSchema,
     EnterpriseSuspendInputSchema.parse(input),
     options,
@@ -101,11 +106,11 @@ export function suspendEnterpriseUser(
 export function reactivateEnterpriseUser(
   http: HttpClient,
   userId: string,
-  input: EnterpriseReactivateInput = {},
+  input: EnterpriseReactivateInput,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseAccessUpdateResponse> {
   return http.post(
-    `/enterprise/users/${encodeURIComponent(userId)}/reactivate`,
+    `${EnterpriseApiBasePath}/users/${encodeURIComponent(userId)}/reactivate`,
     EnterpriseAccessUpdateResponseSchema,
     EnterpriseReactivateInputSchema.parse(input),
     options,
@@ -116,47 +121,59 @@ export function getEnterpriseWorkspaces(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseWorkspacesResponse> {
-  return http.get('/enterprise/workspaces', EnterpriseWorkspacesResponseSchema, options);
+  return http.get(
+    `${EnterpriseApiBasePath}/workspaces`,
+    EnterpriseWorkspacesResponseSchema,
+    options,
+  );
 }
 
 export function getEnterpriseDevelopers(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseDevelopersResponse> {
-  return http.get('/enterprise/developers', EnterpriseDevelopersResponseSchema, options);
+  return http.get(
+    `${EnterpriseApiBasePath}/developers`,
+    EnterpriseDevelopersResponseSchema,
+    options,
+  );
 }
 
 export function getEnterprisePolicies(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterprisePoliciesResponse> {
-  return http.get('/enterprise/policies', EnterprisePoliciesResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/policies`, EnterprisePoliciesResponseSchema, options);
 }
 
 export function getEnterpriseSecurity(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseSecurityResponse> {
-  return http.get('/enterprise/security', EnterpriseSecurityResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/security`, EnterpriseSecurityResponseSchema, options);
 }
 
 export function getEnterpriseAuditEvents(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseAuditEventsResponse> {
-  return http.get('/enterprise/audit-events', EnterpriseAuditEventsResponseSchema, options);
+  return http.get(
+    `${EnterpriseApiBasePath}/audit-events`,
+    EnterpriseAuditEventsResponseSchema,
+    options,
+  );
 }
 
 export function getEnterpriseBilling(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseBillingResponse> {
-  return http.get('/enterprise/billing', EnterpriseBillingResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/billing`, EnterpriseBillingResponseSchema, options);
 }
 
 export function getEnterpriseUsage(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterpriseUsageResponse> {
-  return http.get('/enterprise/usage', EnterpriseUsageResponseSchema, options);
+  return http.get(`${EnterpriseApiBasePath}/usage`, EnterpriseUsageResponseSchema, options);
 }

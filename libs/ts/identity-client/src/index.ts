@@ -298,7 +298,7 @@ export class IdentityClient {
 
   suspendEnterpriseUser(
     userId: string,
-    input: EnterpriseSuspendInput = {},
+    input: EnterpriseSuspendInput,
     options?: RequestOptions,
   ): Promise<EnterpriseAccessUpdateResponse> {
     return suspendEnterpriseUserRequest(this.http, userId, input, options);
@@ -306,7 +306,7 @@ export class IdentityClient {
 
   reactivateEnterpriseUser(
     userId: string,
-    input: EnterpriseReactivateInput = {},
+    input: EnterpriseReactivateInput,
     options?: RequestOptions,
   ): Promise<EnterpriseAccessUpdateResponse> {
     return reactivateEnterpriseUserRequest(this.http, userId, input, options);
