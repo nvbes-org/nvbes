@@ -12,7 +12,10 @@ function DeveloperHomePage() {
           <Link to="/" className="text-lg font-semibold">
             nvbes Developers
           </Link>
-          <Link to="/console" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+          <Link
+            to="/console"
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
             Open console
           </Link>
         </nav>
@@ -30,7 +33,10 @@ function DeveloperHomePage() {
           </div>
           <div className="grid gap-3 rounded-lg border border-border bg-card p-4">
             {['OAuth apps', 'Scope registry', 'Secret rotation', 'Token debugger'].map((label) => (
-              <div key={label} className="rounded-md border border-border bg-background px-4 py-3 text-sm font-medium">
+              <div
+                key={label}
+                className="rounded-md border border-border bg-background px-4 py-3 text-sm font-medium"
+              >
                 {label}
               </div>
             ))}
@@ -55,8 +61,16 @@ function ConsolePreviewPage() {
 }
 
 const rootRoute = createRootRoute({ component: RootShell });
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: DeveloperHomePage });
-const consoleRoute = createRoute({ getParentRoute: () => rootRoute, path: '/console', component: ConsolePreviewPage });
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: DeveloperHomePage,
+});
+const consoleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/console',
+  component: ConsolePreviewPage,
+});
 const routeTree = rootRoute.addChildren([homeRoute, consoleRoute]);
 
 export const router = createRouter({ routeTree });

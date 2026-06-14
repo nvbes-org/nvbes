@@ -45,7 +45,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-devtools-json": "^1.0.0",
-    "vitest": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }
