@@ -14,13 +14,9 @@ echo "  ✓ identity-sdk-core/openapi.json"
 cargo run -p nvbes-drive-api -- --export-openapi > apps/drive-api/openapi.json
 echo "  ✓ drive-api/openapi.json"
 
-pnpm exec vp fmt --write \
-  apps/identity-api/openapi.json \
-  apps/drive-api/openapi.json \
-  libs/ts/identity-sdk-core/openapi.json >/dev/null
+node -e "const fs=require('fs'); const compact=['apps/identity-api/openapi.json']; const pretty=['apps/drive-api/openapi.json','libs/ts/identity-sdk-core/openapi.json']; for (const f of compact) { const data=JSON.parse(fs.readFileSync(f,'utf8')); fs.writeFileSync(f, JSON.stringify(data)+'\n'); } for (const f of pretty) { const data=JSON.parse(fs.readFileSync(f,'utf8')); fs.writeFileSync(f, JSON.stringify(data,null,2)+'\n'); }"
 
 echo "Generating TypeScript types..."
 pnpm --dir libs/ts/identity-sdk-core generate:ts
-pnpm exec vp fmt --write libs/ts/identity-sdk-core/src/types.gen.ts >/dev/null
 
 echo "Done."

@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5175,
       proxy: {
-        '/api': identityApiProxyTarget,
+        '^/api(?:/|$)': identityApiProxyTarget,
         '/developer': identityApiProxyTarget,
         '/oauth': identityApiProxyTarget,
       },

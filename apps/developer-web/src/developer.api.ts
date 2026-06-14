@@ -1,4 +1,5 @@
 import { createHttpClient } from '@nvbes/http-client';
+import { z } from 'zod';
 
 import {
   CreateDeveloperAppResponseSchema,
@@ -16,6 +17,7 @@ import {
 const developerHttpClient = createHttpClient({
   credentials: 'include',
 });
+const EmptyResponseSchema = z.undefined();
 
 export function getDeveloperMe(options?: { signal?: AbortSignal }) {
   return developerHttpClient.get('/developer/me', DeveloperMeSchema, options);
@@ -103,7 +105,7 @@ export function createDeveloperWebhook(input: CreateDeveloperWebhookInput) {
 
 export function deleteDeveloperWebhook(endpointId: string) {
   return developerHttpClient
-    .delete(`/developer/webhooks/${endpointId}`, DeveloperWebhooksResponseSchema)
+    .delete(`/developer/webhooks/${endpointId}`, EmptyResponseSchema)
     .then(() => undefined);
 }
 

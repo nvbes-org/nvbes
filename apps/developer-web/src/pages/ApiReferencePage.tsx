@@ -21,7 +21,9 @@ export function ApiReferencePage() {
   const openApiQuery = useQuery({
     queryKey: ['developer', 'openapi'],
     queryFn: fetchOpenApi,
+    retry: false,
   });
+  const hasApiError = openApiQuery.isError;
   const paths = Object.keys(openApiQuery.data?.paths ?? {});
   const developerPaths = paths.filter((path) => path.startsWith('/developer'));
 
@@ -38,6 +40,15 @@ export function ApiReferencePage() {
           Open Swagger UI
         </a>
       </header>
+      {hasApiError ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4">
+          <h2 className="text-sm font-semibold text-destructive">API connection error</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            OpenAPI metadata could not be loaded from the Identity API. Start the API service or
+            configure the developer-web proxy target, then reload this page.
+          </p>
+        </div>
+      ) : null}
       <div className="rounded-md border border-border bg-card">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
           Developer paths
