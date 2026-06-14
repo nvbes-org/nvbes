@@ -1,11 +1,14 @@
 import type { EnterpriseModuleGrant, EnterpriseRole } from '@nvbes/identity-client';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -26,7 +29,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../components/ui/sheet';
-import { describeModuleGrant } from '../enterprise.permissions';
+import { describeModuleGrant, isLastOwnerRemoval } from '../enterprise.permissions';
 
 export type AccessFormValue = {
   role: EnterpriseRole;
@@ -41,9 +44,11 @@ type UsersPageAccessProps = {
   grants: EnterpriseModuleGrant[];
   workspaceIds: string[];
   value: AccessFormValue;
+  currentOwnerCount: number;
+  error: Error | null;
   saving: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (value: AccessFormValue) => void;
+  onSubmit: (value: AccessFormValue) => Promise<boolean>;
 };
 
 export function UsersPageAccess({
@@ -53,11 +58,18 @@ export function UsersPageAccess({
   grants,
   workspaceIds,
   value,
+  currentOwnerCount,
+  error,
   saving,
   onOpenChange,
   onSubmit,
 }: UsersPageAccessProps) {
   const [draft, setDraft] = useState(value);
+  const blocksLastOwner = isLastOwnerRemoval({
+    currentOwnerCount,
+    selectedRole: value.role,
+    nextRole: draft.role,
+  });
 
   useEffect(() => {
     setDraft(value);
@@ -72,6 +84,14 @@ export function UsersPageAccess({
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-5 px-4">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertTitle>Access update failed</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
+            </Alert>
+          ) : null}
+
           <Field>
             <FieldLabel>Role</FieldLabel>
             <Select
@@ -91,6 +111,9 @@ export function UsersPageAccess({
                 ))}
               </SelectContent>
             </Select>
+            {blocksLastOwner ? (
+              <FieldError>At least one owner must remain in the tenant.</FieldError>
+            ) : null}
           </Field>
 
           <CheckboxSet
@@ -111,7 +134,16 @@ export function UsersPageAccess({
         </div>
 
         <SheetFooter>
-          <Button type="button" disabled={saving} onClick={() => onSubmit(draft)}>
+          <Button
+            type="button"
+            disabled={saving || blocksLastOwner}
+            onClick={async () => {
+              const success = await onSubmit(draft);
+              if (success) {
+                onOpenChange(false);
+              }
+            }}
+          >
             {saving ? 'Saving...' : 'Save access'}
           </Button>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -45,6 +45,8 @@ type UsersPageInviteProps = {
   roles: EnterpriseRole[];
   grants: EnterpriseModuleGrant[];
   workspaceIds: string[];
+  canInvite: boolean;
+  permissionPending: boolean;
   submitting: boolean;
   recipientErrors: Array<{ email: string; message: string }>;
   onSubmit: (value: InviteSubmitValue) => Promise<boolean>;
@@ -54,6 +56,8 @@ export function UsersPageInvite({
   roles,
   grants,
   workspaceIds,
+  canInvite,
+  permissionPending,
   submitting,
   recipientErrors,
   onSubmit,
@@ -100,8 +104,15 @@ export function UsersPageInvite({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button">Invite users</Button>
+        <Button type="button" disabled={!canInvite || permissionPending}>
+          Invite users
+        </Button>
       </DialogTrigger>
+      {!canInvite && !permissionPending ? (
+        <p className="text-xs text-muted-foreground">
+          Your current tenant grants do not allow member invitations.
+        </p>
+      ) : null}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <form className="flex flex-col gap-5" onSubmit={submitForm}>
           <DialogHeader>
@@ -167,16 +178,19 @@ export function UsersPageInvite({
           </Alert>
 
           {recipientErrors.length > 0 ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-              <p className="text-sm font-medium text-destructive">Recipient errors</p>
-              <ul className="mt-2 space-y-1 text-sm text-destructive">
-                {recipientErrors.map((error) => (
-                  <li key={error.email}>
-                    {error.email}: {error.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Alert variant="destructive">
+              <AlertTriangle className="size-4" />
+              <AlertTitle>Recipient errors</AlertTitle>
+              <AlertDescription>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {recipientErrors.map((error) => (
+                    <li key={error.email}>
+                      {error.email}: {error.message}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           ) : null}
 
           <DialogFooter>

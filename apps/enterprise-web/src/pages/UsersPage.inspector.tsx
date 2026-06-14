@@ -22,9 +22,10 @@ type UsersPageInspectorProps = {
   selectedInvitation: EnterpriseInvitationRow | null;
   canEditAccess: boolean;
   mutatingLifecycle: boolean;
+  lifecycleError: Error | null;
   onEditAccess: () => void;
-  onSuspend: (reason: string) => void;
-  onReactivate: (reason: string) => void;
+  onSuspend: (reason: string) => Promise<boolean>;
+  onReactivate: (reason: string) => Promise<boolean>;
 };
 
 export function UsersPageInspector({
@@ -32,6 +33,7 @@ export function UsersPageInspector({
   selectedInvitation,
   canEditAccess,
   mutatingLifecycle,
+  lifecycleError,
   onEditAccess,
   onSuspend,
   onReactivate,
@@ -42,6 +44,7 @@ export function UsersPageInspector({
         user={selectedUser}
         canEditAccess={canEditAccess}
         mutatingLifecycle={mutatingLifecycle}
+        lifecycleError={lifecycleError}
         onEditAccess={onEditAccess}
         onSuspend={onSuspend}
         onReactivate={onReactivate}
@@ -74,6 +77,7 @@ function MemberInspector({
   user,
   canEditAccess,
   mutatingLifecycle,
+  lifecycleError,
   onEditAccess,
   onSuspend,
   onReactivate,
@@ -81,26 +85,25 @@ function MemberInspector({
   user: EnterpriseUserRow;
   canEditAccess: boolean;
   mutatingLifecycle: boolean;
+  lifecycleError: Error | null;
   onEditAccess: () => void;
-  onSuspend: (reason: string) => void;
-  onReactivate: (reason: string) => void;
+  onSuspend: (reason: string) => Promise<boolean>;
+  onReactivate: (reason: string) => Promise<boolean>;
 }) {
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string | null>(null);
   const suspended = user.status === 'suspended';
 
-  function submitLifecycle() {
+  async function submitLifecycle() {
     if (reason.trim().length === 0) {
       setReasonError('An audit reason is required.');
       return;
     }
     setReasonError(null);
-    if (suspended) {
-      onReactivate(reason);
-    } else {
-      onSuspend(reason);
+    const success = suspended ? await onReactivate(reason) : await onSuspend(reason);
+    if (success) {
+      setReason('');
     }
-    setReason('');
   }
 
   return (
@@ -124,6 +127,14 @@ function MemberInspector({
         <Detail label="MFA" value={user.mfa_enabled ? 'Enabled' : 'Not enabled'} />
         <Detail label="Workspaces" value={formatWorkspaceCount(user.workspace_ids.length)} />
         <GrantList grants={user.module_grants} />
+
+        {lifecycleError ? (
+          <Alert variant="destructive">
+            <Ban className="size-4" />
+            <AlertTitle>{suspended ? 'Reactivation failed' : 'Suspension failed'}</AlertTitle>
+            <AlertDescription>{lifecycleError.message}</AlertDescription>
+          </Alert>
+        ) : null}
 
         <div className="flex flex-col gap-2">
           <Button type="button" variant="outline" disabled={!canEditAccess} onClick={onEditAccess}>
@@ -153,7 +164,7 @@ function MemberInspector({
         <Button
           type="button"
           variant={suspended ? 'default' : 'destructive'}
-          disabled={mutatingLifecycle}
+          disabled={!canEditAccess || mutatingLifecycle}
           onClick={submitLifecycle}
         >
           {suspended ? 'Reactivate member' : 'Suspend member'}

@@ -48,6 +48,10 @@ export function UsersPage() {
     () => collectWorkspaceIds(usersData?.users ?? [], usersData?.invitations ?? []),
     [usersData],
   );
+  const currentOwnerCount = useMemo(
+    () => (usersData?.users ?? []).filter((user) => user.role === 'owner').length,
+    [usersData],
+  );
   const canEditAccess = contextQuery.data ? canManageUsers(contextQuery.data) : false;
 
   const invalidateUsers = () =>
@@ -106,6 +110,8 @@ export function UsersPage() {
           roles={roles}
           grants={grants}
           workspaceIds={workspaceIds}
+          canInvite={canEditAccess}
+          permissionPending={contextQuery.isPending}
           submitting={inviteMutation.isPending}
           recipientErrors={recipientErrors}
           onSubmit={async (value) => {
@@ -147,16 +153,29 @@ export function UsersPage() {
             selectedInvitation={selectedInvitation}
             canEditAccess={canEditAccess}
             mutatingLifecycle={suspendMutation.isPending || reactivateMutation.isPending}
+            lifecycleError={suspendMutation.error ?? reactivateMutation.error}
             onEditAccess={() => setAccessOpen(true)}
-            onSuspend={(reason) => {
+            onSuspend={async (reason) => {
               if (selectedUser) {
-                suspendMutation.mutate({ userId: selectedUser.id, reason });
+                try {
+                  await suspendMutation.mutateAsync({ userId: selectedUser.id, reason });
+                  return true;
+                } catch {
+                  return false;
+                }
               }
+              return false;
             }}
-            onReactivate={(reason) => {
+            onReactivate={async (reason) => {
               if (selectedUser) {
-                reactivateMutation.mutate({ userId: selectedUser.id, reason });
+                try {
+                  await reactivateMutation.mutateAsync({ userId: selectedUser.id, reason });
+                  return true;
+                } catch {
+                  return false;
+                }
               }
+              return false;
             }}
           />
         </section>
@@ -174,9 +193,18 @@ export function UsersPage() {
             module_grants: selectedUser.module_grants,
             workspace_ids: selectedUser.workspace_ids,
           }}
+          currentOwnerCount={currentOwnerCount}
+          error={accessMutation.error}
           saving={accessMutation.isPending}
           onOpenChange={setAccessOpen}
-          onSubmit={(value) => accessMutation.mutate(value)}
+          onSubmit={async (value) => {
+            try {
+              await accessMutation.mutateAsync(value);
+              return true;
+            } catch {
+              return false;
+            }
+          }}
         />
       ) : null}
     </div>
@@ -187,7 +215,7 @@ function LoadingState() {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <Card className="rounded-lg" size="sm">
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
