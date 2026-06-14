@@ -944,7 +944,7 @@ pub async fn get_context(
 
     Ok(Json(DeveloperContextResponse {
         tenant_id,
-        principal_id: auth.principal_id,
+        principal_id: auth.user_id,
         roles: Vec::new(),
         permissions: Vec::new(),
         workspaces: Vec::new(),
