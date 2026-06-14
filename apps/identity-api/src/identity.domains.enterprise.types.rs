@@ -78,6 +78,7 @@ pub struct EnterpriseWorkspaceSummary {
 pub struct EnterpriseDeveloperCredentialSummary {
     pub id: Uuid,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub owner_email: Option<String>,
     pub scopes: Vec<String>,
     pub last_used_at: Option<DateTime<Utc>>,
@@ -103,6 +104,7 @@ pub struct EnterpriseSecuritySignal {
     pub label: String,
     pub status: String,
     pub severity: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<BTreeMap<String, serde_json::Value>>,
 }
 
@@ -115,6 +117,7 @@ pub struct EnterpriseAuditEvent {
     pub actor_email: Option<String>,
     pub target_type: Option<String>,
     pub target_id: Option<Uuid>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
     pub created_at: DateTime<Utc>,
 }
@@ -206,6 +209,7 @@ pub struct EnterpriseAccessUpdateResponse {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseWorkspacesResponse {
     pub workspaces: Vec<EnterpriseWorkspaceSummary>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<EnterprisePage>,
 }
 
@@ -213,6 +217,7 @@ pub struct EnterpriseWorkspacesResponse {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseDevelopersResponse {
     pub credentials: Vec<EnterpriseDeveloperCredentialSummary>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub page: Option<EnterprisePage>,
 }
 
