@@ -138,6 +138,51 @@ export const RotateDeveloperSecretSchema = z.object({
   rotated_at: z.string(),
 });
 
+export const DeveloperWebhookEndpointSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  url: z.string(),
+  status: z.enum(['active', 'paused', 'revoked']),
+  failed_delivery_count: z.number().int().nonnegative(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const DeveloperWebhookEndpointsSchema = z.object({
+  webhooks: z.array(DeveloperWebhookEndpointSchema),
+});
+
+export const DeveloperWebhookDeliverySchema = z.object({
+  id: z.string().uuid(),
+  endpoint_id: z.string().uuid(),
+  event_id: z.string().uuid(),
+  event_type: z.string(),
+  status: z.enum(['pending', 'delivered', 'failed', 'replayed']),
+  attempt_count: z.number().int().nonnegative(),
+  response_status: z.number().int().nullable(),
+  error_message: z.string().nullable(),
+  created_at: z.string(),
+  delivered_at: z.string().nullable(),
+  replayed_from_delivery_id: z.string().uuid().nullable(),
+});
+
+export const DeveloperWebhookDeliveriesSchema = z.object({
+  deliveries: z.array(DeveloperWebhookDeliverySchema),
+});
+
+export const DeveloperLogEntrySchema = z.object({
+  id: z.string().uuid(),
+  source: z.string(),
+  event_type: z.string(),
+  severity: z.string(),
+  message: z.string(),
+  created_at: z.string(),
+});
+
+export const DeveloperLogsSchema = z.object({
+  logs: z.array(DeveloperLogEntrySchema),
+});
+
 export type DeveloperRole = z.infer<typeof DeveloperRoleSchema>;
 export type DeveloperPermission = z.infer<typeof DeveloperPermissionSchema>;
 export type DeveloperContext = z.infer<typeof DeveloperContextSchema>;
@@ -148,3 +193,6 @@ export type DeveloperScopeRegistryEntry = z.infer<typeof DeveloperScopeRegistryE
 export type DeveloperServiceAccount = z.infer<typeof DeveloperServiceAccountSchema>;
 export type DeveloperSecretVersion = z.infer<typeof DeveloperSecretVersionSchema>;
 export type RotateDeveloperSecret = z.infer<typeof RotateDeveloperSecretSchema>;
+export type DeveloperWebhookEndpoint = z.infer<typeof DeveloperWebhookEndpointSchema>;
+export type DeveloperWebhookDelivery = z.infer<typeof DeveloperWebhookDeliverySchema>;
+export type DeveloperLogEntry = z.infer<typeof DeveloperLogEntrySchema>;

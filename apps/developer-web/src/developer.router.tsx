@@ -2,9 +2,11 @@ import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanst
 import { DeveloperShell } from './layouts/DeveloperShell';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { OAuthAppsPage } from './pages/OAuthAppsPage';
+import { LogsPage } from './pages/LogsPage';
 import { ScopesPage } from './pages/ScopesPage';
 import { SecretsPage } from './pages/SecretsPage';
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage';
+import { WebhooksPage } from './pages/WebhooksPage';
 
 function RootShell() {
   return <Outlet />;
@@ -76,14 +78,7 @@ const consoleRootRoute = createRoute({
   path: '/console',
   component: DeveloperShell,
 });
-const consolePlaceholderRoutes = [
-  '/consent',
-  '/webhooks',
-  '/sandbox',
-  '/tokens',
-  '/health',
-  '/logs',
-].map((path) =>
+const consolePlaceholderRoutes = ['/consent', '/sandbox', '/tokens', '/health'].map((path) =>
   createRoute({
     getParentRoute: () => consoleRootRoute,
     path,
@@ -115,6 +110,16 @@ const consoleServiceAccountsRoute = createRoute({
   path: '/service-accounts',
   component: ServiceAccountsPage,
 });
+const consoleWebhooksRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/webhooks',
+  component: WebhooksPage,
+});
+const consoleLogsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/logs',
+  component: LogsPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   consoleRootRoute.addChildren([
@@ -123,6 +128,8 @@ const routeTree = rootRoute.addChildren([
     consoleScopesRoute,
     consoleSecretsRoute,
     consoleServiceAccountsRoute,
+    consoleWebhooksRoute,
+    consoleLogsRoute,
     ...consolePlaceholderRoutes,
   ]),
 ]);

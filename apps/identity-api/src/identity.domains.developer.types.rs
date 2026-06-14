@@ -144,3 +144,54 @@ pub struct RotateDeveloperSecretResponse {
     pub overlap_ends_at: DateTime<Utc>,
     pub rotated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeveloperWebhookEndpointSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub url: String,
+    pub status: String,
+    pub failed_delivery_count: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperWebhookEndpointsResponse {
+    pub webhooks: Vec<DeveloperWebhookEndpointSummary>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeveloperWebhookDeliverySummary {
+    pub id: Uuid,
+    pub endpoint_id: Uuid,
+    pub event_id: Uuid,
+    pub event_type: String,
+    pub status: String,
+    pub attempt_count: i32,
+    pub response_status: Option<i32>,
+    pub error_message: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub delivered_at: Option<DateTime<Utc>>,
+    pub replayed_from_delivery_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperWebhookDeliveriesResponse {
+    pub deliveries: Vec<DeveloperWebhookDeliverySummary>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeveloperLogEntry {
+    pub id: Uuid,
+    pub source: String,
+    pub event_type: String,
+    pub severity: String,
+    pub message: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperLogsResponse {
+    pub logs: Vec<DeveloperLogEntry>,
+}

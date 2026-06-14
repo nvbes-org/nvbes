@@ -1,20 +1,24 @@
 import { identityHttpClient } from './identity.http';
 import {
   DeveloperContextSchema,
+  DeveloperLogsSchema,
   DeveloperMarketplaceAppsSchema,
   DeveloperOAuthClientsSchema,
   DeveloperOverviewSchema,
   DeveloperSecretVersionsSchema,
   DeveloperServiceAccountsSchema,
   DeveloperScopeRegistrySchema,
+  DeveloperWebhookEndpointsSchema,
   RotateDeveloperSecretSchema,
   type DeveloperContext,
+  type DeveloperLogEntry,
   type DeveloperMarketplaceApp,
   type DeveloperOAuthClient,
   type DeveloperOverview,
   type DeveloperSecretVersion,
   type DeveloperServiceAccount,
   type DeveloperScopeRegistryEntry,
+  type DeveloperWebhookEndpoint,
   type RotateDeveloperSecret,
 } from './developer.schemas';
 import type { SecretRotationForm } from './pages/SecretsPage.helpers';
@@ -103,6 +107,26 @@ export function rotateDeveloperSecret(
     RotateDeveloperSecretSchema,
     buildSecretRotationPayload(form),
   );
+}
+
+export async function listDeveloperWebhooks(
+  signal?: AbortSignal,
+): Promise<DeveloperWebhookEndpoint[]> {
+  const response = await identityHttpClient.get(
+    '/developer/webhooks',
+    DeveloperWebhookEndpointsSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+  return response.webhooks;
+}
+
+export async function listDeveloperLogs(signal?: AbortSignal): Promise<DeveloperLogEntry[]> {
+  const response = await identityHttpClient.get('/developer/logs', DeveloperLogsSchema, {
+    signal: withTimeoutSignal(signal, 4_000),
+  });
+  return response.logs;
 }
 
 function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
