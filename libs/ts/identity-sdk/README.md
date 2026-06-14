@@ -129,3 +129,8 @@ pnpm build
 ```
 
 Génère les fichiers dans `dist/` (CJS + ESM + types).
+
+## Developer Portal
+
+The nvbes Developer Portal includes quickstarts for React, Rust Axum, Node, and curl. It also
+links to the generated Identity OpenAPI document and developer portal routes under `/developer`.

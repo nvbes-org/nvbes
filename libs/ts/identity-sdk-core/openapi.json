@@ -23,6 +23,56 @@
     }
   ],
   "paths": {
+    "/.well-known/change-password": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "change_password_well_known",
+        "responses": {
+          "200": {
+            "description": "Password change URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePasswordWellKnownResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/gpc.json": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "gpc_well_known",
+        "responses": {
+          "200": {
+            "description": "GPC support status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpcWellKnownResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/.well-known/jwks.json": {
       "get": {
         "tags": [
@@ -83,19 +133,79 @@
         }
       }
     },
-    "/.well-known/change-password": {
+    "/.well-known/openid-configuration": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "openid_configuration",
+        "responses": {
+          "200": {
+            "description": "OpenID Connect discovery metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAuthorizationServerMetadata"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/passkey-endpoints": {
       "get": {
         "tags": [
           "auth"
         ],
-        "operationId": "change_password_well_known",
+        "operationId": "passkey_endpoints_well_known",
         "responses": {
           "200": {
-            "description": "Password change URL",
+            "description": "Passkey enrollment and management endpoints",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChangePasswordWellKnownResponse"
+                  "$ref": "#/components/schemas/PasskeyEndpointsWellKnownResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/webauthn": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "webauthn_well_known",
+        "responses": {
+          "200": {
+            "description": "WebAuthn related origins for cross-domain passkey sharing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAuthnWellKnownResponse"
                 }
               }
             }
@@ -352,6 +462,90 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me/export": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_export_download",
+        "responses": {
+          "200": {
+            "description": "Prepared personal data export",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No prepared export available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_export",
+        "responses": {
+          "200": {
+            "description": "Data export request recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -1392,6 +1586,816 @@
         }
       }
     },
+    "/developer/apps": {
+      "get": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "list_apps",
+        "responses": {
+          "200": {
+            "description": "Developer OAuth apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperAppsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer app read permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "create_app",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeveloperAppRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Developer OAuth app created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDeveloperAppResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer app create permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/apps/{clientId}": {
+      "get": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "get_app",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "OAuth client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Developer OAuth app",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperAppView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer app read permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "revoke_app",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "OAuth client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Developer OAuth app revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeOAuthClientResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer app revoke permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/apps/{clientId}/redirects": {
+      "patch": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "update_redirects",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "OAuth client ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeveloperRedirectsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Developer OAuth app redirects updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperAppView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer app redirects permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/logs": {
+      "get": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "list_logs",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "description": "Principal/user ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "description": "OAuth client ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "description": "Tenant ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "description": "Event type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Developer logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperLogsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer logs read permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/me": {
+      "get": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "Current developer portal access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant context required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/oauth/playground/exchange": {
+      "post": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "exchange_playground_code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthPlaygroundExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OAuth playground exchange metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthPlaygroundExchangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer OAuth playground permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/tokens/inspect": {
+      "post": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "inspect_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectDeveloperTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Developer token inspection result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectDeveloperTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer token inspection permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/webhooks": {
+      "get": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "list_webhooks",
+        "responses": {
+          "200": {
+            "description": "Developer webhook endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperWebhooksResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer webhook read permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "create_webhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeveloperWebhookEndpointRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Developer webhook endpoint created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDeveloperWebhookEndpointResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer webhook manage permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/developer/webhooks/{endpointId}": {
+      "delete": {
+        "tags": [
+          "developer"
+        ],
+        "operationId": "delete_webhook",
+        "parameters": [
+          {
+            "name": "endpointId",
+            "in": "path",
+            "description": "Developer webhook endpoint ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Developer webhook endpoint revoked"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developer webhook manage permission required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/invitations/accept": {
       "post": {
         "tags": [
@@ -1553,7 +2557,7 @@
         "operationId": "list_consents",
         "responses": {
           "200": {
-            "description": "Active consents listed successfully",
+            "description": "Consent history listed successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -1679,6 +2683,15 @@
             "name": "client_secret",
             "in": "query",
             "description": "Client secret (required for JAR)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authuser",
+            "in": "query",
+            "description": "Auth user index",
             "required": false,
             "schema": {
               "type": "string"
@@ -2408,6 +3421,49 @@
           },
           "500": {
             "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/revoke": {
+      "post": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "revoke",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Token revoked successfully"
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -5865,6 +6921,7 @@
         "type": "object",
         "required": [
           "authuser",
+          "status",
           "user",
           "session"
         ],
@@ -5872,13 +6929,29 @@
           "authuser": {
             "type": "string"
           },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "session": {
             "$ref": "#/components/schemas/SessionView"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountChooserSessionStatus"
           },
           "user": {
             "$ref": "#/components/schemas/UserView"
           }
         }
+      },
+      "AccountChooserSessionStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "expired"
+        ]
       },
       "ApproveRecoveryRequest": {
         "type": "object",
@@ -6029,41 +7102,6 @@
           "workspace_id": {
             "type": "string",
             "format": "uuid"
-          }
-        }
-      },
-      "BillingWebhookEventView": {
-        "type": "object",
-        "required": [
-          "provider_event_id",
-          "provider",
-          "status",
-          "signature_valid",
-          "received_at"
-        ],
-        "properties": {
-          "processed_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "provider": {
-            "type": "string"
-          },
-          "provider_event_id": {
-            "type": "string"
-          },
-          "received_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "signature_valid": {
-            "type": "boolean"
-          },
-          "status": {
-            "type": "string"
           }
         }
       },
@@ -6492,6 +7530,17 @@
           }
         }
       },
+      "ChangePasswordWellKnownResponse": {
+        "type": "object",
+        "required": [
+          "change-password"
+        ],
+        "properties": {
+          "change-password": {
+            "type": "string"
+          }
+        }
+      },
       "ChangeVerificationRequest": {
         "type": "object",
         "required": [
@@ -6571,6 +7620,95 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "CreateDeveloperAppRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "redirect_uris",
+          "allowed_scopes"
+        ],
+        "properties": {
+          "allowed_audiences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowed_resources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowed_scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CreateDeveloperAppResponse": {
+        "type": "object",
+        "required": [
+          "app",
+          "client_secret"
+        ],
+        "properties": {
+          "app": {
+            "$ref": "#/components/schemas/DeveloperAppView"
+          },
+          "client_secret": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateDeveloperWebhookEndpointRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "url",
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperWebhookEventType"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateDeveloperWebhookEndpointResponse": {
+        "type": "object",
+        "required": [
+          "endpoint",
+          "signing_secret"
+        ],
+        "properties": {
+          "endpoint": {
+            "$ref": "#/components/schemas/DeveloperWebhookEndpointView"
+          },
+          "signing_secret": {
+            "type": "string"
           }
         }
       },
@@ -6950,6 +8088,17 @@
           }
         }
       },
+      "DataExportResult": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
       "DecisionRequest": {
         "type": "object",
         "required": [
@@ -7012,6 +8161,231 @@
         "properties": {
           "success": {
             "type": "boolean"
+          }
+        }
+      },
+      "DeveloperAppView": {
+        "type": "object",
+        "required": [
+          "id",
+          "client_id",
+          "name",
+          "redirect_uris",
+          "client_type",
+          "created_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DeveloperAppsResponse": {
+        "type": "object",
+        "required": [
+          "apps"
+        ],
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperAppView"
+            }
+          }
+        }
+      },
+      "DeveloperLogEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "event_type",
+          "created_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DeveloperLogsResponse": {
+        "type": "object",
+        "required": [
+          "logs"
+        ],
+        "properties": {
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperLogEntry"
+            }
+          }
+        }
+      },
+      "DeveloperMeResponse": {
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "roles",
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperPermission"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperRole"
+            }
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DeveloperPermission": {
+        "type": "string",
+        "enum": [
+          "developer.apps.read",
+          "developer.apps.create",
+          "developer.apps.update_redirects",
+          "developer.apps.revoke",
+          "developer.webhooks.read",
+          "developer.webhooks.manage",
+          "developer.logs.read",
+          "developer.tokens.inspect",
+          "developer.oauth.playground",
+          "developer.rbac.manage",
+          "developer.docs.read"
+        ]
+      },
+      "DeveloperRole": {
+        "type": "string",
+        "enum": [
+          "developer_admin",
+          "app_manager",
+          "webhook_manager",
+          "log_viewer",
+          "integration_tester",
+          "docs_viewer"
+        ]
+      },
+      "DeveloperWebhookEndpointView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "url",
+          "status",
+          "events",
+          "signing_secret_last4",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperWebhookEventType"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "signing_secret_last4": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "DeveloperWebhookEventType": {
+        "type": "string",
+        "enum": [
+          "user.created",
+          "login.failed",
+          "session.revoked",
+          "client.created"
+        ]
+      },
+      "DeveloperWebhooksResponse": {
+        "type": "object",
+        "required": [
+          "endpoints"
+        ],
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeveloperWebhookEndpointView"
+            }
           }
         }
       },
@@ -7175,18 +8549,6 @@
           }
         }
       },
-      "ChangePasswordWellKnownResponse": {
-        "type": "object",
-        "required": [
-          "change-password"
-        ],
-        "properties": {
-          "change-password": {
-            "type": "string",
-            "format": "uri"
-          }
-        }
-      },
       "FederatedIdentityProviderResponse": {
         "type": "object",
         "required": [
@@ -7311,6 +8673,23 @@
           },
           "success": {
             "type": "boolean"
+          }
+        }
+      },
+      "GpcWellKnownResponse": {
+        "type": "object",
+        "required": [
+          "gpc",
+          "version"
+        ],
+        "properties": {
+          "gpc": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -7471,6 +8850,60 @@
           }
         }
       },
+      "InspectDeveloperTokenRequest": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "InspectDeveloperTokenResponse": {
+        "type": "object",
+        "required": [
+          "active",
+          "scopes"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tenant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "IntrospectRequest": {
         "type": "object",
         "required": [
@@ -7606,6 +9039,12 @@
               "null"
             ],
             "format": "int64"
+          },
+          "network_valid": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "organization_id": {
             "type": [
@@ -8236,12 +9675,16 @@
           "jwks_uri",
           "userinfo_endpoint",
           "introspection_endpoint",
+          "revocation_endpoint",
           "pushed_authorization_request_endpoint",
           "device_authorization_endpoint",
           "response_types_supported",
           "grant_types_supported",
           "token_endpoint_auth_methods_supported",
           "token_endpoint_auth_signing_alg_values_supported",
+          "subject_types_supported",
+          "id_token_signing_alg_values_supported",
+          "claims_supported",
           "code_challenge_methods_supported",
           "dpop_signing_alg_values_supported",
           "scopes_supported",
@@ -8264,6 +9707,12 @@
           "authorization_response_iss_parameter_supported": {
             "type": "boolean"
           },
+          "claims_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "code_challenge_methods_supported": {
             "type": "array",
             "items": {
@@ -8280,6 +9729,12 @@
             }
           },
           "grant_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id_token_signing_alg_values_supported": {
             "type": "array",
             "items": {
               "type": "string"
@@ -8312,7 +9767,16 @@
               "type": "string"
             }
           },
+          "revocation_endpoint": {
+            "type": "string"
+          },
           "scopes_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subject_types_supported": {
             "type": "array",
             "items": {
               "type": "string"
@@ -8506,6 +9970,49 @@
           }
         }
       },
+      "OAuthPlaygroundExchangeRequest": {
+        "type": "object",
+        "required": [
+          "client_id",
+          "code",
+          "redirect_uri",
+          "code_verifier"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "code_verifier": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string"
+          }
+        }
+      },
+      "OAuthPlaygroundExchangeResponse": {
+        "type": "object",
+        "required": [
+          "token_type",
+          "expires_in",
+          "scope"
+        ],
+        "properties": {
+          "expires_in": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string"
+          }
+        }
+      },
       "OidcCallbackRequest": {
         "type": "object",
         "required": [
@@ -8600,6 +10107,21 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "PasskeyEndpointsWellKnownResponse": {
+        "type": "object",
+        "required": [
+          "enroll",
+          "manage"
+        ],
+        "properties": {
+          "enroll": {
+            "type": "string"
+          },
+          "manage": {
+            "type": "string"
           }
         }
       },
@@ -9017,64 +10539,16 @@
           }
         }
       },
-      "RiskEventView": {
+      "RevokeRequest": {
         "type": "object",
         "required": [
-          "id",
-          "principal_id",
-          "event_type",
-          "risk_score",
-          "risk_factors",
-          "decision",
-          "metadata",
-          "created_at"
+          "token"
         ],
         "properties": {
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "decision": {
+          "token": {
             "type": "string"
           },
-          "device_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "ip_address": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "metadata": {},
-          "principal_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "risk_factors": {},
-          "risk_score": {
-            "type": "number",
-            "format": "double"
-          },
-          "session_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "user_agent": {
+          "token_type_hint": {
             "type": [
               "string",
               "null"
@@ -9207,41 +10681,62 @@
           }
         }
       },
-      "SecurityEventsResponse": {
+      "SecurityEventView": {
         "type": "object",
         "required": [
-          "workspace_id",
-          "risk_events",
-          "billing_webhook_events"
+          "id",
+          "event_type",
+          "created_at"
         ],
         "properties": {
-          "billing_webhook_events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BillingWebhookEventView"
-            }
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           },
-          "next_before_billing_webhook_event": {
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip_address": {
             "type": [
               "string",
               "null"
             ]
           },
-          "next_before_risk_event": {
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SecurityEventsResponse": {
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityEventView"
+            }
+          },
+          "next_cursor": {
             "type": [
               "string",
               "null"
             ],
-            "format": "uuid"
-          },
-          "risk_events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RiskEventView"
-            }
-          },
-          "workspace_id": {
-            "type": "string",
             "format": "uuid"
           }
         }
@@ -9960,6 +11455,20 @@
           }
         }
       },
+      "UpdateDeveloperRedirectsRequest": {
+        "type": "object",
+        "required": [
+          "redirect_uris"
+        ],
+        "properties": {
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "UpdateFederatedIdentityProviderRequest": {
         "type": "object",
         "properties": {
@@ -10298,6 +11807,20 @@
           }
         }
       },
+      "WebAuthnWellKnownResponse": {
+        "type": "object",
+        "required": [
+          "origins"
+        ],
+        "properties": {
+          "origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "WebauthnAuthStartResult": {
         "type": "object",
         "required": [
@@ -10618,6 +12141,10 @@
     {
       "name": "authz",
       "description": "Authorization decisions"
+    },
+    {
+      "name": "developer",
+      "description": "Developer portal, apps, webhooks, logs, and integration tools"
     }
   ]
 }
