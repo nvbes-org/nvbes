@@ -155,13 +155,17 @@ Create `apps/developer-web/tsconfig.json`:
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "paths": {
-      "@/*": ["src/*"]
-    },
-    "types": ["vite/client", "vite-plus/client"]
+      "@nvbes/http-client": ["../../libs/ts/http-client/src/index.ts"],
+      "@nvbes/identity-client": ["../../libs/ts/identity-client/src/index.ts"],
+      "@nvbes/identity-sdk-web": ["../../libs/ts/identity-sdk-web/src/index.ts"],
+      "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
+      "@nvbes/web-ui": ["../../libs/ts/web-ui/src/index.ts"],
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src", "vite.config.ts"],
+  "include": ["src"],
   "references": []
 }
 ```
