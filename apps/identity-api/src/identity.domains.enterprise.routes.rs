@@ -51,14 +51,7 @@ async fn get_context(
 ) -> Result<Json<EnterpriseContextResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_context(
-            &state.db,
-            auth.user_id,
-            tenant_id,
-            auth.organization_id,
-            auth.workspace_id,
-        )
-        .await?,
+        service::get_context(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -68,7 +61,7 @@ async fn get_overview(
 ) -> Result<Json<EnterpriseOverviewResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_overview(&state.db, auth.user_id, tenant_id).await?,
+        service::get_overview(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -78,7 +71,7 @@ async fn list_users(
 ) -> Result<Json<EnterpriseUsersResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_users(&state.db, auth.user_id, tenant_id).await?,
+        service::list_users(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -89,7 +82,7 @@ async fn create_invitations(
 ) -> Result<Json<EnterpriseInvitationsResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::create_invitations(&state.db, auth.user_id, tenant_id, input).await?,
+        service::create_invitations(&state.db, &auth, tenant_id, input).await?,
     ))
 }
 
@@ -101,7 +94,7 @@ async fn update_user_access(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::update_user_access(&state.db, auth.user_id, tenant_id, user_id, input).await?,
+        service::update_user_access(&state.db, &auth, tenant_id, user_id, input).await?,
     ))
 }
 
@@ -113,7 +106,7 @@ async fn suspend_user(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::suspend_user(&state.db, auth.user_id, tenant_id, user_id, input).await?,
+        service::suspend_user(&state.db, &auth, tenant_id, user_id, input).await?,
     ))
 }
 
@@ -125,7 +118,7 @@ async fn reactivate_user(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::reactivate_user(&state.db, auth.user_id, tenant_id, user_id, input).await?,
+        service::reactivate_user(&state.db, &auth, tenant_id, user_id, input).await?,
     ))
 }
 
@@ -135,7 +128,7 @@ async fn list_workspaces(
 ) -> Result<Json<EnterpriseWorkspacesResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_workspaces(&state.db, auth.user_id, tenant_id).await?,
+        service::list_workspaces(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -145,7 +138,7 @@ async fn list_developers(
 ) -> Result<Json<EnterpriseDevelopersResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_developers(&state.db, auth.user_id, tenant_id).await?,
+        service::list_developers(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -155,7 +148,7 @@ async fn list_policies(
 ) -> Result<Json<EnterprisePoliciesResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_policies(&state.db, auth.user_id, tenant_id).await?,
+        service::list_policies(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -165,7 +158,7 @@ async fn get_security(
 ) -> Result<Json<EnterpriseSecurityResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_security(&state.db, auth.user_id, tenant_id).await?,
+        service::get_security(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -175,7 +168,7 @@ async fn list_audit_events(
 ) -> Result<Json<EnterpriseAuditEventsResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_audit_events(&state.db, auth.user_id, tenant_id).await?,
+        service::list_audit_events(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -185,7 +178,7 @@ async fn get_billing(
 ) -> Result<Json<EnterpriseBillingResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_billing(&state.db, auth.user_id, tenant_id).await?,
+        service::get_billing(&state.db, &auth, tenant_id).await?,
     ))
 }
 
@@ -194,9 +187,7 @@ async fn get_usage(
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<EnterpriseUsageResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        service::get_usage(&state.db, auth.user_id, tenant_id).await?,
-    ))
+    Ok(Json(service::get_usage(&state.db, &auth, tenant_id).await?))
 }
 
 fn require_tenant(auth: &AuthContext) -> Result<Uuid, AppError> {
