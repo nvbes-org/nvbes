@@ -9,9 +9,9 @@ import {
   SecurityRoutePage,
   SettingsRoutePage,
   UsageRoutePage,
-  UsersRoutePage,
   WorkspacesRoutePage,
 } from './enterprise.router.pages';
+import { UsersPage } from './pages/UsersPage';
 
 export function createEnterpriseRoutes(enterprise: typeof enterpriseRoute) {
   return [
@@ -23,7 +23,7 @@ export function createEnterpriseRoutes(enterprise: typeof enterpriseRoute) {
     createRoute({
       getParentRoute: () => enterprise,
       path: '/users',
-      component: UsersRoutePage,
+      component: UsersPage,
     }),
     createRoute({
       getParentRoute: () => enterprise,
