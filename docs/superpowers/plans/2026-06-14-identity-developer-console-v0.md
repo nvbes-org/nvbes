@@ -191,6 +191,7 @@ Create `apps/developer-web/index.html`:
 Create `apps/developer-web/vite.config.ts`:
 
 ```ts
+import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import devtoolsJson from 'vite-plugin-devtools-json';
@@ -203,10 +204,41 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_IDENTITY_API_PROXY_TARGET ||
     localEnv.VITE_IDENTITY_API_PROXY_TARGET ||
     rootEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    'http://localhost:8080';
+    process.env.VITE_IDENTITY_API_BASE_URL ||
+    localEnv.VITE_IDENTITY_API_BASE_URL ||
+    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+    'http://localhost:4000';
 
   return {
     plugins: [react(), tailwindcss(), devtoolsJson()],
+    resolve: {
+      alias: [
+        {
+          find: '@',
+          replacement: path.resolve(__dirname, './src')
+        },
+        {
+          find: '@nvbes/http-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/http-client/src/index.ts')
+        },
+        {
+          find: '@nvbes/identity-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts')
+        },
+        {
+          find: '@nvbes/identity-sdk-web',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts')
+        },
+        {
+          find: '@nvbes/web-runtime',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/index.ts')
+        },
+        {
+          find: '@nvbes/web-ui',
+          replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts')
+        }
+      ]
+    },
     server: {
       port: 5175,
       proxy: {
@@ -433,11 +465,13 @@ Run:
 
 ```bash
 rtk pnpm exec nx show project developer-web --json
+rtk pnpm exec nx run developer-web:format:check --skip-nx-cache
 rtk pnpm exec nx run developer-web:typecheck
 rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run developer-web:build --skip-nx-cache
 ```
 
-Expected: Nx discovers `developer-web`; typecheck and lint pass.
+Expected: Nx discovers `developer-web`; format check, typecheck, lint, and build pass.
 
 - [ ] **Step 6: Commit**
 
@@ -456,6 +490,7 @@ rtk git commit -m "feat(developer): scaffold developer web app"
 - Create: `apps/identity-api/src/identity.domains.developer.rbac.rs`
 - Create: `apps/identity-api/src/identity.domains.developer.rbac.db.rs`
 - Create: `apps/identity-api/src/identity.domains.developer.routes.rs`
+- Create: `apps/identity-api/src/identity.domains.developer.service.rs`
 - Create/replace: `apps/identity-api/src/identity.domains.developer.tests.rs`
 - Modify: `apps/identity-api/src/identity.domains.mod.rs`
 
@@ -761,6 +796,18 @@ use crate::app::AppState;
 pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new()
 }
+```
+
+Create `apps/identity-api/src/identity.domains.developer.rbac.db.rs`:
+
+```rust
+// Database-backed developer role lookups are introduced with context routes.
+```
+
+Create `apps/identity-api/src/identity.domains.developer.service.rs`:
+
+```rust
+// Developer facade orchestration helpers are introduced with the first API routes.
 ```
 
 Modify `apps/identity-api/src/identity.domains.mod.rs`:
