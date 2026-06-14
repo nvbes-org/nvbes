@@ -209,8 +209,15 @@ pub async fn reactivate_user(
     user_id: Uuid,
     input: EnterpriseReactivateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
     let mut tx = db.begin().await?;
+    db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
+    let current_role = db::target_role_for_lifecycle(&mut tx, tenant_id, user_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
+        })?;
+    ensure_owner_target_allowed(&actor_access, &current_role)?;
     if let Some(workspace_ids) = input.workspace_ids.as_ref() {
         if workspace_ids.is_empty() {
             return Err(AppError::bad_request(

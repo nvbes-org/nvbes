@@ -122,3 +122,48 @@ pub(super) fn default_security_signals(auth: &AuthContext) -> Vec<EnterpriseSecu
         details: Some(BTreeMap::new()),
     }]
 }
+
+pub(super) fn security_signals(summary: &db::SecuritySummaryRow) -> Vec<EnterpriseSecuritySignal> {
+    vec![
+        EnterpriseSecuritySignal {
+            key: "mfa_adoption".to_string(),
+            label: "Active MFA factors".to_string(),
+            status: if summary.mfa_factor_count > 0 {
+                "ok"
+            } else {
+                "attention"
+            }
+            .to_string(),
+            severity: if summary.mfa_factor_count > 0 {
+                "info"
+            } else {
+                "medium"
+            }
+            .to_string(),
+            details: Some(BTreeMap::from([(
+                "active_factor_count".to_string(),
+                serde_json::json!(summary.mfa_factor_count),
+            )])),
+        },
+        EnterpriseSecuritySignal {
+            key: "risk_events".to_string(),
+            label: "High risk events".to_string(),
+            status: if summary.high_risk_event_count == 0 {
+                "ok"
+            } else {
+                "attention"
+            }
+            .to_string(),
+            severity: if summary.high_risk_event_count == 0 {
+                "info"
+            } else {
+                "high"
+            }
+            .to_string(),
+            details: Some(BTreeMap::from([(
+                "high_risk_event_count".to_string(),
+                serde_json::json!(summary.high_risk_event_count),
+            )])),
+        },
+    ]
+}

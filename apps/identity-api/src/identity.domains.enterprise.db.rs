@@ -22,5 +22,5 @@ pub use records::{
 };
 pub use writes::{
     ensure_workspaces_belong, has_pending_invitation, insert_audit, insert_invitation,
-    replace_access, set_tenant_memberships_status, target_role,
+    replace_access, set_tenant_memberships_status, target_role, target_role_for_lifecycle,
 };

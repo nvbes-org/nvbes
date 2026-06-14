@@ -6,7 +6,8 @@ use uuid::Uuid;
 
 use super::super::types::*;
 use super::access::{
-    all_grants, all_roles, default_security_signals, metric, require_actor_access, usage,
+    all_grants, all_roles, default_security_signals, metric, require_actor_access,
+    security_signals, usage,
 };
 
 pub async fn get_context(
@@ -101,8 +102,15 @@ pub async fn list_developers(
 ) -> Result<EnterpriseDevelopersResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     Ok(EnterpriseDevelopersResponse {
-        credentials: Vec::new(),
-        page: None,
+        credentials: db::list_developers(db, tenant_id)
+            .await?
+            .into_iter()
+            .map(db::DeveloperCredentialRow::into_view)
+            .collect(),
+        page: Some(EnterprisePage {
+            cursor: None,
+            has_more: false,
+        }),
     })
 }
 
@@ -113,7 +121,11 @@ pub async fn list_policies(
 ) -> Result<EnterprisePoliciesResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     Ok(EnterprisePoliciesResponse {
-        policies: Vec::new(),
+        policies: db::list_policies(db, tenant_id)
+            .await?
+            .into_iter()
+            .map(db::PolicySummaryRow::into_view)
+            .collect(),
     })
 }
 
@@ -123,11 +135,12 @@ pub async fn get_security(
     tenant_id: Uuid,
 ) -> Result<EnterpriseSecurityResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let summary = db::security_summary(db, tenant_id).await?;
     Ok(EnterpriseSecurityResponse {
-        signals: default_security_signals(auth),
-        mfa_required: false,
-        passkeys_enabled: false,
-        recovery_approval_required: false,
+        signals: security_signals(&summary),
+        mfa_required: summary.mfa_factor_count == 0,
+        passkeys_enabled: summary.passkey_count > 0,
+        recovery_approval_required: summary.high_risk_event_count > 0,
     })
 }
 

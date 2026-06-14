@@ -48,6 +48,28 @@ pub async fn target_role(
     Ok(role)
 }
 
+pub async fn target_role_for_lifecycle(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    user_id: Uuid,
+) -> Result<Option<String>, AppError> {
+    let role = sqlx::query_scalar::<_, String>(r#"
+        SELECT wm.role::text
+        FROM workspace_memberships wm
+        INNER JOIN workspaces w ON w.id = wm.workspace_id
+        WHERE w.tenant_id = $1
+          AND wm.principal_id = $2
+          AND wm.status IN ('active', 'suspended')
+        ORDER BY CASE wm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END
+        LIMIT 1
+        "#)
+    .bind(tenant_id)
+    .bind(user_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+    Ok(role)
+}
+
 pub async fn replace_access(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
