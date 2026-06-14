@@ -9,6 +9,8 @@ pub mod authz;
 pub mod billing;
 #[path = "identity.domains.developer.mod.rs"]
 pub mod developer;
+#[path = "identity.domains.enterprise.mod.rs"]
+pub mod enterprise;
 #[path = "identity.domains.federation.mod.rs"]
 pub mod federation;
 #[path = "identity.domains.legal.mod.rs"]
@@ -29,6 +31,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(auth::routes::router(state))
         .merge(authz::routes::router(state))
         .merge(developer::router(state))
+        .merge(enterprise::routes::router(state))
         .merge(federation::routes::router(state))
         .merge(service_accounts::routes::router(state))
         .merge(workspaces::routes::router(state))

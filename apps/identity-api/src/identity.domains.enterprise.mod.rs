@@ -1,0 +1,10 @@
+#[path = "identity.domains.enterprise.db.rs"]
+pub mod db;
+#[path = "identity.domains.enterprise.policy.rs"]
+pub mod policy;
+#[path = "identity.domains.enterprise.routes.rs"]
+pub mod routes;
+#[path = "identity.domains.enterprise.service.rs"]
+pub mod service;
+#[path = "identity.domains.enterprise.types.rs"]
+pub mod types;
