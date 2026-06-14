@@ -1,7 +1,7 @@
 use axum::{
     Extension, Json, Router,
     extract::{Path, State},
-    routing::{delete, get, patch, post},
+    routing::{get, patch},
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use uuid::Uuid;
