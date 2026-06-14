@@ -4,13 +4,21 @@ import {
   DeveloperMarketplaceAppsSchema,
   DeveloperOAuthClientsSchema,
   DeveloperOverviewSchema,
+  DeveloperSecretVersionsSchema,
+  DeveloperServiceAccountsSchema,
   DeveloperScopeRegistrySchema,
+  RotateDeveloperSecretSchema,
   type DeveloperContext,
   type DeveloperMarketplaceApp,
   type DeveloperOAuthClient,
   type DeveloperOverview,
+  type DeveloperSecretVersion,
+  type DeveloperServiceAccount,
   type DeveloperScopeRegistryEntry,
+  type RotateDeveloperSecret,
 } from './developer.schemas';
+import type { SecretRotationForm } from './pages/SecretsPage.helpers';
+import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
 
 export function getDeveloperContext(signal?: AbortSignal): Promise<DeveloperContext> {
   return identityHttpClient.get('/developer/context', DeveloperContextSchema, {
@@ -57,6 +65,44 @@ export async function listDeveloperScopes(
     signal: withTimeoutSignal(signal, 4_000),
   });
   return response.scopes;
+}
+
+export async function listDeveloperServiceAccounts(
+  signal?: AbortSignal,
+): Promise<DeveloperServiceAccount[]> {
+  const response = await identityHttpClient.get(
+    '/developer/service-accounts',
+    DeveloperServiceAccountsSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+  return response.service_accounts;
+}
+
+export async function listDeveloperSecretVersions(
+  clientId: string,
+  signal?: AbortSignal,
+): Promise<DeveloperSecretVersion[]> {
+  const response = await identityHttpClient.get(
+    `/developer/oauth-clients/${encodeURIComponent(clientId)}/secrets`,
+    DeveloperSecretVersionsSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+  return response.secret_versions;
+}
+
+export function rotateDeveloperSecret(
+  clientId: string,
+  form: SecretRotationForm,
+): Promise<RotateDeveloperSecret> {
+  return identityHttpClient.post(
+    `/developer/oauth-clients/${encodeURIComponent(clientId)}/secrets/rotation`,
+    RotateDeveloperSecretSchema,
+    buildSecretRotationPayload(form),
+  );
 }
 
 function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {

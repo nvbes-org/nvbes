@@ -3,6 +3,8 @@ import { DeveloperShell } from './layouts/DeveloperShell';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { OAuthAppsPage } from './pages/OAuthAppsPage';
 import { ScopesPage } from './pages/ScopesPage';
+import { SecretsPage } from './pages/SecretsPage';
+import { ServiceAccountsPage } from './pages/ServiceAccountsPage';
 
 function RootShell() {
   return <Outlet />;
@@ -76,7 +78,6 @@ const consoleRootRoute = createRoute({
 });
 const consolePlaceholderRoutes = [
   '/consent',
-  '/secrets',
   '/webhooks',
   '/sandbox',
   '/tokens',
@@ -104,12 +105,24 @@ const consoleScopesRoute = createRoute({
   path: '/scopes',
   component: ScopesPage,
 });
+const consoleSecretsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/secrets',
+  component: SecretsPage,
+});
+const consoleServiceAccountsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/service-accounts',
+  component: ServiceAccountsPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   consoleRootRoute.addChildren([
     consoleOAuthClientsRoute,
     consoleMarketplaceRoute,
     consoleScopesRoute,
+    consoleSecretsRoute,
+    consoleServiceAccountsRoute,
     ...consolePlaceholderRoutes,
   ]),
 ]);

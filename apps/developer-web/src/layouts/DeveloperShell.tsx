@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import {
   Activity,
+  Bot,
   Boxes,
   Bug,
   ClipboardList,
@@ -41,6 +42,12 @@ const navigationItems: NavigationItem[] = [
     to: '/console/secrets',
     permission: 'secrets.rotate',
     icon: RotateCcwKey,
+  },
+  {
+    label: 'Service accounts',
+    to: '/console/service-accounts',
+    permission: 'service_accounts.read',
+    icon: Bot,
   },
   { label: 'Webhooks', to: '/console/webhooks', permission: 'webhooks.read', icon: Webhook },
   { label: 'Sandbox tenants', to: '/console/sandbox', permission: 'sandbox.use', icon: Boxes },

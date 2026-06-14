@@ -6,6 +6,8 @@ pub mod rbac_db;
 pub mod routes;
 #[path = "identity.domains.developer.service.rs"]
 pub mod service;
+#[path = "identity.domains.developer.service_accounts.db.rs"]
+pub mod service_accounts_db;
 #[path = "identity.domains.developer.types.rs"]
 pub mod types;
 

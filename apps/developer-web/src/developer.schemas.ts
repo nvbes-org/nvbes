@@ -100,6 +100,44 @@ export const DeveloperScopeRegistrySchema = z.object({
   scopes: z.array(DeveloperScopeRegistryEntrySchema),
 });
 
+export const DeveloperServiceAccountSchema = z.object({
+  principal_id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  role: z.string(),
+  status: z.string(),
+  workspace_id: z.string().uuid().nullable(),
+  oauth_client_count: z.number().int().nonnegative(),
+  last_rotated_at: z.string().nullable(),
+});
+
+export const DeveloperServiceAccountsSchema = z.object({
+  service_accounts: z.array(DeveloperServiceAccountSchema),
+});
+
+export const DeveloperSecretVersionSchema = z.object({
+  id: z.string().uuid(),
+  client_id: z.string(),
+  status: z.enum(['active', 'overlap', 'expired', 'revoked']),
+  secret_last4: z.string(),
+  created_at: z.string(),
+  expires_at: z.string().nullable(),
+  revoked_at: z.string().nullable(),
+});
+
+export const DeveloperSecretVersionsSchema = z.object({
+  secret_versions: z.array(DeveloperSecretVersionSchema),
+});
+
+export const RotateDeveloperSecretSchema = z.object({
+  client_id: z.string(),
+  client_secret: z.string(),
+  active_version_id: z.string().uuid(),
+  previous_version_id: z.string().uuid(),
+  overlap_ends_at: z.string(),
+  rotated_at: z.string(),
+});
+
 export type DeveloperRole = z.infer<typeof DeveloperRoleSchema>;
 export type DeveloperPermission = z.infer<typeof DeveloperPermissionSchema>;
 export type DeveloperContext = z.infer<typeof DeveloperContextSchema>;
@@ -107,3 +145,6 @@ export type DeveloperOverview = z.infer<typeof DeveloperOverviewSchema>;
 export type DeveloperOAuthClient = z.infer<typeof DeveloperOAuthClientSchema>;
 export type DeveloperMarketplaceApp = z.infer<typeof DeveloperMarketplaceAppSchema>;
 export type DeveloperScopeRegistryEntry = z.infer<typeof DeveloperScopeRegistryEntrySchema>;
+export type DeveloperServiceAccount = z.infer<typeof DeveloperServiceAccountSchema>;
+export type DeveloperSecretVersion = z.infer<typeof DeveloperSecretVersionSchema>;
+export type RotateDeveloperSecret = z.infer<typeof RotateDeveloperSecretSchema>;
