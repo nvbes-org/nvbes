@@ -1,5 +1,8 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
 import { DeveloperShell } from './layouts/DeveloperShell';
+import { MarketplacePage } from './pages/MarketplacePage';
+import { OAuthAppsPage } from './pages/OAuthAppsPage';
+import { ScopesPage } from './pages/ScopesPage';
 
 function RootShell() {
   return <Outlet />;
@@ -72,10 +75,7 @@ const consoleRootRoute = createRoute({
   component: DeveloperShell,
 });
 const consolePlaceholderRoutes = [
-  '/oauth-clients',
-  '/marketplace',
   '/consent',
-  '/scopes',
   '/secrets',
   '/webhooks',
   '/sandbox',
@@ -89,9 +89,29 @@ const consolePlaceholderRoutes = [
     component: ConsoleComingSoonPage,
   }),
 );
+const consoleOAuthClientsRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/oauth-clients',
+  component: OAuthAppsPage,
+});
+const consoleMarketplaceRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/marketplace',
+  component: MarketplacePage,
+});
+const consoleScopesRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/scopes',
+  component: ScopesPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
-  consoleRootRoute.addChildren(consolePlaceholderRoutes),
+  consoleRootRoute.addChildren([
+    consoleOAuthClientsRoute,
+    consoleMarketplaceRoute,
+    consoleScopesRoute,
+    ...consolePlaceholderRoutes,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });

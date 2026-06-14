@@ -71,7 +71,7 @@ pub async fn get_developer_overview(
     })
 }
 
-fn require_tenant_id(auth: &AuthContext) -> Result<Uuid, AppError> {
+pub(crate) fn require_tenant_id(auth: &AuthContext) -> Result<Uuid, AppError> {
     auth.tenant_id.ok_or_else(|| {
         AppError::forbidden(
             "tenant_required",

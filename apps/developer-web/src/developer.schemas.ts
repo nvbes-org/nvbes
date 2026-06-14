@@ -53,7 +53,57 @@ export const DeveloperOverviewSchema = z.object({
   activeSandboxes: z.number().int().nonnegative(),
 });
 
+export const DeveloperHealthStatusSchema = z.enum(['passing', 'warning', 'failing', 'unknown']);
+export const DeveloperMarketplaceStatusSchema = z
+  .enum(['pending', 'approved', 'rejected', 'suspended'])
+  .nullable();
+
+export const DeveloperOAuthClientSchema = z.object({
+  client_id: z.string(),
+  name: z.string(),
+  status: z.string(),
+  marketplace_status: DeveloperMarketplaceStatusSchema,
+  consent_screen_configured: z.boolean(),
+  redirect_uri_count: z.number().int().nonnegative(),
+  allowed_scopes: z.array(z.string()),
+  health_status: DeveloperHealthStatusSchema,
+});
+
+export const DeveloperOAuthClientsSchema = z.object({
+  oauth_clients: z.array(DeveloperOAuthClientSchema),
+});
+
+export const DeveloperMarketplaceAppSchema = z.object({
+  client_id: z.string(),
+  name: z.string(),
+  status: z.enum(['pending', 'approved', 'rejected', 'suspended']),
+  review_reason: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const DeveloperMarketplaceAppsSchema = z.object({
+  apps: z.array(DeveloperMarketplaceAppSchema),
+});
+
+export const DeveloperScopeRegistryEntrySchema = z.object({
+  scope_key: z.string(),
+  display_name: z.string(),
+  description: z.string(),
+  risk: z.enum(['low', 'medium', 'high', 'restricted']),
+  owner_team: z.string(),
+  lifecycle: z.enum(['proposed', 'active', 'deprecated', 'retired']),
+  allowed_audiences: z.array(z.string()),
+});
+
+export const DeveloperScopeRegistrySchema = z.object({
+  scopes: z.array(DeveloperScopeRegistryEntrySchema),
+});
+
 export type DeveloperRole = z.infer<typeof DeveloperRoleSchema>;
 export type DeveloperPermission = z.infer<typeof DeveloperPermissionSchema>;
 export type DeveloperContext = z.infer<typeof DeveloperContextSchema>;
 export type DeveloperOverview = z.infer<typeof DeveloperOverviewSchema>;
+export type DeveloperOAuthClient = z.infer<typeof DeveloperOAuthClientSchema>;
+export type DeveloperMarketplaceApp = z.infer<typeof DeveloperMarketplaceAppSchema>;
+export type DeveloperScopeRegistryEntry = z.infer<typeof DeveloperScopeRegistryEntrySchema>;
