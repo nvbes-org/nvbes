@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{
     domains::developer::{
-        rbac::permissions_for_role,
+        rbac::{DeveloperPermission, permissions_for_role},
         rbac_db,
         types::{DeveloperContextResponse, DeveloperOverviewResponse},
     },
@@ -78,6 +78,28 @@ pub(crate) fn require_tenant_id(auth: &AuthContext) -> Result<Uuid, AppError> {
             "Developer Console requires a tenant-scoped session",
         )
     })
+}
+
+pub(crate) async fn require_permission(
+    db: &PgPool,
+    auth: &AuthContext,
+    permission: DeveloperPermission,
+) -> Result<Uuid, AppError> {
+    let tenant_id = require_tenant_id(auth)?;
+    let roles = rbac_db::list_active_roles_for_principal(db, tenant_id, auth.user_id).await?;
+    let allowed = roles
+        .into_iter()
+        .flat_map(permissions_for_role)
+        .any(|candidate| *candidate == permission);
+
+    if !allowed {
+        return Err(AppError::forbidden(
+            "developer_permission_required",
+            format!("Developer permission required: {}", permission.as_api_str()),
+        ));
+    }
+
+    Ok(tenant_id)
 }
 
 async fn count_oauth_clients(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {

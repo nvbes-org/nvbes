@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -194,4 +195,87 @@ pub struct DeveloperLogEntry {
 #[derive(Debug, Serialize)]
 pub struct DeveloperLogsResponse {
     pub logs: Vec<DeveloperLogEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DebugDeveloperTokenInput {
+    pub access_token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DebugDeveloperTokenResponse {
+    pub active: bool,
+    pub access_decision: String,
+    pub claims: Option<DeveloperTokenClaimsView>,
+    pub token_hash_prefix: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperTokenClaimsView {
+    pub subject: String,
+    pub tenant_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub client_id: Option<String>,
+    pub scopes: Vec<String>,
+    pub audience: String,
+    pub issuer: String,
+    pub expires_at: DateTime<Utc>,
+    pub issued_at: DateTime<Utc>,
+    pub not_before: DateTime<Utc>,
+    pub token_type: String,
+    pub amr: Vec<String>,
+    pub acr: Option<String>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeveloperSandboxTenantSummary {
+    pub tenant_id: Uuid,
+    pub sandbox_tenant_id: Uuid,
+    pub sandbox_name: String,
+    pub sandbox_slug: String,
+    pub status: String,
+    pub data_profile: String,
+    pub reset_requested_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperSandboxResponse {
+    pub sandbox: Option<DeveloperSandboxTenantSummary>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpsertDeveloperSandboxInput {
+    pub data_profile: Option<String>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeveloperHealthCheckSummary {
+    pub id: Uuid,
+    pub target_type: String,
+    pub target_id: String,
+    pub check_kind: String,
+    pub status: String,
+    pub summary: String,
+    pub checked_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperHealthChecksResponse {
+    pub checks: Vec<DeveloperHealthCheckSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RunDeveloperHealthChecksResponse {
+    pub checks: Vec<DeveloperHealthCheckSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeveloperHealthCheckSeed {
+    pub target_type: String,
+    pub target_id: String,
+    pub check_kind: String,
+    pub status: String,
+    pub summary: String,
+    pub metadata: Value,
 }

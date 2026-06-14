@@ -4,10 +4,16 @@ use crate::app::AppState;
 
 #[path = "identity.domains.developer.routes.context.rs"]
 pub(crate) mod context;
+#[path = "identity.domains.developer.routes.health.rs"]
+pub(crate) mod health;
 #[path = "identity.domains.developer.routes.oauth.rs"]
 pub(crate) mod oauth;
+#[path = "identity.domains.developer.routes.sandbox.rs"]
+pub(crate) mod sandbox;
 #[path = "identity.domains.developer.routes.service_accounts.rs"]
 pub(crate) mod service_accounts;
+#[path = "identity.domains.developer.routes.tokens.rs"]
+pub(crate) mod tokens;
 #[path = "identity.domains.developer.routes.webhooks.rs"]
 pub(crate) mod webhooks;
 
@@ -51,6 +57,22 @@ pub fn router(state: &AppState) -> Router<AppState> {
             axum::routing::post(webhooks::replay_delivery),
         )
         .route("/developer/logs", get(webhooks::list_logs))
+        .route(
+            "/developer/tokens/debug",
+            axum::routing::post(tokens::debug_token),
+        )
+        .route(
+            "/developer/sandbox",
+            get(sandbox::get_sandbox).put(sandbox::upsert_sandbox),
+        )
+        .route(
+            "/developer/sandbox/reset",
+            axum::routing::post(sandbox::reset_sandbox),
+        )
+        .route(
+            "/developer/health-checks",
+            get(health::list_health_checks).post(health::run_health_checks),
+        )
         .layer(from_fn_with_state(
             state.clone(),
             crate::http::middleware::jwt::jwt_auth_middleware,

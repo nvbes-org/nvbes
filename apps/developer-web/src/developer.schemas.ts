@@ -183,6 +183,58 @@ export const DeveloperLogsSchema = z.object({
   logs: z.array(DeveloperLogEntrySchema),
 });
 
+export const DeveloperTokenClaimsSchema = z.object({
+  subject: z.string(),
+  tenant_id: z.string().uuid().nullable(),
+  workspace_id: z.string().uuid().nullable(),
+  client_id: z.string().nullable(),
+  scopes: z.array(z.string()),
+  audience: z.string(),
+  issuer: z.string(),
+  expires_at: z.string(),
+  issued_at: z.string(),
+  not_before: z.string(),
+  token_type: z.string(),
+  amr: z.array(z.string()),
+  acr: z.string().nullable(),
+});
+
+export const DebugDeveloperTokenSchema = z.object({
+  active: z.boolean(),
+  access_decision: z.enum(['allowed', 'expired', 'tenant_mismatch', 'invalid']),
+  claims: DeveloperTokenClaimsSchema.nullable(),
+  token_hash_prefix: z.string(),
+});
+
+export const DeveloperSandboxTenantSchema = z.object({
+  tenant_id: z.string().uuid(),
+  sandbox_tenant_id: z.string().uuid(),
+  sandbox_name: z.string(),
+  sandbox_slug: z.string(),
+  status: z.string(),
+  data_profile: z.string(),
+  reset_requested_at: z.string().nullable(),
+  updated_at: z.string(),
+});
+
+export const DeveloperSandboxSchema = z.object({
+  sandbox: DeveloperSandboxTenantSchema.nullable(),
+});
+
+export const DeveloperHealthCheckSchema = z.object({
+  id: z.string().uuid(),
+  target_type: z.string(),
+  target_id: z.string(),
+  check_kind: z.string(),
+  status: DeveloperHealthStatusSchema,
+  summary: z.string(),
+  checked_at: z.string(),
+});
+
+export const DeveloperHealthChecksSchema = z.object({
+  checks: z.array(DeveloperHealthCheckSchema),
+});
+
 export type DeveloperRole = z.infer<typeof DeveloperRoleSchema>;
 export type DeveloperPermission = z.infer<typeof DeveloperPermissionSchema>;
 export type DeveloperContext = z.infer<typeof DeveloperContextSchema>;
@@ -196,3 +248,7 @@ export type RotateDeveloperSecret = z.infer<typeof RotateDeveloperSecretSchema>;
 export type DeveloperWebhookEndpoint = z.infer<typeof DeveloperWebhookEndpointSchema>;
 export type DeveloperWebhookDelivery = z.infer<typeof DeveloperWebhookDeliverySchema>;
 export type DeveloperLogEntry = z.infer<typeof DeveloperLogEntrySchema>;
+export type DeveloperTokenClaims = z.infer<typeof DeveloperTokenClaimsSchema>;
+export type DebugDeveloperToken = z.infer<typeof DebugDeveloperTokenSchema>;
+export type DeveloperSandboxTenant = z.infer<typeof DeveloperSandboxTenantSchema>;
+export type DeveloperHealthCheck = z.infer<typeof DeveloperHealthCheckSchema>;

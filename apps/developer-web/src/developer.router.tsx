@@ -1,11 +1,14 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
 import { DeveloperShell } from './layouts/DeveloperShell';
+import { HealthChecksPage } from './pages/HealthChecksPage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { OAuthAppsPage } from './pages/OAuthAppsPage';
 import { LogsPage } from './pages/LogsPage';
+import { SandboxPage } from './pages/SandboxPage';
 import { ScopesPage } from './pages/ScopesPage';
 import { SecretsPage } from './pages/SecretsPage';
 import { ServiceAccountsPage } from './pages/ServiceAccountsPage';
+import { TokenDebuggerPage } from './pages/TokenDebuggerPage';
 import { WebhooksPage } from './pages/WebhooksPage';
 
 function RootShell() {
@@ -78,7 +81,7 @@ const consoleRootRoute = createRoute({
   path: '/console',
   component: DeveloperShell,
 });
-const consolePlaceholderRoutes = ['/consent', '/sandbox', '/tokens', '/health'].map((path) =>
+const consolePlaceholderRoutes = ['/consent'].map((path) =>
   createRoute({
     getParentRoute: () => consoleRootRoute,
     path,
@@ -120,6 +123,21 @@ const consoleLogsRoute = createRoute({
   path: '/logs',
   component: LogsPage,
 });
+const consoleSandboxRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/sandbox',
+  component: SandboxPage,
+});
+const consoleTokensRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/tokens',
+  component: TokenDebuggerPage,
+});
+const consoleHealthRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/health',
+  component: HealthChecksPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   consoleRootRoute.addChildren([
@@ -130,6 +148,9 @@ const routeTree = rootRoute.addChildren([
     consoleServiceAccountsRoute,
     consoleWebhooksRoute,
     consoleLogsRoute,
+    consoleSandboxRoute,
+    consoleTokensRoute,
+    consoleHealthRoute,
     ...consolePlaceholderRoutes,
   ]),
 ]);

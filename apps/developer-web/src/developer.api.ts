@@ -1,20 +1,27 @@
 import { identityHttpClient } from './identity.http';
 import {
+  DebugDeveloperTokenSchema,
   DeveloperContextSchema,
+  DeveloperHealthChecksSchema,
   DeveloperLogsSchema,
   DeveloperMarketplaceAppsSchema,
   DeveloperOAuthClientsSchema,
   DeveloperOverviewSchema,
+  DeveloperSandboxSchema,
+  DeveloperSandboxTenantSchema,
   DeveloperSecretVersionsSchema,
   DeveloperServiceAccountsSchema,
   DeveloperScopeRegistrySchema,
   DeveloperWebhookEndpointsSchema,
   RotateDeveloperSecretSchema,
+  type DebugDeveloperToken,
   type DeveloperContext,
+  type DeveloperHealthCheck,
   type DeveloperLogEntry,
   type DeveloperMarketplaceApp,
   type DeveloperOAuthClient,
   type DeveloperOverview,
+  type DeveloperSandboxTenant,
   type DeveloperSecretVersion,
   type DeveloperServiceAccount,
   type DeveloperScopeRegistryEntry,
@@ -127,6 +134,56 @@ export async function listDeveloperLogs(signal?: AbortSignal): Promise<Developer
     signal: withTimeoutSignal(signal, 4_000),
   });
   return response.logs;
+}
+
+export function debugDeveloperToken(accessToken: string): Promise<DebugDeveloperToken> {
+  return identityHttpClient.post('/developer/tokens/debug', DebugDeveloperTokenSchema, {
+    access_token: accessToken,
+  });
+}
+
+export async function getDeveloperSandbox(
+  signal?: AbortSignal,
+): Promise<DeveloperSandboxTenant | null> {
+  const response = await identityHttpClient.get('/developer/sandbox', DeveloperSandboxSchema, {
+    signal: withTimeoutSignal(signal, 4_000),
+  });
+  return response.sandbox;
+}
+
+export function upsertDeveloperSandbox(dataProfile: string): Promise<DeveloperSandboxTenant> {
+  return identityHttpClient.request('/developer/sandbox', DeveloperSandboxTenantSchema, {
+    method: 'PUT',
+    body: {
+      data_profile: dataProfile,
+    },
+  });
+}
+
+export function resetDeveloperSandbox(): Promise<DeveloperSandboxTenant> {
+  return identityHttpClient.post('/developer/sandbox/reset', DeveloperSandboxTenantSchema, {});
+}
+
+export async function listDeveloperHealthChecks(
+  signal?: AbortSignal,
+): Promise<DeveloperHealthCheck[]> {
+  const response = await identityHttpClient.get(
+    '/developer/health-checks',
+    DeveloperHealthChecksSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+  return response.checks;
+}
+
+export async function runDeveloperHealthChecks(): Promise<DeveloperHealthCheck[]> {
+  const response = await identityHttpClient.post(
+    '/developer/health-checks',
+    DeveloperHealthChecksSchema,
+    {},
+  );
+  return response.checks;
 }
 
 function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
