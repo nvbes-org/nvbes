@@ -100,6 +100,18 @@ export const DeveloperScopeRegistrySchema = z.object({
   scopes: z.array(DeveloperScopeRegistryEntrySchema),
 });
 
+export const DeveloperConsentScreenSchema = z.object({
+  client_id: z.string(),
+  product_name: z.string(),
+  logo_url: z.string().nullable(),
+  support_url: z.string().nullable(),
+  privacy_url: z.string().nullable(),
+  terms_url: z.string().nullable(),
+  description: z.string(),
+  configured: z.boolean(),
+  updated_at: z.string().nullable(),
+});
+
 export const DeveloperServiceAccountSchema = z.object({
   principal_id: z.string().uuid(),
   name: z.string(),
@@ -242,6 +254,7 @@ export type DeveloperOverview = z.infer<typeof DeveloperOverviewSchema>;
 export type DeveloperOAuthClient = z.infer<typeof DeveloperOAuthClientSchema>;
 export type DeveloperMarketplaceApp = z.infer<typeof DeveloperMarketplaceAppSchema>;
 export type DeveloperScopeRegistryEntry = z.infer<typeof DeveloperScopeRegistryEntrySchema>;
+export type DeveloperConsentScreen = z.infer<typeof DeveloperConsentScreenSchema>;
 export type DeveloperServiceAccount = z.infer<typeof DeveloperServiceAccountSchema>;
 export type DeveloperSecretVersion = z.infer<typeof DeveloperSecretVersionSchema>;
 export type RotateDeveloperSecret = z.infer<typeof RotateDeveloperSecretSchema>;

@@ -1,6 +1,7 @@
 import { identityHttpClient } from './identity.http';
 import {
   DebugDeveloperTokenSchema,
+  DeveloperConsentScreenSchema,
   DeveloperContextSchema,
   DeveloperHealthChecksSchema,
   DeveloperLogsSchema,
@@ -15,6 +16,7 @@ import {
   DeveloperWebhookEndpointsSchema,
   RotateDeveloperSecretSchema,
   type DebugDeveloperToken,
+  type DeveloperConsentScreen,
   type DeveloperContext,
   type DeveloperHealthCheck,
   type DeveloperLogEntry,
@@ -78,6 +80,33 @@ export async function listDeveloperScopes(
   return response.scopes;
 }
 
+export function getDeveloperConsentScreen(
+  clientId: string,
+  signal?: AbortSignal,
+): Promise<DeveloperConsentScreen> {
+  return identityHttpClient.get(
+    `/developer/oauth-clients/${encodeURIComponent(clientId)}/consent-screen`,
+    DeveloperConsentScreenSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+}
+
+export function upsertDeveloperConsentScreen(
+  clientId: string,
+  form: DeveloperConsentScreenForm,
+): Promise<DeveloperConsentScreen> {
+  return identityHttpClient.request(
+    `/developer/oauth-clients/${encodeURIComponent(clientId)}/consent-screen`,
+    DeveloperConsentScreenSchema,
+    {
+      method: 'PUT',
+      body: buildConsentScreenPayload(form),
+    },
+  );
+}
+
 export async function listDeveloperServiceAccounts(
   signal?: AbortSignal,
 ): Promise<DeveloperServiceAccount[]> {
@@ -89,6 +118,31 @@ export async function listDeveloperServiceAccounts(
     },
   );
   return response.service_accounts;
+}
+
+export type DeveloperConsentScreenForm = {
+  productName: string;
+  description: string;
+  logoUrl: string;
+  supportUrl: string;
+  privacyUrl: string;
+  termsUrl: string;
+};
+
+function buildConsentScreenPayload(form: DeveloperConsentScreenForm) {
+  return {
+    product_name: form.productName.trim(),
+    description: form.description.trim(),
+    logo_url: nullableTrim(form.logoUrl),
+    support_url: nullableTrim(form.supportUrl),
+    privacy_url: nullableTrim(form.privacyUrl),
+    terms_url: nullableTrim(form.termsUrl),
+  };
+}
+
+function nullableTrim(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 export async function listDeveloperSecretVersions(

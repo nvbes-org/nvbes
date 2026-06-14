@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
 import { DeveloperShell } from './layouts/DeveloperShell';
+import { ConsentScreenPage } from './pages/ConsentScreenPage';
 import { HealthChecksPage } from './pages/HealthChecksPage';
 import { MarketplacePage } from './pages/MarketplacePage';
 import { OAuthAppsPage } from './pages/OAuthAppsPage';
@@ -58,18 +59,6 @@ function DeveloperHomePage() {
   );
 }
 
-function ConsoleComingSoonPage() {
-  return (
-    <section className="rounded-lg border border-border bg-card p-6">
-      <h2 className="text-base font-semibold">Section queued for V0 workflow</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        The shared shell, tenant context, and permission gates are active. Feature screens attach to
-        this route group in the next slices.
-      </p>
-    </section>
-  );
-}
-
 const rootRoute = createRootRoute({ component: RootShell });
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -81,13 +70,6 @@ const consoleRootRoute = createRoute({
   path: '/console',
   component: DeveloperShell,
 });
-const consolePlaceholderRoutes = ['/consent'].map((path) =>
-  createRoute({
-    getParentRoute: () => consoleRootRoute,
-    path,
-    component: ConsoleComingSoonPage,
-  }),
-);
 const consoleOAuthClientsRoute = createRoute({
   getParentRoute: () => consoleRootRoute,
   path: '/oauth-clients',
@@ -123,6 +105,11 @@ const consoleLogsRoute = createRoute({
   path: '/logs',
   component: LogsPage,
 });
+const consoleConsentRoute = createRoute({
+  getParentRoute: () => consoleRootRoute,
+  path: '/consent',
+  component: ConsentScreenPage,
+});
 const consoleSandboxRoute = createRoute({
   getParentRoute: () => consoleRootRoute,
   path: '/sandbox',
@@ -148,10 +135,10 @@ const routeTree = rootRoute.addChildren([
     consoleServiceAccountsRoute,
     consoleWebhooksRoute,
     consoleLogsRoute,
+    consoleConsentRoute,
     consoleSandboxRoute,
     consoleTokensRoute,
     consoleHealthRoute,
-    ...consolePlaceholderRoutes,
   ]),
 ]);
 
