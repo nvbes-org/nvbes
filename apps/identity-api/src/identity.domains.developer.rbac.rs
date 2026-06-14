@@ -76,6 +76,35 @@ pub enum DeveloperPermission {
     RbacManage,
 }
 
+impl DeveloperPermission {
+    pub fn as_api_str(&self) -> &'static str {
+        match self {
+            Self::DocsRead => "docs.read",
+            Self::AppsRead => "apps.read",
+            Self::AppsCreate => "apps.create",
+            Self::AppsUpdate => "apps.update",
+            Self::AppsRevoke => "apps.revoke",
+            Self::MarketplaceRead => "marketplace.read",
+            Self::MarketplaceSubmit => "marketplace.submit",
+            Self::MarketplaceReview => "marketplace.review",
+            Self::ScopesRead => "scopes.read",
+            Self::ScopesManage => "scopes.manage",
+            Self::SecretsRotate => "secrets.rotate",
+            Self::ServiceAccountsRead => "service_accounts.read",
+            Self::ServiceAccountsManage => "service_accounts.manage",
+            Self::WebhooksRead => "webhooks.read",
+            Self::WebhooksManage => "webhooks.manage",
+            Self::WebhooksReplay => "webhooks.replay",
+            Self::LogsRead => "logs.read",
+            Self::TokensInspect => "tokens.inspect",
+            Self::HealthChecksRead => "health_checks.read",
+            Self::HealthChecksRun => "health_checks.run",
+            Self::SandboxUse => "sandbox.use",
+            Self::RbacManage => "rbac.manage",
+        }
+    }
+}
+
 pub fn permissions_for_role(role: DeveloperRole) -> &'static [DeveloperPermission] {
     use DeveloperPermission::*;
 

@@ -8,6 +8,7 @@
     "build": "tsc -b && node ./node_modules/vite-plus/bin/vp build",
     "check": "pnpm run typecheck",
     "preview": "node ./node_modules/vite-plus/bin/vp preview",
+    "test": "node ./node_modules/vite-plus/bin/vp test",
     "typecheck": "tsgo -b --pretty false",
     "lint": "node ./node_modules/vite-plus/bin/vp lint",
     "format": "node ./node_modules/vite-plus/bin/vp fmt --write",

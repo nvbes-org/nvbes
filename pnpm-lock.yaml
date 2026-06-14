@@ -93,6 +93,103 @@ importers:
         specifier: 'catalog:'
         version: 0.1.24(@opentelemetry/api@1.9.1)(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(yaml@2.9.0))(yaml@2.9.0)
 
+  apps/developer-web:
+    dependencies:
+      '@base-ui/react':
+        specifier: ^1.4.1
+        version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@fontsource-variable/geist':
+        specifier: ^5.2.9
+        version: 5.2.9
+      '@nvbes/http-client':
+        specifier: workspace:*
+        version: link:../../libs/ts/http-client
+      '@nvbes/identity-client':
+        specifier: workspace:*
+        version: link:../../libs/ts/identity-client
+      '@nvbes/identity-sdk-web':
+        specifier: workspace:*
+        version: link:../../libs/ts/identity-sdk-web
+      '@nvbes/web-runtime':
+        specifier: workspace:*
+        version: link:../../libs/ts/web-runtime
+      '@nvbes/web-ui':
+        specifier: workspace:*
+        version: link:../../libs/ts/web-ui
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.100.11(react@19.2.6)
+      '@tanstack/react-query-devtools':
+        specifier: 'catalog:'
+        version: 5.100.11(@tanstack/react-query@5.100.11(react@19.2.6))(react@19.2.6)
+      '@tanstack/react-router':
+        specifier: 'catalog:'
+        version: 1.170.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tanstack/react-router-devtools':
+        specifier: 'catalog:'
+        version: 1.167.0(@tanstack/react-router@1.170.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@tanstack/router-core@1.171.3)(csstype@3.2.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^1.16.0
+        version: 1.16.0(react@19.2.6)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
+      shadcn:
+        specifier: ^4.7.0
+        version: 4.7.0(@types/node@25.8.0)(typescript@6.0.3)
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.0(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0))
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20260421.2
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 6.0.2(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0)'
+      vite-plugin-devtools-json:
+        specifier: ^1.0.0
+        version: 1.0.0(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0))
+      vite-plus:
+        specifier: 'catalog:'
+        version: 0.1.24(@opentelemetry/api@1.9.1)(@types/node@25.8.0)(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0))(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0)
+      vitest:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-test@0.1.24(@opentelemetry/api@1.9.1)(@types/node@25.8.0)(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0))(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(yaml@2.9.0)'
+
   apps/drive-web:
     dependencies:
       '@base-ui/react':

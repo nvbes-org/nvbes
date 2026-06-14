@@ -1,4 +1,5 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
+import { DeveloperShell } from './layouts/DeveloperShell';
 
 function RootShell() {
   return <Outlet />;
@@ -12,12 +13,12 @@ function DeveloperHomePage() {
           <Link to="/" className="text-lg font-semibold">
             nvbes Developers
           </Link>
-          <Link
-            to="/console"
+          <a
+            href="/console"
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
             Open console
-          </Link>
+          </a>
         </nav>
         <div className="grid flex-1 items-center gap-6 md:grid-cols-[1fr_380px]">
           <div className="space-y-5">
@@ -47,16 +48,15 @@ function DeveloperHomePage() {
   );
 }
 
-function ConsolePreviewPage() {
+function ConsoleComingSoonPage() {
   return (
-    <main className="min-h-screen bg-background px-6 py-8 text-foreground">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="text-2xl font-semibold">Developer Console</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Console routes connect to `/api/v1/developer` in later tasks.
-        </p>
-      </div>
-    </main>
+    <section className="rounded-lg border border-border bg-card p-6">
+      <h2 className="text-base font-semibold">Section queued for V0 workflow</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The shared shell, tenant context, and permission gates are active. Feature screens attach to
+        this route group in the next slices.
+      </p>
+    </section>
   );
 }
 
@@ -66,12 +66,33 @@ const homeRoute = createRoute({
   path: '/',
   component: DeveloperHomePage,
 });
-const consoleRoute = createRoute({
+const consoleRootRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/console',
-  component: ConsolePreviewPage,
+  component: DeveloperShell,
 });
-const routeTree = rootRoute.addChildren([homeRoute, consoleRoute]);
+const consolePlaceholderRoutes = [
+  '/oauth-clients',
+  '/marketplace',
+  '/consent',
+  '/scopes',
+  '/secrets',
+  '/webhooks',
+  '/sandbox',
+  '/tokens',
+  '/health',
+  '/logs',
+].map((path) =>
+  createRoute({
+    getParentRoute: () => consoleRootRoute,
+    path,
+    component: ConsoleComingSoonPage,
+  }),
+);
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  consoleRootRoute.addChildren(consolePlaceholderRoutes),
+]);
 
 export const router = createRouter({ routeTree });
 
