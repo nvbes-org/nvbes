@@ -29,6 +29,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "posthog-js": "catalog:",
+    "radix-ui": "^1.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "shadcn": "^4.7.0",

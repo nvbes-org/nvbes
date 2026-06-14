@@ -1,4 +1,6 @@
 import { EnterpriseRouteState } from '../components/EnterpriseRouteState';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '../components/ui/card';
 
 export type ModuleShellPageProps = {
   title: string;
@@ -18,26 +20,28 @@ export function ModuleShellPage({ title, summary, metrics }: ModuleShellPageProp
             <h1 className="text-2xl font-heading font-semibold tracking-normal">{title}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{summary}</p>
           </div>
-          <div className="h-9 shrink-0 rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+          <Badge variant="outline" className="h-7 shrink-0 rounded-md">
             Shell
-          </div>
+          </Badge>
         </div>
       </header>
 
       <section className="grid gap-3 md:grid-cols-3">
         {metrics.map((metric) => (
-          <div key={metric.label} className="min-h-28 rounded-lg border border-border bg-card p-4">
-            <p className="truncate text-xs font-medium text-muted-foreground">{metric.label}</p>
-            <p
-              className={
-                metric.tone === 'warning'
-                  ? 'mt-5 truncate text-xl font-heading font-semibold text-destructive'
-                  : 'mt-5 truncate text-xl font-heading font-semibold'
-              }
-            >
-              {metric.value}
-            </p>
-          </div>
+          <Card key={metric.label} className="min-h-28 rounded-lg" size="sm">
+            <CardContent>
+              <p className="truncate text-xs font-medium text-muted-foreground">{metric.label}</p>
+              <p
+                className={
+                  metric.tone === 'warning'
+                    ? 'mt-5 truncate text-xl font-heading font-semibold text-destructive'
+                    : 'mt-5 truncate text-xl font-heading font-semibold'
+                }
+              >
+                {metric.value}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </section>
 

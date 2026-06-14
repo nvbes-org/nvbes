@@ -1,5 +1,7 @@
 import { Activity, Building2, ShieldCheck, Users } from 'lucide-react';
 import { EnterpriseRouteState } from '../components/EnterpriseRouteState';
+import { Badge } from '../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 
 const overviewMetrics = [
   { label: 'Active users', value: 'Pending', icon: Users },
@@ -30,9 +32,9 @@ export function OverviewPage() {
               governance, billing, and platform usage.
             </p>
           </div>
-          <div className="h-9 shrink-0 rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+          <Badge variant="outline" className="h-7 shrink-0 rounded-md">
             Shell only
-          </div>
+          </Badge>
         </div>
       </header>
 
@@ -40,34 +42,39 @@ export function OverviewPage() {
         {overviewMetrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <div key={metric.label} className="min-h-28 rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="truncate text-xs font-medium text-muted-foreground">
-                  {metric.label}
-                </span>
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-              </div>
-              <p className="mt-5 truncate text-xl font-heading font-semibold">{metric.value}</p>
-            </div>
+            <Card key={metric.label} className="min-h-28 rounded-lg" size="sm">
+              <CardContent>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-xs font-medium text-muted-foreground">
+                    {metric.label}
+                  </span>
+                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                </div>
+                <p className="mt-5 truncate text-xl font-heading font-semibold">{metric.value}</p>
+              </CardContent>
+            </Card>
           );
         })}
       </section>
 
-      <section className="rounded-lg border border-border bg-card">
-        <div className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-heading font-semibold">Module readiness</h2>
-        </div>
-        <div className="divide-y divide-border">
+      <Card className="rounded-lg" size="sm">
+        <CardHeader className="border-b border-border">
+          <CardTitle>Module readiness</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y divide-border px-0">
           {overviewModules.map((module) => (
-            <div key={module} className="flex min-h-12 items-center justify-between gap-4 px-4 py-3">
+            <div
+              key={module}
+              className="flex min-h-12 items-center justify-between gap-4 px-4 py-3"
+            >
               <span className="text-sm font-medium">{module}</span>
-              <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+              <Badge variant="secondary" className="shrink-0 rounded-md">
                 Route shell
-              </span>
+              </Badge>
             </div>
           ))}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <EnterpriseRouteState
         title="Data integration pending"
