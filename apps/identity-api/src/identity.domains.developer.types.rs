@@ -115,3 +115,48 @@ impl DeveloperWebhookEventType {
         }
     }
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct InspectDeveloperTokenRequest {
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct InspectDeveloperTokenResponse {
+    pub active: bool,
+    pub subject: Option<String>,
+    pub client_id: Option<String>,
+    pub tenant_id: Option<String>,
+    pub scopes: Vec<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct OAuthPlaygroundExchangeRequest {
+    pub client_id: String,
+    pub code: String,
+    pub redirect_uri: String,
+    pub code_verifier: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OAuthPlaygroundExchangeResponse {
+    pub token_type: String,
+    pub expires_in: i64,
+    pub scope: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeveloperLogEntry {
+    pub id: String,
+    pub event_type: String,
+    pub user_id: Option<String>,
+    pub client_id: Option<String>,
+    pub tenant_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeveloperLogsResponse {
+    pub logs: Vec<DeveloperLogEntry>,
+}
