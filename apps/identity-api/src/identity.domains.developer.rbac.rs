@@ -8,6 +8,48 @@ pub enum DeveloperRole {
     DocsViewer,
 }
 
+impl DeveloperRole {
+    pub fn as_db_str(&self) -> &'static str {
+        match self {
+            Self::DeveloperAdmin => "developer_admin",
+            Self::AppManager => "app_manager",
+            Self::WebhookManager => "webhook_manager",
+            Self::LogViewer => "log_viewer",
+            Self::IntegrationTester => "integration_tester",
+            Self::DocsViewer => "docs_viewer",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeveloperRoleParseError {
+    literal: String,
+}
+
+impl DeveloperRoleParseError {
+    pub fn literal(&self) -> &str {
+        &self.literal
+    }
+}
+
+impl TryFrom<&str> for DeveloperRole {
+    type Error = DeveloperRoleParseError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "developer_admin" => Ok(Self::DeveloperAdmin),
+            "app_manager" => Ok(Self::AppManager),
+            "webhook_manager" => Ok(Self::WebhookManager),
+            "log_viewer" => Ok(Self::LogViewer),
+            "integration_tester" => Ok(Self::IntegrationTester),
+            "docs_viewer" => Ok(Self::DocsViewer),
+            literal => Err(DeveloperRoleParseError {
+                literal: literal.to_string(),
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeveloperPermission {
     DocsRead,
@@ -34,11 +76,11 @@ pub enum DeveloperPermission {
     RbacManage,
 }
 
-pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
+pub fn permissions_for_role(role: DeveloperRole) -> &'static [DeveloperPermission] {
     use DeveloperPermission::*;
 
     match role {
-        DeveloperRole::DeveloperAdmin => vec![
+        DeveloperRole::DeveloperAdmin => &[
             DocsRead,
             AppsRead,
             AppsCreate,
@@ -62,7 +104,7 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
             SandboxUse,
             RbacManage,
         ],
-        DeveloperRole::AppManager => vec![
+        DeveloperRole::AppManager => &[
             DocsRead,
             AppsRead,
             AppsCreate,
@@ -76,7 +118,7 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
             ServiceAccountsManage,
             HealthChecksRead,
         ],
-        DeveloperRole::WebhookManager => vec![
+        DeveloperRole::WebhookManager => &[
             DocsRead,
             WebhooksRead,
             WebhooksManage,
@@ -85,10 +127,8 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
             HealthChecksRead,
             HealthChecksRun,
         ],
-        DeveloperRole::LogViewer => {
-            vec![DocsRead, AppsRead, WebhooksRead, LogsRead, HealthChecksRead]
-        }
-        DeveloperRole::IntegrationTester => vec![
+        DeveloperRole::LogViewer => &[DocsRead, AppsRead, WebhooksRead, LogsRead, HealthChecksRead],
+        DeveloperRole::IntegrationTester => &[
             DocsRead,
             AppsRead,
             MarketplaceRead,
@@ -101,6 +141,6 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
             HealthChecksRun,
             SandboxUse,
         ],
-        DeveloperRole::DocsViewer => vec![DocsRead],
+        DeveloperRole::DocsViewer => &[DocsRead],
     }
 }
