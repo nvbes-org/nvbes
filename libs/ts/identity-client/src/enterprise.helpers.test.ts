@@ -1,4 +1,4 @@
-import type { HttpClient, HttpRequestOptions } from '@nvbes/http-client';
+import { describe, expect, it } from 'vite-plus/test';
 import type { z } from 'zod';
 import { updateEnterpriseUserAccess } from './enterprise.client';
 import {
@@ -7,19 +7,6 @@ import {
   EnterpriseSuspendInputSchema,
   EnterpriseUsersResponseSchema,
 } from './enterprise.schemas';
-
-type TestApi = {
-  describe: (name: string, fn: () => void) => void;
-  expect: (actual: unknown) => {
-    toBe: (expected: unknown) => void;
-    toContain: (expected: unknown) => void;
-    toThrow: () => void;
-  };
-  it: (name: string, fn: () => void | Promise<void>) => void;
-};
-
-const testModuleName = 'vite-plus/test';
-const { describe, expect, it } = (await import(testModuleName)) as TestApi;
 
 describe('enterprise client schemas', () => {
   it('parses users payloads', () => {
@@ -56,6 +43,8 @@ describe('enterprise client schemas', () => {
   it('requires audit reasons for suspend and reactivate inputs', () => {
     expect(() => EnterpriseSuspendInputSchema.parse({})).toThrow();
     expect(() => EnterpriseReactivateInputSchema.parse({})).toThrow();
+    expect(() => EnterpriseSuspendInputSchema.parse({ reason: '   ' })).toThrow();
+    expect(() => EnterpriseReactivateInputSchema.parse({ reason: '   ' })).toThrow();
 
     expect(EnterpriseSuspendInputSchema.parse({ reason: 'security_review' }).reason).toBe(
       'security_review',
@@ -68,7 +57,7 @@ describe('enterprise client schemas', () => {
   it('patches enterprise user access through the versioned API path', async () => {
     const requests: RecordedRequest[] = [];
     const http = {
-      request<T>(path: string, schema: z.ZodType<T>, options: HttpRequestOptions = {}): Promise<T> {
+      request<T>(path: string, schema: z.ZodType<T>, options: TestRequestOptions = {}): Promise<T> {
         requests.push({
           body: JSON.stringify(options.body),
           method: options.method,
@@ -77,7 +66,7 @@ describe('enterprise client schemas', () => {
 
         return Promise.resolve(schema.parse({ user: enterpriseUserPayload() }));
       },
-    } as unknown as HttpClient;
+    } as unknown as Parameters<typeof updateEnterpriseUserAccess>[0];
 
     await updateEnterpriseUserAccess(http, 'user/123', {
       role: 'admin',
@@ -101,6 +90,11 @@ type RecordedRequest = {
   body: string | undefined;
   method: string | undefined;
   path: string;
+};
+
+type TestRequestOptions = {
+  body?: unknown;
+  method?: string;
 };
 
 function enterpriseUserPayload() {

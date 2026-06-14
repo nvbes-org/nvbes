@@ -206,12 +206,14 @@ export const EnterpriseAccessUpdateInputSchema = z.object({
   workspace_ids: z.array(z.string()),
 });
 
+const AuditReasonSchema = z.string().refine((value) => value.trim().length > 0);
+
 export const EnterpriseSuspendInputSchema = z.object({
-  reason: z.string().min(1),
+  reason: AuditReasonSchema,
 });
 
 export const EnterpriseReactivateInputSchema = z.object({
-  reason: z.string().min(1),
+  reason: AuditReasonSchema,
   module_grants: z.array(EnterpriseModuleGrantSchema).optional(),
   workspace_ids: z.array(z.string()).optional(),
 });
