@@ -25,6 +25,7 @@ export function LoginPageContent({
   loading,
   identifierSubmitting,
   location,
+  hostedConsent,
   mfaMethod,
   oauthRequest,
   password,
@@ -81,6 +82,7 @@ export function LoginPageContent({
               hasWebAuthn={hasWebAuthn}
               loading={loading}
               identifierSubmitting={identifierSubmitting}
+              hostedConsent={hostedConsent}
               mfaMethod={mfaMethod}
               oauthRequest={oauthRequest}
               password={password}

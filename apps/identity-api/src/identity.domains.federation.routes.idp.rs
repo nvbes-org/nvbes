@@ -39,6 +39,7 @@ pub fn router() -> Router<AppState> {
 #[serde(rename_all = "snake_case")]
 pub(crate) struct CreateFederatedIdentityProviderRequest {
     provider_type: String,
+    provider_family: Option<String>,
     name: String,
     client_id: Option<String>,
     issuer: Option<String>,
@@ -50,6 +51,7 @@ pub(crate) struct CreateFederatedIdentityProviderRequest {
 #[serde(rename_all = "snake_case")]
 pub(crate) struct UpdateFederatedIdentityProviderRequest {
     provider_type: Option<String>,
+    provider_family: Option<String>,
     name: Option<String>,
     client_id: Option<String>,
     issuer: Option<String>,
@@ -110,6 +112,7 @@ pub(crate) async fn create_identity_provider(
             tenant_id,
             CreateFederatedIdentityProviderInput {
                 provider_type: request.provider_type,
+                provider_family: request.provider_family,
                 name: request.name,
                 client_id: request.client_id,
                 issuer: request.issuer,
@@ -153,6 +156,7 @@ pub(crate) async fn update_identity_provider(
             provider_id,
             UpdateFederatedIdentityProviderInput {
                 provider_type: request.provider_type,
+                provider_family: request.provider_family,
                 name: request.name,
                 client_id: request.client_id,
                 issuer: request.issuer,

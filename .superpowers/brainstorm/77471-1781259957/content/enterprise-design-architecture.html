@@ -1,0 +1,65 @@
+<h2>Design 1/5 - Architecture produit</h2>
+<p class="subtitle">Validation demandee: est-ce que cette separation Enterprise/Tenant -> Workspaces correspond au produit voulu ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">apps/enterprise-web - tenant admin console</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:14px;align-items:stretch">
+      <div class="mock-content">
+        <div class="label">Identity layer</div>
+        <h3 style="margin:.35rem 0">identity-web</h3>
+        <div class="placeholder">Compte personnel</div>
+        <div class="placeholder" style="margin-top:8px">Login / MFA</div>
+        <div class="placeholder" style="margin-top:8px">Sessions user</div>
+      </div>
+      <div class="mock-content" style="border:2px solid #111827">
+        <div class="label">Enterprise layer</div>
+        <h3 style="margin:.35rem 0">enterprise-web</h3>
+        <div class="placeholder">Tenant dashboard</div>
+        <div class="placeholder" style="margin-top:8px">Users + invitations</div>
+        <div class="placeholder" style="margin-top:8px">Workspaces admin</div>
+        <div class="placeholder" style="margin-top:8px">Developers / apps / keys</div>
+        <div class="placeholder" style="margin-top:8px">Policies / security / billing</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Product layer</div>
+        <h3 style="margin:.35rem 0">drive-web</h3>
+        <div class="placeholder">Fichiers</div>
+        <div class="placeholder" style="margin-top:8px">Partages</div>
+        <div class="placeholder" style="margin-top:8px">Actions workspace</div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="mock-content">
+        <div class="label">Tenant owns</div>
+        <p>Users, roles globaux, policies, billing, audit, security posture.</p>
+      </div>
+      <div class="mock-content">
+        <div class="label">Workspace owns</div>
+        <p>Scope de travail, groupes de fichiers, acces local, usage produit.</p>
+      </div>
+      <div class="mock-content">
+        <div class="label">Developer owns</div>
+        <p>Service accounts, API clients, keys, webhooks, OAuth apps.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="architecture-approved" onclick="toggleSelect(this)">
+    <div class="letter">OK</div>
+    <div class="content">
+      <h3>Valider cette architecture</h3>
+      <p>On garde une app dediee enterprise-web et on traite Workspaces comme une ressource tenant.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="architecture-revise" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content">
+      <h3>Reviser</h3>
+      <p>Quelque chose dans la separation des produits ou responsabilites doit changer.</p>
+    </div>
+  </div>
+</div>

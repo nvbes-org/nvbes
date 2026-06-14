@@ -18,6 +18,7 @@ export type LoginPageStepContentProps = Pick<
   | 'hasRecovery'
   | 'hasTotp'
   | 'hasWebAuthn'
+  | 'hostedConsent'
   | 'identifierSubmitting'
   | 'loading'
   | 'mfaMethod'

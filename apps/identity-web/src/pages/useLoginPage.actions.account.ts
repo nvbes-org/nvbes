@@ -7,10 +7,17 @@ import { clearPendingOAuthAuthorizeRequest } from '../identity.oauth';
 import { cancelConsent, selectAccount, useAnotherAccount } from './useLoginPage.account';
 import { approveConsent, finishLoginSession } from './useLoginPage.oauth';
 import type { UseLoginPageActionsOptions } from './useLoginPage.actions.shared';
+import {
+  approveUniversalLoginConsent,
+  denyUniversalLoginConsent,
+  resumeHostedAuthorization,
+} from './useUniversalLogin';
 
 export function useLoginPageAccountActions({
   navigate,
   oauthRequest,
+  hostedStateId,
+  onHostedDecision,
   connectedAccounts,
   setConnectedAccounts,
   email,
@@ -27,6 +34,8 @@ export function useLoginPageAccountActions({
   UseLoginPageActionsOptions,
   | 'navigate'
   | 'oauthRequest'
+  | 'hostedStateId'
+  | 'onHostedDecision'
   | 'connectedAccounts'
   | 'setConnectedAccounts'
   | 'email'
@@ -42,6 +51,12 @@ export function useLoginPageAccountActions({
 >) {
   const finishLogin = useCallback(
     async (session: string | null) => {
+      if (hostedStateId) {
+        const decision = await resumeHostedAuthorization(hostedStateId);
+        onHostedDecision(decision);
+        return;
+      }
+
       await finishLoginSession({
         email,
         password,
@@ -59,7 +74,16 @@ export function useLoginPageAccountActions({
         },
       });
     },
-    [email, password, oauthRequest, navigateToAccount, setSessionToken, setStep],
+    [
+      email,
+      hostedStateId,
+      onHostedDecision,
+      password,
+      oauthRequest,
+      navigateToAccount,
+      setSessionToken,
+      setStep,
+    ],
   );
 
   const handleAccountSelect = (authuser: string) => {
@@ -136,6 +160,20 @@ export function useLoginPageAccountActions({
   };
 
   const handleConsentApprove = async () => {
+    if (hostedStateId) {
+      try {
+        setError(null);
+        setCheckingAuth(true);
+        const decision = await approveUniversalLoginConsent(hostedStateId);
+        onHostedDecision(decision);
+      } catch (err) {
+        setError(clientErrorMessage(err, 'Failed to grant consent'));
+      } finally {
+        setCheckingAuth(false);
+      }
+      return;
+    }
+
     await approveConsent({
       oauthRequest,
       sessionToken,
@@ -147,6 +185,15 @@ export function useLoginPageAccountActions({
   };
 
   const handleConsentCancel = () => {
+    if (hostedStateId) {
+      void denyUniversalLoginConsent(hostedStateId)
+        .then(onHostedDecision)
+        .catch((err) => {
+          setError(clientErrorMessage(err, 'Failed to deny consent'));
+        });
+      return;
+    }
+
     cancelConsent({
       oauthRequest,
       clearPendingOAuthAuthorizeRequest,

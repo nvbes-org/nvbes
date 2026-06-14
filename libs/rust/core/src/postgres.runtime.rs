@@ -101,6 +101,9 @@ mod tests {
             ..AppConfig::default()
         };
 
-        assert_eq!(PostgresPoolSettings::from_app_config(&config).max_connections, 23);
+        assert_eq!(
+            PostgresPoolSettings::from_app_config(&config).max_connections,
+            23
+        );
     }
 }

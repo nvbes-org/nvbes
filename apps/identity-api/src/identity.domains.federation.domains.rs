@@ -12,14 +12,9 @@ pub async fn list_tenant_domains(
 ) -> Result<TenantDomainsResponse, AppError> {
     let rows = sqlx::query_as::<_, TenantDomainRecord>(
         r#"
-        SELECT
-          id,
-          domain,
-          verified_at,
-          verification_requested_at,
-          verification_expires_at,
-          verification_token_hash,
-          created_at
+        SELECT id, domain, sso_required, sso_provider_id, verified_at,
+               verification_requested_at, verification_expires_at,
+               verification_token_hash, created_at
         FROM tenant_domains
         WHERE tenant_id = $1
         ORDER BY domain ASC
@@ -43,6 +38,10 @@ pub async fn create_tenant_domain(
     input: CreateTenantDomainInput,
 ) -> Result<TenantDomainResponse, AppError> {
     let domain = normalize_domain(&input.domain)?;
+    if input.sso_required.unwrap_or(false) {
+        validate_sso_provider(db, tenant_id, input.sso_provider_id).await?;
+    }
+
     let existing = sqlx::query_scalar::<_, i64>(
         r#"
         SELECT COUNT(*)
@@ -68,26 +67,19 @@ pub async fn create_tenant_domain(
     let row = sqlx::query_as::<_, TenantDomainRecord>(
         r#"
         INSERT INTO tenant_domains (
-          tenant_id,
-          domain,
-          verified_at,
-          verification_requested_at,
-          verification_expires_at,
-          verification_token_hash
+          tenant_id, domain, sso_required, sso_provider_id, verified_at,
+          verification_requested_at, verification_expires_at, verification_token_hash
         )
-        VALUES ($1, $2, NULL, NOW(), NOW() + INTERVAL '24 hours', $3)
-        RETURNING
-          id,
-          domain,
-          verified_at,
-          verification_requested_at,
-          verification_expires_at,
-          verification_token_hash,
-          created_at
+        VALUES ($1, $2, $3, $4, NULL, NOW(), NOW() + INTERVAL '24 hours', $5)
+        RETURNING id, domain, sso_required, sso_provider_id, verified_at,
+                  verification_requested_at, verification_expires_at,
+                  verification_token_hash, created_at
         "#,
     )
     .bind(tenant_id)
     .bind(&domain)
+    .bind(input.sso_required.unwrap_or(false))
+    .bind(input.sso_provider_id)
     .bind(&token_hash)
     .fetch_one(db)
     .await?;
@@ -95,6 +87,45 @@ pub async fn create_tenant_domain(
     Ok(TenantDomainResponse {
         domain: row.into_view(),
         verification_token: Some(verification_token),
+    })
+}
+
+pub async fn update_tenant_domain(
+    db: &PgPool,
+    tenant_id: Uuid,
+    domain_id: Uuid,
+    input: UpdateTenantDomainInput,
+) -> Result<TenantDomainResponse, AppError> {
+    let current = fetch_tenant_domain_for_update(db, tenant_id, domain_id).await?;
+    let sso_required = input.sso_required.unwrap_or(current.sso_required);
+    let sso_provider_id = input.sso_provider_id.or(current.sso_provider_id);
+
+    if sso_required {
+        validate_sso_provider(db, tenant_id, sso_provider_id).await?;
+    }
+
+    let row = sqlx::query_as::<_, TenantDomainRecord>(
+        r#"
+        UPDATE tenant_domains
+        SET sso_required = $3,
+            sso_provider_id = CASE WHEN $3 THEN $4 ELSE NULL END
+        WHERE id = $1
+          AND tenant_id = $2
+        RETURNING id, domain, sso_required, sso_provider_id, verified_at,
+                  verification_requested_at, verification_expires_at,
+                  verification_token_hash, created_at
+        "#,
+    )
+    .bind(domain_id)
+    .bind(tenant_id)
+    .bind(sso_required)
+    .bind(sso_provider_id)
+    .fetch_one(db)
+    .await?;
+
+    Ok(TenantDomainResponse {
+        domain: row.into_view(),
+        verification_token: None,
     })
 }
 
@@ -138,14 +169,9 @@ pub async fn verify_tenant_domain(
             verification_token_hash = NULL
         WHERE id = $1
           AND tenant_id = $2
-        RETURNING
-          id,
-          domain,
-          verified_at,
-          verification_requested_at,
-          verification_expires_at,
-          verification_token_hash,
-          created_at
+        RETURNING id, domain, sso_required, sso_provider_id, verified_at,
+                  verification_requested_at, verification_expires_at,
+                  verification_token_hash, created_at
         "#,
     )
     .bind(domain_id)
@@ -194,14 +220,9 @@ async fn fetch_tenant_domain_for_update(
 ) -> Result<TenantDomainRecord, AppError> {
     let row = sqlx::query_as::<_, TenantDomainRecord>(
         r#"
-        SELECT
-          id,
-          domain,
-          verified_at,
-          verification_requested_at,
-          verification_expires_at,
-          verification_token_hash,
-          created_at
+        SELECT id, domain, sso_required, sso_provider_id, verified_at,
+               verification_requested_at, verification_expires_at,
+               verification_token_hash, created_at
         FROM tenant_domains
         WHERE id = $1
           AND tenant_id = $2
@@ -219,4 +240,43 @@ async fn fetch_tenant_domain_for_update(
             "Domain not found.",
         )
     })
+}
+
+async fn validate_sso_provider(
+    db: &PgPool,
+    tenant_id: Uuid,
+    provider_id: Option<Uuid>,
+) -> Result<(), AppError> {
+    let provider_id = provider_id.ok_or_else(|| {
+        AppError::bad_request(
+            "sso_provider_required",
+            "A domain with required SSO must reference an active OIDC or SAML provider.",
+        )
+    })?;
+
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+          SELECT 1
+          FROM federated_identity_providers
+          WHERE id = $1
+            AND tenant_id = $2
+            AND provider_type IN ('oidc', 'saml')
+            AND status = 'active'
+        )
+        "#,
+    )
+    .bind(provider_id)
+    .bind(tenant_id)
+    .fetch_one(db)
+    .await?;
+
+    if !exists {
+        return Err(AppError::bad_request(
+            "sso_provider_invalid",
+            "The required SSO provider must be an active OIDC or SAML provider in this tenant.",
+        ));
+    }
+
+    Ok(())
 }

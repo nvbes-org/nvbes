@@ -5,6 +5,7 @@ Portail React/TypeScript pour nvbes Identity.
 ## Fonctionnalites
 
 - Connexion par flux challenge `identifier -> password -> MFA`.
+- Universal Login hébergé pour les flux OAuth authorization-code + PKCE.
 - Inscription avec detection/selection de region supportee.
 - Verification email, renvoi et changement d'adresse.
 - Gestion compte, sessions, MFA TOTP, passkeys, cles de securite et codes de recuperation.

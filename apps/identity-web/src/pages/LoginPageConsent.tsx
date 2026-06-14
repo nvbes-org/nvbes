@@ -23,11 +23,13 @@ const SCOPE_DESCRIPTIONS: Record<string, { label: string; desc: string }> = {
 };
 
 export function LoginPageConsent({
+  clientName,
   scope,
   error,
   onApprove,
   onCancel,
 }: {
+  clientName?: string;
   scope: string | null | undefined;
   error: string | null;
   onApprove: () => void;
@@ -36,6 +38,9 @@ export function LoginPageConsent({
   return (
     <div className="flex flex-col gap-5">
       <Card className="p-4">
+        {clientName && (
+          <p className="mb-3 text-sm font-semibold text-foreground">Autoriser {clientName}</p>
+        )}
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-foreground/80">
           Autorisations demandées :
         </p>

@@ -5,6 +5,7 @@ use uuid::Uuid;
 use super::hash_password;
 use super::history;
 use super::{validate_password, verify_password};
+use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
 use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
 use crate::domains::auth::types::{ChangePasswordInput, ChangePasswordResult};
 use crate::http::error::AppError;
@@ -76,6 +77,21 @@ pub async fn change(
             risk_factors: serde_json::json!({}),
             decision: RiskDecision::Allow,
             metadata: serde_json::json!({}),
+        },
+    )
+    .await;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.password_changed",
+            target_type: "principal",
+            target_id: Some(user_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({
+                "session_id": current_session_id,
+            }),
         },
     )
     .await;

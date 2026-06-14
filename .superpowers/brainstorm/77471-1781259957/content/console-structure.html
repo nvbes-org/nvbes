@@ -1,0 +1,114 @@
+<h2>Quelle structure de console doit guider la V0 ?</h2>
+<p class="subtitle">Objectif retenu: console client complete, avec gestion des membres prioritaire et permissions par module.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a-workspace-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A - Workspace-first</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:14px;min-height:230px">
+            <div class="mock-sidebar">
+              <strong>Acme SAS</strong><br><br>
+              Overview<br>
+              Workspaces<br>
+              Members<br>
+              Roles<br>
+              Billing<br>
+              Audit
+            </div>
+            <div class="mock-content">
+              <div class="label">Workspace: Finance</div>
+              <h3 style="margin:.35rem 0">Members</h3>
+              <div class="placeholder">Table membres du workspace</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div class="placeholder">Roles locaux</div>
+                <div class="placeholder">Invitations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A - Workspace-first</h3>
+      <p>Chaque workspace devient le centre de gestion. Clair si les permissions different beaucoup entre Drive, equipes ou projets.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b-people-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B - People-first</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:150px 1fr 120px;gap:14px;min-height:230px">
+            <div class="mock-sidebar">
+              <strong>Acme SAS</strong><br><br>
+              Dashboard<br>
+              Members<br>
+              Access matrix<br>
+              Invitations<br>
+              Security<br>
+              Billing
+            </div>
+            <div class="mock-content">
+              <div class="label">Members</div>
+              <h3 style="margin:.35rem 0">12 active, 3 invited</h3>
+              <div class="placeholder">Search + filters</div>
+              <div class="placeholder" style="margin-top:8px">Member table: role, modules, workspaces</div>
+            </div>
+            <div class="mock-content">
+              <div class="label">Detail</div>
+              <div class="placeholder">Role</div>
+              <div class="placeholder" style="margin-top:8px">Modules</div>
+              <div class="placeholder" style="margin-top:8px">Workspaces</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B - People-first</h3>
+      <p>Les admins gerent d'abord les personnes, puis ajustent roles, modules et workspaces dans un panneau detail.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c-policy-first" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C - Policy-first</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:14px;min-height:230px">
+            <div class="mock-sidebar">
+              <strong>Acme SAS</strong><br><br>
+              Overview<br>
+              Policies<br>
+              Roles<br>
+              Members<br>
+              Exceptions<br>
+              Audit
+            </div>
+            <div class="mock-content">
+              <div class="label">Access policy</div>
+              <h3 style="margin:.35rem 0">Role matrix</h3>
+              <div class="placeholder">Matrix: Owner/Admin/Member/Viewer x Modules</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div class="placeholder">Policy preview</div>
+                <div class="placeholder">Affected members</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C - Policy-first</h3>
+      <p>La console met les politiques d'acces au premier plan. Puissant, mais plus abstrait pour une V0 orientee onboarding.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation</h3>
+  <p>Je recommande B - People-first: c'est le plus direct pour inviter, corriger un acces, voir qui a quoi, et evoluer ensuite vers des politiques plus fines.</p>
+</div>

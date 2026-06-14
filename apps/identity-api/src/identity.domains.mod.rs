@@ -19,6 +19,8 @@ pub mod oauth;
 pub mod security;
 #[path = "identity.domains.service_accounts.mod.rs"]
 pub mod service_accounts;
+#[path = "identity.domains.tenants.mod.rs"]
+pub mod tenants;
 #[path = "identity.domains.workspaces.mod.rs"]
 pub mod workspaces;
 
@@ -28,6 +30,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(authz::routes::router(state))
         .merge(federation::routes::router(state))
         .merge(service_accounts::routes::router(state))
+        .merge(tenants::routes::router(state))
         .merge(workspaces::routes::router(state))
         .merge(members::routes::router(state))
         .merge(security::routes::router(state))

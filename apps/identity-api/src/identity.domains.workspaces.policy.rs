@@ -11,12 +11,14 @@ pub struct NormalizedPolicy {
     pub require_admin_approval_for_member_share: bool,
     pub default_share_link_ttl_days: i32,
     pub max_share_link_ttl_days: i32,
+    pub mfa_policy: super::types::MfaPolicySetting,
 }
 
 pub fn normalize_policy_update(
     current: &CurrentWorkspaceRecord,
     input: Option<UpdateWorkspacePolicyInput>,
 ) -> Result<NormalizedPolicy, AppError> {
+    let mfa_policy = input.as_ref().and_then(|input| input.mfa_policy);
     let normalized = normalize_workspace_policy_update(
         CurrentWorkspacePolicy {
             plan_max_share_link_ttl_days: current.plan_max_share_link_ttl_days,
@@ -35,7 +37,12 @@ pub fn normalize_policy_update(
     )
     .map_err(map_policy_error)?;
 
-    Ok(from_shared_policy(normalized))
+    let mut policy = from_shared_policy(normalized);
+    if let Some(mfa_policy) = mfa_policy {
+        policy.mfa_policy = mfa_policy;
+    }
+
+    Ok(policy)
 }
 
 fn from_shared_policy(policy: NormalizedWorkspacePolicy) -> NormalizedPolicy {
@@ -44,6 +51,7 @@ fn from_shared_policy(policy: NormalizedWorkspacePolicy) -> NormalizedPolicy {
         require_admin_approval_for_member_share: policy.require_admin_approval_for_member_share,
         default_share_link_ttl_days: policy.default_share_link_ttl_days,
         max_share_link_ttl_days: policy.max_share_link_ttl_days,
+        mfa_policy: super::types::MfaPolicySetting::Optional,
     }
 }
 

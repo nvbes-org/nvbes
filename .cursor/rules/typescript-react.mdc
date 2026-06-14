@@ -11,7 +11,35 @@ alwaysApply: false
 - INTERDICTION STRICTE du type `any`. Utiliser `unknown` ou des types précis. Pas de passe-droit.
 - Respecter l'ecosysteme existant (Vite, React Router, Effect si deja present dans le module).
 - Ne pas introduire de nouvelle dependance frontend sans besoin fonctionnel clair.
-- Les composants d’assemblage doivent rester minces; la logique de domaine ou de data fetching doit être isolée.
+- Les composants d'assemblage doivent rester minces; la logique de domaine ou de data fetching doit être isolée.
+
+# Hiérarchie DE SELECTION DE COMPOSANTS (OBLIGATOIRE)
+
+**Pour TOUS les sites web/projets frontend, suivre cet ordre STRICTEMENT :**
+
+1. **Registry du projet** — Utiliser d'abord les composants du registry interne du projet (`libs/ts/web-ui`, `apps/*/components/ui`, registry local `components.json`)
+2. **Registry officiel shadcn/ui** — Si aucun composant utile dans le registry projet, utiliser le registry officiel shadcn/ui  
+   - Docs: https://ui.shadcn.com/docs/registry/getting-started
+   - Directory: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/directory.json
+   - Installation: `pnpm dlx shadcn@latest add <component>`
+3. **Registry externe compatible** — Chercher un registry tiers avec des composants utilisables (ex: `@radix-ui/themes`, `@headlessui/react`, registries communautaires)
+4. **Tailwind CSS** — Si aucun composant ne correspond, écrire le composant avec Tailwind CSS (classes utilitaires uniquement)
+5. **CSS pur / CSS Modules** — UNIQUEMENT en dernier recours, si Tailwind n'est pas disponible ou incompatible
+
+**REGLES IMPERATIVES :**
+- NE JAMAIS faire de solution "fait maison" (custom from scratch) avant d'avoir épuisé les 4 premiers niveaux
+- Tout composant custom DOIT être justifié par écrit (pourquoi rien des niveaux 1-4 ne convient)
+- Pour TOUT NOUVEAU site web : installer **impérativement** dans cet ordre → `tailwindcss` → `shadcn/ui` → registries nécessaires
+- Pas d'exception, pas de "vite fait" — la hiérarchie est non-négociable
+
+**Exemple de workflow pour nouveau composant :**
+```
+1. Chercher dans registry projet (@nvbes/web-ui / apps/*/components/ui / components.json)
+2. `pnpm dlx shadcn@latest add <component>` depuis le registry officiel shadcn/ui
+3. Chercher registry tiers (ex: @radix-ui/themes, @headlessui/react)
+4. Écrire avec Tailwind (classes utilitaires uniquement)
+5. CSS Modules / inline styles UNIQUEMENT si Tailwind impossible
+```
 
 # Conventions de fichiers
 

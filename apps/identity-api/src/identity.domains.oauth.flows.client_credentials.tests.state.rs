@@ -39,7 +39,7 @@ pub(super) async fn test_state(pool: &PgPool) -> AppState {
 }
 
 pub(super) async fn db_supports_current_oauth_schema(pool: &PgPool) -> bool {
-    sqlx::query_scalar::<_, bool>(
+    let client_assertion_supported = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
           SELECT 1
@@ -51,7 +51,22 @@ pub(super) async fn db_supports_current_oauth_schema(pool: &PgPool) -> bool {
     )
     .fetch_one(pool)
     .await
-    .unwrap_or(false)
+    .unwrap_or(false);
+    let client_usage_supported = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'oauth_clients'
+            AND column_name = 'last_used_at'
+        )
+        "#,
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap_or(false);
+
+    client_assertion_supported && client_usage_supported
 }
 
 pub(super) fn basic_auth_header(client_id: &str, client_secret: &str) -> String {

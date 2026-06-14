@@ -1,7 +1,7 @@
 use super::types::*;
 use super::validation::{
-    normalize_federated_provider_type, normalize_registry_status, opt_trimmed,
-    validate_federation_endpoint_url_allowed,
+    normalize_enterprise_provider_family, normalize_federated_provider_type,
+    normalize_registry_status, opt_trimmed, validate_federation_endpoint_url_allowed,
 };
 use crate::http::error::AppError;
 use sqlx::PgPool;
@@ -21,11 +21,17 @@ pub async fn list_identity_providers(
         SELECT
           id,
           provider_type::text AS provider_type,
+          provider_family,
           name,
           client_id,
           issuer,
           metadata_url,
           status,
+          sp_entity_id,
+          attribute_mapping,
+          encryption_cert_pem,
+          require_signed_assertions,
+          require_signed_responses,
           created_at
         FROM federated_identity_providers
         WHERE tenant_id = $1
@@ -51,8 +57,10 @@ pub async fn create_identity_provider(
     strict_mode: bool,
 ) -> Result<FederatedIdentityProviderResponse, AppError> {
     let provider_type = normalize_federated_provider_type(&input.provider_type)?;
+    let provider_family = normalize_enterprise_provider_family(input.provider_family.as_deref())?;
     validate_provider_configuration(
         &provider_type,
+        &provider_family,
         input.client_id.as_deref(),
         input.issuer.as_deref(),
         input.metadata_url.as_deref(),
@@ -75,26 +83,34 @@ pub async fn create_identity_provider(
         INSERT INTO federated_identity_providers (
           tenant_id,
           provider_type,
+          provider_family,
           name,
           client_id,
           issuer,
           metadata_url,
           status
         )
-        VALUES ($1, $2::identity_provider_type, $3, $4, $5, $6, $7)
+        VALUES ($1, $2::identity_provider_type, $3, $4, $5, $6, $7, $8)
         RETURNING
           id,
           provider_type::text AS provider_type,
+          provider_family,
           name,
           client_id,
           issuer,
           metadata_url,
           status,
+          sp_entity_id,
+          attribute_mapping,
+          encryption_cert_pem,
+          require_signed_assertions,
+          require_signed_responses,
           created_at
         "#,
     )
     .bind(tenant_id)
     .bind(provider_type)
+    .bind(provider_family)
     .bind(input.name.trim())
     .bind(opt_trimmed(input.client_id))
     .bind(issuer)
@@ -120,6 +136,10 @@ pub async fn update_identity_provider(
         Some(value) => normalize_federated_provider_type(&value)?,
         None => current.provider_type.clone(),
     };
+    let provider_family = match input.provider_family {
+        Some(value) => normalize_enterprise_provider_family(Some(&value))?,
+        None => current.provider_family.clone(),
+    };
     let name = input.name.unwrap_or(current.name).trim().to_string();
     let client_id = input.client_id.or(current.client_id);
     let issuer = match input.issuer.or(current.issuer) {
@@ -136,6 +156,7 @@ pub async fn update_identity_provider(
     };
     validate_provider_configuration(
         &provider_type,
+        &provider_family,
         client_id.as_deref(),
         issuer.as_deref(),
         metadata_url.as_deref(),
@@ -145,27 +166,35 @@ pub async fn update_identity_provider(
         r#"
         UPDATE federated_identity_providers
         SET provider_type = $3::identity_provider_type,
-            name = $4,
-            client_id = $5,
-            issuer = $6,
-            metadata_url = $7,
-            status = $8
+            provider_family = $4,
+            name = $5,
+            client_id = $6,
+            issuer = $7,
+            metadata_url = $8,
+            status = $9
         WHERE id = $1
           AND tenant_id = $2
         RETURNING
           id,
           provider_type::text AS provider_type,
+          provider_family,
           name,
           client_id,
           issuer,
           metadata_url,
           status,
+          sp_entity_id,
+          attribute_mapping,
+          encryption_cert_pem,
+          require_signed_assertions,
+          require_signed_responses,
           created_at
         "#,
     )
     .bind(provider_id)
     .bind(tenant_id)
     .bind(provider_type)
+    .bind(provider_family)
     .bind(name)
     .bind(client_id)
     .bind(issuer)
@@ -217,11 +246,17 @@ pub async fn fetch_identity_provider(
         SELECT
           id,
           provider_type::text AS provider_type,
+          provider_family,
           name,
           client_id,
           issuer,
           metadata_url,
           status,
+          sp_entity_id,
+          attribute_mapping,
+          encryption_cert_pem,
+          require_signed_assertions,
+          require_signed_responses,
           created_at
         FROM federated_identity_providers
         WHERE id = $1

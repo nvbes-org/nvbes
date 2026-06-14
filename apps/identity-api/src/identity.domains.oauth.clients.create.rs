@@ -49,6 +49,7 @@ pub async fn create_client(
         ));
     }
     let client_assertion_required = input.client_assertion_required.unwrap_or(false);
+    let requires_admin_consent = input.requires_admin_consent.unwrap_or(false);
     if client_assertion_required && input.client_assertion_public_key_jwk.is_none() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -115,9 +116,10 @@ pub async fn create_client(
           owner_scope_id,
           client_type,
           client_assertion_public_key_jwk,
-          client_assertion_required
+          client_assertion_required,
+          requires_admin_consent
         )
-        VALUES ($1, $2, $3, $4, $5, $6::scope_type, $7, $8::client_type, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6::scope_type, $7, $8::client_type, $9, $10, $11)
         RETURNING id, created_at
         "#,
     )
@@ -131,6 +133,7 @@ pub async fn create_client(
     .bind(client_type.as_str())
     .bind(input.client_assertion_public_key_jwk.clone())
     .bind(client_assertion_required)
+    .bind(requires_admin_consent)
     .fetch_one(&mut *tx)
     .await?;
     let client_uuid: Uuid = client_row.get("id");
@@ -189,11 +192,13 @@ pub async fn create_client(
             name: input.name,
             redirect_uris: input.redirect_uris,
             created_at: client_created_at,
+            last_used_at: None,
             tenant_id: Some(tenant_id),
             owner_scope_type,
             owner_scope_id,
             client_type: client_type.clone(),
             client_assertion_required,
+            requires_admin_consent,
             client_assertion_public_key_configured,
             service_account_principal_id,
             service_account_workspace_id: is_service_client.then_some(owner_scope_id),

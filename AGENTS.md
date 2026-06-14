@@ -153,6 +153,25 @@ pnpm nx:affected
 - Si une partie du design ou de l'implémentation est bancale, le **redesign complet** est hautement préféré et encouragé.
 - Éviter les rustines, les compromis temporaires et les extensions incrémentales sur une base faible.
 
+# Hiérarchie DE SÉLECTION DE COMPOSANTS (OBLIGATOIRE — TOUS LLM)
+
+**Pour TOUS les sites web/projets frontend, suivre cet ordre STRICTEMENT, sans exception :**
+
+1. **Registry du projet** — Utiliser d'abord les composants du registry interne du projet (`libs/ts/web-ui`, `apps/*/components/ui`, registry local `components.json`)
+2. **Registry officiel shadcn/ui** — Si aucun composant utile dans le registry projet, utiliser le registry officiel shadcn/ui  
+   - Docs: https://ui.shadcn.com/docs/registry/getting-started
+   - Directory: https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/directory.json
+   - Installation: `pnpm dlx shadcn@latest add <component>`
+3. **Registry externe compatible** — Chercher un registry tiers avec des composants utilisables (ex: `@radix-ui/themes`, `@headlessui/react`, registries communautaires)
+4. **Tailwind CSS** — Si aucun composant ne correspond, écrire le composant avec Tailwind CSS (classes utilitaires uniquement)
+5. **CSS pur / CSS Modules** — UNIQUEMENT en dernier recours, si Tailwind n'est pas disponible ou incompatible
+
+**RÈGLES IMPÉRATIVES :**
+- **NE JAMAIS** faire de solution "fait maison" (custom from scratch) avant d'avoir épuisé les 4 premiers niveaux
+- Tout composant custom DOIT être justifié par écrit (pourquoi rien des niveaux 1-4 ne convient)
+- Pour **TOUT NOUVEAU site web** : installer **impérativement** dans cet ordre → `tailwindcss` → `shadcn/ui` → registries nécessaires
+- Pas d'exception, pas de "vite fait" — la hiérarchie est non-négociable
+
 ### Conception LLM-friendly
 
 Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :

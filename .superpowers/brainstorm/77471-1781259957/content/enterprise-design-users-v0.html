@@ -1,0 +1,97 @@
+<h2>Design 4/5 - Experience V0 Users</h2>
+<p class="subtitle">Validation demandee: est-ce que ce workflow Users est la bonne premiere tranche complete ?</p>
+
+<div class="mockup">
+  <div class="mockup-header">Users route - people-first admin workflow</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:180px 1fr 220px;gap:14px;min-height:410px">
+      <div class="mock-sidebar">
+        <strong>Acme SAS</strong><br>
+        Enterprise admin<br><br>
+        Overview<br>
+        <strong>Users</strong><br>
+        Workspaces<br>
+        Developers<br>
+        Policies<br>
+        Security<br>
+        Audit logs<br>
+        Billing<br>
+        Usage<br>
+        Settings
+      </div>
+
+      <div class="mock-content">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+          <div>
+            <div class="label">Users</div>
+            <h3 style="margin:.25rem 0">Manage people and access</h3>
+          </div>
+          <button class="mock-button">Invite user</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0">
+          <div class="placeholder">42 active</div>
+          <div class="placeholder">6 invited</div>
+          <div class="placeholder">3 suspended</div>
+          <div class="placeholder">2 policy risks</div>
+        </div>
+        <div class="placeholder">Search email/name + filters: role, workspace, module, status</div>
+        <div class="placeholder" style="margin-top:8px;height:96px">Dense table with stable rows, keyboard-friendly actions, no layout shift</div>
+        <div class="placeholder" style="margin-top:8px">Bulk actions: assign workspace, change module grants, suspend, resend invite</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div class="placeholder">Pending invitations</div>
+          <div class="placeholder">Access changes needing review</div>
+        </div>
+      </div>
+
+      <div class="mock-content">
+        <div class="label">Inspector</div>
+        <h3 style="margin:.25rem 0">Marie Dubois</h3>
+        <div class="placeholder">Tenant role: Admin</div>
+        <div class="placeholder" style="margin-top:8px">Modules: Drive, Members, Billing</div>
+        <div class="placeholder" style="margin-top:8px">Workspaces: Finance, Legal</div>
+        <div class="placeholder" style="margin-top:8px">Security: MFA enforced</div>
+        <div class="placeholder" style="margin-top:8px">Last 5 audit events</div>
+        <button class="mock-button" style="margin-top:10px">Review access</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>In scope V0</h4>
+    <ul>
+      <li>Invite user with role, modules, and workspace assignments.</li>
+      <li>Edit tenant role and module grants.</li>
+      <li>Assign/remove workspace access.</li>
+      <li>Suspend/reactivate membership with audit reason.</li>
+      <li>Show policy warnings before dangerous changes.</li>
+    </ul>
+  </div>
+  <div class="cons">
+    <h4>Not V0 complete</h4>
+    <ul>
+      <li>Custom roles editor.</li>
+      <li>SCIM / directory sync.</li>
+      <li>Fine-grained per-resource ACLs beyond workspace/module.</li>
+      <li>Full compliance reporting exports.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="users-approved" onclick="toggleSelect(this)">
+    <div class="letter">OK</div>
+    <div class="content">
+      <h3>Valider Users V0</h3>
+      <p>Users est la tranche complete; les autres modules suivent comme routes structurees.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="users-revise" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content">
+      <h3>Reviser</h3>
+      <p>Un workflow Users doit etre ajoute, retire, ou change de priorite.</p>
+    </div>
+  </div>
+</div>

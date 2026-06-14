@@ -33,6 +33,7 @@ pub async fn list_service_accounts(
           oc.client_id,
           oc.name AS oauth_client_name,
           oc.created_at AS oauth_client_created_at,
+          oc.last_used_at AS oauth_client_last_used_at,
           oc.revoked_at AS oauth_client_revoked_at,
           oc.client_assertion_required,
           oc.client_assertion_public_key_jwk IS NOT NULL AS client_assertion_public_key_configured,

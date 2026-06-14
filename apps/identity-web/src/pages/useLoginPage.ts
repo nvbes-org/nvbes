@@ -1,7 +1,8 @@
 import { type AccountEntry } from '@nvbes/identity-client';
 import { useLocation, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { readHostedStateId, type HostedLoginDecision } from '../identity.universal-login.api';
 import {
   authorizeIdentitySession,
   clearPendingOAuthAuthorizeRequest,
@@ -12,6 +13,7 @@ import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
 import { useLoginPageState } from './useLoginPage.state';
+import { followHostedDecision, loadHostedLogin, resumeHostedAuthorization } from './useUniversalLogin';
 import { completeConditionalWebAuthnLogin } from './useLoginPage.webauthn.conditional';
 
 export function useLoginPage() {
@@ -21,7 +23,12 @@ export function useLoginPage() {
     const searchParams = new URLSearchParams(location.searchStr);
     return readOAuthAuthorizeRequest(searchParams) ?? readPendingOAuthAuthorizeRequest();
   }, [location.searchStr]);
+  const hostedStateId = useMemo(() => {
+    const searchParams = new URLSearchParams(location.searchStr);
+    return readHostedStateId(searchParams);
+  }, [location.searchStr]);
   const state = useLoginPageState();
+  const [hostedDecision, setHostedDecision] = useState<HostedLoginDecision | null>(null);
 
   const {
     loginIdentifierMutation,
@@ -35,18 +42,57 @@ export function useLoginPage() {
     void navigate({ to: '/account' });
   }, [navigate]);
 
+  const handleHostedDecision = useCallback(
+    (decision: HostedLoginDecision) => {
+      setHostedDecision(decision);
+      if (decision.kind === 'consent_required') {
+        state.setStep('consent');
+        return;
+      }
+      if (decision.kind === 'error_page') {
+        state.setError(decision.message);
+        return;
+      }
+      if (decision.kind === 'login_required') {
+        state.setStep('identifier');
+        return;
+      }
+      followHostedDecision(decision);
+    },
+    [state.setError, state.setStep],
+  );
+
   const authorizeCurrentOAuth = useCallback(async () => {
+    if (hostedStateId) {
+      const decision = await resumeHostedAuthorization(hostedStateId);
+      handleHostedDecision(decision);
+      return;
+    }
+
     if (!oauthRequest) {
       return;
     }
     await authorizeIdentitySession(null, oauthRequest);
     clearPendingOAuthAuthorizeRequest();
-  }, [oauthRequest]);
+  }, [handleHostedDecision, hostedStateId, oauthRequest]);
+
+  useEffect(() => {
+    if (!hostedStateId) {
+      setHostedDecision(null);
+      return;
+    }
+
+    void loadHostedLogin(hostedStateId)
+      .then(handleHostedDecision)
+      .catch((err) => {
+        state.setError(err instanceof Error ? err.message : 'Login request failed.');
+      });
+  }, [handleHostedDecision, hostedStateId, state.setError]);
 
   const decoyRef = useLoginPageBootstrap({
     checkingAuth: state.checkingAuth,
     locationSearchStr: location.searchStr,
-    hasOAuthRequest: Boolean(oauthRequest),
+    hasOAuthRequest: Boolean(oauthRequest || hostedStateId),
     setCheckingAuth: state.setCheckingAuth,
     setConnectedAccounts: state.setConnectedAccounts as (value: AccountEntry[]) => void,
     setStep: state.setStep,
@@ -59,6 +105,8 @@ export function useLoginPage() {
   const actions = useLoginPageActions({
     navigate,
     oauthRequest,
+    hostedStateId,
+    onHostedDecision: handleHostedDecision,
     connectedAccounts: state.connectedAccounts,
     setConnectedAccounts: state.setConnectedAccounts,
     email: state.email,
@@ -139,6 +187,7 @@ export function useLoginPage() {
     location,
     mfaMethod: state.mfaMethod,
     oauthRequest,
+    hostedConsent: hostedDecision?.kind === 'consent_required' ? hostedDecision : null,
     password: state.password,
     recoveryCode: state.recoveryCode,
     resetToIdentifier: actions.resetToIdentifier,

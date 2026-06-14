@@ -1,0 +1,78 @@
+<h2>Portail developpeur nvbes Identity: quel perimetre?</h2>
+<p class="subtitle">Choisis l'architecture produit qui correspond le mieux a ton intention. Le choix impacte le routing, les donnees exposees, et l'ordre d'implementation.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option A: App dediee /developer</div>
+        <div class="mockup-body">
+          <div class="mock-nav">nvbes Developers | Docs | SDKs | Playground | Login</div>
+          <div style="display:grid;grid-template-columns:190px 1fr;gap:14px;margin-top:12px">
+            <div class="mock-sidebar">Overview<br>Apps<br>Redirects<br>Tokens<br>Webhooks<br>Logs</div>
+            <div class="mock-content">
+              <div class="label">Workspace: Acme</div>
+              <h3>Developer Dashboard</h3>
+              <div class="placeholder">OAuth clients, client ID copy, redirect setup, event health</div>
+              <div class="placeholder">Token inspector + OAuth playground</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Site dedie + portail connecte</h3>
+      <p>Un vrai espace developpeur separe de Mon compte: docs publiques, quickstarts, dashboard connecte, playground, logs et webhooks.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option B: Section dans /account</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:170px 1fr;gap:14px">
+            <div class="mock-sidebar">Compte<br>Securite<br>Sessions<br>Workspaces<br>Developpeurs</div>
+            <div class="mock-content">
+              <h3>Developpeurs</h3>
+              <div class="placeholder">Clients OAuth</div>
+              <div class="placeholder">Service accounts</div>
+              <div class="placeholder">Logs recents</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Onglet developpeur dans Identity</h3>
+      <p>Plus rapide et proche des reglages existants, mais moins clair comme destination developpeur et contraint par le layout compte.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">Option C: Docs publiques d'abord</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Docs | API Reference | Quickstarts</div>
+          <div class="mock-content" style="margin-top:12px">
+            <h3>Build with nvbes Identity</h3>
+            <div class="placeholder">React quickstart</div>
+            <div class="placeholder">Rust Axum quickstart</div>
+            <div class="placeholder">Node + curl examples</div>
+            <button class="mock-button">Open dashboard</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Documentation + reference API</h3>
+      <p>Excellent pour l'adoption externe, mais repousse la partie dashboard, logs, webhooks et configuration OAuth.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Recommendation</h3>
+  <p>Je recommande A: une destination developpeur dediee, avec docs publiques et portail connecte dans la meme app. C'est le seul choix qui couvre naturellement tout le besoin sans forcer le layout compte.</p>
+</div>

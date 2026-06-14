@@ -19,6 +19,7 @@ export function LoginPageStepContent({
   hasRecovery,
   hasTotp,
   hasWebAuthn,
+  hostedConsent,
   identifierSubmitting,
   loading,
   mfaMethod,
@@ -68,6 +69,7 @@ export function LoginPageStepContent({
       hasRecovery={hasRecovery}
       hasTotp={hasTotp}
       hasWebAuthn={hasWebAuthn}
+      hostedConsent={hostedConsent}
       loading={loading}
       mfaMethod={mfaMethod}
       oauthRequest={oauthRequest}

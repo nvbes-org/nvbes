@@ -1,0 +1,71 @@
+<h2>Design 5/5 - Garde-fous, erreurs et validation</h2>
+<p class="subtitle">Validation demandee: ces criteres deviennent le contrat de qualite de la V0 enterprise-web.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Enterprise admin safety model</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="mock-content">
+        <div class="label">Errors</div>
+        <h3 style="margin:.35rem 0">Recoverable UX</h3>
+        <div class="placeholder">Inline validation for invites</div>
+        <div class="placeholder" style="margin-top:8px">Retry states for failed loads</div>
+        <div class="placeholder" style="margin-top:8px">Conflict messages for stale role changes</div>
+        <div class="placeholder" style="margin-top:8px">Permission denied with missing grant</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Security</div>
+        <h3 style="margin:.35rem 0">Admin guardrails</h3>
+        <div class="placeholder">MFA step-up for risky actions</div>
+        <div class="placeholder" style="margin-top:8px">Confirm owner removal / suspension</div>
+        <div class="placeholder" style="margin-top:8px">Last-owner protection</div>
+        <div class="placeholder" style="margin-top:8px">Audit reason on destructive actions</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Audit</div>
+        <h3 style="margin:.35rem 0">Evidence trail</h3>
+        <div class="placeholder">who acted</div>
+        <div class="placeholder" style="margin-top:8px">what changed</div>
+        <div class="placeholder" style="margin-top:8px">tenant/workspace scope</div>
+        <div class="placeholder" style="margin-top:8px">before/after summary</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="mock-content">
+        <div class="label">Frontend tests</div>
+        <div class="placeholder">Pure helpers: filters, permission labels, role transitions</div>
+        <div class="placeholder" style="margin-top:8px">Route smoke: Users table, invite dialog, inspector states</div>
+        <div class="placeholder" style="margin-top:8px">No any types; strict schemas for API payloads</div>
+      </div>
+      <div class="mock-content">
+        <div class="label">Backend/API tests</div>
+        <div class="placeholder">Tenant isolation checks</div>
+        <div class="placeholder" style="margin-top:8px">Invitation lifecycle</div>
+        <div class="placeholder" style="margin-top:8px">Authorization denial and audit events</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Definition of done</h3>
+  <p>enterprise-web must typecheck, lint, and expose a usable Users V0 flow with non-mock domain boundaries. If backend endpoints are not all ready, the spec must name the exact API contracts before implementation starts.</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="quality-approved" onclick="toggleSelect(this)">
+    <div class="letter">OK</div>
+    <div class="content">
+      <h3>Valider le design complet</h3>
+      <p>On peut ecrire la spec de design avec ces 5 blocs.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="quality-revise" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content">
+      <h3>Reviser</h3>
+      <p>Un garde-fou, test, ou critere de finition doit changer.</p>
+    </div>
+  </div>
+</div>

@@ -5,6 +5,8 @@ import { useLoginPageSubmitActions } from './useLoginPage.actions.submit';
 export function useLoginPageActions({
   navigate,
   oauthRequest,
+  hostedStateId,
+  onHostedDecision,
   connectedAccounts,
   setConnectedAccounts,
   email,
@@ -32,6 +34,8 @@ export function useLoginPageActions({
   const accountActions = useLoginPageAccountActions({
     navigate,
     oauthRequest,
+    hostedStateId,
+    onHostedDecision,
     connectedAccounts,
     setConnectedAccounts,
     email,

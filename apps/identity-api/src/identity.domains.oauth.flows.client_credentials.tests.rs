@@ -10,6 +10,22 @@ mod state_support;
 use seed::{cleanup, seed_service_client};
 use state_support::{basic_auth_header, db_supports_current_oauth_schema, test_pool, test_state};
 
+#[test]
+fn machine_token_audit_metadata_records_grant_client_scope_audience_and_jti() {
+    let metadata = super::machine_token_audit_metadata(
+        "gxoc_machine",
+        "access-jti-1",
+        "drive.files.read drive.workspace.read",
+        "nvbes-drive-api",
+    );
+
+    assert_eq!(metadata["grant_type"], "client_credentials");
+    assert_eq!(metadata["client_id"], "gxoc_machine");
+    assert_eq!(metadata["jti"], "access-jti-1");
+    assert_eq!(metadata["scope"], "drive.files.read drive.workspace.read");
+    assert_eq!(metadata["audience"], "nvbes-drive-api");
+}
+
 #[tokio::test]
 async fn client_credentials_token_introspection_exposes_service_account_context() {
     let pool = test_pool();
@@ -63,6 +79,121 @@ async fn client_credentials_token_introspection_exposes_service_account_context(
     assert_eq!(introspection.role.as_deref(), Some("member"));
     assert_eq!(introspection.client_id.as_deref(), Some(client_id.as_str()));
     assert!(introspection.amr.iter().any(|method| method == "m2m"));
+
+    cleanup(&pool, tenant_id).await;
+}
+
+#[tokio::test]
+async fn client_credentials_records_last_used_and_machine_token_audit() {
+    let pool = test_pool();
+    let state = test_state(&pool).await;
+    if !db_supports_current_oauth_schema(&pool).await {
+        eprintln!("skipping test: local database is missing recent oauth schema migrations");
+        return;
+    }
+    let (tenant_id, client_id, client_secret, principal_id, workspace_id, client_uuid) =
+        seed_service_client(&pool).await;
+
+    let token = client_credentials_grant(
+        &state.db,
+        &state.jwt,
+        ClientAuthentication {
+            client_id: client_id.clone(),
+            client_secret: Some(client_secret),
+            client_assertion: None,
+            client_assertion_verified: false,
+        },
+        Some("drive.files.read"),
+        None,
+    )
+    .await
+    .expect("client_credentials should succeed");
+    let claims = state
+        .jwt
+        .decode_token(&token.access_token, "access")
+        .expect("machine token should decode");
+
+    let last_used_at: Option<chrono::DateTime<chrono::Utc>> =
+        sqlx::query_scalar("SELECT last_used_at FROM oauth_clients WHERE id = $1")
+            .bind(client_uuid)
+            .fetch_one(&pool)
+            .await
+            .expect("client usage lookup should work");
+    assert!(last_used_at.is_some());
+
+    let audit_count = sqlx::query_scalar::<_, i64>(
+        r#"
+        SELECT COUNT(*)
+        FROM audit_events
+        WHERE tenant_id = $1
+          AND workspace_id = $2
+          AND actor_principal_id = $3
+          AND action = 'oauth.machine_token.issued'
+          AND target_type = 'oauth_client'
+          AND target_id = $4
+          AND metadata->>'client_id' = $5
+          AND metadata->>'jti' = $6
+          AND metadata->>'grant_type' = 'client_credentials'
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(workspace_id)
+    .bind(principal_id)
+    .bind(client_uuid)
+    .bind(&client_id)
+    .bind(&claims.jti)
+    .fetch_one(&pool)
+    .await
+    .expect("machine token audit lookup should work");
+    assert_eq!(audit_count, 1);
+
+    cleanup(&pool, tenant_id).await;
+}
+
+#[tokio::test]
+async fn introspection_rejects_machine_token_after_client_revocation() {
+    let pool = test_pool();
+    let state = test_state(&pool).await;
+    if !db_supports_current_oauth_schema(&pool).await {
+        eprintln!("skipping test: local database is missing recent oauth schema migrations");
+        return;
+    }
+    let (tenant_id, client_id, client_secret, _, _, client_uuid) = seed_service_client(&pool).await;
+
+    let token = client_credentials_grant(
+        &state.db,
+        &state.jwt,
+        ClientAuthentication {
+            client_id: client_id.clone(),
+            client_secret: Some(client_secret),
+            client_assertion: None,
+            client_assertion_verified: false,
+        },
+        Some("drive.files.read"),
+        None,
+    )
+    .await
+    .expect("client_credentials should succeed");
+
+    sqlx::query("UPDATE oauth_clients SET revoked_at = NOW() WHERE id = $1")
+        .bind(client_uuid)
+        .execute(&pool)
+        .await
+        .expect("client revocation should work");
+
+    let introspection = crate::domains::oauth::flows::introspect_token(
+        &state.db,
+        &state.redis,
+        &state.jwt,
+        &client_id,
+        &token.access_token,
+        Some("access_token".to_string()),
+        None,
+    )
+    .await
+    .expect("introspection should respond");
+
+    assert!(!introspection.active);
 
     cleanup(&pool, tenant_id).await;
 }

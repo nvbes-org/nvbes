@@ -45,6 +45,7 @@ pub async fn create_service_account_oauth_client(
             owner_scope_id: Some(access.workspace_id),
             client_assertion_public_key_jwk: input.client_assertion_public_key_jwk,
             client_assertion_required: input.client_assertion_required,
+            requires_admin_consent: Some(true),
             service_account_name: Some(service_account.name.clone()),
             service_account_description: service_account.description.clone(),
             service_account_principal_id: Some(service_account_id),

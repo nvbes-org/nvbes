@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -35,6 +35,25 @@ pub struct WorkspacePolicyView {
     pub require_admin_approval_for_member_share: bool,
     pub default_share_link_ttl_days: i32,
     pub max_share_link_ttl_days: i32,
+    pub mfa_policy: MfaPolicySetting,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MfaPolicySetting {
+    Optional,
+    RequiredAdmins,
+    RequiredAll,
+}
+
+impl MfaPolicySetting {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Optional => "optional",
+            Self::RequiredAdmins => "required_admins",
+            Self::RequiredAll => "required_all",
+        }
+    }
 }
 
 #[derive(ToSchema)]
@@ -57,4 +76,5 @@ pub struct UpdateWorkspacePolicyInput {
     pub require_admin_approval_for_member_share: Option<bool>,
     pub default_share_link_ttl_days: Option<i32>,
     pub max_share_link_ttl_days: Option<i32>,
+    pub mfa_policy: Option<MfaPolicySetting>,
 }

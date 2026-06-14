@@ -93,6 +93,10 @@ Pour les principals humains, `principal_id` et `user_id` sont alignes sauf deleg
 
 ### OAuth2
 - `GET  /oauth/authorize`
+- `POST /oauth/hosted-login/start`
+- `GET  /oauth/hosted-login/{stateId}`
+- `POST /oauth/hosted-login/{stateId}/authorize`
+- `POST /oauth/hosted-login/{stateId}/consent`
 - `POST /oauth/token`
 - `POST /oauth/introspect`
 - `GET  /oauth/userinfo`
@@ -193,6 +197,14 @@ Pour les flux machine:
 2. Émettre un client OAuth `service`
 3. Obtenir un token via `client_credentials`
 4. Introspecter les tokens machine et délégués avant les actions sensibles côté produit
+
+Contrat vendable V1:
+
+- Universal Login hébergé via `/oauth/hosted-login/*` pour les produits browser.
+- Authorization code + PKCE `S256` pour les clients publics.
+- Discovery OIDC, JWKS, userinfo, introspection et revocation font partie du contrat d'intégration.
+- Refresh tokens rotatifs, usage unique, avec révocation de famille en cas de reuse.
+- Clients OAuth par produit avec redirect URIs exactes, scopes, secrets hashés, rotation et révocation.
 
 Le modele cible distingue:
 

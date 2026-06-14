@@ -18,6 +18,15 @@ pub fn parse_role(role: &str) -> Result<WorkspaceRole, AppError> {
     })
 }
 
+pub fn parse_identity_role(role: &str) -> Result<nvbes_core::authz::IdentityRole, AppError> {
+    nvbes_core::authz::parse_identity_role(role).ok_or_else(|| {
+        AppError::bad_request(
+            "validation_failed",
+            format!("Unsupported identity role: {role}."),
+        )
+    })
+}
+
 pub fn parse_action(action: &str) -> Result<WorkspaceAction, AppError> {
     nvbes_core::authz::parse_action(action).ok_or_else(|| {
         AppError::bad_request(

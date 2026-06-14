@@ -29,6 +29,7 @@ fn provider(base_url: &str) -> FederatedIdentityProviderRecord {
     FederatedIdentityProviderRecord {
         id: Uuid::new_v4(),
         provider_type: "oidc".to_string(),
+        provider_family: "custom".to_string(),
         name: "Acme OIDC".to_string(),
         client_id: Some("client-123".to_string()),
         issuer: Some(format!("{}/issuer", base_url)),

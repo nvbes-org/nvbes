@@ -14,5 +14,5 @@ pub use service::{
 };
 pub use types::{
     ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction, WorkspaceDecision,
-    WorkspacePolicy, WorkspaceRole, parse_action, parse_role,
+    WorkspacePolicy, WorkspaceRole, parse_action, parse_identity_role, parse_role,
 };

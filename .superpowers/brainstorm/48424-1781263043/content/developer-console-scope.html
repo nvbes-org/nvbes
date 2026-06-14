@@ -1,0 +1,83 @@
+<h2>Developer Console Identity: where should the first implementation live?</h2>
+<p class="subtitle">
+  The repository already has Identity OAuth/service-account foundations, an Identity personal app,
+  and a written plan for a separate developer portal. Pick the product boundary for the first
+  implementation slice.
+</p>
+
+<div class="cards">
+  <div class="card" data-choice="developer-web" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">apps/developer-web</div>
+        <div class="mockup-body">
+          <div class="mock-nav">nvbes Developers | Docs | Console | Status</div>
+          <div style="display: grid; grid-template-columns: 180px 1fr; gap: 12px; margin-top: 12px;">
+            <div class="mock-sidebar">
+              Overview<br />OAuth clients<br />Marketplace<br />Scopes<br />Secrets<br />Logs<br />Token debugger
+            </div>
+            <div class="mock-content">
+              <div class="label">Recommended V0</div>
+              <h3>Dedicated developer product</h3>
+              <p>Public docs plus authenticated console, backed by Identity API developer facade.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Dedicated developer-web</h3>
+      <p>Best boundary for OAuth apps, docs, token tools, webhook replay, and integration health without bloating personal account UX.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="identity-web" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">apps/identity-web</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Account | Security | Sessions | Workspace | Service accounts</div>
+          <div style="display: grid; grid-template-columns: 180px 1fr; gap: 12px; margin-top: 12px;">
+            <div class="mock-sidebar">
+              Profile<br />MFA<br />Sessions<br />Service accounts<br />Developer tools
+            </div>
+            <div class="mock-content">
+              <div class="label">Fastest path</div>
+              <h3>Extend existing account app</h3>
+              <p>Reuse workspace service-account screens and API client patterns.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Extend identity-web</h3>
+      <p>Smallest immediate diff, but mixes personal identity settings with tenant/developer operations and will age poorly.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="enterprise-web" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">apps/enterprise-web</div>
+        <div class="mockup-body">
+          <div class="mock-nav">Tenant admin | Users | Workspaces | Developers | Security | Billing</div>
+          <div style="display: grid; grid-template-columns: 180px 1fr; gap: 12px; margin-top: 12px;">
+            <div class="mock-sidebar">
+              Users<br />Workspaces<br />Developers<br />Policies<br />Audit
+            </div>
+            <div class="mock-content">
+              <div class="label">Admin-first</div>
+              <h3>Developer module inside enterprise console</h3>
+              <p>Strong tenant governance, but depends on an enterprise app that is not present yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Enterprise Developers module</h3>
+      <p>Good long-term tenant-admin home, but too coupled to enterprise-web scaffolding for the current request unless that app is the priority.</p>
+    </div>
+  </div>
+</div>

@@ -38,6 +38,11 @@ pub(crate) async fn challenge_pwd(
 ) -> Result<Response, AppError> {
     let meta = super::LoginRequestMeta::from_headers(&headers);
     let auth_state = fetch_state(&state.redis, request.state_token, "pwd").await?;
+    crate::domains::federation::sso_policy::ensure_password_allowed_for_email(
+        &state.db,
+        &auth_state.email,
+    )
+    .await?;
     crate::domains::auth::check_rate_limit(
         &state.redis,
         "auth_login",

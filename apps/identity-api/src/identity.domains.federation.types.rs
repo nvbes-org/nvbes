@@ -15,7 +15,7 @@ pub use common::{
     ScimProvisioningConnectorView, ScimProvisioningConnectorsResponse, TenantDomainRecord,
     TenantDomainResponse, TenantDomainView, TenantDomainsResponse,
     UpdateFederatedIdentityProviderInput, UpdateScimProvisioningConnectorInput,
-    VerifyTenantDomainInput,
+    UpdateTenantDomainInput, VerifyTenantDomainInput,
 };
 pub use provisioning::{
     InboundFederationInput, InboundFederationResponse, JitProvisioningInput,

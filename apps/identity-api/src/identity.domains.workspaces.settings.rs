@@ -42,6 +42,7 @@ pub async fn update_workspace(
             require_admin_approval_for_member_share = $3,
             default_share_link_ttl_days = $4,
             max_share_link_ttl_days = $5,
+            mfa_policy = $6,
             updated_at = NOW()
         WHERE workspace_id = $1
         "#,
@@ -51,6 +52,7 @@ pub async fn update_workspace(
     .bind(policy.require_admin_approval_for_member_share)
     .bind(policy.default_share_link_ttl_days)
     .bind(policy.max_share_link_ttl_days)
+    .bind(policy.mfa_policy.as_str())
     .execute(&mut *tx)
     .await?;
 
@@ -72,6 +74,7 @@ pub async fn update_workspace(
                     "require_admin_approval_for_member_share": policy.require_admin_approval_for_member_share,
                     "default_share_link_ttl_days": policy.default_share_link_ttl_days,
                     "max_share_link_ttl_days": policy.max_share_link_ttl_days,
+                    "mfa_policy": policy.mfa_policy.as_str(),
                 }
             }),
         },
