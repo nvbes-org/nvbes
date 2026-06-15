@@ -431,3 +431,122 @@ async fn test_scope_registry_crud() {
     assert!(!meta_exists_after);
 }
 
+#[tokio::test]
+async fn test_webhook_replay_route() {
+    let pool = crate::test_support::shared_test_pool();
+    crate::test_support::ensure_test_database(&pool).await;
+
+    let tenant_id = uuid::Uuid::new_v4();
+    let principal_id = uuid::Uuid::new_v4();
+    let now = chrono::Utc::now();
+
+    sqlx::query(
+        "INSERT INTO tenants (id, kind, name, slug, status, security_tier, created_at, updated_at)
+         VALUES ($1, 'team', 'Webhooks Test Tenant', $2, 'active', 'standard', $3, $3)"
+    )
+    .bind(tenant_id)
+    .bind(format!("webhooks-test-{}", tenant_id))
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name, created_at, updated_at)
+         VALUES ($1, $2, 'human', 'active', 'Webhooks User', $3, $3)"
+    )
+    .bind(principal_id)
+    .bind(tenant_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO tenant_memberships (tenant_id, principal_id, principal_kind, role, status, created_at, updated_at)
+         VALUES ($1, $2, 'human', 'member', 'active', $3, $3)"
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO developer_role_assignments (tenant_id, principal_id, role, created_at)
+         VALUES ($1, $2, 'developer_admin', $3)"
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let endpoint_id = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO developer_webhook_endpoints (id, tenant_id, name, url, signing_secret_ciphertext, signing_secret_last4, created_by, created_at, updated_at)
+         VALUES ($1, $2, 'Test Endpoint', 'https://example.com/webhook', 'secret', '1234', $3, $4, $4)"
+    )
+    .bind(endpoint_id)
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let delivery_id = uuid::Uuid::new_v4();
+    let event_id = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO developer_webhook_deliveries (id, endpoint_id, tenant_id, event_type, event_id, status, attempt_count, created_at)
+         VALUES ($1, $2, $3, 'user.created', $4, 'failed', 1, $5)"
+    )
+    .bind(delivery_id)
+    .bind(endpoint_id)
+    .bind(tenant_id)
+    .bind(event_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let state = test_state(&pool).await;
+
+    let auth = crate::http::middleware::jwt::AuthContext {
+        user_id: principal_id,
+        user_email: "dev@example.com".to_string(),
+        display_name: "Dev User".to_string(),
+        email_verified_at: None,
+        mfa_enabled: false,
+        tenant_id: Some(tenant_id),
+        organization_id: None,
+        workspace_id: None,
+        workspace_region: None,
+        token_type: "Bearer".to_string(),
+        scope: String::new(),
+        jti: "test-jti".to_string(),
+        session_id: uuid::Uuid::new_v4(),
+        acr: None,
+        amr: vec![],
+        auth_time: None,
+        client_id: None,
+        cnf_jkt: None,
+    };
+
+    let response = super::routes::webhooks::replay_delivery(
+        axum::extract::State(state.clone()),
+        axum::Extension(auth.clone()),
+        axum::extract::Path(delivery_id),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(response.0.status, "pending");
+    assert_eq!(response.0.endpoint_id, endpoint_id);
+    assert_eq!(response.0.event_id, event_id);
+    assert_eq!(response.0.replayed_from_delivery_id, Some(delivery_id));
+}
+
+
