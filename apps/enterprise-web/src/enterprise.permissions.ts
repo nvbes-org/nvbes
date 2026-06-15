@@ -20,6 +20,15 @@ export function canManageUsers(input: {
   );
 }
 
+export function canManagePolicies(input: {
+  role: EnterpriseRole;
+  module_grants: EnterpriseModuleGrant[];
+}): boolean {
+  return (
+    input.role === 'owner' || (input.role === 'admin' && input.module_grants.includes('policies'))
+  );
+}
+
 export function isLastOwnerRemoval(input: {
   currentOwnerCount: number;
   selectedRole: EnterpriseRole;

@@ -1,4 +1,9 @@
-import { canManageUsers, describeModuleGrant, isLastOwnerRemoval } from './enterprise.permissions';
+import {
+  canManagePolicies,
+  canManageUsers,
+  describeModuleGrant,
+  isLastOwnerRemoval,
+} from './enterprise.permissions';
 
 type TestExpectation = {
   toBe(expected: unknown): void;
@@ -25,6 +30,16 @@ describe('enterprise permissions', () => {
   it('blocks users without members administration access', () => {
     expect(canManageUsers({ role: 'admin', module_grants: ['billing'] })).toBe(false);
     expect(canManageUsers({ role: 'member', module_grants: ['members'] })).toBe(false);
+  });
+
+  it('allows owners and policies-admins to simulate policies', () => {
+    expect(canManagePolicies({ role: 'owner', module_grants: [] })).toBe(true);
+    expect(canManagePolicies({ role: 'admin', module_grants: ['policies'] })).toBe(true);
+  });
+
+  it('blocks users without policies administration access', () => {
+    expect(canManagePolicies({ role: 'admin', module_grants: ['members'] })).toBe(false);
+    expect(canManagePolicies({ role: 'member', module_grants: ['policies'] })).toBe(false);
   });
 
   it('blocks last owner removal', () => {

@@ -18,6 +18,7 @@ export const LazyAccountSessionsPage = lazyPage(() => import('./pages/AccountSes
 export const LazyAccountPrivacyPage = lazyPage(() => import('./pages/AccountPrivacyPage'));
 export const LazyAccountLinkedAppsPage = lazyPage(() => import('./pages/AccountLinkedAppsPage'));
 export const LazyAccountAuditsPage = lazyPage(() => import('./pages/AccountAuditsPage'));
+export const LazyAccountTrustCenterPage = lazyPage(() => import('./pages/AccountTrustCenterPage'));
 export const LazyWorkspacesPage = lazyPage(() => import('./pages/WorkspacesPage'));
 export const LazyWorkspaceServiceAccountsPage = lazyPage(
   () => import('./pages/WorkspaceServiceAccountsPage'),

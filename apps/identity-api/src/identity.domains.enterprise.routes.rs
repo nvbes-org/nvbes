@@ -1,5 +1,10 @@
 use crate::app::AppState;
+use crate::domains::enterprise::access_reviews;
+use crate::domains::enterprise::policy_simulation::{
+    EnterprisePolicySimulationInput, EnterprisePolicySimulationResponse, simulate_policy,
+};
 use crate::domains::enterprise::service;
+use crate::domains::enterprise::trust::{self, types::EnterpriseTrustCenterResponse};
 use crate::domains::enterprise::types::{
     EnterpriseAccessUpdateInput, EnterpriseAccessUpdateResponse, EnterpriseAuditEventsResponse,
     EnterpriseBillingResponse, EnterpriseContextResponse, EnterpriseDevelopersResponse,
@@ -15,6 +20,7 @@ use axum::{
     extract::{Extension, Path, State},
     routing::{get, patch, post},
 };
+use nvbes_core::http::error::ErrorEnvelope;
 use uuid::Uuid;
 
 pub fn router(state: &AppState) -> Router<AppState> {
@@ -35,10 +41,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route("/enterprise/workspaces", get(list_workspaces))
         .route("/enterprise/developers", get(list_developers))
         .route("/enterprise/policies", get(list_policies))
+        .route(
+            "/enterprise/policies/simulate",
+            post(simulate_policy_decision),
+        )
         .route("/enterprise/security", get(get_security))
+        .route("/enterprise/trust-center", get(get_trust_center))
         .route("/enterprise/audit-events", get(list_audit_events))
         .route("/enterprise/billing", get(get_billing))
         .route("/enterprise/usage", get(get_usage))
+        .merge(access_reviews::routes::router())
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             jwt_auth_middleware,
@@ -152,6 +164,17 @@ async fn list_policies(
     ))
 }
 
+async fn simulate_policy_decision(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(input): Json<EnterprisePolicySimulationInput>,
+) -> Result<Json<EnterprisePolicySimulationResponse>, AppError> {
+    let tenant_id = require_tenant(&auth)?;
+    Ok(Json(
+        simulate_policy(&state.db, &auth, tenant_id, input).await?,
+    ))
+}
+
 async fn get_security(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -188,6 +211,27 @@ async fn get_usage(
 ) -> Result<Json<EnterpriseUsageResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(service::get_usage(&state.db, &auth, tenant_id).await?))
+}
+
+#[utoipa::path(
+    get,
+    path = "/enterprise/trust-center",
+    tag = "enterprise",
+    responses(
+        (status = 200, description = "Tenant trust center", body = EnterpriseTrustCenterResponse),
+        (status = 400, description = "Missing tenant context", body = ErrorEnvelope),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 403, description = "Tenant management denied", body = ErrorEnvelope),
+    )
+)]
+pub async fn get_trust_center(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Json<EnterpriseTrustCenterResponse>, AppError> {
+    let tenant_id = require_tenant(&auth)?;
+    Ok(Json(
+        trust::get_trust_center(&state.db, &auth, tenant_id).await?,
+    ))
 }
 
 fn require_tenant(auth: &AuthContext) -> Result<Uuid, AppError> {

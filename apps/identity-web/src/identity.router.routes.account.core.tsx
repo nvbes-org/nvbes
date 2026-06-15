@@ -13,6 +13,7 @@ import {
   LazyAccountSessionsPage,
   LazyAccountSocialPage,
   LazyAccountSubscriptionsPage,
+  LazyAccountTrustCenterPage,
   LazyBillingPage,
   LazyWorkspacesPage,
   LazyWorkspaceServiceAccountsPage,
@@ -55,6 +56,11 @@ export function createAccountCoreRoutes(account: typeof accountRoute) {
       getParentRoute: () => account,
       path: '/audits',
       component: LazyAccountAuditsPage,
+    }),
+    createRoute({
+      getParentRoute: () => account,
+      path: '/trust-center',
+      component: LazyAccountTrustCenterPage,
     }),
     createRoute({
       getParentRoute: () => account,

@@ -13,6 +13,7 @@ import {
   Receipt,
   Settings,
   Shield,
+  ShieldCheck,
   UserCircle,
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export const accountNavSections = [
       { to: '/account/privacy', icon: Eye, label: 'Consentements' },
       { to: '/account/linked-apps', icon: LinkIcon, label: 'Apps liees' },
       { to: '/account/audits', icon: FileSearch, label: 'Audits & RGPD' },
+      { to: '/account/trust-center', icon: ShieldCheck, label: 'Trust Center' },
     ],
   },
   {

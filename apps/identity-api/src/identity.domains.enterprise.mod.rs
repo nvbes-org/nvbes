@@ -1,10 +1,16 @@
+#[path = "identity.domains.enterprise.access_reviews.rs"]
+pub mod access_reviews;
 #[path = "identity.domains.enterprise.db.rs"]
 pub mod db;
 #[path = "identity.domains.enterprise.policy.rs"]
 pub mod policy;
+#[path = "identity.domains.enterprise.policy_simulation.rs"]
+pub mod policy_simulation;
 #[path = "identity.domains.enterprise.routes.rs"]
 pub mod routes;
 #[path = "identity.domains.enterprise.service.rs"]
 pub mod service;
+#[path = "identity.domains.enterprise.trust.rs"]
+pub mod trust;
 #[path = "identity.domains.enterprise.types.rs"]
 pub mod types;
