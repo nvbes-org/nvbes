@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, parse_identity_role};
 use crate::domains::enterprise::{db, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -13,9 +14,9 @@ pub(super) async fn ensure_member_manager(
     redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
+    scope: AdminScope,
 ) -> Result<ActorAccess, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let access = require_actor_access(db, auth, tenant_id).await?;
+    let access = require_actor_access(db, auth, tenant_id, scope).await?;
     if !policy::can_manage_members(
         policy::role_as_db(&access.role),
         &policy::grant_names(&access.grants),
@@ -25,10 +26,12 @@ pub(super) async fn ensure_member_manager(
             "Members access is required.",
         ));
     }
-    crate::domains::enterprise::admin_elevation::require_active_admin_elevation(
-        redis, auth, tenant_id,
-    )
-    .await?;
+    if matches!(scope, AdminScope::Tenant) {
+        crate::domains::enterprise::admin_elevation::require_active_admin_elevation(
+            redis, auth, tenant_id,
+        )
+        .await?;
+    }
     Ok(access)
 }
 
@@ -36,45 +39,88 @@ pub(super) async fn require_actor_access(
     db: &Database,
     auth: &AuthContext,
     tenant_id: Uuid,
+    scope: AdminScope,
 ) -> Result<ActorAccess, AppError> {
-    let row = db::actor_access(db, tenant_id, auth.user_id)
-        .await?
-        .ok_or_else(|| {
-            AppError::forbidden(
-                "tenant_management_denied",
-                "You do not have permission to manage this tenant.",
-            )
-        })?;
-    let role = policy::role_from_db(&row.role);
-    let break_glass = match (
-        row.break_glass_procedure_reference,
-        row.break_glass_reason,
-        row.break_glass_created_at,
-    ) {
-        (Some(procedure_reference), Some(reason), Some(created_at)) => {
-            Some(EnterpriseBreakGlassAccount {
-                procedure_reference,
-                reason,
-                created_at,
-                last_used_at: row.break_glass_last_used_at,
+    match scope {
+        AdminScope::Tenant => {
+            let row = db::actor_access(db, tenant_id, auth.user_id)
+                .await?
+                .ok_or_else(|| {
+                    AppError::forbidden(
+                        "tenant_management_denied",
+                        "You do not have permission to manage this tenant.",
+                    )
+                })?;
+            let role = policy::role_from_db(&row.role);
+            let break_glass = match (
+                row.break_glass_procedure_reference,
+                row.break_glass_reason,
+                row.break_glass_created_at,
+            ) {
+                (Some(procedure_reference), Some(reason), Some(created_at)) => {
+                    Some(EnterpriseBreakGlassAccount {
+                        procedure_reference,
+                        reason,
+                        created_at,
+                        last_used_at: row.break_glass_last_used_at,
+                    })
+                }
+                _ => None,
+            };
+            Ok(ActorAccess {
+                grants: policy::grants_for_role(&role),
+                role,
+                break_glass: row.break_glass,
+                break_glass_account: break_glass,
             })
         }
-        _ => None,
-    };
-    Ok(ActorAccess {
-        grants: policy::grants_for_role(&role),
-        role,
-        break_glass: row.break_glass,
-        break_glass_account: break_glass,
-    })
+        AdminScope::Organization(org_id) => {
+            let role_str = sqlx::query_scalar::<_, String>(
+                r#"
+                SELECT role::text
+                FROM organization_memberships
+                WHERE organization_id = $1
+                  AND principal_id = $2
+                  AND status = 'active'
+                LIMIT 1
+                "#,
+            )
+            .bind(org_id)
+            .bind(auth.user_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or_else(|| {
+                AppError::forbidden(
+                    "organization_management_denied",
+                    "You do not have permission to manage this organization.",
+                )
+            })?;
+
+            let parsed_role = parse_identity_role(&role_str)?;
+            let ent_role = match parsed_role {
+                nvbes_core::authz::IdentityRole::Owner => EnterpriseRole::Owner,
+                nvbes_core::authz::IdentityRole::Admin => EnterpriseRole::Admin,
+                nvbes_core::authz::IdentityRole::SecurityAdmin => EnterpriseRole::Admin,
+                _ => EnterpriseRole::Member,
+            };
+
+            Ok(ActorAccess {
+                grants: policy::grants_for_role(&ent_role),
+                role: ent_role,
+                break_glass: false,
+                break_glass_account: None,
+            })
+        }
+    }
 }
 
 pub(super) async fn fetch_user_view(
     db: &Database,
     tenant_id: Uuid,
     user_id: Uuid,
+    scope: AdminScope,
 ) -> Result<EnterpriseUser, AppError> {
-    db::list_users(db, tenant_id)
+    db::list_users(db, tenant_id, scope)
         .await?
         .into_iter()
         .find(|row| row.id == user_id)
