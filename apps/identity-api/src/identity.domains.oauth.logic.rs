@@ -59,6 +59,43 @@ pub fn verify_client_secret(secret: &str, hash_value: &str) -> Result<(), AppErr
         .map_err(|_| AppError::unauthorized("invalid_client", "The client secret is invalid."))
 }
 
+pub async fn verify_client_secret_with_overlap(
+    db: &sqlx::PgPool,
+    client_id: &str,
+    secret: &str,
+    main_hash: &str,
+) -> Result<(), AppError> {
+    if verify_client_secret(secret, main_hash).is_ok() {
+        return Ok(());
+    }
+
+    let valid_hashes: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT client_secret_hash
+        FROM developer_client_secret_versions
+        WHERE client_id = $1
+          AND revoked_at IS NULL
+          AND (
+            status = 'active'
+            OR (status = 'overlap' AND (expires_at IS NULL OR expires_at > NOW()))
+          )
+        "#,
+    )
+    .bind(client_id)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::from)?;
+
+    for hash in valid_hashes {
+        if hash != main_hash && verify_client_secret(secret, &hash).is_ok() {
+            return Ok(());
+        }
+    }
+
+    Err(AppError::unauthorized("invalid_client", "The client secret is invalid."))
+}
+
+
 pub fn generate_user_code() -> String {
     use rand::Rng;
     let chars = b"BCDFGHJKLMNPQRSTVWXZ";

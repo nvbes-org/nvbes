@@ -75,15 +75,14 @@ export function LoginPageConsent({
             </div>
           )}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {clientName || 'Application'}
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">{clientName || 'Application'}</h3>
             <p className="text-[11px] text-muted-foreground">Demande d'autorisation d'accès</p>
           </div>
         </div>
 
         <p className="mb-3 text-xs text-muted-foreground/90">
-          {customDescription || "Cette application souhaite se connecter à votre compte nvbes pour accéder aux autorisations suivantes."}
+          {customDescription ||
+            'Cette application souhaite se connecter à votre compte nvbes pour accéder aux autorisations suivantes.'}
         </p>
 
         <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -141,7 +140,9 @@ export function LoginPageConsent({
                 Politique de confidentialité
               </a>
             )}
-            {privacyUrl && (termsUrl || supportUrl) && <span className="text-muted-foreground/30">•</span>}
+            {privacyUrl && (termsUrl || supportUrl) && (
+              <span className="text-muted-foreground/30">•</span>
+            )}
             {termsUrl && (
               <a
                 href={termsUrl}

@@ -42,7 +42,14 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/developer/console/marketplace/apps/{clientId}/review",
             axum::routing::post(oauth::review_marketplace_app),
         )
-        .route("/developer/console/scopes", get(oauth::list_scopes))
+        .route(
+            "/developer/console/scopes",
+            get(oauth::list_scopes).post(oauth::create_scope),
+        )
+        .route(
+            "/developer/console/scopes/{scopeKey}",
+            axum::routing::put(oauth::update_scope).delete(oauth::delete_scope),
+        )
         .route(
             "/developer/console/oauth-clients/{clientId}/consent-screen",
             get(oauth::get_consent_screen).put(oauth::upsert_consent_screen),

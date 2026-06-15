@@ -33,6 +33,7 @@ import {
   type DeveloperLogEntry,
   type DeveloperMarketplaceApp,
   type DeveloperMe,
+  DeveloperScopeRegistryEntrySchema,
   type DeveloperOAuthClient,
   type DeveloperOverview,
   type DeveloperPermission,
@@ -44,6 +45,8 @@ import {
   type PortalDeveloperLogEntry,
   type PortalDeveloperWebhookEndpoint,
   type RotateDeveloperSecret,
+  type CreateScopeInput,
+  type UpdateScopeInput,
 } from './developer.schemas';
 import type { SecretRotationForm } from './pages/SecretsPage.helpers';
 import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
@@ -329,6 +332,19 @@ export function rotateDeveloperSecret(
   );
 }
 
+export async function revokeDeveloperSecretVersion(
+  clientId: string,
+  versionId: string,
+): Promise<DeveloperSecretVersion[]> {
+  const response = await identityHttpClient.post(
+    `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/secrets/${encodeURIComponent(versionId)}/revoke`,
+    DeveloperSecretVersionsSchema,
+    {},
+  );
+  return response.secret_versions;
+}
+
+
 export async function listDeveloperConsoleWebhooks(
   signal?: AbortSignal,
 ): Promise<DeveloperWebhookEndpoint[]> {
@@ -405,6 +421,37 @@ export async function runDeveloperHealthChecks(): Promise<DeveloperHealthCheck[]
     {},
   );
   return response.checks;
+}
+
+export function createDeveloperScope(
+  input: CreateScopeInput,
+): Promise<DeveloperScopeRegistryEntry> {
+  return identityHttpClient.post(
+    '/developer/console/scopes',
+    DeveloperScopeRegistryEntrySchema,
+    input,
+  );
+}
+
+export function updateDeveloperScope(
+  scopeKey: string,
+  input: UpdateScopeInput,
+): Promise<DeveloperScopeRegistryEntry> {
+  return identityHttpClient.request(
+    `/developer/console/scopes/${encodeURIComponent(scopeKey)}`,
+    DeveloperScopeRegistryEntrySchema,
+    {
+      method: 'PUT',
+      body: input,
+    },
+  );
+}
+
+export function deleteDeveloperScope(scopeKey: string): Promise<void> {
+  return identityHttpClient.delete(
+    `/developer/console/scopes/${encodeURIComponent(scopeKey)}`,
+    EmptyResponseSchema,
+  );
 }
 
 function withTimeoutSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {

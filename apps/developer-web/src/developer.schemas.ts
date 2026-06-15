@@ -179,6 +179,25 @@ export const DeveloperScopeRegistryEntrySchema = z.object({
   allowed_audiences: z.array(z.string()),
 });
 
+export const CreateScopeInputSchema = z.object({
+  scope_key: z.string(),
+  display_name: z.string(),
+  description: z.string(),
+  risk: z.enum(['low', 'medium', 'high', 'restricted']),
+  owner_team: z.string(),
+  lifecycle: z.enum(['proposed', 'active', 'deprecated', 'retired']).optional(),
+  allowed_audiences: z.array(z.string()),
+});
+
+export const UpdateScopeInputSchema = z.object({
+  display_name: z.string(),
+  description: z.string(),
+  risk: z.enum(['low', 'medium', 'high', 'restricted']),
+  owner_team: z.string(),
+  lifecycle: z.enum(['proposed', 'active', 'deprecated', 'retired']),
+  allowed_audiences: z.array(z.string()),
+});
+
 export const DeveloperScopeRegistrySchema = z.object({
   scopes: z.array(DeveloperScopeRegistryEntrySchema),
 });
@@ -355,3 +374,5 @@ export type DeveloperTokenClaims = z.infer<typeof DeveloperTokenClaimsSchema>;
 export type DebugDeveloperToken = z.infer<typeof DebugDeveloperTokenSchema>;
 export type DeveloperSandboxTenant = z.infer<typeof DeveloperSandboxTenantSchema>;
 export type DeveloperHealthCheck = z.infer<typeof DeveloperHealthCheckSchema>;
+export type CreateScopeInput = z.infer<typeof CreateScopeInputSchema>;
+export type UpdateScopeInput = z.infer<typeof UpdateScopeInputSchema>;

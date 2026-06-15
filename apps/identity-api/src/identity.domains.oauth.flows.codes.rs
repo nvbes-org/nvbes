@@ -173,7 +173,7 @@ pub async fn exchange_code(
                 let client_secret = input.client_secret.as_deref().ok_or_else(|| {
                     AppError::unauthorized("invalid_client", "Client authentication is required.")
                 })?;
-                crate::domains::oauth::verify_client_secret(client_secret, &client_secret_hash)?;
+                crate::domains::oauth::verify_client_secret_with_overlap(db, &code.client_id, client_secret, &client_secret_hash).await?;
             }
         }
 

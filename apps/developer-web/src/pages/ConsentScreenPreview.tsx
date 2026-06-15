@@ -47,9 +47,12 @@ export function ConsentScreenPreview({
   ];
 
   return (
-    <div className="consent-preview-wrapper h-full w-full rounded-lg border border-border bg-slate-50/50 p-6 dark:bg-slate-950/20" style={styleOverrides}>
+    <div
+      className="consent-preview-wrapper h-full w-full rounded-lg border border-border bg-slate-50/50 p-6 dark:bg-slate-950/20"
+      style={styleOverrides}
+    >
       {scopedCss && <style dangerouslySetInnerHTML={{ __html: scopedCss }} />}
-      
+
       <div className="mx-auto max-w-sm rounded-xl border border-border bg-card p-5 shadow-sm">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
@@ -133,7 +136,9 @@ export function ConsentScreenPreview({
                 Politique de confidentialité
               </span>
             )}
-            {privacyUrl && (termsUrl || supportUrl) && <span className="text-muted-foreground/30">•</span>}
+            {privacyUrl && (termsUrl || supportUrl) && (
+              <span className="text-muted-foreground/30">•</span>
+            )}
             {termsUrl && (
               <span className="hover:text-foreground hover:underline cursor-pointer">
                 Conditions d'utilisation
@@ -141,9 +146,7 @@ export function ConsentScreenPreview({
             )}
             {termsUrl && supportUrl && <span className="text-muted-foreground/30">•</span>}
             {supportUrl && (
-              <span className="hover:text-foreground hover:underline cursor-pointer">
-                Support
-              </span>
+              <span className="hover:text-foreground hover:underline cursor-pointer">Support</span>
             )}
           </div>
         )}

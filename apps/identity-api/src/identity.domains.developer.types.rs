@@ -450,3 +450,25 @@ pub struct DeveloperHealthCheckSeed {
     pub summary: String,
     pub metadata: Value,
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CreateScopeInput {
+    pub scope_key: String,
+    pub display_name: String,
+    pub description: String,
+    pub risk: String,
+    pub owner_team: String,
+    pub lifecycle: Option<String>,
+    pub allowed_audiences: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct UpdateScopeInput {
+    pub display_name: String,
+    pub description: String,
+    pub risk: String,
+    pub owner_team: String,
+    pub lifecycle: String,
+    pub allowed_audiences: Vec<String>,
+}
+

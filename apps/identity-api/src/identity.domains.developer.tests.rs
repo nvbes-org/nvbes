@@ -244,3 +244,190 @@ async fn test_state(pool: &sqlx::PgPool) -> crate::app::AppState {
         .await
         .expect("app state bootstrap should succeed")
 }
+
+#[tokio::test]
+async fn test_scope_registry_crud() {
+    let pool = crate::test_support::shared_test_pool();
+    crate::test_support::ensure_test_database(&pool).await;
+
+    let tenant_id = uuid::Uuid::new_v4();
+    let principal_id = uuid::Uuid::new_v4();
+    let now = chrono::Utc::now();
+
+    sqlx::query(
+        "INSERT INTO tenants (id, kind, name, slug, status, security_tier, created_at, updated_at)
+         VALUES ($1, 'team', 'Scope Test Tenant', $2, 'active', 'standard', $3, $3)"
+    )
+    .bind(tenant_id)
+    .bind(format!("scope-test-{}", tenant_id))
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name, created_at, updated_at)
+         VALUES ($1, $2, 'human', 'active', 'Scope User', $3, $3)"
+    )
+    .bind(principal_id)
+    .bind(tenant_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO tenant_memberships (tenant_id, principal_id, principal_kind, role, status, created_at, updated_at)
+         VALUES ($1, $2, 'human', 'member', 'active', $3, $3)"
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "INSERT INTO developer_role_assignments (tenant_id, principal_id, role, created_at)
+         VALUES ($1, $2, 'developer_admin', $3)"
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(now)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let auth = crate::http::middleware::jwt::AuthContext {
+        user_id: principal_id,
+        user_email: "scope-admin@example.com".to_string(),
+        display_name: "Scope Admin User".to_string(),
+        email_verified_at: None,
+        mfa_enabled: false,
+        tenant_id: Some(tenant_id),
+        organization_id: None,
+        workspace_id: None,
+        workspace_region: None,
+        token_type: "Bearer".to_string(),
+        scope: String::new(),
+        jti: "test-jti".to_string(),
+        session_id: uuid::Uuid::new_v4(),
+        acr: None,
+        amr: vec![],
+        auth_time: None,
+        client_id: None,
+        cnf_jkt: None,
+    };
+
+    let state = test_state(&pool).await;
+
+    // 1. Create a scope
+    let create_input = super::types::CreateScopeInput {
+        scope_key: "test.scope.write".to_string(),
+        display_name: "Test Scope Write".to_string(),
+        description: "Allows writing test data".to_string(),
+        risk: "medium".to_string(),
+        owner_team: "Platform Security".to_string(),
+        lifecycle: Some("active".to_string()),
+        allowed_audiences: vec!["https://api.test.com".to_string()],
+    };
+
+    let create_response = super::routes::oauth::create_scope(
+        axum::extract::State(state.clone()),
+        axum::Extension(auth.clone()),
+        axum::Json(create_input),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(create_response.0.scope_key, "test.scope.write");
+    assert_eq!(create_response.0.display_name, "Test Scope Write");
+    assert_eq!(create_response.0.risk, "medium");
+    assert_eq!(create_response.0.lifecycle, "active");
+
+    // Verify both tables have the scope
+    let reg_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM developer_scope_registry WHERE scope_key = 'test.scope.write')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(reg_exists);
+
+    let meta_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM oauth_scope_metadata WHERE scope = 'test.scope.write')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(meta_exists);
+
+    // 2. List scopes and ensure ours is in the list
+    let list_response = super::routes::oauth::list_scopes(
+        axum::extract::State(state.clone()),
+        axum::Extension(auth.clone()),
+    )
+    .await
+    .unwrap();
+
+    let found = list_response.0.scopes.iter().any(|s| s.scope_key == "test.scope.write");
+    assert!(found);
+
+    // 3. Update the scope
+    let update_input = super::types::UpdateScopeInput {
+        display_name: "Test Scope Write Updated".to_string(),
+        description: "Allows writing test data updated".to_string(),
+        risk: "high".to_string(), // High risk requires admin consent
+        owner_team: "Platform Security Team".to_string(),
+        lifecycle: "active".to_string(),
+        allowed_audiences: vec!["https://api.test.com".to_string(), "https://api2.test.com".to_string()],
+    };
+
+    let update_response = super::routes::oauth::update_scope(
+        axum::extract::State(state.clone()),
+        axum::Extension(auth.clone()),
+        axum::extract::Path("test.scope.write".to_string()),
+        axum::Json(update_input),
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(update_response.0.display_name, "Test Scope Write Updated");
+    assert_eq!(update_response.0.risk, "high");
+
+    // Verify requires_admin_consent is updated to true in oauth_scope_metadata
+    let requires_admin = sqlx::query_scalar::<_, bool>(
+        "SELECT requires_admin_consent FROM oauth_scope_metadata WHERE scope = 'test.scope.write'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(requires_admin);
+
+    // 4. Delete the scope
+    super::routes::oauth::delete_scope(
+        axum::extract::State(state.clone()),
+        axum::Extension(auth.clone()),
+        axum::extract::Path("test.scope.write".to_string()),
+    )
+    .await
+    .unwrap();
+
+    // Verify it is gone from both tables
+    let reg_exists_after = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM developer_scope_registry WHERE scope_key = 'test.scope.write')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(!reg_exists_after);
+
+    let meta_exists_after = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM oauth_scope_metadata WHERE scope = 'test.scope.write')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(!meta_exists_after);
+}
+

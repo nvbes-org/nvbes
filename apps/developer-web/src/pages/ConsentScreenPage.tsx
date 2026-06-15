@@ -101,7 +101,7 @@ export function ConsentScreenPage() {
             {consentQuery.data?.configured ? 'Configured' : 'Not configured'}
           </p>
         </aside>
-        
+
         <div className="grid gap-4 xl:grid-cols-2">
           {/* Builder Form */}
           <form
@@ -164,7 +164,7 @@ export function ConsentScreenPage() {
                 </div>
               </label>
             </div>
-            
+
             <label className="mt-4 grid gap-2 text-sm font-medium">
               Description
               <textarea

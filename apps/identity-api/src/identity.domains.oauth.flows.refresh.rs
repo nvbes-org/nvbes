@@ -115,7 +115,7 @@ pub async fn refresh_token(
                 let secret = client_auth.client_secret.as_deref().ok_or_else(|| {
                     AppError::unauthorized("invalid_client", "Client authentication is required.")
                 })?;
-                crate::domains::oauth::verify_client_secret(secret, &client_secret_hash)?;
+                crate::domains::oauth::verify_client_secret_with_overlap(db, &client_auth.client_id, secret, &client_secret_hash).await?;
             }
         }
 
