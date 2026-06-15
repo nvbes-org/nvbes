@@ -63,7 +63,7 @@ async fn reminder_candidates(
           ac.tenant_name, ac.due_at, ac.pending_items,
           tm.principal_id AS recipient_principal_id,
           u.email AS recipient_email,
-          u.name AS recipient_name,
+          COALESCE(NULLIF(concat_ws(' ', u.firstname, u.lastname), ''), u.username, u.email) AS recipient_name,
           CASE WHEN ac.due_at < NOW() THEN 'overdue' ELSE 'due_soon' END AS reminder_kind
         FROM active_campaigns ac
         INNER JOIN tenant_memberships tm ON tm.tenant_id = ac.tenant_id

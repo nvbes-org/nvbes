@@ -56,7 +56,10 @@ const EnterpriseWorkspaceSchema = z.object({
 
 const EnterpriseDeveloperCredentialSchema = z.object({
   id: z.string(),
+  client_id: z.string(),
   name: z.string(),
+  status: z.string(),
+  secret_last4: z.string(),
   owner_email: z.string().email().optional(),
   scopes: z.array(z.string()),
   last_used_at: NullableStringSchema.optional(),
@@ -214,10 +217,19 @@ export const EnterprisePoliciesResponseSchema = z.object({
     step_up_required_for_admin_elevation: z.boolean(),
     source: z.string(),
   }),
+  mfa_policy: z.object({
+    policy: z.enum(['optional', 'required_admins', 'required_all']),
+    recommended_policy: z.enum(['optional', 'required_admins', 'required_all']),
+    compliant: z.boolean(),
+  }),
 });
 
 export const EnterpriseSessionPolicyInputSchema = z.object({
   admin_session_ttl_hours: z.number().int().min(1).max(168),
+});
+
+export const EnterpriseMfaPolicyInputSchema = z.object({
+  policy: z.enum(['optional', 'required_admins', 'required_all']),
 });
 
 export const EnterprisePolicySimulationSubjectSchema = z.discriminatedUnion('subject_type', [
@@ -327,6 +339,7 @@ export type EnterpriseWorkspacesResponse = z.infer<typeof EnterpriseWorkspacesRe
 export type EnterpriseDevelopersResponse = z.infer<typeof EnterpriseDevelopersResponseSchema>;
 export type EnterprisePoliciesResponse = z.infer<typeof EnterprisePoliciesResponseSchema>;
 export type EnterpriseSessionPolicyInput = z.infer<typeof EnterpriseSessionPolicyInputSchema>;
+export type EnterpriseMfaPolicyInput = z.infer<typeof EnterpriseMfaPolicyInputSchema>;
 export type EnterprisePolicySimulationSubject = z.infer<
   typeof EnterprisePolicySimulationSubjectSchema
 >;

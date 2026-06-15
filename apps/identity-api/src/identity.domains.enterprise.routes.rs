@@ -1,16 +1,12 @@
 use crate::app::AppState;
 use crate::domains::enterprise::access_reviews;
-use crate::domains::enterprise::policy_simulation::{
-    EnterprisePolicySimulationInput, EnterprisePolicySimulationResponse, simulate_policy,
-};
 use crate::domains::enterprise::service;
 use crate::domains::enterprise::trust::{self, types::EnterpriseTrustCenterResponse};
 use crate::domains::enterprise::types::{
     EnterpriseAccessUpdateInput, EnterpriseAccessUpdateResponse, EnterpriseAdminElevationInput,
     EnterpriseAdminElevationResponse, EnterpriseAuditEventsResponse, EnterpriseBillingResponse,
-    EnterpriseContextResponse, EnterpriseDevelopersResponse, EnterpriseInvitationInput,
-    EnterpriseInvitationsResponse, EnterpriseOverviewResponse, EnterprisePoliciesResponse,
-    EnterpriseReactivateInput, EnterpriseSecurityResponse, EnterpriseSessionPolicyInput,
+    EnterpriseContextResponse, EnterpriseInvitationInput, EnterpriseInvitationsResponse,
+    EnterpriseOverviewResponse, EnterpriseReactivateInput, EnterpriseSecurityResponse,
     EnterpriseSuspendInput, EnterpriseUsageResponse, EnterpriseUsersResponse,
     EnterpriseWorkspacesResponse,
 };
@@ -23,6 +19,14 @@ use axum::{
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use uuid::Uuid;
+
+#[path = "identity.domains.enterprise.routes.developers.rs"]
+pub mod developers;
+#[path = "identity.domains.enterprise.routes.policies.rs"]
+pub mod policies;
+
+pub use developers::revoke_developer_secret;
+pub use policies::update_mfa_policy;
 
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
@@ -41,12 +45,20 @@ pub fn router(state: &AppState) -> Router<AppState> {
             post(reactivate_user),
         )
         .route("/enterprise/workspaces", get(list_workspaces))
-        .route("/enterprise/developers", get(list_developers))
-        .route("/enterprise/policies", get(list_policies))
-        .route("/enterprise/policies/session", patch(update_session_policy))
+        .route("/enterprise/developers", get(developers::list_developers))
+        .route(
+            "/enterprise/developers/credentials/{credentialId}/revoke",
+            post(revoke_developer_secret),
+        )
+        .route("/enterprise/policies", get(policies::list_policies))
+        .route(
+            "/enterprise/policies/session",
+            patch(policies::update_session_policy),
+        )
+        .route("/enterprise/policies/mfa", patch(update_mfa_policy))
         .route(
             "/enterprise/policies/simulate",
-            post(simulate_policy_decision),
+            post(policies::simulate_policy_decision),
         )
         .route("/enterprise/security", get(get_security))
         .route("/enterprise/trust-center", get(get_trust_center))
@@ -170,62 +182,6 @@ async fn list_workspaces(
     ))
 }
 
-async fn list_developers(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<EnterpriseDevelopersResponse>, AppError> {
-    let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        service::list_developers(&state.db, &auth, tenant_id).await?,
-    ))
-}
-
-async fn list_policies(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<EnterprisePoliciesResponse>, AppError> {
-    let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        service::list_policies(
-            &state.db,
-            &auth,
-            tenant_id,
-            state.config.auth_session_ttl_hours,
-        )
-        .await?,
-    ))
-}
-
-async fn simulate_policy_decision(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Json(input): Json<EnterprisePolicySimulationInput>,
-) -> Result<Json<EnterprisePolicySimulationResponse>, AppError> {
-    let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        simulate_policy(&state.db, &auth, tenant_id, input).await?,
-    ))
-}
-
-async fn update_session_policy(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Json(input): Json<EnterpriseSessionPolicyInput>,
-) -> Result<Json<EnterprisePoliciesResponse>, AppError> {
-    let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        service::update_session_policy(
-            &state.db,
-            &state.redis,
-            &auth,
-            tenant_id,
-            state.config.auth_session_ttl_hours,
-            input,
-        )
-        .await?,
-    ))
-}
-
 async fn get_security(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -291,7 +247,7 @@ pub async fn get_trust_center(
     ))
 }
 
-fn require_tenant(auth: &AuthContext) -> Result<Uuid, AppError> {
+pub(super) fn require_tenant(auth: &AuthContext) -> Result<Uuid, AppError> {
     auth.tenant_id.ok_or_else(|| {
         AppError::bad_request(
             "missing_tenant",

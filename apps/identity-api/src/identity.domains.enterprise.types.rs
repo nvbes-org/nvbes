@@ -77,7 +77,10 @@ pub struct EnterpriseWorkspaceSummary {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseDeveloperCredentialSummary {
     pub id: Uuid,
+    pub client_id: String,
     pub name: String,
+    pub status: String,
+    pub secret_last4: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owner_email: Option<String>,
     pub scopes: Vec<String>,
@@ -242,6 +245,7 @@ pub struct EnterpriseDevelopersResponse {
 pub struct EnterprisePoliciesResponse {
     pub policies: Vec<EnterprisePolicySummary>,
     pub session_policy: EnterpriseSessionPolicy,
+    pub mfa_policy: EnterpriseMfaPolicy,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -258,6 +262,20 @@ pub struct EnterpriseSessionPolicy {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseSessionPolicyInput {
     pub admin_session_ttl_hours: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseMfaPolicy {
+    pub policy: String,
+    pub recommended_policy: String,
+    pub compliant: bool,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseMfaPolicyInput {
+    pub policy: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]

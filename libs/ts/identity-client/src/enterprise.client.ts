@@ -42,6 +42,8 @@ import {
   EnterpriseInvitationInputSchema,
   type EnterpriseInvitationsResponse,
   EnterpriseInvitationsResponseSchema,
+  type EnterpriseMfaPolicyInput,
+  EnterpriseMfaPolicyInputSchema,
   type EnterpriseOverviewResponse,
   EnterpriseOverviewResponseSchema,
   type EnterprisePoliciesResponse,
@@ -72,6 +74,10 @@ import {
 import {
   type CreateTenantDomainInput,
   CreateTenantDomainInputSchema,
+  type CreateFederatedIdentityProviderInput,
+  CreateFederatedIdentityProviderInputSchema,
+  type FederatedIdentityProviderResponse,
+  FederatedIdentityProviderResponseSchema,
   type TenantDomainResponse,
   TenantDomainResponseSchema,
   type UpdateTenantDomainInput,
@@ -198,6 +204,19 @@ export function getEnterpriseDevelopers(
   );
 }
 
+export function revokeEnterpriseDeveloperSecret(
+  http: HttpClient,
+  credentialId: string,
+  options?: EnterpriseRequestOptions,
+): Promise<EnterpriseDevelopersResponse> {
+  return http.post(
+    `${EnterpriseApiBasePath}/developers/credentials/${encodeURIComponent(credentialId)}/revoke`,
+    EnterpriseDevelopersResponseSchema,
+    undefined,
+    options,
+  );
+}
+
 export function getEnterprisePolicies(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
@@ -213,6 +232,18 @@ export function updateEnterpriseSessionPolicy(
   return http.request(`${EnterpriseApiBasePath}/policies/session`, EnterprisePoliciesResponseSchema, {
     ...options,
     body: EnterpriseSessionPolicyInputSchema.parse(input),
+    method: 'PATCH',
+  });
+}
+
+export function updateEnterpriseMfaPolicy(
+  http: HttpClient,
+  input: EnterpriseMfaPolicyInput,
+  options?: EnterpriseRequestOptions,
+): Promise<EnterprisePoliciesResponse> {
+  return http.request(`${EnterpriseApiBasePath}/policies/mfa`, EnterprisePoliciesResponseSchema, {
+    ...options,
+    body: EnterpriseMfaPolicyInputSchema.parse(input),
     method: 'PATCH',
   });
 }
@@ -412,6 +443,20 @@ export function createTenantDomain(
     `/tenants/${encodeURIComponent(tenantId)}/domains`,
     TenantDomainResponseSchema,
     CreateTenantDomainInputSchema.parse(input),
+    options,
+  );
+}
+
+export function createFederatedIdentityProvider(
+  http: HttpClient,
+  tenantId: string,
+  input: CreateFederatedIdentityProviderInput,
+  options?: EnterpriseRequestOptions,
+): Promise<FederatedIdentityProviderResponse> {
+  return http.post(
+    `/tenants/${encodeURIComponent(tenantId)}/identity-providers`,
+    FederatedIdentityProviderResponseSchema,
+    CreateFederatedIdentityProviderInputSchema.parse(input),
     options,
   );
 }

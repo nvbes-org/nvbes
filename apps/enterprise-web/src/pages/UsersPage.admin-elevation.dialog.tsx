@@ -58,7 +58,7 @@ export function AdminElevationDialog({
           <DialogHeader>
             <DialogTitle>Admin verification</DialogTitle>
             <DialogDescription>
-              Temporary admin elevation is required before changing tenant members.
+              Temporary admin elevation is required before changing sensitive tenant settings.
             </DialogDescription>
           </DialogHeader>
 

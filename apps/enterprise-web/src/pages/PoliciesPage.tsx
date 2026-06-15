@@ -3,13 +3,11 @@ import type {
   EnterprisePolicySimulationInput,
 } from '@nvbes/identity-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Clock3, Save, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { enterpriseClient } from '../enterprise.api';
 import { canManagePolicies } from '../enterprise.permissions';
@@ -22,6 +20,8 @@ import {
 } from '../enterprise.queries';
 import { PoliciesPageForm, type PoliciesPageSubjectType } from './PoliciesPage.form';
 import { SimulationResult } from './PoliciesPage.result';
+import { MfaPolicyCard, SessionPolicyCard } from './PoliciesPage.security';
+import { isAdminElevationCancelled, useAdminElevation } from './UsersPage.admin-elevation';
 
 export function PoliciesPage() {
   const queryClient = useQueryClient();
@@ -46,6 +46,13 @@ export function PoliciesPage() {
   const canSimulate = contextQuery.data ? canManagePolicies(contextQuery.data) : false;
   const selectedUser = users.find((user) => user.id === userId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === workspaceId);
+  const adminElevation = useAdminElevation({
+    active: contextQuery.data?.admin_elevation.active ?? false,
+    onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
+  });
+  const adminWithoutMfaCount = users.filter(
+    (user) => (user.role === 'owner' || user.role === 'admin') && !user.mfa_enabled,
+  ).length;
 
   useEffect(() => {
     if (!workspaceId && workspaces[0]) {
@@ -62,9 +69,18 @@ export function PoliciesPage() {
   });
   const sessionPolicyMutation = useMutation({
     mutationFn: (adminSessionTtlHours: number) =>
-      enterpriseClient.updateEnterpriseSessionPolicy({
-        admin_session_ttl_hours: adminSessionTtlHours,
-      }),
+      adminElevation.runElevated(() =>
+        enterpriseClient.updateEnterpriseSessionPolicy({
+          admin_session_ttl_hours: adminSessionTtlHours,
+        }),
+      ),
+    onSuccess: (data) => {
+      queryClient.setQueryData(enterpriseQueryKeys.policies, data);
+    },
+  });
+  const mfaPolicyMutation = useMutation({
+    mutationFn: (policy: EnterprisePoliciesResponse['mfa_policy']['policy']) =>
+      adminElevation.runElevated(() => enterpriseClient.updateEnterpriseMfaPolicy({ policy })),
     onSuccess: (data) => {
       queryClient.setQueryData(enterpriseQueryKeys.policies, data);
     },
@@ -109,9 +125,34 @@ export function PoliciesPage() {
           {sessionPolicy ? (
             <SessionPolicyCard
               error={sessionPolicyMutation.error}
-              pending={sessionPolicyMutation.isPending}
+              pending={sessionPolicyMutation.isPending || adminElevation.pending}
               sessionPolicy={sessionPolicy}
-              onSave={(value) => sessionPolicyMutation.mutate(value)}
+              onSave={async (value) => {
+                try {
+                  await sessionPolicyMutation.mutateAsync(value);
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    sessionPolicyMutation.reset();
+                  }
+                }
+              }}
+            />
+          ) : null}
+          {policiesQuery.data?.mfa_policy ? (
+            <MfaPolicyCard
+              adminWithoutMfaCount={adminWithoutMfaCount}
+              error={mfaPolicyMutation.error}
+              mfaPolicy={policiesQuery.data.mfa_policy}
+              pending={mfaPolicyMutation.isPending || adminElevation.pending}
+              onSave={async (value) => {
+                try {
+                  await mfaPolicyMutation.mutateAsync(value);
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    mfaPolicyMutation.reset();
+                  }
+                }
+              }}
             />
           ) : null}
 
@@ -156,83 +197,8 @@ export function PoliciesPage() {
           </section>
         </div>
       )}
+      {adminElevation.dialog}
     </div>
-  );
-}
-
-type SessionPolicyCardProps = {
-  error: Error | null;
-  pending: boolean;
-  onSave(value: number): void;
-  sessionPolicy: EnterprisePoliciesResponse['session_policy'];
-};
-
-function SessionPolicyCard(props: SessionPolicyCardProps) {
-  const { error, pending, sessionPolicy } = props;
-  const [value, setValue] = useState(String(sessionPolicy.admin_session_ttl_hours));
-  const parsedValue = Number.parseInt(value, 10);
-  const validValue = Number.isInteger(parsedValue) && parsedValue >= 1 && parsedValue <= 168;
-  const dirty = parsedValue !== sessionPolicy.admin_session_ttl_hours;
-
-  useEffect(() => {
-    setValue(String(sessionPolicy.admin_session_ttl_hours));
-  }, [sessionPolicy.admin_session_ttl_hours]);
-
-  return (
-    <Card className="rounded-lg" size="sm">
-      <CardContent className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="rounded-lg border border-border bg-muted/30 p-2 text-muted-foreground">
-            <Clock3 className="size-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold">Admin session TTL</p>
-              <Badge
-                variant={sessionPolicy.compliant ? 'default' : 'secondary'}
-                className="rounded-md"
-              >
-                {sessionPolicy.compliant ? 'Compliant' : 'Review'}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              Current admin session TTL is {sessionPolicy.admin_session_ttl_hours}h. Recommended
-              maximum is {sessionPolicy.recommended_admin_session_ttl_hours}h with step-up for admin
-              elevation. Source: {sessionPolicy.source}.
-            </p>
-            {error ? <p className="mt-2 text-sm text-destructive">{error.message}</p> : null}
-          </div>
-        </div>
-        <form
-          className="grid gap-2 md:min-w-64"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (validValue) {
-              props.onSave(parsedValue);
-            }
-          }}
-        >
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="admin-session-ttl">
-            Admin session TTL hours
-          </label>
-          <div className="flex gap-2">
-            <Input
-              id="admin-session-ttl"
-              min={1}
-              max={168}
-              type="number"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-            />
-            <Button type="submit" disabled={!dirty || !validValue || pending}>
-              <Save className="size-4" />
-              Save
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">Allowed range: 1-168 hours.</p>
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

@@ -129,6 +129,7 @@ pub async fn list_policies(
 ) -> Result<EnterprisePoliciesResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let session_policy = db::session_policy(db, tenant_id).await?;
+    let mfa_policy = db::mfa_policy(db, tenant_id).await?;
     Ok(EnterprisePoliciesResponse {
         policies: db::list_policies(db, tenant_id)
             .await?
@@ -136,6 +137,7 @@ pub async fn list_policies(
             .map(db::PolicySummaryRow::into_view)
             .collect(),
         session_policy: session_policy_view(session_policy, auth_session_ttl_hours),
+        mfa_policy: mfa_policy_view(mfa_policy),
     })
 }
 
@@ -155,6 +157,14 @@ pub(super) fn session_policy_view(
         } else {
             "environment".to_string()
         },
+    }
+}
+
+pub(super) fn mfa_policy_view(row: db::MfaPolicyRow) -> EnterpriseMfaPolicy {
+    EnterpriseMfaPolicy {
+        compliant: row.policy == "required_admins" || row.policy == "required_all",
+        policy: row.policy,
+        recommended_policy: "required_admins".to_string(),
     }
 }
 
@@ -242,3 +252,7 @@ pub async fn get_usage(
         ],
     })
 }
+
+#[cfg(test)]
+#[path = "identity.domains.enterprise.service.reads.tests.rs"]
+mod tests;

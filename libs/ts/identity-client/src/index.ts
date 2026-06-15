@@ -4,6 +4,7 @@ import {
   closeAccessReviewCampaign as closeAccessReviewCampaignRequest,
   createAccessReviewCampaign as createAccessReviewCampaignRequest,
   createAccessReviewSchedule as createAccessReviewScheduleRequest,
+  createFederatedIdentityProvider as createFederatedIdentityProviderRequest,
   createTenantDomain as createTenantDomainRequest,
   disableAccessReviewSchedule as disableAccessReviewScheduleRequest,
   createEnterpriseInvitations as createEnterpriseInvitationsRequest,
@@ -27,8 +28,10 @@ import {
   getEnterpriseWorkspaces as getEnterpriseWorkspacesRequest,
   grantEnterpriseAdminElevation as grantEnterpriseAdminElevationRequest,
   reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
+  revokeEnterpriseDeveloperSecret as revokeEnterpriseDeveloperSecretRequest,
   runAccessReviewScheduleNow as runAccessReviewScheduleNowRequest,
   suspendEnterpriseUser as suspendEnterpriseUserRequest,
+  updateEnterpriseMfaPolicy as updateEnterpriseMfaPolicyRequest,
   updateEnterpriseSessionPolicy as updateEnterpriseSessionPolicyRequest,
   updateTenantDomain as updateTenantDomainRequest,
   updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
@@ -57,6 +60,7 @@ import type {
   EnterpriseDevelopersResponse,
   EnterpriseInvitationInput,
   EnterpriseInvitationsResponse,
+  EnterpriseMfaPolicyInput,
   EnterpriseOverviewResponse,
   EnterprisePoliciesResponse,
   EnterprisePolicySimulationInput,
@@ -71,7 +75,9 @@ import type {
 } from './enterprise.schemas';
 import type { EnterpriseTrustCenterResponse } from './enterprise.trust.schemas';
 import type {
+  CreateFederatedIdentityProviderInput,
   CreateTenantDomainInput,
+  FederatedIdentityProviderResponse,
   TenantDomainResponse,
   UpdateTenantDomainInput,
   VerifyTenantDomainInput,
@@ -371,6 +377,13 @@ export class IdentityClient {
     return getEnterpriseDevelopersRequest(this.http, options);
   }
 
+  revokeEnterpriseDeveloperSecret(
+    credentialId: string,
+    options?: RequestOptions,
+  ): Promise<EnterpriseDevelopersResponse> {
+    return revokeEnterpriseDeveloperSecretRequest(this.http, credentialId, options);
+  }
+
   getEnterprisePolicies(options?: RequestOptions): Promise<EnterprisePoliciesResponse> {
     return getEnterprisePoliciesRequest(this.http, options);
   }
@@ -380,6 +393,13 @@ export class IdentityClient {
     options?: RequestOptions,
   ): Promise<EnterprisePoliciesResponse> {
     return updateEnterpriseSessionPolicyRequest(this.http, input, options);
+  }
+
+  updateEnterpriseMfaPolicy(
+    input: EnterpriseMfaPolicyInput,
+    options?: RequestOptions,
+  ): Promise<EnterprisePoliciesResponse> {
+    return updateEnterpriseMfaPolicyRequest(this.http, input, options);
   }
 
   simulateEnterprisePolicy(
@@ -473,6 +493,14 @@ export class IdentityClient {
 
   getEnterpriseTrustCenter(options?: RequestOptions): Promise<EnterpriseTrustCenterResponse> {
     return getEnterpriseTrustCenterRequest(this.http, options);
+  }
+
+  createFederatedIdentityProvider(
+    tenantId: string,
+    input: CreateFederatedIdentityProviderInput,
+    options?: RequestOptions,
+  ): Promise<FederatedIdentityProviderResponse> {
+    return createFederatedIdentityProviderRequest(this.http, tenantId, input, options);
   }
 
   createTenantDomain(

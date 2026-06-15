@@ -131,22 +131,30 @@ pub struct BillingSummaryRow {
 #[derive(Debug, FromRow)]
 pub struct DeveloperCredentialRow {
     pub id: Uuid,
+    pub client_id: String,
     pub name: String,
+    pub status: String,
+    pub secret_last4: String,
     pub owner_email: Option<String>,
     pub scopes: Vec<String>,
+    pub last_used_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
 }
 
 impl DeveloperCredentialRow {
     pub fn into_view(self) -> EnterpriseDeveloperCredentialSummary {
         EnterpriseDeveloperCredentialSummary {
             id: self.id,
+            client_id: self.client_id,
             name: self.name,
+            status: self.status,
+            secret_last4: self.secret_last4,
             owner_email: self.owner_email,
             scopes: self.scopes,
-            last_used_at: None,
+            last_used_at: self.last_used_at,
             created_at: self.created_at,
-            expires_at: None,
+            expires_at: self.expires_at,
         }
     }
 }
@@ -164,6 +172,11 @@ pub struct PolicySummaryRow {
 #[derive(Debug, FromRow)]
 pub struct SessionPolicyRow {
     pub admin_session_ttl_hours: Option<i32>,
+}
+
+#[derive(Debug, FromRow)]
+pub struct MfaPolicyRow {
+    pub policy: String,
 }
 
 impl PolicySummaryRow {

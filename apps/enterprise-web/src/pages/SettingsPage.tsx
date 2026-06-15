@@ -3,22 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Building2, Globe2, KeyRound } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
 import { enterpriseTrustCenterQueryOptions } from '../enterprise.queries';
 import { DomainsCard } from './SettingsPage.domains';
-import { EmptyState } from './SettingsPage.empty';
+import { SsoCard } from './SettingsPage.sso';
 
 type TrustDomain = EnterpriseTrustCenterResponse['verified_domains'][number];
-type TrustProvider = EnterpriseTrustCenterResponse['sso']['providers'][number];
 
 export function SettingsPage() {
   const trustQuery = useQuery(enterpriseTrustCenterQueryOptions());
@@ -78,7 +69,7 @@ export function SettingsPage() {
               domains={trustCenter.verified_domains}
               providers={trustCenter.sso.providers}
             />
-            <SsoCard providers={trustCenter.sso.providers} />
+            <SsoCard tenantId={trustCenter.tenant.id} providers={trustCenter.sso.providers} />
           </section>
         </>
       ) : null}
@@ -106,50 +97,6 @@ function SettingMetric({
         </div>
         <p className="mt-4 truncate text-xl font-heading font-semibold">{value}</p>
         <p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SsoCard({ providers }: { providers: TrustProvider[] }) {
-  return (
-    <Card className="rounded-lg" size="sm">
-      <CardHeader className="border-b border-border">
-        <CardTitle>SSO providers</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {providers.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {providers.map((provider) => (
-                <TableRow key={provider.id}>
-                  <TableCell className="font-medium">{provider.name}</TableCell>
-                  <TableCell>{provider.provider_family}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={provider.status === 'active' ? 'default' : 'secondary'}
-                      className="rounded-md"
-                    >
-                      {provider.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <EmptyState
-            title="No SSO provider"
-            description="Configure a SAML or OIDC provider to centralize enterprise login."
-          />
-        )}
       </CardContent>
     </Card>
   );

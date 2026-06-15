@@ -124,3 +124,9 @@ Objectif: augmenter la valeur plateforme.
 - Integrations.
 - Archivage long terme.
 - Reutilisation du module storage dans les autres produits nvbes.
+
+## Explorations Produits
+
+Ces idees ne sont pas dans le scope Drive V1/V2. Elles documentent des pistes futures a revisiter avec une decision produit separee.
+
+- Privacy-preserving KYC verification: verifier document et visage sans stocker les artefacts bruts, puis emettre un credential reutilisable avec consentement. Voir [Privacy-Preserving KYC Verification](product/privacy-preserving-kyc.md).

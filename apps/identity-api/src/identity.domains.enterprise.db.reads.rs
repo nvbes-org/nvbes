@@ -3,8 +3,8 @@ use uuid::Uuid;
 
 use super::records::{
     ActorAccessRow, AuditEventRow, BillingSummaryRow, DeveloperCredentialRow,
-    EnterpriseInvitationRow, EnterpriseUserRow, InvoiceRow, PolicySummaryRow, SecuritySummaryRow,
-    SessionPolicyRow, WorkspaceSummaryRow,
+    EnterpriseInvitationRow, EnterpriseUserRow, InvoiceRow, MfaPolicyRow, PolicySummaryRow,
+    SecuritySummaryRow, SessionPolicyRow, WorkspaceSummaryRow,
 };
 use crate::http::error::AppError;
 
@@ -157,9 +157,40 @@ pub async fn list_developers(
 ) -> Result<Vec<DeveloperCredentialRow>, AppError> {
     Ok(sqlx::query_as::<_, DeveloperCredentialRow>(
         r#"
-        SELECT oc.id, oc.name, NULL::text AS owner_email,
+        SELECT dcsv.id,
+          dcsv.client_id,
+          CONCAT(oc.name, ' secret ', dcsv.secret_last4) AS name,
+          dcsv.status::text AS status,
+          dcsv.secret_last4,
+          NULL::text AS owner_email,
           COALESCE(policy.scopes, ARRAY[]::text[]) AS scopes,
-          oc.created_at
+          oc.last_used_at,
+          dcsv.created_at,
+          dcsv.expires_at
+        FROM developer_client_secret_versions dcsv
+        INNER JOIN oauth_clients oc
+          ON oc.tenant_id = dcsv.tenant_id
+         AND oc.client_id = dcsv.client_id
+         AND oc.revoked_at IS NULL
+        LEFT JOIN LATERAL (
+          SELECT array_agg(DISTINCT scope) AS scopes
+          FROM oauth_client_policies ocp
+          CROSS JOIN LATERAL unnest(ocp.allowed_scopes) AS scope(scope)
+          WHERE ocp.client_id = oc.id AND ocp.status = 'active'
+        ) policy ON true
+        WHERE dcsv.tenant_id = $1
+          AND dcsv.revoked_at IS NULL
+        UNION ALL
+        SELECT oc.id,
+          oc.client_id,
+          oc.name,
+          'client'::text AS status,
+          'unknown'::text AS secret_last4,
+          NULL::text AS owner_email,
+          COALESCE(policy.scopes, ARRAY[]::text[]) AS scopes,
+          oc.last_used_at,
+          oc.created_at,
+          NULL::timestamptz AS expires_at
         FROM oauth_clients oc
         LEFT JOIN LATERAL (
           SELECT array_agg(DISTINCT scope) AS scopes
@@ -167,8 +198,15 @@ pub async fn list_developers(
           CROSS JOIN LATERAL unnest(ocp.allowed_scopes) AS scope(scope)
           WHERE ocp.client_id = oc.id AND ocp.status = 'active'
         ) policy ON true
-        WHERE oc.tenant_id = $1 AND oc.revoked_at IS NULL
-        ORDER BY oc.created_at DESC
+        WHERE oc.tenant_id = $1
+          AND oc.revoked_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM developer_client_secret_versions dcsv
+            WHERE dcsv.tenant_id = oc.tenant_id
+              AND dcsv.client_id = oc.client_id
+          )
+        ORDER BY created_at DESC
         "#,
     )
     .bind(tenant_id)
@@ -218,6 +256,19 @@ pub async fn session_policy(
     )
     .bind(tenant_id)
     .fetch_optional(db)
+    .await?)
+}
+
+pub async fn mfa_policy(db: &PgPool, tenant_id: Uuid) -> Result<MfaPolicyRow, AppError> {
+    Ok(sqlx::query_as::<_, MfaPolicyRow>(
+        r#"
+        SELECT COALESCE(mfa_policy, 'optional') AS policy
+        FROM tenants
+        WHERE id = $1
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_one(db)
     .await?)
 }
 

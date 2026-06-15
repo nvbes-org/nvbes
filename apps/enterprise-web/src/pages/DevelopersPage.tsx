@@ -1,35 +1,36 @@
-import type { EnterpriseDevelopersResponse } from '@nvbes/identity-client';
-import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Code2, KeyRound, RotateCcw, TimerReset } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Code2, KeyRound, RotateCcw } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
+import { enterpriseClient } from '../enterprise.api';
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '../components/ui/empty';
-import { Skeleton } from '../components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
-import { enterpriseDevelopersQueryOptions } from '../enterprise.queries';
-
-type DeveloperCredential = EnterpriseDevelopersResponse['credentials'][number];
-
-const rotationWindowDays = 90;
+  enterpriseContextQueryOptions,
+  enterpriseDevelopersQueryOptions,
+  enterpriseQueryKeys,
+} from '../enterprise.queries';
+import { CredentialsCard, needsRotation, rotationWindowDays } from './DevelopersPage.credentials';
+import { DevelopersErrorAlert, DevelopersLoadingState } from './DevelopersPage.states';
+import { isAdminElevationCancelled, useAdminElevation } from './UsersPage.admin-elevation';
 
 export function DevelopersPage() {
+  const queryClient = useQueryClient();
+  const contextQuery = useQuery(enterpriseContextQueryOptions());
   const developersQuery = useQuery(enterpriseDevelopersQueryOptions());
   const credentials = developersQuery.data?.credentials ?? [];
   const rotationCandidates = credentials.filter(needsRotation);
+  const adminElevation = useAdminElevation({
+    active: contextQuery.data?.admin_elevation.active ?? false,
+    onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
+  });
+  const revokeMutation = useMutation({
+    mutationFn: (credentialId: string) =>
+      adminElevation.runElevated(() =>
+        enterpriseClient.revokeEnterpriseDeveloperSecret(credentialId),
+      ),
+    onSuccess: (data) => {
+      queryClient.setQueryData(enterpriseQueryKeys.developers, data);
+    },
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,9 +54,11 @@ export function DevelopersPage() {
         </Badge>
       </header>
 
-      {developersQuery.error ? <DevelopersErrorAlert error={developersQuery.error} /> : null}
+      {(developersQuery.error ?? contextQuery.error) ? (
+        <DevelopersErrorAlert error={developersQuery.error ?? contextQuery.error} />
+      ) : null}
 
-      {developersQuery.isPending ? (
+      {developersQuery.isPending || contextQuery.isPending ? (
         <DevelopersLoadingState />
       ) : (
         <>
@@ -80,9 +83,27 @@ export function DevelopersPage() {
             />
           </section>
 
-          <CredentialsCard credentials={credentials} />
+          <CredentialsCard
+            credentials={credentials}
+            pendingCredentialId={
+              revokeMutation.isPending ? (revokeMutation.variables ?? null) : null
+            }
+            revokeError={revokeMutation.error}
+            pending={revokeMutation.isPending || adminElevation.pending}
+            onRevoke={async (credentialId) => {
+              try {
+                await revokeMutation.mutateAsync(credentialId);
+              } catch (error) {
+                if (isAdminElevationCancelled(error)) {
+                  revokeMutation.reset();
+                }
+              }
+            }}
+          />
         </>
       )}
+
+      {adminElevation.dialog}
     </div>
   );
 }
@@ -110,138 +131,4 @@ function DeveloperMetric({
       </CardContent>
     </Card>
   );
-}
-
-function CredentialsCard({ credentials }: { credentials: DeveloperCredential[] }) {
-  return (
-    <Card className="rounded-lg" size="sm">
-      <CardHeader className="border-b border-border">
-        <CardTitle>Credential inventory</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {credentials.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Scopes</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead>Rotation</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {credentials.map((credential) => (
-                <TableRow key={credential.id}>
-                  <TableCell className="font-medium">{credential.name}</TableCell>
-                  <TableCell>{credential.scopes.length || 'None'}</TableCell>
-                  <TableCell>{formatDate(credential.last_used_at)}</TableCell>
-                  <TableCell>{formatDate(credential.expires_at)}</TableCell>
-                  <TableCell>
-                    <RotationBadge credential={credential} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <Empty className="min-h-56 border bg-muted/20">
-            <EmptyMedia variant="icon">
-              <TimerReset className="size-4" />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>No developer credentials</EmptyTitle>
-              <EmptyDescription>
-                OAuth clients and service account credentials will appear here when configured.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RotationBadge({ credential }: { credential: DeveloperCredential }) {
-  if (isExpired(credential.expires_at)) {
-    return (
-      <Badge variant="destructive" className="rounded-md">
-        Expired
-      </Badge>
-    );
-  }
-
-  if (needsRotation(credential)) {
-    return (
-      <Badge variant="secondary" className="rounded-md">
-        Review
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="rounded-md">
-      Current
-    </Badge>
-  );
-}
-
-function DevelopersLoadingState() {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <Skeleton className="h-28 w-full rounded-lg" />
-        <Skeleton className="h-28 w-full rounded-lg" />
-        <Skeleton className="h-28 w-full rounded-lg" />
-      </div>
-      <Skeleton className="h-72 w-full rounded-lg" />
-    </div>
-  );
-}
-
-function DevelopersErrorAlert({ error }: { error: unknown }) {
-  return (
-    <Alert variant="destructive">
-      <AlertCircle className="size-4" />
-      <AlertTitle>Developer credentials unavailable</AlertTitle>
-      <AlertDescription>
-        {error instanceof Error ? error.message : 'Unable to load developer credentials.'}
-      </AlertDescription>
-    </Alert>
-  );
-}
-
-function needsRotation(credential: DeveloperCredential): boolean {
-  if (isExpired(credential.expires_at)) {
-    return true;
-  }
-
-  const createdAt = Date.parse(credential.created_at);
-  if (Number.isNaN(createdAt)) {
-    return false;
-  }
-
-  const ageDays = (Date.now() - createdAt) / 86_400_000;
-  return ageDays >= rotationWindowDays;
-}
-
-function isExpired(value: string | null | undefined): boolean {
-  return Boolean(value && Date.parse(value) <= Date.now());
-}
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) {
-    return 'Never';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Invalid date';
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
 }
