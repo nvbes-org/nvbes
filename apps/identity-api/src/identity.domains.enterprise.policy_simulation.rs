@@ -8,7 +8,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domains::{
-    authz::{ResourceContext, WorkspaceAction, WorkspaceRole, parse_action, parse_role},
+    authz::{
+        AdminScope, ResourceContext, WorkspaceAction, WorkspaceRole, parse_action, parse_role,
+        resolve_admin_scope,
+    },
     enterprise::policy,
 };
 use crate::http::error::AppError;
@@ -52,6 +55,13 @@ async fn ensure_policy_manager(
     tenant_id: Uuid,
 ) -> Result<(), AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
     let row = crate::domains::enterprise::db::actor_access(db, tenant_id, auth.user_id)
         .await?
         .ok_or_else(|| {

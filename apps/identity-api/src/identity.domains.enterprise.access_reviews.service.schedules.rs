@@ -4,7 +4,6 @@ use crate::database::Database;
 use crate::domains::enterprise::access_reviews::{
     reminders, schedule_mutations, schedule_state, schedules, types::*, validation,
 };
-use crate::domains::enterprise::service::require_actor_access_for_enterprise;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 
@@ -13,8 +12,7 @@ pub async fn list_schedules(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<AccessReviewSchedulesResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    super::ensure_tenant_admin(db, auth, tenant_id).await?;
     Ok(AccessReviewSchedulesResponse {
         schedules: schedules::list_schedules(db, tenant_id)
             .await?
@@ -30,8 +28,7 @@ pub async fn create_schedule(
     tenant_id: Uuid,
     input: CreateAccessReviewScheduleInput,
 ) -> Result<AccessReviewSchedule, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    super::ensure_tenant_admin(db, auth, tenant_id).await?;
     validation::validate_schedule_input(&input)?;
 
     let mut tx = db.begin().await?;
@@ -84,8 +81,7 @@ pub async fn disable_schedule(
     tenant_id: Uuid,
     schedule_id: Uuid,
 ) -> Result<AccessReviewSchedule, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    super::ensure_tenant_admin(db, auth, tenant_id).await?;
     if !schedule_state::disable_schedule(db, tenant_id, schedule_id).await? {
         return Err(AppError::not_found(
             "access_review_schedule_not_found",
@@ -109,8 +105,7 @@ pub async fn enable_schedule(
     tenant_id: Uuid,
     schedule_id: Uuid,
 ) -> Result<AccessReviewSchedule, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    super::ensure_tenant_admin(db, auth, tenant_id).await?;
     if !schedule_state::enable_schedule(db, tenant_id, schedule_id).await? {
         return Err(AppError::not_found(
             "access_review_schedule_not_found",
@@ -134,8 +129,7 @@ pub async fn run_schedule_now(
     tenant_id: Uuid,
     schedule_id: Uuid,
 ) -> Result<AccessReviewCampaignDetail, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    super::ensure_tenant_admin(db, auth, tenant_id).await?;
     let campaign_id =
         schedule_mutations::run_schedule_now(db, tenant_id, auth.user_id, schedule_id).await?;
     super::campaign_detail(db, tenant_id, campaign_id).await

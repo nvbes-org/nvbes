@@ -1,4 +1,5 @@
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::{db, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -6,6 +7,28 @@ use uuid::Uuid;
 
 use super::super::types::*;
 use super::access::{ensure_member_manager, fetch_user_view};
+
+async fn ensure_user_in_organization(
+    db: &Database,
+    user_id: Uuid,
+    org_id: Uuid,
+) -> Result<(), AppError> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (SELECT 1 FROM organization_memberships WHERE organization_id = $1 AND principal_id = $2 AND status = 'active')",
+    )
+    .bind(org_id)
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+
+    if !exists {
+        return Err(AppError::forbidden(
+            "user_not_in_organization",
+            "This user is not a member of your organization.",
+        ));
+    }
+    Ok(())
+}
 
 pub async fn update_user_access(
     db: &Database,
@@ -15,8 +38,14 @@ pub async fn update_user_access(
     user_id: Uuid,
     input: EnterpriseAccessUpdateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(&db, auth, tenant_id, auth.organization_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
     ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
+
+    if let AdminScope::Organization(org_id) = scope {
+        ensure_user_in_organization(db, user_id, org_id).await?;
+    }
+
     if input.workspace_ids.is_empty() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -25,7 +54,7 @@ pub async fn update_user_access(
     }
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
-    db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids).await?;
+    db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids, scope).await?;
     let current_role = db::target_role(&mut tx, tenant_id, user_id)
         .await?
         .ok_or_else(|| {
@@ -69,7 +98,7 @@ pub async fn update_user_access(
     .await?;
     tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id).await?,
+        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
     })
 }
 
@@ -81,7 +110,13 @@ pub async fn suspend_user(
     user_id: Uuid,
     input: EnterpriseSuspendInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(&db, auth, tenant_id, auth.organization_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
+
+    if let AdminScope::Organization(org_id) = scope {
+        ensure_user_in_organization(db, user_id, org_id).await?;
+    }
+
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     let current_role = db::target_role(&mut tx, tenant_id, user_id)
@@ -118,7 +153,7 @@ pub async fn suspend_user(
     .await?;
     tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id).await?,
+        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
     })
 }
 
@@ -130,7 +165,13 @@ pub async fn reactivate_user(
     user_id: Uuid,
     input: EnterpriseReactivateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(&db, auth, tenant_id, auth.organization_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
+
+    if let AdminScope::Organization(org_id) = scope {
+        ensure_user_in_organization(db, user_id, org_id).await?;
+    }
+
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     let current_role = db::target_role_for_lifecycle(&mut tx, tenant_id, user_id)
@@ -146,7 +187,7 @@ pub async fn reactivate_user(
                 "Workspace IDs cannot be empty when provided.",
             ));
         }
-        db::ensure_workspaces_belong(&mut tx, tenant_id, workspace_ids).await?;
+        db::ensure_workspaces_belong(&mut tx, tenant_id, workspace_ids, scope).await?;
     }
     let changed = db::set_tenant_memberships_status(
         &mut tx,
@@ -174,7 +215,7 @@ pub async fn reactivate_user(
     .await?;
     tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id).await?,
+        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
     })
 }
 

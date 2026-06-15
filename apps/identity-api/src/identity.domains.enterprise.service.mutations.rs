@@ -1,4 +1,5 @@
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::{db, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -14,7 +15,8 @@ pub async fn create_invitations(
     tenant_id: Uuid,
     input: EnterpriseInvitationInput,
 ) -> Result<EnterpriseInvitationsResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(&db, auth, tenant_id, auth.organization_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
     ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
     if input.workspace_ids.is_empty() || input.emails.is_empty() {
         return Err(AppError::bad_request(
@@ -24,7 +26,7 @@ pub async fn create_invitations(
     }
 
     let mut tx = db.begin().await?;
-    db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids).await?;
+    db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids, scope).await?;
     let mut invitations = Vec::new();
     for raw_email in input.emails {
         let email = crate::domains::auth::password::normalize_email(&raw_email);
@@ -71,8 +73,14 @@ pub async fn revoke_developer_secret(
     tenant_id: Uuid,
     version_id: Uuid,
 ) -> Result<EnterpriseDevelopersResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let access = super::access::require_actor_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(&db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let access = super::access::require_actor_access(db, auth, tenant_id, scope).await?;
     if !policy::can_manage_developers(
         policy::role_as_db(&access.role),
         &policy::grant_names(&access.grants),

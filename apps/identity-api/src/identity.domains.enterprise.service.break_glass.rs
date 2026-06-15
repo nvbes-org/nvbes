@@ -1,4 +1,5 @@
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::{db, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -18,7 +19,14 @@ pub async fn activate_break_glass_account(
     user_id: Uuid,
     input: EnterpriseBreakGlassInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
     ensure_owner(&actor_access)?;
     let reason = validate_text("reason", input.reason, MAX_REASON_LEN)?;
     let procedure_reference = validate_text(
@@ -59,7 +67,7 @@ pub async fn activate_break_glass_account(
     .await?;
     tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id).await?,
+        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
     })
 }
 
@@ -71,7 +79,14 @@ pub async fn revoke_break_glass_account(
     user_id: Uuid,
     input: EnterpriseAuditReasonInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id, scope).await?;
     ensure_owner(&actor_access)?;
     let reason = validate_text("reason", input.reason, MAX_REASON_LEN)?;
 
@@ -96,7 +111,7 @@ pub async fn revoke_break_glass_account(
     .await?;
     tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id).await?,
+        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
     })
 }
 

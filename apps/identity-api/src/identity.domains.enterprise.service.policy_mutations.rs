@@ -1,4 +1,5 @@
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::{db, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -74,7 +75,14 @@ async fn ensure_policy_manager(
     tenant_id: Uuid,
 ) -> Result<(), AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let access = super::access::require_actor_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let access = super::access::require_actor_access(db, auth, tenant_id, scope).await?;
     if !policy::can_manage_policies(
         policy::role_as_db(&access.role),
         &policy::grant_names(&access.grants),

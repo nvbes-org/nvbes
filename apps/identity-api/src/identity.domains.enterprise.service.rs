@@ -12,6 +12,7 @@ mod reads;
 mod user_mutations;
 
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::db as enterprise_db;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -30,7 +31,8 @@ pub async fn require_actor_access_for_enterprise(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<(), AppError> {
-    access::require_actor_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    access::require_actor_access(db, auth, tenant_id, scope).await?;
     Ok(())
 }
 
@@ -42,7 +44,14 @@ pub async fn grant_admin_elevation(
     input: crate::domains::enterprise::types::EnterpriseAdminElevationInput,
 ) -> Result<crate::domains::enterprise::types::EnterpriseAdminElevationResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let access = access::require_actor_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let access = access::require_actor_access(db, auth, tenant_id, scope).await?;
     let break_glass_procedure = if access.break_glass {
         Some(break_glass::validate_break_glass_procedure(
             input.reason.clone(),

@@ -8,6 +8,8 @@ pub mod owners;
 pub mod policy_writes;
 #[path = "identity.domains.enterprise.db.reads.rs"]
 pub mod reads;
+#[path = "identity.domains.enterprise.db.reads_tenant.rs"]
+pub mod reads_tenant;
 #[path = "identity.domains.enterprise.db.records.rs"]
 pub mod records;
 #[path = "identity.domains.enterprise.db.writes.rs"]
@@ -23,9 +25,11 @@ pub use owners::{
 };
 pub use policy_writes::{set_mfa_policy, set_session_policy};
 pub use reads::{
-    actor_access, billing_summary, list_audit_events, list_developers, list_invitations,
-    list_invoices, list_policies, list_users, list_workspaces, mfa_policy, security_summary,
-    session_policy, usage_metrics,
+    actor_access, list_audit_events, list_invitations, list_users, list_workspaces, usage_metrics,
+};
+pub use reads_tenant::{
+    billing_summary, list_developers, list_invoices, list_policies, mfa_policy, security_summary,
+    session_policy,
 };
 pub use records::{
     ActorAccessRow, AuditEventRow, BillingSummaryRow, DeveloperCredentialRow,

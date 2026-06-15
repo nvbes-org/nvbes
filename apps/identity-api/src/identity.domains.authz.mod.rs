@@ -10,7 +10,7 @@ pub mod types;
 pub use db::target_role_for_member;
 pub use service::{
     authorize_workspace_action, decide_workspace_action, ensure_email_verified,
-    ensure_tenant_management_access,
+    ensure_tenant_management_access, resolve_admin_scope,
 };
 pub use types::{
     AdminScope, ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction,

@@ -18,3 +18,7 @@ pub mod service;
 pub mod trust;
 #[path = "identity.domains.enterprise.types.rs"]
 pub mod types;
+
+#[cfg(test)]
+#[path = "identity.domains.enterprise.tests.rs"]
+mod tests;

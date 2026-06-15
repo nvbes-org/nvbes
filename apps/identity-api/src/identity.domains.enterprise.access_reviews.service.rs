@@ -11,17 +11,34 @@ pub use service_schedules::{
 
 use super::{changes, db, decisions, revocations, runtime, types::*, validation};
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::service::require_actor_access_for_enterprise;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
+
+pub(super) async fn ensure_tenant_admin(
+    db: &Database,
+    auth: &AuthContext,
+    tenant_id: Uuid,
+) -> Result<(), AppError> {
+    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    Ok(())
+}
 
 pub async fn list_campaigns(
     db: &Database,
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<AccessReviewCampaignsResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    ensure_tenant_admin(db, auth, tenant_id).await?;
     Ok(AccessReviewCampaignsResponse {
         campaigns: db::list_campaigns(db, tenant_id)
             .await?
@@ -37,8 +54,7 @@ pub async fn get_campaign(
     tenant_id: Uuid,
     campaign_id: Uuid,
 ) -> Result<AccessReviewCampaignDetail, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    ensure_tenant_admin(db, auth, tenant_id).await?;
     campaign_detail(db, tenant_id, campaign_id).await
 }
 
@@ -79,8 +95,7 @@ pub async fn create_campaign(
     tenant_id: Uuid,
     input: CreateAccessReviewCampaignInput,
 ) -> Result<AccessReviewCampaignDetail, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    ensure_tenant_admin(db, auth, tenant_id).await?;
     validation::validate_campaign_input(&input)?;
 
     let mut tx = db.begin().await?;
@@ -126,8 +141,7 @@ pub async fn close_campaign(
     campaign_id: Uuid,
     input: CloseAccessReviewCampaignInput,
 ) -> Result<AccessReviewCampaignDetail, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    ensure_tenant_admin(db, auth, tenant_id).await?;
 
     let mut tx = db.begin().await?;
     let campaign = decisions::reviewable_campaign(&mut tx, tenant_id, campaign_id)
@@ -180,8 +194,7 @@ pub async fn decide_item(
     item_id: Uuid,
     input: AccessReviewDecisionInput,
 ) -> Result<AccessReviewDecisionResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    require_actor_access_for_enterprise(db, auth, tenant_id).await?;
+    ensure_tenant_admin(db, auth, tenant_id).await?;
     validation::validate_decision_input(&input)?;
 
     let mut tx = db.begin().await?;
