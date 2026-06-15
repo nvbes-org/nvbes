@@ -271,6 +271,14 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
         },
         {
+          find: '@nvbes/identity-sdk-web',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
+        },
+        {
+          find: /^@nvbes\/identity-sdk-web\/src\//,
+          replacement: `${path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/')}/`,
+        },
+        {
           find: '@nvbes/web-runtime/posthog',
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/posthog.ts'),
         },

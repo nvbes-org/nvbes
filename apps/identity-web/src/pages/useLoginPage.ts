@@ -13,7 +13,11 @@ import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
 import { useLoginPageState } from './useLoginPage.state';
-import { followHostedDecision, loadHostedLogin, resumeHostedAuthorization } from './useUniversalLogin';
+import {
+  followHostedDecision,
+  loadHostedLogin,
+  resumeHostedAuthorization,
+} from './useUniversalLogin';
 import { completeConditionalWebAuthnLogin } from './useLoginPage.webauthn.conditional';
 
 export function useLoginPage() {

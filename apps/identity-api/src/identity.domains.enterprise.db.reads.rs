@@ -214,7 +214,44 @@ pub async fn security_summary(
         SELECT
           COUNT(DISTINCT mf.id) FILTER (WHERE mf.status = 'active')::bigint AS mfa_factor_count,
           COUNT(DISTINCT mf.id) FILTER (WHERE mf.status = 'active' AND mf.factor_type = 'webauthn')::bigint AS passkey_count,
-          COUNT(DISTINCT re.id) FILTER (WHERE re.risk_score >= 0.7)::bigint AS high_risk_event_count
+          COUNT(DISTINCT re.id) FILTER (WHERE re.risk_score >= 0.7)::bigint AS high_risk_event_count,
+          COUNT(DISTINCT tm.principal_id) FILTER (
+            WHERE tm.status = 'active'
+              AND EXISTS (
+                SELECT 1
+                FROM workspace_memberships admin_wm
+                INNER JOIN workspaces admin_w ON admin_w.id = admin_wm.workspace_id
+                WHERE admin_w.tenant_id = tm.tenant_id
+                  AND admin_wm.principal_id = tm.principal_id
+                  AND admin_wm.status = 'active'
+                  AND admin_wm.role IN ('owner', 'admin')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM mfa_factors admin_mf
+                WHERE admin_mf.principal_id = tm.principal_id
+                  AND admin_mf.status = 'active'
+              )
+          )::bigint AS admin_without_mfa_count,
+          (
+            SELECT COUNT(*)::bigint
+            FROM tenant_domains td
+            WHERE td.tenant_id = $1 AND td.verified_at IS NOT NULL
+          ) AS verified_domain_count,
+          (
+            SELECT COUNT(*)::bigint
+            FROM federated_identity_providers fip
+            WHERE fip.tenant_id = $1 AND fip.status = 'active'
+          ) AS sso_provider_count,
+          (
+            SELECT COUNT(*)::bigint
+            FROM developer_client_secret_versions dcsv
+            WHERE dcsv.tenant_id = $1
+              AND dcsv.revoked_at IS NULL
+              AND (
+                (dcsv.status = 'overlap' AND dcsv.expires_at <= NOW())
+                OR (dcsv.status = 'active' AND dcsv.created_at <= NOW() - INTERVAL '90 days')
+              )
+          ) AS stale_secret_count
         FROM tenant_memberships tm
         LEFT JOIN mfa_factors mf ON mf.principal_id = tm.principal_id
         LEFT JOIN risk_events re ON re.principal_id = tm.principal_id

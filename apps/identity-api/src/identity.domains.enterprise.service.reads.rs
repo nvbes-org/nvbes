@@ -4,6 +4,7 @@ use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
 
+use super::super::security_posture::security_posture;
 use super::super::types::*;
 use super::access::{
     all_grants, all_roles, default_security_signals, metric, require_actor_access,
@@ -139,11 +140,13 @@ pub async fn get_security(
     db: &Database,
     auth: &AuthContext,
     tenant_id: Uuid,
+    auth_session_ttl_hours: i64,
 ) -> Result<EnterpriseSecurityResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let summary = db::security_summary(db, tenant_id).await?;
     Ok(EnterpriseSecurityResponse {
         signals: security_signals(&summary),
+        posture: security_posture(&summary, auth_session_ttl_hours),
         mfa_required: summary.mfa_factor_count == 0,
         passkeys_enabled: summary.passkey_count > 0,
         recovery_approval_required: summary.high_risk_event_count > 0,

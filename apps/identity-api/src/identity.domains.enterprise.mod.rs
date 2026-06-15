@@ -10,6 +10,8 @@ pub mod policy;
 pub mod policy_simulation;
 #[path = "identity.domains.enterprise.routes.rs"]
 pub mod routes;
+#[path = "identity.domains.enterprise.security_posture.rs"]
+pub mod security_posture;
 #[path = "identity.domains.enterprise.service.rs"]
 pub mod service;
 #[path = "identity.domains.enterprise.trust.rs"]

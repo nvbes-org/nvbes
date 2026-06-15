@@ -205,7 +205,13 @@ async fn get_security(
 ) -> Result<Json<EnterpriseSecurityResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_security(&state.db, &auth, tenant_id).await?,
+        service::get_security(
+            &state.db,
+            &auth,
+            tenant_id,
+            state.config.auth_session_ttl_hours,
+        )
+        .await?,
     ))
 }
 

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::db;
@@ -8,6 +8,7 @@ use super::types::{
     TrustCenterSubprocessor, TrustCenterTenant,
 };
 use crate::database::Database;
+use crate::domains::enterprise::types::EnterpriseAuditEvent;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 
@@ -28,13 +29,33 @@ pub async fn get_trust_center(
         .map(crate::domains::enterprise::db::AuditEventRow::into_view)
         .collect();
 
+    Ok(build_trust_center_response(
+        tenant,
+        mfa,
+        providers,
+        domains,
+        regions,
+        audit_events,
+        Utc::now(),
+    ))
+}
+
+fn build_trust_center_response(
+    tenant: db::TrustTenantRow,
+    mfa: db::TrustMfaRow,
+    providers: Vec<db::TrustSsoProviderRow>,
+    domains: Vec<db::TrustDomainRow>,
+    regions: Vec<db::TrustHostingRegionRow>,
+    audit_events: Vec<EnterpriseAuditEvent>,
+    generated_at: DateTime<Utc>,
+) -> EnterpriseTrustCenterResponse {
     let active_providers = providers
         .iter()
         .filter(|provider| provider.status == "active")
         .count() as i64;
     let required_domains = domains.iter().filter(|domain| domain.sso_required).count() as i64;
 
-    Ok(EnterpriseTrustCenterResponse {
+    EnterpriseTrustCenterResponse {
         tenant: TrustCenterTenant {
             id: tenant.id,
             name: tenant.name,
@@ -89,8 +110,8 @@ pub async fn get_trust_center(
             .collect(),
         dpa: dpa_document(),
         subprocessors: subprocessors(),
-        generated_at: Utc::now(),
-    })
+        generated_at,
+    }
 }
 
 fn dpa_document() -> TrustCenterDocument {
@@ -170,5 +191,79 @@ fn subprocessor(
         location: location.to_string(),
         transfer_outside_eea,
         transfer_safeguard: transfer_safeguard.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trust_center_response_derives_statuses_from_tenant_rows() {
+        let now = Utc::now();
+        let tenant_id = Uuid::new_v4();
+
+        let response = build_trust_center_response(
+            db::TrustTenantRow {
+                id: tenant_id,
+                name: "Acme".to_string(),
+                slug: "acme".to_string(),
+                status: "active".to_string(),
+                security_tier: "enterprise".to_string(),
+            },
+            db::TrustMfaRow {
+                active_members: 3,
+                members_with_mfa: 2,
+                active_factors: 4,
+                passkey_factors: 1,
+            },
+            vec![db::TrustSsoProviderRow {
+                id: Uuid::new_v4(),
+                name: "Okta".to_string(),
+                provider_type: "saml".to_string(),
+                provider_family: "okta".to_string(),
+                status: "active".to_string(),
+                created_at: now,
+            }],
+            vec![
+                db::TrustDomainRow {
+                    id: Uuid::new_v4(),
+                    domain: "acme.com".to_string(),
+                    verified_at: Some(now),
+                    sso_required: true,
+                },
+                db::TrustDomainRow {
+                    id: Uuid::new_v4(),
+                    domain: "pending.acme.com".to_string(),
+                    verified_at: None,
+                    sso_required: false,
+                },
+            ],
+            vec![db::TrustHostingRegionRow {
+                data_region: "eu".to_string(),
+                legal_jurisdiction: "gdpr".to_string(),
+                workspace_count: 2,
+            }],
+            Vec::new(),
+            now,
+        );
+
+        assert_eq!(response.tenant.id, tenant_id);
+        assert!(response.mfa.enabled);
+        assert_eq!(response.mfa.members_with_mfa, 2);
+        assert!(response.sso.enabled);
+        assert_eq!(response.sso.active_providers, 1);
+        assert_eq!(response.sso.required_domains, 1);
+        assert!(response.verified_domains[0].verified);
+        assert!(!response.verified_domains[1].verified);
+        assert!(response.audit.immutable);
+        assert_eq!(response.hosting_regions[0].legal_jurisdiction, "gdpr");
+        assert_eq!(response.dpa.version, "2026-05-11");
+        assert!(
+            response
+                .subprocessors
+                .iter()
+                .any(|item| item.name == "Scaleway")
+        );
     }
 }

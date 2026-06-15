@@ -243,13 +243,50 @@ pub struct EnterprisePoliciesResponse {
     pub policies: Vec<EnterprisePolicySummary>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EnterpriseSecurityStatus {
+    Complete,
+    Attention,
+    Critical,
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseSecurityResponse {
     pub signals: Vec<EnterpriseSecuritySignal>,
+    pub posture: EnterpriseSecurityPostureScore,
     pub mfa_required: bool,
     pub passkeys_enabled: bool,
     pub recovery_approval_required: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseSecurityPostureScore {
+    pub score: i64,
+    pub max_score: i64,
+    pub completed_weight: i64,
+    pub status: EnterpriseSecurityStatus,
+    pub completed_controls: i64,
+    pub total_controls: i64,
+    pub controls: Vec<EnterpriseSecurityPostureControl>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseSecurityPostureControl {
+    pub id: String,
+    pub label: String,
+    pub description: String,
+    pub status: EnterpriseSecurityStatus,
+    pub weight: i64,
+    pub completed_weight: i64,
+    pub recommendation: String,
+    pub owner: String,
+    pub evidence: String,
+    pub action_label: String,
+    pub action_path: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

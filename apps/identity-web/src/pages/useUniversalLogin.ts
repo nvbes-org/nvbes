@@ -24,9 +24,7 @@ export async function resumeHostedAuthorization(stateId: string): Promise<Hosted
   return authorizeHostedLogin(stateId);
 }
 
-export async function approveUniversalLoginConsent(
-  stateId: string,
-): Promise<HostedLoginDecision> {
+export async function approveUniversalLoginConsent(stateId: string): Promise<HostedLoginDecision> {
   return approveHostedConsent(stateId);
 }
 

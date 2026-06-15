@@ -183,6 +183,10 @@ pub struct SecuritySummaryRow {
     pub mfa_factor_count: i64,
     pub passkey_count: i64,
     pub high_risk_event_count: i64,
+    pub admin_without_mfa_count: i64,
+    pub verified_domain_count: i64,
+    pub sso_provider_count: i64,
+    pub stale_secret_count: i64,
 }
 
 #[derive(Debug, FromRow)]
