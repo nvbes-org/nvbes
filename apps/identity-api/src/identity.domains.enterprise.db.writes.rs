@@ -5,24 +5,40 @@ use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 use super::records::EnterpriseInvitationRow;
+use crate::domains::authz::AdminScope;
 use crate::http::error::AppError;
 
 pub async fn ensure_workspaces_belong(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
     workspace_ids: &[Uuid],
+    scope: AdminScope,
 ) -> Result<(), AppError> {
-    let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM workspaces WHERE tenant_id = $1 AND id = ANY($2)",
-    )
-    .bind(tenant_id)
-    .bind(workspace_ids)
-    .fetch_one(&mut **tx)
-    .await?;
+    let count = match scope {
+        AdminScope::Tenant => {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM workspaces WHERE tenant_id = $1 AND id = ANY($2)",
+            )
+            .bind(tenant_id)
+            .bind(workspace_ids)
+            .fetch_one(&mut **tx)
+            .await?
+        }
+        AdminScope::Organization(org_id) => {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT COUNT(*) FROM workspaces WHERE tenant_id = $1 AND organization_id = $2 AND id = ANY($3)",
+            )
+            .bind(tenant_id)
+            .bind(org_id)
+            .bind(workspace_ids)
+            .fetch_one(&mut **tx)
+            .await?
+        }
+    };
     if count != workspace_ids.len() as i64 {
         return Err(AppError::bad_request(
             "invalid_workspace_scope",
-            "All workspace IDs must belong to the active tenant.",
+            "All workspace IDs must belong to the active tenant/organization scope.",
         ));
     }
     Ok(())
