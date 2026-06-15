@@ -10,6 +10,7 @@ import {
   DeveloperContextSchema,
   DeveloperHealthChecksSchema,
   DeveloperLogsSchema,
+  DeveloperMarketplaceAppSchema,
   DeveloperMarketplaceAppsSchema,
   DeveloperMeSchema,
   DeveloperOAuthClientsSchema,
@@ -196,6 +197,29 @@ export async function listDeveloperMarketplaceApps(
   return response.apps;
 }
 
+export function submitDeveloperMarketplaceApp(clientId: string): Promise<DeveloperMarketplaceApp> {
+  return identityHttpClient.post(
+    `/developer/console/marketplace/apps/${encodeURIComponent(clientId)}/submit`,
+    DeveloperMarketplaceAppSchema,
+    {},
+  );
+}
+
+export function reviewDeveloperMarketplaceApp(
+  clientId: string,
+  status: string,
+  reviewReason?: string,
+): Promise<DeveloperMarketplaceApp> {
+  return identityHttpClient.post(
+    `/developer/console/marketplace/apps/${encodeURIComponent(clientId)}/review`,
+    DeveloperMarketplaceAppSchema,
+    {
+      status,
+      review_reason: reviewReason || null,
+    },
+  );
+}
+
 export async function listDeveloperScopes(
   signal?: AbortSignal,
 ): Promise<DeveloperScopeRegistryEntry[]> {
@@ -256,6 +280,9 @@ export type DeveloperConsentScreenForm = {
   supportUrl: string;
   privacyUrl: string;
   termsUrl: string;
+  brandColor: string;
+  customCss: string;
+  helpText: string;
 };
 
 function buildConsentScreenPayload(form: DeveloperConsentScreenForm) {
@@ -266,6 +293,9 @@ function buildConsentScreenPayload(form: DeveloperConsentScreenForm) {
     support_url: nullableTrim(form.supportUrl),
     privacy_url: nullableTrim(form.privacyUrl),
     terms_url: nullableTrim(form.termsUrl),
+    brand_color: nullableTrim(form.brandColor),
+    custom_css: nullableTrim(form.customCss),
+    help_text: nullableTrim(form.helpText),
   };
 }
 

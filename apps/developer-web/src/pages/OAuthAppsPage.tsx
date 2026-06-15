@@ -1,6 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, KeyRound } from 'lucide-react';
-import { listDeveloperOAuthClients } from '../developer.api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, KeyRound, UploadCloud } from 'lucide-react';
+import {
+  getDeveloperContext,
+  listDeveloperOAuthClients,
+  submitDeveloperMarketplaceApp,
+} from '../developer.api';
+import { canUseDeveloperPermission } from '../developer.permissions';
 import type { DeveloperOAuthClient } from '../developer.schemas';
 
 export function OAuthAppsPage() {
@@ -50,13 +55,50 @@ export function OAuthAppsPage() {
 }
 
 function OAuthClientRow({ client }: { client: DeveloperOAuthClient }) {
+  const queryClient = useQueryClient();
+  const contextQuery = useQuery({
+    queryKey: ['developer-context'],
+    queryFn: ({ signal }) => getDeveloperContext(signal),
+    staleTime: 60_000,
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (clientId: string) => submitDeveloperMarketplaceApp(clientId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['developer-oauth-clients'] });
+      void queryClient.invalidateQueries({ queryKey: ['developer-marketplace-apps'] });
+      void queryClient.invalidateQueries({ queryKey: ['developer-overview'] });
+    },
+  });
+
+  const canSubmit =
+    contextQuery.data &&
+    canUseDeveloperPermission(contextQuery.data, 'marketplace.submit') &&
+    (!client.marketplace_status ||
+      client.marketplace_status === 'rejected' ||
+      client.marketplace_status === 'suspended');
+
   return (
-    <tr className="border-b border-border last:border-0">
+    <tr className="border-b border-border last:border-0 hover:bg-muted/30">
       <td className="px-4 py-3">
         <p className="font-medium">{client.name}</p>
         <p className="mt-1 font-mono text-xs text-muted-foreground">{client.client_id}</p>
       </td>
-      <td className="px-4 py-3 capitalize">{client.marketplace_status ?? 'not submitted'}</td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="capitalize">{client.marketplace_status ?? 'not submitted'}</span>
+          {canSubmit ? (
+            <button
+              onClick={() => submitMutation.mutate(client.client_id)}
+              disabled={submitMutation.isPending}
+              className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+            >
+              <UploadCloud className="h-3 w-3" />
+              {submitMutation.isPending ? 'Submitting...' : 'Submit'}
+            </button>
+          ) : null}
+        </div>
+      </td>
       <td className="px-4 py-3">
         <span className="inline-flex items-center gap-2">
           {client.consent_screen_configured ? (

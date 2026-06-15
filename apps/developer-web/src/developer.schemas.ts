@@ -191,6 +191,9 @@ export const DeveloperConsentScreenSchema = z.object({
   privacy_url: z.string().nullable(),
   terms_url: z.string().nullable(),
   description: z.string(),
+  brand_color: z.string().nullable().optional(),
+  custom_css: z.string().nullable().optional(),
+  help_text: z.string().nullable().optional(),
   configured: z.boolean(),
   updated_at: z.string().nullable(),
 });

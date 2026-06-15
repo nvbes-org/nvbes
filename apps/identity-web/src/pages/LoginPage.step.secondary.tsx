@@ -50,6 +50,14 @@ export function LoginPageSecondaryStepContent({
     return (
       <LoginPageConsent
         clientName={hostedConsent?.client.name}
+        logoUrl={hostedConsent?.client.logo_url}
+        description={hostedConsent?.client.description}
+        supportUrl={hostedConsent?.client.support_url}
+        privacyUrl={hostedConsent?.client.privacy_url}
+        termsUrl={hostedConsent?.client.terms_url}
+        brandColor={hostedConsent?.client.brand_color}
+        customCss={hostedConsent?.client.custom_css}
+        helpText={hostedConsent?.client.help_text}
         scope={hostedConsent?.scope ?? oauthRequest?.scope}
         error={error}
         onApprove={handleConsentApprove}

@@ -67,7 +67,7 @@ async fn get_hosted_login(
     State(state): State<AppState>,
     Path(state_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let decision = get_hosted_login_decision(&state.redis, &state_id).await?;
+    let decision = get_hosted_login_decision(&state.db, &state.redis, &state_id).await?;
     Ok(Json(serde_json::to_value(decision)?))
 }
 
@@ -75,7 +75,7 @@ async fn authorize_hosted_login(
     State(state): State<AppState>,
     Path(state_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let decision = get_hosted_login_decision(&state.redis, &state_id).await?;
+    let decision = get_hosted_login_decision(&state.db, &state.redis, &state_id).await?;
     Ok(Json(serde_json::to_value(decision)?))
 }
 
@@ -85,6 +85,6 @@ async fn consent_hosted_login(
     Json(request): Json<HostedConsentRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let _approved = matches!(request.consent_action.as_deref(), Some("approve"));
-    let decision = get_hosted_login_decision(&state.redis, &state_id).await?;
+    let decision = get_hosted_login_decision(&state.db, &state.redis, &state_id).await?;
     Ok(Json(serde_json::to_value(decision)?))
 }

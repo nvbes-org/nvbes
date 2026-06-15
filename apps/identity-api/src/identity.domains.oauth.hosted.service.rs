@@ -80,6 +80,7 @@ pub async fn create_hosted_authorization_state(
 }
 
 pub async fn get_hosted_login_decision(
+    db: &sqlx::PgPool,
     redis: &nvbes_redis::RedisPool,
     state_id: &str,
 ) -> Result<HostedLoginDecision, AppError> {
@@ -90,12 +91,78 @@ pub async fn get_hosted_login_decision(
         });
     };
 
+    #[derive(sqlx::FromRow)]
+    struct ClientBrandingRow {
+        name: String,
+        product_name: Option<String>,
+        logo_url: Option<String>,
+        description: Option<String>,
+        support_url: Option<String>,
+        privacy_url: Option<String>,
+        terms_url: Option<String>,
+        brand_color: Option<String>,
+        custom_css: Option<String>,
+        help_text: Option<String>,
+    }
+
+    let client_details = sqlx::query_as::<_, ClientBrandingRow>(
+        r#"
+        SELECT
+          c.name,
+          cs.product_name,
+          cs.logo_url,
+          cs.description,
+          cs.support_url,
+          cs.privacy_url,
+          cs.terms_url,
+          cs.brand_color,
+          cs.custom_css,
+          cs.help_text
+        FROM oauth_clients c
+        LEFT JOIN developer_consent_screens cs ON cs.client_id = c.client_id
+        WHERE c.client_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(&state.client_id)
+    .fetch_optional(db)
+    .await?;
+
+    let client_display = match client_details {
+        Some(row) => {
+            let display_name = row.product_name
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or(row.name);
+            HostedClientDisplay {
+                client_id: state.client_id.clone(),
+                name: display_name,
+                logo_url: row.logo_url,
+                description: row.description,
+                support_url: row.support_url,
+                privacy_url: row.privacy_url,
+                terms_url: row.terms_url,
+                brand_color: row.brand_color,
+                custom_css: row.custom_css,
+                help_text: row.help_text,
+            }
+        }
+        None => HostedClientDisplay {
+            client_id: state.client_id.clone(),
+            name: state.client_id.clone(),
+            logo_url: None,
+            description: None,
+            support_url: None,
+            privacy_url: None,
+            terms_url: None,
+            brand_color: None,
+            custom_css: None,
+            help_text: None,
+        }
+    };
+
     Ok(HostedLoginDecision::ConsentRequired {
         state_id: state.state_id,
-        client: HostedClientDisplay {
-            client_id: state.client_id.clone(),
-            name: state.client_id,
-        },
+        client: client_display,
         scope: state.scope,
     })
 }

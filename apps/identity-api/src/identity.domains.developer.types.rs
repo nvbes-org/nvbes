@@ -242,6 +242,15 @@ pub struct UpsertDeveloperConsentScreenInput {
     pub privacy_url: Option<String>,
     pub terms_url: Option<String>,
     pub description: String,
+    pub brand_color: Option<String>,
+    pub custom_css: Option<String>,
+    pub help_text: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ReviewMarketplaceAppInput {
+    pub status: String,
+    pub review_reason: Option<String>,
 }
 
 #[derive(Debug, FromRow, Serialize)]
@@ -253,6 +262,9 @@ pub struct DeveloperConsentScreenResponse {
     pub privacy_url: Option<String>,
     pub terms_url: Option<String>,
     pub description: String,
+    pub brand_color: Option<String>,
+    pub custom_css: Option<String>,
+    pub help_text: Option<String>,
     pub configured: bool,
     pub updated_at: Option<DateTime<Utc>>,
 }

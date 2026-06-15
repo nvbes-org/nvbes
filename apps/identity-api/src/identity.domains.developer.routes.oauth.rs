@@ -8,12 +8,14 @@ use uuid::Uuid;
 use crate::{
     app::AppState,
     domains::developer::{
+        rbac::DeveloperPermission,
         service,
         types::{
             DeveloperConsentScreenResponse, DeveloperMarketplaceAppSummary,
             DeveloperMarketplaceAppsResponse, DeveloperOAuthClientSummary,
             DeveloperOAuthClientsResponse, DeveloperScopeRegistryEntry,
-            DeveloperScopeRegistryResponse, UpsertDeveloperConsentScreenInput,
+            DeveloperScopeRegistryResponse, ReviewMarketplaceAppInput,
+            UpsertDeveloperConsentScreenInput,
         },
     },
     http::{error::AppError, middleware::jwt::AuthContext},
@@ -76,10 +78,13 @@ pub async fn upsert_consent_screen(
           privacy_url,
           terms_url,
           description,
+          brand_color,
+          custom_css,
+          help_text,
           updated_by,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
         ON CONFLICT (tenant_id, client_id) DO UPDATE
         SET product_name = EXCLUDED.product_name,
             logo_url = EXCLUDED.logo_url,
@@ -87,6 +92,9 @@ pub async fn upsert_consent_screen(
             privacy_url = EXCLUDED.privacy_url,
             terms_url = EXCLUDED.terms_url,
             description = EXCLUDED.description,
+            brand_color = EXCLUDED.brand_color,
+            custom_css = EXCLUDED.custom_css,
+            help_text = EXCLUDED.help_text,
             updated_by = EXCLUDED.updated_by,
             updated_at = now()
         "#,
@@ -99,6 +107,9 @@ pub async fn upsert_consent_screen(
     .bind(input.privacy_url)
     .bind(input.terms_url)
     .bind(input.description)
+    .bind(input.brand_color)
+    .bind(input.custom_css)
+    .bind(input.help_text)
     .bind(auth.user_id)
     .execute(&state.db)
     .await?;
@@ -222,6 +233,9 @@ async fn get_consent_screen_response(
           privacy_url,
           terms_url,
           description,
+          brand_color,
+          custom_css,
+          help_text,
           true AS configured,
           updated_at
         FROM developer_consent_screens
@@ -242,6 +256,9 @@ async fn get_consent_screen_response(
         privacy_url: None,
         terms_url: None,
         description: String::new(),
+        brand_color: None,
+        custom_css: None,
+        help_text: None,
         configured: false,
         updated_at: None,
     }))
@@ -268,4 +285,131 @@ async fn ensure_oauth_client_in_tenant(
     }
 
     Ok(())
+}
+
+pub async fn submit_marketplace_app(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(client_id): Path<String>,
+) -> Result<Json<DeveloperMarketplaceAppSummary>, AppError> {
+    let tenant_id = service::require_permission(
+        &state.db,
+        &auth,
+        DeveloperPermission::ConsoleMarketplaceSubmit,
+    )
+    .await?;
+
+    ensure_oauth_client_in_tenant(&state.db, tenant_id, &client_id).await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO developer_marketplace_apps (
+          tenant_id,
+          client_id,
+          status,
+          submitted_by,
+          updated_at
+        )
+        VALUES ($1, $2, 'pending', $3, now())
+        ON CONFLICT (tenant_id, client_id) DO UPDATE
+        SET status = 'pending',
+            submitted_by = EXCLUDED.submitted_by,
+            review_reason = NULL,
+            updated_at = now()
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(&client_id)
+    .bind(auth.user_id)
+    .execute(&state.db)
+    .await?;
+
+    let app = get_marketplace_app_summary(&state.db, tenant_id, &client_id).await?;
+    Ok(Json(app))
+}
+
+pub async fn review_marketplace_app(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(client_id): Path<String>,
+    Json(input): Json<ReviewMarketplaceAppInput>,
+) -> Result<Json<DeveloperMarketplaceAppSummary>, AppError> {
+    let tenant_id = service::require_permission(
+        &state.db,
+        &auth,
+        DeveloperPermission::MarketplaceReview,
+    )
+    .await?;
+
+    ensure_oauth_client_in_tenant(&state.db, tenant_id, &client_id).await?;
+
+    if !matches!(input.status.as_str(), "approved" | "rejected" | "suspended" | "pending") {
+        return Err(AppError::bad_request(
+            "invalid_marketplace_status",
+            "Marketplace status must be 'approved', 'rejected', 'suspended', or 'pending'",
+        ));
+    }
+
+    let result = sqlx::query(
+        r#"
+        UPDATE developer_marketplace_apps
+        SET status = $3::text::developer_marketplace_status,
+            reviewed_by = $4,
+            review_reason = $5,
+            updated_at = now()
+        WHERE tenant_id = $1
+          AND client_id = $2
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(&client_id)
+    .bind(input.status)
+    .bind(auth.user_id)
+    .bind(input.review_reason)
+    .execute(&state.db)
+    .await?;
+
+    if result.rows_affected() == 0 {
+        return Err(AppError::bad_request(
+            "marketplace_app_not_submitted",
+            "Marketplace app has not been submitted yet",
+        ));
+    }
+
+    let app = get_marketplace_app_summary(&state.db, tenant_id, &client_id).await?;
+    Ok(Json(app))
+}
+
+async fn get_marketplace_app_summary(
+    db: &PgPool,
+    tenant_id: Uuid,
+    client_id: &str,
+) -> Result<DeveloperMarketplaceAppSummary, AppError> {
+    sqlx::query_as(
+        r#"
+        SELECT
+          m.client_id,
+          c.name,
+          m.status::text AS status,
+          m.review_reason,
+          m.created_at,
+          m.updated_at
+        FROM developer_marketplace_apps m
+        INNER JOIN oauth_clients c
+          ON c.tenant_id = m.tenant_id
+         AND c.client_id = m.client_id
+        WHERE m.tenant_id = $1
+          AND m.client_id = $2
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(client_id)
+    .fetch_optional(db)
+    .await?
+    .ok_or_else(|| {
+        AppError::not_found(
+            "marketplace_app_not_found",
+            "Marketplace app not found",
+        )
+    })
 }

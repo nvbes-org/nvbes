@@ -5,6 +5,14 @@ import { identityHttpClient } from './identity.http';
 const HostedClientSchema = z.object({
   client_id: z.string(),
   name: z.string(),
+  logo_url: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  support_url: z.string().nullable().optional(),
+  privacy_url: z.string().nullable().optional(),
+  terms_url: z.string().nullable().optional(),
+  brand_color: z.string().nullable().optional(),
+  custom_css: z.string().nullable().optional(),
+  help_text: z.string().nullable().optional(),
 });
 
 export const HostedLoginDecisionSchema = z.discriminatedUnion('kind', [

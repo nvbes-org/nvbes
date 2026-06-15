@@ -22,6 +22,14 @@ pub struct CachedHostedAuthorizationState {
 pub struct HostedClientDisplay {
     pub client_id: String,
     pub name: String,
+    pub logo_url: Option<String>,
+    pub description: Option<String>,
+    pub support_url: Option<String>,
+    pub privacy_url: Option<String>,
+    pub terms_url: Option<String>,
+    pub brand_color: Option<String>,
+    pub custom_css: Option<String>,
+    pub help_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
