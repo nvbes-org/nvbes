@@ -21,6 +21,8 @@ import {
   DeveloperSecretVersionsSchema,
   DeveloperServiceAccountsSchema,
   DeveloperScopeRegistrySchema,
+  DeveloperWebhookDeliveriesSchema,
+  DeveloperWebhookDeliverySchema,
   DeveloperWebhookEndpointsSchema,
   DeveloperWebhooksResponseSchema,
   InspectDeveloperTokenResponseSchema,
@@ -42,6 +44,7 @@ import {
   type DeveloperServiceAccount,
   type DeveloperScopeRegistryEntry,
   type DeveloperWebhookEndpoint,
+  type DeveloperWebhookDelivery,
   type PortalDeveloperLogEntry,
   type PortalDeveloperWebhookEndpoint,
   type RotateDeveloperSecret,
@@ -344,7 +347,6 @@ export async function revokeDeveloperSecretVersion(
   return response.secret_versions;
 }
 
-
 export async function listDeveloperConsoleWebhooks(
   signal?: AbortSignal,
 ): Promise<DeveloperWebhookEndpoint[]> {
@@ -451,6 +453,30 @@ export function deleteDeveloperScope(scopeKey: string): Promise<void> {
   return identityHttpClient.delete(
     `/developer/console/scopes/${encodeURIComponent(scopeKey)}`,
     EmptyResponseSchema,
+  );
+}
+
+export async function listDeveloperConsoleWebhookDeliveries(
+  endpointId: string,
+  signal?: AbortSignal,
+): Promise<DeveloperWebhookDelivery[]> {
+  const response = await identityHttpClient.get(
+    `/developer/console/webhooks/${encodeURIComponent(endpointId)}/deliveries`,
+    DeveloperWebhookDeliveriesSchema,
+    {
+      signal: withTimeoutSignal(signal, 4_000),
+    },
+  );
+  return response.deliveries;
+}
+
+export async function replayDeveloperConsoleWebhookDelivery(
+  deliveryId: string,
+): Promise<DeveloperWebhookDelivery> {
+  return identityHttpClient.post(
+    `/developer/console/webhooks/deliveries/${encodeURIComponent(deliveryId)}/replay`,
+    DeveloperWebhookDeliverySchema,
+    {},
   );
 }
 
