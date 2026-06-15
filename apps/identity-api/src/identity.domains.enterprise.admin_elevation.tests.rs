@@ -43,6 +43,8 @@ async fn grant_rejects_non_admin_base_role() {
         auth.tenant_id.expect("tenant id should be present"),
         EnterpriseAdminElevationInput {
             duration_minutes: None,
+            reason: None,
+            procedure_reference: None,
         },
     )
     .await
@@ -67,6 +69,8 @@ async fn grant_requires_recent_step_up() {
         tenant_id,
         EnterpriseAdminElevationInput {
             duration_minutes: None,
+            reason: None,
+            procedure_reference: None,
         },
     )
     .await
@@ -100,6 +104,8 @@ async fn grant_stores_elevation_bounded_by_step_up() {
         tenant_id,
         EnterpriseAdminElevationInput {
             duration_minutes: Some(60),
+            reason: None,
+            procedure_reference: None,
         },
     )
     .await

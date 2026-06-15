@@ -48,6 +48,7 @@ export function PoliciesPage() {
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === workspaceId);
   const adminElevation = useAdminElevation({
     active: contextQuery.data?.admin_elevation.active ?? false,
+    breakGlass: contextQuery.data?.break_glass ?? null,
     onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
   });
   const adminWithoutMfaCount = users.filter(

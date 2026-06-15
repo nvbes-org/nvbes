@@ -20,6 +20,8 @@ use axum::{
 use nvbes_core::http::error::ErrorEnvelope;
 use uuid::Uuid;
 
+#[path = "identity.domains.enterprise.routes.break_glass.rs"]
+pub mod break_glass;
 #[path = "identity.domains.enterprise.routes.developers.rs"]
 pub mod developers;
 #[path = "identity.domains.enterprise.routes.policies.rs"]
@@ -43,6 +45,14 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route(
             "/enterprise/users/{userId}/reactivate",
             post(reactivate_user),
+        )
+        .route(
+            "/enterprise/users/{userId}/break-glass",
+            post(break_glass::activate_break_glass_account),
+        )
+        .route(
+            "/enterprise/users/{userId}/break-glass/revoke",
+            post(break_glass::revoke_break_glass_account),
         )
         .route("/enterprise/workspaces", get(list_workspaces))
         .route("/enterprise/developers", get(developers::list_developers))

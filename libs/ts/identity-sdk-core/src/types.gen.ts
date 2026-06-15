@@ -916,6 +916,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/enterprise/developers/credentials/{credentialId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revoke_developer_secret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/policies/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["update_mfa_policy"];
+        trace?: never;
+    };
     "/enterprise/trust-center": {
         parameters: {
             query?: never;
@@ -926,6 +958,38 @@ export interface paths {
         get: operations["get_trust_center"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/users/{userId}/break-glass": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate_break_glass_account"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/users/{userId}/break-glass/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revoke_break_glass_account"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2442,9 +2506,14 @@ export interface components {
             /** Format: uuid */
             tenant_id: string;
         };
+        EnterpriseAccessUpdateResponse: {
+            user: components["schemas"]["EnterpriseUser"];
+        };
         EnterpriseAdminElevationInput: {
             /** Format: int64 */
             duration_minutes?: number | null;
+            procedure_reference?: string | null;
+            reason?: string | null;
         };
         EnterpriseAdminElevationResponse: {
             elevation: components["schemas"]["EnterpriseAdminElevationView"];
@@ -2473,8 +2542,83 @@ export interface components {
             target_id?: string | null;
             target_type?: string | null;
         };
+        EnterpriseAuditReasonInput: {
+            reason: string;
+        };
+        EnterpriseBreakGlassAccount: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            procedure_reference: string;
+            reason: string;
+        };
+        EnterpriseBreakGlassInput: {
+            procedure_reference: string;
+            reason: string;
+        };
+        EnterpriseDeveloperCredentialSummary: {
+            client_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            name: string;
+            owner_email?: string | null;
+            scopes: string[];
+            secret_last4: string;
+            status: string;
+        };
+        EnterpriseDevelopersResponse: {
+            credentials: components["schemas"]["EnterpriseDeveloperCredentialSummary"][];
+            page?: null | components["schemas"]["EnterprisePage"];
+        };
+        EnterpriseMfaPolicy: {
+            compliant: boolean;
+            policy: string;
+            recommended_policy: string;
+        };
+        EnterpriseMfaPolicyInput: {
+            policy: string;
+        };
+        /** @enum {string} */
+        EnterpriseModuleGrant: "members" | "workspaces" | "developers" | "policies" | "security" | "billing" | "audit" | "drive";
+        EnterprisePage: {
+            cursor?: string | null;
+            has_more: boolean;
+        };
+        EnterprisePoliciesResponse: {
+            mfa_policy: components["schemas"]["EnterpriseMfaPolicy"];
+            policies: components["schemas"]["EnterprisePolicySummary"][];
+            session_policy: components["schemas"]["EnterpriseSessionPolicy"];
+        };
+        EnterprisePolicySummary: {
+            category: string;
+            configuration: {
+                [key: string]: unknown;
+            };
+            enabled: boolean;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         /** @enum {string} */
         EnterpriseRole: "owner" | "admin" | "member" | "viewer";
+        EnterpriseSessionPolicy: {
+            /** Format: int64 */
+            admin_session_ttl_hours: number;
+            compliant: boolean;
+            /** Format: int64 */
+            recommended_admin_session_ttl_hours: number;
+            source: string;
+            step_up_required_for_admin_elevation: boolean;
+        };
         EnterpriseTrustCenterResponse: {
             audit: components["schemas"]["TrustCenterAuditStatus"];
             dpa: components["schemas"]["TrustCenterDocument"];
@@ -2486,6 +2630,22 @@ export interface components {
             subprocessors: components["schemas"]["TrustCenterSubprocessor"][];
             tenant: components["schemas"]["TrustCenterTenant"];
             verified_domains: components["schemas"]["TrustCenterDomain"][];
+        };
+        EnterpriseUser: {
+            break_glass?: null | components["schemas"]["EnterpriseBreakGlassAccount"];
+            /** Format: date-time */
+            created_at: string;
+            display_name: string;
+            email: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            last_seen_at?: string | null;
+            mfa_enabled: boolean;
+            module_grants: components["schemas"]["EnterpriseModuleGrant"][];
+            role: components["schemas"]["EnterpriseRole"];
+            status: string;
+            workspace_ids: string[];
         };
         ErrorBody: {
             code: string;
@@ -3262,6 +3422,8 @@ export interface components {
             domain: string;
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            sso_provider_id?: string | null;
             sso_required: boolean;
             verified: boolean;
             /** Format: date-time */
@@ -6194,6 +6356,107 @@ export interface operations {
             };
         };
     };
+    revoke_developer_secret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Developer secret version ID */
+                credentialId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Developer secret revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterpriseDevelopersResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Developers grant or admin elevation required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Developer secret not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    update_mfa_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseMfaPolicyInput"];
+            };
+        };
+        responses: {
+            /** @description MFA policy updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterprisePoliciesResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Policies grant or admin elevation required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     get_trust_center: {
         parameters: {
             query?: never;
@@ -6232,6 +6495,103 @@ export interface operations {
             };
             /** @description Tenant management denied */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activate_break_glass_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseBreakGlassInput"];
+            };
+        };
+        responses: {
+            /** @description Break-glass account activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterpriseAccessUpdateResponse"];
+                };
+            };
+            /** @description Step-up required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Owner access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revoke_break_glass_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseAuditReasonInput"];
+            };
+        };
+        responses: {
+            /** @description Break-glass account revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterpriseAccessUpdateResponse"];
+                };
+            };
+            /** @description Step-up required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Owner access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Break-glass account not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

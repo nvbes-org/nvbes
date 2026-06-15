@@ -1,12 +1,18 @@
 import { HttpError } from '@nvbes/http-client';
 import { completeWebAuthnStepUp, stepUp } from '@nvbes/identity-sdk-web';
-import { useCallback, useState, type FormEvent } from 'react';
+import { type FormEvent, useCallback, useState } from 'react';
 import { enterpriseClient } from '../enterprise.api';
 import { AdminElevationDialog, type StepUpMethod } from './UsersPage.admin-elevation.dialog';
 
 type DeferredElevation = {
   resolve: () => void;
   reject: (error: Error) => void;
+  procedure?: AdminElevationProcedure;
+};
+
+export type AdminElevationProcedure = {
+  reason: string;
+  procedure_reference: string;
 };
 
 export function isAdminElevationCancelled(error: unknown): boolean {
@@ -15,9 +21,11 @@ export function isAdminElevationCancelled(error: unknown): boolean {
 
 export function useAdminElevation({
   active,
+  breakGlass,
   onGranted,
 }: {
   active: boolean;
+  breakGlass?: { procedure_reference: string } | null;
   onGranted: () => Promise<void>;
 }) {
   const [deferred, setDeferred] = useState<DeferredElevation | null>(null);
@@ -25,33 +33,34 @@ export function useAdminElevation({
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [breakGlassReason, setBreakGlassReason] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const requestElevation = useCallback(
-    async (force = false) => {
+    async (force = false, procedure?: AdminElevationProcedure) => {
       if (active && !force) {
         return;
       }
 
       await new Promise<void>((resolve, reject) => {
         setError(null);
-        setDeferred({ resolve, reject });
+        setDeferred({ resolve, reject, procedure });
       });
     },
     [active],
   );
 
   const runElevated = useCallback(
-    async <T,>(action: () => Promise<T>): Promise<T> => {
-      await requestElevation();
+    async <T,>(action: () => Promise<T>, procedure?: AdminElevationProcedure): Promise<T> => {
+      await requestElevation(false, procedure);
       try {
         return await action();
       } catch (caught) {
         if (!isStepUpRequired(caught)) {
           throw caught;
         }
-        await requestElevation(true);
+        await requestElevation(true, procedure);
         return action();
       }
     },
@@ -63,6 +72,8 @@ export function useAdminElevation({
     setPending(true);
     setError(null);
     try {
+      const procedure =
+        deferred?.procedure ?? buildBreakGlassProcedure(breakGlass, breakGlassReason);
       if (method === 'webauthn') {
         await completeWebAuthnStepUp('');
       } else if (method === 'totp') {
@@ -72,7 +83,11 @@ export function useAdminElevation({
       } else {
         await stepUp('', { password });
       }
-      await enterpriseClient.grantEnterpriseAdminElevation({ duration_minutes: 15 });
+      await enterpriseClient.grantEnterpriseAdminElevation({
+        duration_minutes: 15,
+        reason: procedure?.reason,
+        procedure_reference: procedure?.procedure_reference,
+      });
       await onGranted();
       resetSecrets();
       deferred?.resolve();
@@ -98,6 +113,7 @@ export function useAdminElevation({
     setPassword('');
     setTotpCode('');
     setRecoveryCode('');
+    setBreakGlassReason('');
   }
 
   return {
@@ -108,6 +124,9 @@ export function useAdminElevation({
         password={password}
         totpCode={totpCode}
         recoveryCode={recoveryCode}
+        breakGlassActive={Boolean(breakGlass && !deferred?.procedure)}
+        breakGlassProcedureReference={breakGlass?.procedure_reference ?? null}
+        breakGlassReason={breakGlassReason}
         pending={pending}
         error={error}
         onOpenChange={cancel}
@@ -115,11 +134,29 @@ export function useAdminElevation({
         onPasswordChange={setPassword}
         onTotpCodeChange={setTotpCode}
         onRecoveryCodeChange={setRecoveryCode}
+        onBreakGlassReasonChange={setBreakGlassReason}
         onSubmit={submit}
       />
     ),
     pending,
     runElevated,
+  };
+}
+
+function buildBreakGlassProcedure(
+  breakGlass: { procedure_reference: string } | null | undefined,
+  reason: string,
+): AdminElevationProcedure | undefined {
+  if (!breakGlass) {
+    return undefined;
+  }
+  const trimmedReason = reason.trim();
+  if (trimmedReason.length === 0) {
+    throw new Error('Emergency procedure reason is required.');
+  }
+  return {
+    procedure_reference: breakGlass.procedure_reference,
+    reason: trimmedReason,
   };
 }
 

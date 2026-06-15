@@ -46,9 +46,26 @@ pub(super) async fn require_actor_access(
             )
         })?;
     let role = policy::role_from_db(&row.role);
+    let break_glass = match (
+        row.break_glass_procedure_reference,
+        row.break_glass_reason,
+        row.break_glass_created_at,
+    ) {
+        (Some(procedure_reference), Some(reason), Some(created_at)) => {
+            Some(EnterpriseBreakGlassAccount {
+                procedure_reference,
+                reason,
+                created_at,
+                last_used_at: row.break_glass_last_used_at,
+            })
+        }
+        _ => None,
+    };
     Ok(ActorAccess {
         grants: policy::grants_for_role(&role),
         role,
+        break_glass: row.break_glass,
+        break_glass_account: break_glass,
     })
 }
 
@@ -68,6 +85,8 @@ pub(super) async fn fetch_user_view(
 pub(super) struct ActorAccess {
     pub(super) role: EnterpriseRole,
     pub(super) grants: Vec<EnterpriseModuleGrant>,
+    pub(super) break_glass: bool,
+    pub(super) break_glass_account: Option<EnterpriseBreakGlassAccount>,
 }
 
 pub(super) fn all_roles() -> Vec<EnterpriseRole> {

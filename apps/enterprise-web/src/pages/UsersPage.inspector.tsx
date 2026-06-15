@@ -15,39 +15,52 @@ import {
 import { Field, FieldError, FieldLabel } from '../components/ui/field';
 import { Textarea } from '../components/ui/textarea';
 import { describeModuleGrant } from '../enterprise.permissions';
+import { BreakGlassPanel, type BreakGlassFormValue } from './UsersPage.break-glass';
 import type { EnterpriseInvitationRow, EnterpriseUserRow } from './UsersPage.table';
 
 type UsersPageInspectorProps = {
   selectedUser: EnterpriseUserRow | null;
   selectedInvitation: EnterpriseInvitationRow | null;
   canEditAccess: boolean;
+  canManageBreakGlass: boolean;
   mutatingLifecycle: boolean;
   lifecycleError: Error | null;
+  breakGlassError: Error | null;
   onEditAccess: () => void;
   onSuspend: (reason: string) => Promise<boolean>;
   onReactivate: (reason: string) => Promise<boolean>;
+  onActivateBreakGlass: (input: BreakGlassFormValue) => Promise<boolean>;
+  onRevokeBreakGlass: (reason: string) => Promise<boolean>;
 };
 
 export function UsersPageInspector({
   selectedUser,
   selectedInvitation,
   canEditAccess,
+  canManageBreakGlass,
   mutatingLifecycle,
   lifecycleError,
+  breakGlassError,
   onEditAccess,
   onSuspend,
   onReactivate,
+  onActivateBreakGlass,
+  onRevokeBreakGlass,
 }: UsersPageInspectorProps) {
   if (selectedUser) {
     return (
       <MemberInspector
         user={selectedUser}
         canEditAccess={canEditAccess}
+        canManageBreakGlass={canManageBreakGlass}
         mutatingLifecycle={mutatingLifecycle}
         lifecycleError={lifecycleError}
+        breakGlassError={breakGlassError}
         onEditAccess={onEditAccess}
         onSuspend={onSuspend}
         onReactivate={onReactivate}
+        onActivateBreakGlass={onActivateBreakGlass}
+        onRevokeBreakGlass={onRevokeBreakGlass}
       />
     );
   }
@@ -76,19 +89,27 @@ export function UsersPageInspector({
 function MemberInspector({
   user,
   canEditAccess,
+  canManageBreakGlass,
   mutatingLifecycle,
   lifecycleError,
+  breakGlassError,
   onEditAccess,
   onSuspend,
   onReactivate,
+  onActivateBreakGlass,
+  onRevokeBreakGlass,
 }: {
   user: EnterpriseUserRow;
   canEditAccess: boolean;
+  canManageBreakGlass: boolean;
   mutatingLifecycle: boolean;
   lifecycleError: Error | null;
+  breakGlassError: Error | null;
   onEditAccess: () => void;
   onSuspend: (reason: string) => Promise<boolean>;
   onReactivate: (reason: string) => Promise<boolean>;
+  onActivateBreakGlass: (input: BreakGlassFormValue) => Promise<boolean>;
+  onRevokeBreakGlass: (reason: string) => Promise<boolean>;
 }) {
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string | null>(null);
@@ -127,6 +148,14 @@ function MemberInspector({
         <Detail label="MFA" value={user.mfa_enabled ? 'Enabled' : 'Not enabled'} />
         <Detail label="Workspaces" value={formatWorkspaceCount(user.workspace_ids.length)} />
         <GrantList grants={user.module_grants} />
+        <BreakGlassPanel
+          user={user}
+          canManageBreakGlass={canManageBreakGlass}
+          pending={mutatingLifecycle}
+          error={breakGlassError}
+          onActivate={onActivateBreakGlass}
+          onRevoke={onRevokeBreakGlass}
+        />
 
         {lifecycleError ? (
           <Alert variant="destructive">

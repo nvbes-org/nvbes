@@ -97,6 +97,8 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::legal::routes::revoke_consent,
         crate::domains::enterprise::routes::get_trust_center,
         crate::domains::enterprise::routes::grant_admin_elevation,
+        crate::domains::enterprise::routes::break_glass::activate_break_glass_account,
+        crate::domains::enterprise::routes::break_glass::revoke_break_glass_account,
         crate::domains::enterprise::routes::developers::revoke_developer_secret,
         crate::domains::enterprise::routes::policies::update_mfa_policy,
         crate::domains::enterprise::access_reviews::routes::list_access_review_campaigns,

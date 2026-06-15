@@ -15,9 +15,18 @@ pub async fn actor_access(
 ) -> Result<Option<ActorAccessRow>, AppError> {
     Ok(sqlx::query_as::<_, ActorAccessRow>(
         r#"
-        SELECT wm.role::text AS role
+        SELECT wm.role::text AS role,
+          tbga.principal_id IS NOT NULL AS break_glass,
+          tbga.procedure_reference AS break_glass_procedure_reference,
+          tbga.reason AS break_glass_reason,
+          tbga.created_at AS break_glass_created_at,
+          tbga.last_used_at AS break_glass_last_used_at
         FROM workspace_memberships wm
         INNER JOIN workspaces w ON w.id = wm.workspace_id
+        LEFT JOIN tenant_break_glass_accounts tbga
+          ON tbga.tenant_id = $1
+         AND tbga.principal_id = $2
+         AND tbga.revoked_at IS NULL
         WHERE w.tenant_id = $1 AND wm.principal_id = $2 AND wm.status = 'active'
         ORDER BY CASE wm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END
         LIMIT 1
@@ -41,6 +50,10 @@ pub async fn list_users(db: &PgPool, tenant_id: Uuid) -> Result<Vec<EnterpriseUs
             WHEN 2 THEN 'member'
             ELSE 'viewer'
           END AS role,
+          tbga.procedure_reference AS break_glass_procedure_reference,
+          tbga.reason AS break_glass_reason,
+          tbga.created_at AS break_glass_created_at,
+          tbga.last_used_at AS break_glass_last_used_at,
           COALESCE(array_agg(DISTINCT w.id) FILTER (WHERE w.id IS NOT NULL), ARRAY[]::uuid[]) AS workspace_ids,
           CASE WHEN bool_or(wm.status = 'active') THEN 'active'
                WHEN bool_or(wm.status = 'suspended') THEN 'suspended'
@@ -57,8 +70,13 @@ pub async fn list_users(db: &PgPool, tenant_id: Uuid) -> Result<Vec<EnterpriseUs
           workspace_memberships wm
           INNER JOIN workspaces w ON w.id = wm.workspace_id AND w.tenant_id = $1
         ) ON wm.principal_id = u.principal_id AND wm.status IN ('active', 'suspended')
+        LEFT JOIN tenant_break_glass_accounts tbga
+          ON tbga.tenant_id = tm.tenant_id
+         AND tbga.principal_id = tm.principal_id
+         AND tbga.revoked_at IS NULL
         WHERE tm.tenant_id = $1
-        GROUP BY u.principal_id, u.email, u.firstname, u.lastname, u.username, u.created_at, tm.status
+        GROUP BY u.principal_id, u.email, u.firstname, u.lastname, u.username, u.created_at,
+          tm.status, tbga.procedure_reference, tbga.reason, tbga.created_at, tbga.last_used_at
         ORDER BY u.email ASC
         "#)
     .bind(tenant_id)

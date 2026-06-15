@@ -30,6 +30,7 @@ pub async fn get_context(
         user_id: auth.user_id,
         role: access.role.clone(),
         module_grants: access.grants,
+        break_glass: access.break_glass_account,
         admin_elevation,
         available_roles: all_roles(),
         available_module_grants: all_grants(),

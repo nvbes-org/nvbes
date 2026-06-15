@@ -1,42 +1,5 @@
 import { createHttpClient, type HttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
-import {
-  closeAccessReviewCampaign as closeAccessReviewCampaignRequest,
-  createAccessReviewCampaign as createAccessReviewCampaignRequest,
-  createAccessReviewSchedule as createAccessReviewScheduleRequest,
-  createFederatedIdentityProvider as createFederatedIdentityProviderRequest,
-  createTenantDomain as createTenantDomainRequest,
-  disableAccessReviewSchedule as disableAccessReviewScheduleRequest,
-  createEnterpriseInvitations as createEnterpriseInvitationsRequest,
-  decideAccessReviewItem as decideAccessReviewItemRequest,
-  enableAccessReviewSchedule as enableAccessReviewScheduleRequest,
-  exportAccessReviewCampaign as exportAccessReviewCampaignRequest,
-  getAccessReviewCampaign as getAccessReviewCampaignRequest,
-  getAccessReviewCampaigns as getAccessReviewCampaignsRequest,
-  getAccessReviewSchedules as getAccessReviewSchedulesRequest,
-  getEnterpriseAuditEvents as getEnterpriseAuditEventsRequest,
-  getEnterpriseBilling as getEnterpriseBillingRequest,
-  getEnterpriseContext as getEnterpriseContextRequest,
-  getEnterpriseDevelopers as getEnterpriseDevelopersRequest,
-  getEnterpriseOverview as getEnterpriseOverviewRequest,
-  getEnterprisePolicies as getEnterprisePoliciesRequest,
-  simulateEnterprisePolicy as simulateEnterprisePolicyRequest,
-  getEnterpriseSecurity as getEnterpriseSecurityRequest,
-  getEnterpriseTrustCenter as getEnterpriseTrustCenterRequest,
-  getEnterpriseUsage as getEnterpriseUsageRequest,
-  getEnterpriseUsers as getEnterpriseUsersRequest,
-  getEnterpriseWorkspaces as getEnterpriseWorkspacesRequest,
-  grantEnterpriseAdminElevation as grantEnterpriseAdminElevationRequest,
-  reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
-  revokeEnterpriseDeveloperSecret as revokeEnterpriseDeveloperSecretRequest,
-  runAccessReviewScheduleNow as runAccessReviewScheduleNowRequest,
-  suspendEnterpriseUser as suspendEnterpriseUserRequest,
-  updateEnterpriseMfaPolicy as updateEnterpriseMfaPolicyRequest,
-  updateEnterpriseSessionPolicy as updateEnterpriseSessionPolicyRequest,
-  updateTenantDomain as updateTenantDomainRequest,
-  updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
-  verifyTenantDomain as verifyTenantDomainRequest,
-} from './enterprise.client';
 import type {
   AccessReviewCampaignDetail,
   AccessReviewCampaignExport,
@@ -49,13 +12,54 @@ import type {
   CreateAccessReviewCampaignInput,
   CreateAccessReviewScheduleInput,
 } from './enterprise.access-reviews.schemas';
+import {
+  activateEnterpriseBreakGlassAccount as activateEnterpriseBreakGlassAccountRequest,
+  closeAccessReviewCampaign as closeAccessReviewCampaignRequest,
+  createAccessReviewCampaign as createAccessReviewCampaignRequest,
+  createAccessReviewSchedule as createAccessReviewScheduleRequest,
+  createEnterpriseInvitations as createEnterpriseInvitationsRequest,
+  createFederatedIdentityProvider as createFederatedIdentityProviderRequest,
+  createTenantDomain as createTenantDomainRequest,
+  decideAccessReviewItem as decideAccessReviewItemRequest,
+  disableAccessReviewSchedule as disableAccessReviewScheduleRequest,
+  enableAccessReviewSchedule as enableAccessReviewScheduleRequest,
+  exportAccessReviewCampaign as exportAccessReviewCampaignRequest,
+  getAccessReviewCampaign as getAccessReviewCampaignRequest,
+  getAccessReviewCampaigns as getAccessReviewCampaignsRequest,
+  getAccessReviewSchedules as getAccessReviewSchedulesRequest,
+  getEnterpriseAuditEvents as getEnterpriseAuditEventsRequest,
+  getEnterpriseBilling as getEnterpriseBillingRequest,
+  getEnterpriseContext as getEnterpriseContextRequest,
+  getEnterpriseDevelopers as getEnterpriseDevelopersRequest,
+  getEnterpriseOverview as getEnterpriseOverviewRequest,
+  getEnterprisePolicies as getEnterprisePoliciesRequest,
+  getEnterpriseSecurity as getEnterpriseSecurityRequest,
+  getEnterpriseTrustCenter as getEnterpriseTrustCenterRequest,
+  getEnterpriseUsage as getEnterpriseUsageRequest,
+  getEnterpriseUsers as getEnterpriseUsersRequest,
+  getEnterpriseWorkspaces as getEnterpriseWorkspacesRequest,
+  grantEnterpriseAdminElevation as grantEnterpriseAdminElevationRequest,
+  reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
+  revokeEnterpriseBreakGlassAccount as revokeEnterpriseBreakGlassAccountRequest,
+  revokeEnterpriseDeveloperSecret as revokeEnterpriseDeveloperSecretRequest,
+  runAccessReviewScheduleNow as runAccessReviewScheduleNowRequest,
+  simulateEnterprisePolicy as simulateEnterprisePolicyRequest,
+  suspendEnterpriseUser as suspendEnterpriseUserRequest,
+  updateEnterpriseMfaPolicy as updateEnterpriseMfaPolicyRequest,
+  updateEnterpriseSessionPolicy as updateEnterpriseSessionPolicyRequest,
+  updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
+  updateTenantDomain as updateTenantDomainRequest,
+  verifyTenantDomain as verifyTenantDomainRequest,
+} from './enterprise.client';
 import type {
   EnterpriseAccessUpdateInput,
   EnterpriseAccessUpdateResponse,
   EnterpriseAdminElevationInput,
   EnterpriseAdminElevationResponse,
   EnterpriseAuditEventsResponse,
+  EnterpriseAuditReasonInput,
   EnterpriseBillingResponse,
+  EnterpriseBreakGlassInput,
   EnterpriseContextResponse,
   EnterpriseDevelopersResponse,
   EnterpriseInvitationInput,
@@ -369,6 +373,22 @@ export class IdentityClient {
     return reactivateEnterpriseUserRequest(this.http, userId, input, options);
   }
 
+  activateEnterpriseBreakGlassAccount(
+    userId: string,
+    input: EnterpriseBreakGlassInput,
+    options?: RequestOptions,
+  ): Promise<EnterpriseAccessUpdateResponse> {
+    return activateEnterpriseBreakGlassAccountRequest(this.http, userId, input, options);
+  }
+
+  revokeEnterpriseBreakGlassAccount(
+    userId: string,
+    input: EnterpriseAuditReasonInput,
+    options?: RequestOptions,
+  ): Promise<EnterpriseAccessUpdateResponse> {
+    return revokeEnterpriseBreakGlassAccountRequest(this.http, userId, input, options);
+  }
+
   getEnterpriseWorkspaces(options?: RequestOptions): Promise<EnterpriseWorkspacesResponse> {
     return getEnterpriseWorkspacesRequest(this.http, options);
   }
@@ -643,8 +663,8 @@ export function createIdentityClient(options?: IdentityClientOptions): IdentityC
   return new IdentityClient(options);
 }
 
-export * from './enterprise.client';
 export * from './enterprise.access-reviews.schemas';
+export * from './enterprise.client';
 export * from './enterprise.schemas';
 export * from './enterprise.trust.schemas';
 export * from './federation.schemas';

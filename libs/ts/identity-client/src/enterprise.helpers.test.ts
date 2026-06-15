@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test';
 import type { z } from 'zod';
-import { updateEnterpriseUserAccess } from './enterprise.client';
 import {
+  activateEnterpriseBreakGlassAccount,
+  revokeEnterpriseBreakGlassAccount,
+  updateEnterpriseUserAccess,
+} from './enterprise.client';
+import {
+  EnterpriseBreakGlassInputSchema,
   EnterpriseInvitationInputSchema,
   EnterpriseReactivateInputSchema,
   EnterpriseSuspendInputSchema,
@@ -11,7 +16,17 @@ import {
 describe('enterprise client schemas', () => {
   it('parses users payloads', () => {
     const parsed = EnterpriseUsersResponseSchema.parse({
-      users: [],
+      users: [
+        {
+          ...enterpriseUserPayload(),
+          break_glass: {
+            procedure_reference: 'IR-2026-042',
+            reason: 'Emergency tenant recovery',
+            created_at: '2026-06-14T12:00:00Z',
+            last_used_at: null,
+          },
+        },
+      ],
       invitations: [],
       roles: ['owner', 'admin', 'member', 'viewer'],
       module_grants: [
@@ -27,6 +42,7 @@ describe('enterprise client schemas', () => {
       page: { cursor: null, has_more: false },
     });
     expect(parsed.roles).toContain('owner');
+    expect(parsed.users[0]?.break_glass?.procedure_reference).toBe('IR-2026-042');
   });
 
   it('validates invitation input', () => {
@@ -52,6 +68,22 @@ describe('enterprise client schemas', () => {
     expect(EnterpriseReactivateInputSchema.parse({ reason: 'review_complete' }).reason).toBe(
       'review_complete',
     );
+  });
+
+  it('requires break-glass reason and procedure input', () => {
+    expect(() => EnterpriseBreakGlassInputSchema.parse({ reason: 'incident' })).toThrow();
+    expect(() =>
+      EnterpriseBreakGlassInputSchema.parse({
+        procedure_reference: 'IR-2026-042',
+        reason: '   ',
+      }),
+    ).toThrow();
+    expect(
+      EnterpriseBreakGlassInputSchema.parse({
+        procedure_reference: 'IR-2026-042',
+        reason: 'incident',
+      }).procedure_reference,
+    ).toBe('IR-2026-042');
   });
 
   it('patches enterprise user access through the versioned API path', async () => {
@@ -83,6 +115,32 @@ describe('enterprise client schemas', () => {
         workspace_ids: ['workspace_123'],
       }),
     );
+  });
+
+  it('posts enterprise break-glass account changes through encoded user paths', async () => {
+    const requests: RecordedRequest[] = [];
+    const http = {
+      post<T>(path: string, schema: z.ZodType<T>, body: unknown): Promise<T> {
+        requests.push({
+          body: JSON.stringify(body),
+          method: 'POST',
+          path,
+        });
+
+        return Promise.resolve(schema.parse({ user: enterpriseUserPayload() }));
+      },
+    } as unknown as Parameters<typeof activateEnterpriseBreakGlassAccount>[0];
+
+    await activateEnterpriseBreakGlassAccount(http, 'user/123', {
+      procedure_reference: 'IR-2026-042',
+      reason: 'incident',
+    });
+    await revokeEnterpriseBreakGlassAccount(http, 'user/123', {
+      reason: 'rotation complete',
+    });
+
+    expect(requests[0]?.path).toBe('/api/v1/enterprise/users/user%2F123/break-glass');
+    expect(requests[1]?.path).toBe('/api/v1/enterprise/users/user%2F123/break-glass/revoke');
   });
 });
 

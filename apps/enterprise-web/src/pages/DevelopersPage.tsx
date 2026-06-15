@@ -20,6 +20,7 @@ export function DevelopersPage() {
   const rotationCandidates = credentials.filter(needsRotation);
   const adminElevation = useAdminElevation({
     active: contextQuery.data?.admin_elevation.active ?? false,
+    breakGlass: contextQuery.data?.break_glass ?? null,
     onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
   });
   const revokeMutation = useMutation({

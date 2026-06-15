@@ -19,6 +19,23 @@ Ce dossier contient l'infrastructure as code V1, les conventions d'environnement
 - IAM runtime par environnement.
 - Inventaire des secrets a provisionner dans Secret Manager sans inscrire les valeurs dans Git.
 
+## Roadmap production Scaleway
+
+La trajectoire cible est documentee dans
+[Plan Scaleway - Fondation production](../docs/blueprint/scaleway-production-foundation.plan.md).
+
+Ordre de priorite:
+
+1. Load Balancer + Public Gateway.
+2. Secret Manager + Key Manager.
+3. Container Registry.
+4. Serverless Jobs.
+5. Queues / RabbitMQ.
+6. Edge Services.
+
+Chaque produit ajoute doit supprimer une responsabilite operationnelle existante:
+exposition reseau directe, gestion de secrets statiques, build artisanal, worker batch permanent, queue fragile ou diffusion statique lente.
+
 ## Commandes
 
 ```bash

@@ -3166,6 +3166,128 @@
         }
       }
     },
+    "/enterprise/developers/credentials/{credentialId}/revoke": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "revoke_developer_secret",
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "description": "Developer secret version ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Developer secret revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseDevelopersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Developers grant or admin elevation required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Developer secret not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/policies/mfa": {
+      "patch": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "update_mfa_policy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnterpriseMfaPolicyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "MFA policy updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterprisePoliciesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Policies grant or admin elevation required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/enterprise/trust-center": {
       "get": {
         "tags": [
@@ -3205,6 +3327,138 @@
           },
           "403": {
             "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/users/{userId}/break-glass": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "activate_break_glass_account",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnterpriseBreakGlassInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Break-glass account activated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseAccessUpdateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Step-up required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/users/{userId}/break-glass/revoke": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "revoke_break_glass_account",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnterpriseAuditReasonInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Break-glass account revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseAccessUpdateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Step-up required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Owner access required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Break-glass account not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -10012,6 +10266,17 @@
           }
         }
       },
+      "EnterpriseAccessUpdateResponse": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/EnterpriseUser"
+          }
+        }
+      },
       "EnterpriseAdminElevationInput": {
         "type": "object",
         "properties": {
@@ -10021,6 +10286,18 @@
               "null"
             ],
             "format": "int64"
+          },
+          "procedure_reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -10127,6 +10404,262 @@
           }
         }
       },
+      "EnterpriseAuditReasonInput": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseBreakGlassAccount": {
+        "type": "object",
+        "required": [
+          "procedure_reference",
+          "reason",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "procedure_reference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseBreakGlassInput": {
+        "type": "object",
+        "required": [
+          "reason",
+          "procedure_reference"
+        ],
+        "properties": {
+          "procedure_reference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseDeveloperCredentialSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "client_id",
+          "name",
+          "status",
+          "secret_last4",
+          "scopes",
+          "created_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "secret_last4": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseDevelopersResponse": {
+        "type": "object",
+        "required": [
+          "credentials"
+        ],
+        "properties": {
+          "credentials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseDeveloperCredentialSummary"
+            }
+          },
+          "page": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EnterprisePage"
+              }
+            ]
+          }
+        }
+      },
+      "EnterpriseMfaPolicy": {
+        "type": "object",
+        "required": [
+          "policy",
+          "recommended_policy",
+          "compliant"
+        ],
+        "properties": {
+          "compliant": {
+            "type": "boolean"
+          },
+          "policy": {
+            "type": "string"
+          },
+          "recommended_policy": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseMfaPolicyInput": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "type": "string"
+          }
+        }
+      },
+      "EnterpriseModuleGrant": {
+        "type": "string",
+        "enum": [
+          "members",
+          "workspaces",
+          "developers",
+          "policies",
+          "security",
+          "billing",
+          "audit",
+          "drive"
+        ]
+      },
+      "EnterprisePage": {
+        "type": "object",
+        "required": [
+          "has_more"
+        ],
+        "properties": {
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EnterprisePoliciesResponse": {
+        "type": "object",
+        "required": [
+          "policies",
+          "session_policy",
+          "mfa_policy"
+        ],
+        "properties": {
+          "mfa_policy": {
+            "$ref": "#/components/schemas/EnterpriseMfaPolicy"
+          },
+          "policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterprisePolicySummary"
+            }
+          },
+          "session_policy": {
+            "$ref": "#/components/schemas/EnterpriseSessionPolicy"
+          }
+        }
+      },
+      "EnterprisePolicySummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "enabled",
+          "configuration",
+          "updated_at"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "configuration": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "EnterpriseRole": {
         "type": "string",
         "enum": [
@@ -10135,6 +10668,35 @@
           "member",
           "viewer"
         ]
+      },
+      "EnterpriseSessionPolicy": {
+        "type": "object",
+        "required": [
+          "admin_session_ttl_hours",
+          "recommended_admin_session_ttl_hours",
+          "compliant",
+          "step_up_required_for_admin_elevation",
+          "source"
+        ],
+        "properties": {
+          "admin_session_ttl_hours": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "compliant": {
+            "type": "boolean"
+          },
+          "recommended_admin_session_ttl_hours": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "source": {
+            "type": "string"
+          },
+          "step_up_required_for_admin_elevation": {
+            "type": "boolean"
+          }
+        }
       },
       "EnterpriseTrustCenterResponse": {
         "type": "object",
@@ -10185,6 +10747,75 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TrustCenterDomain"
+            }
+          }
+        }
+      },
+      "EnterpriseUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "role",
+          "module_grants",
+          "workspace_ids",
+          "status",
+          "mfa_enabled",
+          "created_at"
+        ],
+        "properties": {
+          "break_glass": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EnterpriseBreakGlassAccount"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "mfa_enabled": {
+            "type": "boolean"
+          },
+          "module_grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseModuleGrant"
+            }
+          },
+          "role": {
+            "$ref": "#/components/schemas/EnterpriseRole"
+          },
+          "status": {
+            "type": "string"
+          },
+          "workspace_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         }
@@ -13223,6 +13854,13 @@
           },
           "id": {
             "type": "string",
+            "format": "uuid"
+          },
+          "sso_provider_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "sso_required": {

@@ -1,3 +1,5 @@
+#[path = "identity.domains.enterprise.db.break_glass.rs"]
+pub mod break_glass;
 #[path = "identity.domains.enterprise.db.developer_writes.rs"]
 pub mod developer_writes;
 #[path = "identity.domains.enterprise.db.owners.rs"]
@@ -11,6 +13,9 @@ pub mod records;
 #[path = "identity.domains.enterprise.db.writes.rs"]
 pub mod writes;
 
+pub use break_glass::{
+    revoke_break_glass_account, touch_break_glass_account, upsert_break_glass_account,
+};
 pub use developer_writes::revoke_developer_secret_version;
 pub use owners::{
     active_owner_count, lock_tenant_owner_changes, ownerless_workspace_count_after_access,

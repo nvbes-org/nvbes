@@ -23,17 +23,21 @@ import {
 } from './enterprise.access-reviews.schemas';
 import {
   type EnterpriseAccessUpdateInput,
+  EnterpriseAccessUpdateInputSchema,
   type EnterpriseAccessUpdateResponse,
+  EnterpriseAccessUpdateResponseSchema,
   type EnterpriseAdminElevationInput,
   EnterpriseAdminElevationInputSchema,
   type EnterpriseAdminElevationResponse,
   EnterpriseAdminElevationResponseSchema,
-  EnterpriseAccessUpdateInputSchema,
-  EnterpriseAccessUpdateResponseSchema,
   type EnterpriseAuditEventsResponse,
   EnterpriseAuditEventsResponseSchema,
+  type EnterpriseAuditReasonInput,
+  EnterpriseAuditReasonInputSchema,
   type EnterpriseBillingResponse,
   EnterpriseBillingResponseSchema,
+  type EnterpriseBreakGlassInput,
+  EnterpriseBreakGlassInputSchema,
   type EnterpriseContextResponse,
   EnterpriseContextResponseSchema,
   type EnterpriseDevelopersResponse,
@@ -52,12 +56,12 @@ import {
   EnterprisePolicySimulationInputSchema,
   type EnterprisePolicySimulationResponse,
   EnterprisePolicySimulationResponseSchema,
-  type EnterpriseSessionPolicyInput,
-  EnterpriseSessionPolicyInputSchema,
   type EnterpriseReactivateInput,
   EnterpriseReactivateInputSchema,
   type EnterpriseSecurityResponse,
   EnterpriseSecurityResponseSchema,
+  type EnterpriseSessionPolicyInput,
+  EnterpriseSessionPolicyInputSchema,
   type EnterpriseSuspendInput,
   EnterpriseSuspendInputSchema,
   type EnterpriseUsageResponse,
@@ -72,10 +76,10 @@ import {
   EnterpriseTrustCenterResponseSchema,
 } from './enterprise.trust.schemas';
 import {
-  type CreateTenantDomainInput,
-  CreateTenantDomainInputSchema,
   type CreateFederatedIdentityProviderInput,
   CreateFederatedIdentityProviderInputSchema,
+  type CreateTenantDomainInput,
+  CreateTenantDomainInputSchema,
   type FederatedIdentityProviderResponse,
   FederatedIdentityProviderResponseSchema,
   type TenantDomainResponse,
@@ -182,6 +186,34 @@ export function reactivateEnterpriseUser(
   );
 }
 
+export function activateEnterpriseBreakGlassAccount(
+  http: HttpClient,
+  userId: string,
+  input: EnterpriseBreakGlassInput,
+  options?: EnterpriseRequestOptions,
+): Promise<EnterpriseAccessUpdateResponse> {
+  return http.post(
+    `${EnterpriseApiBasePath}/users/${encodeURIComponent(userId)}/break-glass`,
+    EnterpriseAccessUpdateResponseSchema,
+    EnterpriseBreakGlassInputSchema.parse(input),
+    options,
+  );
+}
+
+export function revokeEnterpriseBreakGlassAccount(
+  http: HttpClient,
+  userId: string,
+  input: EnterpriseAuditReasonInput,
+  options?: EnterpriseRequestOptions,
+): Promise<EnterpriseAccessUpdateResponse> {
+  return http.post(
+    `${EnterpriseApiBasePath}/users/${encodeURIComponent(userId)}/break-glass/revoke`,
+    EnterpriseAccessUpdateResponseSchema,
+    EnterpriseAuditReasonInputSchema.parse(input),
+    options,
+  );
+}
+
 export function getEnterpriseWorkspaces(
   http: HttpClient,
   options?: EnterpriseRequestOptions,
@@ -229,11 +261,15 @@ export function updateEnterpriseSessionPolicy(
   input: EnterpriseSessionPolicyInput,
   options?: EnterpriseRequestOptions,
 ): Promise<EnterprisePoliciesResponse> {
-  return http.request(`${EnterpriseApiBasePath}/policies/session`, EnterprisePoliciesResponseSchema, {
-    ...options,
-    body: EnterpriseSessionPolicyInputSchema.parse(input),
-    method: 'PATCH',
-  });
+  return http.request(
+    `${EnterpriseApiBasePath}/policies/session`,
+    EnterprisePoliciesResponseSchema,
+    {
+      ...options,
+      body: EnterpriseSessionPolicyInputSchema.parse(input),
+      method: 'PATCH',
+    },
+  );
 }
 
 export function updateEnterpriseMfaPolicy(

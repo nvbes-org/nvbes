@@ -70,8 +70,15 @@ export function UsersPageTable({ users, invitations, selected, onSelect }: Users
                   onClick={() => onSelect(rowSelection)}
                 >
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">
-                      {row.type === 'member' ? row.user.display_name : row.invitation.email}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-medium">
+                        {row.type === 'member' ? row.user.display_name : row.invitation.email}
+                      </span>
+                      {row.type === 'member' && row.user.break_glass ? (
+                        <Badge variant="destructive" className="rounded-md">
+                          Break-glass
+                        </Badge>
+                      ) : null}
                     </span>
                     <span className="block truncate text-xs font-normal text-muted-foreground">
                       {subject.email}

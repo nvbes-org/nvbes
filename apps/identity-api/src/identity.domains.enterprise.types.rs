@@ -41,11 +41,21 @@ pub struct EnterpriseUser {
     pub display_name: String,
     pub role: EnterpriseRole,
     pub module_grants: Vec<EnterpriseModuleGrant>,
+    pub break_glass: Option<EnterpriseBreakGlassAccount>,
     pub workspace_ids: Vec<Uuid>,
     pub status: String,
     pub mfa_enabled: bool,
     pub last_seen_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseBreakGlassAccount {
+    pub procedure_reference: String,
+    pub reason: String,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -174,6 +184,7 @@ pub struct EnterpriseContextResponse {
     pub user_id: Uuid,
     pub role: EnterpriseRole,
     pub module_grants: Vec<EnterpriseModuleGrant>,
+    pub break_glass: Option<EnterpriseBreakGlassAccount>,
     pub admin_elevation: EnterpriseAdminElevationView,
     pub available_roles: Vec<EnterpriseRole>,
     pub available_module_grants: Vec<EnterpriseModuleGrant>,
@@ -366,12 +377,21 @@ pub struct EnterpriseAccessUpdateInput {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseAdminElevationInput {
     pub duration_minutes: Option<i64>,
+    pub reason: Option<String>,
+    pub procedure_reference: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseAuditReasonInput {
     pub reason: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseBreakGlassInput {
+    pub reason: String,
+    pub procedure_reference: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

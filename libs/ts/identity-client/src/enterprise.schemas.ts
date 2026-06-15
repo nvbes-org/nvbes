@@ -20,12 +20,20 @@ const EnterprisePageSchema = z.object({
   has_more: z.boolean(),
 });
 
+const EnterpriseBreakGlassAccountSchema = z.object({
+  procedure_reference: z.string(),
+  reason: z.string(),
+  created_at: z.string(),
+  last_used_at: NullableStringSchema.optional(),
+});
+
 const EnterpriseUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   display_name: z.string(),
   role: EnterpriseRoleSchema,
   module_grants: z.array(EnterpriseModuleGrantSchema),
+  break_glass: EnterpriseBreakGlassAccountSchema.nullable().optional(),
   workspace_ids: z.array(z.string()),
   status: z.string(),
   mfa_enabled: z.boolean(),
@@ -167,6 +175,7 @@ export const EnterpriseContextResponseSchema = z.object({
   user_id: z.string(),
   role: EnterpriseRoleSchema,
   module_grants: z.array(EnterpriseModuleGrantSchema),
+  break_glass: EnterpriseBreakGlassAccountSchema.nullable().optional(),
   admin_elevation: EnterpriseAdminElevationSchema,
   available_roles: z.array(EnterpriseRoleSchema),
   available_module_grants: z.array(EnterpriseModuleGrantSchema),
@@ -310,9 +319,20 @@ export const EnterpriseAccessUpdateInputSchema = z.object({
 
 export const EnterpriseAdminElevationInputSchema = z.object({
   duration_minutes: z.number().int().min(1).max(60).optional(),
+  reason: z.string().optional(),
+  procedure_reference: z.string().optional(),
 });
 
 const AuditReasonSchema = z.string().refine((value) => value.trim().length > 0);
+
+export const EnterpriseAuditReasonInputSchema = z.object({
+  reason: AuditReasonSchema,
+});
+
+export const EnterpriseBreakGlassInputSchema = z.object({
+  reason: AuditReasonSchema,
+  procedure_reference: AuditReasonSchema,
+});
 
 export const EnterpriseSuspendInputSchema = z.object({
   reason: AuditReasonSchema,
@@ -359,5 +379,7 @@ export type EnterpriseUsageResponse = z.infer<typeof EnterpriseUsageResponseSche
 export type EnterpriseInvitationInput = z.infer<typeof EnterpriseInvitationInputSchema>;
 export type EnterpriseAccessUpdateInput = z.infer<typeof EnterpriseAccessUpdateInputSchema>;
 export type EnterpriseAdminElevationInput = z.infer<typeof EnterpriseAdminElevationInputSchema>;
+export type EnterpriseAuditReasonInput = z.infer<typeof EnterpriseAuditReasonInputSchema>;
+export type EnterpriseBreakGlassInput = z.infer<typeof EnterpriseBreakGlassInputSchema>;
 export type EnterpriseSuspendInput = z.infer<typeof EnterpriseSuspendInputSchema>;
 export type EnterpriseReactivateInput = z.infer<typeof EnterpriseReactivateInputSchema>;

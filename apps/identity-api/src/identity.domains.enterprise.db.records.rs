@@ -8,6 +8,11 @@ use super::super::{policy, types::*};
 #[derive(Debug, FromRow)]
 pub struct ActorAccessRow {
     pub role: String,
+    pub break_glass: bool,
+    pub break_glass_procedure_reference: Option<String>,
+    pub break_glass_reason: Option<String>,
+    pub break_glass_created_at: Option<DateTime<Utc>>,
+    pub break_glass_last_used_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, FromRow)]
@@ -16,6 +21,10 @@ pub struct EnterpriseUserRow {
     pub email: String,
     pub display_name: String,
     pub role: String,
+    pub break_glass_procedure_reference: Option<String>,
+    pub break_glass_reason: Option<String>,
+    pub break_glass_created_at: Option<DateTime<Utc>>,
+    pub break_glass_last_used_at: Option<DateTime<Utc>>,
     pub workspace_ids: Vec<Uuid>,
     pub status: String,
     pub mfa_enabled: bool,
@@ -26,9 +35,25 @@ pub struct EnterpriseUserRow {
 impl EnterpriseUserRow {
     pub fn into_view(self) -> EnterpriseUser {
         let role = policy::role_from_db(&self.role);
+        let break_glass = match (
+            self.break_glass_procedure_reference,
+            self.break_glass_reason,
+            self.break_glass_created_at,
+        ) {
+            (Some(procedure_reference), Some(reason), Some(created_at)) => {
+                Some(EnterpriseBreakGlassAccount {
+                    procedure_reference,
+                    reason,
+                    created_at,
+                    last_used_at: self.break_glass_last_used_at,
+                })
+            }
+            _ => None,
+        };
         EnterpriseUser {
             module_grants: policy::grants_for_role(&role),
             role,
+            break_glass,
             id: self.id,
             email: self.email,
             display_name: self.display_name,

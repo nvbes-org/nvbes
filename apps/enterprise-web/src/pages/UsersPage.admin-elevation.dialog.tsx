@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
 
 export type StepUpMethod = 'password' | 'webauthn' | 'totp' | 'recovery';
 
@@ -28,6 +29,9 @@ export function AdminElevationDialog({
   password,
   totpCode,
   recoveryCode,
+  breakGlassActive,
+  breakGlassProcedureReference,
+  breakGlassReason,
   pending,
   error,
   onOpenChange,
@@ -35,6 +39,7 @@ export function AdminElevationDialog({
   onPasswordChange,
   onTotpCodeChange,
   onRecoveryCodeChange,
+  onBreakGlassReasonChange,
   onSubmit,
 }: {
   open: boolean;
@@ -42,6 +47,9 @@ export function AdminElevationDialog({
   password: string;
   totpCode: string;
   recoveryCode: string;
+  breakGlassActive: boolean;
+  breakGlassProcedureReference: string | null;
+  breakGlassReason: string;
   pending: boolean;
   error: string | null;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +57,7 @@ export function AdminElevationDialog({
   onPasswordChange: (value: string) => void;
   onTotpCodeChange: (value: string) => void;
   onRecoveryCodeChange: (value: string) => void;
+  onBreakGlassReasonChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -94,6 +103,21 @@ export function AdminElevationDialog({
             onTotpCodeChange={onTotpCodeChange}
             onRecoveryCodeChange={onRecoveryCodeChange}
           />
+
+          {breakGlassActive ? (
+            <Field>
+              <FieldLabel htmlFor="admin-elevation-break-glass-reason">
+                Emergency procedure reason
+              </FieldLabel>
+              <Textarea
+                id="admin-elevation-break-glass-reason"
+                value={breakGlassReason}
+                onChange={(event) => onBreakGlassReasonChange(event.target.value)}
+                placeholder={breakGlassProcedureReference ?? 'Procedure reference'}
+                required
+              />
+            </Field>
+          ) : null}
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 

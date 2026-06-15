@@ -28,8 +28,8 @@ import { type InviteSubmitValue, UsersPageInvite } from './UsersPage.invite';
 import {
   type EnterpriseInvitationRow,
   type EnterpriseUserRow,
-  UsersPageTable,
   type UsersPageSelection,
+  UsersPageTable,
 } from './UsersPage.table';
 
 type RecipientError = { email: string; message: string };
@@ -54,8 +54,10 @@ export function UsersPage() {
     [usersData],
   );
   const canEditAccess = contextQuery.data ? canManageUsers(contextQuery.data) : false;
+  const canManageBreakGlass = contextQuery.data?.role === 'owner';
   const adminElevation = useAdminElevation({
     active: contextQuery.data?.admin_elevation.active ?? false,
+    breakGlass: contextQuery.data?.break_glass ?? null,
     onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
   });
 
@@ -94,6 +96,31 @@ export function UsersPage() {
     mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
       adminElevation.runElevated(() =>
         enterpriseClient.reactivateEnterpriseUser(userId, { reason }),
+      ),
+    onSuccess: invalidateUsers,
+  });
+  const activateBreakGlassMutation = useMutation({
+    mutationFn: ({
+      userId,
+      procedure_reference,
+      reason,
+    }: {
+      userId: string;
+      procedure_reference: string;
+      reason: string;
+    }) =>
+      adminElevation.runElevated(() =>
+        enterpriseClient.activateEnterpriseBreakGlassAccount(userId, {
+          procedure_reference,
+          reason,
+        }),
+      ),
+    onSuccess: invalidateUsers,
+  });
+  const revokeBreakGlassMutation = useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminElevation.runElevated(() =>
+        enterpriseClient.revokeEnterpriseBreakGlassAccount(userId, { reason }),
       ),
     onSuccess: invalidateUsers,
   });
@@ -167,10 +194,16 @@ export function UsersPage() {
             selectedUser={selectedUser}
             selectedInvitation={selectedInvitation}
             canEditAccess={canEditAccess}
+            canManageBreakGlass={canManageBreakGlass}
             mutatingLifecycle={
-              suspendMutation.isPending || reactivateMutation.isPending || adminElevation.pending
+              suspendMutation.isPending ||
+              reactivateMutation.isPending ||
+              activateBreakGlassMutation.isPending ||
+              revokeBreakGlassMutation.isPending ||
+              adminElevation.pending
             }
             lifecycleError={suspendMutation.error ?? reactivateMutation.error}
+            breakGlassError={activateBreakGlassMutation.error ?? revokeBreakGlassMutation.error}
             onEditAccess={() => setAccessOpen(true)}
             onSuspend={async (reason) => {
               if (selectedUser) {
@@ -194,6 +227,37 @@ export function UsersPage() {
                 } catch (error) {
                   if (isAdminElevationCancelled(error)) {
                     reactivateMutation.reset();
+                  }
+                  return false;
+                }
+              }
+              return false;
+            }}
+            onActivateBreakGlass={async (input) => {
+              if (selectedUser) {
+                try {
+                  await activateBreakGlassMutation.mutateAsync({
+                    userId: selectedUser.id,
+                    ...input,
+                  });
+                  return true;
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    activateBreakGlassMutation.reset();
+                  }
+                  return false;
+                }
+              }
+              return false;
+            }}
+            onRevokeBreakGlass={async (reason) => {
+              if (selectedUser) {
+                try {
+                  await revokeBreakGlassMutation.mutateAsync({ userId: selectedUser.id, reason });
+                  return true;
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    revokeBreakGlassMutation.reset();
                   }
                   return false;
                 }
