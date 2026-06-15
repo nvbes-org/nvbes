@@ -23,6 +23,7 @@ type UsersPageInspectorProps = {
   selectedInvitation: EnterpriseInvitationRow | null;
   canEditAccess: boolean;
   canManageBreakGlass: boolean;
+  isOrgScoped?: boolean;
   mutatingLifecycle: boolean;
   lifecycleError: Error | null;
   breakGlassError: Error | null;
@@ -38,6 +39,7 @@ export function UsersPageInspector({
   selectedInvitation,
   canEditAccess,
   canManageBreakGlass,
+  isOrgScoped = false,
   mutatingLifecycle,
   lifecycleError,
   breakGlassError,
@@ -53,6 +55,7 @@ export function UsersPageInspector({
         user={selectedUser}
         canEditAccess={canEditAccess}
         canManageBreakGlass={canManageBreakGlass}
+        isOrgScoped={isOrgScoped}
         mutatingLifecycle={mutatingLifecycle}
         lifecycleError={lifecycleError}
         breakGlassError={breakGlassError}
@@ -66,7 +69,7 @@ export function UsersPageInspector({
   }
 
   if (selectedInvitation) {
-    return <InvitationInspector invitation={selectedInvitation} />;
+    return <InvitationInspector invitation={selectedInvitation} isOrgScoped={isOrgScoped} />;
   }
 
   return (
@@ -90,6 +93,7 @@ function MemberInspector({
   user,
   canEditAccess,
   canManageBreakGlass,
+  isOrgScoped,
   mutatingLifecycle,
   lifecycleError,
   breakGlassError,
@@ -102,6 +106,7 @@ function MemberInspector({
   user: EnterpriseUserRow;
   canEditAccess: boolean;
   canManageBreakGlass: boolean;
+  isOrgScoped: boolean;
   mutatingLifecycle: boolean;
   lifecycleError: Error | null;
   breakGlassError: Error | null;
@@ -147,15 +152,17 @@ function MemberInspector({
         <Detail label="Role" value={user.role} />
         <Detail label="MFA" value={user.mfa_enabled ? 'Enabled' : 'Not enabled'} />
         <Detail label="Workspaces" value={formatWorkspaceCount(user.workspace_ids.length)} />
-        <GrantList grants={user.module_grants} />
-        <BreakGlassPanel
-          user={user}
-          canManageBreakGlass={canManageBreakGlass}
-          pending={mutatingLifecycle}
-          error={breakGlassError}
-          onActivate={onActivateBreakGlass}
-          onRevoke={onRevokeBreakGlass}
-        />
+        {!isOrgScoped && <GrantList grants={user.module_grants} />}
+        {!isOrgScoped && (
+          <BreakGlassPanel
+            user={user}
+            canManageBreakGlass={canManageBreakGlass}
+            pending={mutatingLifecycle}
+            error={breakGlassError}
+            onActivate={onActivateBreakGlass}
+            onRevoke={onRevokeBreakGlass}
+          />
+        )}
 
         {lifecycleError ? (
           <Alert variant="destructive">
@@ -203,7 +210,13 @@ function MemberInspector({
   );
 }
 
-function InvitationInspector({ invitation }: { invitation: EnterpriseInvitationRow }) {
+function InvitationInspector({
+  invitation,
+  isOrgScoped,
+}: {
+  invitation: EnterpriseInvitationRow;
+  isOrgScoped: boolean;
+}) {
   return (
     <Card className="rounded-lg" size="sm">
       <CardHeader>
@@ -219,7 +232,7 @@ function InvitationInspector({ invitation }: { invitation: EnterpriseInvitationR
         <Detail label="Status" value={invitation.status} />
         <Detail label="Workspaces" value={formatWorkspaceCount(invitation.workspace_ids.length)} />
         <Detail label="Expires" value={formatDate(invitation.expires_at)} />
-        <GrantList grants={invitation.module_grants} />
+        {!isOrgScoped && <GrantList grants={invitation.module_grants} />}
       </CardContent>
     </Card>
   );

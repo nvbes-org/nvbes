@@ -53,8 +53,9 @@ export function UsersPage() {
     () => (usersData?.users ?? []).filter((user) => user.role === 'owner').length,
     [usersData],
   );
+  const isOrgScoped = !!contextQuery.data?.organization_id;
   const canEditAccess = contextQuery.data ? canManageUsers(contextQuery.data) : false;
-  const canManageBreakGlass = contextQuery.data?.role === 'owner';
+  const canManageBreakGlass = contextQuery.data?.role === 'owner' && !isOrgScoped;
   const adminElevation = useAdminElevation({
     active: contextQuery.data?.admin_elevation.active ?? false,
     breakGlass: contextQuery.data?.break_glass ?? null,
@@ -125,7 +126,14 @@ export function UsersPage() {
     onSuccess: invalidateUsers,
   });
 
-  const roles = usersData?.roles ?? fallbackRoles;
+  const roles = useMemo(() => {
+    const rawRoles = usersData?.roles ?? fallbackRoles;
+    if (isOrgScoped) {
+      return rawRoles.filter((role) => role !== 'owner');
+    }
+    return rawRoles;
+  }, [usersData?.roles, isOrgScoped]);
+
   const grants = usersData?.module_grants ?? fallbackGrants;
   const isLoading = usersQuery.isPending || contextQuery.isPending;
   const isEmpty = usersData && usersData.users.length === 0 && usersData.invitations.length === 0;
@@ -141,7 +149,9 @@ export function UsersPage() {
             </Badge>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Tenant member directory, invitations, and access lifecycle controls.
+            {isOrgScoped
+              ? 'Organization member directory, invitations, and access lifecycle controls.'
+              : 'Tenant member directory, invitations, and access lifecycle controls.'}
           </p>
         </div>
         <UsersPageInvite
@@ -149,6 +159,7 @@ export function UsersPage() {
           grants={grants}
           workspaceIds={workspaceIds}
           canInvite={canEditAccess}
+          isOrgScoped={isOrgScoped}
           permissionPending={contextQuery.isPending}
           submitting={inviteMutation.isPending || adminElevation.pending}
           recipientErrors={recipientErrors}
@@ -167,7 +178,6 @@ export function UsersPage() {
           }}
         />
       </header>
-
       <QueryErrorAlert error={usersQuery.error ?? contextQuery.error} />
 
       {isLoading ? (
@@ -186,6 +196,7 @@ export function UsersPage() {
                 invitations={usersData.invitations}
                 selected={selected}
                 onSelect={setSelected}
+                isOrgScoped={isOrgScoped}
               />
             </CardContent>
           </Card>
@@ -195,6 +206,7 @@ export function UsersPage() {
             selectedInvitation={selectedInvitation}
             canEditAccess={canEditAccess}
             canManageBreakGlass={canManageBreakGlass}
+            isOrgScoped={isOrgScoped}
             mutatingLifecycle={
               suspendMutation.isPending ||
               reactivateMutation.isPending ||
@@ -275,6 +287,7 @@ export function UsersPage() {
           roles={roles}
           grants={grants}
           workspaceIds={workspaceIds}
+          isOrgScoped={isOrgScoped}
           value={{
             role: selectedUser.role,
             module_grants: selectedUser.module_grants,

@@ -1,7 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
 import { Outlet } from '@tanstack/react-router';
+import { enterpriseContextQueryOptions } from '../enterprise.queries';
 import { EnterpriseSidebar } from './EnterpriseSidebar';
 
 export function EnterpriseLayout() {
+  const { data: context } = useQuery(enterpriseContextQueryOptions());
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-card md:flex md:flex-col">
@@ -12,7 +16,9 @@ export function EnterpriseLayout() {
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
           <div className="min-w-0">
             <p className="truncate text-sm font-heading font-semibold">nvbes Enterprise</p>
-            <p className="truncate text-[0.7rem] text-muted-foreground">Tenant admin</p>
+            <p className="truncate text-[0.7rem] text-muted-foreground">
+              {context?.organization_id ? 'Org admin' : 'Tenant admin'}
+            </p>
           </div>
         </header>
 

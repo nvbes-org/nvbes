@@ -22,14 +22,21 @@ type DirectoryRow =
   | { type: 'member'; id: string; user: EnterpriseUserRow }
   | { type: 'invitation'; id: string; invitation: EnterpriseInvitationRow };
 
-type UsersPageTableProps = {
+export type UsersPageTableProps = {
   users: EnterpriseUserRow[];
   invitations: EnterpriseInvitationRow[];
   selected: UsersPageSelection | null;
   onSelect: (selection: UsersPageSelection) => void;
+  isOrgScoped?: boolean;
 };
 
-export function UsersPageTable({ users, invitations, selected, onSelect }: UsersPageTableProps) {
+export function UsersPageTable({
+  users,
+  invitations,
+  selected,
+  onSelect,
+  isOrgScoped = false,
+}: UsersPageTableProps) {
   const rows: DirectoryRow[] = [
     ...users.map((user) => ({ type: 'member' as const, id: user.id, user })),
     ...invitations.map((invitation) => ({
@@ -45,7 +52,7 @@ export function UsersPageTable({ users, invitations, selected, onSelect }: Users
         <TableRow>
           <TableHead>Name / email</TableHead>
           <TableHead>Role</TableHead>
-          <TableHead>Module grants</TableHead>
+          {!isOrgScoped && <TableHead>Module grants</TableHead>}
           <TableHead>Workspaces</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Last active</TableHead>
@@ -74,7 +81,7 @@ export function UsersPageTable({ users, invitations, selected, onSelect }: Users
                       <span className="truncate font-medium">
                         {row.type === 'member' ? row.user.display_name : row.invitation.email}
                       </span>
-                      {row.type === 'member' && row.user.break_glass ? (
+                      {row.type === 'member' && row.user.break_glass && !isOrgScoped ? (
                         <Badge variant="destructive" className="rounded-md">
                           Break-glass
                         </Badge>
@@ -91,9 +98,11 @@ export function UsersPageTable({ users, invitations, selected, onSelect }: Users
                   {subject.role}
                 </Badge>
               </TableCell>
-              <TableCell className="max-w-64">
-                <GrantList grants={subject.module_grants} />
-              </TableCell>
+              {!isOrgScoped && (
+                <TableCell className="max-w-64">
+                  <GrantList grants={subject.module_grants} />
+                </TableCell>
+              )}
               <TableCell>{formatWorkspaceCount(subject.workspace_ids.length)}</TableCell>
               <TableCell>
                 <Badge

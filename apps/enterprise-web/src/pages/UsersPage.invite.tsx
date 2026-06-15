@@ -46,6 +46,7 @@ type UsersPageInviteProps = {
   grants: EnterpriseModuleGrant[];
   workspaceIds: string[];
   canInvite: boolean;
+  isOrgScoped?: boolean;
   permissionPending: boolean;
   submitting: boolean;
   recipientErrors: Array<{ email: string; message: string }>;
@@ -57,6 +58,7 @@ export function UsersPageInvite({
   grants,
   workspaceIds,
   canInvite,
+  isOrgScoped = false,
   permissionPending,
   submitting,
   recipientErrors,
@@ -110,15 +112,21 @@ export function UsersPageInvite({
       </DialogTrigger>
       {!canInvite && !permissionPending ? (
         <p className="text-xs text-muted-foreground">
-          Your current tenant grants do not allow member invitations.
+          {isOrgScoped
+            ? 'Your current organization grants do not allow member invitations.'
+            : 'Your current tenant grants do not allow member invitations.'}
         </p>
       ) : null}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <form className="flex flex-col gap-5" onSubmit={submitForm}>
           <DialogHeader>
-            <DialogTitle>Invite tenant users</DialogTitle>
+            <DialogTitle>
+              {isOrgScoped ? 'Invite organization users' : 'Invite tenant users'}
+            </DialogTitle>
             <DialogDescription>
-              Send one or more invitations with initial role, module, and workspace access.
+              {isOrgScoped
+                ? 'Send one or more invitations with initial role and workspace access.'
+                : 'Send one or more invitations with initial role, module, and workspace access.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -152,12 +160,14 @@ export function UsersPageInvite({
             </Select>
           </Field>
 
-          <CheckboxSet
-            legend="Module grants"
-            options={grants.map((grant) => ({ id: grant, label: describeModuleGrant(grant) }))}
-            selected={moduleGrants}
-            onChange={setModuleGrants}
-          />
+          {!isOrgScoped && (
+            <CheckboxSet
+              legend="Module grants"
+              options={grants.map((grant) => ({ id: grant, label: describeModuleGrant(grant) }))}
+              selected={moduleGrants}
+              onChange={setModuleGrants}
+            />
+          )}
 
           <CheckboxSet
             legend="Workspace assignments"
@@ -173,7 +183,9 @@ export function UsersPageInvite({
             <AlertDescription>
               {recipients.length === 0
                 ? 'No recipients parsed yet.'
-                : `${recipients.length} recipient(s) will receive ${role} access with ${moduleGrants.length} module grant(s) and ${workspaceAssignments.length} workspace assignment(s).`}
+                : isOrgScoped
+                  ? `${recipients.length} recipient(s) will receive ${role} access with ${workspaceAssignments.length} workspace assignment(s).`
+                  : `${recipients.length} recipient(s) will receive ${role} access with ${moduleGrants.length} module grant(s) and ${workspaceAssignments.length} workspace assignment(s).`}
             </AlertDescription>
           </Alert>
 

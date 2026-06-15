@@ -43,6 +43,7 @@ type UsersPageAccessProps = {
   roles: EnterpriseRole[];
   grants: EnterpriseModuleGrant[];
   workspaceIds: string[];
+  isOrgScoped?: boolean;
   value: AccessFormValue;
   currentOwnerCount: number;
   error: Error | null;
@@ -57,6 +58,7 @@ export function UsersPageAccess({
   roles,
   grants,
   workspaceIds,
+  isOrgScoped = false,
   value,
   currentOwnerCount,
   error,
@@ -116,13 +118,15 @@ export function UsersPageAccess({
             ) : null}
           </Field>
 
-          <CheckboxSet
-            legend="Module grants"
-            empty="No module grants are available."
-            options={grants.map((grant) => ({ id: grant, label: describeModuleGrant(grant) }))}
-            selected={draft.module_grants}
-            onChange={(module_grants) => setDraft((current) => ({ ...current, module_grants }))}
-          />
+          {!isOrgScoped && (
+            <CheckboxSet
+              legend="Module grants"
+              empty="No module grants are available."
+              options={grants.map((grant) => ({ id: grant, label: describeModuleGrant(grant) }))}
+              selected={draft.module_grants}
+              onChange={(module_grants) => setDraft((current) => ({ ...current, module_grants }))}
+            />
+          )}
 
           <CheckboxSet
             legend="Workspace assignments"
