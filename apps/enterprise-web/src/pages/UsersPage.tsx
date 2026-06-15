@@ -22,6 +22,7 @@ import {
   enterpriseUsersQueryOptions,
 } from '../enterprise.queries';
 import { type AccessFormValue, UsersPageAccess } from './UsersPage.access';
+import { isAdminElevationCancelled, useAdminElevation } from './UsersPage.admin-elevation';
 import { UsersPageInspector } from './UsersPage.inspector';
 import { type InviteSubmitValue, UsersPageInvite } from './UsersPage.invite';
 import {
@@ -53,12 +54,18 @@ export function UsersPage() {
     [usersData],
   );
   const canEditAccess = contextQuery.data ? canManageUsers(contextQuery.data) : false;
+  const adminElevation = useAdminElevation({
+    active: contextQuery.data?.admin_elevation.active ?? false,
+    onGranted: () => queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.context }),
+  });
 
   const invalidateUsers = () =>
     queryClient.invalidateQueries({ queryKey: enterpriseQueryKeys.users });
   const inviteMutation = useMutation({
     mutationFn: (value: InviteSubmitValue) =>
-      enterpriseClient.createEnterpriseInvitations(buildEnterpriseInvitationInput(value)),
+      adminElevation.runElevated(() =>
+        enterpriseClient.createEnterpriseInvitations(buildEnterpriseInvitationInput(value)),
+      ),
     onSuccess: async () => {
       setRecipientErrors([]);
       await invalidateUsers();
@@ -69,7 +76,9 @@ export function UsersPage() {
       if (!selectedUser) {
         throw new Error('No member selected.');
       }
-      return enterpriseClient.updateEnterpriseUserAccess(selectedUser.id, value);
+      return adminElevation.runElevated(() =>
+        enterpriseClient.updateEnterpriseUserAccess(selectedUser.id, value),
+      );
     },
     onSuccess: async () => {
       setAccessOpen(false);
@@ -78,12 +87,14 @@ export function UsersPage() {
   });
   const suspendMutation = useMutation({
     mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
-      enterpriseClient.suspendEnterpriseUser(userId, { reason }),
+      adminElevation.runElevated(() => enterpriseClient.suspendEnterpriseUser(userId, { reason })),
     onSuccess: invalidateUsers,
   });
   const reactivateMutation = useMutation({
     mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
-      enterpriseClient.reactivateEnterpriseUser(userId, { reason }),
+      adminElevation.runElevated(() =>
+        enterpriseClient.reactivateEnterpriseUser(userId, { reason }),
+      ),
     onSuccess: invalidateUsers,
   });
 
@@ -112,13 +123,17 @@ export function UsersPage() {
           workspaceIds={workspaceIds}
           canInvite={canEditAccess}
           permissionPending={contextQuery.isPending}
-          submitting={inviteMutation.isPending}
+          submitting={inviteMutation.isPending || adminElevation.pending}
           recipientErrors={recipientErrors}
           onSubmit={async (value) => {
             try {
               await inviteMutation.mutateAsync(value);
               return true;
             } catch (error) {
+              if (isAdminElevationCancelled(error)) {
+                inviteMutation.reset();
+                return false;
+              }
               setRecipientErrors(buildRecipientErrors(value.emailInput, error));
               return false;
             }
@@ -152,7 +167,9 @@ export function UsersPage() {
             selectedUser={selectedUser}
             selectedInvitation={selectedInvitation}
             canEditAccess={canEditAccess}
-            mutatingLifecycle={suspendMutation.isPending || reactivateMutation.isPending}
+            mutatingLifecycle={
+              suspendMutation.isPending || reactivateMutation.isPending || adminElevation.pending
+            }
             lifecycleError={suspendMutation.error ?? reactivateMutation.error}
             onEditAccess={() => setAccessOpen(true)}
             onSuspend={async (reason) => {
@@ -160,7 +177,10 @@ export function UsersPage() {
                 try {
                   await suspendMutation.mutateAsync({ userId: selectedUser.id, reason });
                   return true;
-                } catch {
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    suspendMutation.reset();
+                  }
                   return false;
                 }
               }
@@ -171,7 +191,10 @@ export function UsersPage() {
                 try {
                   await reactivateMutation.mutateAsync({ userId: selectedUser.id, reason });
                   return true;
-                } catch {
+                } catch (error) {
+                  if (isAdminElevationCancelled(error)) {
+                    reactivateMutation.reset();
+                  }
                   return false;
                 }
               }
@@ -195,18 +218,23 @@ export function UsersPage() {
           }}
           currentOwnerCount={currentOwnerCount}
           error={accessMutation.error}
-          saving={accessMutation.isPending}
+          saving={accessMutation.isPending || adminElevation.pending}
           onOpenChange={setAccessOpen}
           onSubmit={async (value) => {
             try {
               await accessMutation.mutateAsync(value);
               return true;
-            } catch {
+            } catch (error) {
+              if (isAdminElevationCancelled(error)) {
+                accessMutation.reset();
+              }
               return false;
             }
           }}
         />
       ) : null}
+
+      {adminElevation.dialog}
     </div>
   );
 }

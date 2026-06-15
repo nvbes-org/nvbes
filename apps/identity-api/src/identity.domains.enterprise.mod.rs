@@ -1,5 +1,7 @@
 #[path = "identity.domains.enterprise.access_reviews.rs"]
 pub mod access_reviews;
+#[path = "identity.domains.enterprise.admin_elevation.rs"]
+pub mod admin_elevation;
 #[path = "identity.domains.enterprise.db.rs"]
 pub mod db;
 #[path = "identity.domains.enterprise.policy.rs"]

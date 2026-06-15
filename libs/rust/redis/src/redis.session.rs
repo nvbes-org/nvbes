@@ -26,6 +26,14 @@ pub struct CachedSession {
     pub expires_at: DateTime<Utc>,
     pub step_up_verified_at: Option<DateTime<Utc>>,
     pub step_up_expires_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub admin_elevation_role: Option<String>,
+    #[serde(default)]
+    pub admin_elevation_tenant_id: Option<String>,
+    #[serde(default)]
+    pub admin_elevation_granted_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub admin_elevation_expires_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,

@@ -12,11 +12,16 @@ use super::access::{
 
 pub async fn get_context(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseContextResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let access = require_actor_access(db, auth, tenant_id).await?;
+    let admin_elevation =
+        crate::domains::enterprise::admin_elevation::active_admin_elevation(redis, auth, tenant_id)
+            .await?
+            .unwrap_or_else(crate::domains::enterprise::admin_elevation::inactive_admin_elevation);
     Ok(EnterpriseContextResponse {
         tenant_id,
         organization_id: auth.organization_id,
@@ -24,6 +29,7 @@ pub async fn get_context(
         user_id: auth.user_id,
         role: access.role.clone(),
         module_grants: access.grants,
+        admin_elevation,
         available_roles: all_roles(),
         available_module_grants: all_grants(),
     })

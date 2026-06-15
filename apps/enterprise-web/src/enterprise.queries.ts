@@ -3,6 +3,7 @@ import { enterpriseClient } from "./enterprise.api";
 
 export const enterpriseQueryKeys = {
 	accessReviewCampaigns: ["enterprise", "access-review-campaigns"] as const,
+	accessReviewSchedules: ["enterprise", "access-review-schedules"] as const,
 	context: ["enterprise", "context"] as const,
 	policies: ["enterprise", "policies"] as const,
 	users: ["enterprise", "users"] as const,
@@ -13,6 +14,14 @@ export function enterpriseContextQueryOptions() {
 	return queryOptions({
 		queryKey: enterpriseQueryKeys.context,
 		queryFn: ({ signal }) => enterpriseClient.getEnterpriseContext({ signal }),
+	});
+}
+
+export function accessReviewSchedulesQueryOptions() {
+	return queryOptions({
+		queryKey: enterpriseQueryKeys.accessReviewSchedules,
+		queryFn: ({ signal }) =>
+			enterpriseClient.getAccessReviewSchedules({ signal }),
 	});
 }
 

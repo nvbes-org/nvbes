@@ -10,6 +10,7 @@ use super::super::types::*;
 
 pub(super) async fn ensure_member_manager(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<ActorAccess, AppError> {
@@ -24,6 +25,10 @@ pub(super) async fn ensure_member_manager(
             "Members access is required.",
         ));
     }
+    crate::domains::enterprise::admin_elevation::require_active_admin_elevation(
+        redis, auth, tenant_id,
+    )
+    .await?;
     Ok(access)
 }
 

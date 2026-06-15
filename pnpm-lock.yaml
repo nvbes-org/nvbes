@@ -337,6 +337,9 @@ importers:
       '@nvbes/identity-client':
         specifier: workspace:*
         version: link:../../libs/ts/identity-client
+      '@nvbes/identity-sdk-web':
+        specifier: workspace:*
+        version: link:../../libs/ts/identity-sdk-web
       '@nvbes/web-runtime':
         specifier: workspace:*
         version: link:../../libs/ts/web-runtime

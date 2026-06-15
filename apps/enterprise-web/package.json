@@ -18,6 +18,7 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@nvbes/http-client": "workspace:*",
     "@nvbes/identity-client": "workspace:*",
+    "@nvbes/identity-sdk-web": "workspace:*",
     "@nvbes/web-runtime": "workspace:*",
     "@nvbes/web-ui": "workspace:*",
     "@sentry/react": "catalog:",

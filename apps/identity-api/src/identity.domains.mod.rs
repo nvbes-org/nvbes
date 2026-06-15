@@ -41,7 +41,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(members::routes::router(state))
         .merge(security::routes::router(state))
         .merge(billing::routes::router(state))
-        .merge(developer::routes::router(state))
         .merge(legal::routes::router(state))
         .merge(crate::email::routes::router(state))
 }

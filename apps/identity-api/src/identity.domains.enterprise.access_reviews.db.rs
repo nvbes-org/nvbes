@@ -21,6 +21,9 @@ pub struct AccessReviewCampaignRow {
     pub approved_items: i64,
     pub revoked_items: i64,
     pub changed_items: i64,
+    pub due_soon_reminders_sent: i64,
+    pub overdue_reminders_sent: i64,
+    pub last_reminder_at: Option<DateTime<Utc>>,
 }
 
 impl AccessReviewCampaignRow {
@@ -39,6 +42,9 @@ impl AccessReviewCampaignRow {
             approved_items: self.approved_items,
             revoked_items: self.revoked_items,
             changed_items: self.changed_items,
+            due_soon_reminders_sent: self.due_soon_reminders_sent,
+            overdue_reminders_sent: self.overdue_reminders_sent,
+            last_reminder_at: self.last_reminder_at,
         }
     }
 }
@@ -236,12 +242,24 @@ fn campaign_summary_sql(extra_filter: &str) -> String {
       COUNT(ari.id) FILTER (WHERE ari.decision = 'pending')::bigint AS pending_items,
       COUNT(ari.id) FILTER (WHERE ari.decision = 'approved')::bigint AS approved_items,
       COUNT(ari.id) FILTER (WHERE ari.decision = 'revoked')::bigint AS revoked_items,
-      COUNT(ari.id) FILTER (WHERE ari.decision = 'changed')::bigint AS changed_items
+      COUNT(ari.id) FILTER (WHERE ari.decision = 'changed')::bigint AS changed_items,
+      COALESCE(reminders.due_soon_reminders_sent, 0)::bigint AS due_soon_reminders_sent,
+      COALESCE(reminders.overdue_reminders_sent, 0)::bigint AS overdue_reminders_sent,
+      reminders.last_reminder_at
     FROM access_review_campaigns arc
     LEFT JOIN access_review_items ari ON ari.campaign_id = arc.id
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*) FILTER (WHERE arr.reminder_kind = 'due_soon')::bigint AS due_soon_reminders_sent,
+        COUNT(*) FILTER (WHERE arr.reminder_kind = 'overdue')::bigint AS overdue_reminders_sent,
+        MAX(arr.created_at) AS last_reminder_at
+      FROM access_review_reminders arr
+      WHERE arr.campaign_id = arc.id
+    ) reminders ON true
     WHERE arc.tenant_id = $1
       {extra_filter}
-    GROUP BY arc.id
+    GROUP BY arc.id, reminders.due_soon_reminders_sent, reminders.overdue_reminders_sent,
+      reminders.last_reminder_at
     "#
     )
 }
@@ -271,3 +289,7 @@ fn decision_from_db(value: &str) -> AccessReviewItemDecision {
         _ => AccessReviewItemDecision::Pending,
     }
 }
+
+#[cfg(test)]
+#[path = "identity.domains.enterprise.access_reviews.db.tests.rs"]
+mod tests;

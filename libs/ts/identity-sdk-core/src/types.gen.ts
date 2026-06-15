@@ -756,6 +756,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/enterprise/access-review-campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_access_review_campaigns"];
+        put?: never;
+        post: operations["create_access_review_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_access_review_campaign"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-campaigns/{campaignId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["close_access_review_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-campaigns/{campaignId}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_access_review_campaign"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-campaigns/{campaignId}/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["decide_access_review_item"];
+        trace?: never;
+    };
+    "/enterprise/access-review-schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_access_review_schedules"];
+        put?: never;
+        post: operations["create_access_review_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-schedules/{scheduleId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disable_access_review_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-schedules/{scheduleId}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enable_access_review_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/access-review-schedules/{scheduleId}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["run_access_review_schedule_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/admin-elevation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["grant_admin_elevation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/enterprise/trust-center": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_trust_center"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/invitations/accept": {
         parameters: {
             query?: never;
@@ -1057,7 +1233,7 @@ export interface paths {
         delete: operations["delete_domain"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["update_domain"];
         trace?: never;
     };
     "/tenants/{tenantId}/domains/{domainId}/verify": {
@@ -1618,6 +1794,140 @@ export interface components {
             /** Format: uuid */
             workspace_id: string;
         };
+        AccessReviewCampaignDetail: {
+            campaign: components["schemas"]["AccessReviewCampaignSummary"];
+            items: components["schemas"]["AccessReviewItem"][];
+        };
+        AccessReviewCampaignExport: {
+            campaign: components["schemas"]["AccessReviewCampaignSummary"];
+            /** Format: date-time */
+            generated_at: string;
+            rows: components["schemas"]["AccessReviewCampaignExportRow"][];
+        };
+        AccessReviewCampaignExportRow: {
+            /** Format: date-time */
+            created_at: string;
+            decision: components["schemas"]["AccessReviewItemDecision"];
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            item_id: string;
+            item_type: components["schemas"]["AccessReviewItemType"];
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            /** Format: uuid */
+            reviewed_by?: string | null;
+            role?: string | null;
+            status: string;
+            subject_id: string;
+            subject_label: string;
+            /** Format: uuid */
+            workspace_id?: string | null;
+        };
+        AccessReviewCampaignScopeInput: {
+            include_members: boolean;
+            include_oauth_clients: boolean;
+            include_roles: boolean;
+            include_service_accounts: boolean;
+        };
+        /** @enum {string} */
+        AccessReviewCampaignStatus: "draft" | "active" | "closed";
+        AccessReviewCampaignSummary: {
+            /** Format: int64 */
+            approved_items: number;
+            /** Format: int64 */
+            changed_items: number;
+            /** Format: date-time */
+            closed_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            description?: string | null;
+            /** Format: date-time */
+            due_at: string;
+            /** Format: int64 */
+            due_soon_reminders_sent: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            last_reminder_at?: string | null;
+            name: string;
+            /** Format: int64 */
+            overdue_reminders_sent: number;
+            /** Format: int64 */
+            pending_items: number;
+            /** Format: int64 */
+            revoked_items: number;
+            /** Format: date-time */
+            starts_at: string;
+            status: components["schemas"]["AccessReviewCampaignStatus"];
+        };
+        AccessReviewCampaignsResponse: {
+            campaigns: components["schemas"]["AccessReviewCampaignSummary"][];
+        };
+        AccessReviewChangeInput: {
+            target_role?: string | null;
+        };
+        AccessReviewDecisionInput: {
+            change?: null | components["schemas"]["AccessReviewChangeInput"];
+            decision: components["schemas"]["AccessReviewItemDecision"];
+            note?: string | null;
+        };
+        AccessReviewDecisionResponse: {
+            campaign: components["schemas"]["AccessReviewCampaignSummary"];
+            item: components["schemas"]["AccessReviewItem"];
+        };
+        AccessReviewItem: {
+            /** Format: date-time */
+            created_at: string;
+            decision: components["schemas"]["AccessReviewItemDecision"];
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            id: string;
+            item_type: components["schemas"]["AccessReviewItemType"];
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            /** Format: uuid */
+            reviewed_by?: string | null;
+            role?: string | null;
+            status: string;
+            subject_id: string;
+            subject_label: string;
+            /** Format: uuid */
+            workspace_id?: string | null;
+        };
+        /** @enum {string} */
+        AccessReviewItemDecision: "pending" | "approved" | "revoked" | "changed";
+        /** @enum {string} */
+        AccessReviewItemType: "member" | "role" | "service_account" | "oauth_client";
+        AccessReviewSchedule: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            description?: string | null;
+            /** Format: date-time */
+            disabled_at?: string | null;
+            /** Format: int32 */
+            due_after_days: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            last_campaign_id?: string | null;
+            name: string;
+            /** Format: date-time */
+            next_run_at: string;
+            /** Format: int32 */
+            recurrence_days: number;
+            scope: components["schemas"]["AccessReviewCampaignScopeInput"];
+        };
+        AccessReviewSchedulesResponse: {
+            schedules: components["schemas"]["AccessReviewSchedule"][];
+        };
         AccountChooserResult: {
             accounts: components["schemas"]["AccountChooserSession"][];
         };
@@ -1890,9 +2200,28 @@ export interface components {
             stripe_price_id: string;
             url: string;
         };
+        CloseAccessReviewCampaignInput: {
+            note?: string | null;
+        };
         ConsentRequest: {
             consent_type: string;
             document_version: string;
+        };
+        CreateAccessReviewCampaignInput: {
+            description?: string | null;
+            /** Format: date-time */
+            due_at: string;
+            name: string;
+            scope: components["schemas"]["AccessReviewCampaignScopeInput"];
+        };
+        CreateAccessReviewScheduleInput: {
+            description?: string | null;
+            /** Format: int32 */
+            due_after_days: number;
+            name: string;
+            /** Format: int32 */
+            recurrence_days: number;
+            scope: components["schemas"]["AccessReviewCampaignScopeInput"];
         };
         CreateCheckoutRequest: {
             cancel_url?: string | null;
@@ -1924,6 +2253,7 @@ export interface components {
             issuer?: string | null;
             metadata_url?: string | null;
             name: string;
+            provider_family?: string | null;
             provider_type: string;
             status?: string | null;
         };
@@ -1949,6 +2279,7 @@ export interface components {
             owner_scope_type?: string | null;
             redirect_uris: string[];
             required_acr?: string | null;
+            requires_admin_consent?: boolean | null;
             service_account_description?: string | null;
             service_account_name?: string | null;
             /** Format: uuid */
@@ -1998,6 +2329,9 @@ export interface components {
         };
         CreateTenantDomainRequest: {
             domain: string;
+            /** Format: uuid */
+            sso_provider_id?: string | null;
+            sso_required?: boolean | null;
         };
         CreateWorkspaceRequest: {
             name: string;
@@ -2056,7 +2390,7 @@ export interface components {
             tenant_id: string;
         };
         /** @enum {string} */
-        DeveloperPermission: "developer.apps.read" | "developer.apps.create" | "developer.apps.update_redirects" | "developer.apps.revoke" | "developer.webhooks.read" | "developer.webhooks.manage" | "developer.logs.read" | "developer.tokens.inspect" | "developer.oauth.playground" | "developer.rbac.manage" | "developer.docs.read";
+        DeveloperPermission: "developer.apps.read" | "developer.apps.create" | "developer.apps.update_redirects" | "developer.apps.revoke" | "developer.webhooks.read" | "developer.webhooks.manage" | "developer.logs.read" | "developer.tokens.inspect" | "developer.oauth.playground" | "developer.rbac.manage" | "developer.docs.read" | "docs.read" | "apps.read" | "apps.create" | "apps.update" | "apps.revoke" | "marketplace.read" | "marketplace.submit" | "marketplace.review" | "scopes.read" | "scopes.manage" | "secrets.rotate" | "service_accounts.read" | "service_accounts.manage" | "webhooks.read" | "webhooks.manage" | "webhooks.replay" | "logs.read" | "tokens.inspect" | "health_checks.read" | "health_checks.run" | "sandbox.use" | "rbac.manage";
         /** @enum {string} */
         DeveloperRole: "developer_admin" | "app_manager" | "webhook_manager" | "log_viewer" | "integration_tester" | "docs_viewer";
         DeveloperWebhookEndpointView: {
@@ -2108,6 +2442,51 @@ export interface components {
             /** Format: uuid */
             tenant_id: string;
         };
+        EnterpriseAdminElevationInput: {
+            /** Format: int64 */
+            duration_minutes?: number | null;
+        };
+        EnterpriseAdminElevationResponse: {
+            elevation: components["schemas"]["EnterpriseAdminElevationView"];
+        };
+        EnterpriseAdminElevationView: {
+            active: boolean;
+            /** Format: date-time */
+            expires_at?: string | null;
+            role?: null | components["schemas"]["EnterpriseRole"];
+            /** Format: date-time */
+            step_up_expires_at?: string | null;
+        };
+        EnterpriseAuditEvent: {
+            actor_email?: string | null;
+            /** Format: uuid */
+            actor_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            event_type: string;
+            /** Format: uuid */
+            id: string;
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Format: uuid */
+            target_id?: string | null;
+            target_type?: string | null;
+        };
+        /** @enum {string} */
+        EnterpriseRole: "owner" | "admin" | "member" | "viewer";
+        EnterpriseTrustCenterResponse: {
+            audit: components["schemas"]["TrustCenterAuditStatus"];
+            dpa: components["schemas"]["TrustCenterDocument"];
+            /** Format: date-time */
+            generated_at: string;
+            hosting_regions: components["schemas"]["TrustCenterHostingRegion"][];
+            mfa: components["schemas"]["TrustCenterMfaStatus"];
+            sso: components["schemas"]["TrustCenterSsoStatus"];
+            subprocessors: components["schemas"]["TrustCenterSubprocessor"][];
+            tenant: components["schemas"]["TrustCenterTenant"];
+            verified_domains: components["schemas"]["TrustCenterDomain"][];
+        };
         ErrorBody: {
             code: string;
             message: string;
@@ -2130,6 +2509,7 @@ export interface components {
             issuer?: string | null;
             metadata_url?: string | null;
             name: string;
+            provider_family: string;
             provider_type: string;
             require_signed_assertions: boolean;
             require_signed_responses: boolean;
@@ -2398,6 +2778,8 @@ export interface components {
             factors: components["schemas"]["MfaFactorView"][];
             mfa_enabled: boolean;
         };
+        /** @enum {string} */
+        MfaPolicySetting: "optional" | "required_admins" | "required_all";
         MfaRequest: {
             recovery_code?: string | null;
             /** Format: uuid */
@@ -2461,11 +2843,14 @@ export interface components {
             created_at: string;
             /** Format: uuid */
             id: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
             name: string;
             /** Format: uuid */
             owner_scope_id: string;
             owner_scope_type: string;
             redirect_uris: string[];
+            requires_admin_consent: boolean;
             /** Format: uuid */
             service_account_principal_id?: string | null;
             service_account_role?: string | null;
@@ -2693,6 +3078,8 @@ export interface components {
             created_at: string;
             /** Format: uuid */
             id: string;
+            /** Format: date-time */
+            last_used_at?: string | null;
             name: string;
             required_acr: string;
             /** Format: date-time */
@@ -2802,6 +3189,9 @@ export interface components {
             domain: string;
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            sso_provider_id?: string | null;
+            sso_required: boolean;
             /** Format: date-time */
             verification_expires_at?: string | null;
             /** Format: date-time */
@@ -2858,6 +3248,76 @@ export interface components {
             provisioning_uri: string;
             secret_base32: string;
         };
+        TrustCenterAuditStatus: {
+            immutable: boolean;
+            recent_events: components["schemas"]["EnterpriseAuditEvent"][];
+        };
+        TrustCenterDocument: {
+            name: string;
+            status: string;
+            url: string;
+            version: string;
+        };
+        TrustCenterDomain: {
+            domain: string;
+            /** Format: uuid */
+            id: string;
+            sso_required: boolean;
+            verified: boolean;
+            /** Format: date-time */
+            verified_at?: string | null;
+        };
+        TrustCenterHostingRegion: {
+            data_region: string;
+            legal_jurisdiction: string;
+            /** Format: int64 */
+            workspace_count: number;
+        };
+        TrustCenterMfaStatus: {
+            /** Format: int64 */
+            active_factors: number;
+            /** Format: int64 */
+            active_members: number;
+            enabled: boolean;
+            /** Format: int64 */
+            members_with_mfa: number;
+            /** Format: int64 */
+            passkey_factors: number;
+        };
+        TrustCenterSsoProvider: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            provider_family: string;
+            provider_type: string;
+            status: string;
+        };
+        TrustCenterSsoStatus: {
+            /** Format: int64 */
+            active_providers: number;
+            enabled: boolean;
+            providers: components["schemas"]["TrustCenterSsoProvider"][];
+            /** Format: int64 */
+            required_domains: number;
+        };
+        TrustCenterSubprocessor: {
+            data_categories: string;
+            location: string;
+            name: string;
+            service: string;
+            transfer_outside_eea: boolean;
+            transfer_safeguard: string;
+        };
+        TrustCenterTenant: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            security_tier: string;
+            slug: string;
+            status: string;
+        };
         UpdateDeveloperRedirectsRequest: {
             redirect_uris: string[];
         };
@@ -2866,6 +3326,7 @@ export interface components {
             issuer?: string | null;
             metadata_url?: string | null;
             name?: string | null;
+            provider_family?: string | null;
             provider_type?: string | null;
             status?: string | null;
         };
@@ -2892,6 +3353,11 @@ export interface components {
             description?: string | null;
             name?: string | null;
             role?: string | null;
+        };
+        UpdateTenantDomainRequest: {
+            /** Format: uuid */
+            sso_provider_id?: string | null;
+            sso_required?: boolean | null;
         };
         UpdateWorkspaceRequest: {
             name: string;
@@ -3001,13 +3467,14 @@ export interface components {
             /** Format: int32 */
             max_share_link_ttl_days: number;
             member_can_create_share_links: boolean;
+            mfa_policy: components["schemas"]["MfaPolicySetting"];
             require_admin_approval_for_member_share: boolean;
         };
         WorkspaceResponse: {
             workspace: components["schemas"]["WorkspaceView"];
         };
         /** @enum {string} */
-        WorkspaceRole: "Owner" | "Admin" | "Member" | "Viewer";
+        WorkspaceRole: "Owner" | "Admin" | "SecurityAdmin" | "BillingAdmin" | "Member" | "Viewer";
         WorkspaceView: {
             /** Format: date-time */
             created_at: string;
@@ -5093,6 +5560,687 @@ export interface operations {
             };
         };
     };
+    list_access_review_campaigns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access review campaigns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_access_review_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccessReviewCampaignInput"];
+            };
+        };
+        responses: {
+            /** @description Created access review campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignDetail"];
+                };
+            };
+            /** @description Invalid campaign input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_access_review_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review campaign ID */
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access review campaign detail */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignDetail"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    close_access_review_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review campaign ID */
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseAccessReviewCampaignInput"];
+            };
+        };
+        responses: {
+            /** @description Closed access review campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignDetail"];
+                };
+            };
+            /** @description Invalid close input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign is already closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    export_access_review_campaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review campaign ID */
+                campaignId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access review campaign export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignExport"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    decide_access_review_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review campaign ID */
+                campaignId: string;
+                /** @description Access review item ID */
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessReviewDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Access review item decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewDecisionResponse"];
+                };
+            };
+            /** @description Invalid decision input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign or item not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Campaign is closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_access_review_schedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access review schedules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewSchedulesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_access_review_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccessReviewScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Created access review schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewSchedule"];
+                };
+            };
+            /** @description Invalid schedule input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    disable_access_review_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review schedule ID */
+                scheduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disabled access review schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewSchedule"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    enable_access_review_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review schedule ID */
+                scheduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enabled access review schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewSchedule"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    run_access_review_schedule_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Access review schedule ID */
+                scheduleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created access review campaign from schedule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessReviewCampaignDetail"];
+                };
+            };
+            /** @description Empty access review scope */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Schedule not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Schedule is disabled */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    grant_admin_elevation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseAdminElevationInput"];
+            };
+        };
+        responses: {
+            /** @description Temporary admin elevation granted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterpriseAdminElevationResponse"];
+                };
+            };
+            /** @description Step-up required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Admin role required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_trust_center: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant trust center */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnterpriseTrustCenterResponse"];
+                };
+            };
+            /** @description Missing tenant context */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Tenant management denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     accept_invitation: {
         parameters: {
             query?: never;
@@ -6156,6 +7304,71 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    update_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Tenant ID */
+                tenantId: string;
+                /** @description Domain ID */
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantDomainRequest"];
+            };
+        };
+        responses: {
+            /** @description Domain policy updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantDomainResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
             };
             /** @description Unauthorized */
             401: {

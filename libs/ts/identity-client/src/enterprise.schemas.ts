@@ -129,56 +129,11 @@ const EnterpriseOverviewMetricSchema = z.object({
 	delta_percent: z.number().nullable().optional(),
 });
 
-const AccessReviewCampaignStatusSchema = z.enum(["draft", "active", "closed"]);
-const AccessReviewItemTypeSchema = z.enum([
-	"member",
-	"role",
-	"service_account",
-	"oauth_client",
-]);
-const AccessReviewItemDecisionSchema = z.enum([
-	"pending",
-	"approved",
-	"revoked",
-	"changed",
-]);
-
-const AccessReviewCampaignScopeInputSchema = z.object({
-	include_members: z.boolean(),
-	include_roles: z.boolean(),
-	include_service_accounts: z.boolean(),
-	include_oauth_clients: z.boolean(),
-});
-
-const AccessReviewCampaignSummarySchema = z.object({
-	id: z.string(),
-	name: z.string(),
-	description: NullableStringSchema.optional(),
-	status: AccessReviewCampaignStatusSchema,
-	starts_at: z.string(),
-	due_at: z.string(),
-	created_by: z.string(),
-	created_at: z.string(),
-	closed_at: NullableStringSchema.optional(),
-	pending_items: z.number(),
-	approved_items: z.number(),
-	revoked_items: z.number(),
-	changed_items: z.number(),
-});
-
-const AccessReviewItemSchema = z.object({
-	id: z.string(),
-	item_type: AccessReviewItemTypeSchema,
-	subject_id: z.string(),
-	subject_label: z.string(),
-	workspace_id: NullableStringSchema.optional(),
-	role: NullableStringSchema.optional(),
-	status: z.string(),
-	evidence: UnknownRecordSchema,
-	decision: AccessReviewItemDecisionSchema,
-	reviewed_by: NullableStringSchema.optional(),
-	reviewed_at: NullableStringSchema.optional(),
-	created_at: z.string(),
+const EnterpriseAdminElevationSchema = z.object({
+	active: z.boolean(),
+	role: EnterpriseRoleSchema.nullable().optional(),
+	expires_at: NullableStringSchema.optional(),
+	step_up_expires_at: NullableStringSchema.optional(),
 });
 
 export const EnterpriseContextResponseSchema = z.object({
@@ -188,8 +143,13 @@ export const EnterpriseContextResponseSchema = z.object({
 	user_id: z.string(),
 	role: EnterpriseRoleSchema,
 	module_grants: z.array(EnterpriseModuleGrantSchema),
+	admin_elevation: EnterpriseAdminElevationSchema,
 	available_roles: z.array(EnterpriseRoleSchema),
 	available_module_grants: z.array(EnterpriseModuleGrantSchema),
+});
+
+export const EnterpriseAdminElevationResponseSchema = z.object({
+	elevation: EnterpriseAdminElevationSchema,
 });
 
 export const EnterpriseOverviewResponseSchema = z.object({
@@ -293,15 +253,6 @@ export const EnterpriseUsageResponseSchema = z.object({
 	metrics: z.array(EnterpriseUsageMetricSchema),
 });
 
-export const AccessReviewCampaignsResponseSchema = z.object({
-	campaigns: z.array(AccessReviewCampaignSummarySchema),
-});
-
-export const AccessReviewCampaignDetailSchema = z.object({
-	campaign: AccessReviewCampaignSummarySchema,
-	items: z.array(AccessReviewItemSchema),
-});
-
 export const EnterpriseInvitationInputSchema = z.object({
 	emails: z.array(z.string().email()).min(1),
 	role: EnterpriseRoleSchema,
@@ -313,6 +264,10 @@ export const EnterpriseAccessUpdateInputSchema = z.object({
 	role: EnterpriseRoleSchema,
 	module_grants: z.array(EnterpriseModuleGrantSchema),
 	workspace_ids: z.array(z.string()),
+});
+
+export const EnterpriseAdminElevationInputSchema = z.object({
+	duration_minutes: z.number().int().min(1).max(60).optional(),
 });
 
 const AuditReasonSchema = z.string().refine((value) => value.trim().length > 0);
@@ -327,43 +282,16 @@ export const EnterpriseReactivateInputSchema = z.object({
 	workspace_ids: z.array(z.string()).optional(),
 });
 
-export const CreateAccessReviewCampaignInputSchema = z.object({
-	name: z.string().trim().min(1),
-	description: z.string().trim().min(1).optional(),
-	due_at: z.string().datetime(),
-	scope: AccessReviewCampaignScopeInputSchema.refine(
-		(scope) =>
-			scope.include_members ||
-			scope.include_roles ||
-			scope.include_service_accounts ||
-			scope.include_oauth_clients,
-	),
-});
-
 export type EnterpriseRole = z.infer<typeof EnterpriseRoleSchema>;
 export type EnterpriseModuleGrant = z.infer<typeof EnterpriseModuleGrantSchema>;
-export type AccessReviewCampaignStatus = z.infer<
-	typeof AccessReviewCampaignStatusSchema
->;
-export type AccessReviewItemType = z.infer<typeof AccessReviewItemTypeSchema>;
-export type AccessReviewItemDecision = z.infer<
-	typeof AccessReviewItemDecisionSchema
->;
-export type AccessReviewCampaignSummary = z.infer<
-	typeof AccessReviewCampaignSummarySchema
->;
-export type AccessReviewItem = z.infer<typeof AccessReviewItemSchema>;
-export type AccessReviewCampaignsResponse = z.infer<
-	typeof AccessReviewCampaignsResponseSchema
->;
-export type AccessReviewCampaignDetail = z.infer<
-	typeof AccessReviewCampaignDetailSchema
->;
-export type CreateAccessReviewCampaignInput = z.infer<
-	typeof CreateAccessReviewCampaignInputSchema
->;
 export type EnterpriseContextResponse = z.infer<
 	typeof EnterpriseContextResponseSchema
+>;
+export type EnterpriseAdminElevation = z.infer<
+	typeof EnterpriseAdminElevationSchema
+>;
+export type EnterpriseAdminElevationResponse = z.infer<
+	typeof EnterpriseAdminElevationResponseSchema
 >;
 export type EnterpriseOverviewResponse = z.infer<
 	typeof EnterpriseOverviewResponseSchema
@@ -412,6 +340,9 @@ export type EnterpriseInvitationInput = z.infer<
 >;
 export type EnterpriseAccessUpdateInput = z.infer<
 	typeof EnterpriseAccessUpdateInputSchema
+>;
+export type EnterpriseAdminElevationInput = z.infer<
+	typeof EnterpriseAdminElevationInputSchema
 >;
 export type EnterpriseSuspendInput = z.infer<
 	typeof EnterpriseSuspendInputSchema

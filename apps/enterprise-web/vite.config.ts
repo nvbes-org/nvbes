@@ -303,6 +303,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: identityApiBaseUrl,
           changeOrigin: true,
+          rewrite: (requestPath: string) => requestPath.replace(/^\/api\/v1/u, ''),
         },
         '/auth': {
           target: identityApiBaseUrl,

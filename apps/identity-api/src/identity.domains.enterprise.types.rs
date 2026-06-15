@@ -171,8 +171,24 @@ pub struct EnterpriseContextResponse {
     pub user_id: Uuid,
     pub role: EnterpriseRole,
     pub module_grants: Vec<EnterpriseModuleGrant>,
+    pub admin_elevation: EnterpriseAdminElevationView,
     pub available_roles: Vec<EnterpriseRole>,
     pub available_module_grants: Vec<EnterpriseModuleGrant>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseAdminElevationView {
+    pub active: bool,
+    pub role: Option<EnterpriseRole>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub step_up_expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseAdminElevationResponse {
+    pub elevation: EnterpriseAdminElevationView,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -272,6 +288,12 @@ pub struct EnterpriseAccessUpdateInput {
     pub role: EnterpriseRole,
     pub module_grants: Vec<EnterpriseModuleGrant>,
     pub workspace_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseAdminElevationInput {
+    pub duration_minutes: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

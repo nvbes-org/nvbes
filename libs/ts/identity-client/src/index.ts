@@ -1,10 +1,17 @@
 import { createHttpClient, type HttpClient } from "@nvbes/http-client";
 import { z } from "zod";
 import {
+	closeAccessReviewCampaign as closeAccessReviewCampaignRequest,
 	createAccessReviewCampaign as createAccessReviewCampaignRequest,
+	createAccessReviewSchedule as createAccessReviewScheduleRequest,
+	disableAccessReviewSchedule as disableAccessReviewScheduleRequest,
 	createEnterpriseInvitations as createEnterpriseInvitationsRequest,
+	decideAccessReviewItem as decideAccessReviewItemRequest,
+	enableAccessReviewSchedule as enableAccessReviewScheduleRequest,
+	exportAccessReviewCampaign as exportAccessReviewCampaignRequest,
 	getAccessReviewCampaign as getAccessReviewCampaignRequest,
 	getAccessReviewCampaigns as getAccessReviewCampaignsRequest,
+	getAccessReviewSchedules as getAccessReviewSchedulesRequest,
 	getEnterpriseAuditEvents as getEnterpriseAuditEventsRequest,
 	getEnterpriseBilling as getEnterpriseBillingRequest,
 	getEnterpriseContext as getEnterpriseContextRequest,
@@ -17,16 +24,29 @@ import {
 	getEnterpriseUsage as getEnterpriseUsageRequest,
 	getEnterpriseUsers as getEnterpriseUsersRequest,
 	getEnterpriseWorkspaces as getEnterpriseWorkspacesRequest,
+	grantEnterpriseAdminElevation as grantEnterpriseAdminElevationRequest,
 	reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
+	runAccessReviewScheduleNow as runAccessReviewScheduleNowRequest,
 	suspendEnterpriseUser as suspendEnterpriseUserRequest,
 	updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
 } from "./enterprise.client";
 import type {
 	AccessReviewCampaignDetail,
+	AccessReviewCampaignExport,
 	AccessReviewCampaignsResponse,
+	AccessReviewDecisionInput,
+	AccessReviewDecisionResponse,
+	AccessReviewSchedule,
+	AccessReviewSchedulesResponse,
+	CloseAccessReviewCampaignInput,
 	CreateAccessReviewCampaignInput,
+	CreateAccessReviewScheduleInput,
+} from "./enterprise.access-reviews.schemas";
+import type {
 	EnterpriseAccessUpdateInput,
 	EnterpriseAccessUpdateResponse,
+	EnterpriseAdminElevationInput,
+	EnterpriseAdminElevationResponse,
 	EnterpriseAuditEventsResponse,
 	EnterpriseBillingResponse,
 	EnterpriseContextResponse,
@@ -326,6 +346,13 @@ export class IdentityClient {
 		return getEnterpriseContextRequest(this.http, options);
 	}
 
+	grantEnterpriseAdminElevation(
+		input: EnterpriseAdminElevationInput,
+		options?: RequestOptions,
+	): Promise<EnterpriseAdminElevationResponse> {
+		return grantEnterpriseAdminElevationRequest(this.http, input, options);
+	}
+
 	getEnterpriseOverview(
 		options?: RequestOptions,
 	): Promise<EnterpriseOverviewResponse> {
@@ -412,6 +439,12 @@ export class IdentityClient {
 		return getAccessReviewCampaignsRequest(this.http, options);
 	}
 
+	getAccessReviewSchedules(
+		options?: RequestOptions,
+	): Promise<AccessReviewSchedulesResponse> {
+		return getAccessReviewSchedulesRequest(this.http, options);
+	}
+
 	getAccessReviewCampaign(
 		campaignId: string,
 		options?: RequestOptions,
@@ -419,11 +452,69 @@ export class IdentityClient {
 		return getAccessReviewCampaignRequest(this.http, campaignId, options);
 	}
 
+	exportAccessReviewCampaign(
+		campaignId: string,
+		options?: RequestOptions,
+	): Promise<AccessReviewCampaignExport> {
+		return exportAccessReviewCampaignRequest(this.http, campaignId, options);
+	}
+
+	closeAccessReviewCampaign(
+		campaignId: string,
+		input: CloseAccessReviewCampaignInput,
+		options?: RequestOptions,
+	): Promise<AccessReviewCampaignDetail> {
+		return closeAccessReviewCampaignRequest(this.http, campaignId, input, options);
+	}
+
 	createAccessReviewCampaign(
 		input: CreateAccessReviewCampaignInput,
 		options?: RequestOptions,
 	): Promise<AccessReviewCampaignDetail> {
 		return createAccessReviewCampaignRequest(this.http, input, options);
+	}
+
+	createAccessReviewSchedule(
+		input: CreateAccessReviewScheduleInput,
+		options?: RequestOptions,
+	): Promise<AccessReviewSchedule> {
+		return createAccessReviewScheduleRequest(this.http, input, options);
+	}
+
+	disableAccessReviewSchedule(
+		scheduleId: string,
+		options?: RequestOptions,
+	): Promise<AccessReviewSchedule> {
+		return disableAccessReviewScheduleRequest(this.http, scheduleId, options);
+	}
+
+	enableAccessReviewSchedule(
+		scheduleId: string,
+		options?: RequestOptions,
+	): Promise<AccessReviewSchedule> {
+		return enableAccessReviewScheduleRequest(this.http, scheduleId, options);
+	}
+
+	runAccessReviewScheduleNow(
+		scheduleId: string,
+		options?: RequestOptions,
+	): Promise<AccessReviewCampaignDetail> {
+		return runAccessReviewScheduleNowRequest(this.http, scheduleId, options);
+	}
+
+	decideAccessReviewItem(
+		campaignId: string,
+		itemId: string,
+		input: AccessReviewDecisionInput,
+		options?: RequestOptions,
+	): Promise<AccessReviewDecisionResponse> {
+		return decideAccessReviewItemRequest(
+			this.http,
+			campaignId,
+			itemId,
+			input,
+			options,
+		);
 	}
 
 	getEnterpriseTrustCenter(
@@ -553,5 +644,6 @@ export function createIdentityClient(
 }
 
 export * from "./enterprise.client";
+export * from "./enterprise.access-reviews.schemas";
 export * from "./enterprise.schemas";
 export * from "./enterprise.trust.schemas";

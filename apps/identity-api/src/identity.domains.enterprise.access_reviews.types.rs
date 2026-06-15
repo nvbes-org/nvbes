@@ -31,7 +31,7 @@ pub enum AccessReviewItemDecision {
     Changed,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AccessReviewCampaignScopeInput {
     pub include_members: bool,
@@ -51,9 +51,32 @@ pub struct CreateAccessReviewCampaignInput {
 
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct CreateAccessReviewScheduleInput {
+    pub name: String,
+    pub description: Option<String>,
+    pub recurrence_days: i32,
+    pub due_after_days: i32,
+    pub scope: AccessReviewCampaignScopeInput,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct AccessReviewDecisionInput {
     pub decision: AccessReviewItemDecision,
     pub note: Option<String>,
+    pub change: Option<AccessReviewChangeInput>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct CloseAccessReviewCampaignInput {
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccessReviewChangeInput {
+    pub target_role: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -72,6 +95,25 @@ pub struct AccessReviewCampaignSummary {
     pub approved_items: i64,
     pub revoked_items: i64,
     pub changed_items: i64,
+    pub due_soon_reminders_sent: i64,
+    pub overdue_reminders_sent: i64,
+    pub last_reminder_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccessReviewSchedule {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub recurrence_days: i32,
+    pub due_after_days: i32,
+    pub next_run_at: DateTime<Utc>,
+    pub last_campaign_id: Option<Uuid>,
+    pub created_by: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub disabled_at: Option<DateTime<Utc>>,
+    pub scope: AccessReviewCampaignScopeInput,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -100,6 +142,31 @@ pub struct AccessReviewCampaignDetail {
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct AccessReviewCampaignExport {
+    pub campaign: AccessReviewCampaignSummary,
+    pub generated_at: DateTime<Utc>,
+    pub rows: Vec<AccessReviewCampaignExportRow>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccessReviewCampaignExportRow {
+    pub item_id: Uuid,
+    pub item_type: AccessReviewItemType,
+    pub subject_id: String,
+    pub subject_label: String,
+    pub workspace_id: Option<Uuid>,
+    pub role: Option<String>,
+    pub status: String,
+    pub decision: AccessReviewItemDecision,
+    pub reviewed_by: Option<Uuid>,
+    pub reviewed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub evidence: BTreeMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct AccessReviewDecisionResponse {
     pub campaign: AccessReviewCampaignSummary,
     pub item: AccessReviewItem,
@@ -109,4 +176,10 @@ pub struct AccessReviewDecisionResponse {
 #[serde(rename_all = "snake_case")]
 pub struct AccessReviewCampaignsResponse {
     pub campaigns: Vec<AccessReviewCampaignSummary>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AccessReviewSchedulesResponse {
+    pub schedules: Vec<AccessReviewSchedule>,
 }

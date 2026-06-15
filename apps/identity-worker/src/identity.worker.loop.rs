@@ -21,6 +21,8 @@ const WORKER_QUEUES: [&str; 4] = [
     JOB_STRIPE_WEBHOOK_PROCESS,
     JOB_DATA_EXPORT,
 ];
+const ACCESS_REVIEW_SCHEDULE_INTERVAL: Duration = Duration::from_secs(900);
+const ACCESS_REVIEW_REMINDER_INTERVAL: Duration = Duration::from_secs(3600);
 const SENTRY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
 const TRANSIENT_INFRA_ERROR_SLEEP: TokioDuration = TokioDuration::from_secs(5);
 const SENTRY_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
@@ -34,11 +36,15 @@ where
     S: std::future::Future<Output = ()> + Send,
 {
     let observability = state.observability.clone();
+    let mut access_review_schedule_last_run = Instant::now() - ACCESS_REVIEW_SCHEDULE_INTERVAL;
+    let mut access_review_reminder_last_run = Instant::now() - ACCESS_REVIEW_REMINDER_INTERVAL;
     let mut housekeeping_last_run = Instant::now() - Duration::from_secs(3600);
     let mut sentry_heartbeat_last_run = Instant::now() - SENTRY_HEARTBEAT_INTERVAL;
     tokio::pin!(shutdown);
     loop {
         capture_sentry_heartbeat_if_due(&state, &mut sentry_heartbeat_last_run);
+        run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await?;
+        run_access_review_reminders_if_due(&state, &mut access_review_reminder_last_run).await?;
 
         tokio::select! {
             _ = &mut shutdown => return Ok(()),
@@ -73,6 +79,52 @@ where
             _ = sleep(sleep_for) => {},
         }
     }
+}
+
+async fn run_access_review_reminders_if_due(
+    state: &AppState,
+    last_run: &mut Instant,
+) -> anyhow::Result<()> {
+    if last_run.elapsed() < ACCESS_REVIEW_REMINDER_INTERVAL {
+        return Ok(());
+    }
+    let run = crate::domains::enterprise::access_reviews::service::enqueue_due_campaign_reminders(
+        &state.db,
+        &state.redis,
+        &state.config,
+    )
+    .await
+    .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+    if run.reminders_enqueued > 0 {
+        tracing::info!(
+            reminders_enqueued = run.reminders_enqueued,
+            "enqueued access review reminders"
+        );
+    }
+    *last_run = Instant::now();
+    Ok(())
+}
+
+async fn run_access_review_schedules_if_due(
+    state: &AppState,
+    last_run: &mut Instant,
+) -> anyhow::Result<()> {
+    if last_run.elapsed() < ACCESS_REVIEW_SCHEDULE_INTERVAL {
+        return Ok(());
+    }
+    let run =
+        crate::domains::enterprise::access_reviews::service::materialize_due_schedules(&state.db)
+            .await
+            .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+    if run.campaigns_created > 0 || run.empty_schedules > 0 {
+        tracing::info!(
+            campaigns_created = run.campaigns_created,
+            empty_schedules = run.empty_schedules,
+            "materialized due access review schedules"
+        );
+    }
+    *last_run = Instant::now();
+    Ok(())
 }
 
 pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::Result<bool> {

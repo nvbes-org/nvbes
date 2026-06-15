@@ -2396,6 +2396,826 @@
         }
       }
     },
+    "/enterprise/access-review-campaigns": {
+      "get": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "list_access_review_campaigns",
+        "responses": {
+          "200": {
+            "description": "Access review campaigns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "create_access_review_campaign",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccessReviewCampaignInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created access review campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid campaign input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-campaigns/{campaignId}": {
+      "get": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "get_access_review_campaign",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "in": "path",
+            "description": "Access review campaign ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access review campaign detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campaign not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-campaigns/{campaignId}/close": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "close_access_review_campaign",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "in": "path",
+            "description": "Access review campaign ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAccessReviewCampaignInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Closed access review campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid close input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campaign not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Campaign is already closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-campaigns/{campaignId}/export": {
+      "get": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "export_access_review_campaign",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "in": "path",
+            "description": "Access review campaign ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access review campaign export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignExport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campaign not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-campaigns/{campaignId}/items/{itemId}": {
+      "patch": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "decide_access_review_item",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "in": "path",
+            "description": "Access review campaign ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "description": "Access review item ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessReviewDecisionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Access review item decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewDecisionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid decision input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Campaign or item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Campaign is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-schedules": {
+      "get": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "list_access_review_schedules",
+        "responses": {
+          "200": {
+            "description": "Access review schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewSchedulesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "create_access_review_schedule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccessReviewScheduleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created access review schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewSchedule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid schedule input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-schedules/{scheduleId}/disable": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "disable_access_review_schedule",
+        "parameters": [
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "description": "Access review schedule ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disabled access review schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-schedules/{scheduleId}/enable": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "enable_access_review_schedule",
+        "parameters": [
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "description": "Access review schedule ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enabled access review schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/access-review-schedules/{scheduleId}/run": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "run_access_review_schedule_now",
+        "parameters": [
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "description": "Access review schedule ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created access review campaign from schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessReviewCampaignDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty access review scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Schedule is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/admin-elevation": {
+      "post": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "grant_admin_elevation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnterpriseAdminElevationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Temporary admin elevation granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseAdminElevationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Step-up required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin role required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enterprise/trust-center": {
+      "get": {
+        "tags": [
+          "enterprise"
+        ],
+        "operationId": "get_trust_center",
+        "responses": {
+          "200": {
+            "description": "Tenant trust center",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseTrustCenterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tenant management denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/invitations/accept": {
       "post": {
         "tags": [
@@ -3721,6 +4541,96 @@
         "responses": {
           "200": {
             "description": "Domain deleted"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "federation"
+        ],
+        "operationId": "update_domain",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "description": "Tenant ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "domainId",
+            "in": "path",
+            "description": "Domain ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDomainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Domain policy updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDomainResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6903,6 +7813,476 @@
           }
         }
       },
+      "AccessReviewCampaignDetail": {
+        "type": "object",
+        "required": [
+          "campaign",
+          "items"
+        ],
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/AccessReviewCampaignSummary"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessReviewItem"
+            }
+          }
+        }
+      },
+      "AccessReviewCampaignExport": {
+        "type": "object",
+        "required": [
+          "campaign",
+          "generated_at",
+          "rows"
+        ],
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/AccessReviewCampaignSummary"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessReviewCampaignExportRow"
+            }
+          }
+        }
+      },
+      "AccessReviewCampaignExportRow": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "item_type",
+          "subject_id",
+          "subject_label",
+          "status",
+          "decision",
+          "created_at",
+          "evidence"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/AccessReviewItemDecision"
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_type": {
+            "$ref": "#/components/schemas/AccessReviewItemType"
+          },
+          "reviewed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "reviewed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "subject_label": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AccessReviewCampaignScopeInput": {
+        "type": "object",
+        "required": [
+          "include_members",
+          "include_roles",
+          "include_service_accounts",
+          "include_oauth_clients"
+        ],
+        "properties": {
+          "include_members": {
+            "type": "boolean"
+          },
+          "include_oauth_clients": {
+            "type": "boolean"
+          },
+          "include_roles": {
+            "type": "boolean"
+          },
+          "include_service_accounts": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AccessReviewCampaignStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "active",
+          "closed"
+        ]
+      },
+      "AccessReviewCampaignSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "starts_at",
+          "due_at",
+          "created_by",
+          "created_at",
+          "pending_items",
+          "approved_items",
+          "revoked_items",
+          "changed_items",
+          "due_soon_reminders_sent",
+          "overdue_reminders_sent"
+        ],
+        "properties": {
+          "approved_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "changed_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "closed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "due_soon_reminders_sent": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_reminder_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "overdue_reminders_sent": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pending_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "revoked_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccessReviewCampaignStatus"
+          }
+        }
+      },
+      "AccessReviewCampaignsResponse": {
+        "type": "object",
+        "required": [
+          "campaigns"
+        ],
+        "properties": {
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessReviewCampaignSummary"
+            }
+          }
+        }
+      },
+      "AccessReviewChangeInput": {
+        "type": "object",
+        "properties": {
+          "target_role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AccessReviewDecisionInput": {
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "change": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AccessReviewChangeInput"
+              }
+            ]
+          },
+          "decision": {
+            "$ref": "#/components/schemas/AccessReviewItemDecision"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AccessReviewDecisionResponse": {
+        "type": "object",
+        "required": [
+          "campaign",
+          "item"
+        ],
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/AccessReviewCampaignSummary"
+          },
+          "item": {
+            "$ref": "#/components/schemas/AccessReviewItem"
+          }
+        }
+      },
+      "AccessReviewItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "item_type",
+          "subject_id",
+          "subject_label",
+          "status",
+          "evidence",
+          "decision",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/AccessReviewItemDecision"
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "item_type": {
+            "$ref": "#/components/schemas/AccessReviewItemType"
+          },
+          "reviewed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "reviewed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "subject_label": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "AccessReviewItemDecision": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "revoked",
+          "changed"
+        ]
+      },
+      "AccessReviewItemType": {
+        "type": "string",
+        "enum": [
+          "member",
+          "role",
+          "service_account",
+          "oauth_client"
+        ]
+      },
+      "AccessReviewSchedule": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "recurrence_days",
+          "due_after_days",
+          "next_run_at",
+          "created_by",
+          "created_at",
+          "scope"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "disabled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "due_after_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_campaign_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recurrence_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AccessReviewCampaignScopeInput"
+          }
+        }
+      },
+      "AccessReviewSchedulesResponse": {
+        "type": "object",
+        "required": [
+          "schedules"
+        ],
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessReviewSchedule"
+            }
+          }
+        }
+      },
       "AccountChooserResult": {
         "type": "object",
         "required": [
@@ -7585,6 +8965,17 @@
           }
         }
       },
+      "CloseAccessReviewCampaignInput": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ConsentRequest": {
         "type": "object",
         "required": [
@@ -7597,6 +8988,63 @@
           },
           "document_version": {
             "type": "string"
+          }
+        }
+      },
+      "CreateAccessReviewCampaignInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "due_at",
+          "scope"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AccessReviewCampaignScopeInput"
+          }
+        }
+      },
+      "CreateAccessReviewScheduleInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "recurrence_days",
+          "due_after_days",
+          "scope"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_after_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "recurrence_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/AccessReviewCampaignScopeInput"
           }
         }
       },
@@ -7740,6 +9188,12 @@
           "name": {
             "type": "string"
           },
+          "provider_family": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "provider_type": {
             "type": "string"
           },
@@ -7851,6 +9305,12 @@
           "required_acr": {
             "type": [
               "string",
+              "null"
+            ]
+          },
+          "requires_admin_consent": {
+            "type": [
+              "boolean",
               "null"
             ]
           },
@@ -8074,6 +9534,19 @@
         "properties": {
           "domain": {
             "type": "string"
+          },
+          "sso_provider_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "sso_required": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         }
       },
@@ -8312,7 +9785,29 @@
           "developer.tokens.inspect",
           "developer.oauth.playground",
           "developer.rbac.manage",
-          "developer.docs.read"
+          "developer.docs.read",
+          "docs.read",
+          "apps.read",
+          "apps.create",
+          "apps.update",
+          "apps.revoke",
+          "marketplace.read",
+          "marketplace.submit",
+          "marketplace.review",
+          "scopes.read",
+          "scopes.manage",
+          "secrets.rotate",
+          "service_accounts.read",
+          "service_accounts.manage",
+          "webhooks.read",
+          "webhooks.manage",
+          "webhooks.replay",
+          "logs.read",
+          "tokens.inspect",
+          "health_checks.read",
+          "health_checks.run",
+          "sandbox.use",
+          "rbac.manage"
         ]
       },
       "DeveloperRole": {
@@ -8517,6 +10012,183 @@
           }
         }
       },
+      "EnterpriseAdminElevationInput": {
+        "type": "object",
+        "properties": {
+          "duration_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "EnterpriseAdminElevationResponse": {
+        "type": "object",
+        "required": [
+          "elevation"
+        ],
+        "properties": {
+          "elevation": {
+            "$ref": "#/components/schemas/EnterpriseAdminElevationView"
+          }
+        }
+      },
+      "EnterpriseAdminElevationView": {
+        "type": "object",
+        "required": [
+          "active"
+        ],
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EnterpriseRole"
+              }
+            ]
+          },
+          "step_up_expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "EnterpriseAuditEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "event_type",
+          "created_at"
+        ],
+        "properties": {
+          "actor_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "target_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EnterpriseRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "admin",
+          "member",
+          "viewer"
+        ]
+      },
+      "EnterpriseTrustCenterResponse": {
+        "type": "object",
+        "required": [
+          "tenant",
+          "mfa",
+          "sso",
+          "verified_domains",
+          "audit",
+          "hosting_regions",
+          "dpa",
+          "subprocessors",
+          "generated_at"
+        ],
+        "properties": {
+          "audit": {
+            "$ref": "#/components/schemas/TrustCenterAuditStatus"
+          },
+          "dpa": {
+            "$ref": "#/components/schemas/TrustCenterDocument"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hosting_regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustCenterHostingRegion"
+            }
+          },
+          "mfa": {
+            "$ref": "#/components/schemas/TrustCenterMfaStatus"
+          },
+          "sso": {
+            "$ref": "#/components/schemas/TrustCenterSsoStatus"
+          },
+          "subprocessors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustCenterSubprocessor"
+            }
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TrustCenterTenant"
+          },
+          "verified_domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustCenterDomain"
+            }
+          }
+        }
+      },
       "ErrorBody": {
         "type": "object",
         "required": [
@@ -8565,6 +10237,7 @@
         "required": [
           "id",
           "provider_type",
+          "provider_family",
           "name",
           "status",
           "attribute_mapping",
@@ -8607,6 +10280,9 @@
             ]
           },
           "name": {
+            "type": "string"
+          },
+          "provider_family": {
             "type": "string"
           },
           "provider_type": {
@@ -9631,6 +11307,14 @@
           }
         }
       },
+      "MfaPolicySetting": {
+        "type": "string",
+        "enum": [
+          "optional",
+          "required_admins",
+          "required_all"
+        ]
+      },
       "MfaRequest": {
         "type": "object",
         "required": [
@@ -9888,6 +11572,7 @@
           "owner_scope_id",
           "client_type",
           "client_assertion_required",
+          "requires_admin_consent",
           "client_assertion_public_key_configured"
         ],
         "properties": {
@@ -9911,6 +11596,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "name": {
             "type": "string"
           },
@@ -9926,6 +11618,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "requires_admin_consent": {
+            "type": "boolean"
           },
           "service_account_principal_id": {
             "type": [
@@ -10791,6 +12486,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "name": {
             "type": "string"
           },
@@ -11194,6 +12896,7 @@
         "required": [
           "id",
           "domain",
+          "sso_required",
           "created_at"
         ],
         "properties": {
@@ -11207,6 +12910,16 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "sso_provider_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "sso_required": {
+            "type": "boolean"
           },
           "verification_expires_at": {
             "type": [
@@ -11455,6 +13168,249 @@
           }
         }
       },
+      "TrustCenterAuditStatus": {
+        "type": "object",
+        "required": [
+          "immutable",
+          "recent_events"
+        ],
+        "properties": {
+          "immutable": {
+            "type": "boolean"
+          },
+          "recent_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnterpriseAuditEvent"
+            }
+          }
+        }
+      },
+      "TrustCenterDocument": {
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "version",
+          "url"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "TrustCenterDomain": {
+        "type": "object",
+        "required": [
+          "id",
+          "domain",
+          "verified",
+          "sso_required"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sso_required": {
+            "type": "boolean"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "TrustCenterHostingRegion": {
+        "type": "object",
+        "required": [
+          "data_region",
+          "legal_jurisdiction",
+          "workspace_count"
+        ],
+        "properties": {
+          "data_region": {
+            "type": "string"
+          },
+          "legal_jurisdiction": {
+            "type": "string"
+          },
+          "workspace_count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TrustCenterMfaStatus": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "active_members",
+          "members_with_mfa",
+          "active_factors",
+          "passkey_factors"
+        ],
+        "properties": {
+          "active_factors": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "active_members": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "members_with_mfa": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "passkey_factors": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TrustCenterSsoProvider": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider_type",
+          "provider_family",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider_family": {
+            "type": "string"
+          },
+          "provider_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "TrustCenterSsoStatus": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "active_providers",
+          "required_domains",
+          "providers"
+        ],
+        "properties": {
+          "active_providers": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrustCenterSsoProvider"
+            }
+          },
+          "required_domains": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TrustCenterSubprocessor": {
+        "type": "object",
+        "required": [
+          "name",
+          "service",
+          "data_categories",
+          "location",
+          "transfer_outside_eea",
+          "transfer_safeguard"
+        ],
+        "properties": {
+          "data_categories": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "transfer_outside_eea": {
+            "type": "boolean"
+          },
+          "transfer_safeguard": {
+            "type": "string"
+          }
+        }
+      },
+      "TrustCenterTenant": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "status",
+          "security_tier"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "security_tier": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateDeveloperRedirectsRequest": {
         "type": "object",
         "required": [
@@ -11491,6 +13447,12 @@
             ]
           },
           "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_family": {
             "type": [
               "string",
               "null"
@@ -11621,6 +13583,24 @@
           "role": {
             "type": [
               "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "UpdateTenantDomainRequest": {
+        "type": "object",
+        "properties": {
+          "sso_provider_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "sso_required": {
+            "type": [
+              "boolean",
               "null"
             ]
           }
@@ -11998,7 +13978,8 @@
           "member_can_create_share_links",
           "require_admin_approval_for_member_share",
           "default_share_link_ttl_days",
-          "max_share_link_ttl_days"
+          "max_share_link_ttl_days",
+          "mfa_policy"
         ],
         "properties": {
           "default_share_link_ttl_days": {
@@ -12011,6 +13992,9 @@
           },
           "member_can_create_share_links": {
             "type": "boolean"
+          },
+          "mfa_policy": {
+            "$ref": "#/components/schemas/MfaPolicySetting"
           },
           "require_admin_approval_for_member_share": {
             "type": "boolean"
@@ -12033,6 +14017,8 @@
         "enum": [
           "Owner",
           "Admin",
+          "SecurityAdmin",
+          "BillingAdmin",
           "Member",
           "Viewer"
         ]

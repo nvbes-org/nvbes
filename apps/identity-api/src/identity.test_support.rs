@@ -6,6 +6,7 @@ use tokio::time::sleep;
 static LOCAL_REDIS_STARTED: OnceLock<()> = OnceLock::new();
 static TEST_DATABASE_POOL: OnceLock<PgPool> = OnceLock::new();
 static TEST_DATABASE_BOOTSTRAPPED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+static TEST_DATABASE_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
 
 fn uses_local_default_redis() -> bool {
     let url =
@@ -111,4 +112,15 @@ pub fn shared_test_pool() -> PgPool {
                 .expect("valid pool")
         })
         .clone()
+}
+
+pub fn isolated_test_pool(max_connections: u32) -> PgPool {
+    PgPoolOptions::new()
+        .max_connections(max_connections)
+        .connect_lazy(&test_database_url())
+        .expect("valid pool")
+}
+
+pub fn test_database_lock() -> &'static tokio::sync::Mutex<()> {
+    TEST_DATABASE_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
 }

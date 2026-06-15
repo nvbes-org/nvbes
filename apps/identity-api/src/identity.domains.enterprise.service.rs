@@ -23,3 +23,22 @@ pub async fn require_actor_access_for_enterprise(
     access::require_actor_access(db, auth, tenant_id).await?;
     Ok(())
 }
+
+pub async fn grant_admin_elevation(
+    db: &Database,
+    redis: &nvbes_redis::RedisPool,
+    auth: &AuthContext,
+    tenant_id: Uuid,
+    input: crate::domains::enterprise::types::EnterpriseAdminElevationInput,
+) -> Result<crate::domains::enterprise::types::EnterpriseAdminElevationResponse, AppError> {
+    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let access = access::require_actor_access(db, auth, tenant_id).await?;
+    crate::domains::enterprise::admin_elevation::grant_admin_elevation(
+        redis,
+        auth,
+        &access.role,
+        tenant_id,
+        input,
+    )
+    .await
+}

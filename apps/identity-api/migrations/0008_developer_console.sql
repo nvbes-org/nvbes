@@ -21,14 +21,19 @@ BEGIN
   END IF;
 END $$;
 
-CREATE TYPE developer_role AS ENUM (
-  'developer_admin',
-  'app_manager',
-  'webhook_manager',
-  'log_viewer',
-  'integration_tester',
-  'docs_viewer'
-);
+DO $$
+BEGIN
+  CREATE TYPE developer_role AS ENUM (
+    'developer_admin',
+    'app_manager',
+    'webhook_manager',
+    'log_viewer',
+    'integration_tester',
+    'docs_viewer'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TYPE developer_marketplace_status AS ENUM ('pending', 'approved', 'rejected', 'suspended');
 CREATE TYPE developer_scope_risk AS ENUM ('low', 'medium', 'high', 'restricted');
@@ -38,7 +43,7 @@ CREATE TYPE developer_webhook_status AS ENUM ('active', 'paused', 'revoked');
 CREATE TYPE developer_delivery_status AS ENUM ('pending', 'delivered', 'failed', 'replayed');
 CREATE TYPE developer_health_status AS ENUM ('passing', 'warning', 'failing', 'unknown');
 
-CREATE TABLE developer_role_assignments (
+CREATE TABLE IF NOT EXISTS developer_role_assignments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   principal_id uuid NOT NULL,
@@ -52,11 +57,11 @@ CREATE TABLE developer_role_assignments (
     REFERENCES principals(tenant_id, id) ON DELETE RESTRICT
 );
 
-CREATE UNIQUE INDEX idx_developer_role_assignments_active_unique
+CREATE UNIQUE INDEX IF NOT EXISTS idx_developer_role_assignments_active_unique
   ON developer_role_assignments (tenant_id, principal_id, role)
   WHERE revoked_at IS NULL;
 
-CREATE INDEX idx_developer_role_assignments_active
+CREATE INDEX IF NOT EXISTS idx_developer_role_assignments_active
   ON developer_role_assignments (tenant_id, principal_id)
   WHERE revoked_at IS NULL;
 
@@ -155,7 +160,7 @@ CREATE UNIQUE INDEX idx_developer_secret_rotations_one_active
   ON developer_secret_rotations (tenant_id, client_id)
   WHERE revoked_at IS NULL;
 
-CREATE TABLE developer_webhook_endpoints (
+CREATE TABLE IF NOT EXISTS developer_webhook_endpoints (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   name text NOT NULL,
@@ -172,11 +177,11 @@ CREATE TABLE developer_webhook_endpoints (
     REFERENCES principals(tenant_id, id) ON DELETE RESTRICT
 );
 
-CREATE INDEX idx_developer_webhook_endpoints_active
+CREATE INDEX IF NOT EXISTS idx_developer_webhook_endpoints_active
   ON developer_webhook_endpoints (tenant_id)
   WHERE revoked_at IS NULL;
 
-CREATE TABLE developer_webhook_deliveries (
+CREATE TABLE IF NOT EXISTS developer_webhook_deliveries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   endpoint_id uuid NOT NULL,
   tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -242,8 +247,19 @@ ALTER TABLE developer_sandbox_tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE developer_health_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE developer_token_debug_sessions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY developer_role_assignment_isolation ON developer_role_assignments
-  USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'developer_role_assignments'
+      AND policyname = 'developer_role_assignment_isolation'
+  ) THEN
+    CREATE POLICY developer_role_assignment_isolation ON developer_role_assignments
+      USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+  END IF;
+END $$;
 
 CREATE POLICY developer_marketplace_app_isolation ON developer_marketplace_apps
   USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
@@ -257,11 +273,33 @@ CREATE POLICY developer_client_secret_version_isolation ON developer_client_secr
 CREATE POLICY developer_secret_rotation_isolation ON developer_secret_rotations
   USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
 
-CREATE POLICY developer_webhook_endpoint_isolation ON developer_webhook_endpoints
-  USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'developer_webhook_endpoints'
+      AND policyname = 'developer_webhook_endpoint_isolation'
+  ) THEN
+    CREATE POLICY developer_webhook_endpoint_isolation ON developer_webhook_endpoints
+      USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+  END IF;
+END $$;
 
-CREATE POLICY developer_webhook_delivery_isolation ON developer_webhook_deliveries
-  USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'developer_webhook_deliveries'
+      AND policyname = 'developer_webhook_delivery_isolation'
+  ) THEN
+    CREATE POLICY developer_webhook_delivery_isolation ON developer_webhook_deliveries
+      USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);
+  END IF;
+END $$;
 
 CREATE POLICY developer_sandbox_tenant_isolation ON developer_sandbox_tenants
   USING (tenant_id = current_setting('nvbes.tenant_id', true)::uuid);

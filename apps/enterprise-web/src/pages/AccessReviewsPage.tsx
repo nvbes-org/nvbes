@@ -1,9 +1,12 @@
-import type { CreateAccessReviewCampaignInput } from "@nvbes/identity-client";
+import type {
+	CloseAccessReviewCampaignInput,
+	AccessReviewDecisionInput,
+	CreateAccessReviewCampaignInput,
+} from "@nvbes/identity-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardCheck, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
 	Card,
@@ -11,44 +14,44 @@ import {
 	CardHeader,
 	CardTitle,
 } from "../components/ui/card";
-import { Checkbox } from "../components/ui/checkbox";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Skeleton } from "../components/ui/skeleton";
 import { enterpriseClient } from "../enterprise.api";
 import {
 	accessReviewCampaignsQueryOptions,
+	accessReviewSchedulesQueryOptions,
 	enterpriseQueryKeys,
 } from "../enterprise.queries";
+import { AccessReviewCloseControls } from "./AccessReviewsPage.closeControls";
+import { CreateAccessReviewCampaignForm } from "./AccessReviewsPage.create";
+import { downloadAccessReviewExport } from "./AccessReviewsPage.export";
+import { AccessReviewExportControls } from "./AccessReviewsPage.exportControls";
+import {
+	type AccessReviewFilters,
+	filterAccessReviewItems,
+} from "./AccessReviewsPage.filters";
+import { AccessReviewsPageHeader } from "./AccessReviewsPage.header";
+import { accessReviewCampaignQueryKey } from "./AccessReviewsPage.keys";
+import { useAccessReviewScheduleMutations } from "./AccessReviewsPage.scheduleMutations";
+import {
+	type ChangeTargetRole,
+	AccessReviewDecisionControls,
+} from "./AccessReviewsPage.reviewControls";
+import { AccessReviewSchedulesPanel } from "./AccessReviewsPage.schedules";
 import { CampaignTable, ReviewItemsTable } from "./AccessReviewsPage.tables";
-
-const scopeOptions = [
-	["include_members", "Members"],
-	["include_roles", "Roles"],
-	["include_service_accounts", "Service accounts"],
-	["include_oauth_clients", "OAuth clients"],
-] as const;
-
-type ScopeKey = (typeof scopeOptions)[number][0];
-
-const defaultScope: CreateAccessReviewCampaignInput["scope"] = {
-	include_members: true,
-	include_roles: true,
-	include_service_accounts: true,
-	include_oauth_clients: true,
-};
 
 export function AccessReviewsPage() {
 	const queryClient = useQueryClient();
 	const campaignsQuery = useQuery(accessReviewCampaignsQueryOptions());
+	const schedulesQuery = useQuery(accessReviewSchedulesQueryOptions());
 	const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
 		null,
 	);
-	const [form, setForm] = useState(() => ({
-		name: "Quarterly access review",
-		dueDate: defaultDueDate(),
-		scope: defaultScope,
-	}));
+	const [reviewNote, setReviewNote] = useState("");
+	const [targetRole, setTargetRole] = useState<ChangeTargetRole>("viewer");
+	const [filters, setFilters] = useState<AccessReviewFilters>({
+		itemType: "all",
+		decision: "pending",
+	});
 
 	const campaigns = campaignsQuery.data?.campaigns ?? [];
 	const selectedCampaign = useMemo(
@@ -62,7 +65,7 @@ export function AccessReviewsPage() {
 
 	const detailQuery = useQuery({
 		enabled: Boolean(selectedCampaign),
-		queryKey: ["enterprise", "access-review-campaign", selectedCampaign?.id],
+		queryKey: accessReviewCampaignQueryKey(selectedCampaign?.id ?? null),
 		queryFn: ({ signal }) =>
 			enterpriseClient.getAccessReviewCampaign(selectedCampaign?.id ?? "", {
 				signal,
@@ -80,6 +83,79 @@ export function AccessReviewsPage() {
 		},
 	});
 
+	const {
+		createScheduleMutation,
+		runScheduleMutation,
+		updateScheduleMutation,
+	} = useAccessReviewScheduleMutations({
+		onRunNowSuccess: setSelectedCampaignId,
+	});
+
+	const decisionMutation = useMutation({
+		mutationFn: ({
+			itemId,
+			input,
+		}: {
+			itemId: string;
+			input: AccessReviewDecisionInput;
+		}) => {
+			if (!selectedCampaign) {
+				throw new Error("No access review campaign selected.");
+			}
+			return enterpriseClient.decideAccessReviewItem(
+				selectedCampaign.id,
+				itemId,
+				input,
+			);
+		},
+		onSuccess: async (result) => {
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: enterpriseQueryKeys.accessReviewCampaigns,
+				}),
+				queryClient.invalidateQueries({
+					queryKey: accessReviewCampaignQueryKey(result.campaign.id),
+				}),
+			]);
+		},
+	});
+
+	const exportMutation = useMutation({
+		mutationFn: async (format: "csv" | "json") => {
+			if (!selectedCampaign) {
+				throw new Error("No access review campaign selected.");
+			}
+			const exportData = await enterpriseClient.exportAccessReviewCampaign(
+				selectedCampaign.id,
+			);
+			return { exportData, format };
+		},
+		onSuccess: ({ exportData, format }) => {
+			downloadAccessReviewExport(exportData, format);
+		},
+	});
+
+	const closeMutation = useMutation({
+		mutationFn: async ({
+			campaignId,
+			input,
+		}: {
+			campaignId: string;
+			input: CloseAccessReviewCampaignInput;
+		}) => enterpriseClient.closeAccessReviewCampaign(campaignId, input),
+		onSuccess: async (detail) => {
+			setSelectedCampaignId(detail.campaign.id);
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: enterpriseQueryKeys.accessReviewCampaigns,
+				}),
+				queryClient.invalidateQueries({
+					queryKey: accessReviewCampaignQueryKey(detail.campaign.id),
+				}),
+			]);
+		},
+	});
+
 	const activeCampaigns = campaigns.filter(
 		(campaign) => campaign.status === "active",
 	).length;
@@ -87,33 +163,14 @@ export function AccessReviewsPage() {
 		(total, campaign) => total + campaign.pending_items,
 		0,
 	);
-	const disabled =
-		createMutation.isPending || !form.name.trim() || !hasScope(form.scope);
-
+	const reviewItems = detailQuery.data?.items ?? [];
+	const filteredReviewItems = filterAccessReviewItems(reviewItems, filters);
 	return (
 		<div className="flex flex-col gap-6">
-			<header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-				<div>
-					<div className="flex items-center gap-2">
-						<h1 className="text-2xl font-heading font-semibold">
-							Access reviews
-						</h1>
-						<Badge variant="outline" className="rounded-md">
-							Campaigns
-						</Badge>
-					</div>
-					<p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-						Periodic certification for tenant members, assigned roles, service
-						accounts, and OAuth clients.
-					</p>
-				</div>
-				<div className="grid grid-cols-2 gap-2 text-right text-sm">
-					<span className="text-muted-foreground">Active campaigns</span>
-					<strong>{activeCampaigns}</strong>
-					<span className="text-muted-foreground">Pending items</span>
-					<strong>{pendingItems}</strong>
-				</div>
-			</header>
+			<AccessReviewsPageHeader
+				activeCampaigns={activeCampaigns}
+				pendingItems={pendingItems}
+			/>
 
 			{campaignsQuery.error ? (
 				<Alert variant="destructive">
@@ -122,77 +179,41 @@ export function AccessReviewsPage() {
 				</Alert>
 			) : null}
 
+			<AccessReviewSchedulesPanel
+				error={schedulesQuery.error}
+				createError={createScheduleMutation.error}
+				pending={schedulesQuery.isPending}
+				createPending={createScheduleMutation.isPending}
+				mutatingScheduleId={
+					updateScheduleMutation.variables?.scheduleId ??
+					runScheduleMutation.variables ??
+					null
+				}
+				schedules={schedulesQuery.data?.schedules ?? []}
+				runError={runScheduleMutation.error}
+				updateError={updateScheduleMutation.error}
+				onRefresh={() => schedulesQuery.refetch()}
+				onCreate={createScheduleMutation.mutate}
+				onDisable={(scheduleId) =>
+					updateScheduleMutation.mutate({ action: "disable", scheduleId })
+				}
+				onEnable={(scheduleId) =>
+					updateScheduleMutation.mutate({ action: "enable", scheduleId })
+				}
+				onRunNow={runScheduleMutation.mutate}
+			/>
+
 			<section className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
 				<Card className="rounded-lg" size="sm">
 					<CardHeader>
 						<CardTitle>New campaign</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<form
-							className="flex flex-col gap-4"
-							onSubmit={(event) => {
-								event.preventDefault();
-								createMutation.mutate({
-									name: form.name,
-									due_at: new Date(`${form.dueDate}T23:59:00`).toISOString(),
-									scope: form.scope,
-								});
-							}}
-						>
-							<div className="grid gap-2">
-								<Label htmlFor="access-review-name">Name</Label>
-								<Input
-									id="access-review-name"
-									value={form.name}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											name: event.target.value,
-										}))
-									}
-								/>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="access-review-due">Due date</Label>
-								<Input
-									id="access-review-due"
-									type="date"
-									value={form.dueDate}
-									onChange={(event) =>
-										setForm((current) => ({
-											...current,
-											dueDate: event.target.value,
-										}))
-									}
-								/>
-							</div>
-							<div className="grid gap-3">
-								<Label>Scope</Label>
-								{scopeOptions.map(([key, label]) => (
-									<label key={key} className="flex items-center gap-2 text-sm">
-										<Checkbox
-											checked={form.scope[key]}
-											onCheckedChange={(checked) =>
-												setForm((current) => ({
-													...current,
-													scope: { ...current.scope, [key]: checked === true },
-												}))
-											}
-										/>
-										<span>{label}</span>
-									</label>
-								))}
-							</div>
-							{createMutation.error ? (
-								<p className="text-sm text-destructive">
-									{createMutation.error.message}
-								</p>
-							) : null}
-							<Button type="submit" disabled={disabled}>
-								<ClipboardCheck className="size-4" />
-								Start campaign
-							</Button>
-						</form>
+						<CreateAccessReviewCampaignForm
+							error={createMutation.error}
+							pending={createMutation.isPending}
+							onSubmit={createMutation.mutate}
+						/>
 					</CardContent>
 				</Card>
 
@@ -225,26 +246,83 @@ export function AccessReviewsPage() {
 
 			<Card className="rounded-lg" size="sm">
 				<CardHeader>
-					<CardTitle>Review snapshot</CardTitle>
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<CardTitle>Review snapshot</CardTitle>
+						<AccessReviewExportControls
+							disabled={!selectedCampaign || exportMutation.isPending}
+							onExport={exportMutation.mutate}
+						/>
+					</div>
 				</CardHeader>
 				<CardContent>
+					{exportMutation.error ? (
+						<Alert variant="destructive" className="mb-4">
+							<AlertTitle>Export failed</AlertTitle>
+							<AlertDescription>{exportMutation.error.message}</AlertDescription>
+						</Alert>
+					) : null}
+					{decisionMutation.error ? (
+						<Alert variant="destructive" className="mb-4">
+							<AlertTitle>Decision failed</AlertTitle>
+							<AlertDescription>
+								{decisionMutation.error.message}
+							</AlertDescription>
+						</Alert>
+					) : null}
+					{closeMutation.error ? (
+						<Alert variant="destructive" className="mb-4">
+							<AlertTitle>Campaign close failed</AlertTitle>
+							<AlertDescription>{closeMutation.error.message}</AlertDescription>
+						</Alert>
+					) : null}
+					<AccessReviewDecisionControls
+						reviewNote={reviewNote}
+						targetRole={targetRole}
+						filters={filters}
+						onReviewNoteChange={setReviewNote}
+						onTargetRoleChange={setTargetRole}
+						onFiltersChange={setFilters}
+					/>
+					<div className="mb-4 flex justify-end">
+						<AccessReviewCloseControls
+							campaign={selectedCampaign}
+							pending={closeMutation.isPending}
+							onClose={(campaignId, input) =>
+								closeMutation.mutate({ campaignId, input })
+							}
+						/>
+					</div>
 					{detailQuery.isPending && selectedCampaign ? (
 						<Skeleton className="h-64 w-full rounded-lg" />
 					) : (
-						<ReviewItemsTable items={detailQuery.data?.items ?? []} />
+						<ReviewItemsTable
+							items={filteredReviewItems}
+							disabled={
+								decisionMutation.isPending ||
+								detailQuery.data?.campaign.status === "closed"
+							}
+							noteReady={reviewNote.trim().length > 0}
+							targetRole={targetRole}
+							onDecide={(itemId, decision) =>
+								decisionMutation.mutate({
+									itemId,
+									input: {
+										decision,
+										note:
+											decision === "approved" || !reviewNote.trim()
+												? undefined
+												: reviewNote.trim(),
+										change:
+											decision === "changed"
+												? { target_role: targetRole }
+												: undefined,
+									},
+								})
+							}
+						/>
 					)}
 				</CardContent>
 			</Card>
 		</div>
 	);
-}
-
-function defaultDueDate() {
-	const due = new Date();
-	due.setDate(due.getDate() + 14);
-	return due.toISOString().slice(0, 10);
-}
-
-function hasScope(scope: Record<ScopeKey, boolean>) {
-	return scopeOptions.some(([key]) => scope[key]);
 }

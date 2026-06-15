@@ -6,12 +6,12 @@ use crate::domains::enterprise::policy_simulation::{
 use crate::domains::enterprise::service;
 use crate::domains::enterprise::trust::{self, types::EnterpriseTrustCenterResponse};
 use crate::domains::enterprise::types::{
-    EnterpriseAccessUpdateInput, EnterpriseAccessUpdateResponse, EnterpriseAuditEventsResponse,
-    EnterpriseBillingResponse, EnterpriseContextResponse, EnterpriseDevelopersResponse,
-    EnterpriseInvitationInput, EnterpriseInvitationsResponse, EnterpriseOverviewResponse,
-    EnterprisePoliciesResponse, EnterpriseReactivateInput, EnterpriseSecurityResponse,
-    EnterpriseSuspendInput, EnterpriseUsageResponse, EnterpriseUsersResponse,
-    EnterpriseWorkspacesResponse,
+    EnterpriseAccessUpdateInput, EnterpriseAccessUpdateResponse, EnterpriseAdminElevationInput,
+    EnterpriseAdminElevationResponse, EnterpriseAuditEventsResponse, EnterpriseBillingResponse,
+    EnterpriseContextResponse, EnterpriseDevelopersResponse, EnterpriseInvitationInput,
+    EnterpriseInvitationsResponse, EnterpriseOverviewResponse, EnterprisePoliciesResponse,
+    EnterpriseReactivateInput, EnterpriseSecurityResponse, EnterpriseSuspendInput,
+    EnterpriseUsageResponse, EnterpriseUsersResponse, EnterpriseWorkspacesResponse,
 };
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
@@ -26,6 +26,7 @@ use uuid::Uuid;
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .route("/enterprise/context", get(get_context))
+        .route("/enterprise/admin-elevation", post(grant_admin_elevation))
         .route("/enterprise/overview", get(get_overview))
         .route("/enterprise/users", get(list_users))
         .route("/enterprise/invitations", post(create_invitations))
@@ -63,7 +64,29 @@ async fn get_context(
 ) -> Result<Json<EnterpriseContextResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::get_context(&state.db, &auth, tenant_id).await?,
+        service::get_context(&state.db, &state.redis, &auth, tenant_id).await?,
+    ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/enterprise/admin-elevation",
+    tag = "enterprise",
+    request_body = EnterpriseAdminElevationInput,
+    responses(
+        (status = 200, description = "Temporary admin elevation granted", body = EnterpriseAdminElevationResponse),
+        (status = 401, description = "Step-up required", body = ErrorEnvelope),
+        (status = 403, description = "Admin role required", body = ErrorEnvelope),
+    ),
+)]
+pub async fn grant_admin_elevation(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(input): Json<EnterpriseAdminElevationInput>,
+) -> Result<Json<EnterpriseAdminElevationResponse>, AppError> {
+    let tenant_id = require_tenant(&auth)?;
+    Ok(Json(
+        service::grant_admin_elevation(&state.db, &state.redis, &auth, tenant_id, input).await?,
     ))
 }
 
@@ -94,7 +117,7 @@ async fn create_invitations(
 ) -> Result<Json<EnterpriseInvitationsResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::create_invitations(&state.db, &auth, tenant_id, input).await?,
+        service::create_invitations(&state.db, &state.redis, &auth, tenant_id, input).await?,
     ))
 }
 
@@ -106,7 +129,8 @@ async fn update_user_access(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::update_user_access(&state.db, &auth, tenant_id, user_id, input).await?,
+        service::update_user_access(&state.db, &state.redis, &auth, tenant_id, user_id, input)
+            .await?,
     ))
 }
 
@@ -118,7 +142,7 @@ async fn suspend_user(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::suspend_user(&state.db, &auth, tenant_id, user_id, input).await?,
+        service::suspend_user(&state.db, &state.redis, &auth, tenant_id, user_id, input).await?,
     ))
 }
 
@@ -130,7 +154,7 @@ async fn reactivate_user(
 ) -> Result<Json<EnterpriseAccessUpdateResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::reactivate_user(&state.db, &auth, tenant_id, user_id, input).await?,
+        service::reactivate_user(&state.db, &state.redis, &auth, tenant_id, user_id, input).await?,
     ))
 }
 

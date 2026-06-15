@@ -9,11 +9,12 @@ use super::access::{ensure_member_manager, fetch_user_view};
 
 pub async fn create_invitations(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
     input: EnterpriseInvitationInput,
 ) -> Result<EnterpriseInvitationsResponse, AppError> {
-    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
     ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
     if input.workspace_ids.is_empty() || input.emails.is_empty() {
         return Err(AppError::bad_request(
@@ -65,12 +66,13 @@ pub async fn create_invitations(
 
 pub async fn update_user_access(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
     user_id: Uuid,
     input: EnterpriseAccessUpdateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
     ensure_owner_role_allowed(&actor_access, policy::role_as_db(&input.role))?;
     if input.workspace_ids.is_empty() {
         return Err(AppError::bad_request(
@@ -130,12 +132,13 @@ pub async fn update_user_access(
 
 pub async fn suspend_user(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
     user_id: Uuid,
     input: EnterpriseSuspendInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     let current_role = db::target_role(&mut tx, tenant_id, user_id)
@@ -204,12 +207,13 @@ fn ensure_owner_target_allowed(
 
 pub async fn reactivate_user(
     db: &Database,
+    redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
     tenant_id: Uuid,
     user_id: Uuid,
     input: EnterpriseReactivateInput,
 ) -> Result<EnterpriseAccessUpdateResponse, AppError> {
-    let actor_access = ensure_member_manager(db, auth, tenant_id).await?;
+    let actor_access = ensure_member_manager(db, redis, auth, tenant_id).await?;
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     let current_role = db::target_role_for_lifecycle(&mut tx, tenant_id, user_id)

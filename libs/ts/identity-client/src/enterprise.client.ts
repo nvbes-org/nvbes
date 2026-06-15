@@ -2,12 +2,32 @@ import type { HttpClient, HttpRequestOptions } from "@nvbes/http-client";
 import {
 	type AccessReviewCampaignDetail,
 	AccessReviewCampaignDetailSchema,
+	type AccessReviewCampaignExport,
+	AccessReviewCampaignExportSchema,
 	type AccessReviewCampaignsResponse,
 	AccessReviewCampaignsResponseSchema,
+	type AccessReviewDecisionInput,
+	AccessReviewDecisionInputSchema,
+	type AccessReviewDecisionResponse,
+	AccessReviewDecisionResponseSchema,
+	type AccessReviewSchedule,
+	AccessReviewScheduleSchema,
+	type AccessReviewSchedulesResponse,
+	AccessReviewSchedulesResponseSchema,
+	type CloseAccessReviewCampaignInput,
+	CloseAccessReviewCampaignInputSchema,
 	type CreateAccessReviewCampaignInput,
 	CreateAccessReviewCampaignInputSchema,
+	type CreateAccessReviewScheduleInput,
+	CreateAccessReviewScheduleInputSchema,
+} from "./enterprise.access-reviews.schemas";
+import {
 	type EnterpriseAccessUpdateInput,
 	type EnterpriseAccessUpdateResponse,
+	type EnterpriseAdminElevationInput,
+	EnterpriseAdminElevationInputSchema,
+	type EnterpriseAdminElevationResponse,
+	EnterpriseAdminElevationResponseSchema,
 	EnterpriseAccessUpdateInputSchema,
 	EnterpriseAccessUpdateResponseSchema,
 	type EnterpriseAuditEventsResponse,
@@ -59,6 +79,19 @@ export function getEnterpriseContext(
 	return http.get(
 		`${EnterpriseApiBasePath}/context`,
 		EnterpriseContextResponseSchema,
+		options,
+	);
+}
+
+export function grantEnterpriseAdminElevation(
+	http: HttpClient,
+	input: EnterpriseAdminElevationInput,
+	options?: EnterpriseRequestOptions,
+): Promise<EnterpriseAdminElevationResponse> {
+	return http.post(
+		`${EnterpriseApiBasePath}/admin-elevation`,
+		EnterpriseAdminElevationResponseSchema,
+		EnterpriseAdminElevationInputSchema.parse(input),
 		options,
 	);
 }
@@ -222,6 +255,17 @@ export function getAccessReviewCampaigns(
 	);
 }
 
+export function getAccessReviewSchedules(
+	http: HttpClient,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewSchedulesResponse> {
+	return http.get(
+		`${EnterpriseApiBasePath}/access-review-schedules`,
+		AccessReviewSchedulesResponseSchema,
+		options,
+	);
+}
+
 export function getAccessReviewCampaign(
 	http: HttpClient,
 	campaignId: string,
@@ -230,6 +274,84 @@ export function getAccessReviewCampaign(
 	return http.get(
 		`${EnterpriseApiBasePath}/access-review-campaigns/${encodeURIComponent(campaignId)}`,
 		AccessReviewCampaignDetailSchema,
+		options,
+	);
+}
+
+export function exportAccessReviewCampaign(
+	http: HttpClient,
+	campaignId: string,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewCampaignExport> {
+	return http.get(
+		`${EnterpriseApiBasePath}/access-review-campaigns/${encodeURIComponent(campaignId)}/export`,
+		AccessReviewCampaignExportSchema,
+		options,
+	);
+}
+
+export function closeAccessReviewCampaign(
+	http: HttpClient,
+	campaignId: string,
+	input: CloseAccessReviewCampaignInput,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewCampaignDetail> {
+	return http.post(
+		`${EnterpriseApiBasePath}/access-review-campaigns/${encodeURIComponent(campaignId)}/close`,
+		AccessReviewCampaignDetailSchema,
+		CloseAccessReviewCampaignInputSchema.parse(input),
+		options,
+	);
+}
+
+export function createAccessReviewSchedule(
+	http: HttpClient,
+	input: CreateAccessReviewScheduleInput,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewSchedule> {
+	return http.post(
+		`${EnterpriseApiBasePath}/access-review-schedules`,
+		AccessReviewScheduleSchema,
+		CreateAccessReviewScheduleInputSchema.parse(input),
+		options,
+	);
+}
+
+export function disableAccessReviewSchedule(
+	http: HttpClient,
+	scheduleId: string,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewSchedule> {
+	return http.post(
+		`${EnterpriseApiBasePath}/access-review-schedules/${encodeURIComponent(scheduleId)}/disable`,
+		AccessReviewScheduleSchema,
+		undefined,
+		options,
+	);
+}
+
+export function enableAccessReviewSchedule(
+	http: HttpClient,
+	scheduleId: string,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewSchedule> {
+	return http.post(
+		`${EnterpriseApiBasePath}/access-review-schedules/${encodeURIComponent(scheduleId)}/enable`,
+		AccessReviewScheduleSchema,
+		undefined,
+		options,
+	);
+}
+
+export function runAccessReviewScheduleNow(
+	http: HttpClient,
+	scheduleId: string,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewCampaignDetail> {
+	return http.post(
+		`${EnterpriseApiBasePath}/access-review-schedules/${encodeURIComponent(scheduleId)}/run`,
+		AccessReviewCampaignDetailSchema,
+		undefined,
 		options,
 	);
 }
@@ -244,6 +366,24 @@ export function createAccessReviewCampaign(
 		AccessReviewCampaignDetailSchema,
 		CreateAccessReviewCampaignInputSchema.parse(input),
 		options,
+	);
+}
+
+export function decideAccessReviewItem(
+	http: HttpClient,
+	campaignId: string,
+	itemId: string,
+	input: AccessReviewDecisionInput,
+	options?: EnterpriseRequestOptions,
+): Promise<AccessReviewDecisionResponse> {
+	return http.request(
+		`${EnterpriseApiBasePath}/access-review-campaigns/${encodeURIComponent(campaignId)}/items/${encodeURIComponent(itemId)}`,
+		AccessReviewDecisionResponseSchema,
+		{
+			...options,
+			body: AccessReviewDecisionInputSchema.parse(input),
+			method: "PATCH",
+		},
 	);
 }
 
