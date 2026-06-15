@@ -10,8 +10,9 @@ use crate::domains::enterprise::types::{
     EnterpriseAdminElevationResponse, EnterpriseAuditEventsResponse, EnterpriseBillingResponse,
     EnterpriseContextResponse, EnterpriseDevelopersResponse, EnterpriseInvitationInput,
     EnterpriseInvitationsResponse, EnterpriseOverviewResponse, EnterprisePoliciesResponse,
-    EnterpriseReactivateInput, EnterpriseSecurityResponse, EnterpriseSuspendInput,
-    EnterpriseUsageResponse, EnterpriseUsersResponse, EnterpriseWorkspacesResponse,
+    EnterpriseReactivateInput, EnterpriseSecurityResponse, EnterpriseSessionPolicyInput,
+    EnterpriseSuspendInput, EnterpriseUsageResponse, EnterpriseUsersResponse,
+    EnterpriseWorkspacesResponse,
 };
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
@@ -42,6 +43,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route("/enterprise/workspaces", get(list_workspaces))
         .route("/enterprise/developers", get(list_developers))
         .route("/enterprise/policies", get(list_policies))
+        .route("/enterprise/policies/session", patch(update_session_policy))
         .route(
             "/enterprise/policies/simulate",
             post(simulate_policy_decision),
@@ -184,7 +186,13 @@ async fn list_policies(
 ) -> Result<Json<EnterprisePoliciesResponse>, AppError> {
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
-        service::list_policies(&state.db, &auth, tenant_id).await?,
+        service::list_policies(
+            &state.db,
+            &auth,
+            tenant_id,
+            state.config.auth_session_ttl_hours,
+        )
+        .await?,
     ))
 }
 
@@ -196,6 +204,25 @@ async fn simulate_policy_decision(
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
         simulate_policy(&state.db, &auth, tenant_id, input).await?,
+    ))
+}
+
+async fn update_session_policy(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(input): Json<EnterpriseSessionPolicyInput>,
+) -> Result<Json<EnterprisePoliciesResponse>, AppError> {
+    let tenant_id = require_tenant(&auth)?;
+    Ok(Json(
+        service::update_session_policy(
+            &state.db,
+            &state.redis,
+            &auth,
+            tenant_id,
+            state.config.auth_session_ttl_hours,
+            input,
+        )
+        .await?,
     ))
 }
 

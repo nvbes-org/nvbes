@@ -241,6 +241,23 @@ pub struct EnterpriseDevelopersResponse {
 #[serde(rename_all = "snake_case")]
 pub struct EnterprisePoliciesResponse {
     pub policies: Vec<EnterprisePolicySummary>,
+    pub session_policy: EnterpriseSessionPolicy,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseSessionPolicy {
+    pub admin_session_ttl_hours: i64,
+    pub recommended_admin_session_ttl_hours: i64,
+    pub compliant: bool,
+    pub step_up_required_for_admin_elevation: bool,
+    pub source: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EnterpriseSessionPolicyInput {
+    pub admin_session_ttl_hours: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]

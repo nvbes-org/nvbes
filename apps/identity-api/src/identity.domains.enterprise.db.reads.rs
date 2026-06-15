@@ -4,7 +4,7 @@ use uuid::Uuid;
 use super::records::{
     ActorAccessRow, AuditEventRow, BillingSummaryRow, DeveloperCredentialRow,
     EnterpriseInvitationRow, EnterpriseUserRow, InvoiceRow, PolicySummaryRow, SecuritySummaryRow,
-    WorkspaceSummaryRow,
+    SessionPolicyRow, WorkspaceSummaryRow,
 };
 use crate::http::error::AppError;
 
@@ -202,6 +202,22 @@ pub async fn list_policies(
     )
     .bind(tenant_id)
     .fetch_all(db)
+    .await?)
+}
+
+pub async fn session_policy(
+    db: &PgPool,
+    tenant_id: Uuid,
+) -> Result<Option<SessionPolicyRow>, AppError> {
+    Ok(sqlx::query_as::<_, SessionPolicyRow>(
+        r#"
+        SELECT admin_session_ttl_hours
+        FROM tenant_policies
+        WHERE tenant_id = $1
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_optional(db)
     .await?)
 }
 

@@ -4,6 +4,7 @@ import {
   closeAccessReviewCampaign as closeAccessReviewCampaignRequest,
   createAccessReviewCampaign as createAccessReviewCampaignRequest,
   createAccessReviewSchedule as createAccessReviewScheduleRequest,
+  createTenantDomain as createTenantDomainRequest,
   disableAccessReviewSchedule as disableAccessReviewScheduleRequest,
   createEnterpriseInvitations as createEnterpriseInvitationsRequest,
   decideAccessReviewItem as decideAccessReviewItemRequest,
@@ -28,7 +29,10 @@ import {
   reactivateEnterpriseUser as reactivateEnterpriseUserRequest,
   runAccessReviewScheduleNow as runAccessReviewScheduleNowRequest,
   suspendEnterpriseUser as suspendEnterpriseUserRequest,
+  updateEnterpriseSessionPolicy as updateEnterpriseSessionPolicyRequest,
+  updateTenantDomain as updateTenantDomainRequest,
   updateEnterpriseUserAccess as updateEnterpriseUserAccessRequest,
+  verifyTenantDomain as verifyTenantDomainRequest,
 } from './enterprise.client';
 import type {
   AccessReviewCampaignDetail,
@@ -59,12 +63,19 @@ import type {
   EnterprisePolicySimulationResponse,
   EnterpriseReactivateInput,
   EnterpriseSecurityResponse,
+  EnterpriseSessionPolicyInput,
   EnterpriseSuspendInput,
   EnterpriseUsageResponse,
   EnterpriseUsersResponse,
   EnterpriseWorkspacesResponse,
 } from './enterprise.schemas';
 import type { EnterpriseTrustCenterResponse } from './enterprise.trust.schemas';
+import type {
+  CreateTenantDomainInput,
+  TenantDomainResponse,
+  UpdateTenantDomainInput,
+  VerifyTenantDomainInput,
+} from './federation.schemas';
 
 type RequestOptions = { signal?: AbortSignal };
 
@@ -364,6 +375,13 @@ export class IdentityClient {
     return getEnterprisePoliciesRequest(this.http, options);
   }
 
+  updateEnterpriseSessionPolicy(
+    input: EnterpriseSessionPolicyInput,
+    options?: RequestOptions,
+  ): Promise<EnterprisePoliciesResponse> {
+    return updateEnterpriseSessionPolicyRequest(this.http, input, options);
+  }
+
   simulateEnterprisePolicy(
     input: EnterprisePolicySimulationInput,
     options?: RequestOptions,
@@ -455,6 +473,32 @@ export class IdentityClient {
 
   getEnterpriseTrustCenter(options?: RequestOptions): Promise<EnterpriseTrustCenterResponse> {
     return getEnterpriseTrustCenterRequest(this.http, options);
+  }
+
+  createTenantDomain(
+    tenantId: string,
+    input: CreateTenantDomainInput,
+    options?: RequestOptions,
+  ): Promise<TenantDomainResponse> {
+    return createTenantDomainRequest(this.http, tenantId, input, options);
+  }
+
+  updateTenantDomain(
+    tenantId: string,
+    domainId: string,
+    input: UpdateTenantDomainInput,
+    options?: RequestOptions,
+  ): Promise<TenantDomainResponse> {
+    return updateTenantDomainRequest(this.http, tenantId, domainId, input, options);
+  }
+
+  verifyTenantDomain(
+    tenantId: string,
+    domainId: string,
+    input: VerifyTenantDomainInput,
+    options?: RequestOptions,
+  ): Promise<TenantDomainResponse> {
+    return verifyTenantDomainRequest(this.http, tenantId, domainId, input, options);
   }
 
   getEnterpriseBilling(options?: RequestOptions): Promise<EnterpriseBillingResponse> {
@@ -575,3 +619,4 @@ export * from './enterprise.client';
 export * from './enterprise.access-reviews.schemas';
 export * from './enterprise.schemas';
 export * from './enterprise.trust.schemas';
+export * from './federation.schemas';

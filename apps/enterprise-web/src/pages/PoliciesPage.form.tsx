@@ -60,7 +60,10 @@ export function PoliciesPageForm(props: PoliciesPageFormProps) {
     >
       <Field>
         <FieldLabel>Workspace</FieldLabel>
-        <Select value={props.workspaceId} onValueChange={props.onWorkspaceIdChange}>
+        <Select
+          value={props.workspaceId}
+          onValueChange={(value) => props.onWorkspaceIdChange(value)}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select workspace" />
           </SelectTrigger>
@@ -94,7 +97,7 @@ export function PoliciesPageForm(props: PoliciesPageFormProps) {
       {props.subjectType === 'user' ? (
         <Field>
           <FieldLabel>User</FieldLabel>
-          <Select value={props.userId} onValueChange={props.onUserIdChange}>
+          <Select value={props.userId} onValueChange={(value) => props.onUserIdChange(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select user" />
             </SelectTrigger>
@@ -121,7 +124,7 @@ export function PoliciesPageForm(props: PoliciesPageFormProps) {
 
       <Field>
         <FieldLabel>Action</FieldLabel>
-        <Select value={props.action} onValueChange={props.onActionChange}>
+        <Select value={props.action} onValueChange={(value) => props.onActionChange(value)}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -137,7 +140,7 @@ export function PoliciesPageForm(props: PoliciesPageFormProps) {
 
       <Field>
         <FieldLabel>Target role</FieldLabel>
-        <Select value={props.targetRole} onValueChange={props.onTargetRoleChange}>
+        <Select value={props.targetRole} onValueChange={(value) => props.onTargetRoleChange(value)}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>

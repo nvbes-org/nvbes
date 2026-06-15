@@ -11,6 +11,7 @@
     "dev:drive-api": "bash scripts/dev-drive-api.sh",
     "dev:drive-web": "bash scripts/dev-drive-web.sh",
     "dev:developer-web": "bash scripts/dev-developer-web.sh",
+    "dev:enterprise-web": "bash scripts/dev-enterprise-web.sh",
     "dev:drive-worker": "bash scripts/dev-drive-worker.sh",
     "dev:drive-db:reset": "bash scripts/dev-drive-db-reset.sh",
     "dev:identity-web": "bash scripts/dev-identity-web.sh",

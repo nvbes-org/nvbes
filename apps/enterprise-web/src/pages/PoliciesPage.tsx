@@ -1,15 +1,21 @@
-import type { EnterprisePolicySimulationInput } from '@nvbes/identity-client';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { AlertCircle, ShieldCheck } from 'lucide-react';
+import type {
+  EnterprisePoliciesResponse,
+  EnterprisePolicySimulationInput,
+} from '@nvbes/identity-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Clock3, Save, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { enterpriseClient } from '../enterprise.api';
 import { canManagePolicies } from '../enterprise.permissions';
 import {
   enterpriseContextQueryOptions,
+  enterpriseQueryKeys,
   enterprisePoliciesQueryOptions,
   enterpriseUsersQueryOptions,
   enterpriseWorkspacesQueryOptions,
@@ -18,6 +24,7 @@ import { PoliciesPageForm, type PoliciesPageSubjectType } from './PoliciesPage.f
 import { SimulationResult } from './PoliciesPage.result';
 
 export function PoliciesPage() {
+  const queryClient = useQueryClient();
   const contextQuery = useQuery(enterpriseContextQueryOptions());
   const policiesQuery = useQuery(enterprisePoliciesQueryOptions());
   const usersQuery = useQuery(enterpriseUsersQueryOptions());
@@ -35,6 +42,7 @@ export function PoliciesPage() {
   const users = usersQuery.data?.users ?? [];
   const activePolicies =
     policiesQuery.data?.policies.filter((policy) => policy.enabled).length ?? 0;
+  const sessionPolicy = policiesQuery.data?.session_policy;
   const canSimulate = contextQuery.data ? canManagePolicies(contextQuery.data) : false;
   const selectedUser = users.find((user) => user.id === userId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === workspaceId);
@@ -51,6 +59,15 @@ export function PoliciesPage() {
   const simulationMutation = useMutation({
     mutationFn: (input: EnterprisePolicySimulationInput) =>
       enterpriseClient.simulateEnterprisePolicy(input),
+  });
+  const sessionPolicyMutation = useMutation({
+    mutationFn: (adminSessionTtlHours: number) =>
+      enterpriseClient.updateEnterpriseSessionPolicy({
+        admin_session_ttl_hours: adminSessionTtlHours,
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(enterpriseQueryKeys.policies, data);
+    },
   });
 
   const isLoading =
@@ -88,47 +105,134 @@ export function PoliciesPage() {
       {isLoading ? (
         <LoadingState />
       ) : (
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <Card className="rounded-lg" size="sm">
-            <CardHeader>
-              <CardTitle>Policy simulator</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PoliciesPageForm
-                action={action}
-                clientId={clientId}
-                disabled={submitDisabled}
-                memberShareLinksEnabled={memberShareLinksEnabled}
-                ownsResource={ownsResource}
-                selectedUserRole={selectedUser?.role ?? null}
-                selectedWorkspaceId={selectedWorkspace?.id ?? null}
-                subjectType={subjectType}
-                targetRole={targetRole}
-                userId={userId}
-                users={users}
-                workspaceId={workspaceId}
-                workspaces={workspaces}
-                onActionChange={setAction}
-                onClientIdChange={setClientId}
-                onMemberShareLinksEnabledChange={setMemberShareLinksEnabled}
-                onOwnsResourceChange={setOwnsResource}
-                onSubmit={simulationMutation.mutate}
-                onSubjectTypeChange={setSubjectType}
-                onTargetRoleChange={setTargetRole}
-                onUserIdChange={setUserId}
-                onWorkspaceIdChange={setWorkspaceId}
-              />
-            </CardContent>
-          </Card>
+        <div className="flex flex-col gap-4">
+          {sessionPolicy ? (
+            <SessionPolicyCard
+              error={sessionPolicyMutation.error}
+              pending={sessionPolicyMutation.isPending}
+              sessionPolicy={sessionPolicy}
+              onSave={(value) => sessionPolicyMutation.mutate(value)}
+            />
+          ) : null}
 
-          <SimulationResult
-            result={simulationMutation.data ?? null}
-            error={simulationMutation.error}
-            pending={simulationMutation.isPending}
-          />
-        </section>
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <Card className="rounded-lg" size="sm">
+              <CardHeader>
+                <CardTitle>Policy simulator</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PoliciesPageForm
+                  action={action}
+                  clientId={clientId}
+                  disabled={submitDisabled}
+                  memberShareLinksEnabled={memberShareLinksEnabled}
+                  ownsResource={ownsResource}
+                  selectedUserRole={selectedUser?.role ?? null}
+                  selectedWorkspaceId={selectedWorkspace?.id ?? null}
+                  subjectType={subjectType}
+                  targetRole={targetRole}
+                  userId={userId}
+                  users={users}
+                  workspaceId={workspaceId}
+                  workspaces={workspaces}
+                  onActionChange={setAction}
+                  onClientIdChange={setClientId}
+                  onMemberShareLinksEnabledChange={setMemberShareLinksEnabled}
+                  onOwnsResourceChange={setOwnsResource}
+                  onSubmit={simulationMutation.mutate}
+                  onSubjectTypeChange={setSubjectType}
+                  onTargetRoleChange={setTargetRole}
+                  onUserIdChange={setUserId}
+                  onWorkspaceIdChange={setWorkspaceId}
+                />
+              </CardContent>
+            </Card>
+
+            <SimulationResult
+              result={simulationMutation.data ?? null}
+              error={simulationMutation.error}
+              pending={simulationMutation.isPending}
+            />
+          </section>
+        </div>
       )}
     </div>
+  );
+}
+
+type SessionPolicyCardProps = {
+  error: Error | null;
+  pending: boolean;
+  onSave(value: number): void;
+  sessionPolicy: EnterprisePoliciesResponse['session_policy'];
+};
+
+function SessionPolicyCard(props: SessionPolicyCardProps) {
+  const { error, pending, sessionPolicy } = props;
+  const [value, setValue] = useState(String(sessionPolicy.admin_session_ttl_hours));
+  const parsedValue = Number.parseInt(value, 10);
+  const validValue = Number.isInteger(parsedValue) && parsedValue >= 1 && parsedValue <= 168;
+  const dirty = parsedValue !== sessionPolicy.admin_session_ttl_hours;
+
+  useEffect(() => {
+    setValue(String(sessionPolicy.admin_session_ttl_hours));
+  }, [sessionPolicy.admin_session_ttl_hours]);
+
+  return (
+    <Card className="rounded-lg" size="sm">
+      <CardContent className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="rounded-lg border border-border bg-muted/30 p-2 text-muted-foreground">
+            <Clock3 className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold">Admin session TTL</p>
+              <Badge
+                variant={sessionPolicy.compliant ? 'default' : 'secondary'}
+                className="rounded-md"
+              >
+                {sessionPolicy.compliant ? 'Compliant' : 'Review'}
+              </Badge>
+            </div>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Current admin session TTL is {sessionPolicy.admin_session_ttl_hours}h. Recommended
+              maximum is {sessionPolicy.recommended_admin_session_ttl_hours}h with step-up for admin
+              elevation. Source: {sessionPolicy.source}.
+            </p>
+            {error ? <p className="mt-2 text-sm text-destructive">{error.message}</p> : null}
+          </div>
+        </div>
+        <form
+          className="grid gap-2 md:min-w-64"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (validValue) {
+              props.onSave(parsedValue);
+            }
+          }}
+        >
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="admin-session-ttl">
+            Admin session TTL hours
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="admin-session-ttl"
+              min={1}
+              max={168}
+              type="number"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+            />
+            <Button type="submit" disabled={!dirty || !validValue || pending}>
+              <Save className="size-4" />
+              Save
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Allowed range: 1-168 hours.</p>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -40,6 +40,7 @@ const EnterpriseTrustCenterDomainSchema = z.object({
   domain: z.string(),
   verified: z.boolean(),
   sso_required: z.boolean(),
+  sso_provider_id: NullableStringSchema.optional(),
   verified_at: NullableStringSchema.optional(),
 });
 

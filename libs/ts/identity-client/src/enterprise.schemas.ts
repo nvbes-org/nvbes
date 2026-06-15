@@ -207,6 +207,17 @@ export const EnterpriseDevelopersResponseSchema = z.object({
 
 export const EnterprisePoliciesResponseSchema = z.object({
   policies: z.array(EnterprisePolicySchema),
+  session_policy: z.object({
+    admin_session_ttl_hours: z.number(),
+    recommended_admin_session_ttl_hours: z.number(),
+    compliant: z.boolean(),
+    step_up_required_for_admin_elevation: z.boolean(),
+    source: z.string(),
+  }),
+});
+
+export const EnterpriseSessionPolicyInputSchema = z.object({
+  admin_session_ttl_hours: z.number().int().min(1).max(168),
 });
 
 export const EnterprisePolicySimulationSubjectSchema = z.discriminatedUnion('subject_type', [
@@ -315,6 +326,7 @@ export type EnterpriseAccessUpdateResponse = z.infer<typeof EnterpriseAccessUpda
 export type EnterpriseWorkspacesResponse = z.infer<typeof EnterpriseWorkspacesResponseSchema>;
 export type EnterpriseDevelopersResponse = z.infer<typeof EnterpriseDevelopersResponseSchema>;
 export type EnterprisePoliciesResponse = z.infer<typeof EnterprisePoliciesResponseSchema>;
+export type EnterpriseSessionPolicyInput = z.infer<typeof EnterpriseSessionPolicyInputSchema>;
 export type EnterprisePolicySimulationSubject = z.infer<
   typeof EnterprisePolicySimulationSubjectSchema
 >;

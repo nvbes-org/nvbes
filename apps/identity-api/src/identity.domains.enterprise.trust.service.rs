@@ -93,6 +93,7 @@ fn build_trust_center_response(
                 domain: domain.domain,
                 verified: domain.verified_at.is_some(),
                 sso_required: domain.sso_required,
+                sso_provider_id: domain.sso_provider_id,
                 verified_at: domain.verified_at,
             })
             .collect(),
@@ -231,12 +232,14 @@ mod tests {
                     domain: "acme.com".to_string(),
                     verified_at: Some(now),
                     sso_required: true,
+                    sso_provider_id: Some(Uuid::new_v4()),
                 },
                 db::TrustDomainRow {
                     id: Uuid::new_v4(),
                     domain: "pending.acme.com".to_string(),
                     verified_at: None,
                     sso_required: false,
+                    sso_provider_id: None,
                 },
             ],
             vec![db::TrustHostingRegionRow {

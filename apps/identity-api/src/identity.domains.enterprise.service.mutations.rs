@@ -64,6 +64,53 @@ pub async fn create_invitations(
     Ok(EnterpriseInvitationsResponse { invitations })
 }
 
+pub async fn update_session_policy(
+    db: &Database,
+    redis: &nvbes_redis::RedisPool,
+    auth: &AuthContext,
+    tenant_id: Uuid,
+    fallback_ttl_hours: i64,
+    input: EnterpriseSessionPolicyInput,
+) -> Result<EnterprisePoliciesResponse, AppError> {
+    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let access = super::access::require_actor_access(db, auth, tenant_id).await?;
+    if !policy::can_manage_policies(
+        policy::role_as_db(&access.role),
+        &policy::grant_names(&access.grants),
+    ) {
+        return Err(AppError::forbidden(
+            "policies_grant_required",
+            "Policies access is required.",
+        ));
+    }
+    crate::domains::enterprise::admin_elevation::require_active_admin_elevation(
+        redis, auth, tenant_id,
+    )
+    .await?;
+    if !(1..=168).contains(&input.admin_session_ttl_hours) {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            "Admin session TTL must be between 1 and 168 hours.",
+        ));
+    }
+
+    let mut tx = db.begin().await?;
+    db::set_session_policy(&mut tx, tenant_id, input.admin_session_ttl_hours).await?;
+    db::insert_audit(
+        &mut tx,
+        tenant_id,
+        auth.user_id,
+        "enterprise.policy.session_updated",
+        "tenant_policy",
+        Some(tenant_id),
+        serde_json::json!({"admin_session_ttl_hours": input.admin_session_ttl_hours}),
+    )
+    .await?;
+    tx.commit().await?;
+
+    super::reads::list_policies(db, auth, tenant_id, fallback_ttl_hours).await
+}
+
 pub async fn update_user_access(
     db: &Database,
     redis: &nvbes_redis::RedisPool,

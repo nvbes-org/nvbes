@@ -37,6 +37,7 @@ pub struct TrustDomainRow {
     pub domain: String,
     pub verified_at: Option<DateTime<Utc>>,
     pub sso_required: bool,
+    pub sso_provider_id: Option<Uuid>,
 }
 
 #[derive(Debug, FromRow)]
@@ -98,7 +99,7 @@ pub async fn sso_providers(
 pub async fn domains(db: &PgPool, tenant_id: Uuid) -> Result<Vec<TrustDomainRow>, AppError> {
     Ok(sqlx::query_as::<_, TrustDomainRow>(
         r#"
-        SELECT id, domain, verified_at, sso_required
+        SELECT id, domain, verified_at, sso_required, sso_provider_id
         FROM tenant_domains
         WHERE tenant_id = $1
         ORDER BY verified_at DESC NULLS LAST, domain ASC

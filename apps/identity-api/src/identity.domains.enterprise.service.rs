@@ -8,7 +8,9 @@ mod reads;
 use crate::database::Database;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
-pub use mutations::{create_invitations, reactivate_user, suspend_user, update_user_access};
+pub use mutations::{
+    create_invitations, reactivate_user, suspend_user, update_session_policy, update_user_access,
+};
 pub use reads::{
     get_billing, get_context, get_overview, get_security, get_usage, list_audit_events,
     list_developers, list_policies, list_users, list_workspaces,

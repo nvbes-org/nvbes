@@ -125,15 +125,37 @@ pub async fn list_policies(
     db: &Database,
     auth: &AuthContext,
     tenant_id: Uuid,
+    auth_session_ttl_hours: i64,
 ) -> Result<EnterprisePoliciesResponse, AppError> {
     crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let session_policy = db::session_policy(db, tenant_id).await?;
     Ok(EnterprisePoliciesResponse {
         policies: db::list_policies(db, tenant_id)
             .await?
             .into_iter()
             .map(db::PolicySummaryRow::into_view)
             .collect(),
+        session_policy: session_policy_view(session_policy, auth_session_ttl_hours),
     })
+}
+
+pub(super) fn session_policy_view(
+    row: Option<db::SessionPolicyRow>,
+    fallback_ttl_hours: i64,
+) -> EnterpriseSessionPolicy {
+    let policy_ttl = row.and_then(|row| row.admin_session_ttl_hours);
+    let admin_session_ttl_hours = i64::from(policy_ttl.unwrap_or(fallback_ttl_hours as i32));
+    EnterpriseSessionPolicy {
+        admin_session_ttl_hours,
+        recommended_admin_session_ttl_hours: 8,
+        compliant: admin_session_ttl_hours <= 8,
+        step_up_required_for_admin_elevation: true,
+        source: if policy_ttl.is_some() {
+            "tenant_policy".to_string()
+        } else {
+            "environment".to_string()
+        },
+    }
 }
 
 pub async fn get_security(

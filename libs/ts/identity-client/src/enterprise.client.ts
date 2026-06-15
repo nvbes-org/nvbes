@@ -50,6 +50,8 @@ import {
   EnterprisePolicySimulationInputSchema,
   type EnterprisePolicySimulationResponse,
   EnterprisePolicySimulationResponseSchema,
+  type EnterpriseSessionPolicyInput,
+  EnterpriseSessionPolicyInputSchema,
   type EnterpriseReactivateInput,
   EnterpriseReactivateInputSchema,
   type EnterpriseSecurityResponse,
@@ -67,6 +69,16 @@ import {
   type EnterpriseTrustCenterResponse,
   EnterpriseTrustCenterResponseSchema,
 } from './enterprise.trust.schemas';
+import {
+  type CreateTenantDomainInput,
+  CreateTenantDomainInputSchema,
+  type TenantDomainResponse,
+  TenantDomainResponseSchema,
+  type UpdateTenantDomainInput,
+  UpdateTenantDomainInputSchema,
+  type VerifyTenantDomainInput,
+  VerifyTenantDomainInputSchema,
+} from './federation.schemas';
 
 export type EnterpriseRequestOptions = Pick<HttpRequestOptions, 'signal'>;
 
@@ -191,6 +203,18 @@ export function getEnterprisePolicies(
   options?: EnterpriseRequestOptions,
 ): Promise<EnterprisePoliciesResponse> {
   return http.get(`${EnterpriseApiBasePath}/policies`, EnterprisePoliciesResponseSchema, options);
+}
+
+export function updateEnterpriseSessionPolicy(
+  http: HttpClient,
+  input: EnterpriseSessionPolicyInput,
+  options?: EnterpriseRequestOptions,
+): Promise<EnterprisePoliciesResponse> {
+  return http.request(`${EnterpriseApiBasePath}/policies/session`, EnterprisePoliciesResponseSchema, {
+    ...options,
+    body: EnterpriseSessionPolicyInputSchema.parse(input),
+    method: 'PATCH',
+  });
 }
 
 export function simulateEnterprisePolicy(
@@ -374,6 +398,53 @@ export function getEnterpriseTrustCenter(
   return http.get(
     `${EnterpriseApiBasePath}/trust-center`,
     EnterpriseTrustCenterResponseSchema,
+    options,
+  );
+}
+
+export function createTenantDomain(
+  http: HttpClient,
+  tenantId: string,
+  input: CreateTenantDomainInput,
+  options?: EnterpriseRequestOptions,
+): Promise<TenantDomainResponse> {
+  return http.post(
+    `/tenants/${encodeURIComponent(tenantId)}/domains`,
+    TenantDomainResponseSchema,
+    CreateTenantDomainInputSchema.parse(input),
+    options,
+  );
+}
+
+export function updateTenantDomain(
+  http: HttpClient,
+  tenantId: string,
+  domainId: string,
+  input: UpdateTenantDomainInput,
+  options?: EnterpriseRequestOptions,
+): Promise<TenantDomainResponse> {
+  return http.request(
+    `/tenants/${encodeURIComponent(tenantId)}/domains/${encodeURIComponent(domainId)}`,
+    TenantDomainResponseSchema,
+    {
+      ...options,
+      body: UpdateTenantDomainInputSchema.parse(input),
+      method: 'PATCH',
+    },
+  );
+}
+
+export function verifyTenantDomain(
+  http: HttpClient,
+  tenantId: string,
+  domainId: string,
+  input: VerifyTenantDomainInput,
+  options?: EnterpriseRequestOptions,
+): Promise<TenantDomainResponse> {
+  return http.post(
+    `/tenants/${encodeURIComponent(tenantId)}/domains/${encodeURIComponent(domainId)}/verify`,
+    TenantDomainResponseSchema,
+    VerifyTenantDomainInputSchema.parse(input),
     options,
   );
 }

@@ -66,6 +66,7 @@ pub struct TrustCenterDomain {
     pub domain: String,
     pub verified: bool,
     pub sso_required: bool,
+    pub sso_provider_id: Option<Uuid>,
     pub verified_at: Option<DateTime<Utc>>,
 }
 

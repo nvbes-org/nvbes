@@ -13,14 +13,16 @@ pub use owners::{
 };
 pub use reads::{
     actor_access, billing_summary, list_audit_events, list_developers, list_invitations,
-    list_invoices, list_policies, list_users, list_workspaces, security_summary, usage_metrics,
+    list_invoices, list_policies, list_users, list_workspaces, security_summary, session_policy,
+    usage_metrics,
 };
 pub use records::{
     ActorAccessRow, AuditEventRow, BillingSummaryRow, DeveloperCredentialRow,
     EnterpriseInvitationRow, EnterpriseUserRow, InvoiceRow, PolicySummaryRow, SecuritySummaryRow,
-    WorkspaceSummaryRow,
+    SessionPolicyRow, WorkspaceSummaryRow,
 };
 pub use writes::{
     ensure_workspaces_belong, has_pending_invitation, insert_audit, insert_invitation,
-    replace_access, set_tenant_memberships_status, target_role, target_role_for_lifecycle,
+    replace_access, set_session_policy, set_tenant_memberships_status, target_role,
+    target_role_for_lifecycle,
 };

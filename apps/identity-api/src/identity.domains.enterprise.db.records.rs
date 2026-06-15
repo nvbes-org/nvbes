@@ -161,6 +161,11 @@ pub struct PolicySummaryRow {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, FromRow)]
+pub struct SessionPolicyRow {
+    pub admin_session_ttl_hours: Option<i32>,
+}
+
 impl PolicySummaryRow {
     pub fn into_view(self) -> EnterprisePolicySummary {
         let configuration = match serde_json::from_value(self.configuration) {

@@ -4,13 +4,6 @@ import { AlertCircle, Building2, Globe2, KeyRound } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '../components/ui/empty';
 import { Skeleton } from '../components/ui/skeleton';
 import {
   Table,
@@ -21,6 +14,8 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { enterpriseTrustCenterQueryOptions } from '../enterprise.queries';
+import { DomainsCard } from './SettingsPage.domains';
+import { EmptyState } from './SettingsPage.empty';
 
 type TrustDomain = EnterpriseTrustCenterResponse['verified_domains'][number];
 type TrustProvider = EnterpriseTrustCenterResponse['sso']['providers'][number];
@@ -78,7 +73,11 @@ export function SettingsPage() {
           </section>
 
           <section className="grid gap-4 xl:grid-cols-2">
-            <DomainsCard domains={trustCenter.verified_domains} />
+            <DomainsCard
+              tenantId={trustCenter.tenant.id}
+              domains={trustCenter.verified_domains}
+              providers={trustCenter.sso.providers}
+            />
             <SsoCard providers={trustCenter.sso.providers} />
           </section>
         </>
@@ -107,50 +106,6 @@ function SettingMetric({
         </div>
         <p className="mt-4 truncate text-xl font-heading font-semibold">{value}</p>
         <p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DomainsCard({ domains }: { domains: TrustDomain[] }) {
-  return (
-    <Card className="rounded-lg" size="sm">
-      <CardHeader className="border-b border-border">
-        <CardTitle>Domains</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {domains.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Domain</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>SSO</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {domains.map((domain) => (
-                <TableRow key={domain.id}>
-                  <TableCell className="font-medium">{domain.domain}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={domain.verified ? 'default' : 'secondary'}
-                      className="rounded-md"
-                    >
-                      {domain.verified ? 'Verified' : 'Pending'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{domain.sso_required ? 'Required' : 'Optional'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <EmptyState
-            title="No domains"
-            description="Add and verify a tenant domain before enforcing SSO."
-          />
-        )}
       </CardContent>
     </Card>
   );
@@ -197,20 +152,6 @@ function SsoCard({ providers }: { providers: TrustProvider[] }) {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function EmptyState({ title, description }: { title: string; description: string }) {
-  return (
-    <Empty className="min-h-48 border bg-muted/20">
-      <EmptyMedia variant="icon">
-        <AlertCircle className="size-4" />
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
   );
 }
 
