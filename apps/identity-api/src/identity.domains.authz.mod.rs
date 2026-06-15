@@ -13,6 +13,7 @@ pub use service::{
     ensure_tenant_management_access,
 };
 pub use types::{
-    ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction, WorkspaceDecision,
-    WorkspacePolicy, WorkspaceRole, parse_action, parse_identity_role, parse_role,
+    AdminScope, ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction,
+    WorkspaceDecision, WorkspacePolicy, WorkspaceRole, parse_action, parse_identity_role,
+    parse_role,
 };
