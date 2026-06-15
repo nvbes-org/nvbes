@@ -1,4 +1,5 @@
 use crate::database::Database;
+use crate::domains::authz::{AdminScope, resolve_admin_scope};
 use crate::domains::enterprise::db;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -17,8 +18,8 @@ pub async fn get_context(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseContextResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let access = require_actor_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    let access = require_actor_access(db, auth, tenant_id, scope).await?;
     let admin_elevation =
         crate::domains::enterprise::admin_elevation::active_admin_elevation(redis, auth, tenant_id)
             .await?
@@ -42,8 +43,8 @@ pub async fn get_overview(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseOverviewResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id, scope).await?;
     Ok(EnterpriseOverviewResponse {
         metrics: vec![
             metric("workspaces", "Workspaces", workspaces),
@@ -51,7 +52,7 @@ pub async fn get_overview(
             metric("storage_used_bytes", "Storage used", storage),
         ],
         security_signals: default_security_signals(auth),
-        recent_audit_events: db::list_audit_events(db, tenant_id, 5)
+        recent_audit_events: db::list_audit_events(db, tenant_id, scope, 5)
             .await?
             .into_iter()
             .map(db::AuditEventRow::into_view)
@@ -64,14 +65,14 @@ pub async fn list_users(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseUsersResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     Ok(EnterpriseUsersResponse {
-        users: db::list_users(db, tenant_id)
+        users: db::list_users(db, tenant_id, scope)
             .await?
             .into_iter()
             .map(db::EnterpriseUserRow::into_view)
             .collect(),
-        invitations: db::list_invitations(db, tenant_id)
+        invitations: db::list_invitations(db, tenant_id, scope)
             .await?
             .into_iter()
             .map(db::EnterpriseInvitationRow::into_view)
@@ -89,9 +90,9 @@ pub async fn list_workspaces(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseWorkspacesResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     Ok(EnterpriseWorkspacesResponse {
-        workspaces: db::list_workspaces(db, tenant_id)
+        workspaces: db::list_workspaces(db, tenant_id, scope)
             .await?
             .into_iter()
             .map(db::WorkspaceSummaryRow::into_view)
@@ -108,7 +109,13 @@ pub async fn list_developers(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseDevelopersResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
     Ok(EnterpriseDevelopersResponse {
         credentials: db::list_developers(db, tenant_id)
             .await?
@@ -128,7 +135,13 @@ pub async fn list_policies(
     tenant_id: Uuid,
     auth_session_ttl_hours: i64,
 ) -> Result<EnterprisePoliciesResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
     let session_policy = db::session_policy(db, tenant_id).await?;
     let mfa_policy = db::mfa_policy(db, tenant_id).await?;
     Ok(EnterprisePoliciesResponse {
@@ -175,7 +188,13 @@ pub async fn get_security(
     tenant_id: Uuid,
     auth_session_ttl_hours: i64,
 ) -> Result<EnterpriseSecurityResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
     let summary = db::security_summary(db, tenant_id).await?;
     Ok(EnterpriseSecurityResponse {
         signals: security_signals(&summary),
@@ -191,9 +210,9 @@ pub async fn list_audit_events(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseAuditEventsResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     Ok(EnterpriseAuditEventsResponse {
-        events: db::list_audit_events(db, tenant_id, 50)
+        events: db::list_audit_events(db, tenant_id, scope, 50)
             .await?
             .into_iter()
             .map(db::AuditEventRow::into_view)
@@ -210,7 +229,13 @@ pub async fn get_billing(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseBillingResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
     let row = db::billing_summary(db, tenant_id).await?;
     Ok(EnterpriseBillingResponse {
         plan: EnterpriseBillingPlan {
@@ -243,8 +268,14 @@ pub async fn get_usage(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseUsageResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
-    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id).await?;
+    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    if !matches!(scope, AdminScope::Tenant) {
+        return Err(AppError::forbidden(
+            "tenant_scope_required",
+            "This action requires tenant-wide administrative privileges.",
+        ));
+    }
+    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id, scope).await?;
     Ok(EnterpriseUsageResponse {
         metrics: vec![
             usage("workspaces", "Workspaces", workspaces, None, "count"),
