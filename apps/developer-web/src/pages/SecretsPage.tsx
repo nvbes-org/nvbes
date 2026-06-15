@@ -24,7 +24,7 @@ import type { RotateDeveloperSecret } from '../developer.schemas';
 
 export function SecretsPage() {
   const queryClient = useQueryClient();
-  
+
   // State variables
   const [selectedClientId, setSelectedClientId] = useState('');
   const [overlapHours, setOverlapHours] = useState(24);
@@ -63,14 +63,18 @@ export function SecretsPage() {
     onSuccess: (data) => {
       setNewSecretResult(data);
       setUnderstandChecked(false);
-      void queryClient.invalidateQueries({ queryKey: ['developer-client-secret-versions', activeClientId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['developer-client-secret-versions', activeClientId],
+      });
     },
   });
 
   const revokeMutation = useMutation({
     mutationFn: (versionId: string) => revokeDeveloperSecretVersion(activeClientId, versionId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['developer-client-secret-versions', activeClientId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['developer-client-secret-versions', activeClientId],
+      });
     },
   });
 
@@ -115,7 +119,8 @@ export function SecretsPage() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Secret rotation</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure, preview, and perform zero-downtime client secret rotations with overlap periods.
+            Configure, preview, and perform zero-downtime client secret rotations with overlap
+            periods.
           </p>
         </div>
       </div>
@@ -125,7 +130,7 @@ export function SecretsPage() {
         <div className="space-y-6">
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
             <h3 className="font-semibold text-foreground">Guided configuration</h3>
-            
+
             {/* Target Client dropdown */}
             <label className="grid gap-2 text-sm font-medium">
               Target OAuth client
@@ -185,9 +190,7 @@ export function SecretsPage() {
                 </div>
                 <div className="relative">
                   <div className="absolute -left-[17px] top-1 h-2 w-2 rounded-full bg-destructive" />
-                  <p className="text-xs font-medium text-foreground">
-                    In {overlapHours} hours
-                  </p>
+                  <p className="text-xs font-medium text-foreground">In {overlapHours} hours</p>
                   <p className="text-[11px] text-muted-foreground">
                     Old secret expires automatically.
                   </p>
@@ -205,8 +208,8 @@ export function SecretsPage() {
                   onChange={(event) => setUnderstandChecked(event.currentTarget.checked)}
                 />
                 <span className="text-muted-foreground">
-                  I understand that rotating will demote the current client secret to the overlap status
-                  and automatically invalidate it after {overlapHours} hours.
+                  I understand that rotating will demote the current client secret to the overlap
+                  status and automatically invalidate it after {overlapHours} hours.
                 </span>
               </label>
 
@@ -292,9 +295,7 @@ export function SecretsPage() {
                 <History className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-semibold text-foreground">Secret versions history</h3>
               </div>
-              <span className="text-xs text-muted-foreground font-mono">
-                {activeClientName}
-              </span>
+              <span className="text-xs text-muted-foreground font-mono">{activeClientName}</span>
             </div>
 
             {versionsQuery.isLoading ? (
@@ -323,7 +324,7 @@ export function SecretsPage() {
                     {versions.map((v) => {
                       const isActive = v.status === 'active';
                       const isOverlap = v.status === 'overlap';
-                      
+
                       let badgeClass = 'bg-muted text-muted-foreground border-border';
                       if (isActive) {
                         badgeClass = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
@@ -342,7 +343,9 @@ export function SecretsPage() {
                             </div>
                           </td>
                           <td className="py-3.5">
-                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeClass}`}
+                            >
                               {v.status}
                             </span>
                           </td>
@@ -382,7 +385,9 @@ export function SecretsPage() {
                                 Revoke
                               </button>
                             ) : (
-                              <span className="text-[10px] text-muted-foreground font-medium">-</span>
+                              <span className="text-[10px] text-muted-foreground font-medium">
+                                -
+                              </span>
                             )}
                           </td>
                         </tr>
