@@ -1,3 +1,5 @@
+#[path = "identity.domains.enterprise.db.access_writes.rs"]
+pub mod access_writes;
 #[path = "identity.domains.enterprise.db.break_glass.rs"]
 pub mod break_glass;
 #[path = "identity.domains.enterprise.db.developer_writes.rs"]
@@ -15,6 +17,10 @@ pub mod records;
 #[path = "identity.domains.enterprise.db.writes.rs"]
 pub mod writes;
 
+pub use access_writes::{
+    replace_access, set_tenant_memberships_status, target_role, target_role_for_lifecycle,
+    target_workspace_ids_for_lifecycle,
+};
 pub use break_glass::{
     revoke_break_glass_account, touch_break_glass_account, upsert_break_glass_account,
 };
@@ -38,5 +44,5 @@ pub use records::{
 };
 pub use writes::{
     ensure_workspaces_belong, has_pending_invitation, insert_audit, insert_invitation,
-    replace_access, set_tenant_memberships_status, target_role, target_role_for_lifecycle,
+    insert_workspace_audit,
 };

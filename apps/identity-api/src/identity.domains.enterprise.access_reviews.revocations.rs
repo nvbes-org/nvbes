@@ -2,6 +2,7 @@ use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 use super::db::AccessReviewItemRow;
+use crate::domains::authz::AdminScope;
 use crate::http::error::AppError;
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,7 @@ async fn revoke_member(
         principal_id,
         "removed",
         None,
+        AdminScope::Tenant,
     )
     .await?;
     sqlx::query(
@@ -172,6 +174,7 @@ async fn ensure_not_last_owner(
         tx,
         tenant_id,
         principal_id,
+        AdminScope::Tenant,
     )
     .await?;
     ensure_ownerless_count_is_zero(ownerless_count)

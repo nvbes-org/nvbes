@@ -99,7 +99,13 @@ pub async fn client_credentials_grant(
                 "Client authentication is required for client_credentials grant.",
             )
         })?;
-        crate::domains::oauth::verify_client_secret_with_overlap(db, &client_auth.client_id, client_secret, &client_secret_hash).await?;
+        crate::domains::oauth::verify_client_secret_with_overlap(
+            db,
+            &client_auth.client_id,
+            client_secret,
+            &client_secret_hash,
+        )
+        .await?;
     }
 
     let scope_str = scope.unwrap_or("");

@@ -8,6 +8,8 @@ mod mutations;
 mod policy_mutations;
 #[path = "identity.domains.enterprise.service.reads.rs"]
 mod reads;
+#[path = "identity.domains.enterprise.service.user_audit.rs"]
+mod user_audit;
 #[path = "identity.domains.enterprise.service.user_mutations.rs"]
 mod user_mutations;
 
@@ -43,7 +45,6 @@ pub async fn grant_admin_elevation(
     tenant_id: Uuid,
     input: crate::domains::enterprise::types::EnterpriseAdminElevationInput,
 ) -> Result<crate::domains::enterprise::types::EnterpriseAdminElevationResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     if !matches!(scope, AdminScope::Tenant) {
         return Err(AppError::forbidden(

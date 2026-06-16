@@ -310,22 +310,25 @@ async fn test_client_credentials_grant_with_rotated_secret_overlap() {
     // Let's create an overlap version for the old client_secret.
     let overlap_ends_at = chrono::Utc::now() + chrono::Duration::hours(24);
     let old_secret_hash = crate::domains::oauth::hash_client_secret(&client_secret).unwrap();
-    
+
     let mut tx = state.db.begin().await.unwrap();
-    let previous_version_id = crate::domains::developer::service_accounts_db::ensure_previous_overlap_version(
-        &mut tx,
-        tenant_id,
-        &client_id,
-        &old_secret_hash,
-        overlap_ends_at,
-    )
-    .await
-    .unwrap();
+    let previous_version_id =
+        crate::domains::developer::service_accounts_db::ensure_previous_overlap_version(
+            &mut tx,
+            tenant_id,
+            &client_id,
+            &old_secret_hash,
+            overlap_ends_at,
+        )
+        .await
+        .unwrap();
 
     // Generate new secret
     let new_client_secret = "gxo_new_secret_1234567890_value";
-    let new_client_secret_hash = crate::domains::oauth::hash_client_secret(new_client_secret).unwrap();
-    let secret_last4 = crate::domains::developer::service_accounts_db::secret_last4(new_client_secret);
+    let new_client_secret_hash =
+        crate::domains::oauth::hash_client_secret(new_client_secret).unwrap();
+    let secret_last4 =
+        crate::domains::developer::service_accounts_db::secret_last4(new_client_secret);
 
     // Insert new active secret version
     let _active_version_id: uuid::Uuid = sqlx::query_scalar(
@@ -377,7 +380,10 @@ async fn test_client_credentials_grant_with_rotated_secret_overlap() {
         None,
     )
     .await;
-    assert!(token_new.is_ok(), "New secret authentication should succeed");
+    assert!(
+        token_new.is_ok(),
+        "New secret authentication should succeed"
+    );
 
     // 4. Authenticating with the OLD secret during overlap period should succeed
     let token_old = client_credentials_grant(
@@ -393,7 +399,10 @@ async fn test_client_credentials_grant_with_rotated_secret_overlap() {
         None,
     )
     .await;
-    assert!(token_old.is_ok(), "Old secret authentication should succeed during overlap");
+    assert!(
+        token_old.is_ok(),
+        "Old secret authentication should succeed during overlap"
+    );
 
     // 5. If we revoke the previous secret version, old secret authentication should fail
     sqlx::query(
@@ -426,8 +435,10 @@ async fn test_client_credentials_grant_with_rotated_secret_overlap() {
         None,
     )
     .await;
-    assert!(token_revoked.is_err(), "Old secret authentication should fail after revocation");
+    assert!(
+        token_revoked.is_err(),
+        "Old secret authentication should fail after revocation"
+    );
 
     cleanup(&pool, tenant_id).await;
 }
-

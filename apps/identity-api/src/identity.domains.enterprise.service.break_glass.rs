@@ -36,7 +36,7 @@ pub async fn activate_break_glass_account(
     )?;
 
     let mut tx = db.begin().await?;
-    let target_role = db::target_role(&mut tx, tenant_id, user_id)
+    let target_role = db::target_role(&mut tx, tenant_id, user_id, AdminScope::Tenant)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")

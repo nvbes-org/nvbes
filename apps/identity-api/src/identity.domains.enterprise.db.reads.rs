@@ -185,9 +185,8 @@ pub async fn list_workspaces(
     scope: AdminScope,
 ) -> Result<Vec<WorkspaceSummaryRow>, AppError> {
     match scope {
-        AdminScope::Tenant => {
-            Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
-                r#"
+        AdminScope::Tenant => Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
+            r#"
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
@@ -200,14 +199,12 @@ pub async fn list_workspaces(
                 GROUP BY w.id, qu.used_storage_bytes
                 ORDER BY w.created_at DESC
                 "#,
-            )
-            .bind(tenant_id)
-            .fetch_all(db)
-            .await?)
-        }
-        AdminScope::Organization(org_id) => {
-            Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
-                r#"
+        )
+        .bind(tenant_id)
+        .fetch_all(db)
+        .await?),
+        AdminScope::Organization(org_id) => Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
+            r#"
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
@@ -220,12 +217,11 @@ pub async fn list_workspaces(
                 GROUP BY w.id, qu.used_storage_bytes
                 ORDER BY w.created_at DESC
                 "#,
-            )
-            .bind(tenant_id)
-            .bind(org_id)
-            .fetch_all(db)
-            .await?)
-        }
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .fetch_all(db)
+        .await?),
     }
 }
 
@@ -236,9 +232,8 @@ pub async fn list_audit_events(
     limit: i64,
 ) -> Result<Vec<AuditEventRow>, AppError> {
     match scope {
-        AdminScope::Tenant => {
-            Ok(sqlx::query_as::<_, AuditEventRow>(
-                r#"
+        AdminScope::Tenant => Ok(sqlx::query_as::<_, AuditEventRow>(
+            r#"
                 SELECT ae.id, ae.action AS event_type, ae.actor_principal_id AS actor_id,
                   u.email AS actor_email, ae.target_type, ae.target_id, ae.metadata, ae.created_at
                 FROM audit_events ae
@@ -247,15 +242,13 @@ pub async fn list_audit_events(
                 ORDER BY ae.created_at DESC, ae.id DESC
                 LIMIT $2
                 "#,
-            )
-            .bind(tenant_id)
-            .bind(limit)
-            .fetch_all(db)
-            .await?)
-        }
-        AdminScope::Organization(org_id) => {
-            Ok(sqlx::query_as::<_, AuditEventRow>(
-                r#"
+        )
+        .bind(tenant_id)
+        .bind(limit)
+        .fetch_all(db)
+        .await?),
+        AdminScope::Organization(org_id) => Ok(sqlx::query_as::<_, AuditEventRow>(
+            r#"
                 SELECT ae.id, ae.action AS event_type, ae.actor_principal_id AS actor_id,
                   u.email AS actor_email, ae.target_type, ae.target_id, ae.metadata, ae.created_at
                 FROM audit_events ae
@@ -265,17 +258,14 @@ pub async fn list_audit_events(
                 ORDER BY ae.created_at DESC, ae.id DESC
                 LIMIT $2
                 "#,
-            )
-            .bind(tenant_id)
-            .bind(limit)
-            .bind(org_id)
-            .fetch_all(db)
-            .await?)
-        }
+        )
+        .bind(tenant_id)
+        .bind(limit)
+        .bind(org_id)
+        .fetch_all(db)
+        .await?),
     }
 }
-
-
 
 pub async fn usage_metrics(
     db: &PgPool,

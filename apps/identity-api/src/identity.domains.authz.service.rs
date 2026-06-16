@@ -381,9 +381,15 @@ mod tests {
             email_verified_at: Option<chrono::DateTime<chrono::Utc>>,
         }
         impl super::TenantManagementAuth for MockAuth {
-            fn user_id(&self) -> uuid::Uuid { self.user_id }
-            fn tenant_id(&self) -> Option<uuid::Uuid> { self.tenant_id }
-            fn email_verified_at(&self) -> Option<chrono::DateTime<chrono::Utc>> { self.email_verified_at }
+            fn user_id(&self) -> uuid::Uuid {
+                self.user_id
+            }
+            fn tenant_id(&self) -> Option<uuid::Uuid> {
+                self.tenant_id
+            }
+            fn email_verified_at(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+                self.email_verified_at
+            }
         }
 
         let auth = MockAuth {
@@ -408,7 +414,9 @@ mod tests {
         .unwrap();
 
         // Now tenant admin
-        let scope = super::resolve_admin_scope(&pool, &auth, tenant_id, Some(org_id)).await.unwrap();
+        let scope = super::resolve_admin_scope(&pool, &auth, tenant_id, Some(org_id))
+            .await
+            .unwrap();
         assert_eq!(scope, super::AdminScope::Tenant);
 
         // Delete tenant membership to test org admin
@@ -431,7 +439,9 @@ mod tests {
         .unwrap();
 
         // Now organization admin
-        let scope = super::resolve_admin_scope(&pool, &auth, tenant_id, Some(org_id)).await.unwrap();
+        let scope = super::resolve_admin_scope(&pool, &auth, tenant_id, Some(org_id))
+            .await
+            .unwrap();
         assert_eq!(scope, super::AdminScope::Organization(org_id));
     }
 }

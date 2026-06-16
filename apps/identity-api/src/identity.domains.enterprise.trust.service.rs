@@ -19,7 +19,6 @@ pub async fn get_trust_center(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<EnterpriseTrustCenterResponse, AppError> {
-    crate::domains::authz::ensure_tenant_management_access(pool, auth, tenant_id).await?;
     let scope = resolve_admin_scope(pool, auth, tenant_id, auth.organization_id).await?;
     if !matches!(scope, AdminScope::Tenant) {
         return Err(AppError::forbidden(
@@ -32,11 +31,12 @@ pub async fn get_trust_center(
     let providers = db::sso_providers(pool, tenant_id).await?;
     let domains = db::domains(pool, tenant_id).await?;
     let regions = db::hosting_regions(pool, tenant_id).await?;
-    let audit_events = crate::domains::enterprise::db::list_audit_events(pool, tenant_id, scope, 10)
-        .await?
-        .into_iter()
-        .map(crate::domains::enterprise::db::AuditEventRow::into_view)
-        .collect();
+    let audit_events =
+        crate::domains::enterprise::db::list_audit_events(pool, tenant_id, scope, 10)
+            .await?
+            .into_iter()
+            .map(crate::domains::enterprise::db::AuditEventRow::into_view)
+            .collect();
 
     Ok(build_trust_center_response(
         tenant,

@@ -74,7 +74,13 @@ pub(crate) async fn introspect(
     }
 
     let client_secret_hash: String = client_row.get("client_secret_hash");
-    crate::domains::oauth::verify_client_secret_with_overlap(&state.db, &client_id, &client_secret, &client_secret_hash).await?;
+    crate::domains::oauth::verify_client_secret_with_overlap(
+        &state.db,
+        &client_id,
+        &client_secret,
+        &client_secret_hash,
+    )
+    .await?;
 
     let client_ip = nvbes_core::http::client_ip::client_ip(&headers);
     let response = crate::domains::oauth::flows::introspect_token(

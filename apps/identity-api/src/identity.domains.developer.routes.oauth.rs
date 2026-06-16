@@ -334,16 +334,16 @@ pub async fn review_marketplace_app(
     Path(client_id): Path<String>,
     Json(input): Json<ReviewMarketplaceAppInput>,
 ) -> Result<Json<DeveloperMarketplaceAppSummary>, AppError> {
-    let tenant_id = service::require_permission(
-        &state.db,
-        &auth,
-        DeveloperPermission::MarketplaceReview,
-    )
-    .await?;
+    let tenant_id =
+        service::require_permission(&state.db, &auth, DeveloperPermission::MarketplaceReview)
+            .await?;
 
     ensure_oauth_client_in_tenant(&state.db, tenant_id, &client_id).await?;
 
-    if !matches!(input.status.as_str(), "approved" | "rejected" | "suspended" | "pending") {
+    if !matches!(
+        input.status.as_str(),
+        "approved" | "rejected" | "suspended" | "pending"
+    ) {
         return Err(AppError::bad_request(
             "invalid_marketplace_status",
             "Marketplace status must be 'approved', 'rejected', 'suspended', or 'pending'",
@@ -389,7 +389,10 @@ pub async fn create_scope(
 
     let scope_key = input.scope_key.trim();
     if scope_key.is_empty() {
-        return Err(AppError::bad_request("invalid_scope_key", "Scope key cannot be empty."));
+        return Err(AppError::bad_request(
+            "invalid_scope_key",
+            "Scope key cannot be empty.",
+        ));
     }
 
     let risk = input.risk.to_lowercase();
@@ -397,9 +400,19 @@ pub async fn create_scope(
         return Err(AppError::bad_request("invalid_risk", "Invalid risk level."));
     }
 
-    let lifecycle = input.lifecycle.clone().unwrap_or_else(|| "proposed".to_string()).to_lowercase();
-    if !matches!(lifecycle.as_str(), "proposed" | "active" | "deprecated" | "retired") {
-        return Err(AppError::bad_request("invalid_lifecycle", "Invalid lifecycle status."));
+    let lifecycle = input
+        .lifecycle
+        .clone()
+        .unwrap_or_else(|| "proposed".to_string())
+        .to_lowercase();
+    if !matches!(
+        lifecycle.as_str(),
+        "proposed" | "active" | "deprecated" | "retired"
+    ) {
+        return Err(AppError::bad_request(
+            "invalid_lifecycle",
+            "Invalid lifecycle status.",
+        ));
     }
 
     let mut tx = state.db.begin().await?;
@@ -467,8 +480,14 @@ pub async fn update_scope(
     }
 
     let lifecycle = input.lifecycle.to_lowercase();
-    if !matches!(lifecycle.as_str(), "proposed" | "active" | "deprecated" | "retired") {
-        return Err(AppError::bad_request("invalid_lifecycle", "Invalid lifecycle status."));
+    if !matches!(
+        lifecycle.as_str(),
+        "proposed" | "active" | "deprecated" | "retired"
+    ) {
+        return Err(AppError::bad_request(
+            "invalid_lifecycle",
+            "Invalid lifecycle status.",
+        ));
     }
 
     let exists = sqlx::query_scalar::<_, bool>(
@@ -479,7 +498,10 @@ pub async fn update_scope(
     .await?;
 
     if !exists {
-        return Err(AppError::not_found("scope_not_found", "The requested scope was not found."));
+        return Err(AppError::not_found(
+            "scope_not_found",
+            "The requested scope was not found.",
+        ));
     }
 
     let mut tx = state.db.begin().await?;
@@ -553,7 +575,10 @@ pub async fn delete_scope(
     .await?;
 
     if !exists {
-        return Err(AppError::not_found("scope_not_found", "The requested scope was not found."));
+        return Err(AppError::not_found(
+            "scope_not_found",
+            "The requested scope was not found.",
+        ));
     }
 
     let mut tx = state.db.begin().await?;
@@ -572,7 +597,6 @@ pub async fn delete_scope(
 
     Ok(Json(()))
 }
-
 
 async fn get_marketplace_app_summary(
     db: &PgPool,
@@ -600,10 +624,5 @@ async fn get_marketplace_app_summary(
     .bind(client_id)
     .fetch_optional(db)
     .await?
-    .ok_or_else(|| {
-        AppError::not_found(
-            "marketplace_app_not_found",
-            "Marketplace app not found",
-        )
-    })
+    .ok_or_else(|| AppError::not_found("marketplace_app_not_found", "Marketplace app not found"))
 }

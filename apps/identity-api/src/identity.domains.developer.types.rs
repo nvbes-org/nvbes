@@ -471,4 +471,3 @@ pub struct UpdateScopeInput {
     pub lifecycle: String,
     pub allowed_audiences: Vec<String>,
 }
-
