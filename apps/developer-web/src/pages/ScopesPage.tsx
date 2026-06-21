@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Library, Plus, Search, Trash2, Edit2, X, Users, Globe } from 'lucide-react';
 import { useState, useMemo } from 'react';
@@ -9,6 +10,7 @@ import {
   getDeveloperContext,
 } from '../developer.api';
 import { canUseDeveloperPermission } from '../developer.permissions';
+import type { CreateScopeInput, UpdateScopeInput } from '../developer.schemas';
 import { inputClass, textareaClass, buttonClass, Field } from './Portal.shared';
 
 type ScopeRisk = 'low' | 'medium' | 'high' | 'restricted';
@@ -24,6 +26,16 @@ interface ScopeFormData {
   allowed_audiences: string;
 }
 
+const emptyScopeForm: ScopeFormData = {
+  scope_key: '',
+  display_name: '',
+  description: '',
+  risk: 'medium',
+  owner_team: '',
+  lifecycle: 'proposed',
+  allowed_audiences: '',
+};
+
 export function ScopesPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +44,7 @@ export function ScopesPage() {
 
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createScopeForm, setCreateScopeForm] = useState<ScopeFormData>(emptyScopeForm);
   const [editingScope, setEditingScope] = useState<ScopeFormData | null>(null);
   const [editingScopeKey, setEditingScopeKey] = useState<string | null>(null);
   const [deletingScopeKey, setDeletingScopeKey] = useState<string | null>(null);
@@ -64,15 +77,16 @@ export function ScopesPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['developer-scopes'] });
       setIsCreateOpen(false);
+      setCreateScopeForm(emptyScopeForm);
       setFormError(null);
     },
-    onError: (error: any) => {
-      setFormError(error?.body?.error?.message || error?.message || 'Failed to create scope');
+    onError: (error: unknown) => {
+      setFormError(mutationErrorMessage(error, 'Failed to create scope'));
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ scopeKey, input }: { scopeKey: string; input: any }) =>
+    mutationFn: ({ scopeKey, input }: { scopeKey: string; input: UpdateScopeInput }) =>
       updateDeveloperScope(scopeKey, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['developer-scopes'] });
@@ -80,8 +94,8 @@ export function ScopesPage() {
       setEditingScopeKey(null);
       setFormError(null);
     },
-    onError: (error: any) => {
-      setFormError(error?.body?.error?.message || error?.message || 'Failed to update scope');
+    onError: (error: unknown) => {
+      setFormError(mutationErrorMessage(error, 'Failed to update scope'));
     },
   });
 
@@ -120,13 +134,13 @@ export function ScopesPage() {
   const handleCreateSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const scope_key = (form.get('scope_key') as string).trim();
-    const display_name = (form.get('display_name') as string).trim();
-    const description = (form.get('description') as string).trim();
-    const risk = form.get('risk') as ScopeRisk;
-    const owner_team = (form.get('owner_team') as string).trim();
-    const lifecycle = form.get('lifecycle') as ScopeLifecycle;
-    const allowed_audiences_str = form.get('allowed_audiences') as string;
+    const scope_key = formString(form, 'scope_key').trim();
+    const display_name = formString(form, 'display_name').trim();
+    const description = formString(form, 'description').trim();
+    const risk = formString(form, 'risk') as ScopeRisk;
+    const owner_team = formString(form, 'owner_team').trim();
+    const lifecycle = formString(form, 'lifecycle') as ScopeLifecycle;
+    const allowed_audiences_str = formString(form, 'allowed_audiences');
 
     const allowed_audiences = allowed_audiences_str
       ? allowed_audiences_str
@@ -135,7 +149,7 @@ export function ScopesPage() {
           .filter(Boolean)
       : [];
 
-    createMutation.mutate({
+    const input: CreateScopeInput = {
       scope_key,
       display_name,
       description,
@@ -143,19 +157,20 @@ export function ScopesPage() {
       owner_team,
       lifecycle,
       allowed_audiences,
-    });
+    };
+    createMutation.mutate(input);
   };
 
   const handleUpdateSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingScopeKey) return;
     const form = new FormData(event.currentTarget);
-    const display_name = (form.get('display_name') as string).trim();
-    const description = (form.get('description') as string).trim();
-    const risk = form.get('risk') as ScopeRisk;
-    const owner_team = (form.get('owner_team') as string).trim();
-    const lifecycle = form.get('lifecycle') as ScopeLifecycle;
-    const allowed_audiences_str = form.get('allowed_audiences') as string;
+    const display_name = formString(form, 'display_name').trim();
+    const description = formString(form, 'description').trim();
+    const risk = formString(form, 'risk') as ScopeRisk;
+    const owner_team = formString(form, 'owner_team').trim();
+    const lifecycle = formString(form, 'lifecycle') as ScopeLifecycle;
+    const allowed_audiences_str = formString(form, 'allowed_audiences');
 
     const allowed_audiences = allowed_audiences_str
       ? allowed_audiences_str
@@ -164,16 +179,17 @@ export function ScopesPage() {
           .filter(Boolean)
       : [];
 
+    const input: UpdateScopeInput = {
+      display_name,
+      description,
+      risk,
+      owner_team,
+      lifecycle,
+      allowed_audiences,
+    };
     updateMutation.mutate({
       scopeKey: editingScopeKey,
-      input: {
-        display_name,
-        description,
-        risk,
-        owner_team,
-        lifecycle,
-        allowed_audiences,
-      },
+      input,
     });
   };
 
@@ -227,6 +243,7 @@ export function ScopesPage() {
             type="button"
             onClick={() => {
               setFormError(null);
+              setCreateScopeForm(emptyScopeForm);
               setIsCreateOpen(true);
             }}
             className={`${buttonClass} gap-2 shadow-sm hover:opacity-90 transition-opacity`}
@@ -406,30 +423,60 @@ export function ScopesPage() {
                   name="scope_key"
                   className={inputClass}
                   placeholder="identity.users.read"
+                  value={createScopeForm.scope_key}
+                  onChange={(event) =>
+                    setCreateScopeForm((current) => ({
+                      ...current,
+                      scope_key: event.currentTarget.value,
+                    }))
+                  }
                   required
                 />
+                <InvisibleUnicodeWarning value={createScopeForm.scope_key} />
               </Field>
               <Field label="Display Name">
                 <input
                   name="display_name"
                   className={inputClass}
                   placeholder="Read user profiles"
+                  value={createScopeForm.display_name}
+                  onChange={(event) =>
+                    setCreateScopeForm((current) => ({
+                      ...current,
+                      display_name: event.currentTarget.value,
+                    }))
+                  }
                   required
                 />
+                <InvisibleUnicodeWarning value={createScopeForm.display_name} />
               </Field>
               <Field label="Description">
                 <textarea
                   name="description"
                   className={textareaClass}
                   placeholder="Explain what access this scope grants to applications..."
+                  value={createScopeForm.description}
+                  onChange={(event) =>
+                    setCreateScopeForm((current) => ({
+                      ...current,
+                      description: event.currentTarget.value,
+                    }))
+                  }
                   required
                 />
+                <InvisibleUnicodeWarning value={createScopeForm.description} />
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Risk Level">
                   <select
                     name="risk"
-                    defaultValue="medium"
+                    value={createScopeForm.risk}
+                    onChange={(event) =>
+                      setCreateScopeForm((current) => ({
+                        ...current,
+                        risk: event.currentTarget.value as ScopeRisk,
+                      }))
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary w-full cursor-pointer"
                   >
                     <option value="low">Low Risk</option>
@@ -441,7 +488,13 @@ export function ScopesPage() {
                 <Field label="Lifecycle">
                   <select
                     name="lifecycle"
-                    defaultValue="proposed"
+                    value={createScopeForm.lifecycle}
+                    onChange={(event) =>
+                      setCreateScopeForm((current) => ({
+                        ...current,
+                        lifecycle: event.currentTarget.value as ScopeLifecycle,
+                      }))
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary w-full cursor-pointer"
                   >
                     <option value="proposed">Proposed</option>
@@ -456,15 +509,31 @@ export function ScopesPage() {
                   name="owner_team"
                   className={inputClass}
                   placeholder="Core Identity Team"
+                  value={createScopeForm.owner_team}
+                  onChange={(event) =>
+                    setCreateScopeForm((current) => ({
+                      ...current,
+                      owner_team: event.currentTarget.value,
+                    }))
+                  }
                   required
                 />
+                <InvisibleUnicodeWarning value={createScopeForm.owner_team} />
               </Field>
               <Field label="Allowed Audiences (Comma separated)">
                 <input
                   name="allowed_audiences"
                   className={inputClass}
                   placeholder="https://api.nvbes.com, optional"
+                  value={createScopeForm.allowed_audiences}
+                  onChange={(event) =>
+                    setCreateScopeForm((current) => ({
+                      ...current,
+                      allowed_audiences: event.currentTarget.value,
+                    }))
+                  }
                 />
+                <InvisibleUnicodeWarning value={createScopeForm.allowed_audiences} />
               </Field>
 
               <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-border/40">
@@ -518,28 +587,48 @@ export function ScopesPage() {
                   value={editingScope.scope_key}
                   disabled
                 />
+                <InvisibleUnicodeWarning value={editingScope.scope_key} />
               </Field>
               <Field label="Display Name">
                 <input
                   name="display_name"
-                  defaultValue={editingScope.display_name}
+                  value={editingScope.display_name}
+                  onChange={(event) =>
+                    setEditingScope((current) =>
+                      current ? { ...current, display_name: event.currentTarget.value } : current,
+                    )
+                  }
                   className={inputClass}
                   required
                 />
+                <InvisibleUnicodeWarning value={editingScope.display_name} />
               </Field>
               <Field label="Description">
                 <textarea
                   name="description"
-                  defaultValue={editingScope.description}
+                  value={editingScope.description}
+                  onChange={(event) =>
+                    setEditingScope((current) =>
+                      current ? { ...current, description: event.currentTarget.value } : current,
+                    )
+                  }
                   className={textareaClass}
                   required
                 />
+                <InvisibleUnicodeWarning value={editingScope.description} />
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Risk Level">
                   <select
                     name="risk"
-                    defaultValue={editingScope.risk}
+                    value={editingScope.risk}
+                    onChange={(event) =>
+                      setEditingScope((current) =>
+                        current
+                          ? { ...current, risk: event.currentTarget.value as ScopeRisk }
+                          : current,
+                      )
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary w-full cursor-pointer"
                   >
                     <option value="low">Low Risk</option>
@@ -551,7 +640,14 @@ export function ScopesPage() {
                 <Field label="Lifecycle">
                   <select
                     name="lifecycle"
-                    defaultValue={editingScope.lifecycle}
+                    value={editingScope.lifecycle}
+                    onChange={(event) =>
+                      setEditingScope((current) =>
+                        current
+                          ? { ...current, lifecycle: event.currentTarget.value as ScopeLifecycle }
+                          : current,
+                      )
+                    }
                     className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary w-full cursor-pointer"
                   >
                     <option value="proposed">Proposed</option>
@@ -564,18 +660,32 @@ export function ScopesPage() {
               <Field label="Owner Team">
                 <input
                   name="owner_team"
-                  defaultValue={editingScope.owner_team}
+                  value={editingScope.owner_team}
+                  onChange={(event) =>
+                    setEditingScope((current) =>
+                      current ? { ...current, owner_team: event.currentTarget.value } : current,
+                    )
+                  }
                   className={inputClass}
                   required
                 />
+                <InvisibleUnicodeWarning value={editingScope.owner_team} />
               </Field>
               <Field label="Allowed Audiences (Comma separated)">
                 <input
                   name="allowed_audiences"
-                  defaultValue={editingScope.allowed_audiences}
+                  value={editingScope.allowed_audiences}
+                  onChange={(event) =>
+                    setEditingScope((current) =>
+                      current
+                        ? { ...current, allowed_audiences: event.currentTarget.value }
+                        : current,
+                    )
+                  }
                   className={inputClass}
                   placeholder="https://api.nvbes.com, optional"
                 />
+                <InvisibleUnicodeWarning value={editingScope.allowed_audiences} />
               </Field>
 
               <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-border/40">
@@ -662,4 +772,37 @@ function ScopesUnavailable() {
       </p>
     </section>
   );
+}
+
+function formString(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === 'string' ? value : '';
+}
+
+function mutationErrorMessage(error: unknown, fallback: string): string {
+  const body = readObjectProperty(error, 'body');
+  const apiError = readObjectProperty(body, 'error');
+  const apiMessage = readStringProperty(apiError, 'message');
+  if (apiMessage) {
+    return apiMessage;
+  }
+
+  const message = readStringProperty(error, 'message');
+  return message || fallback;
+}
+
+function readObjectProperty(value: unknown, property: string): Record<string, unknown> | null {
+  if (typeof value !== 'object' || value === null || !(property in value)) {
+    return null;
+  }
+  const nested = (value as Record<string, unknown>)[property];
+  return typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : null;
+}
+
+function readStringProperty(value: unknown, property: string): string | null {
+  if (typeof value !== 'object' || value === null || !(property in value)) {
+    return null;
+  }
+  const nested = (value as Record<string, unknown>)[property];
+  return typeof nested === 'string' && nested.length > 0 ? nested : null;
 }

@@ -1,4 +1,4 @@
-import { RelativeTime } from '@nvbes/web-runtime';
+import { InvisibleUnicodeWarning, RelativeTime } from '@nvbes/web-runtime';
 import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -244,6 +244,7 @@ export function SecretsPage() {
                 </span>
                 <ClipboardButton value={newSecretResult.client_secret} className="shadow-sm" />
               </div>
+              <InvisibleUnicodeWarning value={newSecretResult.client_secret} />
 
               {/* Warnings and deadlines */}
               <div className="flex gap-2 text-xs text-emerald-800">

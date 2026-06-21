@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { ClipboardButton } from '@nvbes/web-ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export function TotpConfirmCard({
             </code>
             <ClipboardButton value={secretBase32} label="Copier" className="h-9" />
           </div>
+          <InvisibleUnicodeWarning value={secretBase32} />
         </div>
 
         <Separator />

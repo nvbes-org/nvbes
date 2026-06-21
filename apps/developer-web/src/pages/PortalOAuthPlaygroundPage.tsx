@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -30,6 +31,10 @@ export function PortalOAuthPlaygroundPage() {
   const [codeChallenge, setCodeChallenge] = useState('');
   const [state, setState] = useState('');
   const [nonce, setNonce] = useState('');
+  const [authorizeRedirectUri, setAuthorizeRedirectUri] = useState('');
+  const [authorizeScope, setAuthorizeScope] = useState('openid profile email');
+  const [exchangeRedirectUri, setExchangeRedirectUri] = useState('');
+  const [exchangeCodeVerifier, setExchangeCodeVerifier] = useState('');
   const exchangeCode = useMutation({ mutationFn: exchangeOAuthPlaygroundCode });
 
   return (
@@ -49,10 +54,12 @@ export function PortalOAuthPlaygroundPage() {
           const nextState = randomBase64Url();
           const nextNonce = randomBase64Url();
           const verifier = randomBase64Url();
+          setExchangeRedirectUri(redirectUri);
           void sha256Base64Url(verifier).then((challenge) => {
             setState(nextState);
             setNonce(nextNonce);
             setCodeVerifier(verifier);
+            setExchangeCodeVerifier(verifier);
             setCodeChallenge(challenge);
             const url = new URL('/oauth/authorize', window.location.origin);
             url.searchParams.set('response_type', 'code');
@@ -71,10 +78,23 @@ export function PortalOAuthPlaygroundPage() {
           <input name="client_id" className={inputClass} required />
         </Field>
         <Field label="Redirect URI">
-          <input name="redirect_uri" className={inputClass} required />
+          <input
+            name="redirect_uri"
+            className={inputClass}
+            value={authorizeRedirectUri}
+            onChange={(event) => setAuthorizeRedirectUri(event.currentTarget.value)}
+            required
+          />
+          <InvisibleUnicodeWarning value={authorizeRedirectUri} />
         </Field>
         <Field label="Scope">
-          <input name="scope" className={inputClass} defaultValue="openid profile email" />
+          <input
+            name="scope"
+            className={inputClass}
+            value={authorizeScope}
+            onChange={(event) => setAuthorizeScope(event.currentTarget.value)}
+          />
+          <InvisibleUnicodeWarning value={authorizeScope} />
         </Field>
         <button type="submit" className={buttonClass}>
           Generate authorize URL
@@ -109,10 +129,24 @@ export function PortalOAuthPlaygroundPage() {
           <input name="code" className={inputClass} required />
         </Field>
         <Field label="Redirect URI">
-          <input name="redirect_uri" className={inputClass} required />
+          <input
+            name="redirect_uri"
+            className={inputClass}
+            value={exchangeRedirectUri}
+            onChange={(event) => setExchangeRedirectUri(event.currentTarget.value)}
+            required
+          />
+          <InvisibleUnicodeWarning value={exchangeRedirectUri} />
         </Field>
         <Field label="Code verifier">
-          <input name="code_verifier" className={inputClass} defaultValue={codeVerifier} required />
+          <input
+            name="code_verifier"
+            className={inputClass}
+            value={exchangeCodeVerifier}
+            onChange={(event) => setExchangeCodeVerifier(event.currentTarget.value)}
+            required
+          />
+          <InvisibleUnicodeWarning value={exchangeCodeVerifier} />
         </Field>
         <button type="submit" className={buttonClass} disabled={exchangeCode.isPending}>
           Exchange code

@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { ClipboardButton } from '@nvbes/web-ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +57,7 @@ export function SecretDialog({
                 </Badge>
               </div>
               <Card className="mt-4 break-all p-3 font-mono text-sm">{result.client_secret}</Card>
+              <InvisibleUnicodeWarning value={result.client_secret} />
             </Card>
           </div>
         )}

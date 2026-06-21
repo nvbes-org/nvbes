@@ -1,5 +1,6 @@
 import { QueryClient, keepPreviousData } from '@tanstack/react-query';
 import { DtoValidationError, HttpError } from '@nvbes/http-client';
+import { isSessionStaleError } from './session-stale';
 
 export type ClientErrorKind = 'api' | 'dto' | 'unexpected';
 
@@ -35,6 +36,9 @@ export function createQueryClient(): QueryClient {
         gcTime: 30 * 60 * 1000,
         placeholderData: keepPreviousData,
         retry: (failureCount, error) => {
+          if (isSessionStaleError(error)) {
+            return false;
+          }
           const normalized = normalizeClientError(error);
           if (normalized.kind === 'api' && normalized.status && normalized.status < 500) {
             return false;
