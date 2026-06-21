@@ -13,10 +13,6 @@ pub mod pii_logging;
 pub mod postgres_runtime;
 #[path = "redis.runtime.rs"]
 pub mod redis_runtime;
-#[path = "scw.kms.rs"]
-pub mod scw_kms;
-#[path = "scw.secrets.rs"]
-pub mod scw_secrets;
 #[path = "security.mod.rs"]
 pub mod security;
 #[path = "tls.mod.rs"]

@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/rust/tenancy",
   "sourceRoot": "libs/rust/tenancy/src",
-  "tags": ["type:lib", "domain:shared", "layer:core"]
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:core"]
 }

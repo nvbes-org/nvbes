@@ -4,6 +4,23 @@ use std::collections::BTreeMap;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+#[path = "identity.domains.enterprise.types.operations.rs"]
+mod operations;
+#[path = "identity.domains.enterprise.types.security.rs"]
+mod security;
+
+pub use operations::{
+    EnterpriseAccessUpdateInput, EnterpriseAdminElevationInput, EnterpriseAuditReasonInput,
+    EnterpriseBreakGlassInput, EnterpriseInvitationInput, EnterpriseReactivateInput,
+    EnterpriseSuspendInput,
+};
+pub use security::{
+    EnterpriseAuditEventsResponse, EnterpriseBillingPlan, EnterpriseBillingResponse,
+    EnterpriseInvoice, EnterpriseSecurityPostureControl, EnterpriseSecurityPostureScore,
+    EnterpriseSecurityResponse, EnterpriseSecuritySignal, EnterpriseSecurityStatus,
+    EnterpriseUsageMetric, EnterpriseUsageResponse,
+};
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum EnterpriseRole {
@@ -112,17 +129,6 @@ pub struct EnterprisePolicySummary {
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct EnterpriseSecuritySignal {
-    pub key: String,
-    pub label: String,
-    pub status: String,
-    pub severity: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub details: Option<BTreeMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct EnterpriseAuditEvent {
     pub id: Uuid,
     pub event_type: String,
@@ -133,37 +139,6 @@ pub struct EnterpriseAuditEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<BTreeMap<String, serde_json::Value>>,
     pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseBillingPlan {
-    pub code: String,
-    pub name: String,
-    pub status: String,
-    pub currency: String,
-    pub monthly_price_cents: i64,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseInvoice {
-    pub id: String,
-    pub status: String,
-    pub amount_due_cents: i64,
-    pub currency: String,
-    pub issued_at: DateTime<Utc>,
-    pub hosted_invoice_url: Option<String>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseUsageMetric {
-    pub key: String,
-    pub label: String,
-    pub value: i64,
-    pub limit: Option<i64>,
-    pub unit: String,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -287,123 +262,4 @@ pub struct EnterpriseMfaPolicy {
 #[serde(rename_all = "snake_case")]
 pub struct EnterpriseMfaPolicyInput {
     pub policy: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum EnterpriseSecurityStatus {
-    Complete,
-    Attention,
-    Critical,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseSecurityResponse {
-    pub signals: Vec<EnterpriseSecuritySignal>,
-    pub posture: EnterpriseSecurityPostureScore,
-    pub mfa_required: bool,
-    pub passkeys_enabled: bool,
-    pub recovery_approval_required: bool,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseSecurityPostureScore {
-    pub score: i64,
-    pub max_score: i64,
-    pub completed_weight: i64,
-    pub status: EnterpriseSecurityStatus,
-    pub completed_controls: i64,
-    pub total_controls: i64,
-    pub controls: Vec<EnterpriseSecurityPostureControl>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseSecurityPostureControl {
-    pub id: String,
-    pub label: String,
-    pub description: String,
-    pub status: EnterpriseSecurityStatus,
-    pub weight: i64,
-    pub completed_weight: i64,
-    pub recommendation: String,
-    pub owner: String,
-    pub evidence: String,
-    pub action_label: String,
-    pub action_path: String,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseAuditEventsResponse {
-    pub events: Vec<EnterpriseAuditEvent>,
-    pub page: EnterprisePage,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseBillingResponse {
-    pub plan: EnterpriseBillingPlan,
-    pub invoices: Vec<EnterpriseInvoice>,
-    pub billing_email: Option<String>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseUsageResponse {
-    pub metrics: Vec<EnterpriseUsageMetric>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseInvitationInput {
-    pub emails: Vec<String>,
-    pub role: EnterpriseRole,
-    pub module_grants: Vec<EnterpriseModuleGrant>,
-    pub workspace_ids: Vec<Uuid>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseAccessUpdateInput {
-    pub role: EnterpriseRole,
-    pub module_grants: Vec<EnterpriseModuleGrant>,
-    pub workspace_ids: Vec<Uuid>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseAdminElevationInput {
-    pub duration_minutes: Option<i64>,
-    pub reason: Option<String>,
-    pub procedure_reference: Option<String>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseAuditReasonInput {
-    pub reason: String,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseBreakGlassInput {
-    pub reason: String,
-    pub procedure_reference: String,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseSuspendInput {
-    pub reason: String,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseReactivateInput {
-    pub reason: String,
-    pub module_grants: Option<Vec<EnterpriseModuleGrant>>,
-    pub workspace_ids: Option<Vec<Uuid>>,
 }

@@ -3,8 +3,6 @@ use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domains::auth::keys::KeyBackend;
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenConfirmation {
     pub jkt: String,
@@ -60,13 +58,7 @@ pub struct TokenPair {
 
 #[derive(Clone)]
 pub(crate) enum Signer {
-    Kms {
-        backend: std::sync::Arc<KeyBackend>,
-        kms_key_id: String,
-    },
-    Local {
-        encoding_key: EncodingKey,
-    },
+    Local { encoding_key: EncodingKey },
 }
 
 #[derive(Clone)]

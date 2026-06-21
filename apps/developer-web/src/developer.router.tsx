@@ -5,6 +5,7 @@ import { DeveloperPublicLayout } from './layouts/DeveloperPublicLayout';
 import { DeveloperShell } from './layouts/DeveloperShell';
 import { ApiReferencePage } from './pages/ApiReferencePage';
 import { ConsentScreenPage } from './pages/ConsentScreenPage';
+import { DeveloperCallbackPage } from './pages/DeveloperCallbackPage';
 import { DeveloperHomePage } from './pages/DeveloperHomePage';
 import { HealthChecksPage } from './pages/HealthChecksPage';
 import { LogsPage } from './pages/LogsPage';
@@ -72,6 +73,12 @@ const apiReferenceRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: '/api-reference',
   component: ApiReferencePage,
+});
+
+const callbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/callback',
+  component: DeveloperCallbackPage,
 });
 
 const portalRoute = createRoute({
@@ -201,6 +208,7 @@ const consoleHealthRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([
+  callbackRoute,
   publicRoute.addChildren([
     homeRoute,
     reactQuickstartRoute,

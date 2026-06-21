@@ -22,8 +22,7 @@ pub async fn observe_request(
     let mut req = req;
 
     // --- W3C Trace Context ---
-    let incoming_traceparent = trace_context::extract_traceparent(req.headers())
-        .or_else(|| trace_context::extract_sentry_trace(req.headers()));
+    let incoming_traceparent = trace_context::extract_traceparent(req.headers());
     let tracestate = trace_context::extract_tracestate(req.headers());
     let current_traceparent = incoming_traceparent
         .as_ref()
@@ -47,12 +46,6 @@ pub async fn observe_request(
     if let Ok(value) = axum::http::HeaderValue::from_str(&current_traceparent.to_header_value()) {
         req.headers_mut()
             .insert(trace_context::traceparent_header_name(), value);
-    }
-    if let Ok(value) =
-        axum::http::HeaderValue::from_str(&current_traceparent.to_sentry_trace_header_value())
-    {
-        req.headers_mut()
-            .insert(trace_context::sentry_trace_header_name(), value);
     }
     if let Some(ref ts) = tracestate
         && let Ok(value) = axum::http::HeaderValue::from_str(ts)
@@ -93,11 +86,6 @@ pub async fn observe_request(
         response
             .headers_mut()
             .insert(trace_context::traceparent_header_name(), value);
-    }
-    if let Ok(value) = HeaderValue::from_str(&current_traceparent.to_sentry_trace_header_value()) {
-        response
-            .headers_mut()
-            .insert(trace_context::sentry_trace_header_name(), value);
     }
     if let Some(ts) = &tracestate
         && let Ok(value) = HeaderValue::from_str(ts)
@@ -155,16 +143,9 @@ pub async fn observe_request(
         );
     }
 
-    // Guard: prevent sentry-tracing's cross-thread HubSwitchGuard panic
-    // from swallowing the response. The sentry-tracing layer panics in
-    // on_exit when a span is exited on a different thread than where it
-    // was entered. Our safe panic hook suppresses the panic message but
-    // the unwind still prevents the Response from being delivered.
     #[cfg(feature = "otlp")]
     if let Some(guard) = _span_guard {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
-            drop(guard);
-        }));
+        drop(guard);
     }
 
     response

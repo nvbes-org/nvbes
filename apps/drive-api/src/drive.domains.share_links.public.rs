@@ -109,13 +109,7 @@ pub async fn create_public_download_url(
         return Err(error);
     }
 
-    if let Some(max_downloads) = resolved.max_downloads
-        && resolved.download_count >= max_downloads
-    {
-        let error = AppError::forbidden(
-            "share_link_download_limit_reached",
-            "This share link has reached its download limit.",
-        );
+    if let Err(error) = logic::ensure_public_share_download_allowed(&resolved) {
         log_public_share_denied(
             &mut tx,
             &resolved,

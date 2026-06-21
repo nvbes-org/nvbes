@@ -2,9 +2,9 @@ import { useState } from 'react';
 import {
   deriveConsentState,
   toggleConsentCategory,
-  toggleConsentPostHogPurpose,
+  toggleConsentAnalyticsPurpose,
   toggleConsentVendor,
-  type PostHogPurpose,
+  type AnalyticsPurpose,
 } from '@nvbes/web-runtime';
 import {
   DEFAULT_CONSENT,
@@ -44,10 +44,10 @@ export function CookieConsentSettings() {
     );
   };
 
-  const togglePostHogPurpose = (purpose: PostHogPurpose) => {
+  const toggleAnalyticsPurpose = (purpose: AnalyticsPurpose) => {
     persistConsent(
-      toggleConsentPostHogPurpose(cookieConsent, purpose),
-      `identity-web:account-privacy:posthog:${purpose}`,
+      toggleConsentAnalyticsPurpose(cookieConsent, purpose),
+      `identity-web:account-privacy:analytics:${purpose}`,
     );
   };
 
@@ -58,13 +58,13 @@ export function CookieConsentSettings() {
         cookieConsent={cookieConsent}
         onToggleCategory={toggleCategory}
         onToggleVendor={toggleVendor}
-        onTogglePostHogPurpose={togglePostHogPurpose}
+        onToggleAnalyticsPurpose={toggleAnalyticsPurpose}
       />
       <CookieConsentPerformanceSection
         cookieConsent={cookieConsent}
         onToggleCategory={toggleCategory}
         onToggleVendor={toggleVendor}
-        onTogglePostHogPurpose={togglePostHogPurpose}
+        onToggleAnalyticsPurpose={toggleAnalyticsPurpose}
       />
     </div>
   );

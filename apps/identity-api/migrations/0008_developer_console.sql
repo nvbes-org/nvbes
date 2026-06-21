@@ -201,6 +201,10 @@ CREATE TABLE IF NOT EXISTS developer_webhook_deliveries (
     REFERENCES developer_webhook_deliveries(tenant_id, id) ON DELETE RESTRICT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_developer_webhook_deliveries_replay_once
+  ON developer_webhook_deliveries (tenant_id, replayed_from_delivery_id)
+  WHERE replayed_from_delivery_id IS NOT NULL;
+
 CREATE TABLE developer_sandbox_tenants (
   tenant_id uuid PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
   sandbox_tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,

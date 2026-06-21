@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/drive.file.created.v1.schema.json",
+  "title": "drive.file.created v1",
+  "type": "object",
+  "required": ["event_type", "event_version", "payload"],
+  "properties": {
+    "event_type": { "const": "drive.file.created" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["workspace_id", "file_id", "object_key", "size_bytes"],
+      "properties": {
+        "workspace_id": { "type": "string", "format": "uuid" },
+        "file_id": { "type": "string", "format": "uuid" },
+        "object_key": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -22,6 +22,8 @@ pub mod metadata;
 pub mod routes;
 #[path = "identity.domains.oauth.service.rs"]
 pub mod service;
+#[path = "identity.domains.oauth.system_clients.rs"]
+pub(crate) mod system_clients;
 #[path = "identity.domains.oauth.validation.rs"]
 pub mod validation;
 
@@ -58,7 +60,9 @@ pub mod policies_eval;
 #[path = "identity.domains.oauth.rar.rs"]
 pub mod rar;
 
-pub use logic::{generate_user_code, hash_client_secret, verify_client_secret, verify_client_secret_with_overlap};
+pub use logic::{
+    generate_user_code, hash_client_secret, verify_client_secret, verify_client_secret_with_overlap,
+};
 pub use validation::validate_pkce_for_exchange as verify_pkce;
 pub use validation::{
     normalize_resources, normalize_scopes, parse_client_policy_status, parse_client_type,

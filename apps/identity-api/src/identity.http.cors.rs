@@ -4,17 +4,20 @@ use std::sync::{Arc, RwLock};
 use axum::{
     body::Body,
     extract::State,
-    http::{
-        HeaderMap, HeaderName, HeaderValue, Method, Request, Response, StatusCode, Uri, header,
-    },
+    http::{HeaderMap, HeaderName, HeaderValue, Method, Request, Response, StatusCode, header},
     middleware::Next,
 };
 use sqlx::Row;
 
 use crate::{app::AppState, http::error::AppError};
 
+#[path = "identity.http.cors.origin.rs"]
+mod origin;
+
+pub use origin::{origin_from_redirect_uri, same_origin};
+
 const ALLOWED_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
-const ALLOWED_HEADERS: &str = "content-type, authorization, accept, x-requested-with, idempotency-key, x-request-id, x-csrf-token, sentry-trace, baggage, traceparent, tracestate";
+const ALLOWED_HEADERS: &str = "content-type, authorization, accept, x-requested-with, idempotency-key, x-request-id, x-csrf-token, baggage, traceparent, tracestate";
 const EXPOSED_HEADERS: &str = "x-request-id, traceparent, tracestate";
 
 #[derive(Clone, Default)]
@@ -69,7 +72,7 @@ impl AllowedOriginRegistry {
             );
         }
 
-        self.replace(expand_loopback_aliases(origins));
+        self.replace(origin::expand_loopback_aliases(origins));
         Ok(())
     }
 }
@@ -199,151 +202,6 @@ fn is_browser_client_type(client_type: &str) -> bool {
     )
 }
 
-pub fn origin_from_redirect_uri(redirect_uri: &str) -> Option<String> {
-    let uri = redirect_uri.parse::<Uri>().ok()?;
-    let parts = origin_parts(&uri)?;
-    let port = parts
-        .port
-        .map(|port| format!(":{port}"))
-        .unwrap_or_default();
-    Some(format!(
-        "{}://{}{}",
-        parts.scheme,
-        origin_host(&parts.host),
-        port
-    ))
-}
-
-fn origin_host(host: &str) -> String {
-    if host.contains(':') && !host.starts_with('[') {
-        return format!("[{host}]");
-    }
-
-    host.to_string()
-}
-
-fn expand_loopback_aliases(origins: Vec<String>) -> Vec<String> {
-    let mut expanded = Vec::with_capacity(origins.len() * 3);
-    for origin in origins {
-        if origin.is_empty() {
-            continue;
-        }
-
-        expanded.push(origin.clone());
-
-        if let Some(aliases) = loopback_aliases(&origin) {
-            expanded.extend(aliases);
-        }
-    }
-    expanded
-}
-
-fn loopback_aliases(origin: &str) -> Option<Vec<String>> {
-    let uri = origin.parse::<Uri>().ok()?;
-    let parts = origin_parts(&uri)?;
-    if !is_loopback_host(&parts.host) {
-        return None;
-    }
-
-    let port = parts
-        .port
-        .map(|port| format!(":{}", port))
-        .unwrap_or_default();
-    let scheme = parts.scheme;
-    Some(vec![
-        format!("{scheme}://localhost{port}"),
-        format!("{scheme}://127.0.0.1{port}"),
-        format!("{scheme}://[::1]{port}"),
-    ])
-}
-
-pub fn same_origin(candidate: &str, allowed: &str) -> bool {
-    let candidate = match candidate.parse::<Uri>() {
-        Ok(uri) => uri,
-        Err(_) => return false,
-    };
-    let allowed = match allowed.parse::<Uri>() {
-        Ok(uri) => uri,
-        Err(_) => return false,
-    };
-
-    origin_parts(&candidate).is_some_and(|candidate_origin| {
-        origin_parts(&allowed).is_some_and(|allowed_origin| {
-            candidate_origin == allowed_origin
-                || same_loopback_origin(&candidate_origin, &allowed_origin)
-        })
-    })
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct UriOrigin {
-    scheme: String,
-    host: String,
-    port: Option<u16>,
-}
-
-fn same_loopback_origin(candidate: &UriOrigin, allowed: &UriOrigin) -> bool {
-    candidate.scheme == allowed.scheme
-        && candidate.port == allowed.port
-        && is_loopback_host(&candidate.host)
-        && is_loopback_host(&allowed.host)
-}
-
-fn is_loopback_host(host: &str) -> bool {
-    matches!(host, "localhost" | "127.0.0.1" | "::1")
-}
-
-fn origin_parts(uri: &Uri) -> Option<UriOrigin> {
-    let scheme = uri.scheme_str()?.to_ascii_lowercase();
-    let authority = uri.authority()?;
-    Some(UriOrigin {
-        scheme,
-        host: authority.host().to_ascii_lowercase(),
-        port: authority.port_u16(),
-    })
-}
-
 #[cfg(test)]
-mod tests {
-    use super::{expand_loopback_aliases, origin_from_redirect_uri, same_origin};
-
-    #[test]
-    fn origin_from_redirect_uri_extracts_scheme_host_and_port() {
-        assert_eq!(
-            origin_from_redirect_uri("http://localhost:5173/callback?code=abc"),
-            Some("http://localhost:5173".to_string())
-        );
-
-        assert_eq!(
-            origin_from_redirect_uri("http://[::1]:5173/callback?code=abc"),
-            Some("http://[::1]:5173".to_string())
-        );
-    }
-
-    #[test]
-    fn same_origin_accepts_loopback_aliases() {
-        assert!(same_origin(
-            "http://127.0.0.1:3001/path",
-            "http://localhost:3001"
-        ));
-    }
-
-    #[test]
-    fn expand_loopback_aliases_keeps_original_and_aliases() {
-        let origins = expand_loopback_aliases(vec![
-            "https://files.example.com".to_string(),
-            "http://localhost:3001".to_string(),
-        ]);
-
-        assert!(
-            origins
-                .iter()
-                .any(|origin| origin == "https://files.example.com")
-        );
-        assert!(
-            origins
-                .iter()
-                .any(|origin| origin == "http://127.0.0.1:3001")
-        );
-    }
-}
+#[path = "identity.http.cors.tests.rs"]
+mod tests;

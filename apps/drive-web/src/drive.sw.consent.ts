@@ -1,9 +1,9 @@
 import { getSwReady } from '@nvbes/web-runtime';
 import { isVendorAccepted } from './tracking-consent';
 
-const SENTRY_CONSENT_MESSAGE = 'SENTRY_CONSENT_UPDATED';
+const ERROR_REPORTING_CONSENT_MESSAGE = 'ERROR_REPORTING_CONSENT_UPDATED';
 
-export async function syncDriveServiceWorkerSentryConsent() {
+export async function syncDriveServiceWorkerErrorReportingConsent() {
   const registration = await getSwReady();
   const activeWorker = registration?.active;
   if (!activeWorker) {
@@ -11,7 +11,7 @@ export async function syncDriveServiceWorkerSentryConsent() {
   }
 
   activeWorker.postMessage({
-    type: SENTRY_CONSENT_MESSAGE,
-    sentryAccepted: isVendorAccepted('sentry'),
+    type: ERROR_REPORTING_CONSENT_MESSAGE,
+    errorReportingAccepted: isVendorAccepted('errorReporting'),
   });
 }

@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/completion-audit.mjs --write",
+    "strict_completion_command": "tools/migration/completion-audit.mjs --strict"
+  },
+  "status": {
+    "objective": "incomplete",
+    "requirements": 24,
+    "incomplete": 13,
+    "readiness": "no-go",
+    "readiness_blocking_items": 21,
+    "runtimes_go": 4,
+    "runtimes_total": 4,
+    "domains_go": 8,
+    "domains_total": 8,
+    "domain_dod_go": 64,
+    "domain_dod_total": 64,
+    "gates_go": 4,
+    "gates_total": 9,
+    "phases_go": 10,
+    "phases_total": 13,
+    "live_evidence_decision": "no-go",
+    "live_evidence_missing_requirements": 6,
+    "live_evidence_missing_items": 24
+  },
+  "requirements": [
+    {
+      "id": "critical-journeys",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "tous les parcours critiques ont une implementation nouvelle",
+      "evidence": [
+        "docs/migration/parity-matrix.md",
+        "docs/migration/smoke-test-manifest.md"
+      ],
+      "proof": "pnpm check:migration-parity -- --strict && pnpm check:migration-smoke-tests -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "contracts-versioned",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "tous les contrats publics et internes sont versionnes",
+      "evidence": [
+        "contracts/",
+        "tools/contracts/checks.mjs"
+      ],
+      "proof": "pnpm check:contracts",
+      "status": "control-active"
+    },
+    {
+      "id": "sdk-codegen",
+      "source": "blueprint:Contrats",
+      "requirement": "les contrats OpenAPI, Protobuf et events ont une couverture SDK TypeScript, Rust et Go",
+      "evidence": [
+        "docs/migration/codegen.generated.json"
+      ],
+      "proof": "pnpm check:codegen && tools/migration/codegen.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "data-reconciled",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "toutes les donnees migrables sont reconciliees",
+      "evidence": [
+        "docs/migration/reconciliation.template.json",
+        "docs/migration/readiness-report.generated.json"
+      ],
+      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "target-monorepo-structure",
+      "source": "blueprint:Structure Monorepo Cible",
+      "requirement": "la structure monorepo cible existe pour les frontieres apps, libs, contracts, deploy, docs et tools",
+      "evidence": [
+        "docs/migration/target-structure.generated.json"
+      ],
+      "proof": "tools/migration/target-structure.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "supply-chain-scans",
+      "source": "blueprint:Fondation Technique",
+      "requirement": "les scans secrets, licences, SBOM, dependances et containers sont actifs",
+      "evidence": [
+        "docs/migration/supply-chain.generated.json",
+        "docs/migration/sbom.generated.json"
+      ],
+      "proof": "pnpm check:supply-chain && tools/migration/supply-chain.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "phase-acceptance",
+      "source": "blueprint:Phases de Reconstruction",
+      "requirement": "chaque phase de reconstruction a owner, preuve et decision go",
+      "evidence": [
+        "docs/migration/phase-ledger.generated.json"
+      ],
+      "proof": "tools/migration/phase-ledger.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "runtime-foundation",
+      "source": "blueprint:Stack Cible",
+      "requirement": "les fondations Rust, Go, TypeScript et Python existent et ont leurs checks CI",
+      "evidence": [
+        "docs/migration/runtime-foundation.generated.json"
+      ],
+      "proof": "tools/migration/runtime-foundation.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "domain-acceptance",
+      "source": "blueprint:Frontieres de Domaine",
+      "requirement": "chaque domaine de base a implementation, preuve migration et decision go",
+      "evidence": [
+        "docs/migration/domain-ledger.generated.json"
+      ],
+      "proof": "tools/migration/domain-ledger.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "domain-definition-of-done",
+      "source": "blueprint:Definition de Done Domaine",
+      "requirement": "chaque domaine de base satisfait tous les criteres de Definition of Done",
+      "evidence": [
+        "docs/migration/domain-dod.generated.json"
+      ],
+      "proof": "tools/migration/domain-dod.mjs --strict",
+      "status": "complete"
+    },
+    {
+      "id": "no-runtime-legacy",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "aucun composant runtime legacy n'est requis",
+      "evidence": [
+        "docs/migration/decommission-manifest.md"
+      ],
+      "proof": "pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "provider-boundaries",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "aucun provider proprietaire n'est dans le core OSS",
+      "evidence": [
+        "scripts/check-oss-provider-boundaries.mjs"
+      ],
+      "proof": "pnpm check:oss-boundaries",
+      "status": "control-active"
+    },
+    {
+      "id": "forbidden-imports",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "aucun import interdit OSS/Cloud/Internal ne passe la CI",
+      "evidence": [
+        "tools/boundary-checks/check-product-boundaries.mjs",
+        "scripts/check-nx-boundaries.mjs"
+      ],
+      "proof": "pnpm check:product-boundaries && pnpm check:oss-boundaries",
+      "status": "control-active"
+    },
+    {
+      "id": "backup-rollback",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "les backups et rollbacks sont testes",
+      "evidence": [
+        "docs/migration/backup-restore-manifest.md",
+        "docs/migration/rollback-report.md"
+      ],
+      "proof": "pnpm check:migration-backup-restore -- --strict && pnpm check:migration-rollback-report -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "oss-export-private-docs",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "le repo public OSS ne contient aucun document prive",
+      "evidence": [
+        "tools/oss-export/checks.mjs"
+      ],
+      "proof": "pnpm check:oss-boundaries",
+      "status": "control-active"
+    },
+    {
+      "id": "runbook-explicit",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "le runbook de cutover peut etre execute sans decision implicite",
+      "evidence": [
+        "docs/migration/nvbes-big-bang-migration-runbook.md",
+        "docs/migration/cutover-evidence-packet.generated.json",
+        "docs/migration/live-evidence.schema.json",
+        "docs/migration/live-evidence-instances.generated.json",
+        "docs/migration/readiness-report.generated.json"
+      ],
+      "proof": "pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "live-cutover-evidence",
+      "source": "runbook:Statut Operationnel",
+      "requirement": "les preuves live de repetition, rollback, reconciliation, cutover et decommission sont attachees et acceptees",
+      "evidence": [
+        "docs/migration/live-evidence-instances.generated.json",
+        "docs/migration/live-evidence-instances.md"
+      ],
+      "proof": "tools/migration/live-evidence-instances.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "gate-evidence",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "chaque gate a une preuve attachee",
+      "evidence": [
+        "docs/migration/gate-evidence.generated.json"
+      ],
+      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "risk-closure",
+      "source": "blueprint:Criteres de Reussite",
+      "requirement": "chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope",
+      "evidence": [
+        "docs/migration/risk-register.generated.json"
+      ],
+      "proof": "tools/migration/risk-register.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "post-audit-approved",
+      "source": "runbook:Validation finale",
+      "requirement": "post-migration-audit.md approuve par Migration lead, Security lead et owners produit",
+      "evidence": [
+        "docs/migration/post-migration-audit.md"
+      ],
+      "proof": "pnpm check:migration-post-migration-audit -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "legacy-secrets-revoked",
+      "source": "runbook:Validation finale",
+      "requirement": "tous les secrets legacy inutiles sont revoques",
+      "evidence": [
+        "docs/migration/secret-map.generated.json",
+        "docs/migration/decommission-manifest.md"
+      ],
+      "proof": "tools/migration/secret-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "legacy-jobs-stopped",
+      "source": "runbook:Validation finale",
+      "requirement": "tous les jobs legacy sont arretes ou supprimes",
+      "evidence": [
+        "docs/migration/job-map.generated.json",
+        "docs/migration/decommission-manifest.md"
+      ],
+      "proof": "tools/migration/job-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "docs-updated",
+      "source": "runbook:Validation finale",
+      "requirement": "tous les runbooks publics et prives sont a jour",
+      "evidence": [
+        "docs/migration/",
+        "docs/blueprint/"
+      ],
+      "proof": "pnpm check:migration-artifacts && pnpm check:migration-runbook && pnpm check:migration-blueprint",
+      "status": "control-active"
+    },
+    {
+      "id": "no-v2-debt",
+      "source": "runbook:Validation finale",
+      "requirement": "aucun backlog V2 ne contient une dette necessaire au bon fonctionnement V1",
+      "evidence": [
+        "docs/migration/v2-debt-register.md"
+      ],
+      "proof": "pnpm check:migration-v2-debt -- --strict && tools/migration/completion-audit.mjs --strict",
+      "status": "blocked"
+    }
+  ]
+}

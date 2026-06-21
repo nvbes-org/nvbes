@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/identity.user.created.v1.schema.json",
+  "title": "identity.user.created v1",
+  "type": "object",
+  "required": ["event_type", "event_version", "payload"],
+  "properties": {
+    "event_type": { "const": "identity.user.created" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["user_id", "email_hash"],
+      "properties": {
+        "user_id": { "type": "string", "format": "uuid" },
+        "email_hash": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

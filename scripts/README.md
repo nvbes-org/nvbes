@@ -36,7 +36,6 @@ Variables attendues pour les tests deployes:
 - `NVBES_SMOKE_WEB_MARKER` (optionnel, defaut `nvbes`) pour verifier le HTML web attendu
 - `NVBES_SMOKE_INCLUDE_SEEDED_AUTH=1` pour activer le smoke contract seeded-auth depuis `test-smoke.sh`
 - `NVBES_SMOKE_AUTH_EMAIL` et `NVBES_SMOKE_AUTH_PASSWORD` (optionnels) pour reutiliser un compte existant au lieu d'en seeder un nouveau
-- `NVBES_SMOKE_AUTH_TURNSTILE_TOKEN` (optionnel) si l'endpoint `/auth/challenge/identifier` impose Turnstile
 
 Variables attendues par les gates:
 

@@ -9,7 +9,13 @@ pub(super) fn test_pool() -> PgPool {
 pub(super) async fn test_state(pool: &PgPool) -> AppState {
     unsafe {
         std::env::set_var("NVBES_ENV", "development");
-        std::env::set_var("NVBES_WORKSPACE_ROOT", "/Users/shayn/Development/nvbes");
+        std::env::set_var(
+            "NVBES_WORKSPACE_ROOT",
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .expect("workspace root"),
+        );
     }
 
     let config = AppConfig {

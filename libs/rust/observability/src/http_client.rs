@@ -25,7 +25,6 @@ pub fn propagate_trace_context(extensions: &axum::http::Extensions, headers: &mu
         &outgoing,
         tracestate_snapshot.map(|ts| ts.0.as_str()),
     );
-    trace_context::inject_sentry_trace_into(headers, &outgoing);
 }
 
 /// Inject W3C Trace Context into outgoing headers, reading the incoming trace
@@ -38,8 +37,7 @@ pub fn propagate_headers_trace_context(
     request_headers: &HeaderMap,
     outgoing_headers: &mut HeaderMap,
 ) {
-    let incoming = trace_context::extract_traceparent(request_headers)
-        .or_else(|| trace_context::extract_sentry_trace(request_headers));
+    let incoming = trace_context::extract_traceparent(request_headers);
     let tracestate = trace_context::extract_tracestate(request_headers);
 
     let outgoing = incoming
@@ -48,7 +46,6 @@ pub fn propagate_headers_trace_context(
         .unwrap_or_else(|| trace_context::new_traceparent(true));
 
     trace_context::inject_traceparent_into(outgoing_headers, &outgoing, tracestate.as_deref());
-    trace_context::inject_sentry_trace_into(outgoing_headers, &outgoing);
 }
 
 /// Register a fresh `TraceParent` in an Extensions map so that downstream

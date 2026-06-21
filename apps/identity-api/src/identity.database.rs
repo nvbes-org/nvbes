@@ -50,7 +50,32 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
-    // 3. Seed drive-worker (confidential client)
+    // 3. Seed developer-web (public client)
+    let developer_web_secret_hash =
+        hash_client_secret("").map_err(|e| anyhow::anyhow!("{}", e.message))?;
+    let developer_web_redirect_uris = vec![
+        "http://localhost:5175/callback".to_string(),
+        "https://developers.staging.nvbes.example/callback".to_string(),
+    ];
+    sqlx::query(
+        r#"
+        INSERT INTO oauth_clients (
+            client_id, client_secret_hash, name, redirect_uris, tenant_id,
+            owner_scope_type, owner_scope_id, client_type
+        )
+        VALUES ('developer-web', $1, 'Developer Web', $2, $3, 'tenant', $3, 'public')
+        ON CONFLICT (client_id) DO UPDATE
+        SET client_secret_hash = EXCLUDED.client_secret_hash,
+            redirect_uris = EXCLUDED.redirect_uris
+        "#,
+    )
+    .bind(developer_web_secret_hash)
+    .bind(&developer_web_redirect_uris)
+    .bind(system_tenant_id)
+    .execute(pool)
+    .await?;
+
+    // 4. Seed drive-worker (confidential client)
     let worker_secret = std::env::var("NVBES_IDENTITY_CLIENT_SECRET")
         .unwrap_or_else(|_| "drive-worker-secret-key-12345".to_string());
     let drive_worker_secret_hash =

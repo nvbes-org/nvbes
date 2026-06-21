@@ -44,133 +44,6 @@ pub async fn ensure_workspaces_belong(
     Ok(())
 }
 
-pub async fn target_role(
-    tx: &mut Transaction<'_, Postgres>,
-    tenant_id: Uuid,
-    user_id: Uuid,
-) -> Result<Option<String>, AppError> {
-    let role = sqlx::query_scalar::<_, String>(r#"
-        SELECT wm.role::text
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE w.tenant_id = $1 AND wm.principal_id = $2 AND wm.status = 'active'
-        ORDER BY CASE wm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END
-        LIMIT 1
-        "#)
-    .bind(tenant_id)
-    .bind(user_id)
-    .fetch_optional(&mut **tx)
-    .await?;
-    Ok(role)
-}
-
-pub async fn target_role_for_lifecycle(
-    tx: &mut Transaction<'_, Postgres>,
-    tenant_id: Uuid,
-    user_id: Uuid,
-) -> Result<Option<String>, AppError> {
-    let role = sqlx::query_scalar::<_, String>(r#"
-        SELECT wm.role::text
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE w.tenant_id = $1
-          AND wm.principal_id = $2
-          AND wm.status IN ('active', 'suspended')
-        ORDER BY CASE wm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END
-        LIMIT 1
-        "#)
-    .bind(tenant_id)
-    .bind(user_id)
-    .fetch_optional(&mut **tx)
-    .await?;
-    Ok(role)
-}
-
-pub async fn replace_access(
-    tx: &mut Transaction<'_, Postgres>,
-    tenant_id: Uuid,
-    user_id: Uuid,
-    workspace_ids: &[Uuid],
-    role: &str,
-) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        UPDATE workspace_memberships wm
-        SET status = 'removed', updated_at = NOW()
-        FROM workspaces w
-        WHERE w.id = wm.workspace_id
-          AND w.tenant_id = $1
-          AND wm.principal_id = $2
-          AND NOT (wm.workspace_id = ANY($3))
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(user_id)
-    .bind(workspace_ids)
-    .execute(&mut **tx)
-    .await?;
-    for workspace_id in workspace_ids {
-        sqlx::query(r#"
-            INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source)
-            SELECT w.id, $2, $3::workspace_member_role, 'active', 'manual'
-            FROM workspaces w
-            WHERE w.id = $1 AND w.tenant_id = $4
-            ON CONFLICT (workspace_id, principal_id)
-            DO UPDATE SET role = EXCLUDED.role, status = 'active', source = 'manual', updated_at = NOW()
-            "#)
-        .bind(workspace_id)
-        .bind(user_id)
-        .bind(role)
-        .bind(tenant_id)
-        .execute(&mut **tx)
-        .await?;
-    }
-    Ok(())
-}
-
-pub async fn set_tenant_memberships_status(
-    tx: &mut Transaction<'_, Postgres>,
-    tenant_id: Uuid,
-    user_id: Uuid,
-    status: &str,
-    workspace_ids: Option<&[Uuid]>,
-) -> Result<u64, AppError> {
-    let result = if let Some(workspace_ids) = workspace_ids {
-        sqlx::query(
-            r#"
-            UPDATE workspace_memberships wm
-            SET status = $3::workspace_member_status, updated_at = NOW()
-            FROM workspaces w
-            WHERE w.id = wm.workspace_id
-              AND w.tenant_id = $1
-              AND wm.principal_id = $2
-              AND wm.workspace_id = ANY($4)
-            "#,
-        )
-        .bind(tenant_id)
-        .bind(user_id)
-        .bind(status)
-        .bind(workspace_ids)
-        .execute(&mut **tx)
-        .await?
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE workspace_memberships wm
-            SET status = $3::workspace_member_status, updated_at = NOW()
-            FROM workspaces w
-            WHERE w.id = wm.workspace_id AND w.tenant_id = $1 AND wm.principal_id = $2
-            "#,
-        )
-        .bind(tenant_id)
-        .bind(user_id)
-        .bind(status)
-        .execute(&mut **tx)
-        .await?
-    };
-    Ok(result.rows_affected())
-}
-
 pub async fn insert_invitation(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
@@ -235,11 +108,34 @@ pub async fn insert_audit(
     target_id: Option<Uuid>,
     metadata: Value,
 ) -> Result<(), AppError> {
+    insert_workspace_audit(
+        tx,
+        tenant_id,
+        None,
+        actor_id,
+        action,
+        target_type,
+        target_id,
+        metadata,
+    )
+    .await
+}
+
+pub async fn insert_workspace_audit(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    workspace_id: Option<Uuid>,
+    actor_id: Uuid,
+    action: &'static str,
+    target_type: &'static str,
+    target_id: Option<Uuid>,
+    metadata: Value,
+) -> Result<(), AppError> {
     nvbes_audit::insert_audit_event_tx(
         &mut **tx,
         AuditEventInput {
             tenant_id,
-            workspace_id: None,
+            workspace_id,
             actor_principal_id: Some(actor_id),
             action,
             target_type,

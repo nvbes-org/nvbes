@@ -1,0 +1,542 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/data-migration-pipeline.mjs --write",
+    "sources": [
+      "docs/migration/data-map.generated.json",
+      "docs/migration/rejects.md",
+      "docs/migration/reconciliation-report.schema.json",
+      "docs/migration/reconciliation.template.json",
+      "tools/migration/reconcile.mjs",
+      "docs/migration/drive-upload-download.generated.json",
+      "docs/migration/drive-share-revoke.generated.json",
+      "docs/migration/billing-entitlements.generated.json",
+      "docs/migration/billing-webhook-idempotency.generated.json",
+      "docs/migration/release-freeze-manifest.md",
+      "docs/migration/snapshot-manifest.md"
+    ],
+    "targeted_tests": [
+      "pnpm check:migration-data-map",
+      "pnpm check:migration-rejects",
+      "pnpm check:migration-reconciliation-report",
+      "pnpm check:migration-reconciliation-template"
+    ]
+  },
+  "summary": {
+    "checks": 46,
+    "passed": 46,
+    "failed": 0,
+    "domains": 7,
+    "domains_passed": 7,
+    "domains_failed": 0,
+    "status": "passed"
+  },
+  "domains": [
+    {
+      "domain": "Identity",
+      "source_domains": [
+        "Identity"
+      ],
+      "status": "passed",
+      "source_tables": 27,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "orphan_check",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Workspace",
+      "source_domains": [
+        "Workspace/Authz"
+      ],
+      "status": "passed",
+      "source_tables": 24,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "orphan_check",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Drive",
+      "source_domains": [
+        "Drive"
+      ],
+      "status": "passed",
+      "source_tables": 12,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "object_or_link_invariant",
+        "orphan_check",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Billing",
+      "source_domains": [
+        "Billing/Usage"
+      ],
+      "status": "passed",
+      "source_tables": 20,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "ledger_balance",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Audit",
+      "source_domains": [
+        "Audit/Privacy"
+      ],
+      "status": "passed",
+      "source_tables": 6,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "orphan_check",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Privacy",
+      "source_domains": [
+        "Audit/Privacy"
+      ],
+      "status": "passed",
+      "source_tables": 6,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "orphan_check",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    },
+    {
+      "domain": "Developer Platform",
+      "source_domains": [
+        "Developer Platform"
+      ],
+      "status": "passed",
+      "source_tables": 15,
+      "stages": {
+        "export": "passed",
+        "transform": "passed",
+        "import": "passed",
+        "reject_log": "passed",
+        "checksum": "passed"
+      },
+      "reconciliation": [
+        "checksum",
+        "row_count"
+      ],
+      "evidence": [
+        "docs/migration/data-map.generated.json",
+        "docs/migration/rejects.md",
+        "docs/migration/reconciliation-report.schema.json",
+        "tools/migration/reconcile.mjs"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "reject-log-columns",
+      "description": "Reject log includes class, owner, impact, evidence and decision columns",
+      "path": "docs/migration/rejects.md",
+      "status": "passed",
+      "pattern": "| Run | Domain | Source | Identifier | Class | Owner | Impact | Evidence | Decision |"
+    },
+    {
+      "id": "reconcile-schema-domains",
+      "description": "Reconciliation schema requires domain reports",
+      "path": "docs/migration/reconciliation-report.schema.json",
+      "status": "passed",
+      "pattern": "\"domains\""
+    },
+    {
+      "id": "reconcile-tool-blocking",
+      "description": "Reconciliation tool blocks unaccepted row deltas",
+      "path": "tools/migration/reconcile.mjs",
+      "status": "passed",
+      "pattern": "row count delta requires accepted status"
+    },
+    {
+      "id": "reconcile-tool-checksum",
+      "description": "Reconciliation tool blocks unaccepted checksum mismatches",
+      "path": "tools/migration/reconcile.mjs",
+      "status": "passed",
+      "pattern": "checksum mismatch requires accepted status"
+    },
+    {
+      "id": "reconciliation-template",
+      "description": "Reconciliation template remains explicit no-go",
+      "path": "docs/migration/reconciliation.template.json",
+      "status": "passed",
+      "pattern": "\"decision\": \"no-go\""
+    },
+    {
+      "id": "snapshot-checksum",
+      "description": "Snapshot manifest requires checksum evidence",
+      "path": "docs/migration/snapshot-manifest.md",
+      "status": "passed",
+      "pattern": "checksum or"
+    },
+    {
+      "id": "billing-freeze",
+      "description": "Release freeze includes billing mutation freeze",
+      "path": "docs/migration/release-freeze-manifest.md",
+      "status": "passed",
+      "pattern": "| billing mutation freeze |"
+    },
+    {
+      "id": "drive-object-invariant",
+      "description": "Drive upload/download evidence covers object storage invariants",
+      "path": "docs/migration/drive-upload-download.generated.json",
+      "status": "passed",
+      "pattern": "object"
+    },
+    {
+      "id": "drive-share-invariant",
+      "description": "Drive share/revoke evidence covers share-link invariants",
+      "path": "docs/migration/drive-share-revoke.generated.json",
+      "status": "passed",
+      "pattern": "share"
+    },
+    {
+      "id": "billing-ledger-evidence",
+      "description": "Billing entitlement evidence is present",
+      "path": "docs/migration/billing-entitlements.generated.json",
+      "status": "passed",
+      "pattern": "\"status\": \"passed\""
+    },
+    {
+      "id": "billing-webhook-idempotency",
+      "description": "Billing webhook idempotency evidence is present",
+      "path": "docs/migration/billing-webhook-idempotency.generated.json",
+      "status": "passed",
+      "pattern": "\"status\": \"passed\""
+    },
+    {
+      "id": "identity-export",
+      "description": "Identity data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "27 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "identity-transform",
+      "description": "Identity data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "27 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "identity-import",
+      "description": "Identity data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "27 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "identity-reject_log",
+      "description": "Identity data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "27 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "identity-checksum",
+      "description": "Identity data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "27 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "workspace-export",
+      "description": "Workspace data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "24 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "workspace-transform",
+      "description": "Workspace data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "24 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "workspace-import",
+      "description": "Workspace data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "24 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "workspace-reject_log",
+      "description": "Workspace data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "24 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "workspace-checksum",
+      "description": "Workspace data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "24 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "drive-export",
+      "description": "Drive data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "12 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+    },
+    {
+      "id": "drive-transform",
+      "description": "Drive data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "12 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+    },
+    {
+      "id": "drive-import",
+      "description": "Drive data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "12 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+    },
+    {
+      "id": "drive-reject_log",
+      "description": "Drive data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "12 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+    },
+    {
+      "id": "drive-checksum",
+      "description": "Drive data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "12 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+    },
+    {
+      "id": "billing-export",
+      "description": "Billing data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "20 source table(s), checksum, ledger_balance, row_count"
+    },
+    {
+      "id": "billing-transform",
+      "description": "Billing data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "20 source table(s), checksum, ledger_balance, row_count"
+    },
+    {
+      "id": "billing-import",
+      "description": "Billing data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "20 source table(s), checksum, ledger_balance, row_count"
+    },
+    {
+      "id": "billing-reject_log",
+      "description": "Billing data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "20 source table(s), checksum, ledger_balance, row_count"
+    },
+    {
+      "id": "billing-checksum",
+      "description": "Billing data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "20 source table(s), checksum, ledger_balance, row_count"
+    },
+    {
+      "id": "audit-export",
+      "description": "Audit data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "audit-transform",
+      "description": "Audit data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "audit-import",
+      "description": "Audit data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "audit-reject_log",
+      "description": "Audit data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "audit-checksum",
+      "description": "Audit data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "privacy-export",
+      "description": "Privacy data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "privacy-transform",
+      "description": "Privacy data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "privacy-import",
+      "description": "Privacy data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "privacy-reject_log",
+      "description": "Privacy data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "privacy-checksum",
+      "description": "Privacy data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "6 source table(s), checksum, orphan_check, row_count"
+    },
+    {
+      "id": "developer-platform-export",
+      "description": "Developer Platform data migration export contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "15 source table(s), checksum, row_count"
+    },
+    {
+      "id": "developer-platform-transform",
+      "description": "Developer Platform data migration transform contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "15 source table(s), checksum, row_count"
+    },
+    {
+      "id": "developer-platform-import",
+      "description": "Developer Platform data migration import contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "15 source table(s), checksum, row_count"
+    },
+    {
+      "id": "developer-platform-reject_log",
+      "description": "Developer Platform data migration reject log contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "15 source table(s), checksum, row_count"
+    },
+    {
+      "id": "developer-platform-checksum",
+      "description": "Developer Platform data migration checksum contract",
+      "path": "docs/migration/data-map.generated.json",
+      "status": "passed",
+      "pattern": "15 source table(s), checksum, row_count"
+    }
+  ]
+}

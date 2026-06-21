@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/execution-backlog.mjs --write",
+    "strict_completion_command": "tools/migration/execution-backlog.mjs --strict"
+  },
+  "status": {
+    "open_tasks": 25,
+    "blocking_items": 58,
+    "readiness": "no-go",
+    "completion": "incomplete",
+    "live_evidence": "no-go",
+    "live_evidence_missing_requirements": 6,
+    "live_evidence_missing_items": 24
+  },
+  "tasks": [
+    {
+      "id": "attach-live-evidence-final-reconciliation",
+      "owner_role": "Data lead",
+      "source": "live-evidence:Production reconciliation",
+      "blocking_items": 2,
+      "blocking_details": [
+        "reconciliation:0/1",
+        "reconciliation@production"
+      ],
+      "next_action": "attach accepted live evidence for reconciliation:0/1, reconciliation@production",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id final-reconciliation-reconciliation-production-1 --type reconciliation --env production --owner '<owner>' --source-artifact 'docs/migration/reconciliation.<run>.json' --command 'node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json' --result passed --decision go --immutable-reference artifact://migration/final-reconciliation-reconciliation-production-1 --packet-requirement final-reconciliation --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/final-reconciliation-reconciliation-production-1.json"
+      ],
+      "proof": "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "attach-live-evidence-g4-frontend-signoff",
+      "owner_role": "Product leads",
+      "source": "live-evidence:G4 Frontends",
+      "blocking_items": 3,
+      "blocking_details": [
+        "frontend_signoff:0/1",
+        "web_check:0/1",
+        "smoke_test:0/1"
+      ],
+      "next_action": "attach accepted live evidence for frontend_signoff:0/1, web_check:0/1, smoke_test:0/1",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id g4-frontend-signoff-frontend-signoff-local-1 --type frontend_signoff --env local --owner '<owner>' --source-artifact artifact://migration/g4-frontend-signoff-frontend-signoff-local-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-frontend-experience' --result passed --decision go --immutable-reference artifact://migration/g4-frontend-signoff-frontend-signoff-local-1 --packet-requirement g4-frontend-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g4-frontend-signoff-frontend-signoff-local-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id g4-frontend-signoff-web-check-local-1 --type web_check --env local --owner '<owner>' --source-artifact artifact://migration/g4-frontend-signoff-web-check-local-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:web' --result passed --decision go --immutable-reference artifact://migration/g4-frontend-signoff-web-check-local-1 --packet-requirement g4-frontend-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g4-frontend-signoff-web-check-local-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id g4-frontend-signoff-smoke-test-local-1 --type smoke_test --env local --owner '<owner>' --source-artifact artifact://migration/g4-frontend-signoff-smoke-test-local-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-smoke-tests -- --strict' --result passed --decision go --immutable-reference artifact://migration/g4-frontend-signoff-smoke-test-local-1 --packet-requirement g4-frontend-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g4-frontend-signoff-smoke-test-local-1.json"
+      ],
+      "proof": "pnpm check:migration-frontend-experience && pnpm check:web && pnpm check:migration-smoke-tests -- --strict && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "attach-live-evidence-g5-infra-signoff",
+      "owner_role": "Infra lead",
+      "source": "live-evidence:G5 Infra",
+      "blocking_items": 6,
+      "blocking_details": [
+        "infra_deploy:0/1",
+        "infra_deploy@staging",
+        "infra_restore:0/1",
+        "infra_restore@staging",
+        "rollback:0/1",
+        "rollback@staging"
+      ],
+      "next_action": "attach accepted live evidence for infra_deploy:0/1, infra_deploy@staging, infra_restore:0/1, infra_restore@staging, rollback:0/1, rollback@staging",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id g5-infra-signoff-infra-deploy-staging-1 --type infra_deploy --env staging --owner '<owner>' --source-artifact artifact://migration/g5-infra-signoff-infra-deploy-staging-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-infra-deploy' --result passed --decision go --immutable-reference artifact://migration/g5-infra-signoff-infra-deploy-staging-1 --packet-requirement g5-infra-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g5-infra-signoff-infra-deploy-staging-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id g5-infra-signoff-infra-restore-staging-1 --type infra_restore --env staging --owner '<owner>' --source-artifact artifact://migration/g5-infra-signoff-infra-restore-staging-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-backup-restore -- --strict' --result passed --decision go --immutable-reference artifact://migration/g5-infra-signoff-infra-restore-staging-1 --packet-requirement g5-infra-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g5-infra-signoff-infra-restore-staging-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id g5-infra-signoff-rollback-staging-1 --type rollback --env staging --owner '<owner>' --source-artifact artifact://migration/g5-infra-signoff-rollback-staging-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rollback-report -- --strict' --result passed --decision go --immutable-reference artifact://migration/g5-infra-signoff-rollback-staging-1 --packet-requirement g5-infra-signoff --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/g5-infra-signoff-rollback-staging-1.json"
+      ],
+      "proof": "pnpm check:migration-infra-deploy && pnpm check:migration-backup-restore -- --strict && pnpm check:migration-rollback-report -- --strict && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "attach-live-evidence-p11-rehearsals",
+      "owner_role": "Data lead",
+      "source": "live-evidence:P11/G6 Repetitions migration",
+      "blocking_items": 7,
+      "blocking_details": [
+        "rehearsal:0/3",
+        "rehearsal@local",
+        "rehearsal@staging",
+        "rehearsal@production",
+        "reconciliation:0/2",
+        "rollback:0/1",
+        "reject_review:0/1"
+      ],
+      "next_action": "attach accepted live evidence for rehearsal:0/3, rehearsal@local, rehearsal@staging, rehearsal@production, reconciliation:0/2, rollback:0/1, reject_review:0/1",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-rehearsal-local-1 --type rehearsal --env local --owner '<owner>' --source-artifact artifact://migration/p11-rehearsals-rehearsal-local-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rehearsals -- --strict' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-rehearsal-local-1 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-rehearsal-local-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-rehearsal-staging-2 --type rehearsal --env staging --owner '<owner>' --source-artifact artifact://migration/p11-rehearsals-rehearsal-staging-2.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rehearsals -- --strict' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-rehearsal-staging-2 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-rehearsal-staging-2.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-rehearsal-production-3 --type rehearsal --env production --owner '<owner>' --source-artifact artifact://migration/p11-rehearsals-rehearsal-production-3.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rehearsals -- --strict' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-rehearsal-production-3 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-rehearsal-production-3.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-reconciliation-staging-1 --type reconciliation --env staging --owner '<owner>' --source-artifact 'docs/migration/reconciliation.<run>.json' --command 'node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-reconciliation-staging-1 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-reconciliation-staging-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-reconciliation-production-2 --type reconciliation --env production --owner '<owner>' --source-artifact 'docs/migration/reconciliation.<run>.json' --command 'node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-reconciliation-production-2 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-reconciliation-production-2.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-rollback-staging-1 --type rollback --env staging --owner '<owner>' --source-artifact artifact://migration/p11-rehearsals-rollback-staging-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rollback-report -- --strict' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-rollback-staging-1 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-rollback-staging-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p11-rehearsals-reject-review-staging-1 --type reject_review --env staging --owner '<owner>' --source-artifact artifact://migration/p11-rehearsals-reject-review-staging-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-rejects -- --strict' --result passed --decision go --immutable-reference artifact://migration/p11-rehearsals-reject-review-staging-1 --packet-requirement p11-rehearsals --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p11-rehearsals-reject-review-staging-1.json"
+      ],
+      "proof": "pnpm check:migration-rehearsals -- --strict && node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json && pnpm check:migration-rejects -- --strict && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "attach-live-evidence-p12-cutover",
+      "owner_role": "Migration lead",
+      "source": "live-evidence:P12/G7 Big Bang cutover",
+      "blocking_items": 4,
+      "blocking_details": [
+        "cutover:0/1",
+        "cutover@production",
+        "reconciliation:0/1",
+        "reconciliation@production"
+      ],
+      "next_action": "attach accepted live evidence for cutover:0/1, cutover@production, reconciliation:0/1, reconciliation@production",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id p12-cutover-cutover-production-1 --type cutover --env production --owner '<owner>' --source-artifact artifact://migration/p12-cutover-cutover-production-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json' --result passed --decision go --immutable-reference artifact://migration/p12-cutover-cutover-production-1 --packet-requirement p12-cutover --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p12-cutover-cutover-production-1.json",
+        "node tools/migration/live-evidence-prepare.mjs --id p12-cutover-reconciliation-production-1 --type reconciliation --env production --owner '<owner>' --source-artifact 'docs/migration/reconciliation.<run>.json' --command 'node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json' --result passed --decision go --immutable-reference artifact://migration/p12-cutover-reconciliation-production-1 --packet-requirement p12-cutover --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p12-cutover-reconciliation-production-1.json"
+      ],
+      "proof": "pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "attach-live-evidence-p13-decommission",
+      "owner_role": "Infra lead",
+      "source": "live-evidence:P13/G8 Decommission",
+      "blocking_items": 2,
+      "blocking_details": [
+        "decommission:0/1",
+        "decommission@production"
+      ],
+      "next_action": "attach accepted live evidence for decommission:0/1, decommission@production",
+      "preparation_commands": [
+        "node tools/migration/live-evidence-prepare.mjs --id p13-decommission-decommission-production-1 --type decommission --env production --owner '<owner>' --source-artifact artifact://migration/p13-decommission-decommission-production-1.source --source-checksum '<source-artifact-sha256>' --command 'pnpm check:migration-postcutover' --result passed --decision go --immutable-reference artifact://migration/p13-decommission-decommission-production-1 --packet-requirement p13-decommission --notes '<owner justification and run context>' --out docs/migration/live-evidence-instances/p13-decommission-decommission-production-1.json"
+      ],
+      "proof": "pnpm check:migration-postcutover && pnpm check:migration-live-evidence-instances -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-backup-rollback",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "les backups et rollbacks sont testes"
+      ],
+      "next_action": "les backups et rollbacks sont testes",
+      "proof": "pnpm check:migration-backup-restore -- --strict && pnpm check:migration-rollback-report -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-critical-journeys",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "tous les parcours critiques ont une implementation nouvelle"
+      ],
+      "next_action": "tous les parcours critiques ont une implementation nouvelle",
+      "proof": "pnpm check:migration-parity -- --strict && pnpm check:migration-smoke-tests -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-data-reconciled",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "toutes les donnees migrables sont reconciliees"
+      ],
+      "next_action": "toutes les donnees migrables sont reconciliees",
+      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-gate-evidence",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "chaque gate a une preuve attachee"
+      ],
+      "next_action": "chaque gate a une preuve attachee",
+      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-legacy-jobs-stopped",
+      "owner_role": "Migration lead",
+      "source": "runbook:Validation finale",
+      "blocking_items": 1,
+      "blocking_details": [
+        "tous les jobs legacy sont arretes ou supprimes"
+      ],
+      "next_action": "tous les jobs legacy sont arretes ou supprimes",
+      "proof": "tools/migration/job-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-legacy-secrets-revoked",
+      "owner_role": "Migration lead",
+      "source": "runbook:Validation finale",
+      "blocking_items": 1,
+      "blocking_details": [
+        "tous les secrets legacy inutiles sont revoques"
+      ],
+      "next_action": "tous les secrets legacy inutiles sont revoques",
+      "proof": "tools/migration/secret-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-live-cutover-evidence",
+      "owner_role": "Migration lead",
+      "source": "runbook:Statut Operationnel",
+      "blocking_items": 1,
+      "blocking_details": [
+        "les preuves live de repetition, rollback, reconciliation, cutover et decommission sont attachees et acceptees"
+      ],
+      "next_action": "les preuves live de repetition, rollback, reconciliation, cutover et decommission sont attachees et acceptees",
+      "proof": "tools/migration/live-evidence-instances.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-no-runtime-legacy",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "aucun composant runtime legacy n'est requis"
+      ],
+      "next_action": "aucun composant runtime legacy n'est requis",
+      "proof": "pnpm check:migration-decommission -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-no-v2-debt",
+      "owner_role": "Migration lead",
+      "source": "runbook:Validation finale",
+      "blocking_items": 1,
+      "blocking_details": [
+        "aucun backlog V2 ne contient une dette necessaire au bon fonctionnement V1"
+      ],
+      "next_action": "aucun backlog V2 ne contient une dette necessaire au bon fonctionnement V1",
+      "proof": "pnpm check:migration-v2-debt -- --strict && tools/migration/completion-audit.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-phase-acceptance",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Phases de Reconstruction",
+      "blocking_items": 1,
+      "blocking_details": [
+        "chaque phase de reconstruction a owner, preuve et decision go"
+      ],
+      "next_action": "chaque phase de reconstruction a owner, preuve et decision go",
+      "proof": "tools/migration/phase-ledger.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-post-audit-approved",
+      "owner_role": "Migration lead",
+      "source": "runbook:Validation finale",
+      "blocking_items": 1,
+      "blocking_details": [
+        "post-migration-audit.md approuve par Migration lead, Security lead et owners produit"
+      ],
+      "next_action": "post-migration-audit.md approuve par Migration lead, Security lead et owners produit",
+      "proof": "pnpm check:migration-post-migration-audit -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-risk-closure",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope"
+      ],
+      "next_action": "chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope",
+      "proof": "tools/migration/risk-register.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-runbook-explicit",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Criteres de Reussite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "le runbook de cutover peut etre execute sans decision implicite"
+      ],
+      "next_action": "le runbook de cutover peut etre execute sans decision implicite",
+      "proof": "pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-gate_decisions",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "blocking_items": 5,
+      "blocking_details": [
+        "gate_decisions unresolved item 1/5",
+        "gate_decisions unresolved item 2/5",
+        "gate_decisions unresolved item 3/5",
+        "gate_decisions unresolved item 4/5",
+        "gate_decisions unresolved item 5/5"
+      ],
+      "next_action": "resolve and sign gate_decisions decisions",
+      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-gates",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "blocking_items": 5,
+      "blocking_details": [
+        "gates unresolved item 1/5",
+        "gates unresolved item 2/5",
+        "gates unresolved item 3/5",
+        "gates unresolved item 4/5",
+        "gates unresolved item 5/5"
+      ],
+      "next_action": "resolve and sign gates decisions",
+      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-live_evidence",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/live-evidence-instances.generated.json",
+      "blocking_items": 6,
+      "blocking_details": [
+        "live_evidence unresolved item 1/6",
+        "live_evidence unresolved item 2/6",
+        "live_evidence unresolved item 3/6",
+        "live_evidence unresolved item 4/6",
+        "live_evidence unresolved item 5/6",
+        "live_evidence unresolved item 6/6"
+      ],
+      "next_action": "resolve and sign live_evidence decisions",
+      "proof": "tools/migration/live-evidence-instances.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-phases",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/phase-ledger.generated.json",
+      "blocking_items": 3,
+      "blocking_details": [
+        "phases unresolved item 1/3",
+        "phases unresolved item 2/3",
+        "phases unresolved item 3/3"
+      ],
+      "next_action": "resolve and sign phases decisions",
+      "proof": "tools/migration/phase-ledger.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-reconciliation_template",
+      "owner_role": "Data lead",
+      "source": "docs/migration/reconciliation.template.json",
+      "blocking_items": 1,
+      "blocking_details": [
+        "reconciliation_template unresolved item 1/1"
+      ],
+      "next_action": "resolve and sign reconciliation_template decisions",
+      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-risks",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/risk-register.generated.json",
+      "blocking_items": 1,
+      "blocking_details": [
+        "risks unresolved item 1/1"
+      ],
+      "next_action": "resolve and sign risks decisions",
+      "proof": "tools/migration/risk-register.mjs --strict",
+      "status": "blocked"
+    }
+  ]
+}

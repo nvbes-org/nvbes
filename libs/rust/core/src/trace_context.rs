@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 pub const TRACEPARENT_HEADER: &str = "traceparent";
 pub const TRACESTATE_HEADER: &str = "tracestate";
-pub const SENTRY_TRACE_HEADER: &str = "sentry-trace";
 
 const TRACEPARENT_VERSION: &str = "00";
 const TRACE_FLAG_SAMPLED: u8 = 0x01;
@@ -26,11 +25,6 @@ impl TraceParent {
             TRACEPARENT_VERSION, self.trace_id, self.span_id, flags
         )
     }
-
-    pub fn to_sentry_trace_header_value(&self) -> String {
-        let sampled = if self.sampled { "1" } else { "0" };
-        format!("{}-{}-{}", self.trace_id, self.span_id, sampled)
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -42,10 +36,6 @@ pub fn traceparent_header_name() -> HeaderName {
 
 pub fn tracestate_header_name() -> HeaderName {
     HeaderName::from_static(TRACESTATE_HEADER)
-}
-
-pub fn sentry_trace_header_name() -> HeaderName {
-    HeaderName::from_static(SENTRY_TRACE_HEADER)
 }
 
 pub fn new_trace_id() -> String {
@@ -106,48 +96,11 @@ pub fn parse_traceparent(value: &str) -> Option<TraceParent> {
     })
 }
 
-pub fn parse_sentry_trace(value: &str) -> Option<TraceParent> {
-    let mut parts = value.trim().splitn(3, '-');
-    let trace_id = parts.next()?;
-    let span_id = parts.next()?;
-    let sampled = parts.next().map(|value| match value {
-        "1" => Some(true),
-        "0" => Some(false),
-        _ => None,
-    });
-
-    if trace_id.len() != TRACE_ID_LEN || !is_lower_hex(trace_id) {
-        return None;
-    }
-    if trace_id.chars().all(|c| c == '0') {
-        return None;
-    }
-    if span_id.len() != SPAN_ID_LEN || !is_lower_hex(span_id) {
-        return None;
-    }
-    if span_id.chars().all(|c| c == '0') {
-        return None;
-    }
-
-    Some(TraceParent {
-        trace_id: trace_id.to_string(),
-        span_id: span_id.to_string(),
-        sampled: sampled.flatten().unwrap_or(true),
-    })
-}
-
 pub fn extract_traceparent(headers: &HeaderMap) -> Option<TraceParent> {
     headers
         .get(TRACEPARENT_HEADER)
         .and_then(|value| value.to_str().ok())
         .and_then(parse_traceparent)
-}
-
-pub fn extract_sentry_trace(headers: &HeaderMap) -> Option<TraceParent> {
-    headers
-        .get(SENTRY_TRACE_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .and_then(parse_sentry_trace)
 }
 
 pub fn extract_tracestate(headers: &HeaderMap) -> Option<String> {
@@ -173,16 +126,9 @@ pub fn inject_traceparent_into(
     }
 }
 
-pub fn inject_sentry_trace_into(headers: &mut HeaderMap, traceparent: &TraceParent) {
-    if let Ok(header_value) = HeaderValue::from_str(&traceparent.to_sentry_trace_header_value()) {
-        headers.insert(sentry_trace_header_name(), header_value);
-    }
-}
-
 pub fn trace_headers(traceparent: &TraceParent, tracestate: Option<&str>) -> HeaderMap {
     let mut headers = HeaderMap::new();
     inject_traceparent_into(&mut headers, traceparent, tracestate);
-    inject_sentry_trace_into(&mut headers, traceparent);
     headers
 }
 
@@ -212,12 +158,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_valid_sentry_trace_without_sampling_defaults_to_sampled() {
-        let result = parse_sentry_trace("0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331");
-        assert!(result.is_some());
-        assert!(result.unwrap().sampled);
-    }
-
     #[test]
     fn child_keeps_trace_id_and_changes_span_id() {
         let parent =
@@ -230,12 +170,10 @@ mod tests {
     }
 
     #[test]
-    fn fresh_trace_headers_include_w3c_and_sentry_headers() {
+    fn fresh_trace_headers_include_w3c_headers() {
         let headers = fresh_trace_headers(true);
 
         assert!(headers.get(TRACEPARENT_HEADER).is_some());
-        assert!(headers.get(SENTRY_TRACE_HEADER).is_some());
         assert!(extract_traceparent(&headers).is_some());
-        assert!(extract_sentry_trace(&headers).is_some());
     }
 }

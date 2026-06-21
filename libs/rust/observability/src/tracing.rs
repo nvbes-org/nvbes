@@ -1,6 +1,4 @@
 use nvbes_core::config::AppConfig;
-use sentry_tracing::EventFilter;
-use tracing::Level;
 use tracing_subscriber::prelude::*;
 
 pub fn init_tracing(config: &AppConfig) {
@@ -9,14 +7,7 @@ pub fn init_tracing(config: &AppConfig) {
     let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| default_filter.into());
 
-    let sentry_logs_enabled = config.sentry_logs_enabled;
-    let sentry_layer = sentry_tracing::layer()
-        .event_filter(move |metadata| sentry_event_filter(metadata.level(), sentry_logs_enabled))
-        .span_filter(|_| false);
-
-    let registry = tracing_subscriber::registry()
-        .with(env_filter)
-        .with(sentry_layer);
+    let registry = tracing_subscriber::registry().with(env_filter);
 
     #[cfg(feature = "otlp")]
     let registry = registry.with(otlp_layer(config));
@@ -38,16 +29,6 @@ pub fn init_tracing(config: &AppConfig) {
                     .flatten_event(true),
             )
             .init();
-    }
-}
-
-fn sentry_event_filter(level: &Level, logs_enabled: bool) -> EventFilter {
-    match *level {
-        Level::ERROR if logs_enabled => EventFilter::Event | EventFilter::Log,
-        Level::ERROR => EventFilter::Event,
-        Level::WARN if logs_enabled => EventFilter::Breadcrumb | EventFilter::Log,
-        Level::WARN | Level::INFO => EventFilter::Breadcrumb,
-        Level::DEBUG | Level::TRACE => EventFilter::Ignore,
     }
 }
 

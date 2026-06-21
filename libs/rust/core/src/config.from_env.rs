@@ -151,14 +151,10 @@ impl AppConfig {
             webauthn_related_origins: optional_env("NVBES_WEBAUTHN_RELATED_ORIGINS")
                 .map(|v| parse_csv(&v))
                 .unwrap_or_default(),
-            sentry_dsn: optional_env("NVBES_SENTRY_DSN"),
-            sentry_logs_enabled: env_bool("NVBES_SENTRY_LOGS_ENABLED", false),
             otlp_endpoint: optional_env("NVBES_OTLP_ENDPOINT"),
             otlp_authorization_header: optional_env("NVBES_OTLP_AUTHORIZATION_HEADER"),
-            posthog_enabled: env_bool("NVBES_POSTHOG_ENABLED", false),
-            posthog_host: optional_env("NVBES_POSTHOG_HOST")
-                .unwrap_or_else(|| "https://eu.i.posthog.com".to_string()),
-            posthog_project_token: optional_env("NVBES_POSTHOG_PROJECT_TOKEN"),
+            product_analytics_enabled: env_bool("NVBES_PRODUCT_ANALYTICS_ENABLED", false),
+            product_analytics_token: optional_env("NVBES_PRODUCT_ANALYTICS_TOKEN"),
             analytics_id_salt: optional_env("NVBES_ANALYTICS_ID_SALT"),
             profiling_enabled: env_bool("NVBES_PROFILING_ENABLED", false),
             profiling_endpoint: optional_env("NVBES_PROFILING_ENDPOINT"),
@@ -173,26 +169,31 @@ impl AppConfig {
                 .ok()
                 .map(|v| v == "true")
                 .unwrap_or(false),
-            scw_access_key: optional_env("SCW_ACCESS_KEY"),
-            scw_secret_key: optional_env("SCW_SECRET_KEY"),
-            scw_project_id: optional_env("SCW_DEFAULT_PROJECT_ID")
-                .or_else(|| optional_env("SCW_PROJECT_ID")),
-            scw_region: optional_env("SCW_DEFAULT_REGION")
-                .or_else(|| optional_env("SCW_REGION"))
-                .unwrap_or_else(|| "fr-par".to_string()),
-            scw_kms_key_id: optional_env("SCW_KMS_KEY_ID"),
             secret_manager_enabled: std::env::var("NVBES_SECRET_MANAGER_ENABLED")
                 .ok()
                 .map(|v| v == "true")
                 .unwrap_or(false),
-            scw_tem_enabled: std::env::var("SCW_TEM_ENABLED")
+            email_provider: optional_env("NVBES_EMAIL_PROVIDER").unwrap_or_else(|| {
+                if optional_env("NVBES_SMTP_HOST").is_some() {
+                    "smtp".to_string()
+                } else {
+                    "mock".to_string()
+                }
+            }),
+            email_from_email: optional_env("NVBES_EMAIL_FROM_EMAIL"),
+            email_from_name: optional_env("NVBES_EMAIL_FROM_NAME"),
+            email_reply_to: optional_env("NVBES_EMAIL_REPLY_TO"),
+            smtp_host: optional_env("NVBES_SMTP_HOST"),
+            smtp_port: std::env::var("NVBES_SMTP_PORT")
+                .ok()
+                .and_then(|value| value.parse::<u16>().ok())
+                .unwrap_or(587),
+            smtp_username: optional_env("NVBES_SMTP_USERNAME"),
+            smtp_password: optional_env("NVBES_SMTP_PASSWORD"),
+            smtp_starttls: std::env::var("NVBES_SMTP_STARTTLS")
                 .ok()
                 .map(|v| v == "true")
-                .unwrap_or(false),
-            scw_tem_from_email: optional_env("SCW_TEM_FROM_EMAIL"),
-            scw_tem_from_name: optional_env("SCW_TEM_FROM_NAME"),
-            scw_tem_reply_to: optional_env("SCW_TEM_REPLY_TO"),
-            scw_tem_webhook_secret: optional_env("SCW_TEM_WEBHOOK_SECRET"),
+                .unwrap_or(true),
             storage_enabled: std::env::var("STORAGE_ENABLED")
                 .ok()
                 .map(|v| v == "true")
@@ -205,6 +206,10 @@ impl AppConfig {
             )?,
             storage_endpoint: optional_env("STORAGE_ENDPOINT"),
             storage_region: optional_env("STORAGE_REGION").unwrap_or_else(|| "fr-par".to_string()),
+            storage_access_key: optional_env("STORAGE_ACCESS_KEY")
+                .or_else(|| optional_env("AWS_ACCESS_KEY_ID")),
+            storage_secret_key: optional_env("STORAGE_SECRET_KEY")
+                .or_else(|| optional_env("AWS_SECRET_ACCESS_KEY")),
             scan_enabled: std::env::var("SCAN_ENABLED")
                 .ok()
                 .map(|v| v == "true")
@@ -252,7 +257,6 @@ impl AppConfig {
             trusted_proxy_cidrs: optional_env("NVBES_TRUSTED_PROXY_CIDRS")
                 .map(|value| parse_csv(&value))
                 .unwrap_or_default(),
-            turnstile_secret_key: optional_env("TURNSTILE_SECRET_KEY"),
             mtls_enabled: env_bool("NVBES_MTLS_ENABLED", false),
             mtls_port: std::env::var("NVBES_MTLS_PORT")
                 .ok()

@@ -74,10 +74,22 @@ pub async fn token_exchange(
             let secret = input.client_secret.as_ref().ok_or_else(|| {
                 AppError::unauthorized("invalid_client", "Client authentication is required.")
             })?;
-            crate::domains::oauth::verify_client_secret_with_overlap(db, &client_display_id, secret, &client_secret_hash).await?;
+            crate::domains::oauth::verify_client_secret_with_overlap(
+                db,
+                &client_display_id,
+                secret,
+                &client_secret_hash,
+            )
+            .await?;
         }
     } else if let Some(ref secret) = input.client_secret {
-        crate::domains::oauth::verify_client_secret_with_overlap(db, &client_display_id, secret, &client_secret_hash).await?;
+        crate::domains::oauth::verify_client_secret_with_overlap(
+            db,
+            &client_display_id,
+            secret,
+            &client_secret_hash,
+        )
+        .await?;
     }
 
     let subject_claims =

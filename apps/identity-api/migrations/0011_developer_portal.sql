@@ -100,6 +100,10 @@ CREATE INDEX IF NOT EXISTS idx_developer_webhook_deliveries_endpoint_created
 CREATE INDEX IF NOT EXISTS idx_developer_webhook_deliveries_tenant_event
   ON developer_webhook_deliveries (tenant_id, event_type, created_at DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_developer_webhook_deliveries_replay_once
+  ON developer_webhook_deliveries (tenant_id, replayed_from_delivery_id)
+  WHERE replayed_from_delivery_id IS NOT NULL;
+
 ALTER TABLE developer_role_assignments ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN

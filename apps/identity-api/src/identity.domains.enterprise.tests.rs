@@ -1,249 +1,16 @@
 use crate::domains::enterprise::service::{
-    create_invitations, get_billing, get_security, list_audit_events, list_users, list_workspaces,
+    create_invitations, get_billing, get_security, grant_admin_elevation, list_audit_events,
+    list_users, list_workspaces, suspend_user, update_mfa_policy, update_session_policy,
     update_user_access,
 };
 use crate::domains::enterprise::types::{
-    EnterpriseAccessUpdateInput, EnterpriseInvitationInput, EnterpriseRole,
+    EnterpriseAccessUpdateInput, EnterpriseAdminElevationInput, EnterpriseInvitationInput,
+    EnterpriseMfaPolicyInput, EnterpriseRole, EnterpriseSessionPolicyInput, EnterpriseSuspendInput,
 };
-use crate::http::middleware::jwt::AuthContext;
-use chrono::Utc;
 use uuid::Uuid;
 
-fn mock_auth_context(principal_id: Uuid, email: &str, tenant_id: Uuid, org_id: Option<Uuid>) -> AuthContext {
-    AuthContext {
-        user_id: principal_id,
-        user_email: email.to_string(),
-        display_name: "Test User".to_string(),
-        email_verified_at: Some(Utc::now()),
-        mfa_enabled: true,
-        tenant_id: Some(tenant_id),
-        organization_id: org_id,
-        workspace_id: None,
-        workspace_region: None,
-        token_type: "access".to_string(),
-        scope: "openid profile email".to_string(),
-        jti: Uuid::new_v4().to_string(),
-        session_id: Uuid::new_v4(),
-        acr: Some("aal2".to_string()),
-        amr: vec!["pwd".to_string(), "otp".to_string()],
-        auth_time: Some(Utc::now().timestamp()),
-        client_id: None,
-        cnf_jkt: None,
-    }
-}
-
-async fn setup_test_data(
-    pool: &sqlx::PgPool,
-) -> (
-    Uuid,         // tenant_id
-    Uuid,         // org_a_id
-    Uuid,         // org_b_id
-    Uuid,         // workspace_a_id
-    Uuid,         // workspace_b_id
-    Uuid,         // user_a_id
-    Uuid,         // user_b_id
-    AuthContext,  // org_a_admin_auth
-) {
-    let tenant_id = Uuid::new_v4();
-    let org_a_id = Uuid::new_v4();
-    let org_b_id = Uuid::new_v4();
-    let workspace_a_id = Uuid::new_v4();
-    let workspace_b_id = Uuid::new_v4();
-    let admin_a_id = Uuid::new_v4();
-    let user_a_id = Uuid::new_v4();
-    let user_b_id = Uuid::new_v4();
-    let now = Utc::now();
-
-    // 1. Tenant
-    sqlx::query(
-        r#"
-        INSERT INTO tenants (id, kind, name, slug, status, security_tier, created_at, updated_at)
-        VALUES ($1, 'personal', 'Test Tenant', $2, 'active', 'standard', $3, $3)
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(format!("tenant-{}", tenant_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    // 2. Principals
-    for pid in &[admin_a_id, user_a_id, user_b_id] {
-        sqlx::query(
-            "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name, created_at, updated_at) VALUES ($1, $2, 'human', 'active', 'Test User', $3, $3)",
-        )
-        .bind(pid)
-        .bind(tenant_id)
-        .bind(now)
-        .execute(pool)
-        .await
-        .unwrap();
-    }
-
-    // 3. Users
-    sqlx::query(
-        "INSERT INTO users (principal_id, email, username, firstname, lastname, created_at, updated_at) VALUES ($1, $2, $3, 'Admin', 'A', $4, $4)",
-    )
-    .bind(admin_a_id)
-    .bind(format!("admin_a_{}@example.test", admin_a_id))
-    .bind(format!("admin_a_{}", admin_a_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO users (principal_id, email, username, firstname, lastname, created_at, updated_at) VALUES ($1, $2, $3, 'User', 'A', $4, $4)",
-    )
-    .bind(user_a_id)
-    .bind(format!("user_a_{}@example.test", user_a_id))
-    .bind(format!("user_a_{}", user_a_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO users (principal_id, email, username, firstname, lastname, created_at, updated_at) VALUES ($1, $2, $3, 'User', 'B', $4, $4)",
-    )
-    .bind(user_b_id)
-    .bind(format!("user_b_{}@example.test", user_b_id))
-    .bind(format!("user_b_{}", user_b_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    // 4. Tenant memberships
-    for pid in &[admin_a_id, user_a_id, user_b_id] {
-        sqlx::query(
-            "INSERT INTO tenant_memberships (tenant_id, principal_id, principal_kind, role, status, created_at, updated_at) VALUES ($1, $2, 'human', 'member', 'active', $3, $3)",
-        )
-        .bind(tenant_id)
-        .bind(pid)
-        .bind(now)
-        .execute(pool)
-        .await
-        .unwrap();
-    }
-
-    // 5. Organizations
-    sqlx::query(
-        "INSERT INTO organizations (id, tenant_id, name, slug, status, created_at, updated_at) VALUES ($1, $2, 'Org A', $3, 'active', $4, $4)",
-    )
-    .bind(org_a_id)
-    .bind(tenant_id)
-    .bind(format!("org-a-{}", org_a_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO organizations (id, tenant_id, name, slug, status, created_at, updated_at) VALUES ($1, $2, 'Org B', $3, 'active', $4, $4)",
-    )
-    .bind(org_b_id)
-    .bind(tenant_id)
-    .bind(format!("org-b-{}", org_b_id))
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    // 6. Organization memberships
-    sqlx::query(
-        "INSERT INTO organization_memberships (organization_id, principal_id, role, status, created_at, updated_at) VALUES ($1, $2, 'admin', 'active', $3, $3)",
-    )
-    .bind(org_a_id)
-    .bind(admin_a_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO organization_memberships (organization_id, principal_id, role, status, created_at, updated_at) VALUES ($1, $2, 'member', 'active', $3, $3)",
-    )
-    .bind(org_a_id)
-    .bind(user_a_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO organization_memberships (organization_id, principal_id, role, status, created_at, updated_at) VALUES ($1, $2, 'member', 'active', $3, $3)",
-    )
-    .bind(org_b_id)
-    .bind(user_b_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    // 7. Workspaces
-    sqlx::query(
-        "INSERT INTO workspaces (id, tenant_id, organization_id, name, workspace_type, plan_code, created_at, updated_at) VALUES ($1, $2, $3, 'Workspace A', 'team', 'team', $4, $4)",
-    )
-    .bind(workspace_a_id)
-    .bind(tenant_id)
-    .bind(org_a_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO workspaces (id, tenant_id, organization_id, name, workspace_type, plan_code, created_at, updated_at) VALUES ($1, $2, $3, 'Workspace B', 'team', 'team', $4, $4)",
-    )
-    .bind(workspace_b_id)
-    .bind(tenant_id)
-    .bind(org_b_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    // 8. Workspace memberships
-    sqlx::query(
-        "INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, created_at, updated_at) VALUES ($1, $2, 'member', 'active', $3, $3)",
-    )
-    .bind(workspace_a_id)
-    .bind(user_a_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, created_at, updated_at) VALUES ($1, $2, 'member', 'active', $3, $3)",
-    )
-    .bind(workspace_b_id)
-    .bind(user_b_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .unwrap();
-
-    let org_a_admin_auth = mock_auth_context(
-        admin_a_id,
-        &format!("admin_a_{}@example.test", admin_a_id),
-        tenant_id,
-        Some(org_a_id),
-    );
-
-    (
-        tenant_id,
-        org_a_id,
-        org_b_id,
-        workspace_a_id,
-        workspace_b_id,
-        user_a_id,
-        user_b_id,
-        org_a_admin_auth,
-    )
-}
+#[path = "identity.domains.enterprise.tests.support.rs"]
+mod support;
 
 #[tokio::test]
 async fn test_delegated_administration_scoping_and_blocking() {
@@ -260,26 +27,39 @@ async fn test_delegated_administration_scoping_and_blocking() {
         user_a_id,
         user_b_id,
         org_a_admin_auth,
-    ) = setup_test_data(&pool).await;
+    ) = support::setup_delegated_admin_test_data(&pool).await;
 
-    // --- 1. Test Scoped Reads (Users, Workspaces, Audit Events) ---
-
-    // A. List Users
-    let users_resp = list_users(&pool, &org_a_admin_auth, tenant_id).await.unwrap();
-    // Org A admin should see: admin_a (self) and user_a, but NOT user_b (which is in Org B)
-    assert!(users_resp.users.iter().any(|u| u.id == org_a_admin_auth.user_id));
+    let users_resp = list_users(&pool, &org_a_admin_auth, tenant_id)
+        .await
+        .unwrap();
+    assert!(
+        users_resp
+            .users
+            .iter()
+            .any(|u| u.id == org_a_admin_auth.user_id)
+    );
     assert!(users_resp.users.iter().any(|u| u.id == user_a_id));
     assert!(!users_resp.users.iter().any(|u| u.id == user_b_id));
 
-    // B. List Workspaces
-    let workspaces_resp = list_workspaces(&pool, &org_a_admin_auth, tenant_id).await.unwrap();
-    // Org A admin should see: workspace_a, but NOT workspace_b
-    assert!(workspaces_resp.workspaces.iter().any(|w| w.id == workspace_a_id));
-    assert!(!workspaces_resp.workspaces.iter().any(|w| w.id == workspace_b_id));
+    let workspaces_resp = list_workspaces(&pool, &org_a_admin_auth, tenant_id)
+        .await
+        .unwrap();
+    assert!(
+        workspaces_resp
+            .workspaces
+            .iter()
+            .any(|w| w.id == workspace_a_id)
+    );
+    assert!(
+        !workspaces_resp
+            .workspaces
+            .iter()
+            .any(|w| w.id == workspace_b_id)
+    );
 
-    // C. List Audit Events
-    let audit_resp = list_audit_events(&pool, &org_a_admin_auth, tenant_id).await.unwrap();
-    // Initially empty or scoped only to workspace_a
+    let audit_resp = list_audit_events(&pool, &org_a_admin_auth, tenant_id)
+        .await
+        .unwrap();
     for event in audit_resp.events {
         if let Some(ws_id) = event
             .metadata
@@ -291,20 +71,92 @@ async fn test_delegated_administration_scoping_and_blocking() {
         }
     }
 
-    // --- 2. Test Blocked Tenant-wide Reads ---
-
-    // A. Billing should fail
-    let billing_err = get_billing(&pool, &org_a_admin_auth, tenant_id).await.unwrap_err();
+    let billing_err = get_billing(&pool, &org_a_admin_auth, tenant_id)
+        .await
+        .unwrap_err();
     assert_eq!(billing_err.code, "tenant_scope_required");
 
-    // B. Security center should fail
-    let security_err = get_security(&pool, &org_a_admin_auth, tenant_id, 12).await.unwrap_err();
+    let security_err = get_security(&pool, &org_a_admin_auth, tenant_id, 12)
+        .await
+        .unwrap_err();
     assert_eq!(security_err.code, "tenant_scope_required");
 
-    // --- 3. Test Scoped Mutations ---
+    let elevation_err = grant_admin_elevation(
+        &pool,
+        &redis,
+        &org_a_admin_auth,
+        tenant_id,
+        EnterpriseAdminElevationInput {
+            duration_minutes: Some(15),
+            reason: Some("scope check".to_string()),
+            procedure_reference: None,
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(elevation_err.code, "tenant_scope_required");
 
-    // A. Create Invitation
-    // Inviting to workspace_a (in Org A) should succeed
+    let session_policy_err = update_session_policy(
+        &pool,
+        &redis,
+        &org_a_admin_auth,
+        tenant_id,
+        12,
+        EnterpriseSessionPolicyInput {
+            admin_session_ttl_hours: 8,
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(session_policy_err.code, "tenant_scope_required");
+
+    let mfa_policy_err = update_mfa_policy(
+        &pool,
+        &redis,
+        &org_a_admin_auth,
+        tenant_id,
+        12,
+        EnterpriseMfaPolicyInput {
+            policy: "required_admins".to_string(),
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(mfa_policy_err.code, "tenant_scope_required");
+
+    let trust_err =
+        crate::domains::enterprise::trust::get_trust_center(&pool, &org_a_admin_auth, tenant_id)
+            .await
+            .unwrap_err();
+    assert_eq!(trust_err.code, "tenant_scope_required");
+
+    let access_reviews_err = crate::domains::enterprise::access_reviews::service::list_campaigns(
+        &pool,
+        &org_a_admin_auth,
+        tenant_id,
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(access_reviews_err.code, "tenant_scope_required");
+
+    let policy_simulation_err = crate::domains::enterprise::policy_simulation::simulate_policy(
+        &pool,
+        &org_a_admin_auth,
+        tenant_id,
+        crate::domains::enterprise::policy_simulation::EnterprisePolicySimulationInput {
+            workspace_id: workspace_a_id,
+            subject:
+                crate::domains::enterprise::policy_simulation::types::EnterprisePolicySimulationSubject::User {
+                    user_id: user_a_id,
+                },
+            action: "workspace.member.list".to_string(),
+            resource: None,
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(policy_simulation_err.code, "tenant_scope_required");
+
     let invite_ok = create_invitations(
         &pool,
         &redis,
@@ -320,7 +172,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .await;
     assert!(invite_ok.is_ok());
 
-    // Inviting to workspace_b (in Org B) should fail
     let invite_err = create_invitations(
         &pool,
         &redis,
@@ -337,8 +188,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .unwrap_err();
     assert_eq!(invite_err.code, "invalid_workspace_scope");
 
-    // B. Update User Access
-    // Updating user_a (in Org A) should succeed
     let update_ok = update_user_access(
         &pool,
         &redis,
@@ -354,7 +203,69 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .await;
     assert!(update_ok.is_ok());
 
-    // Updating user_b (in Org B) should fail
+    let user_a_workspace_b_status = sqlx::query_scalar::<_, String>(
+        "SELECT status::text FROM workspace_memberships WHERE workspace_id = $1 AND principal_id = $2",
+    )
+    .bind(workspace_b_id)
+    .bind(user_a_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(user_a_workspace_b_status, "active");
+
+    let suspend_ok = suspend_user(
+        &pool,
+        &redis,
+        &org_a_admin_auth,
+        tenant_id,
+        user_a_id,
+        EnterpriseSuspendInput {
+            reason: "org_a_offboarding".to_string(),
+        },
+    )
+    .await;
+    assert!(suspend_ok.is_ok());
+
+    let user_a_workspace_statuses = sqlx::query_as::<_, (Uuid, String)>(
+        "SELECT workspace_id, status::text FROM workspace_memberships WHERE principal_id = $1 AND workspace_id IN ($2, $3)",
+    )
+    .bind(user_a_id)
+    .bind(workspace_a_id)
+    .bind(workspace_b_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert!(
+        user_a_workspace_statuses
+            .iter()
+            .any(|(workspace_id, status)| *workspace_id == workspace_a_id && status == "suspended")
+    );
+    assert!(
+        user_a_workspace_statuses
+            .iter()
+            .any(|(workspace_id, status)| *workspace_id == workspace_b_id && status == "active")
+    );
+
+    let scoped_audit_after_mutations = list_audit_events(&pool, &org_a_admin_auth, tenant_id)
+        .await
+        .unwrap();
+    assert!(
+        scoped_audit_after_mutations
+            .events
+            .iter()
+            .any(
+                |event| event.event_type == "enterprise.member.access_updated"
+                    && event.target_id == Some(user_a_id)
+            )
+    );
+    assert!(
+        scoped_audit_after_mutations
+            .events
+            .iter()
+            .any(|event| event.event_type == "enterprise.member.suspended"
+                && event.target_id == Some(user_a_id))
+    );
+
     let update_err = update_user_access(
         &pool,
         &redis,

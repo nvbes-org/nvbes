@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/infra-deploy.mjs --write",
+    "sources": [
+      "deploy/oss/helm/nvbes/Chart.yaml",
+      "deploy/oss/helm/nvbes/values.yaml",
+      "deploy/oss/kustomize/kustomization.yaml",
+      "deploy/oss/compose/compose.yaml",
+      "deploy/oss/opentofu/README.md",
+      "infrastructure/environments/staging/main.tf",
+      "infrastructure/environments/staging/outputs.tf",
+      "infrastructure/environments/staging/README.md",
+      "infrastructure/environments/production/README.md",
+      "infrastructure/environments/production/alloy.config.alloy",
+      "infrastructure/environments/production/docker-compose.observability.yml",
+      "infrastructure/modules/scaleway-v1/database.tf",
+      "infrastructure/modules/scaleway-v1/storage.tf",
+      "infrastructure/modules/scaleway-v1/iam.tf",
+      "scripts/test-integration.sh",
+      "scripts/release-gate.sh",
+      "scripts/migrate-staging.sh",
+      "scripts/smoke-staging.sh",
+      "docs/migration/backup-restore-manifest.md",
+      "docs/migration/observability-readiness.md"
+    ],
+    "targeted_tests": [
+      "pnpm check:supply-chain",
+      "tofu -chdir=infrastructure/environments/development validate",
+      "tofu -chdir=infrastructure/environments/staging validate",
+      "pnpm check:migration-backup-restore",
+      "pnpm check:migration-observability"
+    ]
+  },
+  "summary": {
+    "checks": 29,
+    "passed": 29,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "helm-chart",
+      "description": "Helm chart is declared as an application chart",
+      "path": "deploy/oss/helm/nvbes/Chart.yaml",
+      "status": "passed",
+      "pattern": "type: application"
+    },
+    {
+      "id": "helm-oci-registry",
+      "description": "Helm values pin the OCI image registry",
+      "path": "deploy/oss/helm/nvbes/values.yaml",
+      "status": "passed",
+      "pattern": "imageRegistry: ghcr.io/nvbes"
+    },
+    {
+      "id": "helm-identity-api-image",
+      "description": "Helm values include Identity API image",
+      "path": "deploy/oss/helm/nvbes/values.yaml",
+      "status": "passed",
+      "pattern": "repository: nvbes-identity-api"
+    },
+    {
+      "id": "helm-drive-api-image",
+      "description": "Helm values include Drive API image",
+      "path": "deploy/oss/helm/nvbes/values.yaml",
+      "status": "passed",
+      "pattern": "repository: nvbes-drive-api"
+    },
+    {
+      "id": "kustomize-helm",
+      "description": "Kustomize references the Helm chart",
+      "path": "deploy/oss/kustomize/kustomization.yaml",
+      "status": "passed",
+      "pattern": "../helm/nvbes"
+    },
+    {
+      "id": "compose-images",
+      "description": "Compose stack uses released OCI images",
+      "path": "deploy/oss/compose/compose.yaml",
+      "status": "passed",
+      "pattern": "ghcr.io/nvbes/nvbes-identity-api"
+    },
+    {
+      "id": "opentofu-boundary",
+      "description": "OSS OpenTofu boundary is documented",
+      "path": "deploy/oss/opentofu/README.md",
+      "status": "passed",
+      "pattern": "Cloud-specific managed deployment modules belong in `deploy/cloud`"
+    },
+    {
+      "id": "staging-overlay",
+      "description": "Staging OpenTofu overlay declares staging environment",
+      "path": "infrastructure/environments/staging/main.tf",
+      "status": "passed",
+      "pattern": "environment = \"staging\""
+    },
+    {
+      "id": "staging-backup-retention",
+      "description": "Staging overlay configures PostgreSQL backup retention",
+      "path": "infrastructure/environments/staging/main.tf",
+      "status": "passed",
+      "pattern": "postgres_backup_retention_days = 7"
+    },
+    {
+      "id": "staging-secret-inventory",
+      "description": "Staging overlay exposes required secret inventory",
+      "path": "infrastructure/environments/staging/main.tf",
+      "status": "passed",
+      "pattern": "secret_inventory = {"
+    },
+    {
+      "id": "staging-cloudflare-tls",
+      "description": "Staging edge enforces TLS settings",
+      "path": "infrastructure/environments/staging/main.tf",
+      "status": "passed",
+      "pattern": "min_tls_version          = \"1.3\""
+    },
+    {
+      "id": "staging-outputs-secret-inventory",
+      "description": "Staging outputs secret inventory without values",
+      "path": "infrastructure/environments/staging/outputs.tf",
+      "status": "passed",
+      "pattern": "output \"secret_inventory\""
+    },
+    {
+      "id": "staging-readme-no-secrets",
+      "description": "Staging README forbids committing real tfvars secrets",
+      "path": "infrastructure/environments/staging/README.md",
+      "status": "passed",
+      "pattern": "Do not commit `terraform.tfvars` or real secret values."
+    },
+    {
+      "id": "postgres-encryption",
+      "description": "PostgreSQL module enables encryption at rest",
+      "path": "infrastructure/modules/scaleway-v1/database.tf",
+      "status": "passed",
+      "pattern": "encryption_at_rest        = true"
+    },
+    {
+      "id": "postgres-backups",
+      "description": "PostgreSQL module enables managed backups",
+      "path": "infrastructure/modules/scaleway-v1/database.tf",
+      "status": "passed",
+      "pattern": "disable_backup            = false"
+    },
+    {
+      "id": "object-versioning",
+      "description": "Object storage module enables bucket versioning",
+      "path": "infrastructure/modules/scaleway-v1/storage.tf",
+      "status": "passed",
+      "pattern": "versioning"
+    },
+    {
+      "id": "object-lifecycle",
+      "description": "Object storage module defines lifecycle rules",
+      "path": "infrastructure/modules/scaleway-v1/storage.tf",
+      "status": "passed",
+      "pattern": "lifecycle_rule"
+    },
+    {
+      "id": "runtime-secret-access",
+      "description": "Runtime IAM policy grants secret manager access",
+      "path": "infrastructure/modules/scaleway-v1/iam.tf",
+      "status": "passed",
+      "pattern": "SecretManagerSecretAccess"
+    },
+    {
+      "id": "integration-tofu-validate",
+      "description": "Integration script validates development and staging OpenTofu",
+      "path": "scripts/test-integration.sh",
+      "status": "passed",
+      "pattern": "tofu -chdir=infrastructure/environments/staging validate"
+    },
+    {
+      "id": "release-staging-smoke",
+      "description": "Release gate runs staging smoke checks",
+      "path": "scripts/release-gate.sh",
+      "status": "passed",
+      "pattern": "staging smoke gate"
+    },
+    {
+      "id": "release-staging-e2e",
+      "description": "Release gate runs staging critical E2E checks",
+      "path": "scripts/release-gate.sh",
+      "status": "passed",
+      "pattern": "staging critical E2E gate"
+    },
+    {
+      "id": "migration-backup-guard",
+      "description": "Staging migration requires backup or restore point confirmation",
+      "path": "scripts/migrate-staging.sh",
+      "status": "passed",
+      "pattern": "fresh staging backup or restore point"
+    },
+    {
+      "id": "smoke-staging",
+      "description": "Staging smoke wrapper runs smoke and E2E",
+      "path": "scripts/smoke-staging.sh",
+      "status": "passed",
+      "pattern": "staging critical E2E"
+    },
+    {
+      "id": "production-observability-doc",
+      "description": "Production observability runbook documents Alloy architecture",
+      "path": "infrastructure/environments/production/README.md",
+      "status": "passed",
+      "pattern": "Alloy est obligatoire"
+    },
+    {
+      "id": "production-secret-files",
+      "description": "Production observability uses mounted secret files",
+      "path": "infrastructure/environments/production/README.md",
+      "status": "passed",
+      "pattern": "TOKEN_FILE"
+    },
+    {
+      "id": "alloy-redaction",
+      "description": "Alloy pipeline redacts sensitive fields",
+      "path": "infrastructure/environments/production/alloy.config.alloy",
+      "status": "passed",
+      "pattern": "[FilteredSecret]"
+    },
+    {
+      "id": "alloy-healthcheck",
+      "description": "Production Alloy compose has a readiness healthcheck",
+      "path": "infrastructure/environments/production/docker-compose.observability.yml",
+      "status": "passed",
+      "pattern": "http://127.0.0.1:12345/-/ready"
+    },
+    {
+      "id": "backup-restore-manifest",
+      "description": "Backup/restore manifest enumerates restore evidence",
+      "path": "docs/migration/backup-restore-manifest.md",
+      "status": "passed",
+      "pattern": "## Restore Evidence"
+    },
+    {
+      "id": "observability-manifest",
+      "description": "Observability manifest enumerates cutover evidence",
+      "path": "docs/migration/observability-readiness.md",
+      "status": "passed",
+      "pattern": "## Cutover Evidence"
+    }
+  ]
+}

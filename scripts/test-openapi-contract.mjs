@@ -611,7 +611,6 @@ function seededCredentialsFromEnv() {
 
 async function seedAuthContext(apiBaseUrl) {
 	const credentials = seededCredentialsFromEnv();
-	const turnstileToken = process.env.NVBES_SMOKE_AUTH_TURNSTILE_TOKEN;
 	let workspaceName =
 		process.env.NVBES_SMOKE_AUTH_WORKSPACE ?? "Smoke Contract Workspace";
 
@@ -651,9 +650,6 @@ async function seedAuthContext(apiBaseUrl) {
 		email: credentials.email,
 		...identifierPow,
 	};
-	if (turnstileToken) {
-		identifierBody.turnstile_token = turnstileToken;
-	}
 
 	const { json: identifier } = await fetchJson(
 		`${apiBaseUrl}/auth/challenge/identifier`,

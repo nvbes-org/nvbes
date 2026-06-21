@@ -2,6 +2,7 @@ import {
   canManagePolicies,
   canManageUsers,
   describeModuleGrant,
+  isTenantOnlyEnterpriseNavItem,
   isLastOwnerRemoval,
 } from './enterprise.permissions';
 
@@ -44,24 +45,53 @@ describe('enterprise permissions', () => {
 
   it('blocks last owner removal', () => {
     expect(
-      isLastOwnerRemoval({ currentOwnerCount: 1, selectedRole: 'owner', nextRole: 'admin' }),
+      isLastOwnerRemoval({
+        currentOwnerCount: 1,
+        selectedRole: 'owner',
+        nextRole: 'admin',
+      }),
     ).toBe(true);
   });
 
   it('allows owner changes that keep at least one owner', () => {
     expect(
-      isLastOwnerRemoval({ currentOwnerCount: 2, selectedRole: 'owner', nextRole: 'admin' }),
+      isLastOwnerRemoval({
+        currentOwnerCount: 2,
+        selectedRole: 'owner',
+        nextRole: 'admin',
+      }),
     ).toBe(false);
     expect(
-      isLastOwnerRemoval({ currentOwnerCount: 1, selectedRole: 'owner', nextRole: 'owner' }),
+      isLastOwnerRemoval({
+        currentOwnerCount: 1,
+        selectedRole: 'owner',
+        nextRole: 'owner',
+      }),
     ).toBe(false);
     expect(
-      isLastOwnerRemoval({ currentOwnerCount: 1, selectedRole: 'admin', nextRole: 'member' }),
+      isLastOwnerRemoval({
+        currentOwnerCount: 1,
+        selectedRole: 'admin',
+        nextRole: 'member',
+      }),
     ).toBe(false);
   });
 
   it('labels grants', () => {
     expect(describeModuleGrant('members')).toBe('Members');
     expect(describeModuleGrant('audit')).toBe('Audit logs');
+  });
+
+  it('marks tenant-wide enterprise navigation items', () => {
+    expect(isTenantOnlyEnterpriseNavItem('Developers')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Policies')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Security')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Access reviews')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Billing')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Settings')).toBe(true);
+    expect(isTenantOnlyEnterpriseNavItem('Users')).toBe(false);
+    expect(isTenantOnlyEnterpriseNavItem('Workspaces')).toBe(false);
+    expect(isTenantOnlyEnterpriseNavItem('Audit logs')).toBe(false);
+    expect(isTenantOnlyEnterpriseNavItem('Usage')).toBe(false);
   });
 });

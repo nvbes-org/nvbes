@@ -7,27 +7,31 @@ import {
   registerServiceWorker,
   type ClientErrorReporter,
 } from '@nvbes/web-runtime';
-import { capturePostHogException, initPostHog } from './drive.posthog';
-import { captureSentryException, initSentry, syncSentryConsent } from './drive.sentry';
-import { syncDriveServiceWorkerSentryConsent } from './drive.sw.consent';
+import { captureAnalyticsException, initAnalytics } from './drive.analytics';
+import {
+  captureErrorReportingException,
+  initErrorReporting,
+  syncErrorReportingConsent,
+} from './drive.error.reporting';
+import { syncDriveServiceWorkerErrorReportingConsent } from './drive.sw.consent';
 import { syncTrackingConsent, TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 
-const sentryInitialized = initSentry();
-initPostHog();
+const errorReportingInitialized = initErrorReporting();
+initAnalytics();
 
 void syncTrackingConsent();
 window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
-  void syncSentryConsent();
-  void syncDriveServiceWorkerSentryConsent();
+  void syncErrorReportingConsent();
+  void syncDriveServiceWorkerErrorReportingConsent();
 });
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {
-    if (sentryInitialized) {
-      captureSentryException(error, context);
+    if (errorReportingInitialized) {
+      captureErrorReportingException(error, context);
     }
 
-    void capturePostHogException(error, {
+    void captureAnalyticsException(error, {
       event_source: context.tags.source,
       error_kind: context.tags.feature,
     });
@@ -35,7 +39,6 @@ const clientErrorReporter: ClientErrorReporter = {
 };
 
 configureErrorReporting({
-  cloudflare: import.meta.env.VITE_CLOUDFLARE_REPORTING_ENABLED === 'true',
   reporter: clientErrorReporter,
 });
 
@@ -51,4 +54,4 @@ ReactDOM.createRoot(rootEl).render(
 );
 
 registerServiceWorker();
-void syncDriveServiceWorkerSentryConsent();
+void syncDriveServiceWorkerErrorReportingConsent();

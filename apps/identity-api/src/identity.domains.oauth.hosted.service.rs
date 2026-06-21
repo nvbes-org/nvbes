@@ -130,7 +130,8 @@ pub async fn get_hosted_login_decision(
 
     let client_display = match client_details {
         Some(row) => {
-            let display_name = row.product_name
+            let display_name = row
+                .product_name
                 .filter(|s| !s.trim().is_empty())
                 .unwrap_or(row.name);
             HostedClientDisplay {
@@ -157,7 +158,7 @@ pub async fn get_hosted_login_decision(
             brand_color: None,
             custom_css: None,
             help_text: None,
-        }
+        },
     };
 
     Ok(HostedLoginDecision::ConsentRequired {

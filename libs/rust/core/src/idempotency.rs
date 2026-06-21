@@ -181,4 +181,52 @@ mod tests {
         assert_eq!(stored.response_body, response_body);
         assert_eq!(stored.request_hash, request_hash);
     }
+
+    #[test]
+    fn validate_key_trims_and_rejects_invalid_values() {
+        assert_eq!(
+            validate_key(" key-123 ").expect("key should be valid"),
+            "key-123"
+        );
+        assert!(validate_key("   ").is_err());
+        assert!(validate_key(&"a".repeat(IDEMPOTENCY_KEY_MAX_LEN + 1)).is_err());
+    }
+
+    #[test]
+    fn request_signature_includes_method_path_and_body_hash() {
+        let method = Method::POST;
+        let uri = "/v1/workspaces/abc/objects?ignored=true"
+            .parse::<Uri>()
+            .expect("uri must parse");
+
+        let signature = build_request_signature(&method, &uri, br#"{"name":"file"}"#);
+
+        assert!(signature.starts_with("POST:/v1/workspaces/abc/objects:"));
+        assert_eq!(
+            signature.len(),
+            "POST:/v1/workspaces/abc/objects:".len() + 64
+        );
+    }
+
+    #[test]
+    fn derive_scope_changes_by_actor_and_route() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            "Bearer token-a".parse().expect("valid header"),
+        );
+        let method = Method::POST;
+        let first_uri = "/v1/workspaces/a/objects"
+            .parse::<Uri>()
+            .expect("uri must parse");
+        let second_uri = "/v1/workspaces/b/objects"
+            .parse::<Uri>()
+            .expect("uri must parse");
+
+        let first = derive_scope(&headers, &method, &first_uri);
+        let second = derive_scope(&headers, &method, &second_uri);
+
+        assert_ne!(first.as_str(), second.as_str());
+        assert_eq!(first.as_str().len(), 64);
+    }
 }

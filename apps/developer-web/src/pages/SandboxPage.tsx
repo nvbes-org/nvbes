@@ -1,15 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Boxes } from 'lucide-react';
+import { AlertTriangle, Boxes, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import {
   getDeveloperSandbox,
   resetDeveloperSandbox,
   upsertDeveloperSandbox,
 } from '../developer.api';
+import type { DeveloperSandboxDataProfile } from '../developer.schemas';
+import { PageHeader, buttonClass, inputClass } from './Portal.shared';
+
+const dataProfileOptions: { value: DeveloperSandboxDataProfile; label: string }[] = [
+  { value: 'minimal', label: 'Minimal' },
+  { value: 'oauth', label: 'OAuth flows' },
+  { value: 'full', label: 'Full integration' },
+];
 
 export function SandboxPage() {
   const queryClient = useQueryClient();
-  const [dataProfile, setDataProfile] = useState('minimal');
+  const [dataProfile, setDataProfile] = useState<DeveloperSandboxDataProfile>('minimal');
   const sandboxQuery = useQuery({
     queryKey: ['developer-sandbox'],
     queryFn: ({ signal }) => getDeveloperSandbox(signal),
@@ -36,20 +44,13 @@ export function SandboxPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="rounded-md border border-border bg-card p-2">
-          <Boxes className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold">Sandbox tenant</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Isolated tenant environment for client integration tests.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Sandbox tenant"
+        body="Dedicated test environment per client tenant, with isolated identity data and integration fixtures."
+      />
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <form
-          className="rounded-lg border border-border bg-card p-5"
+          className="rounded-md border border-border bg-card p-5"
           onSubmit={(event) => {
             event.preventDefault();
             upsertMutation.mutate(dataProfile);
@@ -58,45 +59,53 @@ export function SandboxPage() {
           <label className="grid gap-2 text-sm font-medium">
             Data profile
             <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className={inputClass}
               value={dataProfile}
-              onChange={(event) => setDataProfile(event.currentTarget.value)}
+              onChange={(event) =>
+                setDataProfile(event.currentTarget.value as DeveloperSandboxDataProfile)
+              }
             >
-              <option value="minimal">minimal</option>
-              <option value="oauth">oauth</option>
-              <option value="full">full</option>
+              {dataProfileOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-              disabled={upsertMutation.isPending}
-              type="submit"
-            >
+            <button className={buttonClass} disabled={upsertMutation.isPending} type="submit">
+              <Boxes className="mr-2 h-4 w-4" />
               {sandbox ? 'Update sandbox' : 'Create sandbox'}
             </button>
             <button
-              className="rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!sandbox || resetMutation.isPending}
               type="button"
               onClick={() => resetMutation.mutate()}
             >
+              <RefreshCw className="mr-2 h-4 w-4" />
               Reset data
             </button>
           </div>
         </form>
-        <article className="rounded-lg border border-border bg-card p-5">
+        <article className="rounded-md border border-border bg-card p-5">
           {sandbox ? (
             <dl className="grid gap-3 text-sm md:grid-cols-2">
+              <Field label="Client tenant" value={sandbox.tenant_id} />
+              <Field label="Sandbox tenant" value={sandbox.sandbox_tenant_id} />
               <Field label="Name" value={sandbox.sandbox_name} />
               <Field label="Slug" value={sandbox.sandbox_slug} />
               <Field label="Status" value={sandbox.status} />
-              <Field label="Profile" value={sandbox.data_profile} />
-              <Field label="Sandbox tenant" value={sandbox.sandbox_tenant_id} />
+              <Field label="Data profile" value={sandbox.data_profile} />
               <Field label="Updated" value={sandbox.updated_at} />
             </dl>
           ) : (
-            <p className="text-sm text-muted-foreground">No sandbox tenant exists.</p>
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">
+                No sandbox tenant exists for this client tenant.
+              </p>
+            </div>
           )}
         </article>
       </div>

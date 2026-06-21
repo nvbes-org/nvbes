@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/web-runtime",
   "sourceRoot": "libs/ts/web-runtime/src",
-  "tags": ["type:lib", "domain:shared", "layer:runtime"]
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:runtime"]
 }

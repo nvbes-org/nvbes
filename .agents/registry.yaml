@@ -1,0 +1,87 @@
+version: 1
+canonical_docs:
+  - docs/agent/agent.contract.md
+  - docs/agent/agent.routing.md
+  - docs/agent/agent.memory.md
+  - docs/agent/agent.skills.md
+  - docs/agent/agent.workflows.md
+profiles:
+  manager:
+    path: .agents/profiles/manager.md
+    default_workflow: triage
+  architect:
+    path: .agents/profiles/architect.md
+    default_workflow: architecture-review
+  rust-api:
+    path: .agents/profiles/rust-api.md
+    default_workflow: implement-feature
+  react-web:
+    path: .agents/profiles/react-web.md
+    default_workflow: implement-feature
+  database:
+    path: .agents/profiles/database.md
+    default_workflow: implement-feature
+  security:
+    path: .agents/profiles/security.md
+    default_workflow: review-pr
+  docs:
+    path: .agents/profiles/docs.md
+    default_workflow: docs-update
+workflows:
+  triage: .agents/workflows/triage.md
+  implement-feature: .agents/workflows/implement-feature.md
+  fix-bug: .agents/workflows/fix-bug.md
+  refactor-module: .agents/workflows/refactor-module.md
+  review-pr: .agents/workflows/review-pr.md
+  docs-update: .agents/workflows/docs-update.md
+routes:
+  rust_backend:
+    applies_to:
+      - apps/*-api
+      - apps/*-worker
+      - libs/rust
+    profile: rust-api
+    skills:
+      - rust
+      - axum
+      - sqlx-code-review
+      - rust-testing
+    validation:
+      - cargo check --workspace
+  frontend:
+    applies_to:
+      - apps/*-web
+      - libs/ts
+    profile: react-web
+    skills:
+      - react
+      - typescript
+      - shadcn
+      - frontend-design
+    validation:
+      - pnpm check:web
+  database:
+    applies_to:
+      - apps/*-api/migrations
+      - libs/rust/*/src/*db*
+    profile: database
+    skills:
+      - postgresql
+      - sqlx-code-review
+      - migrations
+    validation:
+      - cargo check --workspace
+  agent_system:
+    applies_to:
+      - AGENTS.md
+      - docs/agent
+      - .agents
+      - .codex
+      - scripts/agent
+    profile: docs
+    skills:
+      - agentic-architecture
+      - memory-md-management
+      - skill-authoring
+    validation:
+      - pnpm agent:doctor

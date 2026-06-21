@@ -39,15 +39,15 @@ async fn send_email_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Val
     let subject = payload.subject.clone();
     let reply_to = state
         .config
-        .scw_tem_from_email
+        .email_reply_to
         .clone()
         .unwrap_or_else(|| to_email.clone());
 
     let from_email = state
         .config
-        .scw_tem_from_email
+        .email_from_email
         .clone()
-        .context("SCW_TEM_FROM_EMAIL must be set for email sending")?;
+        .context("NVBES_EMAIL_FROM_EMAIL must be set for email sending")?;
 
     let msg = nvbes_email::EmailMessage {
         from: nvbes_email::EmailAddress {
@@ -55,7 +55,7 @@ async fn send_email_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Val
             name: Some(
                 state
                     .config
-                    .scw_tem_from_name
+                    .email_from_name
                     .clone()
                     .unwrap_or_else(|| "nvbes".to_string()),
             ),

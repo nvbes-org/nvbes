@@ -2,6 +2,7 @@
   "name": "@nvbes/web-ui",
   "version": "0.1.0",
   "description": "Shared composite web UI for reusable account switching flows",
+  "license": "AGPL-3.0-only",
   "files": [
     "dist"
   ],

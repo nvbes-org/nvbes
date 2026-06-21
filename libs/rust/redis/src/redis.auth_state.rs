@@ -13,7 +13,6 @@ pub struct CachedAuthState {
     pub email: String,
     pub next_step: String,
     pub device_fingerprint: Option<serde_json::Value>,
-    pub turnstile_token: Option<String>,
     pub expires_at: DateTime<Utc>,
 }
 

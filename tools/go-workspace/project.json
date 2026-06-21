@@ -1,0 +1,35 @@
+{
+  "name": "go-workspace",
+  "projectType": "library",
+  "root": "tools/go-workspace",
+  "sourceRoot": "libs/go",
+  "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
+  "namedInputs": {
+    "default": ["{workspaceRoot}/go.mod", "{workspaceRoot}/libs/go/**/*"],
+    "production": ["default"]
+  },
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "inputs": ["production"],
+      "outputs": [],
+      "options": {
+        "command": "go test ./..."
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "outputs": [],
+      "options": {
+        "command": "go test ./..."
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
+    }
+  }
+}

@@ -130,3 +130,5 @@ override.tf.json
 terraform.rc
 
 .superpowers/
+
+.obsidian/

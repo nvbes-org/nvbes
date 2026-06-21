@@ -15,7 +15,7 @@ use db::Database;
 use nvbes_core::config::AppConfig;
 use nvbes_core::http::keep_alive;
 use nvbes_observability::{
-    init_sentry, init_tracing, install_safe_panic_hook, start_continuous_profiling,
+    init_error_reporting, init_tracing, install_safe_panic_hook, start_continuous_profiling,
 };
 use utoipa::OpenApi;
 
@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
+    let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
 

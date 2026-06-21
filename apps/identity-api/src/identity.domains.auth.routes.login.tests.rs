@@ -11,7 +11,13 @@ fn test_pool() -> PgPool {
 async fn test_config(pool: &PgPool) -> AppState {
     unsafe {
         std::env::set_var("NVBES_ENV", "development");
-        std::env::set_var("NVBES_WORKSPACE_ROOT", "/Users/shayn/Development/nvbes");
+        std::env::set_var(
+            "NVBES_WORKSPACE_ROOT",
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .expect("workspace root"),
+        );
     }
 
     let config = crate::app::AppConfig {
@@ -167,7 +173,7 @@ async fn challenge_pwd_returns_mfa_step_when_recovery_codes_are_configured() {
     let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
     insert_recovery_codes(&pool, principal_id, recovery_code).await;
 
-    let state_token = create_state(&state.redis, Some(principal_id), &email, "pwd", None, None)
+    let state_token = create_state(&state.redis, Some(principal_id), &email, "pwd", None)
         .await
         .expect("auth state should be created");
 
@@ -202,7 +208,7 @@ async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
     let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
     insert_recovery_codes(&pool, principal_id, recovery_code).await;
 
-    let state_token = create_state(&state.redis, Some(principal_id), &email, "mfa", None, None)
+    let state_token = create_state(&state.redis, Some(principal_id), &email, "mfa", None)
         .await
         .expect("mfa auth state should be created");
 

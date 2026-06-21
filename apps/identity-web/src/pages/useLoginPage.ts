@@ -9,6 +9,7 @@ import {
   readOAuthAuthorizeRequest,
   readPendingOAuthAuthorizeRequest,
 } from '../identity.oauth';
+import { readLoginReturnTo } from '../identity.return-to';
 import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
@@ -31,6 +32,10 @@ export function useLoginPage() {
     const searchParams = new URLSearchParams(location.searchStr);
     return readHostedStateId(searchParams);
   }, [location.searchStr]);
+  const returnTo = useMemo(() => {
+    const searchParams = new URLSearchParams(location.searchStr);
+    return readLoginReturnTo(searchParams);
+  }, [location.searchStr]);
   const state = useLoginPageState();
   const [hostedDecision, setHostedDecision] = useState<HostedLoginDecision | null>(null);
 
@@ -43,8 +48,13 @@ export function useLoginPage() {
   } = useLoginPageMutations();
 
   const navigateToAccount = useCallback(() => {
+    if (returnTo) {
+      window.location.assign(returnTo);
+      return;
+    }
+
     void navigate({ to: '/account' });
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   const handleHostedDecision = useCallback(
     (decision: HostedLoginDecision) => {

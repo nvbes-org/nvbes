@@ -14,7 +14,7 @@ pub(crate) use basics::validate_positive_integer;
 #[cfg(test)]
 pub(crate) use observability::{
     validate_grafana_export_path, validate_observability_internal_token,
-    validate_posthog_analytics, validate_profiling,
+    validate_product_analytics, validate_profiling,
 };
 #[cfg(test)]
 pub(crate) use request_e2ee::validate_request_e2ee;
@@ -95,7 +95,7 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
     urls::validate_database_url(&config.database_url, strict_mode)?;
     urls::validate_jwt_secret(&config.jwt_secret, strict_mode)?;
     observability::validate_grafana_export_path(config, strict_mode)?;
-    observability::validate_posthog_analytics(config, strict_mode)?;
+    observability::validate_product_analytics(config, strict_mode)?;
     observability::validate_profiling(config)?;
     observability::validate_observability_internal_token(config, strict_mode)?;
     basics::validate_positive_integer(

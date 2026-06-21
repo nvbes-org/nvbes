@@ -2,7 +2,7 @@ import { identityClient } from '@nvbes/identity-client';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useAccountContext } from '@/hooks/useAccountContext';
-import { trackEvent } from '../identity.posthog';
+import { trackEvent } from '../identity.analytics';
 import {
   BillingPageIntro,
   BillingPlansList,

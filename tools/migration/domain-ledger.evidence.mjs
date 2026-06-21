@@ -1,0 +1,136 @@
+export const completedDomainEvidence = {
+	Identity: {
+		owner: "Identity lead",
+		status: "passed",
+		implementation_evidence: [
+			"apps/identity-api/src/identity.domains.auth.routes.register.rs",
+			"apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/identity-api/src/identity.domains.auth.routes.login.mfa_flow.rs",
+			"apps/identity-api/openapi.json",
+		],
+		migration_evidence: [
+			"docs/migration/identity-register.generated.json",
+			"docs/migration/identity-login-session.generated.json",
+			"docs/migration/identity-mfa-webauthn.generated.json",
+		],
+		decision: "go",
+		proof:
+			"pnpm check:migration-identity-register && pnpm check:migration-identity-login-session && pnpm check:migration-identity-mfa-webauthn",
+	},
+	Workspace: {
+		owner: "Workspace lead",
+		status: "passed",
+		implementation_evidence: [
+			"libs/rust/core/src/authz.policy.rs",
+			"libs/rust/core/src/authz.policy.tests.rs",
+			"apps/identity-api/src/identity.domains.authz.service.rs",
+			"apps/identity-api/src/identity.domains.authz.db.rs",
+		],
+		migration_evidence: [
+			"docs/migration/workspace-membership-roles.generated.json",
+			"docs/migration/workspace-last-owner.generated.json",
+		],
+		decision: "go",
+		proof:
+			"pnpm check:migration-workspace-membership-roles && pnpm check:migration-workspace-last-owner",
+	},
+	Drive: {
+		owner: "Drive lead",
+		status: "passed",
+		implementation_evidence: [
+			"apps/drive-api/src/drive.domains.uploads.core.rs",
+			"apps/drive-api/src/drive.domains.files.transfer.range.rs",
+			"apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+			"apps/drive-api/src/drive.domains.quotas.logic.rs",
+			"apps/drive-worker/src/drive.workers.maintenance.rs",
+			"apps/drive-api/openapi.json",
+		],
+		migration_evidence: [
+			"docs/migration/drive-upload-download.generated.json",
+			"docs/migration/drive-share-revoke.generated.json",
+			"docs/migration/drive-quotas.generated.json",
+		],
+		decision: "go",
+		proof:
+			"pnpm check:migration-drive-upload-download && pnpm check:migration-drive-share-revoke && pnpm check:migration-drive-quotas",
+	},
+	Billing: {
+		owner: "Billing lead",
+		status: "passed",
+		implementation_evidence: [
+			"libs/rust/billing/src/views.rs",
+			"libs/rust/billing/src/types.rs",
+			"apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+			"apps/drive-api/src/drive.domains.billing.manage.checkout.rs",
+		],
+		migration_evidence: [
+			"docs/migration/billing-entitlements.generated.json",
+			"docs/migration/billing-webhook-idempotency.generated.json",
+		],
+		decision: "go",
+		proof:
+			"pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency",
+	},
+	Audit: {
+		owner: "Audit lead",
+		status: "passed",
+		implementation_evidence: [
+			"libs/rust/audit/src/lib.rs",
+			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/drive-api/src/drive.domains.share_links.observability.rs",
+		],
+		migration_evidence: ["docs/migration/audit-append-only.generated.json"],
+		decision: "go",
+		proof: "pnpm check:migration-audit-append-only",
+	},
+	Privacy: {
+		owner: "Privacy lead",
+		status: "passed",
+		implementation_evidence: [
+			"apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/identity-api/src/identity.email.jobs.rs",
+		],
+		migration_evidence: ["docs/migration/privacy-export-delete.generated.json"],
+		decision: "go",
+		proof: "pnpm check:migration-privacy-export-delete",
+	},
+	"Developer Platform": {
+		owner: "Developer Platform lead",
+		status: "passed",
+		implementation_evidence: [
+			"apps/identity-api/src/identity.domains.developer.routes.oauth.rs",
+			"apps/identity-api/src/identity.domains.developer.routes.tokens.rs",
+			"apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
+			"apps/developer-web/src/developer.router.tsx",
+			"libs/ts/identity-sdk-core/openapi.json",
+		],
+		migration_evidence: [
+			"docs/migration/developer-oauth-tokens.generated.json",
+			"docs/migration/developer-signed-webhooks.generated.json",
+		],
+		decision: "go",
+		proof:
+			"pnpm check:migration-developer-oauth-tokens && pnpm check:migration-developer-signed-webhooks",
+	},
+	Cloud: {
+		owner: "Cloud lead",
+		status: "passed",
+		implementation_evidence: [
+			"docs/migration/cloud-provisioning.generated.json",
+			"libs/go/provisioning/provisioning.go",
+			"libs/go/provisioning/provisioning_test.go",
+			"libs/go/control-plane/foundation.go",
+			"apps/cloud-control-api/README.md",
+			"apps/cloud-console/README.md",
+		],
+		migration_evidence: [
+			"docs/migration/cloud-provisioning.generated.json",
+			"docs/migration/resource-map.generated.json",
+			"docs/migration/secret-map.generated.json",
+		],
+		decision: "go",
+		proof: "pnpm check:migration-cloud-provisioning && pnpm check:go && pnpm check:oss-boundaries",
+	},
+};

@@ -3,5 +3,5 @@
   "projectType": "application",
   "root": "apps/enterprise-web",
   "sourceRoot": "apps/enterprise-web/src",
-  "tags": ["type:app", "domain:identity", "layer:app"]
+  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
 }

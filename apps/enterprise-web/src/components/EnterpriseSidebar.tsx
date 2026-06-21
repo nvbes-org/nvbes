@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useMemo, type ComponentType } from 'react';
 import { enterpriseContextQueryOptions } from '../enterprise.queries';
+import { isTenantOnlyEnterpriseNavItem } from '../enterprise.permissions';
 
 export const enterpriseNavSections = [
   {
@@ -60,14 +61,7 @@ export function EnterpriseSidebar({ variant = 'sidebar' }: EnterpriseSidebarProp
       .map((section) => {
         const items = section.items.filter((item) => {
           if (isOrgScoped) {
-            return ![
-              'Developers',
-              'Policies',
-              'Security',
-              'Access reviews',
-              'Billing',
-              'Settings',
-            ].includes(item);
+            return !isTenantOnlyEnterpriseNavItem(item);
           }
           return true;
         });

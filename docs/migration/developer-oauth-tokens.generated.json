@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/developer-oauth-tokens.mjs --write",
+    "sources": [
+      "apps/identity-api/openapi.json",
+      "apps/identity-api/src/identity.http.openapi.rs",
+      "apps/identity-api/src/identity.domains.oauth.routes.clients.rs",
+      "apps/identity-api/src/identity.domains.oauth.clients.create.rs",
+      "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
+      "apps/identity-api/src/identity.domains.oauth.flows.client_credentials.tests.rs",
+      "apps/identity-api/src/identity.domains.developer.tokens.routes.rs",
+      "apps/identity-api/src/identity.domains.developer.routes.tokens.rs",
+      "apps/identity-api/src/identity.domains.developer.routes.tokens.tests.rs",
+      "apps/identity-api/src/identity.domains.developer.routes.oauth.clients.rs",
+      "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "libs/ts/identity-client/src/index.ts",
+      "apps/developer-web/src/developer.api.ts",
+      "apps/developer-web/src/developer.schemas.ts",
+      "apps/developer-web/src/__tests__/developer.schemas.test.ts",
+      "apps/developer-web/src/__tests__/developer.token-health.test.ts"
+    ],
+    "targeted_tests": [
+      "cargo test -p nvbes-identity-api token_access_decision --locked",
+      "cargo test -p nvbes-identity-api machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
+      "pnpm --dir apps/developer-web test -- --run developer.schemas.test.ts developer.token-health.test.ts"
+    ]
+  },
+  "summary": {
+    "checks": 30,
+    "passed": 30,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "openapi-oauth-clients-list",
+      "description": "OpenAPI exposes OAuth client listing",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/oauth/clients'].get"
+    },
+    {
+      "id": "openapi-oauth-clients-create",
+      "description": "OpenAPI exposes OAuth client creation",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/oauth/clients'].post"
+    },
+    {
+      "id": "openapi-oauth-clients-revoke",
+      "description": "OpenAPI exposes OAuth client revocation",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/oauth/clients/{clientId}'].delete"
+    },
+    {
+      "id": "openapi-oauth-policies",
+      "description": "OpenAPI exposes OAuth client policy creation",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/oauth/clients/{clientId}/policies'].post"
+    },
+    {
+      "id": "openapi-token-inspect",
+      "description": "OpenAPI exposes developer token inspection",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/developer/tokens/inspect'].post"
+    },
+    {
+      "id": "openapi-export-oauth",
+      "description": "OpenAPI export includes OAuth client handlers",
+      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "status": "passed",
+      "pattern": "crate::domains::oauth::routes::clients::create_client"
+    },
+    {
+      "id": "openapi-export-token-inspect",
+      "description": "OpenAPI export includes token inspection handler",
+      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "status": "passed",
+      "pattern": "crate::domains::developer::tokens_routes::inspect_token"
+    },
+    {
+      "id": "oauth-route-create",
+      "description": "OAuth routes wire list, create, and revoke",
+      "path": "apps/identity-api/src/identity.domains.oauth.routes.clients.rs",
+      "status": "passed",
+      "pattern": "get(list_clients)\n                .post(create_client)"
+    },
+    {
+      "id": "oauth-route-step-up",
+      "description": "OAuth management mutations require recent step-up",
+      "path": "apps/identity-api/src/identity.domains.oauth.routes.clients.rs",
+      "status": "passed",
+      "pattern": "require_management_step_up"
+    },
+    {
+      "id": "oauth-create-secret",
+      "description": "OAuth creation returns generated client secret once",
+      "path": "apps/identity-api/src/identity.domains.oauth.clients.create.rs",
+      "status": "passed",
+      "pattern": "client_secret"
+    },
+    {
+      "id": "oauth-revoke-refresh",
+      "description": "OAuth revocation invalidates client refresh tokens",
+      "path": "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
+      "status": "passed",
+      "pattern": "revoke_all_client_refresh_tokens"
+    },
+    {
+      "id": "oauth-revoke-par",
+      "description": "OAuth revocation invalidates pushed authorization requests",
+      "path": "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
+      "status": "passed",
+      "pattern": "revoke_pushed_authorization_requests_for_client"
+    },
+    {
+      "id": "oauth-revoke-codes",
+      "description": "OAuth revocation invalidates authorization codes",
+      "path": "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
+      "status": "passed",
+      "pattern": "revoke_authorization_codes_for_client"
+    },
+    {
+      "id": "oauth-revoke-device-codes",
+      "description": "OAuth revocation invalidates device codes",
+      "path": "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
+      "status": "passed",
+      "pattern": "revoke_device_codes_for_client"
+    },
+    {
+      "id": "machine-token-audit-test",
+      "description": "Machine token test records last-used and audit metadata",
+      "path": "apps/identity-api/src/identity.domains.oauth.flows.client_credentials.tests.rs",
+      "status": "passed",
+      "pattern": "client_credentials_records_last_used_and_machine_token_audit"
+    },
+    {
+      "id": "developer-token-inspect-permission",
+      "description": "Developer token inspection requires permission",
+      "path": "apps/identity-api/src/identity.domains.developer.tokens.routes.rs",
+      "status": "passed",
+      "pattern": "DeveloperPermission::TokensInspect"
+    },
+    {
+      "id": "developer-token-debug-route",
+      "description": "Developer console token debug records hash prefix only",
+      "path": "apps/identity-api/src/identity.domains.developer.routes.tokens.rs",
+      "status": "passed",
+      "pattern": "token_hash_prefix"
+    },
+    {
+      "id": "developer-token-debug-test",
+      "description": "Backend token debug unit tests cover allowed, expired, and tenant mismatch",
+      "path": "apps/identity-api/src/identity.domains.developer.routes.tokens.tests.rs",
+      "status": "passed",
+      "pattern": "token_access_decision_prioritizes_tenant_mismatch"
+    },
+    {
+      "id": "developer-oauth-list-route",
+      "description": "Developer console lists OAuth clients with consent and health status",
+      "path": "apps/identity-api/src/identity.domains.developer.routes.oauth.clients.rs",
+      "status": "passed",
+      "pattern": "list_oauth_client_summaries"
+    },
+    {
+      "id": "sdk-oauth-path",
+      "description": "Generated SDK core includes OAuth clients path",
+      "path": "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "status": "passed",
+      "pattern": "\"/oauth/clients\""
+    },
+    {
+      "id": "sdk-oauth-types",
+      "description": "Generated SDK core includes OAuth client result types",
+      "path": "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "status": "passed",
+      "pattern": "CreateOAuthClientResult"
+    },
+    {
+      "id": "sdk-token-inspect-types",
+      "description": "Generated SDK core includes token inspection result types",
+      "path": "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "status": "passed",
+      "pattern": "InspectDeveloperTokenResponse"
+    },
+    {
+      "id": "identity-client-oauth-list",
+      "description": "Handwritten identity client lists OAuth clients",
+      "path": "libs/ts/identity-client/src/index.ts",
+      "status": "passed",
+      "pattern": "listOAuthClients"
+    },
+    {
+      "id": "identity-client-oauth-revoke",
+      "description": "Handwritten identity client revokes OAuth clients",
+      "path": "libs/ts/identity-client/src/index.ts",
+      "status": "passed",
+      "pattern": "revokeOAuthClient"
+    },
+    {
+      "id": "developer-web-oauth-list",
+      "description": "Developer web consumes OAuth client list API",
+      "path": "apps/developer-web/src/developer.api.ts",
+      "status": "passed",
+      "pattern": "listDeveloperOAuthClients"
+    },
+    {
+      "id": "developer-web-token-debug",
+      "description": "Developer web consumes token debug API",
+      "path": "apps/developer-web/src/developer.api.ts",
+      "status": "passed",
+      "pattern": "debugDeveloperToken"
+    },
+    {
+      "id": "developer-web-oauth-schema",
+      "description": "Developer web validates OAuth client summaries",
+      "path": "apps/developer-web/src/developer.schemas.ts",
+      "status": "passed",
+      "pattern": "DeveloperOAuthClientsSchema"
+    },
+    {
+      "id": "developer-web-token-schema",
+      "description": "Developer web validates debug token responses",
+      "path": "apps/developer-web/src/developer.schemas.ts",
+      "status": "passed",
+      "pattern": "DebugDeveloperTokenSchema"
+    },
+    {
+      "id": "developer-web-oauth-schema-test",
+      "description": "Developer web schema test parses OAuth client summaries",
+      "path": "apps/developer-web/src/__tests__/developer.schemas.test.ts",
+      "status": "passed",
+      "pattern": "parses OAuth client summaries"
+    },
+    {
+      "id": "developer-web-token-schema-test",
+      "description": "Developer web token test rejects raw token material in parsed debug response",
+      "path": "apps/developer-web/src/__tests__/developer.token-health.test.ts",
+      "status": "passed",
+      "pattern": "parses token debug responses without raw token material"
+    }
+  ]
+}

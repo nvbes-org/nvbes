@@ -3,5 +3,5 @@
   "projectType": "application",
   "root": "apps/drive-worker",
   "sourceRoot": "apps/drive-worker/src",
-  "tags": ["type:app", "domain:drive", "layer:app"]
+  "tags": ["scope:oss", "type:app", "domain:drive", "layer:app"]
 }

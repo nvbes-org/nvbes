@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/web-ui",
   "sourceRoot": "libs/ts/web-ui/src",
-  "tags": ["type:lib", "domain:shared", "layer:ui"]
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:ui"]
 }

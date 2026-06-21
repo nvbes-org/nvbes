@@ -74,7 +74,6 @@ async fn ensure_policy_manager(
     auth: &AuthContext,
     tenant_id: Uuid,
 ) -> Result<(), AppError> {
-    crate::domains::authz::ensure_tenant_management_access(db, auth, tenant_id).await?;
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     if !matches!(scope, AdminScope::Tenant) {
         return Err(AppError::forbidden(

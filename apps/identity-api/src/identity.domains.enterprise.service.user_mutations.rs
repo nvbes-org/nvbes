@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use super::super::types::*;
 use super::access::{ensure_member_manager, fetch_user_view};
+use super::user_audit::{insert_member_audit, merge_workspace_ids};
 
 async fn ensure_user_in_organization(
     db: &Database,
@@ -55,11 +56,13 @@ pub async fn update_user_access(
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
     db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids, scope).await?;
-    let current_role = db::target_role(&mut tx, tenant_id, user_id)
+    let current_role = db::target_role(&mut tx, tenant_id, user_id, scope)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
         })?;
+    let previous_workspace_ids =
+        db::target_workspace_ids_for_lifecycle(&mut tx, tenant_id, user_id, scope).await?;
     ensure_owner_target_allowed(&actor_access, &current_role)?;
     let ownerless_count = db::ownerless_workspace_count_after_access(
         &mut tx,
@@ -67,6 +70,7 @@ pub async fn update_user_access(
         user_id,
         &input.workspace_ids,
         policy::role_as_db(&input.role),
+        scope,
     )
     .await?;
     if ownerless_count > 0 {
@@ -81,15 +85,19 @@ pub async fn update_user_access(
         user_id,
         &input.workspace_ids,
         policy::role_as_db(&input.role),
+        scope,
     )
     .await?;
-    db::insert_audit(
+    let audit_workspace_ids =
+        merge_workspace_ids(&previous_workspace_ids, input.workspace_ids.as_slice());
+    insert_member_audit(
         &mut tx,
         tenant_id,
+        scope,
+        &audit_workspace_ids,
         auth.user_id,
         "enterprise.member.access_updated",
-        "principal",
-        Some(user_id),
+        user_id,
         serde_json::json!({
             "before": {"role": current_role},
             "after": {"role": policy::role_as_db(&input.role), "workspace_ids": input.workspace_ids}
@@ -119,14 +127,16 @@ pub async fn suspend_user(
 
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
-    let current_role = db::target_role(&mut tx, tenant_id, user_id)
+    let current_role = db::target_role(&mut tx, tenant_id, user_id, scope)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
         })?;
+    let audit_workspace_ids =
+        db::target_workspace_ids_for_lifecycle(&mut tx, tenant_id, user_id, scope).await?;
     ensure_owner_target_allowed(&actor_access, &current_role)?;
     let ownerless_count =
-        db::ownerless_workspace_count_after_status(&mut tx, tenant_id, user_id).await?;
+        db::ownerless_workspace_count_after_status(&mut tx, tenant_id, user_id, scope).await?;
     if ownerless_count > 0 {
         return Err(AppError::conflict(
             "last_owner_removal",
@@ -134,20 +144,22 @@ pub async fn suspend_user(
         ));
     }
     let changed =
-        db::set_tenant_memberships_status(&mut tx, tenant_id, user_id, "suspended", None).await?;
+        db::set_tenant_memberships_status(&mut tx, tenant_id, user_id, "suspended", None, scope)
+            .await?;
     if changed == 0 {
         return Err(AppError::not_found(
             "enterprise_user_not_found",
             "Tenant member not found.",
         ));
     }
-    db::insert_audit(
+    insert_member_audit(
         &mut tx,
         tenant_id,
+        scope,
+        &audit_workspace_ids,
         auth.user_id,
         "enterprise.member.suspended",
-        "principal",
-        Some(user_id),
+        user_id,
         serde_json::json!({"before": {"role": current_role}, "reason": input.reason}),
     )
     .await?;
@@ -174,11 +186,13 @@ pub async fn reactivate_user(
 
     let mut tx = db.begin().await?;
     db::lock_tenant_owner_changes(&mut tx, tenant_id).await?;
-    let current_role = db::target_role_for_lifecycle(&mut tx, tenant_id, user_id)
+    let current_role = db::target_role_for_lifecycle(&mut tx, tenant_id, user_id, scope)
         .await?
         .ok_or_else(|| {
             AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
         })?;
+    let previous_workspace_ids =
+        db::target_workspace_ids_for_lifecycle(&mut tx, tenant_id, user_id, scope).await?;
     ensure_owner_target_allowed(&actor_access, &current_role)?;
     if let Some(workspace_ids) = input.workspace_ids.as_ref() {
         if workspace_ids.is_empty() {
@@ -195,6 +209,7 @@ pub async fn reactivate_user(
         user_id,
         "active",
         input.workspace_ids.as_deref(),
+        scope,
     )
     .await?;
     if changed == 0 {
@@ -203,13 +218,17 @@ pub async fn reactivate_user(
             "Tenant member not found.",
         ));
     }
-    db::insert_audit(
+    let requested_workspace_ids = input.workspace_ids.clone().unwrap_or_default();
+    let audit_workspace_ids =
+        merge_workspace_ids(&previous_workspace_ids, &requested_workspace_ids);
+    insert_member_audit(
         &mut tx,
         tenant_id,
+        scope,
+        &audit_workspace_ids,
         auth.user_id,
         "enterprise.member.reactivated",
-        "principal",
-        Some(user_id),
+        user_id,
         serde_json::json!({"reason": input.reason, "workspace_ids": input.workspace_ids}),
     )
     .await?;

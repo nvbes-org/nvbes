@@ -4,9 +4,14 @@ use uuid::Uuid;
 use crate::domains::authz::AdminScope;
 
 use super::records::{
-    ActorAccessRow, AuditEventRow, EnterpriseInvitationRow, EnterpriseUserRow, WorkspaceSummaryRow,
+    ActorAccessRow, EnterpriseInvitationRow, EnterpriseUserRow, WorkspaceSummaryRow,
 };
 use crate::http::error::AppError;
+
+#[path = "identity.domains.enterprise.db.reads.audit.rs"]
+mod audit;
+
+pub use audit::list_audit_events;
 
 pub async fn actor_access(
     db: &PgPool,
@@ -185,9 +190,8 @@ pub async fn list_workspaces(
     scope: AdminScope,
 ) -> Result<Vec<WorkspaceSummaryRow>, AppError> {
     match scope {
-        AdminScope::Tenant => {
-            Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
-                r#"
+        AdminScope::Tenant => Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
+            r#"
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
@@ -200,14 +204,12 @@ pub async fn list_workspaces(
                 GROUP BY w.id, qu.used_storage_bytes
                 ORDER BY w.created_at DESC
                 "#,
-            )
-            .bind(tenant_id)
-            .fetch_all(db)
-            .await?)
-        }
-        AdminScope::Organization(org_id) => {
-            Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
-                r#"
+        )
+        .bind(tenant_id)
+        .fetch_all(db)
+        .await?),
+        AdminScope::Organization(org_id) => Ok(sqlx::query_as::<_, WorkspaceSummaryRow>(
+            r#"
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
@@ -220,62 +222,13 @@ pub async fn list_workspaces(
                 GROUP BY w.id, qu.used_storage_bytes
                 ORDER BY w.created_at DESC
                 "#,
-            )
-            .bind(tenant_id)
-            .bind(org_id)
-            .fetch_all(db)
-            .await?)
-        }
+        )
+        .bind(tenant_id)
+        .bind(org_id)
+        .fetch_all(db)
+        .await?),
     }
 }
-
-pub async fn list_audit_events(
-    db: &PgPool,
-    tenant_id: Uuid,
-    scope: AdminScope,
-    limit: i64,
-) -> Result<Vec<AuditEventRow>, AppError> {
-    match scope {
-        AdminScope::Tenant => {
-            Ok(sqlx::query_as::<_, AuditEventRow>(
-                r#"
-                SELECT ae.id, ae.action AS event_type, ae.actor_principal_id AS actor_id,
-                  u.email AS actor_email, ae.target_type, ae.target_id, ae.metadata, ae.created_at
-                FROM audit_events ae
-                LEFT JOIN users u ON u.principal_id = ae.actor_principal_id
-                WHERE ae.tenant_id = $1
-                ORDER BY ae.created_at DESC, ae.id DESC
-                LIMIT $2
-                "#,
-            )
-            .bind(tenant_id)
-            .bind(limit)
-            .fetch_all(db)
-            .await?)
-        }
-        AdminScope::Organization(org_id) => {
-            Ok(sqlx::query_as::<_, AuditEventRow>(
-                r#"
-                SELECT ae.id, ae.action AS event_type, ae.actor_principal_id AS actor_id,
-                  u.email AS actor_email, ae.target_type, ae.target_id, ae.metadata, ae.created_at
-                FROM audit_events ae
-                LEFT JOIN users u ON u.principal_id = ae.actor_principal_id
-                WHERE ae.tenant_id = $1
-                  AND ae.workspace_id IN (SELECT id FROM workspaces WHERE organization_id = $3)
-                ORDER BY ae.created_at DESC, ae.id DESC
-                LIMIT $2
-                "#,
-            )
-            .bind(tenant_id)
-            .bind(limit)
-            .bind(org_id)
-            .fetch_all(db)
-            .await?)
-        }
-    }
-}
-
-
 
 pub async fn usage_metrics(
     db: &PgPool,

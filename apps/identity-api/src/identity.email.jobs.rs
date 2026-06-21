@@ -3,7 +3,7 @@ use serde_json::json;
 use tracing::warn;
 
 use super::db::is_email_suppressed;
-use super::webhooks::ScalewayEmailEvent;
+use super::webhooks::EmailProviderEvent;
 use crate::http::error::AppError;
 
 pub const JOB_EMAIL_SEND: &str = "email.send";
@@ -61,7 +61,7 @@ pub fn is_essential_transactional_email(business_type: &str) -> bool {
 
 pub async fn enqueue_email_event_job_tx(
     redis: &nvbes_redis::RedisPool,
-    event: &ScalewayEmailEvent,
+    event: &EmailProviderEvent,
 ) -> Result<(), AppError> {
     let payload = serde_json::json!({
         "provider_event_id": event.id,
@@ -76,7 +76,7 @@ pub async fn enqueue_email_event_job_tx(
             queue: JOB_EMAIL_WEBHOOK_PROCESS.to_string(),
             job_type: JOB_EMAIL_WEBHOOK_PROCESS.to_string(),
             payload,
-            idempotency_key: Some(format!("scw:{}", event.id)),
+            idempotency_key: Some(format!("email:{}", event.id)),
             max_attempts: 2,
             overwrite_terminal: false,
             job_id: None,

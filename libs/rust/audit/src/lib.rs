@@ -15,6 +15,20 @@ pub struct AuditEventInput<'a> {
     pub metadata: Value,
 }
 
+impl<'a> AuditEventInput<'a> {
+    pub fn action_key(&self) -> &'a str {
+        self.action
+    }
+
+    pub fn target_key(&self) -> &'a str {
+        self.target_type
+    }
+
+    pub fn is_workspace_scoped(&self) -> bool {
+        self.workspace_id.is_some()
+    }
+}
+
 /// Insère un événement d'audit en utilisant un pool de connexion.
 /// Le trigger SQL se charge de calculer le chaînage de hash pour l'immuabilité.
 pub async fn insert_audit_event_pool<'a>(
@@ -50,6 +64,49 @@ pub async fn insert_audit_event_pool<'a>(
     .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AuditEventInput;
+    use serde_json::json;
+    use uuid::Uuid;
+
+    #[test]
+    fn audit_input_exposes_action_and_target_keys() {
+        let input = AuditEventInput {
+            tenant_id: Uuid::new_v4(),
+            workspace_id: Some(Uuid::new_v4()),
+            actor_principal_id: Some(Uuid::new_v4()),
+            action: "identity.user.created",
+            target_type: "user",
+            target_id: Some(Uuid::new_v4()),
+            ip: None,
+            user_agent: None,
+            metadata: json!({ "source": "unit-test" }),
+        };
+
+        assert_eq!(input.action_key(), "identity.user.created");
+        assert_eq!(input.target_key(), "user");
+        assert!(input.is_workspace_scoped());
+    }
+
+    #[test]
+    fn audit_input_can_be_tenant_scoped_without_workspace() {
+        let input = AuditEventInput {
+            tenant_id: Uuid::new_v4(),
+            workspace_id: None,
+            actor_principal_id: None,
+            action: "tenant.policy.updated",
+            target_type: "tenant",
+            target_id: None,
+            ip: None,
+            user_agent: None,
+            metadata: json!({}),
+        };
+
+        assert!(!input.is_workspace_scoped());
+    }
 }
 
 /// Insère un événement d'audit dans une transaction existante.

@@ -2,8 +2,6 @@ use base64::Engine;
 use openssl::pkey::{PKey, Public};
 use sqlx::PgPool;
 
-use nvbes_core::scw_kms::{KmsClient, KmsError};
-
 use crate::http::error::AppError;
 
 #[derive(Debug, Clone)]
@@ -31,24 +29,16 @@ type SigningKeyRow = (
 );
 
 pub enum KeyBackend {
-    Kms(KmsClient),
     Local,
 }
 
 impl KeyBackend {
     pub fn is_kms(&self) -> bool {
-        matches!(self, Self::Kms(_))
-    }
-
-    pub fn kms_client(&self) -> Option<&KmsClient> {
-        match self {
-            Self::Kms(c) => Some(c),
-            Self::Local => None,
-        }
+        false
     }
 }
 
-pub async fn create_initial_key(pool: &PgPool, backend: &KeyBackend) -> Result<(), AppError> {
+pub async fn create_initial_key(pool: &PgPool, _backend: &KeyBackend) -> Result<(), AppError> {
     let existing: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM signing_keys")
         .fetch_one(pool)
         .await?;
@@ -56,43 +46,17 @@ pub async fn create_initial_key(pool: &PgPool, backend: &KeyBackend) -> Result<(
         return Ok(());
     }
 
-    match backend {
-        KeyBackend::Kms(client) => {
-            let kms_key = client
-                .create_key("nvbes-jwt-signing")
-                .await
-                .map_err(|e| AppError::internal("kms_key_creation_failed", e.to_string()))?;
-
-            let public_key_resp = client
-                .get_public_key(&kms_key.id)
-                .await
-                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", e.to_string()))?;
-
-            sqlx::query(
-                "INSERT INTO signing_keys (kid, kms_key_id, public_key_pem, status) VALUES ($1, $2, $3, 'active')",
-            )
-            .bind(&kms_key.id)
-            .bind(&kms_key.id)
-            .bind(&public_key_resp.public_key)
-            .execute(pool)
-            .await?;
-        }
-        KeyBackend::Local => {
-            let (kid, public_pem) = generate_local_key_pair()?;
-            sqlx::query(
-                "INSERT INTO signing_keys (kid, public_key_pem, status) VALUES ($1, $2, 'active')",
-            )
-            .bind(&kid)
-            .bind(&public_pem)
-            .execute(pool)
-            .await?;
-        }
-    }
+    let (kid, public_pem) = generate_local_key_pair()?;
+    sqlx::query("INSERT INTO signing_keys (kid, public_key_pem, status) VALUES ($1, $2, 'active')")
+        .bind(&kid)
+        .bind(&public_pem)
+        .execute(pool)
+        .await?;
 
     Ok(())
 }
 
-pub async fn rotate_key(pool: &PgPool, backend: &KeyBackend) -> Result<SigningKey, AppError> {
+pub async fn rotate_key(pool: &PgPool, _backend: &KeyBackend) -> Result<SigningKey, AppError> {
     let mut tx = pool.begin().await?;
 
     sqlx::query(
@@ -101,37 +65,8 @@ pub async fn rotate_key(pool: &PgPool, backend: &KeyBackend) -> Result<SigningKe
     .execute(&mut *tx)
     .await?;
 
-    let (kid, kms_key_id, public_pem) = match backend {
-        KeyBackend::Kms(client) => {
-            let active = get_active_key(pool)
-                .await?
-                .ok_or_else(|| AppError::internal("no_active_key", "No active key to rotate"))?;
-
-            let kms_key_id = active.kms_key_id.as_ref().ok_or_else(|| {
-                AppError::internal("key_not_kms_backed", "Active key is not KMS-backed")
-            })?;
-
-            let rotated = client
-                .rotate_key(kms_key_id)
-                .await
-                .map_err(|e| AppError::internal("kms_rotation_failed", e.to_string()))?;
-
-            let public_key_resp = client
-                .get_public_key(kms_key_id)
-                .await
-                .map_err(|e| AppError::internal("kms_public_key_fetch_failed", e.to_string()))?;
-
-            (
-                format!("kid-{}", rotated.rotation_count),
-                Some(kms_key_id.clone()),
-                public_key_resp.public_key,
-            )
-        }
-        KeyBackend::Local => {
-            let (kid, public_pem) = generate_local_key_pair()?;
-            (kid, None, public_pem)
-        }
-    };
+    let (kid, public_pem) = generate_local_key_pair()?;
+    let kms_key_id: Option<String> = None;
 
     let row: SigningKeyRow = sqlx::query_as(
         "INSERT INTO signing_keys (kid, kms_key_id, public_key_pem, status) VALUES ($1, $2, $3, 'active') RETURNING kid, kms_key_id, public_key_pem, status, activated_at",
@@ -242,11 +177,5 @@ fn normalize_public_key_pem(public_key_pem: &str) -> Option<String> {
 impl SigningKey {
     pub fn public_key_pem(&self) -> &str {
         &self.public_key_pem
-    }
-}
-
-impl From<KmsError> for AppError {
-    fn from(e: KmsError) -> Self {
-        AppError::internal("kms_error", e.to_string())
     }
 }

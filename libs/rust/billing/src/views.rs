@@ -90,3 +90,90 @@ pub fn entitlements_view(record: &BillingStateRecord) -> ProductEntitlementsView
         billing_locked,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{build_invoice_estimate, entitlements_view};
+    use crate::models::BillingStateRecord;
+    use uuid::Uuid;
+
+    const GB: i64 = 1024 * 1024 * 1024;
+
+    fn billing_record() -> BillingStateRecord {
+        BillingStateRecord {
+            workspace_id: Uuid::nil(),
+            workspace_name: "Acme".to_string(),
+            owner_principal_id: Uuid::nil(),
+            owner_email: "owner@example.com".to_string(),
+            trial_ends_at: None,
+            plan_code: "team".to_string(),
+            included_storage_gb: 10,
+            included_users: 2,
+            retention_days: 90,
+            max_share_links: 25,
+            audit_level: "standard".to_string(),
+            max_share_link_ttl_days: 30,
+            subscription_status: "active".to_string(),
+            billing_customer_id: Some("cus_123".to_string()),
+            billing_subscription_id: Some("sub_123".to_string()),
+            current_period_start: None,
+            current_period_end: None,
+            stripe_customer_id: Some("cus_123".to_string()),
+            billing_email: Some("billing@example.com".to_string()),
+            country: Some("FR".to_string()),
+            customer_type: "b2b".to_string(),
+            vat_number: Some("FR123".to_string()),
+            tax_exempt_status: None,
+            used_storage_bytes: 8 * GB,
+            bandwidth_out_bytes_month: 0,
+            active_user_count: 2,
+        }
+    }
+
+    #[test]
+    fn entitlements_view_allows_active_subscription_with_plan_limits() {
+        let entitlements = entitlements_view(&billing_record());
+
+        assert!(entitlements.can_upload);
+        assert!(entitlements.can_create_share_links);
+        assert_eq!(entitlements.included_storage_bytes, 10 * GB);
+        assert_eq!(entitlements.included_users, 2);
+        assert_eq!(entitlements.max_share_links, 25);
+        assert_eq!(entitlements.max_share_link_ttl_days, 30);
+        assert_eq!(entitlements.audit_level, "standard");
+        assert_eq!(entitlements.api_key_limit, 5);
+        assert!(!entitlements.billing_locked);
+    }
+
+    #[test]
+    fn entitlements_view_locks_degraded_subscriptions() {
+        for status in ["past_due", "canceled", "incomplete", "suspended"] {
+            let mut record = billing_record();
+            record.subscription_status = status.to_string();
+
+            let entitlements = entitlements_view(&record);
+
+            assert!(!entitlements.can_upload, "{status} should block uploads");
+            assert!(
+                !entitlements.can_create_share_links,
+                "{status} should block share links"
+            );
+            assert!(entitlements.billing_locked, "{status} should lock billing");
+        }
+    }
+
+    #[test]
+    fn build_invoice_estimate_charges_only_billable_overages() {
+        let mut record = billing_record();
+        record.used_storage_bytes = 12 * GB;
+        record.active_user_count = 4;
+
+        let estimate = build_invoice_estimate(&record);
+
+        assert_eq!(estimate.base_amount_cents, 3_900);
+        assert_eq!(estimate.storage_overage_amount_cents, 8);
+        assert_eq!(estimate.seat_overage_amount_cents, 1_800);
+        assert_eq!(estimate.estimated_amount_cents, 5_708);
+        assert_eq!(estimate.currency, "EUR");
+    }
+}

@@ -1,0 +1,9 @@
+services:
+  identity-api:
+    image: ghcr.io/nvbes/nvbes-identity-api:0.1.0
+  drive-api:
+    image: ghcr.io/nvbes/nvbes-drive-api:0.1.0
+  identity-web:
+    image: ghcr.io/nvbes/nvbes-identity-web:0.1.0
+  drive-web:
+    image: ghcr.io/nvbes/nvbes-drive-web:0.1.0

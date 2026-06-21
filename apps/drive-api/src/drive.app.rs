@@ -35,13 +35,13 @@ pub async fn build_storage(config: &AppConfig) -> std::sync::Arc<dyn ObjectStore
             .as_deref()
             .expect("STORAGE_ENDPOINT required when STORAGE_ENABLED is true");
         let access_key = config
-            .scw_access_key
+            .storage_access_key
             .as_deref()
-            .expect("SCW_ACCESS_KEY required when STORAGE_ENABLED is true");
+            .expect("STORAGE_ACCESS_KEY required when STORAGE_ENABLED is true");
         let secret_key = config
-            .scw_secret_key
+            .storage_secret_key
             .as_deref()
-            .expect("SCW_SECRET_KEY required when STORAGE_ENABLED is true");
+            .expect("STORAGE_SECRET_KEY required when STORAGE_ENABLED is true");
 
         tracing::info!(
             bucket = %config.storage_bucket,
@@ -167,8 +167,6 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
         .layer(ConcurrencyLimitLayer::new(
             state.config.api_max_concurrent_requests as usize,
         ))
-        .layer(sentry_tower::SentryHttpLayer::new().enable_transaction())
-        .layer(sentry_tower::NewSentryLayer::new_from_top())
         .with_state(state))
 }
 
@@ -177,9 +175,7 @@ fn build_product_analytics(
 ) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
     Ok(nvbes_product_analytics::ProductAnalytics::new(
         nvbes_product_analytics::ProductAnalyticsConfig {
-            enabled: config.posthog_enabled,
-            host: config.posthog_host.clone(),
-            project_token: config.posthog_project_token.clone(),
+            enabled: config.product_analytics_enabled,
             analytics_id_salt: config.analytics_id_salt.clone(),
         },
     )?)

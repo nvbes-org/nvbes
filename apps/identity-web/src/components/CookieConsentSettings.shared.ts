@@ -2,8 +2,8 @@ import type { CookieConsentState } from '../tracking-consent';
 
 export const essentialVendors = ['⚡ nvbes Identity', '💳 Stripe (Paiements et Fraude)'];
 
-export const posthogPurposes: Array<{
-  key: keyof CookieConsentState['posthog'];
+export const analyticsPurposes: Array<{
+  key: keyof CookieConsentState['analytics'];
   label: string;
   description: string;
 }> = [
@@ -34,19 +34,19 @@ export const posthogPurposes: Array<{
   },
   {
     key: 'errorTracking',
-    label: 'PostHog error tracking',
-    description: 'Capture navigateur scrubbed en parallèle de Sentry.',
+    label: 'Analytics error tracking',
+    description: 'Capture navigateur scrubbed pour les diagnostics produit.',
   },
 ];
 
 export function getConsentVendorCategory(
   vendor: keyof CookieConsentState['vendors'],
 ): keyof CookieConsentState['categories'] | undefined {
-  if (vendor === 'sentry') {
+  if (vendor === 'errorReporting') {
     return 'performance';
   }
 
-  if (vendor === 'posthog') {
+  if (vendor === 'analytics') {
     return 'analytics';
   }
 

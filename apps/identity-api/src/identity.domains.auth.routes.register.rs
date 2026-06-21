@@ -14,6 +14,10 @@ use nvbes_region::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+#[cfg(test)]
+#[path = "identity.domains.auth.routes.register.tests.rs"]
+mod tests;
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/register", post(register))
@@ -43,6 +47,29 @@ pub(crate) struct RegisterRequest {
 #[serde(rename_all = "snake_case")]
 pub(crate) struct VerifyEmailRequest {
     token: String,
+}
+
+fn register_input_from_request(
+    request: RegisterRequest,
+    country_code: String,
+    data_region: String,
+    birthdate: Option<chrono::NaiveDate>,
+    ip: Option<String>,
+    user_agent: Option<String>,
+) -> crate::domains::auth::types::RegisterInput {
+    crate::domains::auth::types::RegisterInput {
+        email: request.email,
+        password: request.password,
+        firstname: request.firstname,
+        lastname: request.lastname,
+        username: request.username,
+        birthdate,
+        region: Some(country_code),
+        data_region: Some(data_region),
+        workspace_name: request.workspace_name,
+        ip,
+        user_agent,
+    }
 }
 
 #[utoipa::path(
@@ -115,19 +142,14 @@ pub(crate) async fn register(
         &state.db,
         &state.redis,
         &state.config,
-        crate::domains::auth::types::RegisterInput {
-            email: request.email,
-            password: request.password,
-            firstname: request.firstname,
-            lastname: request.lastname,
-            username: request.username,
+        register_input_from_request(
+            request,
+            country_code,
+            data_region,
             birthdate,
-            region: Some(country_code),
-            data_region: Some(data_region),
-            workspace_name: request.workspace_name,
             ip,
-            user_agent: crate::http::request::user_agent(&headers),
-        },
+            crate::http::request::user_agent(&headers),
+        ),
     )
     .await?;
 

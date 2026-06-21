@@ -1,11 +1,11 @@
 import { replayQueue } from './drive.sw.queue';
-import { setDriveServiceWorkerSentryConsent } from './drive.sw.sentry';
+import { setDriveServiceWorkerErrorReportingConsent } from './drive.sw.error.reporting';
 import { driveWorkerSelf, type ExtendableMessageEventLike } from './drive.sw.events.shared';
 
 type DriveServiceWorkerMessage = {
   id?: string;
   isSlowConnection?: boolean;
-  sentryAccepted?: boolean;
+  errorReportingAccepted?: boolean;
   tag?: string;
   type?: string;
 };
@@ -37,8 +37,8 @@ export function registerDriveServiceWorkerMessageEvent({
       return;
     }
 
-    if (type === 'SENTRY_CONSENT_UPDATED') {
-      setDriveServiceWorkerSentryConsent(data.sentryAccepted === true);
+    if (type === 'ERROR_REPORTING_CONSENT_UPDATED') {
+      setDriveServiceWorkerErrorReportingConsent(data.errorReportingAccepted === true);
       return;
     }
 

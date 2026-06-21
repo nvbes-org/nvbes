@@ -1,6 +1,6 @@
 use chrono::Utc;
 use serde::Serialize;
-use tokio::sync::mpsc;
+use std::sync::Arc;
 
 use crate::{
     config::{ProductAnalyticsConfig, ProductAnalyticsError},
@@ -8,17 +8,18 @@ use crate::{
     privacy::{add_pseudonymous_context, is_allowed_event, pseudonymous_id, sanitize_properties},
 };
 
-const BATCH_SIZE: usize = 20;
-const CHANNEL_SIZE: usize = 1024;
-
 #[derive(Clone)]
 pub struct ProductAnalytics {
     inner: Option<std::sync::Arc<ProductAnalyticsInner>>,
 }
 
 struct ProductAnalyticsInner {
-    sender: mpsc::Sender<CaptureEvent>,
+    sink: Arc<dyn ProductAnalyticsSink>,
     salt: String,
+}
+
+pub trait ProductAnalyticsSink: Send + Sync {
+    fn capture(&self, event: CapturedProductAnalyticsEvent);
 }
 
 impl ProductAnalytics {
@@ -31,22 +32,27 @@ impl ProductAnalytics {
             return Ok(Self::disabled());
         }
 
-        let project_token = config
-            .project_token
-            .filter(|value| !value.trim().is_empty())
-            .ok_or(ProductAnalyticsError::MissingProjectToken)?;
+        tracing::warn!(
+            "Product analytics requested without an analytics adapter; events will be dropped"
+        );
+        Ok(Self::disabled())
+    }
+
+    pub fn with_sink(
+        config: ProductAnalyticsConfig,
+        sink: Arc<dyn ProductAnalyticsSink>,
+    ) -> Result<Self, ProductAnalyticsError> {
+        if !config.enabled {
+            return Ok(Self::disabled());
+        }
+
         let salt = config
             .analytics_id_salt
             .filter(|value| !value.trim().is_empty())
             .ok_or(ProductAnalyticsError::MissingAnalyticsSalt)?;
-        let endpoint = batch_endpoint(&config.host)?;
-        let client = reqwest::Client::new();
-        let (sender, receiver) = mpsc::channel(CHANNEL_SIZE);
-
-        tokio::spawn(batch_worker(receiver, client, endpoint, project_token));
 
         Ok(Self {
-            inner: Some(std::sync::Arc::new(ProductAnalyticsInner { sender, salt })),
+            inner: Some(std::sync::Arc::new(ProductAnalyticsInner { sink, salt })),
         })
     }
 
@@ -76,16 +82,14 @@ impl ProductAnalytics {
             event.workspace_id,
         );
 
-        let capture = CaptureEvent {
+        let capture = CapturedProductAnalyticsEvent {
             event: event.name.to_string(),
             distinct_id,
             properties,
             timestamp: Utc::now().to_rfc3339(),
         };
 
-        if let Err(error) = inner.sender.try_send(capture) {
-            tracing::warn!(%error, "PostHog product analytics event dropped");
-        }
+        inner.sink.capture(capture);
     }
 
     pub fn capture_user_event(
@@ -108,78 +112,11 @@ impl ProductAnalytics {
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct CaptureEvent {
-    event: String,
-    distinct_id: String,
-    properties: AnalyticsProperties,
-    timestamp: String,
-}
-
-#[derive(Serialize)]
-struct BatchRequest<'a> {
-    api_key: &'a str,
-    batch: &'a [CaptureEvent],
-}
-
-async fn batch_worker(
-    mut receiver: mpsc::Receiver<CaptureEvent>,
-    client: reqwest::Client,
-    endpoint: String,
-    project_token: String,
-) {
-    let mut batch = Vec::with_capacity(BATCH_SIZE);
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
-
-    loop {
-        tokio::select! {
-            maybe_event = receiver.recv() => {
-                let Some(event) = maybe_event else {
-                    flush_batch(&client, &endpoint, &project_token, &mut batch).await;
-                    return;
-                };
-                batch.push(event);
-                if batch.len() >= BATCH_SIZE {
-                    flush_batch(&client, &endpoint, &project_token, &mut batch).await;
-                }
-            }
-            _ = interval.tick() => {
-                flush_batch(&client, &endpoint, &project_token, &mut batch).await;
-            }
-        }
-    }
-}
-
-async fn flush_batch(
-    client: &reqwest::Client,
-    endpoint: &str,
-    project_token: &str,
-    batch: &mut Vec<CaptureEvent>,
-) {
-    if batch.is_empty() {
-        return;
-    }
-
-    let payload = std::mem::take(batch);
-    let request = BatchRequest {
-        api_key: project_token,
-        batch: &payload,
-    };
-
-    match client.post(endpoint).json(&request).send().await {
-        Ok(response) if !response.status().is_success() => {
-            tracing::warn!(status = %response.status(), "PostHog product analytics batch rejected");
-        }
-        Ok(_) => {}
-        Err(error) => tracing::warn!(%error, "PostHog product analytics batch failed"),
-    }
-}
-
-fn batch_endpoint(host: &str) -> Result<String, ProductAnalyticsError> {
-    let parsed = reqwest::Url::parse(host).map_err(|_| ProductAnalyticsError::InvalidHost)?;
-    match parsed.scheme() {
-        "http" | "https" => Ok(format!("{}/batch/", host.trim_end_matches('/'))),
-        _ => Err(ProductAnalyticsError::InvalidHost),
-    }
+pub struct CapturedProductAnalyticsEvent {
+    pub event: String,
+    pub distinct_id: String,
+    pub properties: AnalyticsProperties,
+    pub timestamp: String,
 }
 
 #[cfg(test)]

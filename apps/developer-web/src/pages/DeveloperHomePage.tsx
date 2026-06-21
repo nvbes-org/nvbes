@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { startDeveloperLogin } from '../developer.auth';
 
 export function DeveloperHomePage() {
   return (
@@ -15,12 +16,13 @@ export function DeveloperHomePage() {
           token inspection, SDKs, and quickstarts from one developer console.
         </p>
         <div className="flex flex-wrap gap-3">
-          <Link
-            to="/portal/apps"
+          <button
+            type="button"
+            onClick={() => void startDeveloperLogin(`${window.location.origin}/portal/apps`)}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
             Open portal
-          </Link>
+          </button>
           <Link
             to="/quickstarts/react"
             className="rounded-md border border-border px-4 py-2 text-sm font-medium"

@@ -135,15 +135,8 @@ pub(crate) async fn challenge_response(
     device_fingerprint: Option<Value>,
     available_methods: Option<Vec<String>>,
 ) -> Result<Response, AppError> {
-    let state_token = create_state(
-        redis,
-        principal_id,
-        email,
-        next_step,
-        device_fingerprint,
-        None,
-    )
-    .await?;
+    let state_token =
+        create_state(redis, principal_id, email, next_step, device_fingerprint).await?;
 
     Ok((
         status,

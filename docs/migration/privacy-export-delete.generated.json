@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/privacy-export-delete.mjs --write",
+    "sources": [
+      "apps/identity-api/openapi.json",
+      "apps/identity-api/src/identity.http.openapi.rs",
+      "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs",
+      "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.profile.rs",
+      "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "apps/identity-api/src/identity.email.jobs.rs",
+      "apps/identity-worker/src/identity.worker.jobs.execute.rs",
+      "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs"
+    ],
+    "targeted_tests": [
+      "cargo test -p nvbes-identity-worker data_export_worker_payload --locked",
+      "cargo test -p nvbes-identity-api account_export --locked"
+    ]
+  },
+  "summary": {
+    "checks": 29,
+    "passed": 29,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "openapi-export-request",
+      "description": "OpenAPI exposes data export request",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/auth/me/export'].post"
+    },
+    {
+      "id": "openapi-export-download",
+      "description": "OpenAPI exposes prepared export download",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/auth/me/export'].get"
+    },
+    {
+      "id": "openapi-account-delete",
+      "description": "OpenAPI exposes account deletion request",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/auth/me/delete'].post"
+    },
+    {
+      "id": "openapi-export-handler",
+      "description": "OpenAPI export includes data export handlers",
+      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "status": "passed",
+      "pattern": "crate::domains::auth::routes::session_mgmt::me_export"
+    },
+    {
+      "id": "openapi-delete-handler",
+      "description": "OpenAPI export includes account delete handler",
+      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "status": "passed",
+      "pattern": "crate::domains::auth::routes::session_mgmt::profile::me_delete"
+    },
+    {
+      "id": "export-request-step-up",
+      "description": "Data export request requires recent step-up",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "verification::require_recent_step_up(redis, auth, None)"
+    },
+    {
+      "id": "export-request-rate-limit",
+      "description": "Data export request is rate limited",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "\"auth_me_export\""
+    },
+    {
+      "id": "export-request-confirm-email",
+      "description": "Data export request enqueues confirmation email",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "business_type: \"data_export\".to_string()"
+    },
+    {
+      "id": "export-request-worker-job",
+      "description": "Data export request enqueues worker job",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "enqueue_data_export_job_tx(redis, auth.user_id(), &auth.user_email)"
+    },
+    {
+      "id": "export-job-idempotency",
+      "description": "Data export worker job is idempotent per user",
+      "path": "apps/identity-api/src/identity.email.jobs.rs",
+      "status": "passed",
+      "pattern": "idempotency_key: Some(format!(\"export:{}\", user_id))"
+    },
+    {
+      "id": "export-download-step-up",
+      "description": "Export download requires recent step-up",
+      "path": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs",
+      "status": "passed",
+      "pattern": "verification::require_recent_step_up(&state.redis, &auth, None)"
+    },
+    {
+      "id": "export-download-no-store",
+      "description": "Export download disables caching",
+      "path": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs",
+      "status": "passed",
+      "pattern": "header::CACHE_CONTROL, \"no-store\""
+    },
+    {
+      "id": "export-cache-key-test",
+      "description": "API tests prove account export cache key scope",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "account_export_cache_key_is_subject_scoped"
+    },
+    {
+      "id": "export-cache-ttl-test",
+      "description": "API tests prove prepared export TTL",
+      "path": "apps/identity-api/src/identity.domains.auth.data_export.rs",
+      "status": "passed",
+      "pattern": "account_export_ttl_is_one_day"
+    },
+    {
+      "id": "worker-dispatch",
+      "description": "Worker dispatch handles data export jobs",
+      "path": "apps/identity-worker/src/identity.worker.jobs.execute.rs",
+      "status": "passed",
+      "pattern": "JOB_DATA_EXPORT =>"
+    },
+    {
+      "id": "worker-build-export",
+      "description": "Worker builds account export",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "build_account_export(&state.db, payload.user_id)"
+    },
+    {
+      "id": "worker-store-export",
+      "description": "Worker stores prepared export before notification",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "store_account_export("
+    },
+    {
+      "id": "worker-send-email",
+      "description": "Worker notifies the requester when export is ready",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "Export de vos donnees - nvbes"
+    },
+    {
+      "id": "worker-payload-parse-test",
+      "description": "Worker smoke test accepts valid export payload",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "data_export_worker_payload_accepts_user_and_email"
+    },
+    {
+      "id": "worker-payload-missing-test",
+      "description": "Worker smoke test rejects missing user id",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "data_export_worker_payload_rejects_missing_user_id"
+    },
+    {
+      "id": "worker-payload-invalid-test",
+      "description": "Worker smoke test rejects invalid user id",
+      "path": "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+      "status": "passed",
+      "pattern": "data_export_worker_payload_rejects_invalid_user_id"
+    },
+    {
+      "id": "delete-step-up",
+      "description": "Account deletion requires AAL2 step-up",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "Some(nvbes_core::auth::Aal::Aal2)"
+    },
+    {
+      "id": "delete-rate-limit",
+      "description": "Account deletion is rate limited",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "\"auth_me_delete\""
+    },
+    {
+      "id": "delete-user-status",
+      "description": "Account deletion marks user deleted",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "UPDATE users SET status = 'deleted'"
+    },
+    {
+      "id": "delete-principal-status",
+      "description": "Account deletion marks principal deleted",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "UPDATE principals SET status = 'deleted'"
+    },
+    {
+      "id": "delete-session-revoke",
+      "description": "Account deletion revokes sessions transactionally",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "sessions_mgmt::revoke_all_user_sessions_tx"
+    },
+    {
+      "id": "delete-redis-session-clear",
+      "description": "Account deletion clears Redis sessions",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "clear_user_sessions"
+    },
+    {
+      "id": "delete-pubsub-user",
+      "description": "Account deletion publishes user suspension",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "publish_user_suspended"
+    },
+    {
+      "id": "delete-pubsub-workspaces",
+      "description": "Account deletion publishes owned workspace deletion",
+      "path": "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
+      "status": "passed",
+      "pattern": "publish_workspace_deleted"
+    }
+  ]
+}

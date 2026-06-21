@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/identity-client",
   "sourceRoot": "libs/ts/identity-client/src",
-  "tags": ["type:lib", "domain:identity", "layer:client"]
+  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:client"]
 }

@@ -6,7 +6,6 @@ use webauthn_rs::prelude::PublicKeyCredential;
 #[derive(Deserialize, ToSchema)]
 pub struct IdentifierRequest {
     pub email: String,
-    pub turnstile_token: Option<String>,
     pub device_fingerprint: Option<serde_json::Value>,
     pub bot_guard: Option<crate::domains::auth::bot_guard::BotGuardProof>,
     pub bot_signals: Option<crate::domains::auth::bot_signals::BotSignals>,

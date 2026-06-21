@@ -23,9 +23,9 @@ const WORKER_QUEUES: [&str; 4] = [
 ];
 const ACCESS_REVIEW_SCHEDULE_INTERVAL: Duration = Duration::from_secs(900);
 const ACCESS_REVIEW_REMINDER_INTERVAL: Duration = Duration::from_secs(3600);
-const SENTRY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
+const WORKER_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
 const TRANSIENT_INFRA_ERROR_SLEEP: TokioDuration = TokioDuration::from_secs(5);
-const SENTRY_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
+const WORKER_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 5,
     checkin_margin_minutes: 2,
     max_runtime_minutes: 2,
@@ -39,10 +39,10 @@ where
     let mut access_review_schedule_last_run = Instant::now() - ACCESS_REVIEW_SCHEDULE_INTERVAL;
     let mut access_review_reminder_last_run = Instant::now() - ACCESS_REVIEW_REMINDER_INTERVAL;
     let mut housekeeping_last_run = Instant::now() - Duration::from_secs(3600);
-    let mut sentry_heartbeat_last_run = Instant::now() - SENTRY_HEARTBEAT_INTERVAL;
+    let mut worker_heartbeat_last_run = Instant::now() - WORKER_HEARTBEAT_INTERVAL;
     tokio::pin!(shutdown);
     loop {
-        capture_sentry_heartbeat_if_due(&state, &mut sentry_heartbeat_last_run);
+        capture_worker_heartbeat_if_due(&state, &mut worker_heartbeat_last_run);
         run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await?;
         run_access_review_reminders_if_due(&state, &mut access_review_reminder_last_run).await?;
 
@@ -168,15 +168,15 @@ pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::
     Ok(true)
 }
 
-fn capture_sentry_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
-    if last_run.elapsed() < SENTRY_HEARTBEAT_INTERVAL {
+fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
+    if last_run.elapsed() < WORKER_HEARTBEAT_INTERVAL {
         return;
     }
 
     capture_worker_heartbeat(
         &state.config.environment,
         &worker_monitor_slug("identity-worker", "loop-heartbeat"),
-        SENTRY_HEARTBEAT_SCHEDULE,
+        WORKER_HEARTBEAT_SCHEDULE,
     );
     *last_run = Instant::now();
 }

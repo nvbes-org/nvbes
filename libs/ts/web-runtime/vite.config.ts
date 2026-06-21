@@ -7,7 +7,7 @@ export default defineConfig({
     },
   },
   pack: {
-    entry: ['src/index.ts', 'src/posthog.ts'],
+    entry: ['src/index.ts', 'src/analytics.ts'],
     format: ['esm'],
     dts: true,
   },

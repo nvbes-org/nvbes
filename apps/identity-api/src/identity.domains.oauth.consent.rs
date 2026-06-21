@@ -1,6 +1,7 @@
 use super::service::ConsentRequirementInput;
+use super::system_clients::is_system_client;
 use crate::http::error::AppError;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 pub fn evaluate_consent_action(
     consent_action: Option<&str>,
@@ -113,16 +114,17 @@ async fn requires_admin_consent(
     client_id: uuid::Uuid,
     scopes: &[String],
 ) -> Result<bool, AppError> {
-    sqlx::query_scalar::<_, bool>(
+    let row = sqlx::query(
         r#"
         SELECT
+          c.client_id,
           COALESCE(c.requires_admin_consent, FALSE)
           OR EXISTS (
             SELECT 1
             FROM oauth_scope_metadata scope
             WHERE scope.scope = ANY($2)
               AND scope.requires_admin_consent = TRUE
-          )
+          ) AS requires_admin_consent
         FROM oauth_clients c
         WHERE c.id = $1
         "#,
@@ -131,7 +133,14 @@ async fn requires_admin_consent(
     .bind(scopes)
     .fetch_optional(db)
     .await?
-    .ok_or_else(|| AppError::not_found("client_not_found", "The OAuth client was not found."))
+    .ok_or_else(|| AppError::not_found("client_not_found", "The OAuth client was not found."))?;
+
+    let client_id: String = row.get("client_id");
+    if is_system_client(&client_id) {
+        return Ok(false);
+    }
+
+    Ok(row.get("requires_admin_consent"))
 }
 
 async fn tenant_admin_can_grant_consent(

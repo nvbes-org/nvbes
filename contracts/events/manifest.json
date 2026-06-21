@@ -1,0 +1,29 @@
+{
+  "envelope": "contracts/events/envelope.schema.json",
+  "events": [
+    {
+      "event_type": "identity.user.created",
+      "event_version": 1,
+      "schema": "contracts/events/identity.user.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "workspace.membership.created",
+      "event_version": 1,
+      "schema": "contracts/events/workspace.membership.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "drive.file.created",
+      "event_version": 1,
+      "schema": "contracts/events/drive.file.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.entitlement.changed",
+      "event_version": 1,
+      "schema": "contracts/events/billing.entitlement.changed.v1.schema.json",
+      "critical": true
+    }
+  ]
+}

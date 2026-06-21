@@ -1,6 +1,7 @@
 use axum::{Extension, Json, extract::State};
 use chrono::{DateTime, TimeZone, Utc};
 use nvbes_core::auth::token_hash;
+use uuid::Uuid;
 
 use crate::{
     app::AppState,
@@ -11,6 +12,35 @@ use crate::{
     },
     http::{error::AppError, middleware::jwt::AuthContext},
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TokenAccessDecision {
+    active: bool,
+    access_decision: &'static str,
+}
+
+fn token_access_decision(
+    now: i64,
+    token_tenant_id: Option<&str>,
+    expected_tenant_id: Uuid,
+    not_before: i64,
+    expires_at: i64,
+) -> TokenAccessDecision {
+    let active = now >= not_before && now < expires_at;
+    let expected_tenant_id = expected_tenant_id.to_string();
+    let access_decision = if token_tenant_id != Some(expected_tenant_id.as_str()) {
+        "tenant_mismatch"
+    } else if !active {
+        "expired"
+    } else {
+        "allowed"
+    };
+
+    TokenAccessDecision {
+        active,
+        access_decision,
+    }
+}
 
 pub async fn debug_token(
     State(state): State<AppState>,
@@ -32,18 +62,19 @@ pub async fn debug_token(
     let decoded = state.jwt.decode_token_ignore_expiry(token);
     let (active, access_decision, claims) = match decoded {
         Ok(claims) => {
-            let now = Utc::now().timestamp();
-            let active = now >= claims.nbf && now < claims.exp;
-            let tenant_matches = claims.tenant_id.as_deref() == Some(&tenant_id.to_string());
-            let decision = if !tenant_matches {
-                "tenant_mismatch"
-            } else if !active {
-                "expired"
-            } else {
-                "allowed"
-            };
+            let decision = token_access_decision(
+                Utc::now().timestamp(),
+                claims.tenant_id.as_deref(),
+                tenant_id,
+                claims.nbf,
+                claims.exp,
+            );
 
-            (active, decision.to_string(), Some(claims_to_view(claims)?))
+            (
+                decision.active,
+                decision.access_decision.to_string(),
+                Some(claims_to_view(claims)?),
+            )
         }
         Err(_) => (false, "invalid".to_string(), None),
     };
@@ -108,3 +139,7 @@ fn timestamp_to_datetime(timestamp: i64) -> Result<DateTime<Utc>, AppError> {
         )
     })
 }
+
+#[cfg(test)]
+#[path = "identity.domains.developer.routes.tokens.tests.rs"]
+mod tests;

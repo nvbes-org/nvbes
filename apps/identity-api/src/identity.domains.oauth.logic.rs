@@ -92,9 +92,11 @@ pub async fn verify_client_secret_with_overlap(
         }
     }
 
-    Err(AppError::unauthorized("invalid_client", "The client secret is invalid."))
+    Err(AppError::unauthorized(
+        "invalid_client",
+        "The client secret is invalid.",
+    ))
 }
-
 
 pub fn generate_user_code() -> String {
     use rand::Rng;

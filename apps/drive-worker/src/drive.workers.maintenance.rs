@@ -12,6 +12,17 @@ pub const JOB_QUOTAS_RECALCULATE: &str = "quotas.recalculate";
 pub const JOB_TRASH_PURGE: &str = "trash.purge";
 pub const JOB_STORAGE_PURGE_DELETED: &str = "storage.purge_deleted";
 pub const JOB_STORAGE_PURGE_QUARANTINED: &str = "storage.purge_quarantined";
+const RECALCULATE_QUOTAS_SQL: &str = r#"
+        UPDATE quota_usage qu
+        SET used_storage_bytes = COALESCE((
+            SELECT SUM(so.size_bytes)
+            FROM storage_objects so
+            WHERE so.workspace_id = qu.workspace_id
+              AND so.status = 'active'
+              AND so.object_type = 'file'
+        ), 0),
+        updated_at = NOW()
+        "#;
 
 pub async fn enqueue_maintenance_jobs(redis: &nvbes_redis::RedisPool) -> anyhow::Result<()> {
     nvbes_redis::worker_queue::enqueue_job(
@@ -159,21 +170,9 @@ pub async fn purge_expired_uploads(
 }
 
 pub async fn recalculate_quotas(database: &Database) -> anyhow::Result<JsonValue> {
-    let result = sqlx::query(
-        r#"
-        UPDATE quota_usage qu
-        SET storage_used_bytes = COALESCE((
-            SELECT SUM(so.size_bytes)
-            FROM storage_objects so
-            WHERE so.workspace_id = qu.workspace_id
-              AND so.status = 'active'
-              AND so.object_type = 'file'
-        ), 0),
-        updated_at = NOW()
-        "#,
-    )
-    .execute(&**database)
-    .await?;
+    let result = sqlx::query(RECALCULATE_QUOTAS_SQL)
+        .execute(&**database)
+        .await?;
 
     Ok(serde_json::json!({
         "updated_workspaces": result.rows_affected()
@@ -196,4 +195,15 @@ pub async fn purge_trash(database: &Database) -> anyhow::Result<JsonValue> {
     Ok(serde_json::json!({
         "deleted_objects": result.rows_affected()
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RECALCULATE_QUOTAS_SQL;
+
+    #[test]
+    fn recalculate_quotas_updates_used_storage_bytes() {
+        assert!(RECALCULATE_QUOTAS_SQL.contains("SET used_storage_bytes"));
+        assert!(!RECALCULATE_QUOTAS_SQL.contains("storage_used_bytes"));
+    }
 }

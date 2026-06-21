@@ -3,7 +3,7 @@ import { precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
 
-import { captureDriveServiceWorkerException } from './drive.sw.sentry';
+import { captureDriveServiceWorkerException } from './drive.sw.error.reporting';
 
 type ServiceWorkerFetchEvent = { request: Request };
 type PrecacheManifestEntry = string | { url: string; revision?: string | null };

@@ -6,7 +6,7 @@ fn mock_config() -> AppConfig {
         web_base_url: "https://nvbes.fr".to_string(),
         auth_verification_ttl_hours: 24,
         auth_password_reset_ttl_minutes: 30,
-        scw_tem_from_email: Some("test@nvbes.fr".to_string()),
+        email_from_email: Some("test@nvbes.fr".to_string()),
         ..Default::default()
     }
 }

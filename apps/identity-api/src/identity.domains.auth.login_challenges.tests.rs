@@ -45,9 +45,15 @@ async fn replace_challenge_prunes_expired_and_keeps_active_flow_unique() {
     crate::test_support::ensure_test_database(&pool).await;
     unsafe {
         env::set_var("NVBES_ENV", "development");
-        env::set_var("NVBES_WORKSPACE_ROOT", "/Users/shayn/Development/nvbes");
+        env::set_var(
+            "NVBES_WORKSPACE_ROOT",
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .expect("workspace root"),
+        );
     }
-    let auth_state_id = create_state(&redis, None, "challenge@example.com", "mfa", None, None)
+    let auth_state_id = create_state(&redis, None, "challenge@example.com", "mfa", None)
         .await
         .expect("auth state should be created");
     let principal_id = Uuid::new_v4();
@@ -139,7 +145,7 @@ async fn failed_attempts_block_fetch_after_limit() {
     let pool = test_pool();
     let redis = crate::test_support::test_redis_pool().await;
     crate::test_support::ensure_test_database(&pool).await;
-    let auth_state_id = create_state(&redis, None, "limit@example.com", "mfa", None, None)
+    let auth_state_id = create_state(&redis, None, "limit@example.com", "mfa", None)
         .await
         .expect("auth state should be created");
     let principal_id = Uuid::new_v4();

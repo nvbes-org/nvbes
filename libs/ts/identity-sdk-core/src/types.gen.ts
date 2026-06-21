@@ -164,6 +164,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/challenge/pow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["challenge_pow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/challenge/pwd": {
         parameters: {
             query?: never;
@@ -174,6 +190,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["challenge_pwd"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/challenge/webauthn/discoverable/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["challenge_webauthn_discoverable_finish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/challenge/webauthn/discoverable/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["challenge_webauthn_discoverable_start"];
         delete?: never;
         options?: never;
         head?: never;
@@ -228,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me/export": {
         parameters: {
             query?: never;
@@ -238,6 +302,38 @@ export interface paths {
         get: operations["me_export_download"];
         put?: never;
         post: operations["me_export"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_notifications_get"];
+        put: operations["me_notifications_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_preferences_get"];
+        put: operations["me_preferences_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -366,6 +462,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["webauthn_auth_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["change_password"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1052,6 +1164,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_consents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/gpc": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["gpc_status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2250,6 +2378,13 @@ export interface components {
             /** @description Raw `UNMASKED_VENDOR_WEBGL` string (e.g. "Google Inc. (NVIDIA)"). */
             webgl_vendor?: string | null;
         };
+        ChangePasswordInput: {
+            current_password: string;
+            new_password: string;
+        };
+        ChangePasswordResult: {
+            success: boolean;
+        };
         ChangePasswordWellKnownResponse: {
             "change-password": string;
         };
@@ -2416,6 +2551,9 @@ export interface components {
         };
         DecisionResponse: {
             decision: components["schemas"]["WorkspaceDecision"];
+        };
+        DeleteAccountResult: {
+            success: boolean;
         };
         DeleteOAuthClientPolicyResult: {
             success: boolean;
@@ -2688,6 +2826,10 @@ export interface components {
             requires_admin_approval: boolean;
             success: boolean;
         };
+        GpcStatusResponse: {
+            gpc_enabled: boolean;
+            gpc_opt_out_active: boolean;
+        };
         GpcWellKnownResponse: {
             gpc: boolean;
             /** Format: int32 */
@@ -2701,7 +2843,6 @@ export interface components {
             email: string;
             pow_nonce?: string | null;
             pow_solution?: string | null;
-            turnstile_token?: string | null;
         };
         IdentifierResult: {
             available_methods?: string[] | null;
@@ -3077,6 +3218,11 @@ export interface components {
             provider: string;
             stripe_customer_id: string;
             url: string;
+        };
+        PowChallenge: {
+            /** Format: int32 */
+            difficulty: number;
+            nonce: string;
         };
         ProductEntitlementsView: {
             /** Format: int32 */
@@ -3546,6 +3692,16 @@ export interface components {
             /** Format: date-time */
             revoked_at?: string | null;
         };
+        UserNotifications: {
+            email?: boolean;
+            in_app?: boolean;
+            push?: boolean;
+        };
+        UserPreferences: {
+            language?: string;
+            skip_password?: boolean;
+            theme?: string;
+        };
         UserView: {
             /** Format: date */
             birthdate?: string | null;
@@ -3579,6 +3735,11 @@ export interface components {
             /** Format: uuid */
             challenge_id: string;
             options: unknown;
+        };
+        WebauthnDiscoverableFinishRequest: {
+            /** Format: uuid */
+            challenge_id: string;
+            webauthn_response: Record<string, never>;
         };
         WebauthnRegisterFinishRequest: {
             /** Format: uuid */
@@ -3901,7 +4062,7 @@ export interface operations {
                     "application/json": components["schemas"]["IdentifierResult"];
                 };
             };
-            /** @description Risk policy blocked or Turnstile failed */
+            /** @description Risk policy blocked or bot guard failed */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3945,6 +4106,26 @@ export interface operations {
             };
         };
     };
+    challenge_pow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PoW challenge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PowChallenge"];
+                };
+            };
+        };
+    };
     challenge_pwd: {
         parameters: {
             query?: never;
@@ -3977,6 +4158,68 @@ export interface operations {
                 };
             };
             /** @description Invalid credentials or state */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    challenge_webauthn_discoverable_finish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebauthnDiscoverableFinishRequest"];
+            };
+        };
+        responses: {
+            /** @description Login successful after discoverable WebAuthn */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            /** @description Invalid authentication state */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    challenge_webauthn_discoverable_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discoverable WebAuthn login challenge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebauthnAuthStartResult"];
+                };
+            };
+            /** @description Invalid authentication state */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4078,6 +4321,44 @@ export interface operations {
             };
         };
     };
+    me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteAccountResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     me_export_download: {
         parameters: {
             query?: never;
@@ -4154,6 +4435,130 @@ export interface operations {
             };
             /** @description Rate limited */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNotifications"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_notifications_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserNotifications"];
+            };
+        };
+        responses: {
+            /** @description Notifications updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNotifications"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User preferences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPreferences"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserPreferences"];
+            };
+        };
+        responses: {
+            /** @description Preferences updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPreferences"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4442,6 +4847,57 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    change_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordInput"];
+            };
+        };
+        responses: {
+            /** @description Password changed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordResult"];
+                };
+            };
+            /** @description Validation error or same password */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6750,6 +7206,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserConsent"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    gpc_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description GPC status and auto-recording result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GpcStatusResponse"];
                 };
             };
             /** @description Unauthorized */

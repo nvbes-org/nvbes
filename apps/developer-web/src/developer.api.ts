@@ -1,6 +1,7 @@
 import { createHttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
-import { identityHttpClient } from './identity.http';
+import { identityApiBaseUrl, identityHttpClient } from './identity.http';
+import { getDeveloperAccessToken } from './developer.session.storage';
 import {
   CreateDeveloperAppResponseSchema,
   CreateDeveloperWebhookEndpointResponseSchema,
@@ -40,6 +41,7 @@ import {
   type DeveloperOverview,
   type DeveloperPermission,
   type DeveloperSandboxTenant,
+  type DeveloperSandboxDataProfile,
   type DeveloperSecretVersion,
   type DeveloperServiceAccount,
   type DeveloperScopeRegistryEntry,
@@ -55,9 +57,16 @@ import type { SecretRotationForm } from './pages/SecretsPage.helpers';
 import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
 
 const developerHttpClient = createHttpClient({
+  baseUrl: identityApiBaseUrl,
   credentials: 'include',
+  headers: developerAuthHeaders(),
 });
 const EmptyResponseSchema = z.undefined();
+
+function developerAuthHeaders(): HeadersInit | undefined {
+  const token = getDeveloperAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
 
 export function getDeveloperMe(options?: { signal?: AbortSignal }) {
   return developerHttpClient.get('/developer/me', DeveloperMeSchema, options);
@@ -386,7 +395,9 @@ export async function getDeveloperSandbox(
   return response.sandbox;
 }
 
-export function upsertDeveloperSandbox(dataProfile: string): Promise<DeveloperSandboxTenant> {
+export function upsertDeveloperSandbox(
+  dataProfile: DeveloperSandboxDataProfile,
+): Promise<DeveloperSandboxTenant> {
   return identityHttpClient.request('/developer/console/sandbox', DeveloperSandboxTenantSchema, {
     method: 'PUT',
     body: {

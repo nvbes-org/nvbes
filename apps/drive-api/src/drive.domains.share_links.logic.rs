@@ -133,6 +133,19 @@ pub fn enforce_public_share_access(
     Ok(())
 }
 
+pub fn ensure_public_share_download_allowed(share: &PublicShareRecord) -> Result<(), AppError> {
+    if let Some(max_downloads) = share.max_downloads
+        && share.download_count >= max_downloads
+    {
+        return Err(AppError::forbidden(
+            "share_link_download_limit_reached",
+            "This share link has reached its download limit.",
+        ));
+    }
+
+    Ok(())
+}
+
 pub fn build_public_share_url(_share_link_id: Uuid, token: &str) -> String {
     format!("/public/shares/{token}")
 }
@@ -161,50 +174,5 @@ pub async fn build_signed_public_download_url(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domains::files::models::StorageObjectStatus;
-
-    fn shareable_object(status: StorageObjectStatus, scan_status: &str) -> ShareableObjectRecord {
-        ShareableObjectRecord {
-            id: Uuid::new_v4(),
-            status,
-            scan_status: scan_status.to_owned(),
-        }
-    }
-
-    #[test]
-    fn public_share_requires_clean_scan_outside_development() {
-        assert!(public_share_requires_clean_scan("staging"));
-        assert!(public_share_requires_clean_scan("production"));
-        assert!(!public_share_requires_clean_scan("development"));
-    }
-
-    #[test]
-    fn active_but_unclean_object_is_not_publicly_shareable_when_scan_is_required() {
-        let object = shareable_object(StorageObjectStatus::Active, "unscanned_disabled");
-
-        let error = ensure_shareable_object_for_public_link(&object, true)
-            .expect_err("unclean scan should block public sharing");
-
-        assert_eq!(error.code, "file_scan_not_cleared");
-    }
-
-    #[test]
-    fn development_can_share_active_unscanned_object() {
-        let object = shareable_object(StorageObjectStatus::Active, "unscanned_disabled");
-
-        ensure_shareable_object_for_public_link(&object, false)
-            .expect("development should allow active unscanned objects");
-    }
-
-    #[test]
-    fn quarantined_object_is_never_publicly_shareable() {
-        let object = shareable_object(StorageObjectStatus::Quarantined, "infected");
-
-        let error = ensure_shareable_object_for_public_link(&object, false)
-            .expect_err("quarantine should always block public sharing");
-
-        assert_eq!(error.code, "file_quarantined");
-    }
-}
+#[path = "drive.domains.share_links.logic.tests.rs"]
+mod tests;

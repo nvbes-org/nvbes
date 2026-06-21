@@ -1,0 +1,3 @@
+nvbes OSS chart installed.
+
+This chart is the public packaging boundary. Production templates must remain OSS-only and must not depend on managed cloud providers.

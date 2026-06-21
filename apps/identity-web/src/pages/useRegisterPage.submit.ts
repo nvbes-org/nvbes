@@ -5,7 +5,7 @@ import { identityAuthMutationKeys, submitRegisterMutationFn } from '../identity.
 import { resolvePowChallenge } from '../identity.auth.pow';
 import { identityApiBaseUrl } from '../identity.http';
 import { savePendingOAuthAuthorizeRequest } from '../identity.oauth';
-import { trackEvent } from '../identity.posthog';
+import { trackEvent } from '../identity.analytics';
 
 interface RegisterSubmitArgs {
   oauthRequest: ReturnType<typeof import('../identity.oauth').readOAuthAuthorizeRequest>;

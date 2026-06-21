@@ -30,43 +30,12 @@ pub(crate) async fn enforce_identifier_request_guards(
         ));
     }
 
-    verify_turnstile_if_enabled(config, meta, request).await?;
-
     if let Some(proof) = &request.bot_guard {
         crate::domains::auth::bot_guard::verify(proof, "login_identifier", &config.jwt_secret)?;
     }
 
     enforce_bot_score(headers, meta, request)?;
     Ok(())
-}
-
-async fn verify_turnstile_if_enabled(
-    config: &AppConfig,
-    meta: &LoginRequestMeta,
-    request: &IdentifierRequest,
-) -> Result<(), AppError> {
-    let Some(secret) = &config.turnstile_secret_key else {
-        return Ok(());
-    };
-
-    let Some(token) = request.turnstile_token.as_deref() else {
-        return Err(AppError::forbidden(
-            "missing_turnstile",
-            "Turnstile token required",
-        ));
-    };
-
-    crate::domains::auth::turnstile::verify_token(
-        secret,
-        token,
-        crate::domains::auth::turnstile::VerifyOptions {
-            ip: meta.ip().as_deref(),
-            expected_action: Some("login_identifier"),
-            expected_hostname: Some(&config.webauthn_rp_id),
-            idempotency_key: None,
-        },
-    )
-    .await
 }
 
 fn enforce_bot_score(

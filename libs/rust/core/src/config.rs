@@ -50,16 +50,12 @@ pub struct AppConfig {
     pub webauthn_rp_origin: String,
     pub webauthn_related_origins: Vec<String>,
     #[serde(skip_serializing)]
-    pub sentry_dsn: Option<String>,
-    pub sentry_logs_enabled: bool,
-    #[serde(skip_serializing)]
     pub otlp_endpoint: Option<String>,
     #[serde(skip_serializing)]
     pub otlp_authorization_header: Option<String>,
-    pub posthog_enabled: bool,
-    pub posthog_host: String,
+    pub product_analytics_enabled: bool,
     #[serde(skip_serializing)]
-    pub posthog_project_token: Option<String>,
+    pub product_analytics_token: Option<String>,
     #[serde(skip_serializing)]
     pub analytics_id_salt: Option<String>,
     pub profiling_enabled: bool,
@@ -73,28 +69,25 @@ pub struct AppConfig {
     #[serde(skip_serializing)]
     pub observability_internal_token: Option<String>,
     pub kms_enabled: bool,
-    #[serde(skip_serializing)]
-    pub scw_access_key: Option<String>,
-    #[serde(skip_serializing)]
-    pub scw_secret_key: Option<String>,
-    #[serde(skip_serializing)]
-    pub scw_project_id: Option<String>,
-    pub scw_region: String,
-    #[serde(skip_serializing)]
-    pub scw_kms_key_id: Option<String>,
     pub secret_manager_enabled: bool,
-    pub scw_tem_enabled: bool,
+    pub email_provider: String,
+    pub email_from_email: Option<String>,
+    pub email_from_name: Option<String>,
+    pub email_reply_to: Option<String>,
+    pub smtp_host: Option<String>,
+    pub smtp_port: u16,
+    pub smtp_username: Option<String>,
     #[serde(skip_serializing)]
-    pub scw_tem_from_email: Option<String>,
-    pub scw_tem_from_name: Option<String>,
-    #[serde(skip_serializing)]
-    pub scw_tem_reply_to: Option<String>,
-    #[serde(skip_serializing)]
-    pub scw_tem_webhook_secret: Option<String>,
+    pub smtp_password: Option<String>,
+    pub smtp_starttls: bool,
     pub storage_enabled: bool,
     pub storage_bucket: String,
     pub storage_endpoint: Option<String>,
     pub storage_region: String,
+    #[serde(skip_serializing)]
+    pub storage_access_key: Option<String>,
+    #[serde(skip_serializing)]
+    pub storage_secret_key: Option<String>,
     pub scan_enabled: bool,
     pub scan_engine: String,
     pub clamav_host: String,
@@ -106,8 +99,6 @@ pub struct AppConfig {
     pub quarantine_retention_days: u32,
     pub scan_fail_open: bool,
     pub trusted_proxy_cidrs: Vec<String>,
-    #[serde(skip_serializing)]
-    pub turnstile_secret_key: Option<String>,
     pub mtls_enabled: bool,
     pub mtls_port: u16,
     #[serde(skip_serializing)]

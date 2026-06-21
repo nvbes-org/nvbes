@@ -2,6 +2,7 @@
   "name": "@nvbes/identity-sdk-web",
   "version": "0.1.0",
   "description": "nvbes Identity SDK for web browsers (secure cookies)",
+  "license": "AGPL-3.0-only",
   "files": [
     "dist"
   ],

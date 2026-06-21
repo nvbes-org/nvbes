@@ -15,13 +15,7 @@ pub async fn logout(
     user_id: Uuid,
 ) -> Result<(), AppError> {
     let _ = db;
-    nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
-        .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
-
-    nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
-        .await
-        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
+    revoke_logout_session_state(redis, session_id, user_id).await?;
     let _ = record_auth_event(
         db,
         AuthAuditInput {
@@ -35,6 +29,22 @@ pub async fn logout(
         },
     )
     .await;
+    Ok(())
+}
+
+async fn revoke_logout_session_state(
+    redis: &nvbes_redis::RedisPool,
+    session_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
+        .await
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+
+    nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
+        .await
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
+
     Ok(())
 }
 

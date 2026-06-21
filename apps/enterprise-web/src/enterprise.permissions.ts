@@ -1,5 +1,14 @@
 import type { EnterpriseModuleGrant, EnterpriseRole } from '@nvbes/identity-client';
 
+const tenantOnlyEnterpriseNavItems = new Set([
+  'Developers',
+  'Policies',
+  'Security',
+  'Access reviews',
+  'Billing',
+  'Settings',
+]);
+
 const grantLabels: Record<EnterpriseModuleGrant, string> = {
   audit: 'Audit logs',
   billing: 'Billing',
@@ -27,6 +36,10 @@ export function canManagePolicies(input: {
   return (
     input.role === 'owner' || (input.role === 'admin' && input.module_grants.includes('policies'))
   );
+}
+
+export function isTenantOnlyEnterpriseNavItem(label: string): boolean {
+  return tenantOnlyEnterpriseNavItems.has(label);
 }
 
 export function isLastOwnerRemoval(input: {
