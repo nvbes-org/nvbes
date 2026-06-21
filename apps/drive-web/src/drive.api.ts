@@ -1,4 +1,5 @@
 import { createHttpClient } from '@nvbes/http-client';
+import { createVerifiedFetch } from '@nvbes/web-runtime';
 import { z } from 'zod';
 
 const DriveUserViewSchema = z.object({
@@ -45,12 +46,17 @@ import { getValidAccessToken } from './drive.session';
 
 export async function driveClient(accessToken?: string) {
   const token = accessToken || (await getValidAccessToken());
+  const baseUrl = driveApiBaseUrl();
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return createHttpClient({
-    baseUrl: driveApiBaseUrl(),
+    baseUrl,
+    fetchImpl: createVerifiedFetch({
+      allowedOrigins: [baseUrl],
+      credentials: 'include',
+    }),
     headers,
   });
 }

@@ -20,6 +20,8 @@ pub mod service;
 pub mod stripe;
 #[path = "drive.domains.billing.types.rs"]
 pub mod types;
+#[path = "drive.domains.billing.usage_events.rs"]
+pub mod usage_events;
 #[path = "drive.domains.billing.webhooks.rs"]
 pub mod webhooks;
 

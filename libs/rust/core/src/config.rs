@@ -1,3 +1,5 @@
+#[path = "config.billing.rs"]
+mod billing;
 #[path = "config.env.rs"]
 mod env;
 #[path = "config.from_env.rs"]
@@ -43,6 +45,10 @@ pub struct AppConfig {
     #[serde(skip_serializing)]
     pub jwt_secret: String,
     pub stripe_api_base_url: String,
+    #[serde(skip_serializing)]
+    pub mollie_api_key: Option<String>,
+    pub mollie_api_base_url: String,
+    pub billing_mollie_enabled: bool,
     pub billing_default_success_url: String,
     pub billing_default_cancel_url: String,
     pub billing_default_portal_return_url: String,

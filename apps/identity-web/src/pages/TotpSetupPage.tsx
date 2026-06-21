@@ -17,7 +17,6 @@ export default function TotpSetupPage() {
     onTotpCodeChange,
     onSetup,
     onConfirm,
-    onCopySecret,
   } = useTotpSetupPage();
 
   if (step === 'stepup') {
@@ -53,7 +52,6 @@ export default function TotpSetupPage() {
         totpCode={totpCode}
         error={error}
         loading={loading}
-        onCopySecret={onCopySecret}
         onTotpCodeChange={onTotpCodeChange}
         onCancel={navigateBack}
         onSubmit={onConfirm}

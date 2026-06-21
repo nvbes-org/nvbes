@@ -1,13 +1,14 @@
 use sqlx::PgPool;
 
 use super::super::types::*;
-use super::super::{db, policy, stripe};
+use super::super::{db, policy, provider_mollie, provider_routing, stripe};
 use crate::domains::auth::{
     risk::{self, RiskDecision, RiskEventInput},
     verification,
 };
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
-use nvbes_billing::validate_plan_code;
+use nvbes_billing::provider::{ProviderCheckoutInput, ProviderCode};
+use nvbes_billing::{plan_monthly_price_cents, validate_plan_code};
 use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
@@ -53,20 +54,6 @@ pub async fn create_checkout_session(
         ));
     }
 
-    let mapping = db::fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id).await?;
-    let customer_id = match record
-        .stripe_customer_id
-        .clone()
-        .or_else(|| record.billing_customer_id.clone())
-    {
-        Some(customer_id) => customer_id,
-        None => {
-            let customer = stripe::create_stripe_customer(config, &record).await?;
-            db::upsert_billing_customer_tx(&mut tx, access.workspace_id, &customer.id).await?;
-            customer.id
-        }
-    };
-
     let success_url = policy::resolve_billing_redirect_url(
         input.success_url.as_deref(),
         &config.billing_default_success_url,
@@ -84,17 +71,85 @@ pub async fn create_checkout_session(
         "NVBES_BILLING_CANCEL_URL",
     )?;
 
-    let session = stripe::create_stripe_checkout_session(
-        config,
-        &customer_id,
-        record.owner_principal_id,
-        access.workspace_id,
-        &target_plan.code,
-        &mapping.stripe_price_id,
-        &success_url,
-        &cancel_url,
-    )
-    .await?;
+    let provider = provider_routing::route_provider(&provider_routing::ProviderRouteRequest {
+        country: record.country.clone(),
+        currency: "EUR".to_string(),
+        payment_method: None,
+        amount_minor: plan_monthly_price_cents(&target_plan.code),
+        mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
+    });
+
+    let checkout = match provider {
+        ProviderCode::Stripe => {
+            let mapping = db::fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id).await?;
+            let customer_id = match record
+                .stripe_customer_id
+                .clone()
+                .or_else(|| record.billing_customer_id.clone())
+            {
+                Some(customer_id) => customer_id,
+                None => {
+                    let customer = stripe::create_stripe_customer(config, &record).await?;
+                    db::upsert_billing_customer_tx(&mut tx, access.workspace_id, &customer.id)
+                        .await?;
+                    customer.id
+                }
+            };
+            let session = stripe::create_stripe_checkout_session(
+                config,
+                &customer_id,
+                record.owner_principal_id,
+                access.workspace_id,
+                &target_plan.code,
+                &mapping.stripe_price_id,
+                &success_url,
+                &cancel_url,
+            )
+            .await?;
+            CheckoutProviderResult {
+                provider: "stripe".to_string(),
+                checkout_id: session.id,
+                url: session.url,
+                provider_customer_id: customer_id.clone(),
+                provider_price_id: Some(mapping.stripe_price_id.clone()),
+                payment_id: None,
+                stripe_customer_id: customer_id,
+                stripe_price_id: mapping.stripe_price_id,
+            }
+        }
+        ProviderCode::Mollie => {
+            let provider_customer_id = record
+                .billing_customer_id
+                .clone()
+                .unwrap_or_else(|| access.workspace_id.to_string());
+            let payment = provider_mollie::create_mollie_payment(
+                config,
+                &ProviderCheckoutInput {
+                    tenant_id: record.workspace_id.to_string(),
+                    provider_customer_id: provider_customer_id.clone(),
+                    amount_minor: plan_monthly_price_cents(&target_plan.code),
+                    currency: "EUR".to_string(),
+                    success_url: success_url.clone(),
+                    cancel_url: cancel_url.clone(),
+                    webhook_url: Some(format!(
+                        "{}/webhooks/mollie",
+                        config.api_base_url.trim_end_matches('/')
+                    )),
+                },
+            )
+            .await?;
+            CheckoutProviderResult {
+                provider: "mollie".to_string(),
+                checkout_id: payment.checkout_id.clone(),
+                url: payment.url,
+                provider_customer_id,
+                provider_price_id: None,
+                payment_id: Some(payment.checkout_id),
+                stripe_customer_id: String::new(),
+                stripe_price_id: String::new(),
+            }
+        }
+    };
 
     db::insert_audit_event(
         &mut tx,
@@ -108,10 +163,11 @@ pub async fn create_checkout_session(
             user_agent: user_agent.as_deref(),
             metadata: serde_json::json!({
                 "plan_code": target_plan.code,
-                "stripe_customer_id": customer_id,
-                "stripe_price_id": mapping.stripe_price_id,
-                "stripe_product_id": mapping.stripe_product_id,
-                "checkout_session_id": session.id,
+                "provider": checkout.provider,
+                "provider_customer_id": checkout.provider_customer_id,
+                "provider_price_id": checkout.provider_price_id,
+                "checkout_id": checkout.checkout_id,
+                "payment_id": checkout.payment_id,
             }),
         },
     )
@@ -135,17 +191,33 @@ pub async fn create_checkout_session(
             }),
             decision: RiskDecision::Allow,
             metadata: serde_json::json!({
-                "checkout_session_id": session.id,
+                "provider": checkout.provider,
+                "checkout_id": checkout.checkout_id,
             }),
         },
     )
     .await;
 
     Ok(CheckoutSessionResponse {
-        provider: "stripe".to_string(),
-        session_id: session.id,
-        url: session.url,
-        stripe_customer_id: customer_id,
-        stripe_price_id: mapping.stripe_price_id,
+        provider: checkout.provider,
+        session_id: checkout.checkout_id.clone(),
+        checkout_id: checkout.checkout_id,
+        url: checkout.url,
+        provider_customer_id: checkout.provider_customer_id,
+        provider_price_id: checkout.provider_price_id,
+        payment_id: checkout.payment_id,
+        stripe_customer_id: checkout.stripe_customer_id,
+        stripe_price_id: checkout.stripe_price_id,
     })
+}
+
+struct CheckoutProviderResult {
+    provider: String,
+    checkout_id: String,
+    url: String,
+    provider_customer_id: String,
+    provider_price_id: Option<String>,
+    payment_id: Option<String>,
+    stripe_customer_id: String,
+    stripe_price_id: String,
 }

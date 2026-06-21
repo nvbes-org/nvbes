@@ -1,11 +1,11 @@
+import { InvisibleUnicodeWarning, RelativeTime } from '@nvbes/web-runtime';
+import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
   Calendar,
-  Check,
   CheckCircle2,
   Clock,
-  Copy,
   History,
   KeyRound,
   Loader2,
@@ -30,7 +30,6 @@ export function SecretsPage() {
   const [overlapHours, setOverlapHours] = useState(24);
   const [understandChecked, setUnderstandChecked] = useState(false);
   const [newSecretResult, setNewSecretResult] = useState<RotateDeveloperSecret | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Queries
   const clientsQuery = useQuery({
@@ -54,7 +53,6 @@ export function SecretsPage() {
   useEffect(() => {
     setNewSecretResult(null);
     setUnderstandChecked(false);
-    setCopied(false);
   }, [activeClientId]);
 
   // Mutations
@@ -77,17 +75,6 @@ export function SecretsPage() {
       });
     },
   });
-
-  // Copy helper
-  const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy secret', err);
-    }
-  };
 
   if (clientsQuery.isLoading) {
     return <div className="h-80 animate-pulse rounded-lg border border-border bg-card" />;
@@ -255,18 +242,9 @@ export function SecretsPage() {
                 <span className="flex-1 text-emerald-950 font-bold select-all">
                   {newSecretResult.client_secret}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(newSecretResult.client_secret)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-background text-foreground hover:bg-muted border border-border shadow-sm transition-all"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
+                <ClipboardButton value={newSecretResult.client_secret} className="shadow-sm" />
               </div>
+              <InvisibleUnicodeWarning value={newSecretResult.client_secret} />
 
               {/* Warnings and deadlines */}
               <div className="flex gap-2 text-xs text-emerald-800">
@@ -278,7 +256,7 @@ export function SecretsPage() {
                     <li>
                       The previous secret remains valid until{' '}
                       <span className="font-semibold">
-                        {new Date(newSecretResult.overlap_ends_at).toLocaleString()}
+                        <RelativeTime value={newSecretResult.overlap_ends_at} />
                       </span>{' '}
                       ({overlapHours} hours from now).
                     </li>
@@ -353,17 +331,17 @@ export function SecretsPage() {
                             <div className="space-y-1">
                               <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(v.created_at).toLocaleDateString()}
+                                <RelativeTime value={v.created_at} />
                               </div>
                               {v.expires_at ? (
                                 <div className="flex items-center gap-1 text-[10px] text-amber-600 font-medium">
                                   <Clock className="h-3 w-3" />
-                                  Exp: {new Date(v.expires_at).toLocaleString()}
+                                  Exp: <RelativeTime value={v.expires_at} />
                                 </div>
                               ) : null}
                               {v.revoked_at ? (
                                 <div className="text-[10px] text-rose-600 font-medium">
-                                  Revoked: {new Date(v.revoked_at).toLocaleDateString()}
+                                  Revoked: <RelativeTime value={v.revoked_at} />
                                 </div>
                               ) : null}
                             </div>

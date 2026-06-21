@@ -1,5 +1,6 @@
 'use client';
 
+import { trustSafeHtml, VerifiedHtml } from '@nvbes/web-runtime';
 import { formatHex, oklch } from 'culori';
 import QR from 'qrcode';
 import { type HTMLAttributes, useEffect, useState } from 'react';
@@ -73,10 +74,9 @@ export const QRCode = ({
   }
 
   return (
-    <div
+    <VerifiedHtml
       className={cn('size-full', '[&_svg]:size-full', className)}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: "Required for SVG"
-      dangerouslySetInnerHTML={{ __html: svg }}
+      html={trustSafeHtml(svg, 'locally generated qrcode svg')}
       {...props}
     />
   );

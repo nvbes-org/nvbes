@@ -58,15 +58,17 @@ Fondations marketing/growth:
 
 Fondations business/FinOps:
 
-- Stripe comme provider billing V1.
-- Mapping Stripe Product/Price/Customer/Subscription/Invoice/Tax.
-- Ledger interne des usages facturables.
+- Plateforme billing interne canonique pour catalogue, subscriptions, invoices, payments, ledger, usage, entitlements et reconciliation.
+- Stripe comme PSP principal V1; Mollie comme PSP secondaire active par routing provider-neutral.
+- Mappings provider-neutral pour Product/Price/Customer/Subscription/Invoice/Tax, avec compatibilite Stripe pendant la transition.
+- Ledger interne append-only pour usages, invoices, paiements, refunds, credits, write-offs et adjustments.
 - Meters V1: `storage_gb_month`, `team_seat_month`, `egress_gb` en suivi.
 - TVA EU, B2B/B2C et factures conformes.
 - Dashboard marge/couts par workspace et par plan.
 - Budgets cloud par environnement.
 - Protections anti-abus sur trials.
 - Validation marge brute avant lancement payant.
+- Validation externe obligatoire avant activation multi-pays payante: TVA, e-invoicing, revenue recognition audit et retention des pieces comptables.
 
 Fondations infra/DevOps:
 
@@ -134,3 +136,4 @@ Ces idees ne sont pas dans le scope Drive V1/V2. Elles documentent des pistes fu
 - Trajectoire low budget vers plateforme globale: plan starter economique avec chemin d'upgrade progressif vers l'architecture zero-stack. Voir [Plan Starter Low Budget vers Plateforme Globale](blueprint/nvbes-low-budget-to-global-platform.plan.md).
 - Hierarchie monorepo OSS/Cloud: separation entre source privee, export public OSS, docs publiques et operations Cloud. Voir [Plan Monorepo nvbes OSS et nvbes Cloud](blueprint/nvbes-oss-cloud-monorepo.plan.md).
 - Structuration complete Big Bang zero dette: migration complete vers une plateforme nvbes reconstruite from scratch. Voir [Plan Structuration Complete Big Bang Zero Dette](blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md).
+- Plateforme billing interne multi-provider: internaliser catalogue, subscriptions, invoices, payments, ledger, tax evidence, reconciliation, routing Stripe/Mollie et reporting finance sans devenir PSP. Voir [Plan Plateforme Billing Interne Multi-Provider](blueprint/nvbes-internal-billing-platform.plan.md).

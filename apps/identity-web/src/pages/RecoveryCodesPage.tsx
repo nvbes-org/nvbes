@@ -1,10 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import {
-  copyRecoveryCodes,
-  downloadRecoveryCodes,
-  generateCodesWithPassword,
-} from './RecoveryCodesPage.actions';
+import { downloadRecoveryCodes, generateCodesWithPassword } from './RecoveryCodesPage.actions';
 import { RecoveryCodesListStep } from './RecoveryCodesPage.list';
 import { RecoveryCodesPasswordStep } from './RecoveryCodesPage.password';
 import { RecoveryCodesStepUp } from './RecoveryCodesPage.stepup';
@@ -17,7 +13,6 @@ export default function RecoveryCodesPage() {
   const [codes, setCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,12 +27,6 @@ export default function RecoveryCodesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const copyAll = () => {
-    void copyRecoveryCodes(codes);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const download = () => {
@@ -69,9 +58,7 @@ export default function RecoveryCodesPage() {
   return (
     <RecoveryCodesListStep
       codes={codes}
-      copied={copied}
       onBack={() => void navigate({ to: '/account/security' })}
-      onCopy={copyAll}
       onDownload={download}
     />
   );

@@ -1,5 +1,5 @@
-import { Copy } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
+import { ClipboardButton } from '@nvbes/web-ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,18 +32,6 @@ export function SecretDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!open) setCopied(false);
-  }, [open]);
-
-  const handleCopy = async () => {
-    if (!result) return;
-    await navigator.clipboard.writeText(result.client_secret);
-    setCopied(true);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -69,14 +57,12 @@ export function SecretDialog({
                 </Badge>
               </div>
               <Card className="mt-4 break-all p-3 font-mono text-sm">{result.client_secret}</Card>
+              <InvisibleUnicodeWarning value={result.client_secret} />
             </Card>
           </div>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={handleCopy} disabled={!result}>
-            <Copy data-icon="inline-start" />
-            {copied ? 'Copie' : 'Copier'}
-          </Button>
+          {result ? <ClipboardButton value={result.client_secret} label="Copier" /> : null}
           <Button onClick={() => onOpenChange(false)}>Fermer</Button>
         </DialogFooter>
       </DialogContent>

@@ -2,7 +2,9 @@ use anyhow::Context;
 use serde_json::Value;
 
 use crate::app::AppState;
-use crate::domains::billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS;
+use crate::domains::billing::jobs::{
+    JOB_STRIPE_WEBHOOK_PROCESS, enqueue_billing_email_for_stripe_event,
+};
 use crate::domains::billing::webhooks::process_stripe_event;
 use crate::email::jobs::{
     EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
@@ -136,6 +138,9 @@ async fn process_stripe_webhook_job(state: &AppState, job: &QueuedJob) -> anyhow
         }
 
         capture_billing_webhook_analytics(state, workspace_id, &job_payload, plan_code.as_deref());
+        enqueue_billing_email_for_stripe_event(&state.db, &state.redis, workspace_id, &job_payload)
+            .await
+            .map_err(|e| anyhow::anyhow!(format!("Billing email enqueue failed: {e:?}")))?;
     }
 
     Ok(serde_json::json!({"status": "processed"}))

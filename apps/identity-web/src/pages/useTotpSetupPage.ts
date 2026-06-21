@@ -72,8 +72,5 @@ export function useTotpSetupPage() {
     onTotpCodeChange: setTotpCode,
     onSetup: handleSetup,
     onConfirm: handleConfirm,
-    onCopySecret: () => {
-      void navigator.clipboard.writeText(secretBase32);
-    },
   };
 }

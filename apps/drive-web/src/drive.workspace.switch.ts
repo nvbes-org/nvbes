@@ -1,4 +1,5 @@
 import { createRequestHeaders } from '@nvbes/http-client';
+import { verifiedFetch } from '@nvbes/web-runtime';
 import { z } from 'zod';
 
 const SwitchWorkspaceResultSchema = z.object({
@@ -27,7 +28,9 @@ export async function switchDriveWorkspace(
   accessToken: string,
   workspaceId: string,
 ): Promise<void> {
-  const response = await fetch(`${identityApiBaseUrl()}/auth/workspaces/${workspaceId}/switch`, {
+  const baseUrl = identityApiBaseUrl();
+  const response = await verifiedFetch(`${baseUrl}/auth/workspaces/${workspaceId}/switch`, {
+    allowedOrigins: [baseUrl],
     method: 'POST',
     headers: createRequestHeaders('POST', {
       Authorization: `Bearer ${accessToken}`,

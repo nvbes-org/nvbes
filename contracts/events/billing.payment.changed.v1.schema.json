@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.com/events/billing.payment.changed.v1.schema.json",
+  "title": "billing.payment.changed.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tenant_id",
+    "payment_id",
+    "provider",
+    "status",
+    "currency",
+    "amount_minor",
+    "changed_at"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "payment_id": { "type": "string", "format": "uuid" },
+    "provider": { "type": "string", "enum": ["stripe", "mollie"] },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "requires_action", "authorized", "captured", "failed", "refunded", "disputed", "canceled"]
+    },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "amount_minor": { "type": "integer", "minimum": 0 },
+    "changed_at": { "type": "string", "format": "date-time" },
+    "provider_payment_id": { "type": "string" }
+  }
+}

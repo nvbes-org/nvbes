@@ -107,8 +107,12 @@ pub async fn create_checkout_session(
 
     Ok(CheckoutSessionResponse {
         provider: "stripe".to_string(),
-        session_id: session.id,
+        session_id: session.id.clone(),
+        checkout_id: session.id,
         url: session.url,
+        provider_customer_id: customer_id.clone(),
+        provider_price_id: Some(mapping.stripe_price_id.clone()),
+        payment_id: None,
         stripe_customer_id: customer_id,
         stripe_price_id: mapping.stripe_price_id,
     })

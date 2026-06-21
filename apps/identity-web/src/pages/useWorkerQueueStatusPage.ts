@@ -1,3 +1,4 @@
+import { useVisibilityAwareInterval } from '@nvbes/web-runtime';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { useAccountContext } from '@/hooks/useAccountContext';
@@ -23,6 +24,7 @@ export function useWorkerQueueStatusPage() {
   const [snapshot, setSnapshot] = useState<WorkerQueueStatusResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const liveInterval = useVisibilityAwareInterval(30_000, false);
 
   useEffect(() => {
     const workspaceId = submittedWorkspaceId || me?.current_workspace_id || '';
@@ -63,8 +65,17 @@ export function useWorkerQueueStatusPage() {
     };
 
     void fetchSnapshot();
-    return () => controller.abort();
-  }, [me?.current_workspace_id, submittedWorkspaceId]);
+
+    const intervalId =
+      liveInterval === false ? null : window.setInterval(() => void fetchSnapshot(), liveInterval);
+
+    return () => {
+      controller.abort();
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [liveInterval, me?.current_workspace_id, submittedWorkspaceId]);
 
   return {
     me,

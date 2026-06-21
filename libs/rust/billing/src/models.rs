@@ -8,6 +8,7 @@ use uuid::Uuid;
 #[sqlx(type_name = "billing_provider", rename_all = "snake_case")]
 pub enum BillingProvider {
     Stripe,
+    Mollie,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Eq)]

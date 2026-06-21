@@ -60,7 +60,7 @@ export function LoginPageConsent({
 
   return (
     <div className="flex flex-col gap-5" style={styleOverrides}>
-      {customCss && <style dangerouslySetInnerHTML={{ __html: customCss }} />}
+      {customCss ? <style>{customCss}</style> : null}
       <Card className="p-5">
         <div className="mb-4 flex items-center gap-3">
           {logoUrl ? (

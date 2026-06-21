@@ -1,7 +1,6 @@
 import { createHttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
-import { identityApiBaseUrl, identityHttpClient } from './identity.http';
-import { getDeveloperAccessToken } from './developer.session.storage';
+import { identityApiBaseUrl, identityHttpClient, identityVerifiedFetch } from './identity.http';
 import {
   CreateDeveloperAppResponseSchema,
   CreateDeveloperWebhookEndpointResponseSchema,
@@ -59,14 +58,9 @@ import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
 const developerHttpClient = createHttpClient({
   baseUrl: identityApiBaseUrl,
   credentials: 'include',
-  headers: developerAuthHeaders(),
+  fetchImpl: identityVerifiedFetch,
 });
 const EmptyResponseSchema = z.undefined();
-
-function developerAuthHeaders(): HeadersInit | undefined {
-  const token = getDeveloperAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : undefined;
-}
 
 export function getDeveloperMe(options?: { signal?: AbortSignal }) {
   return developerHttpClient.get('/developer/me', DeveloperMeSchema, options);

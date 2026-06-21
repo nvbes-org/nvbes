@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle, Bug, CheckCircle2, Clock3, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
@@ -43,6 +44,7 @@ export function TokenDebuggerPage() {
             value={accessToken}
             onChange={(event) => setAccessToken(event.currentTarget.value)}
           />
+          <InvisibleUnicodeWarning value={accessToken} />
         </label>
         <button
           className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"

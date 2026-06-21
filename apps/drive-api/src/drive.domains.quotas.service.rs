@@ -2,7 +2,9 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use super::db;
-use super::logic::{storage_alerts, storage_usage_percent, upload_blocked};
+use super::logic::{
+    billing_status_blocks_upload, storage_alerts, storage_usage_percent, upload_blocked,
+};
 use super::observability;
 pub use super::types::{
     AuditEventInput, BandwidthOutUsageInput, FileUploadedUsageInput, QuotaResponse,
@@ -41,7 +43,23 @@ pub async fn ensure_upload_allowed_tx(
     workspace_id: Uuid,
     requested_size_bytes: i64,
 ) -> Result<(), AppError> {
+    if let Some(status) = db::lock_subscription_status(tx, workspace_id).await?
+        && billing_status_blocks_upload(&status)
+    {
+        return Err(AppError::forbidden(
+            "billing_access_suspended",
+            "Workspace billing policy has suspended new uploads.",
+        ));
+    }
+
     let snapshot = db::lock_usage_snapshot(tx, workspace_id).await?;
+
+    if !snapshot.upload_allowed {
+        return Err(AppError::forbidden(
+            "billing_upload_not_entitled",
+            "Workspace entitlements do not allow new uploads.",
+        ));
+    }
 
     if upload_blocked(snapshot.used_storage_bytes, snapshot.included_storage_bytes) {
         return Err(AppError::conflict(

@@ -1,3 +1,6 @@
+import { getSafeLocalStorage } from '@nvbes/web-runtime';
+import { z } from 'zod';
+
 export type DeveloperSession = {
   accessToken: string;
   refreshToken?: string;
@@ -6,38 +9,29 @@ export type DeveloperSession = {
 };
 
 const STORAGE_SESSION_KEY = 'nvbes_developer_session';
+const DeveloperSessionSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string().optional(),
+  scope: z.string(),
+  tokenType: z.string(),
+});
 
 export function getDeveloperSession(): DeveloperSession | null {
-  const storage = browserLocalStorage();
-  const raw = storage?.getItem(STORAGE_SESSION_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw) as DeveloperSession;
-  } catch {
+  const session = getSafeLocalStorage().getJson(STORAGE_SESSION_KEY, DeveloperSessionSchema);
+  if (!session) {
     clearDeveloperSession();
-    return null;
   }
+  return session;
 }
 
 export function saveDeveloperSession(session: DeveloperSession): void {
-  browserLocalStorage()?.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
+  getSafeLocalStorage().setJson(STORAGE_SESSION_KEY, session);
 }
 
 export function clearDeveloperSession(): void {
-  browserLocalStorage()?.removeItem(STORAGE_SESSION_KEY);
+  getSafeLocalStorage().removeItem(STORAGE_SESSION_KEY);
 }
 
 export function getDeveloperAccessToken(): string | null {
   return getDeveloperSession()?.accessToken ?? null;
-}
-
-function browserLocalStorage(): Storage | null {
-  if (typeof localStorage === 'undefined' || typeof localStorage.getItem !== 'function') {
-    return null;
-  }
-
-  return localStorage;
 }

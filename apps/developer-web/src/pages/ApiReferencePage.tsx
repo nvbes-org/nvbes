@@ -1,20 +1,21 @@
+import { verifiedFetchJson } from '@nvbes/web-runtime';
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
-type OpenApiDocument = {
-  info?: {
-    title?: string;
-    version?: string;
-  };
-  paths?: Record<string, unknown>;
-};
+const OpenApiDocumentSchema = z.object({
+  info: z
+    .object({
+      title: z.string().optional(),
+      version: z.string().optional(),
+    })
+    .optional(),
+  paths: z.record(z.string(), z.unknown()).optional(),
+});
+
+type OpenApiDocument = z.infer<typeof OpenApiDocumentSchema>;
 
 async function fetchOpenApi(): Promise<OpenApiDocument> {
-  const response = await fetch('/api/openapi.json', { credentials: 'include' });
-  if (!response.ok) {
-    throw new Error('OpenAPI document unavailable');
-  }
-
-  return (await response.json()) as OpenApiDocument;
+  return verifiedFetchJson('/api/openapi.json', OpenApiDocumentSchema, { credentials: 'include' });
 }
 
 export function ApiReferencePage() {

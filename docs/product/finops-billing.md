@@ -28,11 +28,13 @@ Objets Stripe a mapper:
 - Meter ou usage event selon le modele Stripe disponible au moment de l'implementation.
 - Webhook Event.
 
-Regle:
+Regles:
 
 - nvbes garde une source interne auditable des usages avant envoi a Stripe.
-- Stripe est la source de verite pour paiement, facture et statut financier.
+- Le ledger interne nvbes est canonique; Stripe et Mollie sont des providers d'execution et de reconciliation.
+- Stripe reste provider d'execution V1 pour checkout, paiement, portail et webhooks tant que la plateforme interne monte en maturite.
 - nvbes est la source de verite pour droits produit, quotas, usages et audit.
+- Les invoices, payments, refunds, credit notes, write-offs et adjustments doivent etre reconstructibles depuis les tables canoniques nvbes.
 
 ## Unit Economics
 
@@ -153,6 +155,7 @@ V1 doit couvrir:
 Regle:
 
 - Aucun lancement payant EU sans validation fiscale/comptable minimale.
+- Les calculs TVA, l'e-invoicing, la revenue recognition auditee et la retention des pieces comptables restent sous validation expert-comptable/fiscaliste avant activation multi-pays.
 
 ## Objectifs Business V1
 
@@ -199,7 +202,7 @@ Alertes:
 ## Gouvernance Billing
 
 - Toute modification de prix ou quota passe par review.
-- Les changements Stripe Product/Price sont versionnes dans les docs.
+- Les changements catalogue/prix nvbes sont versionnes; les objets Stripe/Mollie sont des miroirs ou references provider.
 - Les anciens prix restent supportes ou migration documentee.
 - Les refunds, credits et adjustments sont audites.
 - Les erreurs billing SEV2 ou plus ont postmortem.

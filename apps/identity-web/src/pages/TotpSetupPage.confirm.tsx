@@ -1,3 +1,5 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
+import { ClipboardButton } from '@nvbes/web-ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,7 +14,6 @@ export function TotpConfirmCard({
   totpCode,
   error,
   loading,
-  onCopySecret,
   onTotpCodeChange,
   onCancel,
   onSubmit,
@@ -22,7 +23,6 @@ export function TotpConfirmCard({
   totpCode: string;
   error: string | null;
   loading: boolean;
-  onCopySecret: () => void;
   onTotpCodeChange: (value: string) => void;
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -50,10 +50,9 @@ export function TotpConfirmCard({
             <code className="flex-1 break-all rounded bg-muted px-3 py-2 text-sm font-mono">
               {secretBase32}
             </code>
-            <Button variant="outline" size="sm" onClick={onCopySecret}>
-              Copier
-            </Button>
+            <ClipboardButton value={secretBase32} label="Copier" className="h-9" />
           </div>
+          <InvisibleUnicodeWarning value={secretBase32} />
         </div>
 
         <Separator />

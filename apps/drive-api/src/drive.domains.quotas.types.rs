@@ -62,6 +62,7 @@ pub struct BandwidthOutUsageInput<'a> {
 pub struct UsageSnapshot {
     pub included_storage_bytes: i64,
     pub used_storage_bytes: i64,
+    pub upload_allowed: bool,
 }
 
 pub struct StorageThresholdAuditInput<'a> {

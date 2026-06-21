@@ -1,8 +1,18 @@
+import { getSafeLocalStorage } from '@nvbes/web-runtime';
+import { z } from 'zod';
 import type { AccountSession } from './drive.session.client';
 
 const STORAGE_SESSIONS_KEY = 'nvbes_drive_sessions';
 const STORAGE_ACTIVE_ID_KEY = 'nvbes_drive_active_user_id';
 const SESSION_STORAGE_KEYS = new Set([STORAGE_SESSIONS_KEY, STORAGE_ACTIVE_ID_KEY]);
+const AccountSessionSchema = z.object({
+  accessToken: z.string(),
+  email: z.string(),
+  name: z.string(),
+  refreshToken: z.string().optional(),
+  userId: z.string(),
+});
+const AccountSessionsSchema = z.array(AccountSessionSchema);
 
 const listeners = new Set<() => void>();
 let storageListenerInstalled = false;
@@ -59,33 +69,29 @@ export function notifySessionChanges(): void {
 }
 
 export function getSessions(): AccountSession[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_SESSIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return getSafeLocalStorage().getJson(STORAGE_SESSIONS_KEY, AccountSessionsSchema) ?? [];
 }
 
 export function saveSessions(sessions: AccountSession[]): void {
-  localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(sessions));
+  getSafeLocalStorage().setJson(STORAGE_SESSIONS_KEY, sessions);
 }
 
 export function getActiveSessionId(): string | null {
-  return localStorage.getItem(STORAGE_ACTIVE_ID_KEY);
+  return getSafeLocalStorage().getItem(STORAGE_ACTIVE_ID_KEY);
 }
 
 export function setActiveSessionId(userId: string): void {
-  localStorage.setItem(STORAGE_ACTIVE_ID_KEY, userId);
+  getSafeLocalStorage().setItem(STORAGE_ACTIVE_ID_KEY, userId);
 }
 
 export function clearActiveSessionId(): void {
-  localStorage.removeItem(STORAGE_ACTIVE_ID_KEY);
+  getSafeLocalStorage().removeItem(STORAGE_ACTIVE_ID_KEY);
 }
 
 export function clearStoredSessions(): void {
-  localStorage.removeItem(STORAGE_ACTIVE_ID_KEY);
-  localStorage.removeItem(STORAGE_SESSIONS_KEY);
+  const storage = getSafeLocalStorage();
+  storage.removeItem(STORAGE_ACTIVE_ID_KEY);
+  storage.removeItem(STORAGE_SESSIONS_KEY);
 }
 
 export function getActiveSession(): AccountSession | null {

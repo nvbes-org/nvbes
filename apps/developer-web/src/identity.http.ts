@@ -1,4 +1,5 @@
 import { createHttpClient } from '@nvbes/http-client';
+import { verifiedFetch } from '@nvbes/web-runtime';
 import { getDeveloperAccessToken } from './developer.session.storage';
 
 export const identityApiBaseUrl =
@@ -6,13 +7,23 @@ export const identityApiBaseUrl =
   globalThis.location?.origin ||
   'http://localhost:4000';
 
+export const identityVerifiedFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(init?.headers);
+  const token = getDeveloperAccessToken();
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  return verifiedFetch(input, {
+    ...init,
+    allowedOrigins: [identityApiBaseUrl],
+    credentials: init?.credentials ?? 'include',
+    headers,
+  });
+};
+
 export const identityHttpClient = createHttpClient({
   baseUrl: identityApiBaseUrl,
   credentials: 'include',
-  headers: developerAuthHeaders(),
+  fetchImpl: identityVerifiedFetch,
 });
-
-function developerAuthHeaders(): HeadersInit | undefined {
-  const token = getDeveloperAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : undefined;
-}

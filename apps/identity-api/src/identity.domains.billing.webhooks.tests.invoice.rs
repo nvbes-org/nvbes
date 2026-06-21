@@ -181,6 +181,44 @@ fn ensure_invoice_amount_consistency_rejects_missing_amount_due() {
 }
 
 #[test]
+fn ensure_invoice_payment_success_consistency_accepts_paid_invoice() {
+    let object = json!({
+        "status": "paid",
+        "amount_paid": 4680,
+        "subscription": "sub_123",
+    });
+
+    assert!(ensure_invoice_payment_success_consistency(&object).is_ok());
+}
+
+#[test]
+fn ensure_invoice_payment_success_consistency_rejects_unpaid_invoice() {
+    let object = json!({
+        "status": "open",
+        "amount_paid": 0,
+        "subscription": "sub_123",
+    });
+
+    let error = ensure_invoice_payment_success_consistency(&object)
+        .expect_err("payment succeeded should require paid invoice status");
+
+    assert_eq!(error.code, "webhook_invoice_status_mismatch");
+}
+
+#[test]
+fn ensure_invoice_payment_success_consistency_rejects_missing_amount_paid() {
+    let object = json!({
+        "status": "paid",
+        "subscription": "sub_123",
+    });
+
+    let error = ensure_invoice_payment_success_consistency(&object)
+        .expect_err("payment succeeded should require amount_paid");
+
+    assert_eq!(error.code, "webhook_invoice_amount_paid_missing");
+}
+
+#[test]
 fn ensure_invoice_subscription_consistency_accepts_matching_subscription() {
     let object = json!({
         "subscription": "sub_123",

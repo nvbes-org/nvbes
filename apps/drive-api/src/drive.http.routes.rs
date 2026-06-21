@@ -14,6 +14,7 @@ use super::openapi;
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 struct HealthResponse {
+    release_id: &'static str,
     status: &'static str,
 }
 
@@ -65,7 +66,10 @@ async fn health(State(state): State<crate::app::AppState>) -> Json<HealthRespons
         state.db.num_idle(),
     );
 
-    Json(HealthResponse { status: "ok" })
+    Json(HealthResponse {
+        release_id: env!("CARGO_PKG_VERSION"),
+        status: "ok",
+    })
 }
 
 async fn dashboards() -> Json<observability::DashboardsResponse> {
