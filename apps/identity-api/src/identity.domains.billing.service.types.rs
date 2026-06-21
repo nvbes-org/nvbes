@@ -20,3 +20,15 @@ pub(crate) struct AuditEventInput<'a> {
     pub user_agent: Option<&'a str>,
     pub metadata: serde_json::Value,
 }
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ProviderEventRecord {
+    pub id: Uuid,
+    pub tenant_id: Option<Uuid>,
+    pub provider: String,
+    pub provider_event_id: String,
+    pub event_type: String,
+    pub status: String,
+    pub signature_valid: bool,
+    pub payload_summary: serde_json::Value,
+}

@@ -23,6 +23,7 @@ const WORKER_QUEUES: [&str; 4] = [
 ];
 const ACCESS_REVIEW_SCHEDULE_INTERVAL: Duration = Duration::from_secs(900);
 const ACCESS_REVIEW_REMINDER_INTERVAL: Duration = Duration::from_secs(3600);
+const BILLING_RECONCILIATION_INTERVAL: Duration = Duration::from_secs(3600);
 const WORKER_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
 const TRANSIENT_INFRA_ERROR_SLEEP: TokioDuration = TokioDuration::from_secs(5);
 const WORKER_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
@@ -38,6 +39,7 @@ where
     let observability = state.observability.clone();
     let mut access_review_schedule_last_run = Instant::now() - ACCESS_REVIEW_SCHEDULE_INTERVAL;
     let mut access_review_reminder_last_run = Instant::now() - ACCESS_REVIEW_REMINDER_INTERVAL;
+    let mut billing_reconciliation_last_run = Instant::now() - BILLING_RECONCILIATION_INTERVAL;
     let mut housekeeping_last_run = Instant::now() - Duration::from_secs(3600);
     let mut worker_heartbeat_last_run = Instant::now() - WORKER_HEARTBEAT_INTERVAL;
     tokio::pin!(shutdown);
@@ -45,6 +47,7 @@ where
         capture_worker_heartbeat_if_due(&state, &mut worker_heartbeat_last_run);
         run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await?;
         run_access_review_reminders_if_due(&state, &mut access_review_reminder_last_run).await?;
+        run_billing_reconciliation_if_due(&state, &mut billing_reconciliation_last_run).await?;
 
         tokio::select! {
             _ = &mut shutdown => return Ok(()),
@@ -79,6 +82,32 @@ where
             _ = sleep(sleep_for) => {},
         }
     }
+}
+
+async fn run_billing_reconciliation_if_due(
+    state: &AppState,
+    last_run: &mut Instant,
+) -> anyhow::Result<()> {
+    if last_run.elapsed() < BILLING_RECONCILIATION_INTERVAL {
+        return Ok(());
+    }
+    let run = crate::domains::billing::jobs_reconciliation::run_ledger_reconciliation(
+        &state.db,
+        chrono::Utc::now(),
+    )
+    .await
+    .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+    if run.differences_created > 0 {
+        tracing::warn!(
+            run_id = %run.run_id,
+            differences_created = run.differences_created,
+            "billing reconciliation detected ledger differences"
+        );
+    } else {
+        tracing::info!(run_id = %run.run_id, "billing reconciliation completed");
+    }
+    *last_run = Instant::now();
+    Ok(())
 }
 
 async fn run_access_review_reminders_if_due(

@@ -33,7 +33,11 @@ pub async fn fetch_quota_row(
         r#"
         SELECT
           w.id AS workspace_id,
-          (p.included_storage_gb::bigint * $2::bigint)::bigint AS included_storage_bytes,
+          COALESCE(
+            (ent.quotas ->> 'storage_bytes')::bigint,
+            ((ent.quotas ->> 'storage_gb')::bigint * $2::bigint),
+            (p.included_storage_gb::bigint * $2::bigint)
+          )::bigint AS included_storage_bytes,
           qu.used_storage_bytes,
           qu.file_count,
           COALESCE(monthly_bandwidth.quantity, 0)::bigint AS bandwidth_out_bytes_month,
@@ -41,6 +45,14 @@ pub async fn fetch_quota_row(
         FROM workspaces w
         INNER JOIN plans p ON p.id = w.plan_id
         INNER JOIN quota_usage qu ON qu.workspace_id = w.id
+        LEFT JOIN LATERAL (
+          SELECT bes.quotas
+          FROM billing_entitlement_snapshots bes
+          WHERE bes.workspace_id = w.id
+            AND bes.effective_at <= NOW()
+          ORDER BY bes.effective_at DESC, bes.created_at DESC
+          LIMIT 1
+        ) ent ON TRUE
         LEFT JOIN LATERAL (
           SELECT SUM(quantity)::bigint AS quantity
           FROM usage_events ue
@@ -68,11 +80,24 @@ pub async fn lock_usage_snapshot(
     let row = sqlx::query(
         r#"
         SELECT
-          (p.included_storage_gb::bigint * $2::bigint)::bigint AS included_storage_bytes,
-          qu.used_storage_bytes
+          COALESCE(
+            (ent.quotas ->> 'storage_bytes')::bigint,
+            ((ent.quotas ->> 'storage_gb')::bigint * $2::bigint),
+            (p.included_storage_gb::bigint * $2::bigint)
+          )::bigint AS included_storage_bytes,
+          qu.used_storage_bytes,
+          COALESCE((ent.features ->> 'upload')::boolean, TRUE) AS upload_allowed
         FROM workspaces w
         INNER JOIN plans p ON p.id = w.plan_id
         INNER JOIN quota_usage qu ON qu.workspace_id = w.id
+        LEFT JOIN LATERAL (
+          SELECT bes.features, bes.quotas
+          FROM billing_entitlement_snapshots bes
+          WHERE bes.workspace_id = w.id
+            AND bes.effective_at <= NOW()
+          ORDER BY bes.effective_at DESC, bes.created_at DESC
+          LIMIT 1
+        ) ent ON TRUE
         WHERE w.id = $1
         FOR UPDATE OF qu
         "#,
@@ -88,7 +113,27 @@ pub async fn lock_usage_snapshot(
     Ok(UsageSnapshot {
         included_storage_bytes: row.get("included_storage_bytes"),
         used_storage_bytes: row.get("used_storage_bytes"),
+        upload_allowed: row.get("upload_allowed"),
     })
+}
+
+pub async fn lock_subscription_status(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<Option<String>, AppError> {
+    let row = sqlx::query(
+        r#"
+        SELECT status::text AS status
+        FROM subscriptions
+        WHERE workspace_id = $1
+        FOR UPDATE
+        "#,
+    )
+    .bind(workspace_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    Ok(row.map(|row| row.get("status")))
 }
 
 pub async fn increment_storage_usage(

@@ -6,6 +6,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+chrono.workspace = true
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }

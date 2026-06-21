@@ -1204,3 +1204,26 @@ WHERE arl.api_key_id = ak.id
 
 CREATE INDEX IF NOT EXISTS idx_api_request_logs_actor_principal_id_created_at
   ON api_request_logs (actor_principal_id, created_at DESC);
+
+-- Migration: 0010_billing_entitlement_projection.sql
+CREATE TABLE IF NOT EXISTS billing_entitlement_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
+  source_event_id TEXT,
+  status TEXT NOT NULL,
+  features JSONB NOT NULL DEFAULT '{}'::jsonb,
+  quotas JSONB NOT NULL DEFAULT '{}'::jsonb,
+  billing_locked BOOLEAN NOT NULL DEFAULT FALSE,
+  effective_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_entitlement_snapshots_workspace_effective
+  ON billing_entitlement_snapshots (workspace_id, effective_at DESC, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_entitlement_snapshots_source_event
+  ON billing_entitlement_snapshots (workspace_id, source_event_id)
+  WHERE source_event_id IS NOT NULL;
+
+ALTER TABLE billing_entitlement_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY billing_entitlement_snapshot_isolation ON billing_entitlement_snapshots
+  USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);

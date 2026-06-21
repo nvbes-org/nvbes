@@ -28,15 +28,6 @@ pub fn current_billing_period() -> (NaiveDate, NaiveDate) {
     (start, end)
 }
 
-pub fn plan_monthly_price_cents(plan_code: &str) -> i64 {
-    match plan_code {
-        "solo_pro" => 1_500,
-        "team" => 3_900,
-        "team_plus" => 7_900,
-        _ => 0,
-    }
-}
-
 pub fn api_key_limit(plan_code: &str) -> i32 {
     match plan_code {
         "team_plus" => 20,

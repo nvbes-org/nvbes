@@ -7,6 +7,7 @@ use sqlx::PgPool;
 use super::db::fetch_billing_state_tx;
 use super::entitlements::persist_invoice_estimate;
 use super::types::*;
+use super::usage_events::{DriveUsageEventInput, build_drive_usage_event};
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 
 pub async fn get_billing(
@@ -38,6 +39,17 @@ pub async fn get_usage(
 
     let (period_start, period_end) = current_billing_period();
     let included_storage_bytes = i64::from(record.included_storage_gb) * 1024 * 1024 * 1024;
+    if let Some(tenant_id) = access.tenant_id {
+        let _storage_snapshot_event = build_drive_usage_event(DriveUsageEventInput {
+            tenant_id,
+            workspace_id: access.workspace_id,
+            meter_code: "storage_gb_month".to_string(),
+            quantity: record.used_storage_bytes,
+            unit: "bytes".to_string(),
+            occurred_at: chrono::Utc::now(),
+            source_operation_id: format!("usage-view:{}:{period_start}", access.workspace_id),
+        });
+    }
 
     Ok(BillingUsageResponse {
         workspace_id: access.workspace_id,

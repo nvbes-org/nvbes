@@ -58,15 +58,17 @@ Fondations marketing/growth:
 
 Fondations business/FinOps:
 
-- Stripe comme provider billing V1.
-- Mapping Stripe Product/Price/Customer/Subscription/Invoice/Tax.
-- Ledger interne des usages facturables.
+- Plateforme billing interne canonique pour catalogue, subscriptions, invoices, payments, ledger, usage, entitlements et reconciliation.
+- Stripe comme PSP principal V1; Mollie comme PSP secondaire active par routing provider-neutral.
+- Mappings provider-neutral pour Product/Price/Customer/Subscription/Invoice/Tax, avec compatibilite Stripe pendant la transition.
+- Ledger interne append-only pour usages, invoices, paiements, refunds, credits, write-offs et adjustments.
 - Meters V1: `storage_gb_month`, `team_seat_month`, `egress_gb` en suivi.
 - TVA EU, B2B/B2C et factures conformes.
 - Dashboard marge/couts par workspace et par plan.
 - Budgets cloud par environnement.
 - Protections anti-abus sur trials.
 - Validation marge brute avant lancement payant.
+- Validation externe obligatoire avant activation multi-pays payante: TVA, e-invoicing, revenue recognition audit et retention des pieces comptables.
 
 Fondations infra/DevOps:
 

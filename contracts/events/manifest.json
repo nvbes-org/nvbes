@@ -24,6 +24,42 @@
       "event_version": 1,
       "schema": "contracts/events/billing.entitlement.changed.v1.schema.json",
       "critical": true
+    },
+    {
+      "event_type": "billing.usage.recorded",
+      "event_version": 1,
+      "schema": "contracts/events/billing.usage.recorded.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.invoice.issued",
+      "event_version": 1,
+      "schema": "contracts/events/billing.invoice.issued.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.payment.changed",
+      "event_version": 1,
+      "schema": "contracts/events/billing.payment.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.subscription.changed",
+      "event_version": 1,
+      "schema": "contracts/events/billing.subscription.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.dunning.changed",
+      "event_version": 1,
+      "schema": "contracts/events/billing.dunning.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "billing.reconciliation.difference",
+      "event_version": 1,
+      "schema": "contracts/events/billing.reconciliation.difference.v1.schema.json",
+      "critical": true
     }
   ]
 }

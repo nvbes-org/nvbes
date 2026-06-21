@@ -1,4 +1,5 @@
 use super::AppConfig;
+use super::billing::billing_provider_env;
 use super::env::{env_bool, env_or_default, optional_env, parse_csv};
 use super::validation::validate_config_urls_and_secrets;
 
@@ -16,6 +17,8 @@ impl AppConfig {
             .ok()
             .and_then(|value| value.parse::<u16>().ok())
             .unwrap_or(4000);
+
+        let billing_provider_env = billing_provider_env()?;
 
         let config = Self {
             app_name: env_or_default(
@@ -104,14 +107,12 @@ impl AppConfig {
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
                 .unwrap_or(15),
-            stripe_secret_key: optional_env("NVBES_STRIPE_SECRET_KEY"),
-            stripe_webhook_secret: optional_env("NVBES_STRIPE_WEBHOOK_SECRET"),
-            stripe_api_base_url: env_or_default(
-                "NVBES_STRIPE_API_BASE_URL",
-                std::env::var("NVBES_STRIPE_API_BASE_URL").ok(),
-                "https://api.stripe.com",
-                false,
-            )?,
+            stripe_secret_key: billing_provider_env.stripe_secret_key,
+            stripe_webhook_secret: billing_provider_env.stripe_webhook_secret,
+            stripe_api_base_url: billing_provider_env.stripe_api_base_url,
+            mollie_api_key: billing_provider_env.mollie_api_key,
+            mollie_api_base_url: billing_provider_env.mollie_api_base_url,
+            billing_mollie_enabled: billing_provider_env.billing_mollie_enabled,
             billing_default_success_url: env_or_default(
                 "NVBES_BILLING_SUCCESS_URL",
                 std::env::var("NVBES_BILLING_SUCCESS_URL").ok(),

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.com/events/billing.subscription.changed.v1.schema.json",
+  "title": "billing.subscription.changed.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tenant_id",
+    "subscription_id",
+    "status",
+    "effective_at",
+    "change_type"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "subscription_id": { "type": "string", "format": "uuid" },
+    "status": {
+      "type": "string",
+      "enum": ["trialing", "active", "grace", "past_due", "degraded", "suspended", "canceled", "ended"]
+    },
+    "effective_at": { "type": "string", "format": "date-time" },
+    "change_type": { "type": "string", "minLength": 1 },
+    "previous_status": { "type": "string" },
+    "metadata": { "type": "object", "additionalProperties": true }
+  }
+}

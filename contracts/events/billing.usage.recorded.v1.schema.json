@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.com/events/billing.usage.recorded.v1.schema.json",
+  "title": "billing.usage.recorded.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tenant_id",
+    "workspace_id",
+    "meter_code",
+    "quantity",
+    "unit",
+    "occurred_at",
+    "source",
+    "idempotency_key"
+  ],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "workspace_id": { "type": "string", "format": "uuid" },
+    "meter_code": { "type": "string", "minLength": 1 },
+    "quantity": { "type": "integer", "minimum": 0 },
+    "unit": { "type": "string", "minLength": 1 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "source": { "type": "string", "minLength": 1 },
+    "idempotency_key": { "type": "string", "minLength": 1 },
+    "metadata": { "type": "object", "additionalProperties": true }
+  }
+}

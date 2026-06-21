@@ -8,6 +8,10 @@ pub fn upload_blocked(used_storage_bytes: i64, included_storage_bytes: i64) -> b
     included_storage_bytes <= 0 || used_storage_bytes >= included_storage_bytes
 }
 
+pub fn billing_status_blocks_upload(status: &str) -> bool {
+    status == "suspended"
+}
+
 pub fn storage_usage_percent(used_storage_bytes: i64, included_storage_bytes: i64) -> f64 {
     if included_storage_bytes <= 0 {
         return 100.0;
@@ -58,7 +62,8 @@ pub fn crosses_threshold(
 #[cfg(test)]
 mod tests {
     use super::{
-        BYTES_PER_GB, crosses_threshold, storage_alerts, storage_usage_percent, upload_blocked,
+        BYTES_PER_GB, billing_status_blocks_upload, crosses_threshold, storage_alerts,
+        storage_usage_percent, upload_blocked,
     };
 
     #[test]
@@ -66,6 +71,14 @@ mod tests {
         assert!(!upload_blocked(9 * BYTES_PER_GB, 10 * BYTES_PER_GB));
         assert!(upload_blocked(10 * BYTES_PER_GB, 10 * BYTES_PER_GB));
         assert!(upload_blocked(1, 0));
+    }
+
+    #[test]
+    fn billing_status_blocks_only_suspended_uploads() {
+        assert!(!billing_status_blocks_upload("active"));
+        assert!(!billing_status_blocks_upload("past_due"));
+        assert!(!billing_status_blocks_upload("canceled"));
+        assert!(billing_status_blocks_upload("suspended"));
     }
 
     #[test]

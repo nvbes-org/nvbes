@@ -33,7 +33,11 @@ pub struct BillingOverviewResponse {
 pub struct CheckoutSessionResponse {
     pub provider: String,
     pub session_id: String,
+    pub checkout_id: String,
     pub url: String,
+    pub provider_customer_id: String,
+    pub provider_price_id: Option<String>,
+    pub payment_id: Option<String>,
     pub stripe_customer_id: String,
     pub stripe_price_id: String,
 }

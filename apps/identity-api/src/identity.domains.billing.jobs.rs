@@ -1,6 +1,11 @@
 use crate::http::error::AppError;
 use serde_json::Value;
 
+#[path = "identity.domains.billing.jobs.email.rs"]
+mod email;
+
+pub use email::enqueue_billing_email_for_stripe_event;
+
 pub const JOB_STRIPE_WEBHOOK_PROCESS: &str = "billing.stripe.webhook.process";
 const DEFAULT_MAX_ATTEMPTS: u32 = 5;
 

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.com/events/billing.reconciliation.difference.v1.schema.json",
+  "title": "billing.reconciliation.difference.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reconciliation_run_id",
+    "difference_type",
+    "severity",
+    "detected_at"
+  ],
+  "properties": {
+    "reconciliation_run_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "provider": { "type": "string", "enum": ["stripe", "mollie"] },
+    "provider_reference": { "type": "string" },
+    "difference_type": {
+      "type": "string",
+      "enum": [
+        "missing_provider_event",
+        "amount_mismatch",
+        "currency_mismatch",
+        "status_mismatch",
+        "duplicate_capture",
+        "unbalanced_ledger"
+      ]
+    },
+    "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+    "detected_at": { "type": "string", "format": "date-time" },
+    "details": { "type": "object", "additionalProperties": true }
+  }
+}
