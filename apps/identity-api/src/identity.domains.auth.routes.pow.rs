@@ -14,7 +14,7 @@ pub fn router() -> Router<AppState> {
         (status = 200, description = "PoW challenge", body = crate::domains::auth::pow::PowChallenge),
     ),
 )]
-async fn challenge_pow(
+pub(crate) async fn challenge_pow(
     State(state): State<AppState>,
 ) -> Result<Json<crate::domains::auth::pow::PowChallenge>, AppError> {
     if !state.config.auth_pow_enabled {

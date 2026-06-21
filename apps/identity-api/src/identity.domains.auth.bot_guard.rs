@@ -8,8 +8,8 @@
 //! 2. **Time-lock** — Minimum time between form render and submission.
 //! 3. **JS Dynamic Signature** — HMAC-SHA256 proof that the client ran JavaScript.
 //!
-//! These are designed to complement (not replace) Turnstile, catching cheap
-//! scrapers and curl-based bots that skip the Turnstile widget entirely.
+//! These checks are fully self-hosted and avoid coupling OSS login protection
+//! to a managed bot challenge provider.
 
 use crate::http::error::AppError;
 use hmac::{Hmac, Mac};

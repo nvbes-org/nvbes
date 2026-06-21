@@ -55,6 +55,49 @@ fn validate_single_factor(request: &MfaRequest) -> Result<(), AppError> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::super::types::MfaRequest;
+    use super::validate_single_factor;
+    use uuid::Uuid;
+
+    fn mfa_request() -> MfaRequest {
+        MfaRequest {
+            state_token: Uuid::nil(),
+            totp_code: None,
+            recovery_code: None,
+            webauthn_response: None,
+            webauthn_challenge_id: None,
+        }
+    }
+
+    #[test]
+    fn validate_single_factor_accepts_exactly_one_factor() {
+        let mut request = mfa_request();
+        request.totp_code = Some("123456".to_string());
+
+        validate_single_factor(&request).unwrap();
+    }
+
+    #[test]
+    fn validate_single_factor_rejects_missing_factor() {
+        let error = validate_single_factor(&mfa_request()).unwrap_err();
+
+        assert_eq!(error.code, "validation_failed");
+    }
+
+    #[test]
+    fn validate_single_factor_rejects_multiple_factors() {
+        let mut request = mfa_request();
+        request.totp_code = Some("123456".to_string());
+        request.recovery_code = Some("recovery-code".to_string());
+
+        let error = validate_single_factor(&request).unwrap_err();
+
+        assert_eq!(error.code, "validation_failed");
+    }
+}
+
 async fn resolve_webauthn_method(
     db: &Database,
     redis: &nvbes_redis::RedisPool,

@@ -12,6 +12,7 @@ use crate::{
             DeveloperConsoleLogsResponse, DeveloperWebhookDeliveriesResponse,
             DeveloperWebhookDeliverySummary, DeveloperWebhookEndpointsResponse,
         },
+        webhooks_delivery,
     },
     http::{error::AppError, middleware::jwt::AuthContext},
 };
@@ -78,6 +79,10 @@ pub async fn replay_delivery(
           replayed_from_delivery_id
         )
         VALUES ($1, $2, $3, $4, 'pending', 0, $5)
+        ON CONFLICT (tenant_id, replayed_from_delivery_id)
+          WHERE replayed_from_delivery_id IS NOT NULL
+        DO UPDATE SET
+          replayed_from_delivery_id = developer_webhook_deliveries.replayed_from_delivery_id
         RETURNING
           id,
           endpoint_id,
@@ -166,12 +171,7 @@ async fn find_replayable_delivery(
         AppError::not_found("webhook_delivery_not_found", "Webhook delivery not found")
     })?;
 
-    if delivery.status != "failed" && delivery.status != "pending" {
-        return Err(AppError::conflict(
-            "webhook_delivery_not_replayable",
-            "Only failed or pending webhook deliveries can be replayed",
-        ));
-    }
+    webhooks_delivery::ensure_replayable_delivery_status(&delivery.status)?;
 
     Ok(delivery)
 }

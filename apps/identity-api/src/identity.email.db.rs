@@ -1,11 +1,11 @@
 use serde_json::Value;
 
-use super::webhooks::ScalewayEmailEvent;
+use super::webhooks::EmailProviderEvent;
 use crate::http::error::AppError;
 
 pub async fn record_email_event_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    event: &ScalewayEmailEvent,
+    event: &EmailProviderEvent,
 ) -> Result<(), AppError> {
     let details = build_event_details(event);
 
@@ -209,7 +209,7 @@ pub async fn update_email_message_status_tx(
     Ok(())
 }
 
-fn build_event_details(event: &ScalewayEmailEvent) -> Value {
+fn build_event_details(event: &EmailProviderEvent) -> Value {
     let mut details = serde_json::Map::new();
     if let Some(ref msg) = event.message {
         if let Some(ref subject) = msg.subject {

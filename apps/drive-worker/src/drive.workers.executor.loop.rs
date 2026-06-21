@@ -19,9 +19,9 @@ const WORKER_QUEUES: [&str; 9] = [
     super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT,
     super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT,
 ];
-const SENTRY_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
+const WORKER_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
 const TRANSIENT_INFRA_ERROR_SLEEP: Duration = Duration::from_secs(5);
-const SENTRY_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
+const WORKER_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 5,
     checkin_margin_minutes: 2,
     max_runtime_minutes: 2,
@@ -85,7 +85,7 @@ pub async fn run_loop(
     let db_clone = database.clone();
     let redis_clone = redis.clone();
     let environment = worker_environment();
-    let mut sentry_heartbeat_last_run = Instant::now() - SENTRY_HEARTBEAT_INTERVAL;
+    let mut worker_heartbeat_last_run = Instant::now() - WORKER_HEARTBEAT_INTERVAL;
     tokio::spawn(async move {
         loop {
             if let Err(error) =
@@ -102,7 +102,7 @@ pub async fn run_loop(
     });
 
     loop {
-        capture_sentry_heartbeat_if_due(&environment, &mut sentry_heartbeat_last_run);
+        capture_worker_heartbeat_if_due(&environment, &mut worker_heartbeat_last_run);
 
         let processed = match run_once(database, redis, storage.clone(), observability).await {
             Ok(processed) => processed,
@@ -119,15 +119,15 @@ pub async fn run_loop(
     }
 }
 
-fn capture_sentry_heartbeat_if_due(environment: &str, last_run: &mut Instant) {
-    if last_run.elapsed() < SENTRY_HEARTBEAT_INTERVAL {
+fn capture_worker_heartbeat_if_due(environment: &str, last_run: &mut Instant) {
+    if last_run.elapsed() < WORKER_HEARTBEAT_INTERVAL {
         return;
     }
 
     capture_worker_heartbeat(
         environment,
         &worker_monitor_slug("drive-worker", "loop-heartbeat"),
-        SENTRY_HEARTBEAT_SCHEDULE,
+        WORKER_HEARTBEAT_SCHEDULE,
     );
     *last_run = Instant::now();
 }

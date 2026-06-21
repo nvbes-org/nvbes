@@ -4,8 +4,7 @@ use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer, Expos
 
 const REQUEST_ID_HEADER_NAME: &str = "x-request-id";
 const CSRF_TOKEN_HEADER_NAME: &str = "x-csrf-token";
-const SENTRY_TRACE_HEADER_NAME: &str = "sentry-trace";
-const SENTRY_BAGGAGE_HEADER_NAME: &str = "baggage";
+const BAGGAGE_HEADER_NAME: &str = "baggage";
 const TRACEPARENT_HEADER_NAME: &str = "traceparent";
 const TRACESTATE_HEADER_NAME: &str = "tracestate";
 
@@ -36,8 +35,7 @@ pub fn cors_layer(config: &AppConfig) -> CorsLayer {
             HeaderName::from_static("idempotency-key"),
             HeaderName::from_static(REQUEST_ID_HEADER_NAME),
             HeaderName::from_static(CSRF_TOKEN_HEADER_NAME),
-            HeaderName::from_static(SENTRY_TRACE_HEADER_NAME),
-            HeaderName::from_static(SENTRY_BAGGAGE_HEADER_NAME),
+            HeaderName::from_static(BAGGAGE_HEADER_NAME),
             HeaderName::from_static(TRACEPARENT_HEADER_NAME),
             HeaderName::from_static(TRACESTATE_HEADER_NAME),
         ]))

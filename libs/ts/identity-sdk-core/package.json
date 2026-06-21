@@ -1,6 +1,7 @@
 {
   "name": "@nvbes/identity-sdk-core",
   "version": "0.1.0",
+  "license": "AGPL-3.0-only",
   "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation",
   "files": [
     "openapi.json",
@@ -9,7 +10,8 @@
   "sideEffects": false,
   "scripts": {
     "generate:ts": "openapi-typescript openapi.json -o src/types.gen.ts",
-    "generate:rust": "openapi-generator-cli generate -i openapi.json -g rust -o ../identity-sdk-backend"
+    "generate:rust": "openapi-generator-cli generate -i openapi.json -g rust -o ../identity-sdk-backend",
+    "generate:go": "openapi-generator-cli generate -i openapi.json -g go -o ../../go/identity-sdk"
   },
   "devDependencies": {
     "openapi-typescript": "^7.0.0"

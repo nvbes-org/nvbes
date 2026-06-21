@@ -694,6 +694,9 @@ EXECUTE FUNCTION audit_events_prevent_mutation();
 -- (Assuming few or no records yet, otherwise this might be slow)
 UPDATE audit_events SET event_hash = 'backfill' WHERE event_hash IS NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_events_event_hash
+    ON audit_events (event_hash);
+
 
 -- Migration: 20260512000000_saml_production_v1.sql
 CREATE TABLE saml_pending_requests (

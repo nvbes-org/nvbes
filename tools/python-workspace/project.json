@@ -1,0 +1,35 @@
+{
+  "name": "python-workspace",
+  "projectType": "library",
+  "root": "tools/python-workspace",
+  "sourceRoot": "libs/python",
+  "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
+  "namedInputs": {
+    "default": ["{workspaceRoot}/pyproject.toml", "{workspaceRoot}/libs/python/**/*"],
+    "production": ["default"]
+  },
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "inputs": ["production"],
+      "outputs": [],
+      "options": {
+        "command": "python3 -m unittest discover -s libs/python -p '*_test.py'"
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "inputs": ["default"],
+      "outputs": [],
+      "options": {
+        "command": "python3 -m unittest discover -s libs/python -p '*_test.py'"
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
+    }
+  }
+}

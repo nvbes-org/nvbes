@@ -242,3 +242,27 @@ macro_rules! impl_app_error {
         }
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AppError;
+    use axum::http::StatusCode;
+
+    #[test]
+    fn app_error_constructors_keep_standard_error_contract() {
+        let error = AppError::bad_request("invalid_input", "Invalid input.");
+
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.code, "invalid_input");
+        assert_eq!(error.message, "Invalid input.");
+        assert!(error.request_id.is_none());
+    }
+
+    #[test]
+    fn rate_limit_error_preserves_retry_after() {
+        let error = AppError::too_many_requests("rate_limited", "Slow down.", Some(30), None);
+
+        assert_eq!(error.status, StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(error.retry_after_seconds, Some(30));
+    }
+}

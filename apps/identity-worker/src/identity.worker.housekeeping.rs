@@ -7,7 +7,7 @@ use nvbes_observability::{
 use crate::app::AppState;
 
 const HOUSEKEEPING_INTERVAL: Duration = Duration::from_secs(3600);
-const HOUSEKEEPING_SENTRY_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
+const HOUSEKEEPING_MONITOR_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 60,
     checkin_margin_minutes: 15,
     max_runtime_minutes: 30,
@@ -24,7 +24,7 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
             "identity-worker",
             "housekeeping-expired-unverified-accounts",
         ),
-        HOUSEKEEPING_SENTRY_SCHEDULE,
+        HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 
     let result =

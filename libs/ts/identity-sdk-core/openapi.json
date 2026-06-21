@@ -271,7 +271,7 @@
             }
           },
           "403": {
-            "description": "Risk policy blocked or Turnstile failed",
+            "description": "Risk policy blocked or bot guard failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -323,6 +323,26 @@
         }
       }
     },
+    "/auth/challenge/pow": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "challenge_pow",
+        "responses": {
+          "200": {
+            "description": "PoW challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowChallenge"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/challenge/pwd": {
       "post": {
         "tags": [
@@ -362,6 +382,76 @@
           },
           "401": {
             "description": "Invalid credentials or state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/challenge/webauthn/discoverable/finish": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "challenge_webauthn_discoverable_finish",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebauthnDiscoverableFinishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful after discoverable WebAuthn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid authentication state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/challenge/webauthn/discoverable/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "challenge_webauthn_discoverable_start",
+        "responses": {
+          "200": {
+            "description": "Discoverable WebAuthn login challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebauthnAuthStartResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid authentication state",
             "content": {
               "application/json": {
                 "schema": {
@@ -473,6 +563,46 @@
         }
       }
     },
+    "/auth/me/delete": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_delete",
+        "responses": {
+          "200": {
+            "description": "Account deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAccountResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/me/export": {
       "get": {
         "tags": [
@@ -546,6 +676,142 @@
           },
           "429": {
             "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me/notifications": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Notification preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserNotifications"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_notifications_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserNotifications"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Notifications updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserNotifications"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me/preferences": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_preferences_get",
+        "responses": {
+          "200": {
+            "description": "User preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "me_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -880,6 +1146,66 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/password/change": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePasswordResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or same password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
             "content": {
               "application/json": {
                 "schema": {
@@ -3639,6 +3965,36 @@
                   "items": {
                     "$ref": "#/components/schemas/UserConsent"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/legal/gpc": {
+      "get": {
+        "tags": [
+          "legal"
+        ],
+        "operationId": "gpc_status",
+        "responses": {
+          "200": {
+            "description": "GPC status and auto-recording result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GpcStatusResponse"
                 }
               }
             }
@@ -9164,6 +9520,32 @@
           }
         }
       },
+      "ChangePasswordInput": {
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
+      "ChangePasswordResult": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
       "ChangePasswordWellKnownResponse": {
         "type": "object",
         "required": [
@@ -9877,6 +10259,17 @@
         "properties": {
           "decision": {
             "$ref": "#/components/schemas/WorkspaceDecision"
+          }
+        }
+      },
+      "DeleteAccountResult": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
           }
         }
       },
@@ -10983,6 +11376,21 @@
           }
         }
       },
+      "GpcStatusResponse": {
+        "type": "object",
+        "required": [
+          "gpc_enabled",
+          "gpc_opt_out_active"
+        ],
+        "properties": {
+          "gpc_enabled": {
+            "type": "boolean"
+          },
+          "gpc_opt_out_active": {
+            "type": "boolean"
+          }
+        }
+      },
       "GpcWellKnownResponse": {
         "type": "object",
         "required": [
@@ -11043,12 +11451,6 @@
             ]
           },
           "pow_solution": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "turnstile_token": {
             "type": [
               "string",
               "null"
@@ -12515,6 +12917,23 @@
             "type": "string"
           },
           "url": {
+            "type": "string"
+          }
+        }
+      },
+      "PowChallenge": {
+        "type": "object",
+        "required": [
+          "nonce",
+          "difficulty"
+        ],
+        "properties": {
+          "difficulty": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "nonce": {
             "type": "string"
           }
         }
@@ -14324,6 +14743,34 @@
           }
         }
       },
+      "UserNotifications": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "boolean"
+          },
+          "in_app": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UserPreferences": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "skip_password": {
+            "type": "boolean"
+          },
+          "theme": {
+            "type": "string"
+          }
+        }
+      },
       "UserView": {
         "type": "object",
         "required": [
@@ -14451,6 +14898,22 @@
             "format": "uuid"
           },
           "options": {}
+        }
+      },
+      "WebauthnDiscoverableFinishRequest": {
+        "type": "object",
+        "required": [
+          "challenge_id",
+          "webauthn_response"
+        ],
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "webauthn_response": {
+            "type": "object"
+          }
         }
       },
       "WebauthnRegisterFinishRequest": {

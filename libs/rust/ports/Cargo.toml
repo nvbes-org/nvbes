@@ -1,0 +1,14 @@
+[package]
+name = "nvbes-ports"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+nvbes-platform = { path = "../platform" }
+serde.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

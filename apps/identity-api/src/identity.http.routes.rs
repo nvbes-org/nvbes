@@ -32,7 +32,10 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
         .route("/observability/dashboards", get(dashboards))
         .route("/observability/alerts/critical", get(critical_alerts))
         .route("/observability/log-streams", get(log_streams))
-        .route("/observability/sentry-smoke", post(sentry_smoke))
+        .route(
+            "/observability/error-reporting-smoke",
+            post(error_reporting_smoke),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.config.clone(),
             nvbes_core::http::internal_observability::internal_observability_guard,
@@ -140,14 +143,14 @@ async fn log_streams() -> Json<observability::LogStreamsResponse> {
     Json(observability::LogStreamsResponse::v1())
 }
 
-async fn sentry_smoke(
+async fn error_reporting_smoke(
     State(state): State<AppState>,
-) -> Json<nvbes_observability::SentrySmokeResult> {
-    Json(nvbes_observability::capture_sentry_smoke(
+) -> Json<nvbes_observability::ErrorReportingSmokeResult> {
+    Json(nvbes_observability::capture_error_reporting_smoke(
         &state.config.app_name,
         &state.config.environment,
         "api",
-        state.config.sentry_dsn.is_some(),
+        false,
     ))
 }
 

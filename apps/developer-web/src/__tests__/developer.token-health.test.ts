@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { DebugDeveloperTokenSchema, DeveloperHealthChecksSchema } from '../developer.schemas';
 import { countUnhealthyChecks } from '../pages/HealthChecksPage.helpers';
-import { summarizeAccessDecision } from '../pages/TokenDebuggerPage.helpers';
+import {
+  describeAccessDecision,
+  summarizeAccessDecision,
+  summarizeExpiration,
+} from '../pages/TokenDebuggerPage.helpers';
 
 describe('developer token debugger and health checks', () => {
   it('summarizes token access decisions', () => {
     expect(summarizeAccessDecision(null)).toBe('No token inspected');
+    expect(describeAccessDecision(null)).toContain('Paste an access token');
     expect(
       summarizeAccessDecision({
         active: false,
@@ -14,6 +19,13 @@ describe('developer token debugger and health checks', () => {
         token_hash_prefix: 'abc123',
       }),
     ).toBe('Tenant mismatch');
+  });
+
+  it('summarizes expiration relative to a fixed clock', () => {
+    const now = new Date('2026-06-14T09:00:00Z');
+
+    expect(summarizeExpiration('2026-06-14T10:00:00Z', now)).toContain('Expires in 1 hour');
+    expect(summarizeExpiration('2026-06-14T08:58:00Z', now)).toContain('Expired 2 minutes ago');
   });
 
   it('parses token debug responses without raw token material', () => {

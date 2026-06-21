@@ -1,7 +1,7 @@
 import { TrackingConsentToggle } from '@nvbes/web-runtime';
 import { Badge } from '@/components/ui/badge';
 import type { CookieConsentState } from '../tracking-consent';
-import { essentialVendors, posthogPurposes } from './CookieConsentSettings.shared';
+import { essentialVendors, analyticsPurposes } from './CookieConsentSettings.shared';
 
 export function CookieConsentEssentialSection() {
   return (
@@ -34,12 +34,12 @@ export function CookieConsentAnalyticsSection({
   cookieConsent,
   onToggleCategory,
   onToggleVendor,
-  onTogglePostHogPurpose,
+  onToggleAnalyticsPurpose,
 }: {
   cookieConsent: CookieConsentState;
   onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
   onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
-  onTogglePostHogPurpose: (purpose: keyof CookieConsentState['posthog']) => void;
+  onToggleAnalyticsPurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
     <div className="space-y-3 p-4">
@@ -52,18 +52,18 @@ export function CookieConsentAnalyticsSection({
       />
       <div className="space-y-2 border-t border-border/20 px-2">
         <TrackingConsentToggle
-          checked={cookieConsent.vendors.posthog}
-          onChange={() => onToggleVendor('posthog')}
-          label="PostHog"
-          description="Active ou désactive toutes les finalités PostHog."
+          checked={cookieConsent.vendors.analytics}
+          onChange={() => onToggleVendor('analytics')}
+          label="Analytics"
+          description="Active ou désactive toutes les finalités Analytics."
         />
-        {posthogPurposes
+        {analyticsPurposes
           .filter((purpose) => purpose.key !== 'errorTracking')
           .map((purpose) => (
             <TrackingConsentToggle
               key={purpose.key}
-              checked={cookieConsent.posthog[purpose.key]}
-              onChange={() => onTogglePostHogPurpose(purpose.key)}
+              checked={cookieConsent.analytics[purpose.key]}
+              onChange={() => onToggleAnalyticsPurpose(purpose.key)}
               label={purpose.label}
               description={purpose.description}
             />
@@ -77,14 +77,14 @@ export function CookieConsentPerformanceSection({
   cookieConsent,
   onToggleCategory,
   onToggleVendor,
-  onTogglePostHogPurpose,
+  onToggleAnalyticsPurpose,
 }: {
   cookieConsent: CookieConsentState;
   onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
   onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
-  onTogglePostHogPurpose: (purpose: keyof CookieConsentState['posthog']) => void;
+  onToggleAnalyticsPurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
-  const errorTracking = posthogPurposes.find((purpose) => purpose.key === 'errorTracking');
+  const errorTracking = analyticsPurposes.find((purpose) => purpose.key === 'errorTracking');
 
   return (
     <div className="space-y-3 p-4">
@@ -97,15 +97,15 @@ export function CookieConsentPerformanceSection({
       />
       <div className="space-y-2 border-t border-border/20 px-2">
         <TrackingConsentToggle
-          checked={cookieConsent.vendors.sentry}
-          onChange={() => onToggleVendor('sentry')}
-          label="Sentry"
-          description="Rapports d'erreurs en temps réel."
+          checked={cookieConsent.vendors.errorReporting}
+          onChange={() => onToggleVendor('errorReporting')}
+          label="Error reporting"
+          description="Rapports d'erreurs techniques."
         />
         {errorTracking ? (
           <TrackingConsentToggle
-            checked={cookieConsent.posthog.errorTracking}
-            onChange={() => onTogglePostHogPurpose('errorTracking')}
+            checked={cookieConsent.analytics.errorTracking}
+            onChange={() => onToggleAnalyticsPurpose('errorTracking')}
             label={errorTracking.label}
             description={errorTracking.description}
           />

@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/http-client",
   "sourceRoot": "libs/ts/http-client/src",
-  "tags": ["type:lib", "domain:shared", "layer:transport"]
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:transport"]
 }

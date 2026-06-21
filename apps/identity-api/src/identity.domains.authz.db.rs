@@ -170,17 +170,29 @@ pub async fn record_permission_denied(
     .bind(access.workspace_id)
     .bind(client_ip(headers).as_deref())
     .bind(user_agent(headers).as_deref())
-    .bind(sqlx::types::Json(serde_json::json!({
-      "requested_action": format!("{action:?}"),
-      "role": format!("{:?}", access.role),
-      "owns_resource": resource.owns_resource,
-      "member_share_links_enabled": resource.member_share_links_enabled,
-      "target_role": resource.target_role.map(|role| format!("{role:?}"))
-    })))
+    .bind(sqlx::types::Json(permission_denied_metadata(
+        access.role,
+        action,
+        resource,
+    )))
     .execute(db)
     .await?;
 
     Ok(())
+}
+
+fn permission_denied_metadata(
+    role: WorkspaceRole,
+    action: WorkspaceAction,
+    resource: ResourceContext,
+) -> serde_json::Value {
+    serde_json::json!({
+      "requested_action": format!("{action:?}"),
+      "role": format!("{role:?}"),
+      "owns_resource": resource.owns_resource,
+      "member_share_links_enabled": resource.member_share_links_enabled,
+      "target_role": resource.target_role.map(|role| format!("{role:?}"))
+    })
 }
 
 pub async fn target_role_for_member(
@@ -202,4 +214,34 @@ pub async fn target_role_for_member(
 
     let row = row.ok_or_else(|| AppError::not_found("member_not_found", "Member not found."))?;
     parse_role(row.get::<String, _>("role").as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ResourceContext, WorkspaceAction, WorkspaceRole, permission_denied_metadata};
+    use serde_json::json;
+
+    #[test]
+    fn permission_denied_metadata_captures_role_action_and_target_role() {
+        let metadata = permission_denied_metadata(
+            WorkspaceRole::Admin,
+            WorkspaceAction::InviteMember,
+            ResourceContext {
+                target_role: Some(WorkspaceRole::Owner),
+                owns_resource: false,
+                member_share_links_enabled: true,
+            },
+        );
+
+        assert_eq!(
+            metadata,
+            json!({
+                "requested_action": "InviteMember",
+                "role": "Admin",
+                "owns_resource": false,
+                "member_share_links_enabled": true,
+                "target_role": "Owner",
+            })
+        );
+    }
 }

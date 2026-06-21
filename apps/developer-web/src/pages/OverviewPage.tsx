@@ -47,6 +47,7 @@ export function OverviewPage() {
     queryKey: ['developer-overview'],
     queryFn: ({ signal }) => getDeveloperOverview(signal),
     staleTime: 30_000,
+    retry: false,
   });
 
   if (overviewQuery.isLoading) {

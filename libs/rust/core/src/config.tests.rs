@@ -2,7 +2,7 @@ use super::AppConfig;
 use super::env::env_or_default;
 use super::validation::{
     validate_grafana_export_path, validate_jwt_secret, validate_observability_internal_token,
-    validate_positive_integer, validate_posthog_analytics, validate_profiling,
+    validate_positive_integer, validate_product_analytics, validate_profiling,
     validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
     validate_webauthn_rp_id,
 };
@@ -139,33 +139,31 @@ fn validate_grafana_export_path_rejects_direct_profile_auth_outside_development(
 }
 
 #[test]
-fn validate_posthog_requires_token_and_salt_when_enabled() {
+fn validate_product_analytics_requires_token_and_salt_when_enabled() {
     let config = AppConfig {
-        posthog_enabled: true,
-        posthog_host: "https://eu.i.posthog.com".to_string(),
+        product_analytics_enabled: true,
         ..AppConfig::default()
     };
 
-    let error = validate_posthog_analytics(&config, false)
-        .expect_err("enabled PostHog must require a project token");
+    let error = validate_product_analytics(&config, false)
+        .expect_err("enabled product analytics must require a token");
 
-    assert!(error.contains("NVBES_POSTHOG_PROJECT_TOKEN"));
+    assert!(error.contains("NVBES_PRODUCT_ANALYTICS_TOKEN"));
 }
 
 #[test]
-fn validate_posthog_rejects_us_direct_host_in_strict_mode() {
+fn validate_product_analytics_requires_strong_salt_in_strict_mode() {
     let config = AppConfig {
-        posthog_enabled: true,
-        posthog_host: "https://us.i.posthog.com".to_string(),
-        posthog_project_token: Some("phc_test".to_string()),
-        analytics_id_salt: Some("01234567890123456789012345678901".to_string()),
+        product_analytics_enabled: true,
+        product_analytics_token: Some("analytics_test".to_string()),
+        analytics_id_salt: Some("short".to_string()),
         ..AppConfig::default()
     };
 
-    let error = validate_posthog_analytics(&config, true)
-        .expect_err("strict mode must reject PostHog US direct host");
+    let error = validate_product_analytics(&config, true)
+        .expect_err("strict mode must reject weak analytics salt");
 
-    assert!(error.contains("EU Cloud"));
+    assert!(error.contains("NVBES_ANALYTICS_ID_SALT"));
 }
 
 #[test]

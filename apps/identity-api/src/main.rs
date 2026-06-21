@@ -1,7 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_core::http::keep_alive;
 use nvbes_observability::{
-    init_sentry, init_tracing, install_safe_panic_hook, start_continuous_profiling,
+    init_error_reporting, init_tracing, install_safe_panic_hook, start_continuous_profiling,
 };
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -26,18 +26,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    if login_protection_required(&config.environment) && config.turnstile_secret_key.is_none() {
-        panic!(
-            "TURNSTILE_SECRET_KEY is required outside development/test. Refusing to start with fail-open login protection."
-        );
-    }
     if login_protection_required(&config.environment) && !config.auth_pow_enabled {
         panic!(
             "NVBES_AUTH_POW_ENABLED=true is required outside development/test. Refusing to start with fail-open login protection."
         );
     }
 
-    let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
+    let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
     let _profiling_guard =

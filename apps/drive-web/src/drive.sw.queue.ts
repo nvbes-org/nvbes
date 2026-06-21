@@ -1,6 +1,6 @@
 import { createRequestHeaders } from '@nvbes/http-client';
 
-import { captureDriveServiceWorkerException } from './drive.sw.sentry';
+import { captureDriveServiceWorkerException } from './drive.sw.error.reporting';
 
 async function openMutationsDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

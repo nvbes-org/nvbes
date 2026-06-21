@@ -23,10 +23,6 @@ macro_rules! traced_s3_request {
                 nvbes_core::trace_context::TRACEPARENT_HEADER,
                 traceparent.to_header_value(),
             );
-            request.headers_mut().insert(
-                nvbes_core::trace_context::SENTRY_TRACE_HEADER,
-                traceparent.to_sentry_trace_header_value(),
-            );
         })
     }};
 }

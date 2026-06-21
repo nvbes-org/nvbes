@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/codegen.mjs --write",
+    "strict_cutover_command": "tools/migration/codegen.mjs --strict"
+  },
+  "summary": {
+    "entries": 6,
+    "active": 6,
+    "pending": 0
+  },
+  "entries": [
+    {
+      "id": "openapi",
+      "command": "pnpm check:contracts",
+      "evidence": "contracts/openapi/manifest.json",
+      "status": "active"
+    },
+    {
+      "id": "protobuf",
+      "command": "pnpm check:contracts",
+      "evidence": "contracts/protobuf/nvbes/platform/v1/common.proto",
+      "status": "active"
+    },
+    {
+      "id": "events",
+      "command": "pnpm check:contracts",
+      "evidence": "contracts/events/manifest.json",
+      "status": "active"
+    },
+    {
+      "id": "typescript-sdk",
+      "command": "pnpm check:codegen",
+      "evidence": "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "status": "active"
+    },
+    {
+      "id": "rust-sdk",
+      "command": "pnpm check:codegen",
+      "evidence": "libs/rust/identity-sdk-backend/src/lib.rs",
+      "status": "active"
+    },
+    {
+      "id": "go-sdk",
+      "command": "pnpm check:codegen",
+      "evidence": "libs/go/identity-sdk/sdk.go",
+      "status": "active"
+    }
+  ]
+}

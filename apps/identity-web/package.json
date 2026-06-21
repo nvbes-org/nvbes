@@ -22,7 +22,6 @@
     "@nvbes/identity-sdk-web": "workspace:*",
     "@nvbes/web-runtime": "workspace:*",
     "@nvbes/web-ui": "workspace:*",
-    "@sentry/react": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "catalog:",
     "@tanstack/react-router": "catalog:",
@@ -35,7 +34,6 @@
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
     "lucide-react": "^1.16.0",
-    "posthog-js": "catalog:",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
     "react": "catalog:",
@@ -47,7 +45,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "@sentry/vite-plugin": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/culori": "^4.0.1",
     "@types/qrcode": "^1.5.6",

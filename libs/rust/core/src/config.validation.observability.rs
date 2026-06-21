@@ -1,5 +1,4 @@
 use super::{AppConfig, urls};
-use reqwest::Url;
 
 pub(crate) fn validate_observability_internal_token(
     config: &AppConfig,
@@ -78,34 +77,23 @@ pub(crate) fn validate_grafana_export_path(
     Ok(())
 }
 
-pub(crate) fn validate_posthog_analytics(
+pub(crate) fn validate_product_analytics(
     config: &AppConfig,
     strict_mode: bool,
 ) -> Result<(), String> {
-    if !config.posthog_enabled && config.posthog_host.trim().is_empty() {
-        return Ok(());
-    }
-
-    let url = Url::parse(&config.posthog_host)
-        .map_err(|_| "NVBES_POSTHOG_HOST must be a valid URL".to_string())?;
-    match url.scheme() {
-        "http" | "https" => {}
-        _ => return Err("NVBES_POSTHOG_HOST must use HTTP or HTTPS".to_string()),
-    }
-
-    if !config.posthog_enabled {
+    if !config.product_analytics_enabled {
         return Ok(());
     }
 
     if config
-        .posthog_project_token
+        .product_analytics_token
         .as_deref()
         .unwrap_or("")
         .trim()
         .is_empty()
     {
         return Err(
-            "NVBES_POSTHOG_PROJECT_TOKEN is required when NVBES_POSTHOG_ENABLED is true"
+            "NVBES_PRODUCT_ANALYTICS_TOKEN is required when NVBES_PRODUCT_ANALYTICS_ENABLED is true"
                 .to_string(),
         );
     }
@@ -113,7 +101,7 @@ pub(crate) fn validate_posthog_analytics(
     let salt = config.analytics_id_salt.as_deref().unwrap_or("").trim();
     if salt.is_empty() {
         return Err(
-            "NVBES_ANALYTICS_ID_SALT is required when NVBES_POSTHOG_ENABLED is true".to_string(),
+            "NVBES_ANALYTICS_ID_SALT is required when product analytics is enabled".to_string(),
         );
     }
     if strict_mode && salt.len() < 32 {
@@ -121,16 +109,6 @@ pub(crate) fn validate_posthog_analytics(
             "NVBES_ANALYTICS_ID_SALT must be at least 32 characters outside development"
                 .to_string(),
         );
-    }
-
-    if strict_mode {
-        let host = url.host_str().unwrap_or("").to_ascii_lowercase();
-        if host == "app.posthog.com" || host == "us.i.posthog.com" {
-            return Err(
-                "NVBES_POSTHOG_HOST must use PostHog EU Cloud or a first-party proxy outside development"
-                    .to_string(),
-            );
-        }
     }
 
     Ok(())

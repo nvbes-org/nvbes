@@ -6,6 +6,7 @@ version.workspace = true
 
 [dependencies]
 async-trait = "0.1"
+lettre.workspace = true
 reqwest.workspace = true
 nvbes-core = { path = "../core" }
 serde.workspace = true

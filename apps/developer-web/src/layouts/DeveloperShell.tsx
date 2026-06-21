@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useLocation } from '@tanstack/react-router';
 import {
   Activity,
@@ -9,6 +9,7 @@ import {
   Gauge,
   KeyRound,
   Library,
+  LogOut,
   RotateCcwKey,
   ShieldCheck,
   Store,
@@ -16,6 +17,11 @@ import {
 } from 'lucide-react';
 import { getDeveloperContext } from '../developer.api';
 import { canUseDeveloperPermission } from '../developer.permissions';
+import {
+  isDeveloperAuthError,
+  logoutDeveloperSession,
+  redirectToDeveloperLogin,
+} from '../developer.session';
 import type { DeveloperPermission } from '../developer.schemas';
 import { OverviewPage } from '../pages/OverviewPage';
 
@@ -63,14 +69,59 @@ const navigationItems: NavigationItem[] = [
 
 export function DeveloperShell() {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const isConsoleRoot = location.pathname === '/console' || location.pathname === '/console/';
   const contextQuery = useQuery({
     queryKey: ['developer-context'],
     queryFn: ({ signal }) => getDeveloperContext(signal),
     staleTime: 60_000,
+    retry: false,
+  });
+  const logoutMutation = useMutation({
+    mutationFn: logoutDeveloperSession,
+    onSettled: () => {
+      queryClient.removeQueries({ queryKey: ['developer-context'] });
+      window.location.assign('/');
+    },
   });
 
   const context = contextQuery.data;
+
+  if (contextQuery.isError && isDeveloperAuthError(contextQuery.error)) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <div className="w-full max-w-md rounded-md border border-border bg-card p-6">
+          <p className="text-xs font-medium uppercase text-muted-foreground">Developer Console</p>
+          <h1 className="mt-2 text-lg font-semibold">Sign in required</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Use an Identity session with developer console permissions to continue.
+          </p>
+          <button
+            type="button"
+            onClick={() => redirectToDeveloperLogin()}
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Sign in
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (contextQuery.isLoading) {
+    return (
+      <ConsoleSessionState title="Loading session" message="Checking developer console access." />
+    );
+  }
+
+  if (contextQuery.isError || !context) {
+    return (
+      <ConsoleSessionState
+        title="Developer context unavailable"
+        message="The console could not load tenant-scoped Identity data."
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -116,6 +167,17 @@ export function DeveloperShell() {
             <p className="truncate text-xs text-muted-foreground">
               {context?.email || 'Sign in required'}
             </p>
+            {context ? (
+              <button
+                type="button"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                className="mt-3 flex w-full items-center gap-2 rounded-md px-0 py-1.5 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4" />
+                {logoutMutation.isPending ? 'Signing out...' : 'Sign out'}
+              </button>
+            ) : null}
           </div>
         </div>
       </aside>
@@ -138,5 +200,17 @@ export function DeveloperShell() {
         <main className="px-4 py-6 lg:px-8">{isConsoleRoot ? <OverviewPage /> : <Outlet />}</main>
       </div>
     </div>
+  );
+}
+
+function ConsoleSessionState({ title, message }: { title: string; message: string }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-6">
+        <p className="text-xs font-medium uppercase text-muted-foreground">Developer Console</p>
+        <h1 className="mt-2 text-lg font-semibold">{title}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
+      </div>
+    </main>
   );
 }

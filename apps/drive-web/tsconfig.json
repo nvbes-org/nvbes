@@ -7,10 +7,10 @@
       "@nvbes/identity-sdk": ["../../libs/ts/identity-sdk/src/index.ts"],
       "@nvbes/web-ui": ["../../libs/ts/web-ui/src/index.ts"],
       "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
-      "@nvbes/web-runtime/posthog": ["../../libs/ts/web-runtime/src/posthog.ts"],
+      "@nvbes/web-runtime/analytics": ["../../libs/ts/web-runtime/src/analytics.ts"],
       "@/*": ["./src/*"]
     }
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "src/sw.ts", "src/drive.sw.sentry.ts"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "src/sw.ts"]
 }

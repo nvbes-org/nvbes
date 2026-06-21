@@ -1,0 +1,13 @@
+[package]
+name = "nvbes-analytics-posthog"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+nvbes-product-analytics = { path = "../../product-analytics" }
+reqwest.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true

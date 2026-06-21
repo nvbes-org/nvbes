@@ -5,12 +5,19 @@ import {
   FileJson,
   KeyRound,
   ListFilter,
+  LogOut,
   RadioTower,
   ShieldCheck,
   Webhook,
 } from 'lucide-react';
 
 import { getDeveloperMe } from '@/developer.api';
+import {
+  isDeveloperAuthError,
+  logoutDeveloperSession,
+  redirectToDeveloperLogin,
+} from '@/developer.session';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const navItems = [
   { to: '/portal/apps', label: 'Apps', icon: AppWindow },
@@ -23,10 +30,18 @@ const navItems = [
 ] as const;
 
 export function DeveloperPortalLayout() {
+  const queryClient = useQueryClient();
   const meQuery = useQuery({
     queryKey: ['developer', 'me'],
     queryFn: ({ signal }) => getDeveloperMe({ signal }),
     retry: false,
+  });
+  const logoutMutation = useMutation({
+    mutationFn: logoutDeveloperSession,
+    onSettled: () => {
+      queryClient.removeQueries({ queryKey: ['developer'] });
+      window.location.assign('/');
+    },
   });
 
   if (meQuery.isLoading) {
@@ -37,14 +52,21 @@ export function DeveloperPortalLayout() {
     );
   }
 
-  if (meQuery.isError || !meQuery.data) {
+  if ((meQuery.isError && isDeveloperAuthError(meQuery.error)) || !meQuery.data) {
     return (
       <main className="min-h-screen bg-background p-6">
-        <div className="rounded-md border border-border bg-card p-6">
+        <div className="mx-auto max-w-md rounded-md border border-border bg-card p-6">
           <h1 className="text-lg font-semibold">Developer access required</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sign in with a tenant account that has developer portal permissions.
           </p>
+          <button
+            type="button"
+            onClick={() => redirectToDeveloperLogin()}
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Sign in
+          </button>
         </div>
       </main>
     );
@@ -71,6 +93,17 @@ export function DeveloperPortalLayout() {
             </Link>
           ))}
         </nav>
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            <LogOut className="size-4" />
+            {logoutMutation.isPending ? 'Signing out...' : 'Sign out'}
+          </button>
+        </div>
       </aside>
       <main className="min-w-0 overflow-auto">
         <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-8">

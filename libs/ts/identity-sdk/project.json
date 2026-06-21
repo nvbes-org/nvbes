@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/identity-sdk",
   "sourceRoot": "libs/ts/identity-sdk/src",
-  "tags": ["type:lib", "domain:shared", "layer:sdk"]
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:sdk"]
 }

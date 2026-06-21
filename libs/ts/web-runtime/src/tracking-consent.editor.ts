@@ -1,8 +1,8 @@
 import type { CookieConsentState } from './tracking-consent';
 
-export type PostHogPurpose = keyof CookieConsentState['posthog'];
+export type AnalyticsPurpose = keyof CookieConsentState['analytics'];
 
-export const ANALYTICS_POSTHOG_PURPOSES: PostHogPurpose[] = [
+export const OPTIONAL_ANALYTICS_PURPOSES: AnalyticsPurpose[] = [
   'productAnalytics',
   'autocaptureHeatmaps',
   'sessionReplay',
@@ -10,24 +10,24 @@ export const ANALYTICS_POSTHOG_PURPOSES: PostHogPurpose[] = [
   'featureFlags',
 ];
 
-export function hasAnyPostHogPurpose(posthog: CookieConsentState['posthog']): boolean {
-  return Object.values(posthog).some((value) => value);
+export function hasAnyAnalyticsPurpose(analytics: CookieConsentState['analytics']): boolean {
+  return Object.values(analytics).some((value) => value);
 }
 
 export function deriveConsentState(consent: CookieConsentState): CookieConsentState {
   return {
     categories: {
       essentials: true,
-      analytics: ANALYTICS_POSTHOG_PURPOSES.some((purpose) => consent.posthog[purpose]),
-      performance: consent.vendors.sentry || consent.posthog.errorTracking,
+      analytics: OPTIONAL_ANALYTICS_PURPOSES.some((purpose) => consent.analytics[purpose]),
+      performance: consent.vendors.errorReporting || consent.analytics.errorTracking,
     },
     vendors: {
       stripe: true,
       identity: true,
-      posthog: hasAnyPostHogPurpose(consent.posthog),
-      sentry: consent.vendors.sentry,
+      analytics: hasAnyAnalyticsPurpose(consent.analytics),
+      errorReporting: consent.vendors.errorReporting,
     },
-    posthog: { ...consent.posthog },
+    analytics: { ...consent.analytics },
   };
 }
 
@@ -41,21 +41,21 @@ export function toggleConsentCategory(
 
   const nextValue = !consent.categories[category];
   const nextVendors = { ...consent.vendors };
-  const nextPosthog = { ...consent.posthog };
+  const nextAnalytics = { ...consent.analytics };
 
   if (category === 'analytics') {
-    for (const purpose of ANALYTICS_POSTHOG_PURPOSES) {
-      nextPosthog[purpose] = nextValue;
+    for (const purpose of OPTIONAL_ANALYTICS_PURPOSES) {
+      nextAnalytics[purpose] = nextValue;
     }
   } else {
-    nextVendors.sentry = nextValue;
-    nextPosthog.errorTracking = nextValue;
+    nextVendors.errorReporting = nextValue;
+    nextAnalytics.errorTracking = nextValue;
   }
 
   return deriveConsentState({
     categories: { ...consent.categories, [category]: nextValue },
     vendors: nextVendors,
-    posthog: nextPosthog,
+    analytics: nextAnalytics,
   });
 }
 
@@ -70,33 +70,33 @@ export function toggleConsentVendor(
 
   const nextValue = !consent.vendors[vendor];
   const nextVendors = { ...consent.vendors, [vendor]: nextValue };
-  const nextPosthog = { ...consent.posthog };
+  const nextAnalytics = { ...consent.analytics };
 
-  if (vendor === 'posthog') {
-    for (const purpose of Object.keys(nextPosthog) as PostHogPurpose[]) {
-      nextPosthog[purpose] = nextValue;
+  if (vendor === 'analytics') {
+    for (const purpose of Object.keys(nextAnalytics) as AnalyticsPurpose[]) {
+      nextAnalytics[purpose] = nextValue;
     }
   } else if (category === 'performance') {
-    nextPosthog.errorTracking = nextPosthog.errorTracking && nextValue;
+    nextAnalytics.errorTracking = nextAnalytics.errorTracking && nextValue;
   }
 
   return deriveConsentState({
     categories: { ...consent.categories },
     vendors: nextVendors,
-    posthog: nextPosthog,
+    analytics: nextAnalytics,
   });
 }
 
-export function toggleConsentPostHogPurpose(
+export function toggleConsentAnalyticsPurpose(
   consent: CookieConsentState,
-  purpose: PostHogPurpose,
+  purpose: AnalyticsPurpose,
 ): CookieConsentState {
   return deriveConsentState({
     categories: { ...consent.categories },
     vendors: { ...consent.vendors },
-    posthog: {
-      ...consent.posthog,
-      [purpose]: !consent.posthog[purpose],
+    analytics: {
+      ...consent.analytics,
+      [purpose]: !consent.analytics[purpose],
     },
   });
 }

@@ -7,8 +7,6 @@ use tower_http::compression::CompressionLayer;
 use tower_http::timeout::TimeoutLayer;
 use tracing::info;
 
-use crate::domains::auth::keys::KeyBackend;
-
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
@@ -31,76 +29,34 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 
 impl AppState {
     pub async fn bootstrap(config: &AppConfig, db: PgPool) -> anyhow::Result<Self> {
-        let backend = if config.kms_enabled {
-            let kms_config = nvbes_core::scw_kms::KmsConfig::from_env().unwrap_or_else(|| {
-                panic!(
-                    "KMS enabled but SCW_ACCESS_KEY, SCW_SECRET_KEY, and SCW_DEFAULT_PROJECT_ID must be set"
-                )
-            });
-            let client = nvbes_core::scw_kms::KmsClient::new(kms_config);
-            KeyBackend::Kms(client)
-        } else {
-            if config.environment != "development" {
-                panic!(
-                    "Local JWT signing keys are forbidden outside development. Enable KMS before starting this environment."
-                );
-            }
-            KeyBackend::Local
-        };
+        if config.kms_enabled {
+            anyhow::bail!(
+                "NVBES_KMS_ENABLED requires a Cloud KMS adapter. OSS identity-api uses local JWT signing keys."
+            );
+        }
 
-        let jwt = match &backend {
-            KeyBackend::Kms(_) => {
-                crate::domains::auth::keys::create_initial_key(&db, &backend)
-                    .await
-                    .expect("initial signing key creation should succeed");
+        let local_key =
+            crate::domains::auth::keys_local::load_or_create_local_signing_key_material()
+                .expect("local signing key material should load");
+        crate::domains::auth::keys_local::ensure_local_signing_key(&db, &local_key)
+            .await
+            .expect("local signing key should be synced");
+        let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
+            .await
+            .unwrap_or_default();
 
-                let active_key = crate::domains::auth::keys::get_active_key(&db)
-                    .await
-                    .expect("active key lookup should succeed")
-                    .expect("active key should exist after create_initial_key");
-                let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
-                    .await
-                    .unwrap_or_default();
-
-                info!(
-                    "JWT signing initialized with KMS (kid={}, kms_key_id={})",
-                    active_key.kid,
-                    active_key.kms_key_id.as_deref().unwrap_or("unknown")
-                );
-                crate::domains::auth::jwt::JwtService::new_kms(
-                    &active_key,
-                    backend,
-                    public_keys,
-                    "nvbes-identity",
-                    "nvbes-identity-api",
-                    chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
-                )
-            }
-            KeyBackend::Local => {
-                let local_key =
-                    crate::domains::auth::keys_local::load_or_create_local_signing_key_material()
-                        .expect("local signing key material should load");
-                crate::domains::auth::keys_local::ensure_local_signing_key(&db, &local_key)
-                    .await
-                    .expect("local signing key should be synced");
-                let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
-                    .await
-                    .unwrap_or_default();
-
-                info!(
-                    "JWT signing initialized with local RSA key (kid={})",
-                    local_key.kid
-                );
-                crate::domains::auth::jwt::JwtService::new_local(
-                    &local_key.kid,
-                    &local_key.private_key_pem,
-                    public_keys,
-                    "nvbes-identity",
-                    "nvbes-identity-api",
-                    chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
-                )
-            }
-        };
+        info!(
+            "JWT signing initialized with local RSA key (kid={})",
+            local_key.kid
+        );
+        let jwt = crate::domains::auth::jwt::JwtService::new_local(
+            &local_key.kid,
+            &local_key.private_key_pem,
+            public_keys,
+            "nvbes-identity",
+            "nvbes-identity-api",
+            chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
+        );
 
         let redis = nvbes_core::redis_runtime::require_redis_pool(config).await?;
 
@@ -120,7 +76,7 @@ impl AppState {
             jwt,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             product_analytics: build_product_analytics(config)?,
-            email: build_email_sender(config),
+            email: build_email_sender(config)?,
             dpop_nonce,
             redis,
             rate_limiter,
@@ -150,49 +106,49 @@ fn build_product_analytics(
 ) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
     Ok(nvbes_product_analytics::ProductAnalytics::new(
         nvbes_product_analytics::ProductAnalyticsConfig {
-            enabled: config.posthog_enabled,
-            host: config.posthog_host.clone(),
-            project_token: config.posthog_project_token.clone(),
+            enabled: config.product_analytics_enabled,
             analytics_id_salt: config.analytics_id_salt.clone(),
         },
     )?)
 }
 
-fn build_email_sender(config: &AppConfig) -> std::sync::Arc<dyn nvbes_email::EmailSender> {
-    if config.scw_tem_enabled {
-        let secret_key = config
-            .scw_secret_key
-            .clone()
-            .expect("SCW_SECRET_KEY required when SCW_TEM_ENABLED is true");
-        let project_id = config
-            .scw_project_id
-            .clone()
-            .expect("SCW_PROJECT_ID required when SCW_TEM_ENABLED is true");
-
-        if config.environment != "development" {
-            config
-                .scw_tem_from_email
-                .clone()
-                .expect("SCW_TEM_FROM_EMAIL is required in non-development environments when SCW_TEM_ENABLED is true. Set it to a real monitored address for deliverability.");
-        }
-
-        info!(
-            "Email sender: Scaleway Transactional Email (region={})",
-            config.scw_region
-        );
-        std::sync::Arc::new(nvbes_email::ScalewayEmailClient::new(
-            secret_key,
-            project_id,
-            &config.scw_region,
-        ))
-    } else {
-        if config.environment != "development" {
-            panic!(
-                "Mock email sender is forbidden outside development. Configure SCW_TEM_ENABLED and production sender credentials."
+fn build_email_sender(
+    config: &AppConfig,
+) -> anyhow::Result<std::sync::Arc<dyn nvbes_email::EmailSender>> {
+    match config.email_provider.as_str() {
+        "smtp" => {
+            let host = config.smtp_host.clone().ok_or_else(|| {
+                anyhow::anyhow!("NVBES_SMTP_HOST is required when NVBES_EMAIL_PROVIDER=smtp")
+            })?;
+            if config.environment != "development" && config.email_from_email.is_none() {
+                anyhow::bail!(
+                    "NVBES_EMAIL_FROM_EMAIL is required outside development when SMTP email is enabled"
+                );
+            }
+            info!(
+                "Email sender: SMTP (host={host}, port={})",
+                config.smtp_port
             );
+            Ok(std::sync::Arc::new(nvbes_email::SmtpEmailSender::new(
+                nvbes_email::SmtpEmailConfig {
+                    host,
+                    port: config.smtp_port,
+                    username: config.smtp_username.clone(),
+                    password: config.smtp_password.clone(),
+                    starttls: config.smtp_starttls,
+                },
+            )?))
         }
-        info!("Email sender: Mock (development mode)");
-        std::sync::Arc::new(nvbes_email::MockEmailSender::new())
+        "mock" => {
+            if config.environment != "development" {
+                anyhow::bail!(
+                    "Mock email sender is forbidden outside development. Configure NVBES_EMAIL_PROVIDER=smtp."
+                );
+            }
+            info!("Email sender: Mock (development mode)");
+            Ok(std::sync::Arc::new(nvbes_email::MockEmailSender::new()))
+        }
+        provider => anyhow::bail!("Unsupported NVBES_EMAIL_PROVIDER={provider}"),
     }
 }
 
@@ -224,7 +180,5 @@ pub fn build_router(state: AppState) -> axum::Router {
         .layer(ConcurrencyLimitLayer::new(
             state.config.api_max_concurrent_requests as usize,
         ))
-        .layer(sentry_tower::SentryHttpLayer::new().enable_transaction())
-        .layer(sentry_tower::NewSentryLayer::new_from_top())
         .with_state(state)
 }

@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/workspace-membership-roles.mjs --write",
+    "sources": [
+      "libs/rust/core/src/authz.policy.rs",
+      "libs/rust/core/src/authz.policy.tests.rs",
+      "libs/rust/core/src/authz.role.rs",
+      "apps/identity-api/src/identity.domains.authz.db.rs",
+      "apps/identity-api/src/identity.domains.authz.service.rs",
+      "apps/identity-api/src/identity.domains.authz.routes.rs",
+      "apps/identity-api/openapi.json"
+    ],
+    "targeted_tests": [
+      "cargo test -p nvbes-core workspace_membership_roles_cover_expected_permission_boundaries --locked",
+      "cargo test -p nvbes-identity-api permission_denied_metadata_captures_role_action_and_target_role --locked"
+    ]
+  },
+  "summary": {
+    "checks": 26,
+    "passed": 26,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "owner-role",
+      "description": "Owner role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::Owner"
+    },
+    {
+      "id": "admin-role",
+      "description": "Admin role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::Admin"
+    },
+    {
+      "id": "security-admin-role",
+      "description": "Security admin role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::SecurityAdmin"
+    },
+    {
+      "id": "billing-admin-role",
+      "description": "Billing admin role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::BillingAdmin"
+    },
+    {
+      "id": "member-role",
+      "description": "Member role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::Member"
+    },
+    {
+      "id": "viewer-role",
+      "description": "Viewer role is part of the workspace role model",
+      "path": "libs/rust/core/src/authz.role.rs",
+      "status": "passed",
+      "pattern": "WorkspaceRole::Viewer"
+    },
+    {
+      "id": "policy-entrypoint",
+      "description": "Workspace role policy uses the shared is_allowed entrypoint",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "pub fn is_allowed"
+    },
+    {
+      "id": "owner-policy",
+      "description": "Owner policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn owner_allows"
+    },
+    {
+      "id": "admin-policy",
+      "description": "Admin policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn admin_allows"
+    },
+    {
+      "id": "security-admin-policy",
+      "description": "Security admin policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn security_admin_allows"
+    },
+    {
+      "id": "billing-admin-policy",
+      "description": "Billing admin policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn billing_admin_allows"
+    },
+    {
+      "id": "member-policy",
+      "description": "Member policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn member_allows"
+    },
+    {
+      "id": "viewer-policy",
+      "description": "Viewer policy is explicit",
+      "path": "libs/rust/core/src/authz.policy.rs",
+      "status": "passed",
+      "pattern": "fn viewer_allows"
+    },
+    {
+      "id": "role-boundary-test",
+      "description": "Core test covers owner/admin/security/billing/member/viewer permission boundaries",
+      "path": "libs/rust/core/src/authz.policy.tests.rs",
+      "status": "passed",
+      "pattern": "workspace_membership_roles_cover_expected_permission_boundaries"
+    },
+    {
+      "id": "admin-invite-test",
+      "description": "Core test blocks admin escalation through invites",
+      "path": "libs/rust/core/src/authz.policy.tests.rs",
+      "status": "passed",
+      "pattern": "admin_can_only_invite_member_or_viewer"
+    },
+    {
+      "id": "security-admin-test",
+      "description": "Core test limits security admin to audit/security views",
+      "path": "libs/rust/core/src/authz.policy.tests.rs",
+      "status": "passed",
+      "pattern": "security_admin_can_view_audit_but_cannot_invite_members"
+    },
+    {
+      "id": "billing-admin-test",
+      "description": "Core test limits billing admin away from audit",
+      "path": "libs/rust/core/src/authz.policy.tests.rs",
+      "status": "passed",
+      "pattern": "billing_admin_can_manage_billing_but_cannot_view_audit"
+    },
+    {
+      "id": "viewer-readonly-test",
+      "description": "Core test keeps viewer read-only",
+      "path": "libs/rust/core/src/authz.policy.tests.rs",
+      "status": "passed",
+      "pattern": "viewer_is_read_only"
+    },
+    {
+      "id": "service-policy-call",
+      "description": "Identity API authorization calls the shared role policy",
+      "path": "apps/identity-api/src/identity.domains.authz.service.rs",
+      "status": "passed",
+      "pattern": "is_allowed(access.role, action, effective_resource)"
+    },
+    {
+      "id": "denied-audit-call",
+      "description": "Denied workspace actions are audited before returning an error",
+      "path": "apps/identity-api/src/identity.domains.authz.service.rs",
+      "status": "passed",
+      "pattern": "record_permission_denied(db, &access, action, effective_resource, headers).await?"
+    },
+    {
+      "id": "audit-insert",
+      "description": "Permission denied decisions insert an audit event",
+      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "status": "passed",
+      "pattern": "INSERT INTO audit_events"
+    },
+    {
+      "id": "audit-action",
+      "description": "Permission denied audit uses stable action literal",
+      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "status": "passed",
+      "pattern": "'permission.denied'"
+    },
+    {
+      "id": "audit-metadata-helper",
+      "description": "Permission denied audit metadata is generated through a tested helper",
+      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "status": "passed",
+      "pattern": "permission_denied_metadata"
+    },
+    {
+      "id": "audit-metadata-test",
+      "description": "Permission denied audit metadata has a unit test",
+      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "status": "passed",
+      "pattern": "permission_denied_metadata_captures_role_action_and_target_role"
+    },
+    {
+      "id": "decision-route",
+      "description": "Authz decision endpoint is routed",
+      "path": "apps/identity-api/src/identity.domains.authz.routes.rs",
+      "status": "passed",
+      "pattern": "/authz/decision"
+    },
+    {
+      "id": "decision-openapi",
+      "description": "Authz decision endpoint is present in OpenAPI",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "\"/authz/decision\""
+    }
+  ]
+}

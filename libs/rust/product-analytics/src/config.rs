@@ -1,18 +1,13 @@
 #[derive(Debug, Clone)]
 pub struct ProductAnalyticsConfig {
     pub enabled: bool,
-    pub host: String,
-    pub project_token: Option<String>,
     pub analytics_id_salt: Option<String>,
 }
 
 impl ProductAnalyticsConfig {
     pub fn from_env() -> Self {
         Self {
-            enabled: env_bool("NVBES_POSTHOG_ENABLED", false),
-            host: optional_env("NVBES_POSTHOG_HOST")
-                .unwrap_or_else(|| "https://eu.i.posthog.com".to_string()),
-            project_token: optional_env("NVBES_POSTHOG_PROJECT_TOKEN"),
+            enabled: env_bool("NVBES_PRODUCT_ANALYTICS_ENABLED", false),
             analytics_id_salt: optional_env("NVBES_ANALYTICS_ID_SALT"),
         }
     }
@@ -20,11 +15,7 @@ impl ProductAnalyticsConfig {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProductAnalyticsError {
-    #[error("NVBES_POSTHOG_HOST must be a valid HTTP(S) URL")]
-    InvalidHost,
-    #[error("NVBES_POSTHOG_PROJECT_TOKEN is required when PostHog analytics is enabled")]
-    MissingProjectToken,
-    #[error("NVBES_ANALYTICS_ID_SALT is required when PostHog analytics is enabled")]
+    #[error("NVBES_ANALYTICS_ID_SALT is required when product analytics is enabled")]
     MissingAnalyticsSalt,
 }
 

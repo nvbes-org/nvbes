@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/billing-webhook-idempotency.mjs --write",
+    "sources": [
+      "apps/identity-api/openapi.json",
+      "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+      "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "apps/identity-api/src/identity.domains.billing.jobs.rs",
+      "apps/identity-api/migrations/0001_initial_schema.sql",
+      "apps/identity-api/src/identity.http.openapi.rs"
+    ],
+    "targeted_test": "cargo test -p nvbes-identity-api classify_webhook_retry --locked"
+  },
+  "summary": {
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "openapi-stripe-webhook-path",
+      "description": "OpenAPI exposes POST /webhooks/stripe",
+      "path": "apps/identity-api/openapi.json",
+      "status": "passed",
+      "pattern": "paths['/webhooks/stripe'].post"
+    },
+    {
+      "id": "openapi-export-route",
+      "description": "OpenAPI export includes Stripe webhook handler",
+      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "status": "passed",
+      "pattern": "crate::domains::billing::routes::webhooks::handle_stripe_webhook"
+    },
+    {
+      "id": "route-handler",
+      "description": "Axum route accepts Stripe webhooks",
+      "path": "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "status": "passed",
+      "pattern": "route(\"/webhooks/stripe\", post(handle_stripe_webhook))"
+    },
+    {
+      "id": "rate-limit",
+      "description": "Webhook route enforces rate limiting before processing",
+      "path": "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "status": "passed",
+      "pattern": "enforce_stripe_webhook_rate_limit"
+    },
+    {
+      "id": "provider-event-lock",
+      "description": "Handler locks existing provider event rows",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "status": "passed",
+      "pattern": "WHERE provider_event_id = $1\n        FOR UPDATE"
+    },
+    {
+      "id": "duplicate-decision",
+      "description": "Processed webhooks are treated as duplicates",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+      "status": "passed",
+      "pattern": "Some(\"processed\") => WebhookRetryDecision::Duplicate"
+    },
+    {
+      "id": "replay-failed-decision",
+      "description": "Failed or received webhooks are replayable",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+      "status": "passed",
+      "pattern": "Some(\"failed\" | \"received\") => WebhookRetryDecision::ReplayFailed"
+    },
+    {
+      "id": "conflict-idempotency",
+      "description": "Insert path is idempotent on provider_event_id",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "status": "passed",
+      "pattern": "ON CONFLICT (provider_event_id) DO NOTHING"
+    },
+    {
+      "id": "duplicate-response",
+      "description": "Duplicate path returns duplicate without enqueueing",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "status": "passed",
+      "pattern": "status: \"duplicate\".to_string()"
+    },
+    {
+      "id": "replay-update",
+      "description": "Replay path resets failed or received events",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "status": "passed",
+      "pattern": "status = 'received'"
+    },
+    {
+      "id": "queue-idempotency-key",
+      "description": "Queued webhook job uses provider_event_id as idempotency key",
+      "path": "apps/identity-api/src/identity.domains.billing.jobs.rs",
+      "status": "passed",
+      "pattern": "idempotency_key: Some(provider_event_id.to_string())"
+    },
+    {
+      "id": "event-id-unique",
+      "description": "Database constrains provider_event_id uniqueness",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql",
+      "status": "passed",
+      "pattern": "provider_event_id TEXT NOT NULL UNIQUE"
+    },
+    {
+      "id": "failed-replay-test",
+      "description": "Unit test covers failed replay classification",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "status": "passed",
+      "pattern": "classify_webhook_retry_treats_failed_as_replayable"
+    },
+    {
+      "id": "received-replay-test",
+      "description": "Unit test covers received replay classification",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "status": "passed",
+      "pattern": "classify_webhook_retry_treats_received_as_replayable"
+    },
+    {
+      "id": "duplicate-test",
+      "description": "Unit test covers processed duplicate classification",
+      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "status": "passed",
+      "pattern": "classify_webhook_retry_treats_processed_as_duplicate"
+    }
+  ]
+}

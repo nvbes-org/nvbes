@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/audit-append-only.mjs --write",
+    "sources": [
+      "apps/identity-api/migrations/0001_initial_schema.sql",
+      "apps/drive-api/migrations/0001_initial_schema.sql",
+      "libs/rust/audit/src/lib.rs"
+    ]
+  },
+  "summary": {
+    "checks": 34,
+    "passed": 34,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "product": "identity",
+      "check": "pgcrypto digest extension",
+      "status": "passed",
+      "pattern": "CREATE EXTENSION IF NOT EXISTS pgcrypto",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "hash chain column",
+      "status": "passed",
+      "pattern": "previous_event_hash",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "event hash column",
+      "status": "passed",
+      "pattern": "event_hash",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "hash chain function",
+      "status": "passed",
+      "pattern": "CREATE OR REPLACE FUNCTION audit_events_set_hash()",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "hash partition",
+      "status": "passed",
+      "pattern": "tenant_id = NEW.tenant_id",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "sha256 digest",
+      "status": "passed",
+      "pattern": "'sha256'",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "previous hash included",
+      "status": "passed",
+      "pattern": "COALESCE(previous_hash, '')",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "insert hash trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_set_hash",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "insert trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE INSERT ON audit_events",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "mutation blocker function",
+      "status": "passed",
+      "pattern": "CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "update blocker trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_prevent_update",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "update trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE UPDATE ON audit_events",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "delete blocker trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_prevent_delete",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "delete trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE DELETE ON audit_events",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "identity",
+      "check": "unique event hash index",
+      "status": "passed",
+      "pattern": "idx_audit_events_event_hash",
+      "path": "apps/identity-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "pgcrypto digest extension",
+      "status": "passed",
+      "pattern": "CREATE EXTENSION IF NOT EXISTS pgcrypto",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "hash chain column",
+      "status": "passed",
+      "pattern": "previous_event_hash",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "event hash column",
+      "status": "passed",
+      "pattern": "event_hash",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "hash chain function",
+      "status": "passed",
+      "pattern": "CREATE OR REPLACE FUNCTION audit_events_set_hash()",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "hash partition",
+      "status": "passed",
+      "pattern": "workspace_id = NEW.workspace_id",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "sha256 digest",
+      "status": "passed",
+      "pattern": "'sha256'",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "previous hash included",
+      "status": "passed",
+      "pattern": "COALESCE(previous_hash, '')",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "insert hash trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_set_hash",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "insert trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE INSERT ON audit_events",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "mutation blocker function",
+      "status": "passed",
+      "pattern": "CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "update blocker trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_prevent_update",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "update trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE UPDATE ON audit_events",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "delete blocker trigger",
+      "status": "passed",
+      "pattern": "CREATE TRIGGER trg_audit_events_prevent_delete",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "delete trigger timing",
+      "status": "passed",
+      "pattern": "BEFORE DELETE ON audit_events",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "drive",
+      "check": "unique event hash index",
+      "status": "passed",
+      "pattern": "idx_audit_events_event_hash",
+      "path": "apps/drive-api/migrations/0001_initial_schema.sql"
+    },
+    {
+      "product": "shared-audit-crate",
+      "check": "pool insert API",
+      "status": "passed",
+      "pattern": "pub async fn insert_audit_event_pool",
+      "path": "libs/rust/audit/src/lib.rs"
+    },
+    {
+      "product": "shared-audit-crate",
+      "check": "transaction insert API",
+      "status": "passed",
+      "pattern": "pub async fn insert_audit_event_tx",
+      "path": "libs/rust/audit/src/lib.rs"
+    },
+    {
+      "product": "shared-audit-crate",
+      "check": "event hash delegated to trigger",
+      "status": "passed",
+      "pattern": "Le trigger SQL se charge de calculer le chaînage de hash",
+      "path": "libs/rust/audit/src/lib.rs"
+    },
+    {
+      "product": "shared-audit-crate",
+      "check": "event hash omitted from insert columns",
+      "status": "passed",
+      "pattern": "audit insert column lists do not include event_hash",
+      "path": "libs/rust/audit/src/lib.rs"
+    }
+  ]
+}

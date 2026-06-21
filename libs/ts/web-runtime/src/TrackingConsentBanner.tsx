@@ -7,7 +7,7 @@ import {
 } from './tracking-consent';
 import {
   toggleConsentCategory,
-  toggleConsentPostHogPurpose,
+  toggleConsentAnalyticsPurpose,
   toggleConsentVendor,
 } from './tracking-consent.editor';
 import { TrackingConsentToggle } from './TrackingConsentToggle';
@@ -155,53 +155,55 @@ export function SharedTrackingConsentBanner({
                 </div>
                 <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
                   <TrackingConsentToggle
-                    checked={tempConsent.vendors.posthog}
+                    checked={tempConsent.vendors.analytics}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'posthog', 'analytics'))
+                      setTempConsent((prev) => toggleConsentVendor(prev, 'analytics', 'analytics'))
                     }
-                    label="PostHog"
-                    description="Active ou désactive toutes les finalités PostHog."
+                    label="Analytics"
+                    description="Active ou désactive toutes les finalités Analytics."
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.productAnalytics}
+                    checked={tempConsent.analytics.productAnalytics}
                     onChange={() =>
                       setTempConsent((prev) =>
-                        toggleConsentPostHogPurpose(prev, 'productAnalytics'),
+                        toggleConsentAnalyticsPurpose(prev, 'productAnalytics'),
                       )
                     }
                     label="Analytics produit"
                     description="Mesure les étapes de funnel sans données personnelles."
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.featureFlags}
+                    checked={tempConsent.analytics.featureFlags}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentPostHogPurpose(prev, 'featureFlags'))
+                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'featureFlags'))
                     }
                     label="Feature flags"
                     description="Active des expériences non critiques après consentement."
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.autocaptureHeatmaps}
+                    checked={tempConsent.analytics.autocaptureHeatmaps}
                     onChange={() =>
                       setTempConsent((prev) =>
-                        toggleConsentPostHogPurpose(prev, 'autocaptureHeatmaps'),
+                        toggleConsentAnalyticsPurpose(prev, 'autocaptureHeatmaps'),
                       )
                     }
                     label="Heatmaps & autocapture"
                     description="Capture uniquement les interactions masquées et non sensibles."
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.sessionReplay}
+                    checked={tempConsent.analytics.sessionReplay}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentPostHogPurpose(prev, 'sessionReplay'))
+                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'sessionReplay'))
                     }
                     label="Session replay"
                     description={sessionReplayDescription}
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.surveysFeedback}
+                    checked={tempConsent.analytics.surveysFeedback}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentPostHogPurpose(prev, 'surveysFeedback'))
+                      setTempConsent((prev) =>
+                        toggleConsentAnalyticsPurpose(prev, 'surveysFeedback'),
+                      )
                     }
                     label="Surveys & feedback"
                     description="Questionnaires ciblés hors pages sensibles."
@@ -233,20 +235,22 @@ export function SharedTrackingConsentBanner({
                 </div>
                 <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
                   <TrackingConsentToggle
-                    checked={tempConsent.vendors.sentry}
+                    checked={tempConsent.vendors.errorReporting}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'sentry', 'performance'))
+                      setTempConsent((prev) =>
+                        toggleConsentVendor(prev, 'errorReporting', 'performance'),
+                      )
                     }
-                    label="Sentry"
-                    description="Rapports d'erreurs en temps réel."
+                    label="Error reporting"
+                    description="Rapports d'erreurs techniques."
                   />
                   <TrackingConsentToggle
-                    checked={tempConsent.posthog.errorTracking}
+                    checked={tempConsent.analytics.errorTracking}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentPostHogPurpose(prev, 'errorTracking'))
+                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'errorTracking'))
                     }
-                    label="PostHog error tracking"
-                    description="Capture navigateur scrubbed en parallèle de Sentry."
+                    label="Analytics error tracking"
+                    description="Capture navigateur scrubbed pour les diagnostics produit."
                   />
                 </div>
               </div>

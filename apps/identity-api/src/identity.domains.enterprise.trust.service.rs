@@ -134,74 +134,7 @@ fn dpa_document() -> TrustCenterDocument {
 }
 
 fn subprocessors() -> Vec<TrustCenterSubprocessor> {
-    vec![
-        subprocessor(
-            "Scaleway",
-            "Hebergement",
-            "Compte, fichiers, metadata, logs",
-            "France",
-            false,
-            "N/A",
-        ),
-        subprocessor(
-            "Stripe",
-            "Paiement et billing",
-            "Facturation, TVA, transactions",
-            "USA",
-            true,
-            "SCC",
-        ),
-        subprocessor(
-            "PostHog",
-            "Product analytics",
-            "Events usage, metadata techniques",
-            "USA",
-            true,
-            "SCC",
-        ),
-        subprocessor(
-            "Sentry",
-            "Error tracking",
-            "Logs d'erreurs, metadata techniques",
-            "USA",
-            true,
-            "SCC",
-        ),
-        subprocessor(
-            "Grafana Labs",
-            "Observabilite cloud",
-            "Metriques, traces, logs rediges",
-            "UE/USA",
-            true,
-            "DPA Grafana Cloud + SCC",
-        ),
-        subprocessor(
-            "Cloudflare",
-            "WAF, CDN, DNS",
-            "IP, logs reseau, requetes HTTP",
-            "Global edge",
-            true,
-            "SCC",
-        ),
-    ]
-}
-
-fn subprocessor(
-    name: &str,
-    service: &str,
-    data_categories: &str,
-    location: &str,
-    transfer_outside_eea: bool,
-    transfer_safeguard: &str,
-) -> TrustCenterSubprocessor {
-    TrustCenterSubprocessor {
-        name: name.to_string(),
-        service: service.to_string(),
-        data_categories: data_categories.to_string(),
-        location: location.to_string(),
-        transfer_outside_eea,
-        transfer_safeguard: transfer_safeguard.to_string(),
-    }
+    Vec::new()
 }
 
 #[cfg(test)]
@@ -271,11 +204,6 @@ mod tests {
         assert!(response.audit.immutable);
         assert_eq!(response.hosting_regions[0].legal_jurisdiction, "gdpr");
         assert_eq!(response.dpa.version, "2026-05-11");
-        assert!(
-            response
-                .subprocessors
-                .iter()
-                .any(|item| item.name == "Scaleway")
-        );
+        assert!(response.subprocessors.is_empty());
     }
 }

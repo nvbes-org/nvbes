@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/billing-entitlements.mjs --write",
+    "sources": [
+      "libs/rust/billing/src/views.rs",
+      "libs/rust/billing/src/types.rs",
+      "libs/rust/billing/src/shared.rs",
+      "apps/identity-api/src/identity.domains.billing.routes.manage.rs",
+      "apps/identity-api/src/identity.domains.billing.service.overview.rs",
+      "apps/identity-api/src/identity.domains.billing.entitlements.rs",
+      "apps/identity-api/src/identity.domains.billing.policy.rs",
+      "apps/identity-api/src/identity.domains.billing.service.types.rs",
+      "apps/drive-api/src/drive.domains.billing.manage.core.rs",
+      "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "apps/drive-api/src/drive.domains.billing.types.rs",
+      "contracts/events/billing.entitlement.changed.v1.schema.json",
+      "contracts/events/manifest.json",
+      "docs/migration/data-map.md",
+      "docs/migration/job-map.md",
+      "docs/migration/resource-map.md",
+      "docs/migration/risk-register.generated.json"
+    ],
+    "targeted_tests": [
+      "cargo test -p nvbes-billing entitlements_view --locked",
+      "cargo test -p nvbes-billing build_invoice_estimate_charges_only_billable_overages --locked",
+      "pnpm check:migration-reconciliation-report"
+    ]
+  },
+  "summary": {
+    "checks": 35,
+    "passed": 35,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "entitlement-type",
+      "description": "Shared billing type exposes product entitlements",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub struct ProductEntitlementsView"
+    },
+    {
+      "id": "entitlement-upload",
+      "description": "Entitlements include upload permission",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub can_upload: bool"
+    },
+    {
+      "id": "entitlement-share-link",
+      "description": "Entitlements include share-link permission",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub can_create_share_links: bool"
+    },
+    {
+      "id": "entitlement-storage",
+      "description": "Entitlements include storage allowance",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub included_storage_bytes: i64"
+    },
+    {
+      "id": "entitlement-api-keys",
+      "description": "Entitlements include API key limits",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub api_key_limit: i32"
+    },
+    {
+      "id": "entitlement-lock",
+      "description": "Entitlements include billing lock state",
+      "path": "libs/rust/billing/src/types.rs",
+      "status": "passed",
+      "pattern": "pub billing_locked: bool"
+    },
+    {
+      "id": "shared-entitlement-view",
+      "description": "Shared entitlement view derives product permissions",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "pub fn entitlements_view"
+    },
+    {
+      "id": "shared-lock-statuses",
+      "description": "Shared entitlement view locks degraded statuses",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "\"past_due\" | \"canceled\" | \"incomplete\" | \"suspended\""
+    },
+    {
+      "id": "shared-api-key-limit",
+      "description": "Shared entitlement view maps plan to API key limit",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "api_key_limit(&record.plan_code)"
+    },
+    {
+      "id": "shared-active-test",
+      "description": "Active entitlement behavior is covered by unit test",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "entitlements_view_allows_active_subscription_with_plan_limits"
+    },
+    {
+      "id": "shared-locked-test",
+      "description": "Degraded subscription lock behavior is covered by unit test",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "entitlements_view_locks_degraded_subscriptions"
+    },
+    {
+      "id": "shared-invoice-test",
+      "description": "Invoice overage calculation is covered by unit test",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "build_invoice_estimate_charges_only_billable_overages"
+    },
+    {
+      "id": "shared-usage-overage",
+      "description": "Invoice estimate charges storage and seat overages",
+      "path": "libs/rust/billing/src/views.rs",
+      "status": "passed",
+      "pattern": "storage_overage_amount_cents + seat_overage_amount_cents"
+    },
+    {
+      "id": "shared-lock-helper",
+      "description": "Billing policy helper locks degraded subscription statuses",
+      "path": "libs/rust/billing/src/shared.rs",
+      "status": "passed",
+      "pattern": "subscription_status_requires_lock"
+    },
+    {
+      "id": "identity-overview",
+      "description": "Identity billing overview returns entitlements",
+      "path": "apps/identity-api/src/identity.domains.billing.service.overview.rs",
+      "status": "passed",
+      "pattern": "entitlements: entitlements_view(&record)"
+    },
+    {
+      "id": "identity-usage-ledger",
+      "description": "Identity usage response exposes billable storage and seats",
+      "path": "apps/identity-api/src/identity.domains.billing.service.overview.rs",
+      "status": "passed",
+      "pattern": "billable_quantity"
+    },
+    {
+      "id": "identity-entitlements-route",
+      "description": "Identity exposes billing entitlements endpoint",
+      "path": "apps/identity-api/src/identity.domains.billing.routes.manage.rs",
+      "status": "passed",
+      "pattern": "path = \"/workspaces/{workspaceId}/billing/entitlements\""
+    },
+    {
+      "id": "identity-entitlements-authz",
+      "description": "Identity entitlement endpoint requires billing authorization",
+      "path": "apps/identity-api/src/identity.domains.billing.routes.manage.rs",
+      "status": "passed",
+      "pattern": "WorkspaceAction::ViewBilling"
+    },
+    {
+      "id": "identity-entitlements-service",
+      "description": "Identity service returns workspace entitlements",
+      "path": "apps/identity-api/src/identity.domains.billing.entitlements.rs",
+      "status": "passed",
+      "pattern": "get_entitlements_for_workspace"
+    },
+    {
+      "id": "identity-type-reexport",
+      "description": "Identity service re-exports shared entitlement type",
+      "path": "apps/identity-api/src/identity.domains.billing.service.types.rs",
+      "status": "passed",
+      "pattern": "ProductEntitlementsView"
+    },
+    {
+      "id": "identity-policy-lock",
+      "description": "Identity billing operations enforce lock policy",
+      "path": "apps/identity-api/src/identity.domains.billing.policy.rs",
+      "status": "passed",
+      "pattern": "subscription_status_requires_lock(&billing_record.subscription_status)"
+    },
+    {
+      "id": "drive-overview",
+      "description": "Drive billing overview returns shared entitlements",
+      "path": "apps/drive-api/src/drive.domains.billing.manage.core.rs",
+      "status": "passed",
+      "pattern": "entitlements: entitlements_view(&record)"
+    },
+    {
+      "id": "drive-usage-ledger",
+      "description": "Drive usage response exposes billable storage and seats",
+      "path": "apps/drive-api/src/drive.domains.billing.manage.core.rs",
+      "status": "passed",
+      "pattern": "billable_quantity"
+    },
+    {
+      "id": "drive-invoice-persist",
+      "description": "Drive persists invoice estimates for reconciliation",
+      "path": "apps/drive-api/src/drive.domains.billing.manage.core.rs",
+      "status": "passed",
+      "pattern": "persist_invoice_estimate(db, &estimate)"
+    },
+    {
+      "id": "drive-invoice-storage",
+      "description": "Drive invoice estimate persistence stores amount and period",
+      "path": "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "status": "passed",
+      "pattern": "INSERT INTO invoice_estimates"
+    },
+    {
+      "id": "drive-type-reexport",
+      "description": "Drive service re-exports shared billing response types",
+      "path": "apps/drive-api/src/drive.domains.billing.types.rs",
+      "status": "passed",
+      "pattern": "BillingOverviewResponse"
+    },
+    {
+      "id": "entitlement-event-schema",
+      "description": "Entitlement changed event schema is versioned",
+      "path": "contracts/events/billing.entitlement.changed.v1.schema.json",
+      "status": "passed",
+      "pattern": "\"event_type\": { \"const\": \"billing.entitlement.changed\" }"
+    },
+    {
+      "id": "entitlement-event-payload",
+      "description": "Entitlement event payload requires workspace and status",
+      "path": "contracts/events/billing.entitlement.changed.v1.schema.json",
+      "status": "passed",
+      "pattern": "\"required\": [\"workspace_id\", \"entitlement\", \"status\"]"
+    },
+    {
+      "id": "event-manifest",
+      "description": "Event manifest includes billing entitlement changes",
+      "path": "contracts/events/manifest.json",
+      "status": "passed",
+      "pattern": "\"billing.entitlement.changed\""
+    },
+    {
+      "id": "data-map-ledger",
+      "description": "Billing financial data requires ledger balance reconciliation",
+      "path": "docs/migration/data-map.md",
+      "status": "passed",
+      "pattern": "row_count, checksum, ledger_balance"
+    },
+    {
+      "id": "subscription-rebuild",
+      "description": "Subscriptions have explicit rebuild decision",
+      "path": "docs/migration/data-map.md",
+      "status": "passed",
+      "pattern": "`target-postgres:billing-usage.subscriptions`"
+    },
+    {
+      "id": "usage-events-rebuild",
+      "description": "Usage events have explicit rebuild decision",
+      "path": "docs/migration/data-map.md",
+      "status": "passed",
+      "pattern": "`target-postgres:billing-usage.usage_events`"
+    },
+    {
+      "id": "job-map",
+      "description": "Billing webhook processing job is mapped",
+      "path": "docs/migration/job-map.md",
+      "status": "passed",
+      "pattern": "billing.stripe.webhook.process"
+    },
+    {
+      "id": "resource-map",
+      "description": "Billing entitlement event topic is mapped",
+      "path": "docs/migration/resource-map.md",
+      "status": "passed",
+      "pattern": "billing.entitlement.changed"
+    },
+    {
+      "id": "risk-register",
+      "description": "Billing divergence risk requires ledger reconciliation",
+      "path": "docs/migration/risk-register.generated.json",
+      "status": "passed",
+      "pattern": "ledger reconcile et freeze des mutations billing"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "projectType": "library",
   "root": "tools/rust-workspace",
   "sourceRoot": "tools/rust-workspace",
-  "tags": ["type:workspace", "domain:shared", "layer:tooling"],
+  "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
   "implicitDependencies": [
     "drive-api",
     "drive-worker",
@@ -14,6 +14,8 @@
     "core",
     "identity-sdk-backend",
     "observability",
+    "platform",
+    "ports",
     "tenancy"
   ],
   "namedInputs": {
@@ -37,7 +39,11 @@
       "outputs": [],
       "options": {
         "command": "cargo build --workspace --release --locked"
-      }
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true,
+      "dependsOn": ["^build"]
     },
     "check": {
       "executor": "nx:run-commands",
@@ -45,7 +51,10 @@
       "outputs": [],
       "options": {
         "command": "cargo check --workspace --locked"
-      }
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -53,7 +62,10 @@
       "outputs": [],
       "options": {
         "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
-      }
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
     },
     "test": {
       "executor": "nx:run-commands",
@@ -61,7 +73,10 @@
       "outputs": [],
       "options": {
         "command": "cargo test --workspace --locked"
-      }
+      },
+      "configurations": {},
+      "parallelism": true,
+      "cache": true
     }
   }
 }

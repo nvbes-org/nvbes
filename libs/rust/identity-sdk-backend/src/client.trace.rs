@@ -1,18 +1,15 @@
 use reqwest::RequestBuilder;
 
 const TRACEPARENT_HEADER: &str = "traceparent";
-const SENTRY_TRACE_HEADER: &str = "sentry-trace";
 
 pub(crate) fn with_fresh_trace_headers(request: RequestBuilder) -> RequestBuilder {
     let trace_id = random_hex::<16>();
     let span_id = random_hex::<8>();
 
-    request
-        .header(
-            TRACEPARENT_HEADER,
-            format!("00-{}-{}-01", trace_id, span_id),
-        )
-        .header(SENTRY_TRACE_HEADER, format!("{}-{}-1", trace_id, span_id))
+    request.header(
+        TRACEPARENT_HEADER,
+        format!("00-{}-{}-01", trace_id, span_id),
+    )
 }
 
 fn random_hex<const N: usize>() -> String {

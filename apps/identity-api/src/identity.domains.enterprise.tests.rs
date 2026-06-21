@@ -29,13 +29,9 @@ async fn test_delegated_administration_scoping_and_blocking() {
         org_a_admin_auth,
     ) = support::setup_delegated_admin_test_data(&pool).await;
 
-    // --- 1. Test Scoped Reads (Users, Workspaces, Audit Events) ---
-
-    // A. List Users
     let users_resp = list_users(&pool, &org_a_admin_auth, tenant_id)
         .await
         .unwrap();
-    // Org A admin should see: admin_a (self) and user_a, but NOT user_b (which is in Org B)
     assert!(
         users_resp
             .users
@@ -45,11 +41,9 @@ async fn test_delegated_administration_scoping_and_blocking() {
     assert!(users_resp.users.iter().any(|u| u.id == user_a_id));
     assert!(!users_resp.users.iter().any(|u| u.id == user_b_id));
 
-    // B. List Workspaces
     let workspaces_resp = list_workspaces(&pool, &org_a_admin_auth, tenant_id)
         .await
         .unwrap();
-    // Org A admin should see: workspace_a, but NOT workspace_b
     assert!(
         workspaces_resp
             .workspaces
@@ -63,11 +57,9 @@ async fn test_delegated_administration_scoping_and_blocking() {
             .any(|w| w.id == workspace_b_id)
     );
 
-    // C. List Audit Events
     let audit_resp = list_audit_events(&pool, &org_a_admin_auth, tenant_id)
         .await
         .unwrap();
-    // Initially empty or scoped only to workspace_a
     for event in audit_resp.events {
         if let Some(ws_id) = event
             .metadata
@@ -79,21 +71,16 @@ async fn test_delegated_administration_scoping_and_blocking() {
         }
     }
 
-    // --- 2. Test Blocked Tenant-wide Reads ---
-
-    // A. Billing should fail
     let billing_err = get_billing(&pool, &org_a_admin_auth, tenant_id)
         .await
         .unwrap_err();
     assert_eq!(billing_err.code, "tenant_scope_required");
 
-    // B. Security center should fail
     let security_err = get_security(&pool, &org_a_admin_auth, tenant_id, 12)
         .await
         .unwrap_err();
     assert_eq!(security_err.code, "tenant_scope_required");
 
-    // C. Tenant-only mutations and views should fail with the same scope contract
     let elevation_err = grant_admin_elevation(
         &pool,
         &redis,
@@ -170,10 +157,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .unwrap_err();
     assert_eq!(policy_simulation_err.code, "tenant_scope_required");
 
-    // --- 3. Test Scoped Mutations ---
-
-    // A. Create Invitation
-    // Inviting to workspace_a (in Org A) should succeed
     let invite_ok = create_invitations(
         &pool,
         &redis,
@@ -189,7 +172,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .await;
     assert!(invite_ok.is_ok());
 
-    // Inviting to workspace_b (in Org B) should fail
     let invite_err = create_invitations(
         &pool,
         &redis,
@@ -206,8 +188,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
     .unwrap_err();
     assert_eq!(invite_err.code, "invalid_workspace_scope");
 
-    // B. Update User Access
-    // Updating user_a (in Org A) should succeed
     let update_ok = update_user_access(
         &pool,
         &redis,
@@ -286,7 +266,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
                 && event.target_id == Some(user_a_id))
     );
 
-    // Updating user_b (in Org B) should fail
     let update_err = update_user_access(
         &pool,
         &redis,

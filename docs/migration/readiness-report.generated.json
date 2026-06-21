@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/readiness-report.mjs --write",
+    "strict_cutover_command": "tools/migration/readiness-report.mjs --strict"
+  },
+  "status": {
+    "production_cutover": "no-go",
+    "blocking_areas": 6,
+    "blocking_items": 21,
+    "live_evidence_missing_requirements": 6,
+    "live_evidence_missing_items": 24
+  },
+  "sources": [
+    {
+      "id": "data",
+      "source": "docs/migration/data-map.generated.json",
+      "total": 104,
+      "pending": 0,
+      "proof": "pnpm check:migration-data-map"
+    },
+    {
+      "id": "secrets",
+      "source": "docs/migration/secret-map.generated.json",
+      "total": 77,
+      "pending": 0,
+      "proof": "pnpm check:migration-secret-map"
+    },
+    {
+      "id": "jobs",
+      "source": "docs/migration/job-map.generated.json",
+      "total": 13,
+      "pending": 0,
+      "proof": "pnpm check:migration-job-map"
+    },
+    {
+      "id": "resources",
+      "source": "docs/migration/resource-map.generated.json",
+      "total": 18,
+      "pending": 0,
+      "proof": "pnpm check:migration-resource-map"
+    },
+    {
+      "id": "target_structure",
+      "source": "docs/migration/target-structure.generated.json",
+      "total": 56,
+      "pending": 0,
+      "proof": "pnpm check:migration-target-structure"
+    },
+    {
+      "id": "codegen",
+      "source": "docs/migration/codegen.generated.json",
+      "total": 6,
+      "pending": 0,
+      "proof": "pnpm check:migration-codegen"
+    },
+    {
+      "id": "supply_chain",
+      "source": "docs/migration/supply-chain.generated.json",
+      "total": 5,
+      "pending": 0,
+      "proof": "pnpm check:migration-supply-chain"
+    },
+    {
+      "id": "runtimes",
+      "source": "docs/migration/runtime-foundation.generated.json",
+      "total": 4,
+      "pending": 0,
+      "proof": "pnpm check:migration-runtime-foundation"
+    },
+    {
+      "id": "platform_primitives",
+      "source": "docs/migration/platform-primitives.generated.json",
+      "total": 9,
+      "pending": 0,
+      "proof": "pnpm check:migration-platform-primitives"
+    },
+    {
+      "id": "identity_register",
+      "source": "docs/migration/identity-register.generated.json",
+      "total": 29,
+      "pending": 0,
+      "proof": "pnpm check:migration-identity-register"
+    },
+    {
+      "id": "identity_login_session",
+      "source": "docs/migration/identity-login-session.generated.json",
+      "total": 27,
+      "pending": 0,
+      "proof": "pnpm check:migration-identity-login-session"
+    },
+    {
+      "id": "identity_mfa_webauthn",
+      "source": "docs/migration/identity-mfa-webauthn.generated.json",
+      "total": 37,
+      "pending": 0,
+      "proof": "pnpm check:migration-identity-mfa-webauthn"
+    },
+    {
+      "id": "workspace_membership_roles",
+      "source": "docs/migration/workspace-membership-roles.generated.json",
+      "total": 26,
+      "pending": 0,
+      "proof": "pnpm check:migration-workspace-membership-roles"
+    },
+    {
+      "id": "workspace_last_owner",
+      "source": "docs/migration/workspace-last-owner.generated.json",
+      "total": 18,
+      "pending": 0,
+      "proof": "pnpm check:migration-workspace-last-owner"
+    },
+    {
+      "id": "drive_upload_download",
+      "source": "docs/migration/drive-upload-download.generated.json",
+      "total": 48,
+      "pending": 0,
+      "proof": "pnpm check:migration-drive-upload-download"
+    },
+    {
+      "id": "drive_share_revoke",
+      "source": "docs/migration/drive-share-revoke.generated.json",
+      "total": 32,
+      "pending": 0,
+      "proof": "pnpm check:migration-drive-share-revoke"
+    },
+    {
+      "id": "drive_quotas",
+      "source": "docs/migration/drive-quotas.generated.json",
+      "total": 37,
+      "pending": 0,
+      "proof": "pnpm check:migration-drive-quotas"
+    },
+    {
+      "id": "audit_append_only",
+      "source": "docs/migration/audit-append-only.generated.json",
+      "total": 34,
+      "pending": 0,
+      "proof": "pnpm check:migration-audit-append-only"
+    },
+    {
+      "id": "privacy_export_delete",
+      "source": "docs/migration/privacy-export-delete.generated.json",
+      "total": 29,
+      "pending": 0,
+      "proof": "pnpm check:migration-privacy-export-delete"
+    },
+    {
+      "id": "billing_entitlements",
+      "source": "docs/migration/billing-entitlements.generated.json",
+      "total": 35,
+      "pending": 0,
+      "proof": "pnpm check:migration-billing-entitlements"
+    },
+    {
+      "id": "billing_webhook_idempotency",
+      "source": "docs/migration/billing-webhook-idempotency.generated.json",
+      "total": 15,
+      "pending": 0,
+      "proof": "pnpm check:migration-billing-webhook-idempotency"
+    },
+    {
+      "id": "developer_oauth_tokens",
+      "source": "docs/migration/developer-oauth-tokens.generated.json",
+      "total": 30,
+      "pending": 0,
+      "proof": "pnpm check:migration-developer-oauth-tokens"
+    },
+    {
+      "id": "developer_signed_webhooks",
+      "source": "docs/migration/developer-signed-webhooks.generated.json",
+      "total": 27,
+      "pending": 0,
+      "proof": "pnpm check:migration-developer-signed-webhooks"
+    },
+    {
+      "id": "cloud_provisioning",
+      "source": "docs/migration/cloud-provisioning.generated.json",
+      "total": 21,
+      "pending": 0,
+      "proof": "pnpm check:migration-cloud-provisioning"
+    },
+    {
+      "id": "phases",
+      "source": "docs/migration/phase-ledger.generated.json",
+      "total": 13,
+      "pending": 3,
+      "proof": "tools/migration/phase-ledger.mjs --strict"
+    },
+    {
+      "id": "domains",
+      "source": "docs/migration/domain-ledger.generated.json",
+      "total": 8,
+      "pending": 0,
+      "proof": "pnpm check:migration-domain-ledger"
+    },
+    {
+      "id": "domain_dod",
+      "source": "docs/migration/domain-dod.generated.json",
+      "total": 64,
+      "pending": 0,
+      "proof": "pnpm check:migration-domain-dod"
+    },
+    {
+      "id": "risks",
+      "source": "docs/migration/risk-register.generated.json",
+      "total": 7,
+      "pending": 1,
+      "proof": "tools/migration/risk-register.mjs --strict"
+    },
+    {
+      "id": "gates",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "total": 9,
+      "pending": 5,
+      "proof": "tools/migration/gate-evidence.mjs --strict"
+    },
+    {
+      "id": "gate_decisions",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "total": 9,
+      "pending": 5,
+      "proof": "tools/migration/gate-evidence.mjs --strict"
+    },
+    {
+      "id": "reconciliation_template",
+      "source": "docs/migration/reconciliation.template.json",
+      "total": 1,
+      "pending": 1,
+      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
+    },
+    {
+      "id": "live_evidence",
+      "source": "docs/migration/live-evidence-instances.generated.json",
+      "total": 6,
+      "pending": 6,
+      "proof": "tools/migration/live-evidence-instances.mjs --strict"
+    }
+  ],
+  "blockers": [
+    {
+      "area": "phases",
+      "source": "docs/migration/phase-ledger.generated.json",
+      "blocking_items": 3,
+      "proof": "tools/migration/phase-ledger.mjs --strict"
+    },
+    {
+      "area": "risks",
+      "source": "docs/migration/risk-register.generated.json",
+      "blocking_items": 1,
+      "proof": "tools/migration/risk-register.mjs --strict"
+    },
+    {
+      "area": "gates",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "blocking_items": 5,
+      "proof": "tools/migration/gate-evidence.mjs --strict"
+    },
+    {
+      "area": "gate_decisions",
+      "source": "docs/migration/gate-evidence.generated.json",
+      "blocking_items": 5,
+      "proof": "tools/migration/gate-evidence.mjs --strict"
+    },
+    {
+      "area": "reconciliation_template",
+      "source": "docs/migration/reconciliation.template.json",
+      "blocking_items": 1,
+      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
+    },
+    {
+      "area": "live_evidence",
+      "source": "docs/migration/live-evidence-instances.generated.json",
+      "blocking_items": 6,
+      "proof": "tools/migration/live-evidence-instances.mjs --strict"
+    }
+  ]
+}

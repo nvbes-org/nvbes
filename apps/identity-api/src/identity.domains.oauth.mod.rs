@@ -22,6 +22,8 @@ pub mod metadata;
 pub mod routes;
 #[path = "identity.domains.oauth.service.rs"]
 pub mod service;
+#[path = "identity.domains.oauth.system_clients.rs"]
+pub(crate) mod system_clients;
 #[path = "identity.domains.oauth.validation.rs"]
 pub mod validation;
 

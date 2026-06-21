@@ -34,7 +34,13 @@ pub(crate) async fn spawn_identity_server(state: nvbes_identity_api::app::AppSta
 pub(crate) async fn identity_state(pool: &PgPool) -> nvbes_identity_api::app::AppState {
     unsafe {
         std::env::set_var("NVBES_ENV", "development");
-        std::env::set_var("NVBES_WORKSPACE_ROOT", "/Users/shayn/Development/nvbes");
+        std::env::set_var(
+            "NVBES_WORKSPACE_ROOT",
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .expect("workspace root"),
+        );
     }
 
     let config = nvbes_identity_api::app::AppConfig {
@@ -52,7 +58,13 @@ pub(crate) async fn identity_state(pool: &PgPool) -> nvbes_identity_api::app::Ap
 pub(crate) async fn drive_app() -> axum::Router {
     unsafe {
         std::env::set_var("NVBES_ENV", "development");
-        std::env::set_var("NVBES_WORKSPACE_ROOT", "/Users/shayn/Development/nvbes");
+        std::env::set_var(
+            "NVBES_WORKSPACE_ROOT",
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .ancestors()
+                .nth(2)
+                .expect("workspace root"),
+        );
     }
 
     let config = AppConfig {

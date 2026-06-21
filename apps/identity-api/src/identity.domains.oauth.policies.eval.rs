@@ -5,6 +5,7 @@ use crate::http::error::AppError;
 use sqlx::PgPool;
 
 use super::service::PolicyEvaluation;
+use super::system_clients::is_system_client;
 use super::{normalize_resources, normalize_scopes};
 
 struct ClientPolicyRecord {
@@ -37,7 +38,7 @@ pub async fn ensure_client_policy(
             .collect(),
     );
 
-    if client_id == "drive-web" || client_id == "drive-worker" {
+    if is_system_client(client_id) {
         return Ok(PolicyEvaluation {
             status: "active".to_string(),
             normalized_scope: scope,

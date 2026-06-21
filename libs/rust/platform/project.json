@@ -1,0 +1,7 @@
+{
+  "name": "platform",
+  "projectType": "library",
+  "root": "libs/rust/platform",
+  "sourceRoot": "libs/rust/platform/src",
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:core"]
+}

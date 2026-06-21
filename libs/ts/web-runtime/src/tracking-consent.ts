@@ -1,17 +1,17 @@
 import {
   ACCEPT_ALL_CONSENT,
-  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  POSTHOG_PURPOSE_CONSENT_TYPES,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
   cloneConsent,
-  getPostHogConsent,
+  getAnalyticsConsent,
   getTrackingConsent,
   hasAnyOptionalConsent,
   isCategoryAccepted,
-  isPostHogPurposeAccepted,
+  isAnalyticsPurposeAccepted,
   isVendorAccepted,
   persistTrackingConsent,
   readTrackingConsentStoredValue,
@@ -79,30 +79,30 @@ function backendConsentState(consents: BackendConsent[]): CookieConsentState {
   const activeVersions = activeVersionsByConsentType(consents);
   const analyticsGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_analytics') ||
-    hasActiveConsent(activeVersions, 'cookie_consent_vendor_posthog') ||
-    Object.values(POSTHOG_PURPOSE_CONSENT_TYPES).some((consentType) =>
+    hasActiveConsent(activeVersions, 'cookie_consent_vendor_analytics') ||
+    Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES).some((consentType) =>
       hasActiveConsent(activeVersions, consentType),
     );
   const performanceGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_performance') ||
-    hasActiveConsent(activeVersions, 'cookie_consent_vendor_sentry') ||
-    hasActiveConsent(activeVersions, POSTHOG_PURPOSE_CONSENT_TYPES.errorTracking);
-  const posthog = {
+    hasActiveConsent(activeVersions, 'cookie_consent_vendor_error_reporting') ||
+    hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking);
+  const analytics = {
     productAnalytics: hasActiveConsent(
       activeVersions,
-      POSTHOG_PURPOSE_CONSENT_TYPES.productAnalytics,
+      ANALYTICS_PURPOSE_CONSENT_TYPES.productAnalytics,
     ),
     autocaptureHeatmaps: hasActiveConsent(
       activeVersions,
-      POSTHOG_PURPOSE_CONSENT_TYPES.autocaptureHeatmaps,
+      ANALYTICS_PURPOSE_CONSENT_TYPES.autocaptureHeatmaps,
     ),
-    sessionReplay: hasActiveConsent(activeVersions, POSTHOG_PURPOSE_CONSENT_TYPES.sessionReplay),
+    sessionReplay: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.sessionReplay),
     surveysFeedback: hasActiveConsent(
       activeVersions,
-      POSTHOG_PURPOSE_CONSENT_TYPES.surveysFeedback,
+      ANALYTICS_PURPOSE_CONSENT_TYPES.surveysFeedback,
     ),
-    errorTracking: hasActiveConsent(activeVersions, POSTHOG_PURPOSE_CONSENT_TYPES.errorTracking),
-    featureFlags: hasActiveConsent(activeVersions, POSTHOG_PURPOSE_CONSENT_TYPES.featureFlags),
+    errorTracking: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking),
+    featureFlags: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.featureFlags),
   };
 
   return {
@@ -120,12 +120,13 @@ function backendConsentState(consents: BackendConsent[]): CookieConsentState {
       identity:
         hasActiveConsent(activeVersions, 'cookie_consent_vendor_identity') ||
         DEFAULT_CONSENT.vendors.identity,
-      posthog:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_posthog') || analyticsGranted,
-      sentry:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_sentry') || performanceGranted,
+      analytics:
+        hasActiveConsent(activeVersions, 'cookie_consent_vendor_analytics') || analyticsGranted,
+      errorReporting:
+        hasActiveConsent(activeVersions, 'cookie_consent_vendor_error_reporting') ||
+        performanceGranted,
     },
-    posthog,
+    analytics,
   };
 }
 
@@ -166,8 +167,8 @@ async function syncLocalConsentToBackend(
   const vendorMapping = {
     stripe: 'cookie_consent_vendor_stripe',
     identity: 'cookie_consent_vendor_identity',
-    posthog: 'cookie_consent_vendor_posthog',
-    sentry: 'cookie_consent_vendor_sentry',
+    analytics: 'cookie_consent_vendor_analytics',
+    errorReporting: 'cookie_consent_vendor_error_reporting',
   } as const satisfies Record<keyof CookieConsentState['vendors'], string>;
 
   for (const [category, consentType] of Object.entries(categoryMapping)) {
@@ -182,18 +183,18 @@ async function syncLocalConsentToBackend(
 
   for (const [vendor, consentType] of Object.entries(vendorMapping)) {
     const granted =
-      vendor === 'posthog'
-        ? consent.vendors.posthog
+      vendor === 'analytics'
+        ? consent.vendors.analytics
         : consent.vendors[vendor as keyof CookieConsentState['vendors']];
     queueConsentSync(promises, activeVersions, consentType, granted, client);
   }
 
-  for (const [purpose, consentType] of Object.entries(POSTHOG_PURPOSE_CONSENT_TYPES)) {
+  for (const [purpose, consentType] of Object.entries(ANALYTICS_PURPOSE_CONSENT_TYPES)) {
     queueConsentSync(
       promises,
       activeVersions,
       consentType,
-      consent.posthog[purpose as keyof CookieConsentState['posthog']],
+      consent.analytics[purpose as keyof CookieConsentState['analytics']],
       client,
     );
   }
@@ -260,17 +261,17 @@ async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<
 
 export {
   ACCEPT_ALL_CONSENT,
-  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  POSTHOG_PURPOSE_CONSENT_TYPES,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
   cloneConsent,
-  getPostHogConsent,
+  getAnalyticsConsent,
   getTrackingConsent,
   isCategoryAccepted,
-  isPostHogPurposeAccepted,
+  isAnalyticsPurposeAccepted,
   isVendorAccepted,
   type CookieConsentState,
   type TrackingConsentStoredValue,
@@ -303,8 +304,8 @@ export function createTrackingConsentApi({
 
   return {
     getTrackingConsent,
-    getPostHogConsent,
-    isPostHogPurposeAccepted,
+    getAnalyticsConsent,
+    isAnalyticsPurposeAccepted,
     isVendorAccepted,
     isCategoryAccepted,
     setTrackingConsent,

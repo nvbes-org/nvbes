@@ -11,7 +11,6 @@ pub struct AuthState {
     pub email: String,
     pub next_step: String,
     pub device_fingerprint: Option<Value>,
-    pub turnstile_token: Option<String>,
 }
 
 pub async fn create_state(
@@ -20,7 +19,6 @@ pub async fn create_state(
     email: &str,
     next_step: &str,
     device_fingerprint: Option<Value>,
-    turnstile_token: Option<String>,
 ) -> Result<Uuid, AppError> {
     let id = Uuid::new_v4();
     let expires_at = Utc::now() + Duration::minutes(15);
@@ -32,7 +30,6 @@ pub async fn create_state(
             email: email.to_string(),
             next_step: next_step.to_string(),
             device_fingerprint,
-            turnstile_token,
             expires_at,
         },
         15 * 60,
@@ -89,7 +86,6 @@ pub async fn fetch_state(
         email: state.email,
         next_step: state.next_step,
         device_fingerprint: state.device_fingerprint,
-        turnstile_token: state.turnstile_token,
     })
 }
 

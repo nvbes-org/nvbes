@@ -95,33 +95,33 @@ export {
 export { configureErrorReporting, reportClientError } from './report-error';
 export type { ClientErrorReportContext, ClientErrorReporter } from './report-error';
 export {
-  createSentryReplayPrivacyOptions,
-  getSentryReplaysOnErrorSampleRate,
-  getSentryTracesSampleRate,
+  createErrorReportingReplayPrivacyOptions,
+  getErrorReportingReplaysOnErrorSampleRate,
+  getErrorReportingTracesSampleRate,
   sanitizeUrlString,
   scrubReplayRecordingEvent,
-  scrubSentryBreadcrumb,
-  scrubSentryEvent,
-} from './sentry-privacy';
-export { createSentryFeedbackOptions } from './sentry-feedback';
+  scrubErrorReportingBreadcrumb,
+  scrubErrorReportingEvent,
+} from './error-reporting-privacy';
+export { createErrorReportingFeedbackOptions } from './error-reporting-feedback';
 export {
-  installBrowserSentrySmoke,
-  isBrowserSentrySmokeEnabled,
-  SENTRY_SMOKE_GLOBAL,
-} from './sentry-smoke';
+  installBrowserErrorReportingSmoke,
+  isBrowserErrorReportingSmokeEnabled,
+  ERROR_REPORTING_SMOKE_GLOBAL,
+} from './error-reporting-smoke';
 export type {
-  BrowserSentrySmokeOptions,
-  BrowserSentrySmokeReporter,
-  BrowserSentrySmokeResult,
-} from './sentry-smoke';
+  BrowserErrorReportingSmokeOptions,
+  BrowserErrorReportingSmokeReporter,
+  BrowserErrorReportingSmokeResult,
+} from './error-reporting-smoke';
 export {
   ACCEPT_ALL_CONSENT,
-  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
   createTrackingConsentApi,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  POSTHOG_PURPOSE_CONSENT_TYPES,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
 } from './tracking-consent';
 export type {
@@ -130,13 +130,13 @@ export type {
   TrackingConsentStoredValue,
 } from './tracking-consent';
 export {
-  ANALYTICS_POSTHOG_PURPOSES,
   deriveConsentState,
-  hasAnyPostHogPurpose,
+  hasAnyAnalyticsPurpose,
+  OPTIONAL_ANALYTICS_PURPOSES,
   toggleConsentCategory,
-  toggleConsentPostHogPurpose,
+  toggleConsentAnalyticsPurpose,
   toggleConsentVendor,
-  type PostHogPurpose,
+  type AnalyticsPurpose,
 } from './tracking-consent.editor';
 export { SharedTrackingConsentBanner } from './TrackingConsentBanner';
 export { TrackingConsentToggle } from './TrackingConsentToggle';

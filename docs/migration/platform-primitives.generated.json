@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/platform-primitives.mjs --write",
+    "strict_cutover_command": "tools/migration/platform-primitives.mjs --strict"
+  },
+  "summary": {
+    "entries": 9,
+    "active": 9,
+    "missing": 0,
+    "pending": 0
+  },
+  "entries": [
+    {
+      "id": "config",
+      "evidence": "libs/rust/core/src/config.rs",
+      "proof": "cargo test -p nvbes-core config --locked",
+      "status": "active"
+    },
+    {
+      "id": "errors",
+      "evidence": "libs/rust/core/src/http.error.rs",
+      "proof": "cargo test -p nvbes-core app_error_constructors_keep_standard_error_contract --locked && cargo test -p nvbes-core rate_limit_error_preserves_retry_after --locked",
+      "status": "active"
+    },
+    {
+      "id": "tenancy",
+      "evidence": "libs/rust/tenancy/src/lib.rs",
+      "proof": "cargo test -p nvbes-tenancy --locked",
+      "status": "active"
+    },
+    {
+      "id": "audit",
+      "evidence": "libs/rust/audit/src/lib.rs",
+      "proof": "cargo test -p nvbes-audit --locked",
+      "status": "active"
+    },
+    {
+      "id": "outbox",
+      "evidence": "libs/rust/platform/src/platform.outbox.rs",
+      "proof": "cargo test -p nvbes-platform --locked",
+      "status": "active"
+    },
+    {
+      "id": "ports",
+      "evidence": "libs/rust/ports/src/lib.rs",
+      "proof": "cargo test -p nvbes-ports --locked",
+      "status": "active"
+    },
+    {
+      "id": "observability",
+      "evidence": "libs/rust/observability/src/lib.rs",
+      "proof": "cargo test -p nvbes-observability --locked",
+      "status": "active"
+    },
+    {
+      "id": "idempotency",
+      "evidence": "libs/rust/core/src/idempotency.rs",
+      "proof": "cargo test -p nvbes-core validate_key_trims_and_rejects_invalid_values --locked && cargo test -p nvbes-core request_signature_includes_method_path_and_body_hash --locked && cargo test -p nvbes-core derive_scope_changes_by_actor_and_route --locked",
+      "status": "active"
+    },
+    {
+      "id": "events",
+      "evidence": "contracts/events/manifest.json",
+      "proof": "pnpm check:contracts",
+      "status": "active"
+    }
+  ]
+}

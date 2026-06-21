@@ -109,9 +109,23 @@ fn build_refreshed_cookies(
     authuser: &str,
     new_token: &str,
 ) -> Result<RefreshedCookies, AppError> {
-    let secure_cookie = state.config.environment != "development";
+    build_refreshed_cookies_from_config(
+        &state.config.environment,
+        state.config.auth_session_ttl_hours,
+        authuser,
+        new_token,
+    )
+}
+
+fn build_refreshed_cookies_from_config(
+    environment: &str,
+    auth_session_ttl_hours: i64,
+    authuser: &str,
+    new_token: &str,
+) -> Result<RefreshedCookies, AppError> {
+    let secure_cookie = environment != "development";
     let session_cookie_name = auth_cookie_name_with_user("session", authuser, secure_cookie);
-    let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
+    let session_expires_in = (auth_session_ttl_hours * 60 * 60).max(0);
     let session_cookie = auth_cookie(
         &session_cookie_name,
         new_token,
@@ -131,4 +145,36 @@ fn build_refreshed_cookies(
         session_cookie,
         csrf_cookie,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_refreshed_cookies_from_config;
+
+    #[test]
+    fn refreshed_cookies_are_authuser_scoped_and_secure_outside_development() {
+        let cookies = build_refreshed_cookies_from_config("production", 2, "1", "rotated-token")
+            .expect("cookies should build");
+        let session_cookie = cookies.session_cookie.to_str().expect("valid header");
+        let csrf_cookie = cookies.csrf_cookie.to_str().expect("valid header");
+
+        assert!(session_cookie.starts_with("__Host-session_1=rotated-token;"));
+        assert!(session_cookie.contains("Max-Age=7200"));
+        assert!(session_cookie.contains("HttpOnly"));
+        assert!(session_cookie.contains("Secure"));
+        assert!(csrf_cookie.starts_with("__Host-csrf_token_1="));
+        assert!(csrf_cookie.contains("Max-Age=7200"));
+        assert!(csrf_cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn refreshed_cookies_use_local_names_in_development() {
+        let cookies = build_refreshed_cookies_from_config("development", 1, "0", "local-token")
+            .expect("cookies should build");
+        let session_cookie = cookies.session_cookie.to_str().expect("valid header");
+
+        assert!(session_cookie.starts_with("session=local-token;"));
+        assert!(session_cookie.contains("Max-Age=3600"));
+        assert!(!session_cookie.contains("Secure"));
+    }
 }

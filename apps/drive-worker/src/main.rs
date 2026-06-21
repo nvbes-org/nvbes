@@ -1,6 +1,6 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
-    WorkerMonitorSchedule, capture_sentry_smoke, init_sentry, init_tracing,
+    WorkerMonitorSchedule, capture_error_reporting_smoke, init_error_reporting, init_tracing,
     install_safe_panic_hook, start_continuous_profiling, start_worker_monitor_check_in,
     worker_monitor_slug,
 };
@@ -12,7 +12,7 @@ pub use nvbes_drive_api::db;
 
 use db::Database;
 
-const MAINTENANCE_ENQUEUE_SENTRY_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
+const MAINTENANCE_ENQUEUE_MONITOR_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     interval_minutes: 1440,
     checkin_margin_minutes: 60,
     max_runtime_minutes: 30,
@@ -24,17 +24,16 @@ const DEFAULT_DRIVE_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4101";
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
-    let _sentry_guard = Box::leak(Box::new(init_sentry(&config)));
+    let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
 
-    if matches!(std::env::args().nth(1).as_deref(), Some("sentry-smoke")) {
-        let result = capture_sentry_smoke(
-            "drive-worker",
-            &config.environment,
-            "worker",
-            config.sentry_dsn.is_some(),
-        );
+    if matches!(
+        std::env::args().nth(1).as_deref(),
+        Some("error-reporting-smoke")
+    ) {
+        let result =
+            capture_error_reporting_smoke("drive-worker", &config.environment, "worker", false);
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
@@ -67,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
             let check_in = start_worker_monitor_check_in(
                 &config.environment,
                 &worker_monitor_slug("drive-worker", "enqueue-maintenance"),
-                MAINTENANCE_ENQUEUE_SENTRY_SCHEDULE,
+                MAINTENANCE_ENQUEUE_MONITOR_SCHEDULE,
             );
 
             if let Err(error) = workers::enqueue_maintenance_jobs(&redis).await {

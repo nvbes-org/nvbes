@@ -112,3 +112,97 @@ fn parse_non_negative_i64(value: &str, code: &str) -> Result<i64, AppError> {
     }
     Ok(parsed)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{ensure_downloadable_file, resolve_range};
+    use crate::domains::files::models::{DownloadMetadata, StorageObjectStatus, StorageObjectType};
+    use crate::domains::files::transfer::ResolvedRange;
+
+    fn metadata() -> DownloadMetadata {
+        DownloadMetadata {
+            object_type: StorageObjectType::File,
+            status: StorageObjectStatus::Active,
+            object_key: Some("object-key".to_string()),
+            size_bytes: 100,
+            mime_type: Some("text/plain".to_string()),
+        }
+    }
+
+    #[test]
+    fn ensure_downloadable_file_accepts_active_files_only() {
+        assert!(ensure_downloadable_file(&metadata()).is_ok());
+
+        let folder = DownloadMetadata {
+            object_type: StorageObjectType::Folder,
+            ..metadata()
+        };
+        assert_eq!(
+            ensure_downloadable_file(&folder).unwrap_err().code,
+            "invalid_download_target"
+        );
+
+        let quarantined = DownloadMetadata {
+            status: StorageObjectStatus::Quarantined,
+            ..metadata()
+        };
+        assert_eq!(
+            ensure_downloadable_file(&quarantined).unwrap_err().code,
+            "file_quarantined"
+        );
+
+        let pending = DownloadMetadata {
+            status: StorageObjectStatus::Pending,
+            ..metadata()
+        };
+        assert_eq!(
+            ensure_downloadable_file(&pending).unwrap_err().code,
+            "object_not_downloadable"
+        );
+    }
+
+    #[test]
+    fn resolve_range_supports_full_suffix_and_clamped_ranges() {
+        assert!(matches!(
+            resolve_range(None, 100).unwrap(),
+            ResolvedRange::Full
+        ));
+
+        match resolve_range(Some("bytes=-10"), 100).unwrap() {
+            ResolvedRange::Partial {
+                start,
+                end_inclusive,
+            } => {
+                assert_eq!(start, 90);
+                assert_eq!(end_inclusive, 99);
+            }
+            _ => panic!("expected suffix range"),
+        }
+
+        match resolve_range(Some("bytes=90-200"), 100).unwrap() {
+            ResolvedRange::Partial {
+                start,
+                end_inclusive,
+            } => {
+                assert_eq!(start, 90);
+                assert_eq!(end_inclusive, 99);
+            }
+            _ => panic!("expected clamped range"),
+        }
+    }
+
+    #[test]
+    fn resolve_range_rejects_multiple_ranges_and_marks_unsatisfiable() {
+        assert_eq!(
+            resolve_range(Some("bytes=0-1,2-3"), 100)
+                .err()
+                .unwrap()
+                .code,
+            "multiple_ranges_unsupported"
+        );
+        assert!(matches!(
+            resolve_range(Some("bytes=100-200"), 100).unwrap(),
+            ResolvedRange::Unsatisfiable
+        ));
+    }
+}

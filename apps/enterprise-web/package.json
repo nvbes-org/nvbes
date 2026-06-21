@@ -21,7 +21,6 @@
     "@nvbes/identity-sdk-web": "workspace:*",
     "@nvbes/web-runtime": "workspace:*",
     "@nvbes/web-ui": "workspace:*",
-    "@sentry/react": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "catalog:",
     "@tanstack/react-router": "catalog:",
@@ -29,7 +28,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
-    "posthog-js": "catalog:",
     "radix-ui": "^1.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -39,7 +37,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@sentry/vite-plugin": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",

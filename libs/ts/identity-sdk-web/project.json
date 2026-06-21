@@ -3,5 +3,5 @@
   "projectType": "library",
   "root": "libs/ts/identity-sdk-web",
   "sourceRoot": "libs/ts/identity-sdk-web/src",
-  "tags": ["type:lib", "domain:identity", "layer:sdk"]
+  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"]
 }

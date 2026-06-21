@@ -16,7 +16,7 @@ pub fn router() -> Router<AppState> {
     request_body = IdentifierRequest,
     responses(
         (status = 200, description = "Identifier verified", body = IdentifierResult),
-        (status = 403, description = "Risk policy blocked or Turnstile failed", body = ErrorEnvelope),
+        (status = 403, description = "Risk policy blocked or bot guard failed", body = ErrorEnvelope),
     ),
 )]
 pub(crate) async fn challenge_identifier(

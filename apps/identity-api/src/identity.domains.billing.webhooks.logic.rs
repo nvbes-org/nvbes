@@ -39,8 +39,8 @@ pub enum WebhookRetryDecision {
 
 pub fn classify_webhook_retry(existing_status: Option<&str>) -> WebhookRetryDecision {
     match existing_status {
-        Some("processed" | "received") => WebhookRetryDecision::Duplicate,
-        Some("failed") => WebhookRetryDecision::ReplayFailed,
+        Some("processed") => WebhookRetryDecision::Duplicate,
+        Some("failed" | "received") => WebhookRetryDecision::ReplayFailed,
         _ => WebhookRetryDecision::Insert,
     }
 }

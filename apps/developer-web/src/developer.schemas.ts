@@ -323,13 +323,16 @@ export const DebugDeveloperTokenSchema = z.object({
   token_hash_prefix: z.string(),
 });
 
+export const DeveloperSandboxStatusSchema = z.enum(['active', 'ready', 'resetting']);
+export const DeveloperSandboxDataProfileSchema = z.enum(['minimal', 'oauth', 'full']);
+
 export const DeveloperSandboxTenantSchema = z.object({
   tenant_id: z.string().uuid(),
   sandbox_tenant_id: z.string().uuid(),
   sandbox_name: z.string(),
   sandbox_slug: z.string(),
-  status: z.string(),
-  data_profile: z.string(),
+  status: DeveloperSandboxStatusSchema,
+  data_profile: DeveloperSandboxDataProfileSchema,
   reset_requested_at: z.string().nullable(),
   updated_at: z.string(),
 });
@@ -372,6 +375,7 @@ export type DeveloperWebhookDelivery = z.infer<typeof DeveloperWebhookDeliverySc
 export type DeveloperLogEntry = z.infer<typeof DeveloperConsoleLogEntrySchema>;
 export type DeveloperTokenClaims = z.infer<typeof DeveloperTokenClaimsSchema>;
 export type DebugDeveloperToken = z.infer<typeof DebugDeveloperTokenSchema>;
+export type DeveloperSandboxDataProfile = z.infer<typeof DeveloperSandboxDataProfileSchema>;
 export type DeveloperSandboxTenant = z.infer<typeof DeveloperSandboxTenantSchema>;
 export type DeveloperHealthCheck = z.infer<typeof DeveloperHealthCheckSchema>;
 export type CreateScopeInput = z.infer<typeof CreateScopeInputSchema>;

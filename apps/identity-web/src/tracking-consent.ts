@@ -1,12 +1,12 @@
 import { identityClient } from '@nvbes/identity-client';
 import {
   ACCEPT_ALL_CONSENT,
-  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
   createTrackingConsentApi,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  POSTHOG_PURPOSE_CONSENT_TYPES,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
   type CookieConsentState,
   type TrackingConsentStoredValue,
@@ -45,11 +45,11 @@ const trackingConsentApi = createTrackingConsentApi({
 
 export {
   ACCEPT_ALL_CONSENT,
-  CATEGORY_POSTHOG_PURPOSES_MAP,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  POSTHOG_PURPOSE_CONSENT_TYPES,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
   type CookieConsentState,
   type TrackingConsentStoredValue,
@@ -57,8 +57,8 @@ export {
 
 export const {
   getTrackingConsent,
-  getPostHogConsent,
-  isPostHogPurposeAccepted,
+  getAnalyticsConsent,
+  isAnalyticsPurposeAccepted,
   isVendorAccepted,
   isCategoryAccepted,
   setTrackingConsent,

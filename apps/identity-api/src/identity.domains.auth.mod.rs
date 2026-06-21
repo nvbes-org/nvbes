@@ -62,8 +62,6 @@ pub mod sessions_context;
 pub mod sessions_mgmt;
 #[path = "identity.domains.auth.state.rs"]
 pub mod state;
-#[path = "identity.domains.auth.turnstile.rs"]
-pub mod turnstile;
 #[path = "identity.domains.auth.types.rs"]
 pub mod types;
 #[path = "identity.domains.auth.verification.rs"]

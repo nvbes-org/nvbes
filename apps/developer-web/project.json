@@ -3,5 +3,5 @@
   "projectType": "application",
   "root": "apps/developer-web",
   "sourceRoot": "apps/developer-web/src",
-  "tags": ["type:app", "domain:identity", "layer:app"]
+  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
 }

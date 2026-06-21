@@ -33,6 +33,10 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
         },
         {
+          find: '@nvbes/identity-sdk',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk/src/index.ts'),
+        },
+        {
           find: '@nvbes/identity-sdk-web',
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
         },
@@ -49,7 +53,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5175,
       proxy: {
+        '/auth': identityApiProxyTarget,
         '/api': identityApiProxyTarget,
+        '/developer': identityApiProxyTarget,
         '/oauth': identityApiProxyTarget,
         '/.well-known': identityApiProxyTarget,
       },

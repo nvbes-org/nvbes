@@ -1,0 +1,88 @@
+{
+  "name": "nvbes full-stack dev",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/nvbes",
+  "remoteUser": "vscode",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [
+    3001,
+    4000,
+    4002,
+    5173,
+    13000,
+    13100,
+    13200,
+    14317,
+    14318,
+    14040,
+    15432,
+    16379,
+    18001,
+    19090
+  ],
+  "portsAttributes": {
+    "3001": {
+      "label": "Identity web"
+    },
+    "4000": {
+      "label": "Identity API"
+    },
+    "4002": {
+      "label": "Drive API"
+    },
+    "5173": {
+      "label": "Drive web"
+    },
+    "13000": {
+      "label": "Grafana"
+    },
+    "13100": {
+      "label": "Loki"
+    },
+    "13200": {
+      "label": "Tempo"
+    },
+    "14317": {
+      "label": "Tempo OTLP gRPC"
+    },
+    "14318": {
+      "label": "Tempo OTLP HTTP"
+    },
+    "14040": {
+      "label": "Pyroscope"
+    },
+    "15432": {
+      "label": "PostgreSQL"
+    },
+    "16379": {
+      "label": "Redis"
+    },
+    "18001": {
+      "label": "RedisInsight"
+    },
+    "19090": {
+      "label": "Prometheus"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "biomejs.biome",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "rust-analyzer.cargo.features": "all",
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  }
+}

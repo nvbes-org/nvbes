@@ -49,6 +49,14 @@ fn classify_webhook_retry_treats_failed_as_replayable() {
 }
 
 #[test]
+fn classify_webhook_retry_treats_received_as_replayable() {
+    assert_eq!(
+        classify_webhook_retry(Some("received")),
+        WebhookRetryDecision::ReplayFailed
+    );
+}
+
+#[test]
 fn classify_webhook_retry_treats_processed_as_duplicate() {
     assert_eq!(
         classify_webhook_retry(Some("processed")),

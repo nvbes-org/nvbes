@@ -3,7 +3,7 @@
   "projectType": "library",
   "root": "libs/ts/identity-sdk-core",
   "sourceRoot": "libs/ts/identity-sdk-core/src",
-  "tags": ["type:lib", "domain:identity", "layer:sdk"],
+  "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"],
   "targets": {
     "generate:ts": {
       "executor": "nx:run-commands",

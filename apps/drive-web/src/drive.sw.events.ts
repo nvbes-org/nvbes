@@ -2,7 +2,7 @@ import { registerDriveServiceWorkerBackgroundFetchEvents } from './drive.sw.even
 import { registerDriveServiceWorkerMessageEvent } from './drive.sw.events.message';
 import { driveWorkerSelf, type PeriodicSyncEvent } from './drive.sw.events.shared';
 import { replayQueue } from './drive.sw.queue';
-import { captureDriveServiceWorkerException } from './drive.sw.sentry';
+import { captureDriveServiceWorkerException } from './drive.sw.error.reporting';
 
 export function registerDriveServiceWorkerEvents({
   getIsSlowConnection,

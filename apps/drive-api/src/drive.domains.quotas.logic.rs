@@ -54,3 +54,51 @@ pub fn crosses_threshold(
     let threshold_bytes = included_storage_bytes.saturating_mul(threshold_percent) / 100;
     before_used_storage_bytes < threshold_bytes && after_used_storage_bytes >= threshold_bytes
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        BYTES_PER_GB, crosses_threshold, storage_alerts, storage_usage_percent, upload_blocked,
+    };
+
+    #[test]
+    fn upload_blocked_only_at_or_over_limit() {
+        assert!(!upload_blocked(9 * BYTES_PER_GB, 10 * BYTES_PER_GB));
+        assert!(upload_blocked(10 * BYTES_PER_GB, 10 * BYTES_PER_GB));
+        assert!(upload_blocked(1, 0));
+    }
+
+    #[test]
+    fn storage_alerts_emit_warning_and_critical_levels() {
+        let warning = storage_alerts(8 * BYTES_PER_GB, 10 * BYTES_PER_GB);
+        assert_eq!(warning.len(), 1);
+        assert_eq!(warning[0].code, "storage_quota_warning");
+
+        let critical = storage_alerts(10 * BYTES_PER_GB, 10 * BYTES_PER_GB);
+        assert_eq!(critical.len(), 2);
+        assert_eq!(critical[1].code, "storage_quota_critical");
+    }
+
+    #[test]
+    fn storage_usage_percent_rounds_to_two_decimals() {
+        assert_eq!(storage_usage_percent(1, 3), 33.33);
+        assert_eq!(storage_usage_percent(1, 0), 100.0);
+    }
+
+    #[test]
+    fn crosses_threshold_only_when_entering_threshold() {
+        assert!(crosses_threshold(
+            7 * BYTES_PER_GB,
+            8 * BYTES_PER_GB,
+            10 * BYTES_PER_GB,
+            80
+        ));
+        assert!(!crosses_threshold(
+            8 * BYTES_PER_GB,
+            9 * BYTES_PER_GB,
+            10 * BYTES_PER_GB,
+            80
+        ));
+        assert!(!crosses_threshold(1, 2, 0, 80));
+    }
+}

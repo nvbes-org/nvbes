@@ -1,0 +1,7 @@
+{
+  "name": "ports",
+  "projectType": "library",
+  "root": "libs/rust/ports",
+  "sourceRoot": "libs/rust/ports/src",
+  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:core"]
+}

@@ -130,3 +130,7 @@ Objectif: augmenter la valeur plateforme.
 Ces idees ne sont pas dans le scope Drive V1/V2. Elles documentent des pistes futures a revisiter avec une decision produit separee.
 
 - Privacy-preserving KYC verification: verifier document et visage sans stocker les artefacts bruts, puis emettre un credential reutilisable avec consentement. Voir [Privacy-Preserving KYC Verification](product/privacy-preserving-kyc.md).
+- Plateforme globale zero-stack: architecture cible multi-cloud, cellulaire et hyperscale pour les futurs produits nvbes. Voir [Plan Plateforme Globale - Stack Zero](blueprint/nvbes-global-platform-zero-stack.plan.md).
+- Trajectoire low budget vers plateforme globale: plan starter economique avec chemin d'upgrade progressif vers l'architecture zero-stack. Voir [Plan Starter Low Budget vers Plateforme Globale](blueprint/nvbes-low-budget-to-global-platform.plan.md).
+- Hierarchie monorepo OSS/Cloud: separation entre source privee, export public OSS, docs publiques et operations Cloud. Voir [Plan Monorepo nvbes OSS et nvbes Cloud](blueprint/nvbes-oss-cloud-monorepo.plan.md).
+- Structuration complete Big Bang zero dette: migration complete vers une plateforme nvbes reconstruite from scratch. Voir [Plan Structuration Complete Big Bang Zero Dette](blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md).

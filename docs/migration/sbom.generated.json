@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/security/sbom.mjs --write"
+  },
+  "summary": {
+    "entries": 5,
+    "complete": 5,
+    "pending": 0
+  },
+  "components": [
+    {
+      "ecosystem": "node",
+      "manifest": "package.json",
+      "lockfile": "pnpm-lock.yaml",
+      "manifest_present": true,
+      "lock_present": true
+    },
+    {
+      "ecosystem": "rust",
+      "manifest": "Cargo.toml",
+      "lockfile": "Cargo.lock",
+      "manifest_present": true,
+      "lock_present": true
+    },
+    {
+      "ecosystem": "go",
+      "manifest": "go.mod",
+      "lockfile": "go.mod",
+      "manifest_present": true,
+      "lock_present": true
+    },
+    {
+      "ecosystem": "python",
+      "manifest": "pyproject.toml",
+      "lockfile": "pyproject.toml",
+      "manifest_present": true,
+      "lock_present": true
+    },
+    {
+      "ecosystem": "containers",
+      "manifest": "deploy/oss/helm/nvbes/Chart.yaml",
+      "lockfile": "deploy/oss/helm/nvbes/values.yaml",
+      "manifest_present": true,
+      "lock_present": true
+    }
+  ]
+}

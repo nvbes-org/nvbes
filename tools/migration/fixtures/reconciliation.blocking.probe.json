@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "environment": "production",
+  "snapshot_id": "synthetic-blocking-probe",
+  "target": {
+    "commit": "synthetic-blocking-probe",
+    "contracts_version": "synthetic-blocking-probe",
+    "image_digests": [],
+    "migration_ids": []
+  },
+  "durations_seconds": {
+    "export": 0,
+    "transform": 0,
+    "import": 0,
+    "reconciliation": 0,
+    "smoke": 0
+  },
+  "domains": [
+    {
+      "name": "Synthetic",
+      "counts": {
+        "source_rows": 1,
+        "target_rows": 0,
+        "delta": 1
+      },
+      "checksums": {
+        "source": "source",
+        "target": "target",
+        "matched": false
+      },
+      "orphans": 0,
+      "duplicates": 0,
+      "rejects": {
+        "fixed": 0,
+        "accepted": 0,
+        "rejected": 0,
+        "blocking": 1
+      },
+      "status": "blocking",
+      "evidence": []
+    }
+  ],
+  "decision": "no-go"
+}

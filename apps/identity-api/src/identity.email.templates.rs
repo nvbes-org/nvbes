@@ -18,17 +18,17 @@ fn render_template(template: &str, replacements: &[(&str, &str)]) -> String {
 }
 
 fn from_address(config: &crate::app::AppConfig) -> Result<EmailAddress, AppError> {
-    let email = config.scw_tem_from_email.clone().ok_or_else(|| {
+    let email = config.email_from_email.clone().ok_or_else(|| {
         AppError::internal(
             "email_not_configured",
-            "SCW_TEM_FROM_EMAIL must be set to send emails.",
+            "NVBES_EMAIL_FROM_EMAIL must be set to send emails.",
         )
     })?;
     Ok(EmailAddress {
         email,
         name: Some(
             config
-                .scw_tem_from_name
+                .email_from_name
                 .clone()
                 .unwrap_or_else(|| "nvbes".to_string()),
         ),
@@ -37,24 +37,21 @@ fn from_address(config: &crate::app::AppConfig) -> Result<EmailAddress, AppError
 
 fn reply_to_header(config: &crate::app::AppConfig) -> Result<Vec<(String, String)>, AppError> {
     let reply_to = config
-        .scw_tem_reply_to
+        .email_reply_to
         .clone()
-        .or_else(|| config.scw_tem_from_email.clone())
+        .or_else(|| config.email_from_email.clone())
         .ok_or_else(|| {
             AppError::internal(
                 "email_not_configured",
-                "SCW_TEM_FROM_EMAIL must be set to send emails.",
+                "NVBES_EMAIL_FROM_EMAIL must be set to send emails.",
             )
         })?;
     Ok(vec![("Reply-To".to_string(), reply_to)])
 }
 
-const VERIFICATION_TEMPLATE: &str =
-    include_str!("../../../libs/ts/email-templates/dist/verification.html");
-const PASSWORD_RESET_TEMPLATE: &str =
-    include_str!("../../../libs/ts/email-templates/dist/password-reset.html");
-const INVITATION_TEMPLATE: &str =
-    include_str!("../../../libs/ts/email-templates/dist/invitation.html");
+const VERIFICATION_TEMPLATE: &str = include_str!("identity.email.templates.verification.html");
+const PASSWORD_RESET_TEMPLATE: &str = include_str!("identity.email.templates.password-reset.html");
+const INVITATION_TEMPLATE: &str = include_str!("identity.email.templates.invitation.html");
 
 pub fn verification_email(
     config: &crate::app::AppConfig,

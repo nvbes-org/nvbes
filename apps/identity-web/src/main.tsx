@@ -6,24 +6,28 @@ import {
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { capturePostHogException, initPostHog } from './identity.posthog';
-import { captureSentryException, initSentry, syncSentryConsent } from './identity.sentry';
+import { captureAnalyticsException, initAnalytics } from './identity.analytics';
+import {
+  captureErrorReportingException,
+  initErrorReporting,
+  syncErrorReportingConsent,
+} from './identity.error.reporting';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
-const sentryInitialized = initSentry();
-initPostHog();
+const errorReportingInitialized = initErrorReporting();
+initAnalytics();
 window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
-  void syncSentryConsent();
+  void syncErrorReportingConsent();
 });
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {
-    if (sentryInitialized) {
-      captureSentryException(error, context);
+    if (errorReportingInitialized) {
+      captureErrorReportingException(error, context);
     }
 
-    void capturePostHogException(error, {
+    void captureAnalyticsException(error, {
       event_source: context.tags.source,
       error_kind: context.tags.feature,
     });
@@ -31,7 +35,6 @@ const clientErrorReporter: ClientErrorReporter = {
 };
 
 configureErrorReporting({
-  cloudflare: import.meta.env.VITE_CLOUDFLARE_REPORTING_ENABLED === 'true',
   reporter: clientErrorReporter,
 });
 

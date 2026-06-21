@@ -2,15 +2,15 @@ import { DtoValidationError, HttpError } from '@nvbes/http-client';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
   ClientRuntimeError,
-  createSentryFeedbackOptions,
-  installBrowserSentrySmoke,
-  isBrowserSentrySmokeEnabled,
+  createErrorReportingFeedbackOptions,
+  installBrowserErrorReportingSmoke,
+  isBrowserErrorReportingSmokeEnabled,
   normalizeClientError,
-  SENTRY_SMOKE_GLOBAL,
+  ERROR_REPORTING_SMOKE_GLOBAL,
   sanitizeUrlString,
   scrubReplayRecordingEvent,
-  scrubSentryBreadcrumb,
-  scrubSentryEvent,
+  scrubErrorReportingBreadcrumb,
+  scrubErrorReportingEvent,
 } from './index';
 import { z } from 'zod';
 
@@ -47,23 +47,23 @@ describe('web-runtime client errors', () => {
   });
 });
 
-describe('Sentry browser smoke test', () => {
+describe('ErrorReporting browser smoke test', () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, 'window');
   });
 
   it('is enabled in development or by explicit env flag', () => {
-    expect(isBrowserSentrySmokeEnabled(undefined, true)).toBe(true);
-    expect(isBrowserSentrySmokeEnabled('true', false)).toBe(true);
-    expect(isBrowserSentrySmokeEnabled('1', false)).toBe(true);
-    expect(isBrowserSentrySmokeEnabled('false', false)).toBe(false);
+    expect(isBrowserErrorReportingSmokeEnabled(undefined, true)).toBe(true);
+    expect(isBrowserErrorReportingSmokeEnabled('true', false)).toBe(true);
+    expect(isBrowserErrorReportingSmokeEnabled('1', false)).toBe(true);
+    expect(isBrowserErrorReportingSmokeEnabled('false', false)).toBe(false);
   });
 
   it('does not install the global smoke function when disabled', () => {
     installTestWindow();
-    delete window[SENTRY_SMOKE_GLOBAL];
+    delete window[ERROR_REPORTING_SMOKE_GLOBAL];
 
-    const installed = installBrowserSentrySmoke({
+    const installed = installBrowserErrorReportingSmoke({
       appName: 'drive-web',
       dsnConfigured: true,
       enabled: false,
@@ -81,15 +81,15 @@ describe('Sentry browser smoke test', () => {
     });
 
     expect(installed).toBe(false);
-    expect(window[SENTRY_SMOKE_GLOBAL]).toBeUndefined();
+    expect(window[ERROR_REPORTING_SMOKE_GLOBAL]).toBeUndefined();
   });
 
   it('captures a low-PII browser smoke message when installed', async () => {
     installTestWindow();
-    delete window[SENTRY_SMOKE_GLOBAL];
+    delete window[ERROR_REPORTING_SMOKE_GLOBAL];
 
     const tags = new Map<string, string | boolean>();
-    installBrowserSentrySmoke({
+    installBrowserErrorReportingSmoke({
       appName: 'identity-web',
       dsnConfigured: true,
       enabled: true,
@@ -107,24 +107,24 @@ describe('Sentry browser smoke test', () => {
       runtime: 'browser',
     });
 
-    const smoke = window[SENTRY_SMOKE_GLOBAL];
+    const smoke = window[ERROR_REPORTING_SMOKE_GLOBAL];
     expect(smoke).toBeDefined();
     const result = await smoke?.();
 
     expect(result).toMatchObject({
       appName: 'identity-web',
-      eventId: 'info:nvbes browser sentry smoke test',
+      eventId: 'info:nvbes browser errorReporting smoke test',
       flushed: true,
       status: 'accepted',
     });
-    expect(tags.get('smoke_test')).toBe('sentry');
+    expect(tags.get('smoke_test')).toBe('errorReporting');
   });
 
-  it('reports skipped when Sentry is not initialized', async () => {
+  it('reports skipped when ErrorReporting is not initialized', async () => {
     installTestWindow();
-    delete window[SENTRY_SMOKE_GLOBAL];
+    delete window[ERROR_REPORTING_SMOKE_GLOBAL];
 
-    installBrowserSentrySmoke({
+    installBrowserErrorReportingSmoke({
       appName: 'drive-web',
       dsnConfigured: true,
       enabled: true,
@@ -143,9 +143,9 @@ describe('Sentry browser smoke test', () => {
       runtime: 'browser',
     });
 
-    await expect(window[SENTRY_SMOKE_GLOBAL]?.()).resolves.toMatchObject({
+    await expect(window[ERROR_REPORTING_SMOKE_GLOBAL]?.()).resolves.toMatchObject({
       eventId: null,
-      reason: 'sentry_not_initialized',
+      reason: 'errorReporting_not_initialized',
       status: 'skipped',
     });
   });
@@ -159,9 +159,9 @@ function installTestWindow() {
   });
 }
 
-describe('Sentry privacy scrubbing', () => {
-  it('keeps Sentry feedback explicit and low-PII', () => {
-    expect(createSentryFeedbackOptions('drive-web')).toMatchObject({
+describe('ErrorReporting privacy scrubbing', () => {
+  it('keeps ErrorReporting feedback explicit and low-PII', () => {
+    expect(createErrorReportingFeedbackOptions('drive-web')).toMatchObject({
       autoInject: true,
       showEmail: false,
       showName: false,
@@ -173,8 +173,8 @@ describe('Sentry privacy scrubbing', () => {
     });
   });
 
-  it('removes user data and request payloads from Sentry events', () => {
-    const event = scrubSentryEvent({
+  it('removes user data and request payloads from ErrorReporting events', () => {
+    const event = scrubErrorReportingEvent({
       user: { email: 'ada@example.com' },
       message: 'Failed Bearer abcdefghijklmnopqrstuvwxyz',
       request: {
@@ -202,9 +202,11 @@ describe('Sentry privacy scrubbing', () => {
   });
 
   it('drops console breadcrumbs and scrubs breadcrumb URLs', () => {
-    expect(scrubSentryBreadcrumb({ category: 'console', message: 'ada@example.com' })).toBeNull();
+    expect(
+      scrubErrorReportingBreadcrumb({ category: 'console', message: 'ada@example.com' }),
+    ).toBeNull();
 
-    const breadcrumb = scrubSentryBreadcrumb({
+    const breadcrumb = scrubErrorReportingBreadcrumb({
       category: 'fetch',
       data: {
         url: '/files/report.pdf?token=secret',

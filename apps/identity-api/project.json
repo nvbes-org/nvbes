@@ -3,5 +3,5 @@
   "projectType": "application",
   "root": "apps/identity-api",
   "sourceRoot": "apps/identity-api/src",
-  "tags": ["type:app", "domain:identity", "layer:app"]
+  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
 }

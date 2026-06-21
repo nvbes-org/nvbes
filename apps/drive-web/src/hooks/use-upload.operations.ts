@@ -1,6 +1,6 @@
 import { driveQueryKeys } from '../drive.queries';
 import type { UploadFileInput } from '../drive.native-fs.service';
-import { trackEvent } from '../drive.posthog';
+import { trackEvent } from '../drive.analytics';
 import type { UploadProgress } from '../drive.uploads.types';
 import { uploadTrackingPayload } from './use-upload.analytics';
 import { initializeUploads } from './use-upload.shared';

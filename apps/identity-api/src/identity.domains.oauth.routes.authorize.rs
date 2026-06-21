@@ -6,6 +6,11 @@ use serde::Deserialize;
 use sqlx::Row;
 use std::time::Duration;
 
+#[path = "identity.domains.oauth.routes.authorize.params.rs"]
+mod params;
+
+use params::build_params_from_map;
+
 pub fn router() -> Router<AppState> {
     Router::new().route("/authorize", get(authorize))
 }
@@ -28,19 +33,6 @@ pub struct AuthorizeRequest {
     pub client_secret: Option<String>,
     #[serde(default)]
     pub authuser: Option<String>,
-}
-
-#[derive(Default)]
-struct ResolvedParams {
-    redirect_uri: String,
-    scope: Option<String>,
-    state: Option<String>,
-    audience: Option<String>,
-    resource: Option<Vec<String>>,
-    authorization_details: crate::domains::oauth::rar::AuthorizationDetails,
-    code_challenge: Option<String>,
-    code_challenge_method: Option<String>,
-    consent_action: Option<String>,
 }
 
 struct AuthorizationSubject {
@@ -257,58 +249,5 @@ async fn authenticate_authorization_subject(
         auth,
         workspace_id,
         tenant_id,
-    })
-}
-
-fn build_params_from_map(
-    params: &serde_json::Map<String, serde_json::Value>,
-) -> Result<ResolvedParams, AppError> {
-    let redirect_uri = params
-        .get("redirect_uri")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            AppError::bad_request(
-                "invalid_request",
-                "The pushed authorization request is missing redirect_uri.",
-            )
-        })?
-        .to_string();
-
-    Ok(ResolvedParams {
-        redirect_uri,
-        scope: params
-            .get("scope")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        state: params
-            .get("state")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        audience: params
-            .get("audience")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        resource: params.get("resource").and_then(|v| {
-            v.as_array().map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(String::from))
-                    .collect()
-            })
-        }),
-        authorization_details: crate::domains::oauth::rar::parse_authorization_details_value(
-            params.get("authorization_details"),
-        )?,
-        code_challenge: params
-            .get("code_challenge")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        code_challenge_method: params
-            .get("code_challenge_method")
-            .and_then(|v| v.as_str())
-            .map(String::from),
-        consent_action: params
-            .get("consent_action")
-            .and_then(|v| v.as_str())
-            .map(String::from),
     })
 }

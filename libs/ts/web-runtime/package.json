@@ -2,6 +2,7 @@
   "name": "@nvbes/web-runtime",
   "version": "0.1.0",
   "description": "Shared frontend runtime for TanStack Query and client errors",
+  "license": "AGPL-3.0-only",
   "files": [
     "dist"
   ],
@@ -13,9 +14,9 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
-    "./posthog": {
-      "types": "./dist/posthog.d.mts",
-      "import": "./dist/posthog.mjs"
+    "./analytics": {
+      "types": "./dist/analytics.d.mts",
+      "import": "./dist/analytics.mjs"
     }
   },
   "scripts": {
@@ -31,7 +32,6 @@
     "@nvbes/http-client": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
-    "posthog-js": "catalog:",
     "react": "catalog:",
     "zod": "^3.25.76"
   },
