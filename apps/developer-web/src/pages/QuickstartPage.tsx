@@ -1,17 +1,12 @@
+import { ClipboardButton } from '@nvbes/web-ui';
 import { quickstarts, type QuickstartKey } from '@/developer.quickstarts';
-
-async function copy(value: string) {
-  await navigator.clipboard.writeText(value);
-}
 
 function CodeBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-md border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <h2 className="text-sm font-semibold">{label}</h2>
-        <button type="button" className="text-sm text-primary" onClick={() => void copy(value)}>
-          Copy
-        </button>
+        <ClipboardButton value={value} className="h-7 border-0 px-2 text-primary" />
       </div>
       <pre className="min-w-0 overflow-auto p-4 text-xs leading-6">
         <code>{value}</code>

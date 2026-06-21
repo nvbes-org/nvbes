@@ -4,6 +4,7 @@ import {
   hasAnyAnalyticsConsent,
   type AnalyticsPurposeConsent,
 } from './analytics';
+import { getSafeLocalStorage } from './safe-storage';
 
 export interface CookieConsentState {
   categories: {
@@ -225,9 +226,7 @@ function parseStoredConsent(value: string, legacyProductOnly: boolean): CookieCo
     isObject(parsed) && 'expiresAt' in parsed ? Date.parse(String(parsed.expiresAt)) : Number.NaN;
 
   if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
-    window.localStorage.removeItem(STORAGE_KEY_V3);
-    window.localStorage.removeItem(STORAGE_KEY_V2);
-    window.localStorage.removeItem(STORAGE_KEY_V1);
+    clearStoredTrackingConsentVersions();
     return null;
   }
 
@@ -263,15 +262,15 @@ function legacyV1Consent(accepted: boolean): CookieConsentState {
 }
 
 function persistMigratedConsent(consent: CookieConsentState, source: string): void {
-  window.localStorage.setItem(STORAGE_KEY_V3, JSON.stringify(createStoredConsent(consent, source)));
+  getSafeLocalStorage().setItem(
+    STORAGE_KEY_V3,
+    JSON.stringify(createStoredConsent(consent, source)),
+  );
 }
 
 export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const value = window.localStorage.getItem(STORAGE_KEY_V3);
+  const storage = getSafeLocalStorage();
+  const value = storage.getItem(STORAGE_KEY_V3);
   if (!value) {
     return null;
   }
@@ -280,34 +279,30 @@ export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | n
     const parsed = JSON.parse(value) as TrackingConsentStoredValue;
     const expiresAt = Date.parse(parsed.expiresAt);
     if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
-      window.localStorage.removeItem(STORAGE_KEY_V3);
-      window.localStorage.removeItem(STORAGE_KEY_V2);
-      window.localStorage.removeItem(STORAGE_KEY_V1);
+      clearStoredTrackingConsentVersions();
       return null;
     }
 
     return parsed;
   } catch {
-    window.localStorage.removeItem(STORAGE_KEY_V3);
+    storage.removeItem(STORAGE_KEY_V3);
     return null;
   }
 }
 
 export function getTrackingConsent(): CookieConsentState | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+  const storage = getSafeLocalStorage();
 
-  const valueV3 = window.localStorage.getItem(STORAGE_KEY_V3);
+  const valueV3 = storage.getItem(STORAGE_KEY_V3);
   if (valueV3) {
     try {
       return parseStoredConsent(valueV3, false);
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY_V3);
+      storage.removeItem(STORAGE_KEY_V3);
     }
   }
 
-  const valueV2 = window.localStorage.getItem(STORAGE_KEY_V2);
+  const valueV2 = storage.getItem(STORAGE_KEY_V2);
   if (valueV2) {
     try {
       const migrated = parseStoredConsent(valueV2, true);
@@ -316,11 +311,11 @@ export function getTrackingConsent(): CookieConsentState | null {
         return migrated;
       }
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY_V2);
+      storage.removeItem(STORAGE_KEY_V2);
     }
   }
 
-  const valueV1 = window.localStorage.getItem(STORAGE_KEY_V1);
+  const valueV1 = storage.getItem(STORAGE_KEY_V1);
   if (valueV1 === 'accepted' || valueV1 === 'declined') {
     const migrated = legacyV1Consent(valueV1 === 'accepted');
     persistMigratedConsent(migrated, 'legacy-v1-migration');
@@ -366,17 +361,16 @@ export function persistTrackingConsent(
   source: string,
   savedAt = new Date(),
 ): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
+  const storage = getSafeLocalStorage();
 
-  window.localStorage.setItem(
-    STORAGE_KEY_V3,
-    JSON.stringify(createStoredConsent(consent, source, savedAt)),
-  );
+  storage.setItem(STORAGE_KEY_V3, JSON.stringify(createStoredConsent(consent, source, savedAt)));
 
-  window.localStorage.setItem(
-    STORAGE_KEY_V1,
-    hasAnyOptionalConsent(consent) ? 'accepted' : 'declined',
-  );
+  storage.setItem(STORAGE_KEY_V1, hasAnyOptionalConsent(consent) ? 'accepted' : 'declined');
+}
+
+function clearStoredTrackingConsentVersions(): void {
+  const storage = getSafeLocalStorage();
+  storage.removeItem(STORAGE_KEY_V3);
+  storage.removeItem(STORAGE_KEY_V2);
+  storage.removeItem(STORAGE_KEY_V1);
 }

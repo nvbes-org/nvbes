@@ -81,6 +81,8 @@ export function normalizeClientError(error: unknown): ClientRuntimeError {
 
 export { ErrorBoundary } from './ErrorBoundary';
 export type { ErrorBoundaryProps } from './ErrorBoundary';
+export { ErrorWithRetry, FeatureBoundary } from './error-with-retry';
+export type { ErrorWithRetryProps, FeatureBoundaryProps } from './error-with-retry';
 export { RouterErrorFallback } from './RouterErrorFallback';
 export {
   AuthErrorBoundary,
@@ -140,6 +142,48 @@ export {
 } from './tracking-consent.editor';
 export { SharedTrackingConsentBanner } from './TrackingConsentBanner';
 export { TrackingConsentToggle } from './TrackingConsentToggle';
+export { createSafeStorage, getSafeLocalStorage, getSafeSessionStorage } from './safe-storage';
+export type { SafeStorage, SafeStorageKind } from './safe-storage';
+export {
+  createVerifiedFetch,
+  verifiedFetch,
+  verifiedFetchJson,
+  VerifiedFetchError,
+} from './verified-fetch';
+export type { VerifiedFetchInit, VerifiedFetchInput, VerifiedFetchOptions } from './verified-fetch';
+export { sanitizeHtml, safeHtmlToString, trustSafeHtml, VerifiedHtml } from './safe-html';
+export type { SafeHtml } from './safe-html';
+export {
+  findInvisibleUnicodeCharacters,
+  hasInvisibleUnicodeCharacters,
+  InvisibleUnicodeWarning,
+  revealInvisibleUnicodeCharacters,
+} from './unicode-invisible';
+export type { InvisibleUnicodeMatch } from './unicode-invisible';
+export { formatAbsoluteDateTime, formatRelativeDateTime, RelativeTime } from './relative-time';
+export type { RelativeTimeInput, RelativeTimeProps } from './relative-time';
+export {
+  detectVersionMismatch,
+  inspectVersionMismatch,
+  recordVersionMismatchPrompt,
+} from './version-mismatch';
+export type {
+  VersionMismatchDetectorOptions,
+  VersionMismatchInput,
+  VersionMismatchResult,
+} from './version-mismatch';
+export {
+  getBrowserVisibilityState,
+  useBrowserVisibilityState,
+  useVisibilityAwareInterval,
+} from './live-updates';
+export type { BrowserVisibilityState } from './live-updates';
+export { LiveRegionMessage, LiveRegionProvider, useLiveRegion } from './live-region';
+export type { LiveRegionApi } from './live-region';
+export { commandSearchTokenValue, parseCommandSearch } from './command-search';
+export type { CommandSearchToken, ParsedCommandSearch } from './command-search';
+export { detectSessionStale, isSessionStaleError } from './session-stale';
+export type { SessionStaleReason, SessionStaleResult } from './session-stale';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
   if (error instanceof ClientRuntimeError) {

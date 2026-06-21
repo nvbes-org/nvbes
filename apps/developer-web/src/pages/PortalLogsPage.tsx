@@ -1,3 +1,4 @@
+import { commandSearchTokenValue, parseCommandSearch, RelativeTime } from '@nvbes/web-runtime';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -21,23 +22,44 @@ export function PortalLogsPage() {
     <section>
       <PageHeader
         title="Logs"
-        body="Filter tenant logs by user, client, tenant, event type, and date."
+        body="Filter tenant logs by query tokens, user, client, tenant, event type, and date."
       />
       <form
         className="mb-6 grid gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-3"
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
+          const commandQuery = parseCommandSearch(formString(form, 'query'));
           setFilters({
-            user_id: formString(form, 'user_id').trim() || undefined,
-            client_id: formString(form, 'client_id').trim() || undefined,
-            tenant_id: formString(form, 'tenant_id').trim() || undefined,
-            event_type: formString(form, 'event_type').trim() || undefined,
+            user_id:
+              formString(form, 'user_id').trim() ||
+              commandSearchTokenValue(commandQuery, 'user') ||
+              undefined,
+            client_id:
+              formString(form, 'client_id').trim() ||
+              commandSearchTokenValue(commandQuery, 'client') ||
+              undefined,
+            tenant_id:
+              formString(form, 'tenant_id').trim() ||
+              commandSearchTokenValue(commandQuery, 'tenant') ||
+              undefined,
+            event_type:
+              formString(form, 'event_type').trim() ||
+              commandSearchTokenValue(commandQuery, 'event') ||
+              commandQuery.text ||
+              undefined,
           });
           setFrom(formString(form, 'from'));
           setTo(formString(form, 'to'));
         }}
       >
+        <Field label="Query">
+          <input
+            name="query"
+            className={inputClass}
+            placeholder='event:login.failed client:"portal"'
+          />
+        </Field>
         <Field label="User ID">
           <input name="user_id" className={inputClass} />
         </Field>
@@ -69,7 +91,8 @@ export function PortalLogsPage() {
             <div key={log.id} className="rounded-md border border-border bg-card p-3 text-sm">
               <div className="font-medium">{log.event_type}</div>
               <div className="mt-1 text-xs text-muted-foreground">
-                {log.created_at} · user {log.user_id ?? '-'} · client {log.client_id ?? '-'}
+                <RelativeTime value={log.created_at} /> · user {log.user_id ?? '-'} · client{' '}
+                {log.client_id ?? '-'}
               </div>
             </div>
           ))}

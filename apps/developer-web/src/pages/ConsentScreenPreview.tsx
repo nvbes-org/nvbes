@@ -51,7 +51,7 @@ export function ConsentScreenPreview({
       className="consent-preview-wrapper h-full w-full rounded-lg border border-border bg-slate-50/50 p-6 dark:bg-slate-950/20"
       style={styleOverrides}
     >
-      {scopedCss && <style dangerouslySetInnerHTML={{ __html: scopedCss }} />}
+      {scopedCss ? <style>{scopedCss}</style> : null}
 
       <div className="mx-auto max-w-sm rounded-xl border border-border bg-card p-5 shadow-sm">
         {/* Header */}

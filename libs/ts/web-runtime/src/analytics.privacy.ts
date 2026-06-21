@@ -1,4 +1,5 @@
 import type { AnalyticsProperties, AnalyticsPurposeConsent } from './analytics.types';
+import { getSafeLocalStorage, getSafeSessionStorage } from './safe-storage';
 
 export type PseudonymizeAnalyticsId = (prefix: string, id: string) => Promise<string>;
 
@@ -130,8 +131,8 @@ export function clearAnalyticsStorage(): void {
     return;
   }
 
-  for (const storage of [window.localStorage, window.sessionStorage]) {
-    for (const key of Object.keys(storage)) {
+  for (const storage of [getSafeLocalStorage(), getSafeSessionStorage()]) {
+    for (const key of storage.keys()) {
       const normalized = key.toLowerCase();
       if (normalized.startsWith('ph_') || normalized.startsWith('nvbes.analytics.')) {
         storage.removeItem(key);

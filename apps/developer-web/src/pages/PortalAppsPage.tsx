@@ -1,3 +1,4 @@
+import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -17,10 +18,6 @@ function lines(value: string) {
     .split(/\r?\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-async function copyClientId(clientId: string) {
-  await navigator.clipboard.writeText(clientId);
 }
 
 export function PortalAppsPage() {
@@ -87,9 +84,10 @@ export function PortalAppsPage() {
       {clientSecret ? (
         <div className="mb-6 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Client secret</h2>
-          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">
-            {clientSecret}
-          </code>
+          <div className="mt-2 flex items-start gap-2 rounded-md bg-background p-3">
+            <code className="min-w-0 flex-1 overflow-auto text-xs">{clientSecret}</code>
+            <ClipboardButton value={clientSecret} />
+          </div>
         </div>
       ) : null}
       {appsQuery.data?.length ? (
@@ -112,13 +110,7 @@ export function PortalAppsPage() {
                   <td className="p-3">{app.client_type}</td>
                   <td className="p-3">{app.redirect_uris.length}</td>
                   <td className="p-3">
-                    <button
-                      type="button"
-                      className="text-primary"
-                      onClick={() => void copyClientId(app.client_id)}
-                    >
-                      Copy
-                    </button>
+                    <ClipboardButton value={app.client_id} className="border-0 text-primary" />
                   </td>
                 </tr>
               ))}

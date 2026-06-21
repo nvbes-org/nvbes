@@ -1,3 +1,6 @@
+import { getSafeSessionStorage } from '@nvbes/web-runtime';
+import { z } from 'zod';
+
 type DeveloperOAuthState = {
   state: string;
   codeVerifier: string;
@@ -5,29 +8,28 @@ type DeveloperOAuthState = {
 };
 
 const OAUTH_STORAGE_KEY = 'nvbes_developer_oauth_state';
+const DeveloperOAuthStateSchema = z.object({
+  codeVerifier: z.string(),
+  returnTo: z.string(),
+  state: z.string(),
+});
 
 export function readDeveloperOauthState(): DeveloperOAuthState | null {
-  const raw = sessionStorage.getItem(OAUTH_STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(raw) as DeveloperOAuthState;
-  } catch {
+  const state = getSafeSessionStorage().getJson(OAUTH_STORAGE_KEY, DeveloperOAuthStateSchema);
+  if (!state) {
     clearDeveloperOauthState();
-    return null;
   }
+  return state;
 }
 
 export function clearDeveloperOauthState(): void {
-  sessionStorage.removeItem(OAUTH_STORAGE_KEY);
+  getSafeSessionStorage().removeItem(OAUTH_STORAGE_KEY);
 }
 
 export async function buildDeveloperAuthorizationUrl(returnTo: string): Promise<string> {
   const { codeVerifier, codeChallenge } = await createPkceChallenge();
   const state = createRandomValue(24);
-  sessionStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify({ state, codeVerifier, returnTo }));
+  getSafeSessionStorage().setJson(OAUTH_STORAGE_KEY, { state, codeVerifier, returnTo });
 
   const { developerIdentityClient } = await import('./developer.oauth.client');
   return developerIdentityClient.getAuthorizationUrl(

@@ -1,3 +1,4 @@
+import { RelativeTime, useVisibilityAwareInterval } from '@nvbes/web-runtime';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -108,6 +109,7 @@ export function WebhooksPage() {
 
 function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
   const queryClient = useQueryClient();
+  const liveInterval = useVisibilityAwareInterval(2_000, false);
 
   const deliveriesQuery = useQuery({
     queryKey: ['developer-webhook-deliveries', endpointId],
@@ -115,7 +117,7 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
     staleTime: 5_000,
     refetchInterval: (query) => {
       const hasPending = query.state.data?.some((d) => d.status === 'pending');
-      return hasPending ? 2_000 : false;
+      return hasPending ? liveInterval : false;
     },
   });
 
@@ -194,7 +196,7 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
                           HTTP {delivery.response_status}
                         </span>
                       )}
-                      <span>{new Date(delivery.created_at).toLocaleString()}</span>
+                      <RelativeTime value={delivery.created_at} />
                     </div>
                     {delivery.error_message && (
                       <p className="text-xs text-destructive bg-destructive/5 rounded px-2 py-1 mt-1 font-mono">

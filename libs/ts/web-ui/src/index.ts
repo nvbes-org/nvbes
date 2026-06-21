@@ -1,4 +1,5 @@
 export { cn } from './lib/classnames';
+export { ClipboardButton, type ClipboardButtonProps } from './clipboard-button';
 export {
   findActiveAccount,
   initialsForDisplayName,
