@@ -172,6 +172,8 @@ export type {
   VersionMismatchInput,
   VersionMismatchResult,
 } from './version-mismatch';
+export { VersionMismatchBanner } from './version-mismatch-banner';
+export type { VersionMismatchBannerProps } from './version-mismatch-banner';
 export {
   getBrowserVisibilityState,
   useBrowserVisibilityState,

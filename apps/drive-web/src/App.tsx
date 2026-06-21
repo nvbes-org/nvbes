@@ -1,4 +1,4 @@
-import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
+import { createQueryClient, ErrorBoundary, VersionMismatchBanner } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
@@ -8,6 +8,9 @@ import { NetworkQualityInit } from './components/NetworkQualityInit';
 import { TooltipProvider } from './components/ui/tooltip';
 import { router } from './drive.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
+
+const DRIVE_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
+const DRIVE_HEALTH_URL = `${import.meta.env.VITE_DRIVE_API_BASE_URL || '/api'}/health`;
 
 function handleRenderProfiler(
   id: string,
@@ -41,6 +44,11 @@ export function App() {
         <TooltipProvider>
           <NetworkQualityInit />
           <TrackingConsentBanner />
+          <VersionMismatchBanner
+            appName="drive-web"
+            frontendBuildId={DRIVE_WEB_BUILD_ID}
+            healthUrl={DRIVE_HEALTH_URL}
+          />
           {import.meta.env.DEV ? (
             <Profiler id="drive-web" onRender={handleRenderProfiler}>
               <RouterProvider router={router} />

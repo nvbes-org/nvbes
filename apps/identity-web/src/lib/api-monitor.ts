@@ -1,3 +1,5 @@
+import { verifiedFetch } from '@nvbes/web-runtime';
+
 export type ConnectionStatus = 'connected' | 'disconnected' | 'checking';
 
 type Listener = (status: ConnectionStatus) => void;
@@ -7,6 +9,7 @@ class ApiMonitor {
   private listeners: Set<Listener> = new Set();
   private probeIntervalId: number | null = null;
   private isChecking = false;
+  private fetchImpl: typeof fetch | null = null;
 
   constructor() {
     this.setupFetchInterceptor();
@@ -40,6 +43,7 @@ class ApiMonitor {
     if (typeof window === 'undefined') return;
 
     const originalFetch = window.fetch;
+    this.fetchImpl = originalFetch.bind(window);
     window.fetch = async (input, init) => {
       const urlString =
         typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
@@ -73,7 +77,10 @@ class ApiMonitor {
       try {
         const identityApiBaseUrl =
           import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000';
-        const response = await fetch(`${identityApiBaseUrl}/health`, {
+        const healthUrl = `${identityApiBaseUrl}/health`;
+        const response = await verifiedFetch(healthUrl, {
+          allowedOrigins: [identityApiBaseUrl],
+          fetchImpl: this.fetchImpl ?? undefined,
           method: 'GET',
           cache: 'no-store',
         });
@@ -102,7 +109,10 @@ class ApiMonitor {
     try {
       const identityApiBaseUrl =
         import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000';
-      const response = await fetch(`${identityApiBaseUrl}/health`, {
+      const healthUrl = `${identityApiBaseUrl}/health`;
+      const response = await verifiedFetch(healthUrl, {
+        allowedOrigins: [identityApiBaseUrl],
+        fetchImpl: this.fetchImpl ?? undefined,
         method: 'GET',
         cache: 'no-store',
       });

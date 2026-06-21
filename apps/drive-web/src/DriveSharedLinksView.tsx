@@ -1,4 +1,5 @@
-import { Copy, Link2, ShieldOff } from 'lucide-react';
+import { ClipboardButton } from '@nvbes/web-ui';
+import { Link2, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { DriveEmptyState } from './DriveViewState';
@@ -32,14 +33,6 @@ export function DriveSharedLinksView({
     );
   }
 
-  async function handleCopy(link: DriveShareLink) {
-    try {
-      await navigator.clipboard?.writeText(shareLinkUrl(link));
-    } catch {
-      return;
-    }
-  }
-
   function handleRevoke(linkId: string) {
     onStateChange(revokeShareLink(state, linkId));
   }
@@ -48,7 +41,6 @@ export function DriveSharedLinksView({
     <section className="grid gap-3">
       {state.shareLinks.map((link) => {
         const entry = entryForLink(state.entries, link);
-        const copyAvailable = typeof navigator.clipboard?.writeText === 'function';
         const isRevoked = link.status === 'revoked';
 
         return (
@@ -80,17 +72,11 @@ export function DriveSharedLinksView({
               </dl>
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!copyAvailable}
-                  onClick={() => void handleCopy(link)}
-                  aria-label={`Copier le lien ${entry?.name ?? link.label}`}
-                >
-                  <Copy data-icon="inline-start" aria-hidden="true" />
-                  Copier
-                </Button>
+                <ClipboardButton
+                  value={shareLinkUrl(link)}
+                  label={`Copier le lien ${entry?.name ?? link.label}`}
+                  className="h-9"
+                />
                 <Button
                   type="button"
                   variant="destructive"

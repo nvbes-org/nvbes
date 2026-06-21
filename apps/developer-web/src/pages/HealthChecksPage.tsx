@@ -1,3 +1,4 @@
+import { useVisibilityAwareInterval } from '@nvbes/web-runtime';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, AlertTriangle } from 'lucide-react';
 import { listDeveloperHealthChecks, runDeveloperHealthChecks } from '../developer.api';
@@ -5,9 +6,11 @@ import { countUnhealthyChecks, healthStatusClass } from './HealthChecksPage.help
 
 export function HealthChecksPage() {
   const queryClient = useQueryClient();
+  const liveInterval = useVisibilityAwareInterval(30_000, false);
   const healthQuery = useQuery({
     queryKey: ['developer-health-checks'],
     queryFn: ({ signal }) => listDeveloperHealthChecks(signal),
+    refetchInterval: liveInterval,
     staleTime: 30_000,
   });
   const runMutation = useMutation({

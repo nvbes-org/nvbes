@@ -1,4 +1,4 @@
-import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
+import { createQueryClient, ErrorBoundary, VersionMismatchBanner } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
@@ -8,6 +8,9 @@ import { router } from './identity.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
 import { ApiConnectionOverlay } from './components/ApiConnectionOverlay';
 import { ToastProvider } from './components/ui/toast';
+
+const IDENTITY_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
+const IDENTITY_HEALTH_URL = `${import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000'}/health`;
 
 function handleRenderProfiler(
   id: string,
@@ -44,6 +47,11 @@ function App() {
               <RouterProvider router={router} />
               <TrackingConsentBanner />
               <ApiConnectionOverlay />
+              <VersionMismatchBanner
+                appName="identity-web"
+                frontendBuildId={IDENTITY_WEB_BUILD_ID}
+                healthUrl={IDENTITY_HEALTH_URL}
+              />
               <ReactQueryDevtools initialIsOpen={false} />
               <TanStackRouterDevtools router={router} position="bottom-right" />
             </Profiler>
@@ -52,6 +60,11 @@ function App() {
               <RouterProvider router={router} />
               <TrackingConsentBanner />
               <ApiConnectionOverlay />
+              <VersionMismatchBanner
+                appName="identity-web"
+                frontendBuildId={IDENTITY_WEB_BUILD_ID}
+                healthUrl={IDENTITY_HEALTH_URL}
+              />
             </>
           )}
         </ToastProvider>

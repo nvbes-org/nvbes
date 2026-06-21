@@ -1,17 +1,14 @@
+import { ClipboardButton } from '@nvbes/web-ui';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 export function RecoveryCodesListStep({
   codes,
-  copied,
   onBack,
-  onCopy,
   onDownload,
 }: {
   codes: string[];
-  copied: boolean;
   onBack: () => void;
-  onCopy: () => void;
   onDownload: () => void;
 }) {
   return (
@@ -38,9 +35,7 @@ export function RecoveryCodesListStep({
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onCopy}>
-            {copied ? 'Copié !' : 'Copier'}
-          </Button>
+          <ClipboardButton value={codes.join('\n')} label="Copier" className="h-10 flex-1" />
           <Button variant="outline" className="flex-1" onClick={onDownload}>
             Télécharger
           </Button>

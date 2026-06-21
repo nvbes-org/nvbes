@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -23,6 +24,10 @@ function lines(value: string) {
 export function PortalAppsPage() {
   const queryClient = useQueryClient();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [allowedScopes, setAllowedScopes] = useState('');
+  const [redirectUris, setRedirectUris] = useState('');
+  const [allowedAudiences, setAllowedAudiences] = useState('');
+  const [allowedResources, setAllowedResources] = useState('');
   const appsQuery = useQuery({
     queryKey: ['developer', 'apps'],
     queryFn: ({ signal }) => listDeveloperApps({ signal }),
@@ -63,18 +68,42 @@ export function PortalAppsPage() {
             name="allowed_scopes"
             className={inputClass}
             placeholder="openid profile email"
+            value={allowedScopes}
+            onChange={(event) => setAllowedScopes(event.currentTarget.value)}
             required
           />
+          <InvisibleUnicodeWarning value={allowedScopes} />
         </Field>
         <Field label="Redirect URIs">
-          <textarea name="redirect_uris" className={textareaClass} required />
+          <textarea
+            name="redirect_uris"
+            className={textareaClass}
+            value={redirectUris}
+            onChange={(event) => setRedirectUris(event.currentTarget.value)}
+            required
+          />
+          <InvisibleUnicodeWarning value={redirectUris} />
         </Field>
         <div className="grid gap-3">
           <Field label="Allowed audiences">
-            <input name="allowed_audiences" className={inputClass} placeholder="optional" />
+            <input
+              name="allowed_audiences"
+              className={inputClass}
+              placeholder="optional"
+              value={allowedAudiences}
+              onChange={(event) => setAllowedAudiences(event.currentTarget.value)}
+            />
+            <InvisibleUnicodeWarning value={allowedAudiences} />
           </Field>
           <Field label="Allowed resources">
-            <input name="allowed_resources" className={inputClass} placeholder="optional" />
+            <input
+              name="allowed_resources"
+              className={inputClass}
+              placeholder="optional"
+              value={allowedResources}
+              onChange={(event) => setAllowedResources(event.currentTarget.value)}
+            />
+            <InvisibleUnicodeWarning value={allowedResources} />
           </Field>
         </div>
         <button type="submit" className={buttonClass} disabled={createApp.isPending}>
@@ -88,6 +117,7 @@ export function PortalAppsPage() {
             <code className="min-w-0 flex-1 overflow-auto text-xs">{clientSecret}</code>
             <ClipboardButton value={clientSecret} />
           </div>
+          <InvisibleUnicodeWarning value={clientSecret} />
         </div>
       ) : null}
       {appsQuery.data?.length ? (

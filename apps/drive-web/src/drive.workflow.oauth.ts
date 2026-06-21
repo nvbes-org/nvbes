@@ -1,3 +1,5 @@
+import { getSafeSessionStorage } from '@nvbes/web-runtime';
+import { z } from 'zod';
 import type { OAuthFlow } from './drive.workflow.config';
 import { createIdentityClient } from './drive.workflow.config';
 
@@ -8,27 +10,26 @@ interface OAuthStateRecord {
 }
 
 const OAUTH_STORAGE_KEY = 'nvbes_drive_oauth_state';
+const OAuthStateRecordSchema = z.object({
+  codeVerifier: z.string(),
+  flow: z.enum(['login', 'register']),
+  state: z.string(),
+});
 
 function oauthStorage(): OAuthStateRecord | null {
-  const raw = sessionStorage.getItem(OAUTH_STORAGE_KEY);
-  if (!raw) {
-    return null;
+  const record = getSafeSessionStorage().getJson(OAUTH_STORAGE_KEY, OAuthStateRecordSchema);
+  if (!record) {
+    clearOauthStorage();
   }
-
-  try {
-    return JSON.parse(raw) as OAuthStateRecord;
-  } catch {
-    sessionStorage.removeItem(OAUTH_STORAGE_KEY);
-    return null;
-  }
+  return record;
 }
 
 function setOauthStorage(record: OAuthStateRecord): void {
-  sessionStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify(record));
+  getSafeSessionStorage().setJson(OAUTH_STORAGE_KEY, record);
 }
 
 export function clearOauthStorage(): void {
-  sessionStorage.removeItem(OAUTH_STORAGE_KEY);
+  getSafeSessionStorage().removeItem(OAUTH_STORAGE_KEY);
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {

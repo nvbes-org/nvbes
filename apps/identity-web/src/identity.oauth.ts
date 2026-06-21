@@ -1,3 +1,4 @@
+import { getSafeSessionStorage } from '@nvbes/web-runtime';
 import { z } from 'zod';
 import { identityHttpClient } from './identity.http';
 
@@ -23,6 +24,15 @@ const ParResponseSchema = z.object({
 });
 
 const PENDING_OAUTH_KEY = 'nvbes.pending_oauth_authorize';
+const OAuthAuthorizeRequestSchema = z.object({
+  clientId: z.string(),
+  codeChallenge: z.string().nullable().optional(),
+  codeChallengeMethod: z.string().nullable().optional(),
+  consentAction: z.string().nullable().optional(),
+  redirectUri: z.string(),
+  scope: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+});
 
 function oauthApiUrl(): string {
   return '/oauth/authorize';
@@ -59,25 +69,19 @@ export function readOAuthAuthorizeRequest(
 }
 
 export function savePendingOAuthAuthorizeRequest(request: OAuthAuthorizeRequest): void {
-  window.sessionStorage.setItem(PENDING_OAUTH_KEY, JSON.stringify(request));
+  getSafeSessionStorage().setJson(PENDING_OAUTH_KEY, request);
 }
 
 export function readPendingOAuthAuthorizeRequest(): OAuthAuthorizeRequest | null {
-  const value = window.sessionStorage.getItem(PENDING_OAUTH_KEY);
-  if (!value) {
-    return null;
+  const request = getSafeSessionStorage().getJson(PENDING_OAUTH_KEY, OAuthAuthorizeRequestSchema);
+  if (!request) {
+    clearPendingOAuthAuthorizeRequest();
   }
-
-  try {
-    return JSON.parse(value) as OAuthAuthorizeRequest;
-  } catch {
-    window.sessionStorage.removeItem(PENDING_OAUTH_KEY);
-    return null;
-  }
+  return request;
 }
 
 export function clearPendingOAuthAuthorizeRequest(): void {
-  window.sessionStorage.removeItem(PENDING_OAUTH_KEY);
+  getSafeSessionStorage().removeItem(PENDING_OAUTH_KEY);
 }
 
 export async function authorizeIdentitySession(

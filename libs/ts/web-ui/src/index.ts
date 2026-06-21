@@ -1,5 +1,6 @@
 export { cn } from './lib/classnames';
 export { ClipboardButton, type ClipboardButtonProps } from './clipboard-button';
+export { CommandSearch, type CommandSearchProps, type CommandSearchToken } from './command-search';
 export {
   findActiveAccount,
   initialsForDisplayName,

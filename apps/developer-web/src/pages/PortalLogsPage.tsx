@@ -1,12 +1,26 @@
 import { commandSearchTokenValue, parseCommandSearch, RelativeTime } from '@nvbes/web-runtime';
+import { CommandSearch, type CommandSearchToken } from '@nvbes/web-ui';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { listDeveloperLogs, type DeveloperLogsFilter } from '@/developer.api';
+import { DeveloperVirtualStack } from './DeveloperVirtualStack';
 import { EmptyState, Field, PageHeader, formString, inputClass } from './Portal.shared';
+
+const logSearchTokens: CommandSearchToken[] = [
+  { key: 'client', description: 'OAuth client ID', example: 'client:portal' },
+  { key: 'event', description: 'Event type', example: 'event:login.failed' },
+  { key: 'route', description: 'Route path', example: 'route:/oauth/token' },
+  { key: 'since', description: 'Start date', example: 'since:2026-06-01' },
+  { key: 'status', description: 'HTTP status', example: 'status:failed' },
+  { key: 'tenant', description: 'Tenant ID', example: 'tenant:tenant_123' },
+  { key: 'trace', description: 'Trace ID', example: 'trace:abc123' },
+  { key: 'user', description: 'User ID', example: 'user:user_123' },
+];
 
 export function PortalLogsPage() {
   const [filters, setFilters] = useState<DeveloperLogsFilter>({});
+  const [query, setQuery] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const logsQuery = useQuery({
@@ -29,7 +43,7 @@ export function PortalLogsPage() {
         onSubmit={(event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
-          const commandQuery = parseCommandSearch(formString(form, 'query'));
+          const commandQuery = parseCommandSearch(query);
           setFilters({
             user_id:
               formString(form, 'user_id').trim() ||
@@ -54,9 +68,10 @@ export function PortalLogsPage() {
         }}
       >
         <Field label="Query">
-          <input
-            name="query"
-            className={inputClass}
+          <CommandSearch
+            value={query}
+            onChange={setQuery}
+            tokens={logSearchTokens}
             placeholder='event:login.failed client:"portal"'
           />
         </Field>
@@ -86,8 +101,13 @@ export function PortalLogsPage() {
         </button>
       </form>
       {logs.length ? (
-        <div className="grid gap-2">
-          {logs.map((log) => (
+        <DeveloperVirtualStack
+          items={logs}
+          className="grid max-h-[720px] gap-2 overflow-auto pr-1"
+          itemClassName="pb-2"
+          estimateSize={78}
+          getKey={(log) => log.id}
+          renderItem={(log) => (
             <div key={log.id} className="rounded-md border border-border bg-card p-3 text-sm">
               <div className="font-medium">{log.event_type}</div>
               <div className="mt-1 text-xs text-muted-foreground">
@@ -95,8 +115,8 @@ export function PortalLogsPage() {
                 {log.client_id ?? '-'}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        />
       ) : (
         <EmptyState title="No logs" body="No tenant logs match the current filters." />
       )}

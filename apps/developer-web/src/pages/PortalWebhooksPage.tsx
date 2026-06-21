@@ -1,3 +1,5 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
+import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -20,6 +22,7 @@ const eventOptions = ['user.created', 'login.failed', 'session.revoked', 'client
 export function PortalWebhooksPage() {
   const queryClient = useQueryClient();
   const [signingSecret, setSigningSecret] = useState<string | null>(null);
+  const [endpointUrl, setEndpointUrl] = useState('');
   const webhooksQuery = useQuery({
     queryKey: ['developer', 'webhooks'],
     queryFn: ({ signal }) => listDeveloperWebhooks({ signal }),
@@ -58,7 +61,14 @@ export function PortalWebhooksPage() {
           <input name="name" className={inputClass} required />
         </Field>
         <Field label="Endpoint URL">
-          <input name="url" className={inputClass} required />
+          <input
+            name="url"
+            className={inputClass}
+            value={endpointUrl}
+            onChange={(event) => setEndpointUrl(event.currentTarget.value)}
+            required
+          />
+          <InvisibleUnicodeWarning value={endpointUrl} />
         </Field>
         <fieldset className="grid gap-2 text-sm">
           <legend className="font-medium">Events</legend>
@@ -76,9 +86,11 @@ export function PortalWebhooksPage() {
       {signingSecret ? (
         <div className="mb-6 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Signing secret</h2>
-          <code className="mt-2 block overflow-auto rounded-md bg-background p-3 text-xs">
-            {signingSecret}
-          </code>
+          <div className="mt-2 flex items-start gap-2 rounded-md bg-background p-3">
+            <code className="min-w-0 flex-1 overflow-auto text-xs">{signingSecret}</code>
+            <ClipboardButton value={signingSecret} />
+          </div>
+          <InvisibleUnicodeWarning value={signingSecret} />
         </div>
       ) : null}
       {webhooksQuery.data?.length ? (

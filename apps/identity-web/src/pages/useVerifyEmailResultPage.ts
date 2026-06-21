@@ -1,4 +1,5 @@
 import { createRequestHeaders } from '@nvbes/http-client';
+import { verifiedFetch } from '@nvbes/web-runtime';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
@@ -37,7 +38,7 @@ export function useVerifyEmailResultPage() {
       }
 
       try {
-        const response = await fetch('/auth/verify-email', {
+        const response = await verifiedFetch('/auth/verify-email', {
           method: 'POST',
           headers: createRequestHeaders('POST', headers),
           body: JSON.stringify({ token }),

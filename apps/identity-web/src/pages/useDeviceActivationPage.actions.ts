@@ -1,4 +1,5 @@
 import { createRequestHeaders } from '@nvbes/http-client';
+import { verifiedFetch } from '@nvbes/web-runtime';
 import type { DeviceActivationStep, DeviceInfo } from './DeviceActivationPage.shared';
 import { getDeviceActionEndpoint } from './useDeviceActivationPage.shared';
 
@@ -13,7 +14,7 @@ export async function verifyDeviceUserCode({
   setStep: React.Dispatch<React.SetStateAction<DeviceActivationStep>>;
   setError: (value: string) => void;
 }) {
-  const response = await fetch('/oauth/device/verify', {
+  const response = await verifiedFetch('/oauth/device/verify', {
     method: 'POST',
     headers: createRequestHeaders('POST', {
       'Content-Type': 'application/json',
@@ -54,7 +55,7 @@ export async function handleDeviceConsentAction({
     headers['X-CSRF-Token'] = csrfToken;
   }
 
-  const response = await fetch(getDeviceActionEndpoint(action), {
+  const response = await verifiedFetch(getDeviceActionEndpoint(action), {
     method: 'POST',
     headers: createRequestHeaders('POST', headers),
     body: JSON.stringify({

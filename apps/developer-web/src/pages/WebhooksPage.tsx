@@ -16,8 +16,9 @@ import {
   listDeveloperConsoleWebhookDeliveries,
   replayDeveloperConsoleWebhookDelivery,
 } from '../developer.api';
-import { canReplayWebhookDelivery } from './WebhooksPage.helpers';
 import { DeveloperWebhookDelivery } from '../developer.schemas';
+import { DeveloperVirtualStack } from './DeveloperVirtualStack';
+import { canReplayWebhookDelivery } from './WebhooksPage.helpers';
 
 export function WebhooksPage() {
   const webhooksQuery = useQuery({
@@ -164,8 +165,13 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
         Delivery Attempts
       </h4>
       <div className="overflow-hidden rounded-md border border-border bg-card">
-        <div className="divide-y divide-border">
-          {deliveriesQuery.data.map((delivery) => {
+        <DeveloperVirtualStack
+          items={deliveriesQuery.data}
+          className="max-h-[560px] overflow-auto"
+          itemClassName="border-b border-border last:border-b-0"
+          estimateSize={112}
+          getKey={(delivery) => delivery.id}
+          renderItem={(delivery) => {
             const replayable = canReplayWebhookDelivery(delivery);
             return (
               <div
@@ -233,8 +239,8 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
                 </div>
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { createRequestHeaders } from '@nvbes/http-client';
 import type { IdentityConfig, TokenResponse } from '@nvbes/identity-sdk';
+import { verifiedFetch } from '@nvbes/web-runtime';
 
 export interface IdentityRuntimeClient {
   config: Pick<IdentityConfig, 'clientId' | 'tokenUrl'>;
@@ -66,7 +67,8 @@ export async function refreshAccessToken(
   client: IdentityRuntimeClient,
   refreshToken: string,
 ): Promise<RefreshTokenResponse> {
-  const response = await fetch(client.config.tokenUrl, {
+  const response = await verifiedFetch(client.config.tokenUrl, {
+    allowedOrigins: [client.config.tokenUrl],
     method: 'POST',
     headers: createRequestHeaders('POST', {
       'Content-Type': 'application/x-www-form-urlencoded',

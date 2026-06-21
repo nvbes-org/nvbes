@@ -1,3 +1,4 @@
+import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -174,6 +175,7 @@ export function ConsentScreenPage() {
                   setForm((current) => ({ ...current, description: event.currentTarget.value }))
                 }
               />
+              <InvisibleUnicodeWarning value={form.description} />
             </label>
 
             <div className="grid gap-4 md:grid-cols-2 mt-4">
@@ -187,6 +189,7 @@ export function ConsentScreenPage() {
                     setForm((current) => ({ ...current, helpText: event.currentTarget.value }))
                   }
                 />
+                <InvisibleUnicodeWarning value={form.helpText} />
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 Custom CSS
@@ -198,6 +201,7 @@ export function ConsentScreenPage() {
                     setForm((current) => ({ ...current, customCss: event.currentTarget.value }))
                   }
                 />
+                <InvisibleUnicodeWarning value={form.customCss} />
               </label>
             </div>
 
@@ -250,6 +254,7 @@ function TextField(props: {
         placeholder={props.placeholder}
         onChange={(event) => props.onChange(event.currentTarget.value)}
       />
+      <InvisibleUnicodeWarning value={props.value} />
     </label>
   );
 }
