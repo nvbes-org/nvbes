@@ -64,7 +64,7 @@ async fn mark_client_used(
     Ok(())
 }
 
-fn machine_token_audit_metadata(
+pub(crate) fn machine_token_audit_metadata(
     client_id: &str,
     jti: &str,
     scope: &str,

@@ -92,6 +92,17 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
         strict_mode,
         true,
     )?;
+    urls::validate_public_url(
+        "NVBES_MOLLIE_API_BASE_URL",
+        &config.mollie_api_base_url,
+        strict_mode,
+        true,
+    )?;
+    if config.billing_mollie_enabled && config.mollie_api_key.is_none() {
+        return Err(
+            "NVBES_MOLLIE_API_KEY is required when NVBES_MOLLIE_ENABLED is true".to_string(),
+        );
+    }
     urls::validate_database_url(&config.database_url, strict_mode)?;
     urls::validate_jwt_secret(&config.jwt_secret, strict_mode)?;
     observability::validate_grafana_export_path(config, strict_mode)?;

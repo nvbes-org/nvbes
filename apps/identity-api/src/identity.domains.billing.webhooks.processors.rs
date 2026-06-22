@@ -4,6 +4,8 @@ use serde_json::Value;
 use sqlx::Row;
 
 use super::super::db;
+use super::super::entitlements;
+use super::super::jobs_dunning;
 use super::logic::resolve_subscription_workspace_id;
 use super::validators_checkout as checkout;
 use super::validators_invoice as invoice;
@@ -106,6 +108,7 @@ pub async fn process_subscription_upsert(
 
     db::project_workspace_plan(tx, workspace_id, plan_id).await?;
     db::insert_billing_audit(tx, workspace_id, "billing.updated", object).await?;
+    persist_webhook_entitlements(tx, workspace_id, "subscription_upserted", object).await?;
 
     Ok(Some(workspace_id))
 }
@@ -142,6 +145,7 @@ pub async fn process_subscription_deleted(
     .await?;
 
     db::project_workspace_plan(tx, workspace_id, trial_plan_id).await?;
+    persist_webhook_entitlements(tx, workspace_id, "subscription_deleted", object).await?;
     Ok(Some(workspace_id))
 }
 
@@ -179,6 +183,10 @@ pub async fn process_invoice_payment_failed(
         current_subscription_status.as_deref(),
     )?;
     workspace::ensure_invoice_workspace_consistency(object, workspace_id)?;
+    let attempt_count = object
+        .get("attempt_count")
+        .and_then(Value::as_i64)
+        .unwrap_or(1);
 
     if current_subscription_id.is_none() {
         sqlx::query(
@@ -210,8 +218,62 @@ pub async fn process_invoice_payment_failed(
     .execute(tx.as_mut())
     .await?;
 
+    jobs_dunning::record_payment_failure_tx(tx, workspace_id, attempt_count).await?;
     db::insert_billing_audit(tx, workspace_id, "billing.payment_failed", object).await?;
+    persist_webhook_entitlements(tx, workspace_id, "payment_failed", object).await?;
     Ok(Some(workspace_id))
+}
+
+pub async fn process_invoice_payment_succeeded(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    object: &Value,
+) -> Result<Option<uuid::Uuid>, AppError> {
+    invoice::ensure_invoice_payment_success_consistency(object)?;
+    let subscription_id = required_string(object, "subscription").ok_or_else(|| {
+        AppError::bad_request(
+            "webhook_missing_subscription",
+            "Invoice is missing subscription id.",
+        )
+    })?;
+    let workspace_id = db::workspace_id_for_subscription(tx, &subscription_id).await?;
+    workspace::ensure_invoice_workspace_consistency(object, workspace_id)?;
+
+    sqlx::query(
+        r#"
+        UPDATE subscriptions
+        SET status = 'active',
+            billing_subscription_id = $2,
+            updated_at = NOW()
+        WHERE workspace_id = $1
+          AND status IN ('past_due', 'suspended', 'incomplete')
+        "#,
+    )
+    .bind(workspace_id)
+    .bind(&subscription_id)
+    .execute(tx.as_mut())
+    .await?;
+
+    jobs_dunning::record_payment_success_tx(tx, workspace_id).await?;
+    db::insert_billing_audit(tx, workspace_id, "billing.payment_succeeded", object).await?;
+    persist_webhook_entitlements(tx, workspace_id, "payment_succeeded", object).await?;
+    Ok(Some(workspace_id))
+}
+
+async fn persist_webhook_entitlements(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    workspace_id: uuid::Uuid,
+    reason: &str,
+    object: &Value,
+) -> Result<(), AppError> {
+    entitlements::persist_current_workspace_entitlements_tx(
+        tx,
+        workspace_id,
+        None,
+        reason,
+        serde_json::json!({ "webhook": object }),
+    )
+    .await?;
+    Ok(())
 }
 
 pub async fn process_stripe_event(
@@ -227,6 +289,9 @@ pub async fn process_stripe_event(
             process_subscription_deleted(tx, &event.data_object).await
         }
         "invoice.payment_failed" => process_invoice_payment_failed(tx, &event.data_object).await,
+        "invoice.payment_succeeded" => {
+            process_invoice_payment_succeeded(tx, &event.data_object).await
+        }
         _ => Ok(None),
     }
 }

@@ -9,6 +9,8 @@ use super::{ClientAuthentication, TokenView};
 
 #[path = "identity.domains.oauth.flows.client_credentials.audit.rs"]
 mod audit;
+#[cfg(test)]
+pub(super) use audit::machine_token_audit_metadata;
 
 pub async fn client_credentials_grant(
     db: &PgPool,

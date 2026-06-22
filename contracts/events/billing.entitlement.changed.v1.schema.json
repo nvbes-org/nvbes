@@ -1,20 +1,52 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.nvbes.local/events/billing.entitlement.changed.v1.schema.json",
-  "title": "billing.entitlement.changed v1",
+  "$id": "https://contracts.nvbes.com/events/billing.entitlement.changed.v1.schema.json",
+  "title": "billing.entitlement.changed.v1",
   "type": "object",
-  "required": ["event_type", "event_version", "payload"],
+  "additionalProperties": false,
+  "required": [
+    "tenant_id",
+    "workspace_id",
+    "snapshot_id",
+    "plan_code",
+    "subscription_status",
+    "effective_at",
+    "entitlements"
+  ],
   "properties": {
-    "event_type": { "const": "billing.entitlement.changed" },
-    "event_version": { "const": 1 },
-    "payload": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "workspace_id": { "type": "string", "format": "uuid" },
+    "snapshot_id": { "type": "string", "format": "uuid" },
+    "plan_code": { "type": "string", "minLength": 1 },
+    "subscription_status": {
+      "type": "string",
+      "enum": ["trialing", "active", "grace", "past_due", "degraded", "suspended", "canceled", "ended"]
+    },
+    "effective_at": { "type": "string", "format": "date-time" },
+    "entitlements": {
       "type": "object",
-      "required": ["workspace_id", "entitlement", "status"],
+      "additionalProperties": false,
+      "required": [
+        "can_upload",
+        "can_create_share_links",
+        "included_storage_bytes",
+        "included_users",
+        "max_share_links",
+        "billing_locked"
+      ],
       "properties": {
-        "workspace_id": { "type": "string", "format": "uuid" },
-        "entitlement": { "type": "string", "minLength": 1 },
-        "status": { "type": "string", "enum": ["active", "inactive"] }
+        "can_upload": { "type": "boolean" },
+        "can_create_share_links": { "type": "boolean" },
+        "included_storage_bytes": { "type": "integer", "minimum": 0 },
+        "included_users": { "type": "integer", "minimum": 0 },
+        "max_share_links": { "type": "integer", "minimum": 0 },
+        "max_share_link_ttl_days": { "type": "integer", "minimum": 0 },
+        "audit_level": { "type": "string" },
+        "api_key_limit": { "type": "integer", "minimum": 0 },
+        "billing_locked": { "type": "boolean" }
       }
-    }
+    },
+    "reason": { "type": "string" },
+    "metadata": { "type": "object", "additionalProperties": true }
   }
 }

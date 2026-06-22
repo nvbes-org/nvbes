@@ -80,6 +80,31 @@ pub fn ensure_invoice_amount_consistency(object: &Value) -> Result<(), AppError>
     Ok(())
 }
 
+pub fn ensure_invoice_payment_success_consistency(object: &Value) -> Result<(), AppError> {
+    if !matches!(object.get("status").and_then(Value::as_str), Some("paid")) {
+        return Err(AppError::bad_request(
+            "webhook_invoice_status_mismatch",
+            "Invoice payment succeeded webhook has an unexpected invoice status.",
+        ));
+    }
+
+    let amount_paid = object.get("amount_paid").and_then(Value::as_i64);
+    if amount_paid.is_none() {
+        return Err(AppError::bad_request(
+            "webhook_invoice_amount_paid_missing",
+            "Invoice payment succeeded webhook is missing the amount paid.",
+        ));
+    }
+    if amount_paid.is_some_and(|value| value < 0) {
+        return Err(AppError::bad_request(
+            "webhook_invoice_amount_paid_invalid",
+            "Invoice payment succeeded webhook has an invalid amount paid.",
+        ));
+    }
+
+    Ok(())
+}
+
 pub fn ensure_invoice_subscription_consistency(
     object: &Value,
     current_subscription_id: Option<&str>,

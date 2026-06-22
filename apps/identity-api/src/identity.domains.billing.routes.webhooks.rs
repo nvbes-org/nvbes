@@ -1,6 +1,7 @@
 use crate::app::AppState;
 
 use crate::domains::billing::service::{self, BillingWebhookResponse};
+use crate::domains::billing::{db, provider_mollie};
 use crate::http::error::AppError;
 use crate::http::request::client_ip;
 use axum::{Json, Router, body::Bytes, extract::State, http::HeaderMap, routing::post};
@@ -9,7 +10,9 @@ use nvbes_core::limiter::RateLimiter;
 use std::time::Duration;
 
 pub fn router(_state: &AppState) -> Router<AppState> {
-    Router::new().route("/webhooks/stripe", post(handle_stripe_webhook))
+    Router::new()
+        .route("/webhooks/stripe", post(handle_stripe_webhook))
+        .route("/webhooks/mollie", post(handle_mollie_webhook))
 }
 
 #[utoipa::path(
@@ -47,6 +50,33 @@ pub(crate) async fn handle_stripe_webhook(
     Ok(Json(result?))
 }
 
+#[utoipa::path(
+    post,
+    path = "/webhooks/mollie",
+    tag = "billing",
+    request_body(content = String, description = "Raw Mollie webhook payload", content_type = "application/x-www-form-urlencoded"),
+    responses(
+        (status = 200, description = "Webhook accepted", body = BillingWebhookResponse),
+        (status = 400, description = "Bad request", body = ErrorEnvelope),
+        (status = 429, description = "Rate limited", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn handle_mollie_webhook(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<BillingWebhookResponse>, AppError> {
+    enforce_mollie_webhook_rate_limit(&state.rate_limiter, &headers).await?;
+    let event = provider_mollie::verify_mollie_classic_webhook(body.as_ref())?;
+    let record = db::record_provider_event(&state.db, &event, None).await?;
+
+    Ok(Json(BillingWebhookResponse {
+        provider_event_id: record.provider_event_id,
+        status: "accepted".to_string(),
+    }))
+}
+
 pub(crate) async fn enforce_stripe_webhook_rate_limit(
     limiter: &RateLimiter,
     headers: &HeaderMap,
@@ -54,6 +84,17 @@ pub(crate) async fn enforce_stripe_webhook_rate_limit(
     let key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
     limiter
         .check("billing_webhook_stripe", &key, 300, Duration::from_secs(60))
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn enforce_mollie_webhook_rate_limit(
+    limiter: &RateLimiter,
+    headers: &HeaderMap,
+) -> Result<(), AppError> {
+    let key = client_ip(headers).unwrap_or_else(|| "unknown".to_string());
+    limiter
+        .check("billing_webhook_mollie", &key, 300, Duration::from_secs(60))
         .await?;
     Ok(())
 }

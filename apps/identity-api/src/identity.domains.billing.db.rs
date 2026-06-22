@@ -1,3 +1,8 @@
+#[path = "identity.domains.billing.db.provider_events.rs"]
+mod provider_events;
+
+pub use provider_events::{mark_provider_event_replayed, record_provider_event};
+
 use super::types::{AuditEventInput, BillingStateRecord, PlanRecord, StripePriceMapping};
 use crate::http::error::AppError;
 use sqlx::PgPool;
@@ -179,6 +184,24 @@ pub async fn workspace_id_for_subscription(
             "Stripe subscription is not mapped to a workspace.",
         )
     })
+}
+
+pub async fn tenant_id_for_workspace(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    workspace_id: Uuid,
+) -> Result<Uuid, AppError> {
+    let tenant_id = sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT tenant_id
+        FROM workspaces
+        WHERE id = $1
+        "#,
+    )
+    .bind(workspace_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    tenant_id.ok_or_else(|| AppError::not_found("workspace_not_found", "Workspace not found."))
 }
 
 pub async fn project_workspace_plan(
