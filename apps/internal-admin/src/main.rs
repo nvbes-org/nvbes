@@ -30,6 +30,8 @@ mod command_center;
 mod compliance_center;
 #[path = "internal_admin.customer_center.rs"]
 mod customer_center;
+#[path = "internal_admin.developer_center.rs"]
+mod developer_center;
 #[path = "internal_admin.http.error.rs"]
 mod error;
 #[path = "internal_admin.global_search.rs"]

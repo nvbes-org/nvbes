@@ -9,6 +9,7 @@ import type {
   ComplianceCenterSnapshot,
   CreditNoteRequest,
   CustomerCenterSnapshot,
+  DeveloperCenterSnapshot,
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
@@ -119,6 +120,11 @@ export async function getRevenueCenter(credentials: AdminCredentials) {
 export async function getCustomerCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/customer-center', { headers: authHeaders(credentials) });
   return parseJson<CustomerCenterSnapshot>(response);
+}
+
+export async function getDeveloperCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/developer-center', { headers: authHeaders(credentials) });
+  return parseJson<DeveloperCenterSnapshot>(response);
 }
 
 export async function getOperationsCenter(credentials: AdminCredentials) {

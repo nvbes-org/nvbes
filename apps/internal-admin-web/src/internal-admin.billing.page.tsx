@@ -17,6 +17,7 @@ import { AuditEventsPanel } from './internal-admin.audit.events';
 import { ComplianceCenterPanel } from './internal-admin.compliance-center';
 import { CommandCenterPanel } from './internal-admin.command-center';
 import { CustomerCenterPanel } from './internal-admin.customer-center';
+import { DeveloperCenterPanel } from './internal-admin.developer-center';
 import { GlobalSearchPanel } from './internal-admin.global-search';
 import { OperationsCenterPanel } from './internal-admin.operations-center';
 import { RegionCenterPanel } from './internal-admin.region-center';
@@ -66,6 +67,11 @@ export function BillingOperationsPage() {
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
         onSelectWorkspace={setSelectedWorkspaceId}
+      />
+      <DeveloperCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
       />
       <OperationsCenterPanel
         credentials={credentials}

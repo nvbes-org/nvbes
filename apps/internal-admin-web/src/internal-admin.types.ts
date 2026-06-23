@@ -114,6 +114,21 @@ export type RegionCenterSnapshot = {
   multi_region_tenants: MultiRegionTenant[];
 };
 
+export type DeveloperCenterSnapshot = {
+  active_client_count: number;
+  pending_marketplace_app_count: number;
+  failed_webhook_delivery_count_24h: number;
+  active_webhook_endpoint_count: number;
+  expiring_secret_count: number;
+  restricted_scope_count: number;
+  failing_health_check_count: number;
+  pending_marketplace_apps: PendingMarketplaceApp[];
+  webhook_failures: WebhookFailure[];
+  expiring_secrets: ExpiringSecret[];
+  risky_scopes: RiskyScope[];
+  health_issues: DeveloperHealthIssue[];
+};
+
 export type RevenueCenterSnapshot = {
   captured_payments_30d: MoneyTotal[];
   open_invoices: MoneyTotal[];
@@ -337,6 +352,63 @@ export type MultiRegionTenant = {
   workspace_count: number;
   region_count: number;
   regions: string[];
+};
+
+export type PendingMarketplaceApp = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  client_id: string;
+  client_name: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WebhookFailure = {
+  id: string;
+  endpoint_id: string;
+  endpoint_name: string;
+  tenant_id: string;
+  tenant_name: string;
+  event_type: string;
+  status: string;
+  attempt_count: number;
+  response_status: number | null;
+  error_message: string | null;
+  created_at: string;
+};
+
+export type ExpiringSecret = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  client_id: string;
+  client_name: string;
+  status: string;
+  secret_last4: string;
+  expires_at: string | null;
+};
+
+export type RiskyScope = {
+  scope_key: string;
+  display_name: string;
+  risk: string;
+  lifecycle: string;
+  owner_team: string;
+  updated_at: string;
+};
+
+export type DeveloperHealthIssue = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  target_type: string;
+  target_id: string;
+  check_kind: string;
+  status: string;
+  summary: string;
+  checked_at: string;
 };
 
 export type RecentRiskEvent = {
