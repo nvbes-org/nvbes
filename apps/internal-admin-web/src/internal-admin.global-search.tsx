@@ -13,10 +13,14 @@ export function GlobalSearchPanel({
   credentials,
   disabled,
   onSelectTenant,
+  onSelectUser,
+  onSelectWorkspace,
 }: {
   credentials: AdminCredentials;
   disabled: boolean;
   onSelectTenant: (tenantId: string) => void;
+  onSelectUser: (principalId: string) => void;
+  onSelectWorkspace: (workspaceId: string) => void;
 }) {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -67,6 +71,8 @@ export function GlobalSearchPanel({
             hasSubmitted={submitted.length >= 2}
             isFetching={search.isFetching}
             onSelectTenant={onSelectTenant}
+            onSelectUser={onSelectUser}
+            onSelectWorkspace={onSelectWorkspace}
             rows={search.data ?? []}
             tooShort={trimmedQuery.length > 0 && trimmedQuery.length < 2}
           />
@@ -81,6 +87,8 @@ function GlobalSearchResults({
   hasSubmitted,
   isFetching,
   onSelectTenant,
+  onSelectUser,
+  onSelectWorkspace,
   rows,
   tooShort,
 }: {
@@ -88,6 +96,8 @@ function GlobalSearchResults({
   hasSubmitted: boolean;
   isFetching: boolean;
   onSelectTenant: (tenantId: string) => void;
+  onSelectUser: (principalId: string) => void;
+  onSelectWorkspace: (workspaceId: string) => void;
   rows: GlobalSearchResult[];
   tooShort: boolean;
 }) {
@@ -134,6 +144,32 @@ function GlobalSearchResults({
                 type="button"
               >
                 Open tenant
+              </Button>
+            ) : null}
+            {row.workspace_id ? (
+              <Button
+                onClick={() => {
+                  onSelectWorkspace(row.workspace_id ?? row.id);
+                  window.location.hash = 'workspace-detail';
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Open workspace
+              </Button>
+            ) : null}
+            {row.kind === 'user' ? (
+              <Button
+                onClick={() => {
+                  onSelectUser(row.id);
+                  window.location.hash = 'user-detail';
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Open user
               </Button>
             ) : null}
           </div>

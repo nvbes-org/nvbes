@@ -1,4 +1,13 @@
-import { Activity, Banknote, Building2, FileDown, LifeBuoy, Search, Shield } from 'lucide-react';
+import {
+  Activity,
+  Banknote,
+  Building2,
+  FileDown,
+  LifeBuoy,
+  Search,
+  Shield,
+  UserRound,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -6,6 +15,8 @@ const navItems = [
   { href: '#command-center', label: 'Command', icon: Building2 },
   { href: '#global-search', label: 'Global Search', icon: Search },
   { href: '#tenant-detail', label: 'Tenant', icon: Building2 },
+  { href: '#workspace-detail', label: 'Workspace', icon: Building2 },
+  { href: '#user-detail', label: 'User', icon: UserRound },
   { href: '#recherche', label: 'Recherche', icon: Search },
   { href: '#provider-events', label: 'Provider Events', icon: Activity },
   { href: '#audit', label: 'Audit', icon: Shield },
@@ -53,7 +64,7 @@ export function InternalAdminShell({ children }: { children: ReactNode }) {
               <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
                 Back-office
               </p>
-              <h1 className="text-lg font-semibold">Operations billing internes</h1>
+              <h1 className="text-lg font-semibold">Pilotage back-office</h1>
             </div>
             <div className="border-border bg-card hidden items-center gap-2 rounded-md border px-3 py-2 text-xs md:flex">
               <Activity className="text-primary size-4" />

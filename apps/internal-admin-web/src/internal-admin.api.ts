@@ -18,6 +18,8 @@ import type {
   RefundIntentRequest,
   SearchResult,
   TenantDetail,
+  UserDetail,
+  WorkspaceDetail,
 } from './internal-admin.types';
 
 const jsonHeaders = { 'content-type': 'application/json' };
@@ -95,6 +97,20 @@ export async function getTenantDetail(credentials: AdminCredentials, tenantId: s
     headers: authHeaders(credentials),
   });
   return parseJson<TenantDetail>(response);
+}
+
+export async function getWorkspaceDetail(credentials: AdminCredentials, workspaceId: string) {
+  const response = await fetch(`/admin/workspaces/${workspaceId}`, {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<WorkspaceDetail>(response);
+}
+
+export async function getUserDetail(credentials: AdminCredentials, principalId: string) {
+  const response = await fetch(`/admin/users/${principalId}`, {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<UserDetail>(response);
 }
 
 export async function getBillingOverview(credentials: AdminCredentials) {

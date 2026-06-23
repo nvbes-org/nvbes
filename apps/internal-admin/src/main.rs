@@ -32,6 +32,10 @@ mod global_search;
 mod routes;
 #[path = "internal_admin.tenants.rs"]
 mod tenants;
+#[path = "internal_admin.users.rs"]
+mod users;
+#[path = "internal_admin.workspaces.rs"]
+mod workspaces;
 
 use std::net::SocketAddr;
 

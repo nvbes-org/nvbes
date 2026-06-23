@@ -36,6 +36,49 @@ export type TenantDetail = {
   updated_at: string;
 };
 
+export type WorkspaceDetail = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  name: string;
+  workspace_type: string;
+  plan_code: string;
+  trial_ends_at: string | null;
+  member_count: number;
+  owner_count: number;
+  active_member_count: number;
+  service_account_count: number;
+  audit_events_24h: number;
+  open_invoice_count: number;
+  active_subscription_count: number;
+  latest_audit_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserDetail = {
+  principal_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  email: string;
+  name: string;
+  principal_status: string;
+  user_status: string;
+  email_verified_at: string | null;
+  workspace_count: number;
+  active_workspace_count: number;
+  active_mfa_factor_count: number;
+  active_oauth_consent_count: number;
+  risk_events_24h: number;
+  audit_events_24h: number;
+  latest_risk_at: string | null;
+  latest_audit_at: string | null;
+  primary_workspace_id: string | null;
+  primary_workspace_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MutationResult = {
   object_id: string;
   ledger_entry_count: number;

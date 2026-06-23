@@ -19,6 +19,8 @@ import { InternalAdminShell } from './internal-admin.shell';
 import { StatusStrip } from './internal-admin.status-strip';
 import type { ProviderEventFailure } from './internal-admin.types';
 import { TenantDetailPanel } from './internal-admin.tenant-detail';
+import { UserDetailPanel } from './internal-admin.user-detail';
+import { WorkspaceDetailPanel } from './internal-admin.workspace-detail';
 
 type ReplayDraft = {
   nonce: number;
@@ -30,6 +32,8 @@ export function BillingOperationsPage() {
   const [credentials, setCredentials] = useState(loadCredentials);
   const [replayDraft, setReplayDraft] = useState<ReplayDraft | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const isReady = credentialsReady(credentials);
   const readiness = useMemo(() => {
     const filled = Object.values(credentials).filter(Boolean).length;
@@ -49,11 +53,26 @@ export function BillingOperationsPage() {
         credentials={credentials}
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+        onSelectWorkspace={setSelectedWorkspaceId}
       />
       <TenantDetailPanel
         credentials={credentials}
         disabled={!isReady}
         tenantId={selectedTenantId}
+      />
+      <WorkspaceDetailPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        workspaceId={selectedWorkspaceId}
+      />
+      <UserDetailPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectWorkspace={setSelectedWorkspaceId}
+        principalId={selectedUserId}
       />
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
         <div className="space-y-5">

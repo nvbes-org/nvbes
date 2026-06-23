@@ -17,6 +17,8 @@ This app owns operator-only endpoints and must stay isolated from public product
 - `GET /admin/command-center`
 - `GET /admin/search`
 - `GET /admin/tenants/{tenantId}`
+- `GET /admin/users/{principalId}`
+- `GET /admin/workspaces/{workspaceId}`
 - `GET /workspaces/{workspaceId}/admin/audit-events`
 - `GET /workspaces/{workspaceId}/billing/admin/overview`
 - `GET /workspaces/{workspaceId}/billing/admin/provider-events/failures`

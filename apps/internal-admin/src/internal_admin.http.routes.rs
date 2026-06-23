@@ -29,6 +29,8 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::command_center::router())
         .merge(crate::global_search::router())
         .merge(crate::tenants::router())
+        .merge(crate::users::router())
+        .merge(crate::workspaces::router())
         .layer(axum::middleware::from_fn_with_state(
             config.clone(),
             nvbes_core::http::internal_observability::internal_observability_guard,
