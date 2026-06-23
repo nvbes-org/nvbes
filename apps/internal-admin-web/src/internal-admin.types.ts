@@ -925,6 +925,13 @@ export type AuditEvent = {
   created_at: string;
 };
 
+export type AuditEventFilters = {
+  action?: string;
+  targetType?: string;
+  query?: string;
+  limit?: number;
+};
+
 export type BillingOverview = {
   open_invoice_count: number;
   overdue_invoice_count: number;

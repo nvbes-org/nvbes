@@ -18,6 +18,9 @@ use crate::error::AppError;
 struct AuditQuery {
     #[serde(default = "default_limit")]
     limit: i64,
+    action: Option<String>,
+    target_type: Option<String>,
+    q: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -48,15 +51,17 @@ async fn list_audit_events_route(
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     let limit = query.limit.clamp(1, 100);
     Ok(Json(
-        list_audit_events(&state.db, access.tenant_id, limit).await?,
+        list_audit_events(&state.db, access.tenant_id, query, limit).await?,
     ))
 }
 
 async fn list_audit_events(
     db: &PgPool,
     tenant_id: Uuid,
+    query: AuditQuery,
     limit: i64,
 ) -> Result<Vec<AuditEvent>, AppError> {
+    let search_pattern = query.q.as_ref().map(|value| format!("%{}%", value.trim()));
     let rows = sqlx::query(
         r#"
         SELECT ae.id, ae.action, ae.actor_principal_id, u.email AS actor_email,
@@ -64,11 +69,24 @@ async fn list_audit_events(
         FROM audit_events ae
         LEFT JOIN users u ON u.principal_id = ae.actor_principal_id
         WHERE ae.tenant_id = $1
+          AND ($2::text IS NULL OR ae.action = $2)
+          AND ($3::text IS NULL OR ae.target_type = $3)
+          AND (
+            $4::text IS NULL
+            OR ae.action ILIKE $4
+            OR ae.target_type ILIKE $4
+            OR ae.target_id::text ILIKE $4
+            OR ae.actor_principal_id::text ILIKE $4
+            OR u.email ILIKE $4
+          )
         ORDER BY ae.created_at DESC, ae.id DESC
-        LIMIT $2
+        LIMIT $5
         "#,
     )
     .bind(tenant_id)
+    .bind(trimmed_filter(query.action))
+    .bind(trimmed_filter(query.target_type))
+    .bind(search_pattern)
     .bind(limit)
     .fetch_all(db)
     .await?;
@@ -90,4 +108,25 @@ async fn list_audit_events(
 
 fn default_limit() -> i64 {
     25
+}
+
+fn trimmed_filter(value: Option<String>) -> Option<String> {
+    value
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trimmed_filter_discards_blank_values() {
+        assert_eq!(
+            trimmed_filter(Some("  action  ".to_string())),
+            Some("action".to_string())
+        );
+        assert_eq!(trimmed_filter(Some("   ".to_string())), None);
+        assert_eq!(trimmed_filter(None), None);
+    }
 }

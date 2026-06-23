@@ -2,6 +2,7 @@ import { verifiedFetch } from '@nvbes/web-runtime';
 import type {
   AccessCenterSnapshot,
   AdminCredentials,
+  AuditEventFilters,
   AuditEvidenceSnapshot,
   AuditEvent,
   BillingPlatformSnapshot,
@@ -103,8 +104,14 @@ export function executeBillingRunbook(
   );
 }
 
-export async function listAuditEvents(credentials: AdminCredentials, limit = 25) {
-  const params = new URLSearchParams({ limit: String(limit) });
+export async function listAuditEvents(
+  credentials: AdminCredentials,
+  filters: AuditEventFilters = {},
+) {
+  const params = new URLSearchParams({ limit: String(filters.limit ?? 25) });
+  if (filters.action?.trim()) params.set('action', filters.action.trim());
+  if (filters.targetType?.trim()) params.set('target_type', filters.targetType.trim());
+  if (filters.query?.trim()) params.set('q', filters.query.trim());
   const response = await verifiedFetch(
     `/workspaces/${credentials.workspaceId}/admin/audit-events?${params.toString()}`,
     { headers: authHeaders(credentials) },
@@ -120,89 +127,89 @@ export async function getCommandCenter(credentials: AdminCredentials) {
 }
 
 export async function getAccessCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/access-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/access-center', { headers: authHeaders(credentials) });
   return parseJson<AccessCenterSnapshot>(response);
 }
 
 export async function getAuditEvidenceCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/audit-evidence-center', {
+  const response = await verifiedFetch('/admin/audit-evidence-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<AuditEvidenceSnapshot>(response);
 }
 
 export async function getSecurityCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/security-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/security-center', { headers: authHeaders(credentials) });
   return parseJson<SecurityCenterSnapshot>(response);
 }
 
 export async function getComplianceCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/compliance-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/compliance-center', { headers: authHeaders(credentials) });
   return parseJson<ComplianceCenterSnapshot>(response);
 }
 
 export async function getCommunicationsCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/communications-center', {
+  const response = await verifiedFetch('/admin/communications-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<CommunicationsCenterSnapshot>(response);
 }
 
 export async function getRegionCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/region-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/region-center', { headers: authHeaders(credentials) });
   return parseJson<RegionCenterSnapshot>(response);
 }
 
 export async function getRevenueCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/revenue-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/revenue-center', { headers: authHeaders(credentials) });
   return parseJson<RevenueCenterSnapshot>(response);
 }
 
 export async function getRiskDecisionCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/risk-decision-center', {
+  const response = await verifiedFetch('/admin/risk-decision-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<RiskDecisionSnapshot>(response);
 }
 
 export async function getBillingPlatformCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/billing-platform-center', {
+  const response = await verifiedFetch('/admin/billing-platform-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<BillingPlatformSnapshot>(response);
 }
 
 export async function getCustomerCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/customer-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/customer-center', { headers: authHeaders(credentials) });
   return parseJson<CustomerCenterSnapshot>(response);
 }
 
 export async function getDeveloperCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/developer-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/developer-center', { headers: authHeaders(credentials) });
   return parseJson<DeveloperCenterSnapshot>(response);
 }
 
 export async function getEntitlementsCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/entitlements-center', {
+  const response = await verifiedFetch('/admin/entitlements-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<EntitlementsSnapshot>(response);
 }
 
 export async function getIdentityGovernanceCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/identity-governance-center', {
+  const response = await verifiedFetch('/admin/identity-governance-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<IdentityGovernanceSnapshot>(response);
 }
 
 export async function getOperationsCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/operations-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/operations-center', { headers: authHeaders(credentials) });
   return parseJson<OperationsCenterSnapshot>(response);
 }
 
 export async function getUsageCenter(credentials: AdminCredentials) {
-  const response = await fetch('/admin/usage-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/usage-center', { headers: authHeaders(credentials) });
   return parseJson<UsageCenterSnapshot>(response);
 }
 
@@ -246,7 +253,7 @@ export function reactivateTenant(
 }
 
 export async function getWorkspaceDetail(credentials: AdminCredentials, workspaceId: string) {
-  const response = await fetch(`/admin/workspaces/${workspaceId}`, {
+  const response = await verifiedFetch(`/admin/workspaces/${workspaceId}`, {
     headers: authHeaders(credentials),
   });
   return parseJson<WorkspaceDetail>(response);
@@ -277,7 +284,7 @@ export function reactivateWorkspace(
 }
 
 export async function getUserDetail(credentials: AdminCredentials, principalId: string) {
-  const response = await fetch(`/admin/users/${principalId}`, {
+  const response = await verifiedFetch(`/admin/users/${principalId}`, {
     headers: authHeaders(credentials),
   });
   return parseJson<UserDetail>(response);
