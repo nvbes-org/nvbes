@@ -35,9 +35,9 @@ pub async fn record_api_audit_event(
     input: PublicApiAuditEventInput<'_>,
 ) -> Result<(), AppError> {
     let mut tx = db.begin().await?;
-    db::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInsert {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: context.workspace_id,
             actor_user_id: context.created_by,
             actor_principal_id: Some(context.created_by_principal_id),
@@ -79,9 +79,9 @@ pub async fn log_denied(db: &PgPool, input: DeniedLogInput<'_>) -> Result<(), Ap
     .await?;
 
     let mut tx = db.begin().await?;
-    db::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInsert {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: input.workspace_id,
             actor_user_id: None,
             actor_principal_id: None,

@@ -5,7 +5,6 @@ use uuid::Uuid;
 use crate::{
     domains::{
         authz::WorkspaceAccess,
-        files::queries::{AuditEventInput, insert_audit_event_tx},
         quotas::FileUploadedUsageInput,
         uploads::{db, scan},
     },
@@ -88,9 +87,9 @@ pub(super) async fn finalize_tus_upload(
         "file.uploaded"
     };
 
-    insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

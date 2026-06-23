@@ -199,22 +199,21 @@ pub async fn insert_audit_event(
     target_id: Uuid,
     metadata: serde_json::Value,
 ) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata
-        )
-        VALUES ($1, NULL, $2, $3, 'user', $4, $5)
-        "#,
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
+            tenant_id,
+            workspace_id: None,
+            actor_principal_id: Some(actor_id),
+            action,
+            target_type: "user",
+            target_id: Some(target_id),
+            ip: None,
+            user_agent: None,
+            metadata,
+        },
     )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .bind(action)
-    .bind(target_id)
-    .bind(metadata)
-    .execute(&mut **tx)
-    .await?;
-    Ok(())
+    .await
 }
 
 pub async fn update_recovery_final_approval(

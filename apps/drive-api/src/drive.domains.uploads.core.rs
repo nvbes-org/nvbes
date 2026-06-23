@@ -2,11 +2,7 @@ use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{
-    domains::authz::WorkspaceAccess,
-    domains::files::queries::{AuditEventInput, insert_audit_event_tx},
-    http::error::AppError,
-};
+use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 
 use super::db;
 use super::logic;
@@ -74,9 +70,9 @@ pub async fn create_upload(
     )
     .await?;
 
-    insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),
@@ -195,9 +191,9 @@ pub async fn create_tus_upload(
     )
     .await?;
 
-    insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

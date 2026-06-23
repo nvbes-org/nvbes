@@ -23,10 +23,10 @@ pub fn record_api_request_geo(status_code: i32, geo: &ApiRequestGeo) {
     }
 }
 
-pub fn record_network_policy_block(reason: &str) {
+pub fn record_network_policy_block(reason: &str, mode: &str) {
     metrics::counter!(
         NETWORK_POLICY_BLOCKS_METRIC,
-        &[("reason", reason.to_string())]
+        &[("reason", reason.to_string()), ("mode", mode.to_string())]
     )
     .increment(1);
 }

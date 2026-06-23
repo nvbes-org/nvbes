@@ -45,39 +45,20 @@ pub async fn record_permission_denied(
       }))
     });
     let mut tx = db.begin().await?;
-    let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        access.workspace_id,
-        ip.as_deref(),
-        "permission.denied",
-        metadata,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id: access.workspace_id,
+            actor_user_id: access.auth.audit_actor_user_id(),
+            actor_principal_id: Some(access.auth.audit_actor_principal_id()),
+            action: "permission.denied",
+            target_type: "workspace",
+            target_id: Some(access.workspace_id),
+            ip: ip.as_deref(),
+            user_agent: user_agent(headers).as_deref(),
+            metadata,
+        },
     )
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, 'permission.denied', 'workspace', $4, $5::inet, $6, $7)
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(access.auth.audit_actor_user_id())
-    .bind(Some(access.auth.audit_actor_principal_id()))
-    .bind(access.workspace_id)
-    .bind(ip.as_deref())
-    .bind(user_agent(headers).as_deref())
-    .bind(sqlx::types::Json(metadata))
-    .execute(&mut *tx)
     .await?;
     tx.commit().await?;
 

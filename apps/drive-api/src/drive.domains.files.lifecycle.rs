@@ -48,9 +48,9 @@ pub async fn trash_object(
         .find(|record| record.id == object_id)
         .ok_or_else(|| AppError::internal("trash_failed", "Failed to trash object."))?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),
@@ -111,9 +111,9 @@ pub async fn restore_object(
         .find(|record| record.id == object_id)
         .ok_or_else(|| AppError::internal("restore_failed", "Failed to restore object."))?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),
@@ -177,9 +177,9 @@ pub async fn delete_object(
     )
     .await?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

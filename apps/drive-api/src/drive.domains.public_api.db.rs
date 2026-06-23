@@ -3,7 +3,7 @@ mod request_logs;
 
 pub use request_logs::insert_api_request_log;
 
-use super::types::{ApiKeyMigrationTargetView, ApiKeyView, AuditEventInsert, RateLimitView};
+use super::types::{ApiKeyMigrationTargetView, ApiKeyView, RateLimitView};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
@@ -156,49 +156,6 @@ pub async fn get_workspace_for_api(
     .bind(workspace_id)
     .fetch_one(db)
     .await
-}
-
-pub async fn insert_audit_event_tx(
-    tx: &mut Transaction<'_, Postgres>,
-    input: AuditEventInsert<'_>,
-) -> Result<(), sqlx::Error> {
-    let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
-        tx,
-        input.workspace_id,
-        input.ip,
-        input.action,
-        input.metadata,
-    )
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.actor_user_id)
-    .bind(input.actor_principal_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(metadata))
-    .execute(&mut **tx)
-    .await?;
-    Ok(())
 }
 
 fn api_key_view(row: sqlx::postgres::PgRow) -> ApiKeyView {

@@ -238,29 +238,19 @@ pub(super) async fn insert_admin_audit(
     target_id: uuid::Uuid,
     reason: &str,
 ) -> Result<(), crate::http::error::AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          tenant_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          metadata,
-          event_hash
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, jsonb_build_object('reason', $6), gen_random_uuid()::text
-        )
-        "#,
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
+            tenant_id,
+            workspace_id: None,
+            actor_principal_id: Some(actor_principal_id),
+            action,
+            target_type,
+            target_id: Some(target_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({ "reason": reason }),
+        },
     )
-    .bind(tenant_id)
-    .bind(actor_principal_id)
-    .bind(action)
-    .bind(target_type)
-    .bind(target_id)
-    .bind(reason)
-    .execute(tx.as_mut())
-    .await?;
-    Ok(())
+    .await
 }

@@ -118,12 +118,26 @@ pub(super) async fn enforce_network_policy(
     actor_principal_id: Option<Uuid>,
 ) -> Result<(), AppError> {
     let ip = crate::http::request::client_ip(headers);
-    let Some(block) =
-        crate::domains::public_api::network_policy::public_api_network_block(db, ip.as_deref())
-            .await?
+    let Some(block) = crate::domains::public_api::network_policy::public_api_network_block(
+        db,
+        workspace_id,
+        ip.as_deref(),
+    )
+    .await?
     else {
         return Ok(());
     };
+
+    crate::domains::public_api::metrics::record_network_policy_block(
+        block.reason,
+        block.mode.as_str(),
+    );
+    if !matches!(
+        block.mode,
+        crate::domains::public_api::network_policy::PublicApiNetworkPolicyMode::Enforce
+    ) {
+        return Ok(());
+    }
 
     observability::log_denied(
         db,
@@ -140,7 +154,6 @@ pub(super) async fn enforce_network_policy(
         },
     )
     .await?;
-    crate::domains::public_api::metrics::record_network_policy_block(block.reason);
     Err(PublicApiErrorKind::NetworkRiskBlocked.app_error())
 }
 
