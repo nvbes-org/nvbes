@@ -1,11 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
-import { Clock3, Copy, KeyRound, ShieldAlert, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Clock3,
+  Copy,
+  KeyRound,
+  RotateCcw,
+  ShieldAlert,
+  ShieldCheck,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getUserDetail } from './internal-admin.api';
+import { Textarea } from '@/components/ui/textarea';
+import { getUserDetail, reactivateUser, suspendUser } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
-import type { AdminCredentials } from './internal-admin.types';
+import type { AdminCredentials, UserLifecycleResult } from './internal-admin.types';
+
+type UserAction = 'reactivate' | 'suspend';
 
 export function UserDetailPanel({
   credentials,
@@ -20,12 +33,42 @@ export function UserDetailPanel({
   onSelectWorkspace: (workspaceId: string) => void;
   principalId: string | null;
 }) {
+  const queryClient = useQueryClient();
+  const [activeAction, setActiveAction] = useState<UserAction | null>(null);
+  const [reason, setReason] = useState('');
+  const [actionResult, setActionResult] = useState<UserLifecycleResult | null>(null);
   const user = useQuery({
     queryKey: ['user-detail', principalId],
     queryFn: () => getUserDetail(credentials, principalId ?? ''),
     enabled: !disabled && principalId !== null,
   });
   const data = user.data;
+  const mutation = useMutation({
+    mutationFn: async (action: UserAction) => {
+      if (!principalId) throw new Error('User absent.');
+      const body = { reason };
+      return action === 'suspend'
+        ? suspendUser(credentials, principalId, body)
+        : reactivateUser(credentials, principalId, body);
+    },
+    onSuccess: async (result) => {
+      setActionResult(result);
+      setActiveAction(null);
+      setReason('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['user-detail', principalId] }),
+        queryClient.invalidateQueries({ queryKey: ['security-center'] }),
+        queryClient.invalidateQueries({ queryKey: ['access-center'] }),
+        queryClient.invalidateQueries({ queryKey: ['global-search'] }),
+      ]);
+    },
+  });
+  const availableAction =
+    data?.principal_status === 'active' || data?.user_status === 'active'
+      ? 'suspend'
+      : data?.principal_status === 'suspended' || data?.user_status === 'suspended'
+        ? 'reactivate'
+        : null;
 
   return (
     <section className="border-border bg-card mb-5 rounded-lg border p-4" id="user-detail">
@@ -128,9 +171,138 @@ export function UserDetailPanel({
               value={formatCount(data.audit_events_24h)}
             />
           </div>
+          <UserLifecycleActions
+            activeAction={activeAction}
+            actionResult={actionResult}
+            availableAction={availableAction}
+            disabled={disabled}
+            error={mutation.error}
+            isPending={mutation.isPending}
+            onCancel={() => {
+              setActiveAction(null);
+              setReason('');
+            }}
+            onReasonChange={setReason}
+            onRun={(action) => mutation.mutate(action)}
+            onStart={(action) => {
+              setActionResult(null);
+              setActiveAction(action);
+            }}
+            principalStatus={data.principal_status}
+            reason={reason}
+            userStatus={data.user_status}
+          />
         </div>
       ) : null}
     </section>
+  );
+}
+
+function UserLifecycleActions({
+  activeAction,
+  actionResult,
+  availableAction,
+  disabled,
+  error,
+  isPending,
+  onCancel,
+  onReasonChange,
+  onRun,
+  onStart,
+  principalStatus,
+  reason,
+  userStatus,
+}: {
+  activeAction: UserAction | null;
+  actionResult: UserLifecycleResult | null;
+  availableAction: UserAction | null;
+  disabled: boolean;
+  error: Error | null;
+  isPending: boolean;
+  onCancel: () => void;
+  onReasonChange: (reason: string) => void;
+  onRun: (action: UserAction) => void;
+  onStart: (action: UserAction) => void;
+  principalStatus: string;
+  reason: string;
+  userStatus: string;
+}) {
+  const isReasonReady = reason.trim().length >= 12;
+  const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
+
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ShieldAlert className="text-muted-foreground size-4" />
+            Cycle de vie utilisateur
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Principal: <span className="font-medium">{principalStatus}</span> · User:{' '}
+            <span className="font-medium">{userStatus}</span>
+          </p>
+        </div>
+        {availableAction ? (
+          <Button
+            disabled={disabled || isPending}
+            onClick={() => onStart(availableAction)}
+            type="button"
+            variant={availableAction === 'suspend' ? 'destructive' : 'outline'}
+          >
+            {availableAction === 'suspend' ? (
+              <ShieldAlert className="size-4" />
+            ) : (
+              <RotateCcw className="size-4" />
+            )}
+            {actionLabel}
+          </Button>
+        ) : (
+          <Badge variant="outline">Aucune action</Badge>
+        )}
+      </div>
+
+      {activeAction ? (
+        <div className="bg-muted/30 grid gap-3 rounded-md border p-3">
+          <Textarea
+            disabled={disabled || isPending}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="Motif audit, incident, ticket, approbation..."
+            value={reason}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">
+              Minimum 12 caracteres requis pour executer l'action.
+            </p>
+            <div className="flex gap-2">
+              <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
+                Annuler
+              </Button>
+              <Button
+                disabled={disabled || !isReasonReady || isPending}
+                onClick={() => onRun(activeAction)}
+                type="button"
+                variant={activeAction === 'suspend' ? 'destructive' : 'default'}
+              >
+                Confirmer
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="text-destructive mt-3 text-xs">
+          {error instanceof Error ? error.message : 'Action impossible'}
+        </p>
+      ) : null}
+      {actionResult ? (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {actionResult.audit_action}: {actionResult.previous_user_status} vers{' '}
+          {actionResult.next_user_status}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -2,10 +2,10 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::HeaderMap,
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -30,8 +30,30 @@ struct TenantDetail {
     updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+struct TenantLifecycleRequest {
+    reason: String,
+}
+
+#[derive(Debug, Serialize)]
+struct TenantLifecycleResult {
+    tenant_id: Uuid,
+    previous_status: String,
+    next_status: String,
+    audit_action: &'static str,
+}
+
 pub fn router() -> Router<AppState> {
-    Router::new().route("/admin/tenants/{tenantId}", get(tenant_detail_route))
+    Router::new()
+        .route("/admin/tenants/{tenantId}", get(tenant_detail_route))
+        .route(
+            "/admin/tenants/{tenantId}/suspend",
+            post(suspend_tenant_route),
+        )
+        .route(
+            "/admin/tenants/{tenantId}/reactivate",
+            post(reactivate_tenant_route),
+        )
 }
 
 async fn tenant_detail_route(
@@ -41,6 +63,46 @@ async fn tenant_detail_route(
 ) -> Result<Json<TenantDetail>, AppError> {
     let _actor_id = actor_principal_id(&headers)?;
     Ok(Json(load_tenant_detail(&state.db, tenant_id).await?))
+}
+
+async fn suspend_tenant_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(tenant_id): Path<Uuid>,
+    Json(request): Json<TenantLifecycleRequest>,
+) -> Result<Json<TenantLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_tenant_status(
+            &state.db,
+            actor_id,
+            tenant_id,
+            "suspended",
+            "internal_admin.tenant.suspend",
+            request,
+        )
+        .await?,
+    ))
+}
+
+async fn reactivate_tenant_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(tenant_id): Path<Uuid>,
+    Json(request): Json<TenantLifecycleRequest>,
+) -> Result<Json<TenantLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_tenant_status(
+            &state.db,
+            actor_id,
+            tenant_id,
+            "active",
+            "internal_admin.tenant.reactivate",
+            request,
+        )
+        .await?,
+    ))
 }
 
 async fn load_tenant_detail(db: &PgPool, tenant_id: Uuid) -> Result<TenantDetail, AppError> {
@@ -90,4 +152,105 @@ async fn load_tenant_detail(db: &PgPool, tenant_id: Uuid) -> Result<TenantDetail
         open_invoice_count: row.get(11),
         provider_failure_count: row.get(12),
     })
+}
+
+async fn change_tenant_status(
+    db: &PgPool,
+    actor_id: Uuid,
+    tenant_id: Uuid,
+    next_status: &'static str,
+    audit_action: &'static str,
+    request: TenantLifecycleRequest,
+) -> Result<TenantLifecycleResult, AppError> {
+    validate_lifecycle_reason(&request.reason)?;
+
+    let mut tx = db.begin().await?;
+    let previous_status = sqlx::query_scalar::<_, String>(
+        "SELECT status::text FROM tenants WHERE id = $1 FOR UPDATE",
+    )
+    .bind(tenant_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    validate_tenant_status_transition(&previous_status, next_status)?;
+
+    sqlx::query("UPDATE tenants SET status = $2::tenant_status, updated_at = NOW() WHERE id = $1")
+        .bind(tenant_id)
+        .bind(next_status)
+        .execute(tx.as_mut())
+        .await?;
+
+    sqlx::query(
+        "INSERT INTO audit_events (
+           tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
+         ) VALUES (
+           $1, $2, $3, 'tenant', $1,
+           jsonb_build_object('reason', $4, 'previous_status', $5, 'next_status', $6),
+           gen_random_uuid()::text
+         )",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .bind(audit_action)
+    .bind(request.reason.trim())
+    .bind(&previous_status)
+    .bind(next_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(TenantLifecycleResult {
+        tenant_id,
+        previous_status,
+        next_status: next_status.to_string(),
+        audit_action,
+    })
+}
+
+fn validate_lifecycle_reason(reason: &str) -> Result<(), AppError> {
+    if reason.trim().len() < 12 {
+        return Err(AppError::bad_request(
+            "audit_reason_required",
+            "Tenant lifecycle actions require a detailed audit reason.",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_tenant_status_transition(
+    previous_status: &str,
+    next_status: &'static str,
+) -> Result<(), AppError> {
+    if previous_status == "deleted" {
+        return Err(AppError::bad_request(
+            "tenant_deleted",
+            "Deleted tenants cannot be mutated from the back-office.",
+        ));
+    }
+    if previous_status == next_status {
+        return Err(AppError::bad_request(
+            "tenant_status_unchanged",
+            "Tenant is already in the requested status.",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lifecycle_reason_must_be_detailed() {
+        assert!(validate_lifecycle_reason("too short").is_err());
+        assert!(validate_lifecycle_reason("ticket SEC-123 approved").is_ok());
+    }
+
+    #[test]
+    fn tenant_lifecycle_rejects_deleted_and_unchanged_statuses() {
+        assert!(validate_tenant_status_transition("deleted", "active").is_err());
+        assert!(validate_tenant_status_transition("active", "active").is_err());
+        assert!(validate_tenant_status_transition("active", "suspended").is_ok());
+    }
 }

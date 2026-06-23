@@ -2,10 +2,10 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::HeaderMap,
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -37,8 +37,33 @@ struct UserDetail {
     updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+struct UserLifecycleRequest {
+    reason: String,
+}
+
+#[derive(Debug, Serialize)]
+struct UserLifecycleResult {
+    principal_id: Uuid,
+    tenant_id: Uuid,
+    previous_principal_status: String,
+    previous_user_status: String,
+    next_principal_status: String,
+    next_user_status: String,
+    audit_action: &'static str,
+}
+
 pub fn router() -> Router<AppState> {
-    Router::new().route("/admin/users/{principalId}", get(user_detail_route))
+    Router::new()
+        .route("/admin/users/{principalId}", get(user_detail_route))
+        .route(
+            "/admin/users/{principalId}/suspend",
+            post(suspend_user_route),
+        )
+        .route(
+            "/admin/users/{principalId}/reactivate",
+            post(reactivate_user_route),
+        )
 }
 
 async fn user_detail_route(
@@ -48,6 +73,52 @@ async fn user_detail_route(
 ) -> Result<Json<UserDetail>, AppError> {
     let _actor_id = actor_principal_id(&headers)?;
     Ok(Json(load_user_detail(&state.db, principal_id).await?))
+}
+
+async fn suspend_user_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(principal_id): Path<Uuid>,
+    Json(request): Json<UserLifecycleRequest>,
+) -> Result<Json<UserLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_user_status(
+            &state.db,
+            actor_id,
+            principal_id,
+            UserLifecycleTarget {
+                principal_status: "suspended",
+                user_status: "suspended",
+                audit_action: "internal_admin.user.suspend",
+            },
+            request,
+        )
+        .await?,
+    ))
+}
+
+async fn reactivate_user_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(principal_id): Path<Uuid>,
+    Json(request): Json<UserLifecycleRequest>,
+) -> Result<Json<UserLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_user_status(
+            &state.db,
+            actor_id,
+            principal_id,
+            UserLifecycleTarget {
+                principal_status: "active",
+                user_status: "active",
+                audit_action: "internal_admin.user.reactivate",
+            },
+            request,
+        )
+        .await?,
+    ))
 }
 
 async fn load_user_detail(db: &PgPool, principal_id: Uuid) -> Result<UserDetail, AppError> {
@@ -131,4 +202,160 @@ async fn load_user_detail(db: &PgPool, principal_id: Uuid) -> Result<UserDetail,
         primary_workspace_id: row.get(18),
         primary_workspace_name: row.get(19),
     })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct UserLifecycleTarget {
+    principal_status: &'static str,
+    user_status: &'static str,
+    audit_action: &'static str,
+}
+
+async fn change_user_status(
+    db: &PgPool,
+    actor_id: Uuid,
+    principal_id: Uuid,
+    target: UserLifecycleTarget,
+    request: UserLifecycleRequest,
+) -> Result<UserLifecycleResult, AppError> {
+    validate_lifecycle_reason(&request.reason)?;
+
+    let mut tx = db.begin().await?;
+    let row = sqlx::query(
+        r#"
+        SELECT p.tenant_id, p.status::text AS principal_status, u.status::text AS user_status
+        FROM principals p
+        JOIN users u ON u.principal_id = p.id
+        WHERE p.id = $1
+        FOR UPDATE OF p, u
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+    let tenant_id: Uuid = row.get("tenant_id");
+    let previous_principal_status: String = row.get("principal_status");
+    let previous_user_status: String = row.get("user_status");
+
+    validate_user_status_transition(
+        &previous_principal_status,
+        &previous_user_status,
+        target.principal_status,
+        target.user_status,
+    )?;
+
+    sqlx::query(
+        "UPDATE principals SET status = $2::principal_status, updated_at = NOW() WHERE id = $1",
+    )
+    .bind(principal_id)
+    .bind(target.principal_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    sqlx::query(
+        "UPDATE users SET status = $2::user_status, updated_at = NOW() WHERE principal_id = $1",
+    )
+    .bind(principal_id)
+    .bind(target.user_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO audit_events (
+           tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
+         ) VALUES (
+           $1, $2, $3, 'principal', $4,
+           jsonb_build_object(
+             'reason', $5,
+             'previous_principal_status', $6,
+             'previous_user_status', $7,
+             'next_principal_status', $8,
+             'next_user_status', $9
+           ),
+           gen_random_uuid()::text
+         )",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .bind(target.audit_action)
+    .bind(principal_id)
+    .bind(request.reason.trim())
+    .bind(&previous_principal_status)
+    .bind(&previous_user_status)
+    .bind(target.principal_status)
+    .bind(target.user_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(UserLifecycleResult {
+        principal_id,
+        tenant_id,
+        previous_principal_status,
+        previous_user_status,
+        next_principal_status: target.principal_status.to_string(),
+        next_user_status: target.user_status.to_string(),
+        audit_action: target.audit_action,
+    })
+}
+
+fn validate_lifecycle_reason(reason: &str) -> Result<(), AppError> {
+    if reason.trim().len() < 12 {
+        return Err(AppError::bad_request(
+            "audit_reason_required",
+            "User lifecycle actions require a detailed audit reason.",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_user_status_transition(
+    previous_principal_status: &str,
+    previous_user_status: &str,
+    next_principal_status: &'static str,
+    next_user_status: &'static str,
+) -> Result<(), AppError> {
+    if matches!(previous_principal_status, "deleted" | "revoked")
+        || previous_user_status == "deleted"
+    {
+        return Err(AppError::bad_request(
+            "user_lifecycle_terminal",
+            "Deleted or revoked users cannot be mutated from the back-office.",
+        ));
+    }
+    if previous_principal_status == next_principal_status
+        && previous_user_status == next_user_status
+    {
+        return Err(AppError::bad_request(
+            "user_status_unchanged",
+            "User is already in the requested status.",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lifecycle_reason_must_be_detailed() {
+        assert!(validate_lifecycle_reason("too short").is_err());
+        assert!(validate_lifecycle_reason("incident SEC-123 approved").is_ok());
+    }
+
+    #[test]
+    fn user_lifecycle_rejects_terminal_and_unchanged_statuses() {
+        assert!(validate_user_status_transition("deleted", "active", "active", "active").is_err());
+        assert!(validate_user_status_transition("revoked", "active", "active", "active").is_err());
+        assert!(validate_user_status_transition("active", "deleted", "active", "active").is_err());
+        assert!(
+            validate_user_status_transition("suspended", "suspended", "suspended", "suspended")
+                .is_err()
+        );
+        assert!(
+            validate_user_status_transition("active", "active", "suspended", "suspended").is_ok()
+        );
+    }
 }

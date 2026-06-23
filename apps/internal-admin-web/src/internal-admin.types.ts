@@ -36,6 +36,17 @@ export type TenantDetail = {
   updated_at: string;
 };
 
+export type TenantLifecycleRequest = {
+  reason: string;
+};
+
+export type TenantLifecycleResult = {
+  tenant_id: string;
+  previous_status: string;
+  next_status: string;
+  audit_action: string;
+};
+
 export type WorkspaceDetail = {
   id: string;
   tenant_id: string;
@@ -77,6 +88,20 @@ export type UserDetail = {
   primary_workspace_name: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type UserLifecycleRequest = {
+  reason: string;
+};
+
+export type UserLifecycleResult = {
+  principal_id: string;
+  tenant_id: string;
+  previous_principal_status: string;
+  previous_user_status: string;
+  next_principal_status: string;
+  next_user_status: string;
+  audit_action: string;
 };
 
 export type SecurityCenterSnapshot = {

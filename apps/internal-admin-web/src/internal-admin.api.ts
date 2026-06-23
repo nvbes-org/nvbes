@@ -32,8 +32,12 @@ import type {
   SearchResult,
   SecurityCenterSnapshot,
   TenantDetail,
+  TenantLifecycleRequest,
+  TenantLifecycleResult,
   UsageCenterSnapshot,
   UserDetail,
+  UserLifecycleRequest,
+  UserLifecycleResult,
   WorkspaceDetail,
 } from './internal-admin.types';
 
@@ -201,6 +205,30 @@ export async function getTenantDetail(credentials: AdminCredentials, tenantId: s
   return parseJson<TenantDetail>(response);
 }
 
+export function suspendTenant(
+  credentials: AdminCredentials,
+  tenantId: string,
+  body: TenantLifecycleRequest,
+) {
+  return postJson<TenantLifecycleRequest, TenantLifecycleResult>(
+    credentials,
+    `/admin/tenants/${tenantId}/suspend`,
+    body,
+  );
+}
+
+export function reactivateTenant(
+  credentials: AdminCredentials,
+  tenantId: string,
+  body: TenantLifecycleRequest,
+) {
+  return postJson<TenantLifecycleRequest, TenantLifecycleResult>(
+    credentials,
+    `/admin/tenants/${tenantId}/reactivate`,
+    body,
+  );
+}
+
 export async function getWorkspaceDetail(credentials: AdminCredentials, workspaceId: string) {
   const response = await fetch(`/admin/workspaces/${workspaceId}`, {
     headers: authHeaders(credentials),
@@ -213,6 +241,30 @@ export async function getUserDetail(credentials: AdminCredentials, principalId: 
     headers: authHeaders(credentials),
   });
   return parseJson<UserDetail>(response);
+}
+
+export function suspendUser(
+  credentials: AdminCredentials,
+  principalId: string,
+  body: UserLifecycleRequest,
+) {
+  return postJson<UserLifecycleRequest, UserLifecycleResult>(
+    credentials,
+    `/admin/users/${principalId}/suspend`,
+    body,
+  );
+}
+
+export function reactivateUser(
+  credentials: AdminCredentials,
+  principalId: string,
+  body: UserLifecycleRequest,
+) {
+  return postJson<UserLifecycleRequest, UserLifecycleResult>(
+    credentials,
+    `/admin/users/${principalId}/reactivate`,
+    body,
+  );
 }
 
 export async function getBillingOverview(credentials: AdminCredentials) {
