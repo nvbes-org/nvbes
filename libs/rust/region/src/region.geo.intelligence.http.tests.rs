@@ -52,8 +52,9 @@ fn normalizes_common_privacy_payload() {
     assert_eq!(lookup.relation.asn, Some(64500));
     assert_eq!(lookup.relation.network_kind, Some(GeoNetworkKind::Vpn));
     assert_eq!(lookup.relation.risk_score, Some(90));
+    assert!(lookup.relation.risk_labels.contains(&"vpn".to_string()));
     assert!(
-        lookup
+        !lookup
             .relation
             .risk_labels
             .contains(&"commercial_vpn".to_string())

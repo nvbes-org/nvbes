@@ -9,8 +9,11 @@ use super::types::*;
 
 #[path = "identity.domains.security.service.risk_events.rs"]
 mod risk_events;
+#[path = "identity.domains.security.service.summary.rs"]
+mod summary;
 
 use risk_events::{SecurityEventFilters, fetch_risk_events};
+use summary::security_events_summary;
 
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;
@@ -25,28 +28,30 @@ pub async fn list_events(
     let risk_events =
         fetch_risk_events(db, access.workspace_id, input.before_id, limit, &filters).await?;
 
+    let summary = security_events_summary(&risk_events);
     let events = risk_events
-        .into_iter()
+        .iter()
         .map(|event| SecurityEventView {
             id: event.id,
-            event_type: event.event_type,
+            event_type: event.event_type.clone(),
             created_at: event.created_at,
-            ip_address: event.ip_address,
+            ip_address: event.ip_address.clone(),
             user_agent: None,
-            status: Some(event.decision),
+            status: Some(event.decision.clone()),
             risk_score: Some(event.risk_score),
-            geo_country_code: event.geo_country_code,
-            geo_source: event.geo_source,
-            geo_confidence: event.geo_confidence,
-            geo_network_kind: event.geo_network_kind,
+            geo_country_code: event.geo_country_code.clone(),
+            geo_source: event.geo_source.clone(),
+            geo_confidence: event.geo_confidence.clone(),
+            geo_network_kind: event.geo_network_kind.clone(),
             geo_risk_score: event.geo_risk_score,
-            geo_risk_labels: event.geo_risk_labels,
+            geo_risk_labels: event.geo_risk_labels.clone(),
         })
         .collect::<Vec<_>>();
 
     Ok(SecurityEventsResponse {
         next_cursor: events.last().map(|event| event.id),
         events,
+        summary,
     })
 }
 

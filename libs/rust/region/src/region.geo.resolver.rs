@@ -227,7 +227,7 @@ fn reputation_from_evidence(evidence: &[GeoEvidence], private_network: bool) -> 
         .unwrap_or_else(|| GeoReputation {
             network_kind: crate::geo::types::GeoNetworkKind::Unknown,
             risk_score: 50,
-            risk_labels: vec!["unclassified".to_string()],
+            risk_labels: vec!["unknown".to_string()],
         })
 }
 

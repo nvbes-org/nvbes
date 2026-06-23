@@ -1,6 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupRecordContext, GeoNetworkKind, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::PgPool;
@@ -8,6 +9,7 @@ use uuid::Uuid;
 
 pub struct GeoSecuritySignal {
     pub score: f64,
+    pub decision: super::RiskDecision,
     pub factors: Value,
     pub metadata: Value,
 }
@@ -25,6 +27,7 @@ pub async fn apply_geo_security_signal(
     else {
         return GeoSecuritySignal {
             score: base_score,
+            decision: super::RiskDecision::Allow,
             factors,
             metadata: geo_metadata(None),
         };
@@ -50,6 +53,10 @@ pub async fn apply_geo_security_signal(
     } else if resolution.risk_score >= 60 {
         score += 12.0;
         geo_factors.push("elevated_risk_network");
+    }
+    let decision = geo_policy_decision(&resolution);
+    if matches!(decision, super::RiskDecision::StepUp) {
+        geo_factors.push("geo_policy_step_up");
     }
 
     if let Some(object) = factors.as_object_mut() {
@@ -91,9 +98,27 @@ pub async fn apply_geo_security_signal(
 
     GeoSecuritySignal {
         score: f64::min(score, 100.0),
+        decision,
         factors,
         metadata: geo_metadata(Some(&resolution)),
     }
+}
+
+fn geo_policy_decision(resolution: &GeoResolution) -> super::RiskDecision {
+    if resolution.private_network
+        || matches!(resolution.confidence.as_str(), "none" | "low")
+        || resolution.risk_score >= 60
+        || matches!(
+            resolution.network_kind,
+            GeoNetworkKind::Tor
+                | GeoNetworkKind::Proxy
+                | GeoNetworkKind::Vpn
+                | GeoNetworkKind::Datacenter
+        )
+    {
+        return super::RiskDecision::StepUp;
+    }
+    super::RiskDecision::Allow
 }
 
 fn geo_metadata(resolution: Option<&GeoResolution>) -> Value {

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::geo::types::{GeoNetworkKind, GeoNetworkRelation, GeoRiskSignal};
+use crate::geo::types::{
+    GeoNetworkKind, GeoNetworkRelation, GeoRiskSignal, canonicalize_geo_risk_labels,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeoReputation {
@@ -32,7 +34,7 @@ pub fn score_relation(relation: &GeoNetworkRelation) -> GeoReputation {
         return GeoReputation {
             network_kind: kind,
             risk_score: score,
-            risk_labels: relation.risk_labels.clone(),
+            risk_labels: canonical_labels_or_kind(&relation.risk_labels, kind),
         };
     }
 
@@ -191,6 +193,14 @@ fn score_for_kind(kind: GeoNetworkKind) -> u8 {
     }
 }
 
+fn canonical_labels_or_kind(labels: &[String], kind: GeoNetworkKind) -> Vec<String> {
+    let mut labels = canonicalize_geo_risk_labels(labels.iter().cloned());
+    if labels.is_empty() {
+        labels.push(kind.as_str().to_string());
+    }
+    labels
+}
+
 #[cfg(test)]
 mod tests {
     use super::score_relation;
@@ -226,5 +236,21 @@ mod tests {
             score_relation(&relation("Mullvad VPN")).risk_score
                 > score_relation(&relation("Example Broadband Telecom")).risk_score
         );
+    }
+
+    #[test]
+    fn explicit_relation_labels_are_canonicalized() {
+        let mut relation = relation("Example Provider");
+        relation.network_kind = Some(GeoNetworkKind::Vpn);
+        relation.risk_score = Some(90);
+        relation.risk_labels = vec![
+            "commercial_vpn".to_string(),
+            "is_vpn".to_string(),
+            "hosting".to_string(),
+        ];
+
+        let reputation = score_relation(&relation);
+
+        assert_eq!(reputation.risk_labels, vec!["vpn", "datacenter"]);
     }
 }

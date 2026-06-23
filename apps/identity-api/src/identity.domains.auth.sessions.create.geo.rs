@@ -1,6 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupRecordContext, GeoNetworkKind, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::PgPool;
@@ -41,6 +42,10 @@ pub(super) async fn record_login_geo_signal(
         geo_score_delta += 12.0;
         geo_factors.push("elevated_risk_network");
     }
+    let geo_decision = geo_policy_decision(&resolution);
+    if matches!(geo_decision, risk::RiskDecision::StepUp) {
+        geo_factors.push("geo_policy_step_up");
+    }
     let resolved_country = resolution
         .location
         .as_ref()
@@ -51,10 +56,8 @@ pub(super) async fn record_login_geo_signal(
         geo_score_delta += 20.0;
         geo_factors.push("geo_client_country_mismatch");
     }
-    if geo_score_delta > 0.0 && matches!(decision, risk::RiskDecision::Allow) {
-        *decision = risk::RiskDecision::StepUp;
-    }
     *score = f64::min(*score + geo_score_delta, 100.0);
+    *decision = (*decision).strictest(geo_decision);
 
     if let Some(object) = factors.as_object_mut() {
         object.insert(
@@ -93,6 +96,23 @@ pub(super) async fn record_login_geo_signal(
     }
 
     Some(resolution)
+}
+
+fn geo_policy_decision(resolution: &GeoResolution) -> risk::RiskDecision {
+    if resolution.private_network
+        || matches!(resolution.confidence.as_str(), "none" | "low")
+        || resolution.risk_score >= 60
+        || matches!(
+            resolution.network_kind,
+            GeoNetworkKind::Tor
+                | GeoNetworkKind::Proxy
+                | GeoNetworkKind::Vpn
+                | GeoNetworkKind::Datacenter
+        )
+    {
+        return risk::RiskDecision::StepUp;
+    }
+    risk::RiskDecision::Allow
 }
 
 async fn resolve_and_record(

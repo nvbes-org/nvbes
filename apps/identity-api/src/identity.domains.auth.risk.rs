@@ -28,6 +28,23 @@ impl RiskDecision {
             Self::Lock => "lock",
         }
     }
+
+    pub const fn severity(self) -> u8 {
+        match self {
+            Self::Allow => 0,
+            Self::StepUp => 1,
+            Self::Deny => 2,
+            Self::Lock => 3,
+        }
+    }
+
+    pub fn strictest(self, other: Self) -> Self {
+        if self.severity() >= other.severity() {
+            self
+        } else {
+            other
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

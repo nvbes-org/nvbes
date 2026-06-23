@@ -1,6 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupRecordContext, GeoNetworkKind, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::PgPool;
@@ -14,10 +15,20 @@ pub(super) async fn password_geo_signal(
     base_score: f64,
     mut factors: Value,
     purpose_event: &'static str,
-) -> (f64, Value, Option<GeoResolution>) {
+) -> (
+    f64,
+    Value,
+    crate::domains::auth::risk::RiskDecision,
+    Option<GeoResolution>,
+) {
     let Some(resolution) = resolve_and_record(db, config, principal_id, ip, purpose_event).await
     else {
-        return (base_score, factors, None);
+        return (
+            base_score,
+            factors,
+            crate::domains::auth::risk::RiskDecision::Allow,
+            None,
+        );
     };
     let mut score = base_score;
     let mut geo_factors = Vec::new();
@@ -40,6 +51,10 @@ pub(super) async fn password_geo_signal(
     } else if resolution.risk_score >= 60 {
         score += 12.0;
         geo_factors.push("elevated_risk_network");
+    }
+    let decision = geo_policy_decision(&resolution);
+    if matches!(decision, crate::domains::auth::risk::RiskDecision::StepUp) {
+        geo_factors.push("geo_policy_step_up");
     }
 
     if let Some(object) = factors.as_object_mut() {
@@ -79,7 +94,24 @@ pub(super) async fn password_geo_signal(
         );
     }
 
-    (f64::min(score, 100.0), factors, Some(resolution))
+    (f64::min(score, 100.0), factors, decision, Some(resolution))
+}
+
+fn geo_policy_decision(resolution: &GeoResolution) -> crate::domains::auth::risk::RiskDecision {
+    if resolution.private_network
+        || matches!(resolution.confidence.as_str(), "none" | "low")
+        || resolution.risk_score >= 60
+        || matches!(
+            resolution.network_kind,
+            GeoNetworkKind::Tor
+                | GeoNetworkKind::Proxy
+                | GeoNetworkKind::Vpn
+                | GeoNetworkKind::Datacenter
+        )
+    {
+        return crate::domains::auth::risk::RiskDecision::StepUp;
+    }
+    crate::domains::auth::risk::RiskDecision::Allow
 }
 
 pub(super) fn geo_metadata(resolution: Option<&GeoResolution>) -> Value {

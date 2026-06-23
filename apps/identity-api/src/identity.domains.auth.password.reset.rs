@@ -7,7 +7,7 @@ use super::hash_password;
 use super::history;
 use super::token_hash;
 use super::validate_password;
-use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
+use crate::domains::auth::risk::{self, RiskEventInput};
 use crate::domains::auth::types::{ResetPasswordInput, ResetPasswordResult};
 use crate::http::error::AppError;
 
@@ -68,7 +68,7 @@ pub async fn reset(
     history::insert_password_hash(db, principal_id, &new_hash).await?;
     history::prune_history(db, principal_id, config.auth_password_history_size).await?;
 
-    let (risk_score, risk_factors, geo_resolution) = password_geo_signal(
+    let (risk_score, risk_factors, geo_decision, geo_resolution) = password_geo_signal(
         db,
         config,
         principal_id,
@@ -89,7 +89,7 @@ pub async fn reset(
             user_agent: user_agent.clone(),
             risk_score,
             risk_factors,
-            decision: RiskDecision::Allow,
+            decision: geo_decision,
             metadata: serde_json::json!({
                 "geo": geo_metadata(geo_resolution.as_ref()),
             }),

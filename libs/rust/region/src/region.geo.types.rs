@@ -110,6 +110,49 @@ impl GeoRiskSignal {
     }
 }
 
+pub fn canonical_geo_risk_label(value: &str) -> Option<&'static str> {
+    let normalized = value
+        .trim()
+        .trim_start_matches("is_")
+        .replace(['-', ' '], "_")
+        .to_ascii_lowercase();
+    match normalized.as_str() {
+        "tor" | "tor_exit" => Some("tor"),
+        "vpn" | "anonymous_vpn" | "commercial_vpn" => Some("vpn"),
+        "proxy" | "socks" | "socks_proxy" | "web_proxy" => Some("proxy"),
+        "datacenter" | "data_center" | "hosting" | "hosted" | "cloud" | "server" => {
+            Some("datacenter")
+        }
+        "mobile" | "cellular" | "wireless" | "lte" | "4g" | "5g" => Some("mobile"),
+        "residential" | "consumer" | "broadband" | "fiber" | "fibre" | "cable" | "dsl" => {
+            Some("residential")
+        }
+        "unknown" | "unclassified" => Some("unknown"),
+        _ => None,
+    }
+}
+
+pub fn canonicalize_geo_risk_labels(labels: impl IntoIterator<Item = String>) -> Vec<String> {
+    let mut canonical = Vec::new();
+    for label in labels {
+        if label.starts_with("source:") {
+            push_unique_label(&mut canonical, label);
+            continue;
+        }
+        if let Some(label) = canonical_geo_risk_label(&label) {
+            push_unique_label(&mut canonical, label.to_string());
+        }
+    }
+    canonical
+}
+
+pub fn push_unique_label(labels: &mut Vec<String>, label: impl Into<String>) {
+    let label = label.into();
+    if !labels.iter().any(|item| item == &label) {
+        labels.push(label);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeoNetworkRelation {
     pub source_code: String,

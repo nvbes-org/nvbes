@@ -5,7 +5,7 @@ use uuid::Uuid;
 use webauthn_rs::prelude::PublicKeyCredential;
 
 use super::super::login_challenges::{self, CreateLoginChallengeInput};
-use super::super::risk::{self, RiskDecision, RiskEventInput};
+use super::super::risk::{self, RiskEventInput};
 use super::storage::{load_passkeys, persist_passkey};
 use super::types::StoredPasskeyAuthentication;
 use crate::http::error::AppError;
@@ -88,7 +88,7 @@ pub async fn start_login_authentication(
             user_agent: user_agent.map(ToOwned::to_owned),
             risk_score: geo_signal.score,
             risk_factors: geo_signal.factors,
-            decision: RiskDecision::Allow,
+            decision: geo_signal.decision,
             metadata: json!({ "geo": geo_signal.metadata }),
         },
     )
@@ -189,7 +189,7 @@ pub async fn finish_login_authentication(
             user_agent: user_agent.map(ToOwned::to_owned),
             risk_score: geo_signal.score,
             risk_factors: geo_signal.factors,
-            decision: RiskDecision::Allow,
+            decision: geo_signal.decision,
             metadata: json!({ "geo": geo_signal.metadata }),
         },
     )

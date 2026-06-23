@@ -7,7 +7,7 @@ use uuid::Uuid;
 use webauthn_rs::prelude::PublicKeyCredential;
 
 use super::super::super::login_challenges;
-use super::super::super::risk::{self, RiskDecision, RiskEventInput};
+use super::super::super::risk::{self, RiskEventInput};
 use super::super::storage::{discoverable_keys, fetch_user_email, load_passkeys, persist_passkey};
 use super::super::types::StoredDiscoverableAuthentication;
 use crate::http::error::AppError;
@@ -160,7 +160,7 @@ pub async fn finish_discoverable_login_authentication(
             user_agent: user_agent.map(ToOwned::to_owned),
             risk_score: geo_signal.score,
             risk_factors: geo_signal.factors,
-            decision: RiskDecision::Allow,
+            decision: geo_signal.decision,
             metadata: json!({ "geo": geo_signal.metadata }),
         },
     )

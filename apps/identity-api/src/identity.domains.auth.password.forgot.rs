@@ -32,7 +32,7 @@ pub async fn forgot(
 
         let (risk_score, decision, risk_factors) =
             risk::current_state_summary(db, principal_id).await?;
-        let (risk_score, risk_factors, geo_resolution) = password_geo_signal(
+        let (risk_score, risk_factors, geo_decision, geo_resolution) = password_geo_signal(
             db,
             config,
             principal_id,
@@ -42,6 +42,7 @@ pub async fn forgot(
             "password_reset_requested",
         )
         .await;
+        let decision = decision.strictest(geo_decision);
         let _ = risk::record_event(
             db,
             RiskEventInput {
