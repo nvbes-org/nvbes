@@ -9,6 +9,9 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+};
 use crate::billing_admin_access::{actor_principal_id, authorize_backoffice};
 use crate::error::AppError;
 
@@ -32,6 +35,7 @@ pub struct BillingRunbookView {
 
 #[derive(Debug, Deserialize)]
 struct RunbookExecutionRequest {
+    confirm_code: String,
     reason: String,
 }
 
@@ -62,6 +66,9 @@ async fn execute_runbook_route(
     Path((workspace_id, runbook_id)): Path<(Uuid, String)>,
     Json(request): Json<RunbookExecutionRequest>,
 ) -> Result<Json<RunbookExecutionResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "EXECUTE RUNBOOK")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     let _actor_id = actor_principal_id(&headers)?;
     Ok(Json(

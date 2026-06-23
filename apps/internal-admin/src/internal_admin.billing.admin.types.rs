@@ -38,6 +38,7 @@ pub(crate) struct SearchQuery {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreditNoteRequest {
+    pub(crate) confirm_code: String,
     pub(crate) invoice_id: Uuid,
     pub(crate) amount_minor: i64,
     pub(crate) currency: String,
@@ -46,6 +47,7 @@ pub(crate) struct CreditNoteRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct RefundIntentRequest {
+    pub(crate) confirm_code: String,
     pub(crate) payment_id: Uuid,
     pub(crate) provider: String,
     pub(crate) amount_minor: i64,
@@ -55,6 +57,7 @@ pub(crate) struct RefundIntentRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ProviderReplayRequest {
+    pub(crate) confirm_code: String,
     pub(crate) provider: String,
     pub(crate) provider_event_id: String,
     pub(crate) reason: String,
@@ -62,6 +65,7 @@ pub(crate) struct ProviderReplayRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ProviderMigrationRequest {
+    pub(crate) confirm_code: String,
     pub(crate) from_provider: String,
     pub(crate) to_provider: String,
     pub(crate) reason: String,
@@ -69,6 +73,7 @@ pub(crate) struct ProviderMigrationRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct GraceOverrideRequest {
+    pub(crate) confirm_code: String,
     pub(crate) subscription_id: Option<Uuid>,
     pub(crate) grace_days: i64,
     pub(crate) reason: String,
@@ -76,6 +81,7 @@ pub(crate) struct GraceOverrideRequest {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ManualCompRequest {
+    pub(crate) confirm_code: String,
     pub(crate) amount_minor: i64,
     pub(crate) currency: String,
     pub(crate) direction: String,

@@ -62,6 +62,13 @@ function authHeaders(credentials: AdminCredentials): Record<string, string> {
   };
 }
 
+function mutationHeaders(credentials: AdminCredentials): Record<string, string> {
+  return {
+    ...authHeaders(credentials),
+    'Idempotency-Key': crypto.randomUUID(),
+  };
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text();
@@ -77,7 +84,7 @@ async function postJson<TBody, TResult>(
 ): Promise<TResult> {
   const response = await verifiedFetch(path, {
     method: 'POST',
-    headers: { ...jsonHeaders, ...authHeaders(credentials) },
+    headers: { ...jsonHeaders, ...mutationHeaders(credentials) },
     body: JSON.stringify(body),
   });
   return parseJson<TResult>(response);
@@ -463,7 +470,7 @@ export function createManualCompensation(credentials: AdminCredentials, body: Ma
 export async function downloadBillingExport(credentials: AdminCredentials, exportType: ExportType) {
   const response = await verifiedFetch(
     `/workspaces/${credentials.workspaceId}/billing/admin/exports/${exportType}`,
-    { method: 'POST', headers: authHeaders(credentials) },
+    { method: 'POST', headers: mutationHeaders(credentials) },
   );
   if (!response.ok) {
     throw new Error((await response.text()) || `Export failed with HTTP ${response.status}`);

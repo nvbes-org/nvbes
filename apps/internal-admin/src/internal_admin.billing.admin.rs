@@ -8,6 +8,9 @@ use axum::{
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+};
 use crate::billing_admin_access::authorize_backoffice;
 use crate::billing_admin_exports::{build_finance_export, parse_finance_export_type};
 use crate::billing_admin_mutations::{
@@ -80,6 +83,9 @@ async fn credit_note_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<CreditNoteRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "CREATE CREDIT NOTE")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_credit_note(&state.db, access, request).await?))
 }
@@ -90,6 +96,9 @@ async fn write_off_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<CreditNoteRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "WRITE OFF")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_write_off(&state.db, access, request).await?))
 }
@@ -100,6 +109,9 @@ async fn refund_intent_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<RefundIntentRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "CREATE REFUND")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_refund_intent(&state.db, access, request).await?,
@@ -112,6 +124,9 @@ async fn replay_provider_event_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ProviderReplayRequest>,
 ) -> Result<Json<ProviderReplayResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "REPLAY EVENT")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_provider_event(&state.db, access, request).await?,
@@ -124,6 +139,9 @@ async fn provider_migration_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ProviderMigrationRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "PLAN MIGRATION")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_provider_migration(&state.db, access, request).await?,
@@ -136,6 +154,9 @@ async fn grace_override_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<GraceOverrideRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "OVERRIDE GRACE")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         override_grace_period(&state.db, access, workspace_id, request).await?,
@@ -148,6 +169,9 @@ async fn manual_comp_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ManualCompRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
+    require_idempotency_key(&headers)?;
+    require_permission(&headers, BackofficePermission::BillingMutate)?;
+    require_confirmation(&request.confirm_code, "CREATE COMPENSATION")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_manual_compensation(&state.db, access, request).await?,
@@ -159,6 +183,7 @@ async fn finance_export_route(
     headers: HeaderMap,
     Path((workspace_id, export_type)): Path<(Uuid, String)>,
 ) -> Result<impl IntoResponse, AppError> {
+    require_idempotency_key(&headers)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     let export_type = parse_finance_export_type(&export_type)?;
     let export = build_finance_export(&state.db, access.tenant_id, export_type).await?;

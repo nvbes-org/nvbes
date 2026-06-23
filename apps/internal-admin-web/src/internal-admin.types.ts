@@ -974,6 +974,7 @@ export type BillingRunbook = {
 };
 
 export type RunbookExecutionRequest = {
+  confirm_code: string;
   reason: string;
 };
 
@@ -1037,6 +1038,7 @@ export type ProviderEventFailure = {
 };
 
 export type CreditNoteRequest = {
+  confirm_code: string;
   invoice_id: string;
   amount_minor: number;
   currency: string;
@@ -1049,24 +1051,28 @@ export type RefundIntentRequest = CreditNoteRequest & {
 };
 
 export type ProviderReplayRequest = {
+  confirm_code: string;
   provider: string;
   provider_event_id: string;
   reason: string;
 };
 
 export type ProviderMigrationRequest = {
+  confirm_code: string;
   from_provider: string;
   to_provider: string;
   reason: string;
 };
 
 export type GraceOverrideRequest = {
+  confirm_code: string;
   subscription_id?: string;
   grace_days: number;
   reason: string;
 };
 
 export type ManualCompRequest = {
+  confirm_code: string;
   amount_minor: number;
   currency: string;
   direction: string;

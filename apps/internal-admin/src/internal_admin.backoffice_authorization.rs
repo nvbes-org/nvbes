@@ -3,10 +3,12 @@ use axum::http::HeaderMap;
 use crate::error::AppError;
 
 const ROLE_HEADER: &str = "x-nvbes-backoffice-role";
+const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum BackofficePermission {
     AccessMutate,
+    BillingMutate,
     GovernanceMutate,
     SecurityMutate,
     TenantLifecycle,
@@ -47,6 +49,24 @@ pub(crate) fn require_confirmation(actual: &str, expected: &str) -> Result<(), A
     ))
 }
 
+pub(crate) fn require_idempotency_key(headers: &HeaderMap) -> Result<&str, AppError> {
+    let value = headers
+        .get(IDEMPOTENCY_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| {
+            AppError::bad_request(
+                "idempotency_key_required",
+                "Back-office mutations require Idempotency-Key.",
+            )
+        })?;
+    nvbes_core::idempotency::validate_key(value).map_err(|message| {
+        AppError::bad_request(
+            "invalid_idempotency_key",
+            format!("Invalid Idempotency-Key: {message}"),
+        )
+    })
+}
+
 fn backoffice_role(headers: &HeaderMap) -> Result<BackofficeRole, AppError> {
     let value = headers
         .get(ROLE_HEADER)
@@ -77,6 +97,7 @@ fn parse_role(value: &str) -> Result<BackofficeRole, AppError> {
 fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
     match role {
         BackofficeRole::PlatformAdmin => true,
+        BackofficeRole::FinanceAdmin => matches!(permission, BackofficePermission::BillingMutate),
         BackofficeRole::SecurityAdmin => matches!(
             permission,
             BackofficePermission::AccessMutate
@@ -90,7 +111,7 @@ fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
                 | BackofficePermission::UserLifecycle
                 | BackofficePermission::WorkspaceLifecycle
         ),
-        BackofficeRole::FinanceAdmin | BackofficeRole::Viewer => false,
+        BackofficeRole::Viewer => false,
     }
 }
 
@@ -139,9 +160,31 @@ mod tests {
     }
 
     #[test]
+    fn finance_admin_can_only_mutate_billing() {
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::BillingMutate
+        ));
+        assert!(!role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::SecurityMutate
+        ));
+    }
+
+    #[test]
     fn confirmation_must_match_exactly_after_trim() {
         assert!(require_confirmation("SUSPEND TENANT", "SUSPEND TENANT").is_ok());
         assert!(require_confirmation(" SUSPEND TENANT ", "SUSPEND TENANT").is_ok());
         assert!(require_confirmation("suspend tenant", "SUSPEND TENANT").is_err());
+    }
+
+    #[test]
+    fn idempotency_key_is_required_and_validated() {
+        let headers = HeaderMap::new();
+        assert!(require_idempotency_key(&headers).is_err());
+
+        let mut headers = HeaderMap::new();
+        headers.insert(IDEMPOTENCY_KEY_HEADER, " key-123 ".parse().unwrap());
+        assert_eq!(require_idempotency_key(&headers).unwrap(), "key-123");
     }
 }

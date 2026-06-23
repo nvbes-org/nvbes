@@ -61,7 +61,7 @@ export function BillingActions({
   const [result, setResult] = useState<string>('Aucune action executee.');
   const expectedCode = actionConfirmCodes[active];
   const mutation = useMutation({
-    mutationFn: (form: FormData) => submitAction(credentials, active, form),
+    mutationFn: (form: FormData) => submitAction(credentials, active, confirmCode, form),
     onSuccess: async (data) => {
       setResult(JSON.stringify(data, null, 2));
       await Promise.all([
@@ -286,10 +286,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-async function submitAction(credentials: AdminCredentials, action: ActionKey, form: FormData) {
+async function submitAction(
+  credentials: AdminCredentials,
+  action: ActionKey,
+  confirmCode: string,
+  form: FormData,
+) {
   const reason = text(form, 'reason');
   if (action === 'replay') {
     return replayProviderEvent(credentials, {
+      confirm_code: confirmCode,
       provider: text(form, 'provider'),
       provider_event_id: text(form, 'provider_event_id'),
       reason,
@@ -297,6 +303,7 @@ async function submitAction(credentials: AdminCredentials, action: ActionKey, fo
   }
   if (action === 'migration') {
     return createProviderMigration(credentials, {
+      confirm_code: confirmCode,
       from_provider: text(form, 'from_provider'),
       to_provider: text(form, 'to_provider'),
       reason,
@@ -304,6 +311,7 @@ async function submitAction(credentials: AdminCredentials, action: ActionKey, fo
   }
   if (action === 'grace') {
     return overrideGracePeriod(credentials, {
+      confirm_code: confirmCode,
       subscription_id: optionalText(form, 'subscription_id'),
       grace_days: numberValue(form, 'grace_days'),
       reason,
@@ -311,6 +319,7 @@ async function submitAction(credentials: AdminCredentials, action: ActionKey, fo
   }
   if (action === 'manual-comp') {
     return createManualCompensation(credentials, {
+      confirm_code: confirmCode,
       amount_minor: numberValue(form, 'amount_minor'),
       currency: text(form, 'currency'),
       direction: text(form, 'direction'),
@@ -319,19 +328,20 @@ async function submitAction(credentials: AdminCredentials, action: ActionKey, fo
   }
   if (action === 'refund') {
     return createRefundIntent(credentials, {
-      ...creditPayload(form),
+      ...creditPayload(form, confirmCode),
       payment_id: text(form, 'payment_id'),
       provider: text(form, 'provider'),
       reason,
     });
   }
   return action === 'write-off'
-    ? createWriteOff(credentials, creditPayload(form))
-    : createCreditNote(credentials, creditPayload(form));
+    ? createWriteOff(credentials, creditPayload(form, confirmCode))
+    : createCreditNote(credentials, creditPayload(form, confirmCode));
 }
 
-function creditPayload(form: FormData): CreditNoteRequest {
+function creditPayload(form: FormData, confirmCode: string): CreditNoteRequest {
   return {
+    confirm_code: confirmCode,
     invoice_id: text(form, 'invoice_id'),
     amount_minor: numberValue(form, 'amount_minor'),
     currency: text(form, 'currency'),

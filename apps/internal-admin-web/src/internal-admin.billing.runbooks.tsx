@@ -3,6 +3,7 @@ import { CheckCircle2, LifeBuoy, PlayCircle, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { executeBillingRunbook, listBillingRunbooks } from './internal-admin.api';
@@ -22,6 +23,7 @@ export function BillingRunbooks({
 }) {
   const queryClient = useQueryClient();
   const [activeRunbookId, setActiveRunbookId] = useState<string | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RunbookExecutionResult | null>(null);
   const runbooks = useQuery({
@@ -30,9 +32,14 @@ export function BillingRunbooks({
     enabled: !disabled,
   });
   const mutation = useMutation({
-    mutationFn: (runbookId: string) => executeBillingRunbook(credentials, runbookId, { reason }),
+    mutationFn: (runbookId: string) =>
+      executeBillingRunbook(credentials, runbookId, {
+        confirm_code: confirmCode,
+        reason,
+      }),
     onSuccess: async (data) => {
       setResult(data);
+      setConfirmCode('');
       setReason('');
       setActiveRunbookId(null);
       await Promise.all([
@@ -71,14 +78,17 @@ export function BillingRunbooks({
             key={runbook.id}
             onCancel={() => {
               setActiveRunbookId(null);
+              setConfirmCode('');
               setReason('');
             }}
+            onConfirmCodeChange={setConfirmCode}
             onReasonChange={setReason}
             onRun={() => mutation.mutate(runbook.id)}
             onStart={() => {
               setResult(null);
               setActiveRunbookId(runbook.id);
             }}
+            confirmCode={confirmCode}
             reason={reason}
             runbook={runbook}
           />
@@ -105,20 +115,24 @@ export function BillingRunbooks({
 function RunbookCard({
   disabled,
   error,
+  confirmCode,
   isActive,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRun,
   onStart,
   reason,
   runbook,
 }: {
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isActive: boolean;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRun: () => void;
   onStart: () => void;
@@ -126,6 +140,8 @@ function RunbookCard({
   runbook: BillingRunbook;
 }) {
   const isReasonReady = reason.trim().length >= 12;
+  const expectedCode = 'EXECUTE RUNBOOK';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <article className="bg-muted/40 rounded-md border p-3">
@@ -149,15 +165,24 @@ function RunbookCard({
             placeholder="Motif audit, incident, ticket, approbation..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-xs">Minimum 12 caracteres requis.</p>
+            <p className="text-muted-foreground text-xs">
+              Motif detaille et code exact {expectedCode} requis.
+            </p>
             <div className="flex gap-2">
               <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
                 <RotateCcw className="size-4" />
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={onRun}
                 type="button"
               >

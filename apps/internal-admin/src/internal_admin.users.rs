@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_permission,
+    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
 };
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
@@ -85,6 +85,7 @@ async fn suspend_user_route(
     Path(principal_id): Path<Uuid>,
     Json(request): Json<UserLifecycleRequest>,
 ) -> Result<Json<UserLifecycleResult>, AppError> {
+    require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::UserLifecycle)?;
     require_confirmation(&request.confirm_code, "SUSPEND USER")?;
     let actor_id = actor_principal_id(&headers)?;
@@ -110,6 +111,7 @@ async fn reactivate_user_route(
     Path(principal_id): Path<Uuid>,
     Json(request): Json<UserLifecycleRequest>,
 ) -> Result<Json<UserLifecycleResult>, AppError> {
+    require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::UserLifecycle)?;
     require_confirmation(&request.confirm_code, "REACTIVATE USER")?;
     let actor_id = actor_principal_id(&headers)?;
