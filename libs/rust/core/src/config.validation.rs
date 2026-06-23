@@ -1,5 +1,7 @@
 #[path = "config.validation.basics.rs"]
 mod basics;
+#[path = "config.validation.geo.rs"]
+mod geo;
 #[path = "config.validation.observability.rs"]
 mod observability;
 #[path = "config.validation.request_e2ee.rs"]
@@ -11,6 +13,8 @@ use super::AppConfig;
 
 #[cfg(test)]
 pub(crate) use basics::validate_positive_integer;
+#[cfg(test)]
+pub(crate) use geo::validate_ip_intelligence;
 #[cfg(test)]
 pub(crate) use observability::{
     validate_grafana_export_path, validate_observability_internal_token,
@@ -118,5 +122,6 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
         config.auth_unverified_account_ttl_days,
     )?;
     request_e2ee::validate_request_e2ee(config, strict_mode)?;
+    geo::validate_ip_intelligence(config, strict_mode)?;
     Ok(())
 }
