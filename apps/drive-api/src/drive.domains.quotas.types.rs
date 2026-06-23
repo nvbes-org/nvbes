@@ -75,15 +75,3 @@ pub struct StorageThresholdAuditInput<'a> {
     pub ip: Option<&'a str>,
     pub user_agent: Option<&'a str>,
 }
-
-pub struct AuditEventInput<'a> {
-    pub workspace_id: Uuid,
-    pub actor_user_id: Option<Uuid>,
-    pub actor_principal_id: Option<Uuid>,
-    pub action: &'a str,
-    pub target_type: &'a str,
-    pub target_id: Option<Uuid>,
-    pub ip: Option<&'a str>,
-    pub user_agent: Option<&'a str>,
-    pub metadata: serde_json::Value,
-}

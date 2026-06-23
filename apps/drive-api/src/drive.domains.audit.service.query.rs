@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use crate::{
@@ -63,8 +63,18 @@ pub async fn export_events(
 
 pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<(), AppError> {
     let mut tx = db.begin().await?;
+    record_event_tx(&mut tx, input).await?;
+    tx.commit().await?;
+
+    Ok(())
+}
+
+pub async fn record_event_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    input: AuditRecordInput<'_>,
+) -> Result<(), AppError> {
     let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
-        &mut tx,
+        tx,
         input.workspace_id,
         input.ip,
         input.action,
@@ -97,9 +107,8 @@ pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<()
     .bind(input.ip)
     .bind(input.user_agent)
     .bind(sqlx::types::Json(metadata))
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
-    tx.commit().await?;
 
     Ok(())
 }

@@ -10,5 +10,5 @@ mod service;
 pub use routes::router;
 pub use service::{
     AuditEventsResponse, AuditRecordInput, ListAuditEventsInput, export_events, list_events,
-    record_event,
+    record_event, record_event_tx,
 };

@@ -1,43 +1,8 @@
 use super::logic::{
     STORAGE_CRITICAL_THRESHOLD_PERCENT, STORAGE_WARNING_THRESHOLD_PERCENT, crosses_threshold,
 };
-use super::types::{AuditEventInput, StorageThresholdAuditInput};
+use super::types::StorageThresholdAuditInput;
 use crate::http::error::AppError;
-
-pub async fn insert_audit_event(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    input: AuditEventInput<'_>,
-) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.actor_user_id)
-    .bind(input.actor_principal_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(&mut **tx)
-    .await?;
-
-    Ok(())
-}
 
 pub async fn insert_storage_threshold_audits(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -59,9 +24,9 @@ pub async fn insert_storage_threshold_audits(
                 "quota.storage_warning"
             };
 
-            insert_audit_event(
+            crate::domains::audit::record_event_tx(
                 tx,
-                AuditEventInput {
+                crate::domains::audit::AuditRecordInput {
                     workspace_id: input.workspace_id,
                     actor_user_id: input.actor_user_id,
                     actor_principal_id: Some(input.actor_principal_id),

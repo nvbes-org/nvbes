@@ -13,7 +13,7 @@ mod query;
 mod tests;
 
 pub use csv::events_to_csv;
-pub use query::{export_events, list_events, record_event};
+pub use query::{export_events, list_events, record_event, record_event_tx};
 
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;

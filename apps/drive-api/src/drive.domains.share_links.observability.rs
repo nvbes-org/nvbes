@@ -18,9 +18,9 @@ pub async fn log_share_link_event_tx(
     tx: &mut Transaction<'_, Postgres>,
     input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
-    crate::domains::files::queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         tx,
-        crate::domains::files::queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: input.workspace_id,
             actor_user_id: input.actor_user_id,
             actor_principal_id: input.actor_principal_id,
