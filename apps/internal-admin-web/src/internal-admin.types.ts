@@ -91,6 +91,21 @@ export type SecurityCenterSnapshot = {
   users_without_mfa: UserWithoutMfa[];
 };
 
+export type AuditEvidenceSnapshot = {
+  audit_events_24h: number;
+  actorless_event_count_24h: number;
+  sensitive_action_count_24h: number;
+  missing_hash_count: number;
+  backfilled_hash_count: number;
+  active_signing_key_count: number;
+  deprecated_signing_key_count: number;
+  revoked_signing_key_count: number;
+  recent_audit_events: AuditEvidenceEvent[];
+  actorless_events: AuditEvidenceEvent[];
+  hash_anomalies: AuditHashAnomaly[];
+  signing_keys: SigningKeySummary[];
+};
+
 export type ComplianceCenterSnapshot = {
   active_consent_count: number;
   revoked_consent_count_30d: number;
@@ -549,6 +564,40 @@ export type RecentRiskEvent = {
   risk_score: number;
   decision: string;
   created_at: string;
+};
+
+export type AuditEvidenceEvent = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  actor_principal_id: string | null;
+  actor_email: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  ip: string | null;
+  created_at: string;
+};
+
+export type AuditHashAnomaly = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  action: string;
+  event_hash: string;
+  previous_event_hash: string | null;
+  created_at: string;
+};
+
+export type SigningKeySummary = {
+  kid: string;
+  algorithm: string;
+  status: string;
+  kms_key_id: string | null;
+  activated_at: string;
+  deprecated_at: string | null;
+  revoked_at: string | null;
 };
 
 export type UserWithoutMfa = {

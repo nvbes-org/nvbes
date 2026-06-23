@@ -2,6 +2,7 @@ import { verifiedFetch } from '@nvbes/web-runtime';
 import type {
   AccessCenterSnapshot,
   AdminCredentials,
+  AuditEvidenceSnapshot,
   AuditEvent,
   BillingOverview,
   BillingRunbook,
@@ -97,6 +98,13 @@ export async function getCommandCenter(credentials: AdminCredentials) {
 export async function getAccessCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/access-center', { headers: authHeaders(credentials) });
   return parseJson<AccessCenterSnapshot>(response);
+}
+
+export async function getAuditEvidenceCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/audit-evidence-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<AuditEvidenceSnapshot>(response);
 }
 
 export async function getSecurityCenter(credentials: AdminCredentials) {

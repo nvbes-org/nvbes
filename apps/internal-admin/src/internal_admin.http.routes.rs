@@ -23,6 +23,7 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
     let private_routes = Router::new()
         .merge(crate::access_center::router())
         .merge(crate::audit::router())
+        .merge(crate::audit_evidence_center::router())
         .merge(crate::billing_admin::router())
         .merge(crate::billing_admin_overview::router())
         .merge(crate::billing_admin_provider_events::router())

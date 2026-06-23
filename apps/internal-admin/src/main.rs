@@ -4,6 +4,8 @@ mod access_center;
 mod app;
 #[path = "internal_admin.audit.rs"]
 mod audit;
+#[path = "internal_admin.audit_evidence_center.rs"]
+mod audit_evidence_center;
 #[path = "internal_admin.billing.admin.rs"]
 mod billing_admin;
 #[path = "internal_admin.billing.admin.access.rs"]

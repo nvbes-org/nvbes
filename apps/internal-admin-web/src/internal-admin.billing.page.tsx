@@ -13,6 +13,7 @@ import { ProviderEventFailuresPanel } from './internal-admin.billing.provider-ev
 import { BillingRunbooks } from './internal-admin.billing.runbooks';
 import { BillingSearch } from './internal-admin.billing.search';
 import { AccessCenterPanel } from './internal-admin.access-center';
+import { AuditEvidenceCenterPanel } from './internal-admin.audit-evidence-center';
 import { AuditEventsPanel } from './internal-admin.audit.events';
 import { CommunicationsCenterPanel } from './internal-admin.communications-center';
 import { ComplianceCenterPanel } from './internal-admin.compliance-center';
@@ -86,6 +87,12 @@ export function BillingOperationsPage() {
         onSelectTenant={setSelectedTenantId}
         onSelectUser={setSelectedUserId}
         onSelectWorkspace={setSelectedWorkspaceId}
+      />
+      <AuditEvidenceCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
       />
       <IdentityGovernanceCenterPanel
         credentials={credentials}
