@@ -19,3 +19,19 @@ CREATE TABLE public_api_network_allowlist (
 
 CREATE INDEX idx_public_api_network_allowlist_workspace_expires
   ON public_api_network_allowlist (workspace_id, expires_at);
+
+ALTER TABLE geo_lookup_events
+  DROP CONSTRAINT IF EXISTS geo_lookup_events_purpose_check;
+
+ALTER TABLE geo_lookup_events
+  ADD CONSTRAINT geo_lookup_events_purpose_check
+    CHECK (purpose IN (
+      'payment',
+      'security',
+      'data_region',
+      'auth',
+      'audit',
+      'drive_api',
+      'drive_audit',
+      'identity_audit'
+    ));

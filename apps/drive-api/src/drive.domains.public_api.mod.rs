@@ -4,6 +4,9 @@ pub mod api_key_signatures;
 pub mod auth;
 #[path = "drive.domains.public_api.db.rs"]
 pub mod db;
+#[cfg(test)]
+#[path = "drive.domains.public_api.db_tests.rs"]
+mod db_tests;
 #[path = "drive.domains.public_api.errors.rs"]
 pub mod errors;
 #[path = "drive.domains.public_api.geo.rs"]
