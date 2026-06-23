@@ -68,7 +68,7 @@ pub async fn cache_ip_intelligence_tx(
         "#,
     )
     .bind(relation.source_code.as_str())
-    .bind(relation_key(relation))
+    .bind(network_relation_key(relation))
     .bind(relation.registry.as_deref())
     .bind(relation.network.as_deref())
     .bind(relation.start_ip.map(|ip| ip.to_string()))
@@ -177,23 +177,39 @@ fn push_source_label(labels: &mut Vec<String>, source_code: &str) {
     }
 }
 
-fn relation_key(relation: &GeoNetworkRelation) -> String {
+pub(crate) fn network_relation_key(relation: &GeoNetworkRelation) -> String {
+    let provider_prefix = if relation.source_code == "ip_intelligence" {
+        provider_key(relation)
+            .map(|provider| format!("provider:{provider}:"))
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
     if let Some(network) = &relation.network {
-        return format!("network:{network}");
+        return format!("{provider_prefix}network:{network}");
     }
     if let (Some(start_ip), Some(end_ip)) = (relation.start_ip, relation.end_ip) {
-        return format!("range:{start_ip}-{end_ip}");
+        return format!("{provider_prefix}range:{start_ip}-{end_ip}");
     }
     relation
         .source_reference
         .as_deref()
-        .map(|reference| format!("ref:{reference}"))
+        .map(|reference| format!("{provider_prefix}ref:{reference}"))
         .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn provider_key(relation: &GeoNetworkRelation) -> Option<String> {
+    relation
+        .risk_labels
+        .iter()
+        .find_map(|label| label.strip_prefix("source:"))
+        .or(relation.source_reference.as_deref())
+        .map(ToOwned::to_owned)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{IpIntelligenceInput, normalize_ip_intelligence, relation_key};
+    use super::{IpIntelligenceInput, network_relation_key, normalize_ip_intelligence};
     use crate::geo::types::GeoNetworkKind;
 
     #[test]
@@ -230,7 +246,7 @@ mod tests {
     }
 
     #[test]
-    fn relation_key_prefers_network_over_single_ip_range() {
+    fn relation_key_includes_provider_for_ip_intelligence() {
         let lookup = normalize_ip_intelligence(IpIntelligenceInput {
             source_code: "test_provider".to_string(),
             ip: "8.8.8.8".parse().unwrap(),
@@ -249,6 +265,9 @@ mod tests {
             risk_labels: Vec::new(),
         });
 
-        assert_eq!(relation_key(&lookup.relation), "network:8.8.8.0/24");
+        assert_eq!(
+            network_relation_key(&lookup.relation),
+            "provider:test_provider:network:8.8.8.0/24"
+        );
     }
 }

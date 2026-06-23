@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::geo::{
     database::{PersonalGeoDatabase, PersonalGeoRange},
+    intelligence::network_relation_key,
     types::{GeoEvidence, GeoNetworkKind, GeoNetworkRelation, GeoResolution},
 };
 
@@ -171,7 +172,7 @@ async fn upsert_network_relation_tx(
         "#,
     )
     .bind(relation.source_code.as_str())
-    .bind(relation_key(relation))
+    .bind(network_relation_key(relation))
     .bind(relation.registry.as_deref())
     .bind(relation.network.as_deref())
     .bind(relation.start_ip.map(|ip| ip.to_string()))
@@ -185,18 +186,4 @@ async fn upsert_network_relation_tx(
     .bind(&relation.risk_labels)
     .fetch_one(&mut **tx)
     .await
-}
-
-fn relation_key(relation: &GeoNetworkRelation) -> String {
-    if let Some(network) = &relation.network {
-        return format!("network:{network}");
-    }
-    if let (Some(start_ip), Some(end_ip)) = (relation.start_ip, relation.end_ip) {
-        return format!("range:{start_ip}-{end_ip}");
-    }
-    relation
-        .source_reference
-        .as_deref()
-        .map(|reference| format!("ref:{reference}"))
-        .unwrap_or_else(|| "unknown".to_string())
 }
