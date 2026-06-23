@@ -64,7 +64,7 @@ function buildChecks() {
 		textCheck("workspace-insert", sources.accountDb, "Registration creates personal workspace", "INSERT INTO workspaces"),
 		textCheck("workspace-policy", sources.accountDb, "Registration creates workspace policy", "INSERT INTO workspace_policies"),
 		textCheck("owner-membership", sources.accountDb, "Registration creates owner workspace membership", "INSERT INTO workspace_memberships"),
-		textCheck("audit-event", sources.accountDb, "Registration writes user.registered audit event", "'user.registered'"),
+		textCheck("audit-event", sources.accountDb, "Registration writes user.registered audit event", 'action: "user.registered"'),
 		textCheck("verification-email", sources.accountDb, "Registration issues verification email token", "issue_verification_email_tx"),
 		textCheck("openapi-source", sources.openapiSource, "OpenAPI source exports register path", "crate::domains::auth::routes::register::register"),
 		textCheck("openapi-json-path", sources.openapiJson, "Generated OpenAPI contains /auth/register", "\"/auth/register\""),

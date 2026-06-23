@@ -4,23 +4,41 @@
   "title": "billing.subscription.changed.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "tenant_id",
-    "subscription_id",
-    "status",
-    "effective_at",
-    "change_type"
-  ],
+  "required": ["event_type", "event_version", "payload"],
   "properties": {
-    "tenant_id": { "type": "string", "format": "uuid" },
-    "subscription_id": { "type": "string", "format": "uuid" },
-    "status": {
-      "type": "string",
-      "enum": ["trialing", "active", "grace", "past_due", "degraded", "suspended", "canceled", "ended"]
-    },
-    "effective_at": { "type": "string", "format": "date-time" },
-    "change_type": { "type": "string", "minLength": 1 },
-    "previous_status": { "type": "string" },
-    "metadata": { "type": "object", "additionalProperties": true }
+    "event_type": { "const": "billing.subscription.changed" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "subscription_id",
+        "status",
+        "effective_at",
+        "change_type"
+      ],
+      "properties": {
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "subscription_id": { "type": "string", "format": "uuid" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "trialing",
+            "active",
+            "grace",
+            "past_due",
+            "degraded",
+            "suspended",
+            "canceled",
+            "ended"
+          ]
+        },
+        "effective_at": { "type": "string", "format": "date-time" },
+        "change_type": { "type": "string", "minLength": 1 },
+        "previous_status": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    }
   }
 }

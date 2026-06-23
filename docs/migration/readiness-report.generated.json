@@ -15,28 +15,28 @@
     {
       "id": "data",
       "source": "docs/migration/data-map.generated.json",
-      "total": 104,
+      "total": 179,
       "pending": 0,
       "proof": "pnpm check:migration-data-map"
     },
     {
       "id": "secrets",
       "source": "docs/migration/secret-map.generated.json",
-      "total": 77,
+      "total": 80,
       "pending": 0,
       "proof": "pnpm check:migration-secret-map"
     },
     {
       "id": "jobs",
       "source": "docs/migration/job-map.generated.json",
-      "total": 13,
+      "total": 14,
       "pending": 0,
       "proof": "pnpm check:migration-job-map"
     },
     {
       "id": "resources",
       "source": "docs/migration/resource-map.generated.json",
-      "total": 18,
+      "total": 25,
       "pending": 0,
       "proof": "pnpm check:migration-resource-map"
     },

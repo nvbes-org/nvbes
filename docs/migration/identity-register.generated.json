@@ -183,7 +183,7 @@
       "description": "Registration writes user.registered audit event",
       "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
       "status": "passed",
-      "pattern": "'user.registered'"
+      "pattern": "action: \"user.registered\""
     },
     {
       "id": "verification-email",

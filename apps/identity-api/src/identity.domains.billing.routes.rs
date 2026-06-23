@@ -1,8 +1,6 @@
 use crate::app::AppState;
 use axum::{Router, middleware};
 
-#[path = "identity.domains.billing.routes.admin.rs"]
-pub mod admin;
 #[path = "identity.domains.billing.routes.manage.rs"]
 pub mod manage;
 #[path = "identity.domains.billing.routes.portal.rs"]
@@ -21,7 +19,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .merge(manage::router(state))
         .merge(portal::router())
-        .merge(admin::router())
         .merge(internal_routes)
         .merge(webhooks::router(state))
 }

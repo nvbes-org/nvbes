@@ -22,10 +22,10 @@
 
 | Area | Source | Total | Blocking | Proof |
 |---|---|---:|---:|---|
-| data | `docs/migration/data-map.generated.json` | 104 | 0 | `pnpm check:migration-data-map` |
-| secrets | `docs/migration/secret-map.generated.json` | 77 | 0 | `pnpm check:migration-secret-map` |
-| jobs | `docs/migration/job-map.generated.json` | 13 | 0 | `pnpm check:migration-job-map` |
-| resources | `docs/migration/resource-map.generated.json` | 18 | 0 | `pnpm check:migration-resource-map` |
+| data | `docs/migration/data-map.generated.json` | 179 | 0 | `pnpm check:migration-data-map` |
+| secrets | `docs/migration/secret-map.generated.json` | 80 | 0 | `pnpm check:migration-secret-map` |
+| jobs | `docs/migration/job-map.generated.json` | 14 | 0 | `pnpm check:migration-job-map` |
+| resources | `docs/migration/resource-map.generated.json` | 25 | 0 | `pnpm check:migration-resource-map` |
 | target_structure | `docs/migration/target-structure.generated.json` | 56 | 0 | `pnpm check:migration-target-structure` |
 | codegen | `docs/migration/codegen.generated.json` | 6 | 0 | `pnpm check:migration-codegen` |
 | supply_chain | `docs/migration/supply-chain.generated.json` | 5 | 0 | `pnpm check:migration-supply-chain` |

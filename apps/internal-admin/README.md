@@ -1,5 +1,32 @@
 # Internal Admin
 
-Placeholder for private internal administration tools.
+Dedicated private back-office API.
 
-This area is Internal-only and must not be exported to `nvbes-oss`.
+This app owns operator-only endpoints and must stay isolated from public product APIs such as
+`identity-api` and `drive-api`.
+
+## Boundary
+
+- Internal-only app, not exported to `nvbes-oss`.
+- Back-office routes are mounted here, never in customer-facing services.
+- HTTP access is protected by the shared internal token guard.
+- Audited mutations require `x-nvbes-actor-principal-id` so back-office actions remain attributable.
+
+## Billing
+
+- `GET /admin/command-center`
+- `GET /admin/search`
+- `GET /admin/tenants/{tenantId}`
+- `GET /workspaces/{workspaceId}/admin/audit-events`
+- `GET /workspaces/{workspaceId}/billing/admin/overview`
+- `GET /workspaces/{workspaceId}/billing/admin/provider-events/failures`
+- `GET /workspaces/{workspaceId}/billing/admin/search`
+- `POST /workspaces/{workspaceId}/billing/admin/credit-notes`
+- `POST /workspaces/{workspaceId}/billing/admin/write-offs`
+- `POST /workspaces/{workspaceId}/billing/admin/refund-intents`
+- `POST /workspaces/{workspaceId}/billing/admin/provider-events/replay`
+- `POST /workspaces/{workspaceId}/billing/admin/provider-migrations`
+- `POST /workspaces/{workspaceId}/billing/admin/grace-overrides`
+- `POST /workspaces/{workspaceId}/billing/admin/manual-compensations`
+- `POST /workspaces/{workspaceId}/billing/admin/exports/{exportType}`
+- `GET /admin/billing/runbooks`

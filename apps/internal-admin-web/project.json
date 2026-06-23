@@ -1,0 +1,7 @@
+{
+  "name": "internal-admin-web",
+  "projectType": "application",
+  "root": "apps/internal-admin-web",
+  "sourceRoot": "apps/internal-admin-web/src",
+  "tags": ["scope:internal", "type:app", "domain:internal-admin", "layer:app"]
+}

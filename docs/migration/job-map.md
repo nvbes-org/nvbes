@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 13
+- entries: 14
 - pending: 0
 - keep: 0
-- rebuild: 13
+- rebuild: 14
 - remove: 0
 - replace: 0
 
@@ -19,6 +19,7 @@
 
 | Job | Domain | Decision | Owner | Target | Replacement |
 |---|---|---:|---|---|---|
+| geo.lookup_maintenance | Platform | rebuild | Infra lead | `apps/workers#geo-lookup-maintenance` | `target-worker:geo.lookup_maintenance` |
 | quotas.recalculate | Drive | rebuild | Drive lead | `apps/workers#quotas-recalculate` | `target-worker:quotas.recalculate` |
 | storage.purge_deleted | Drive | rebuild | Drive lead | `apps/workers#storage-purge-deleted` | `target-worker:storage.purge_deleted` |
 | storage.purge_quarantined | Drive | rebuild | Drive lead | `apps/workers#storage-purge-quarantined` | `target-worker:storage.purge_quarantined` |

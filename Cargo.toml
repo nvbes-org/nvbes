@@ -4,6 +4,7 @@ members = [
   "apps/drive-worker",
   "apps/identity-api",
   "apps/identity-worker",
+  "apps/internal-admin",
   "libs/rust/audit",
   "libs/rust/billing",
   "libs/rust/core",

@@ -228,7 +228,7 @@
       "description": "Entitlement event payload requires workspace and status",
       "path": "contracts/events/billing.entitlement.changed.v1.schema.json",
       "status": "passed",
-      "pattern": "\"required\": [\"workspace_id\", \"entitlement\", \"status\"]"
+      "pattern": "\"workspace_id\",\n        \"snapshot_id\",\n        \"plan_code\",\n        \"subscription_status\""
     },
     {
       "id": "event-manifest",

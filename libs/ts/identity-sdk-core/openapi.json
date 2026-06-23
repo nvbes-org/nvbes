@@ -6488,6 +6488,67 @@
         }
       }
     },
+    "/webhooks/mollie": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "handle_mollie_webhook",
+        "requestBody": {
+          "description": "Raw Mollie webhook payload",
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingWebhookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/webhooks/stripe": {
       "post": {
         "tags": [
@@ -7480,6 +7541,61 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "geo_country_code",
+            "in": "query",
+            "description": "Filter by resolved ISO country code",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "geo_source",
+            "in": "query",
+            "description": "Filter by geo source",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "geo_confidence",
+            "in": "query",
+            "description": "Filter by geo confidence",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "geo_network_kind",
+            "in": "query",
+            "description": "Filter by geo network kind",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "min_geo_risk_score",
+            "in": "query",
+            "description": "Minimum geo network risk score",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "geo_risk_label",
+            "in": "query",
+            "description": "Filter by exact geo risk label",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -9579,13 +9695,33 @@
         "required": [
           "provider",
           "session_id",
+          "checkout_id",
           "url",
+          "provider_customer_id",
           "stripe_customer_id",
           "stripe_price_id"
         ],
         "properties": {
+          "checkout_id": {
+            "type": "string"
+          },
+          "payment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "provider": {
             "type": "string"
+          },
+          "provider_customer_id": {
+            "type": "string"
+          },
+          "provider_price_id": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "session_id": {
             "type": "string"
@@ -13426,12 +13562,29 @@
           }
         }
       },
+      "SecurityEventCount": {
+        "type": "object",
+        "required": [
+          "key",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
       "SecurityEventView": {
         "type": "object",
         "required": [
           "id",
           "event_type",
-          "created_at"
+          "created_at",
+          "geo_risk_labels"
         ],
         "properties": {
           "created_at": {
@@ -13440,6 +13593,43 @@
           },
           "event_type": {
             "type": "string"
+          },
+          "geo_confidence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_country_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_network_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_risk_labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "geo_risk_score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "geo_source": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "type": "string",
@@ -13450,6 +13640,13 @@
               "string",
               "null"
             ]
+          },
+          "risk_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           },
           "status": {
             "type": [
@@ -13468,7 +13665,8 @@
       "SecurityEventsResponse": {
         "type": "object",
         "required": [
-          "events"
+          "events",
+          "summary"
         ],
         "properties": {
           "events": {
@@ -13483,6 +13681,47 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SecurityEventsSummary"
+          }
+        }
+      },
+      "SecurityEventsSummary": {
+        "type": "object",
+        "required": [
+          "total_events",
+          "high_risk_events",
+          "by_network_kind",
+          "by_country",
+          "by_risk_label"
+        ],
+        "properties": {
+          "by_country": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityEventCount"
+            }
+          },
+          "by_network_kind": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityEventCount"
+            }
+          },
+          "by_risk_label": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityEventCount"
+            }
+          },
+          "high_risk_events": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_events": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       },

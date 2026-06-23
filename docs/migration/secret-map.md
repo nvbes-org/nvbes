@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 77
+- entries: 80
 - pending: 0
-- keep: 64
-- rotate: 13
+- keep: 66
+- rotate: 14
 - remove: 0
 - replace: 0
 
@@ -52,6 +52,9 @@
 | NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-identity-worker-metrics-bind-addr` |
 | NVBES_JWT_SECRET | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-jwt-secret` |
 | NVBES_LOG_PII_MASKING | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-log-pii-masking` |
+| NVBES_MOLLIE_API_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-mollie-api-base-url` |
+| NVBES_MOLLIE_API_KEY | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-mollie-api-key` |
+| NVBES_MOLLIE_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-mollie-enabled` |
 | NVBES_OBSERVABILITY_INTERNAL_TOKEN | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-observability-internal-token` |
 | NVBES_OTLP_AUTHORIZATION_HEADER | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-otlp-authorization-header` |
 | NVBES_OTLP_ENDPOINT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-otlp-endpoint` |

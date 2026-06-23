@@ -1292,6 +1292,7 @@
           "workspace_id",
           "action",
           "target_type",
+          "geo_risk_labels",
           "metadata",
           "event_hash",
           "created_at"
@@ -1327,6 +1328,31 @@
           "event_hash": {
             "type": "string"
           },
+          "geo_country_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_network_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_risk_labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "geo_risk_score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -1338,6 +1364,12 @@
             ]
           },
           "metadata": {},
+          "network_block_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "previous_event_hash": {
             "type": [
               "string",

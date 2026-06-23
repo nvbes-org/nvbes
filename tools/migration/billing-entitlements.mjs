@@ -79,7 +79,7 @@ function buildChecks() {
 		textCheck("drive-invoice-storage", sources.driveEntitlements, "Drive invoice estimate persistence stores amount and period", "INSERT INTO invoice_estimates"),
 		textCheck("drive-type-reexport", sources.driveTypes, "Drive service re-exports shared billing response types", "BillingOverviewResponse"),
 		textCheck("entitlement-event-schema", sources.entitlementEvent, "Entitlement changed event schema is versioned", "\"event_type\": { \"const\": \"billing.entitlement.changed\" }"),
-		textCheck("entitlement-event-payload", sources.entitlementEvent, "Entitlement event payload requires workspace and status", "\"required\": [\"workspace_id\", \"entitlement\", \"status\"]"),
+		textCheck("entitlement-event-payload", sources.entitlementEvent, "Entitlement event payload requires workspace and status", "\"workspace_id\",\n        \"snapshot_id\",\n        \"plan_code\",\n        \"subscription_status\""),
 		textCheck("event-manifest", sources.eventManifest, "Event manifest includes billing entitlement changes", "\"billing.entitlement.changed\""),
 		textCheck("data-map-ledger", sources.dataMap, "Billing financial data requires ledger balance reconciliation", "row_count, checksum, ledger_balance"),
 		textCheck("subscription-rebuild", sources.dataMap, "Subscriptions have explicit rebuild decision", "`target-postgres:billing-usage.subscriptions`"),

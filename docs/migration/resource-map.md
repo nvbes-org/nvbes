@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 18
+- entries: 25
 - pending: 0
-- keep: 4
-- rebuild: 13
+- keep: 10
+- rebuild: 14
 - remove: 0
 - replace: 1
 
@@ -20,7 +20,13 @@
 | Type | Name | Decision | Owner | Target |
 |---|---|---:|---|---|
 | bucket | scaleway_object_bucket.files | replace | Data lead | `deploy/oss/opentofu#s3-compatible-files-bucket` |
+| event_topic | billing.dunning.changed | keep | Platform lead | `contracts/events/billing.dunning.changed.v1.schema.json` |
 | event_topic | billing.entitlement.changed | keep | Platform lead | `contracts/events/billing.entitlement.changed.v1.schema.json` |
+| event_topic | billing.invoice.issued | keep | Platform lead | `contracts/events/billing.invoice.issued.v1.schema.json` |
+| event_topic | billing.payment.changed | keep | Platform lead | `contracts/events/billing.payment.changed.v1.schema.json` |
+| event_topic | billing.reconciliation.difference | keep | Platform lead | `contracts/events/billing.reconciliation.difference.v1.schema.json` |
+| event_topic | billing.subscription.changed | keep | Platform lead | `contracts/events/billing.subscription.changed.v1.schema.json` |
+| event_topic | billing.usage.recorded | keep | Platform lead | `contracts/events/billing.usage.recorded.v1.schema.json` |
 | event_topic | drive.file.created | keep | Platform lead | `contracts/events/drive.file.created.v1.schema.json` |
 | event_topic | identity.user.created | keep | Platform lead | `contracts/events/identity.user.created.v1.schema.json` |
 | event_topic | workspace.membership.created | keep | Platform lead | `contracts/events/workspace.membership.created.v1.schema.json` |
@@ -28,6 +34,7 @@
 | queue | data.export | rebuild | Infra lead | `apps/workers#audit-privacy-data-export` |
 | queue | email.send | rebuild | Infra lead | `apps/workers#email-email-send` |
 | queue | email.webhook.process | rebuild | Infra lead | `apps/workers#email-email-webhook-process` |
+| queue | geo.lookup_maintenance | rebuild | Infra lead | `apps/workers#geo-lookup-maintenance` |
 | queue | privacy.account_delete | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-account-delete` |
 | queue | privacy.account_export | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-account-export` |
 | queue | privacy.workspace_delete | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-workspace-delete` |

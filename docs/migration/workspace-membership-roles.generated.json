@@ -168,14 +168,14 @@
       "description": "Permission denied decisions insert an audit event",
       "path": "apps/identity-api/src/identity.domains.authz.db.rs",
       "status": "passed",
-      "pattern": "INSERT INTO audit_events"
+      "pattern": "record_event_tx"
     },
     {
       "id": "audit-action",
       "description": "Permission denied audit uses stable action literal",
       "path": "apps/identity-api/src/identity.domains.authz.db.rs",
       "status": "passed",
-      "pattern": "'permission.denied'"
+      "pattern": "action: \"permission.denied\""
     },
     {
       "id": "audit-metadata-helper",

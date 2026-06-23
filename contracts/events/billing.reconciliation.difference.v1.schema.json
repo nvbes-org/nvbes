@@ -4,30 +4,39 @@
   "title": "billing.reconciliation.difference.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "reconciliation_run_id",
-    "difference_type",
-    "severity",
-    "detected_at"
-  ],
+  "required": ["event_type", "event_version", "payload"],
   "properties": {
-    "reconciliation_run_id": { "type": "string", "format": "uuid" },
-    "tenant_id": { "type": "string", "format": "uuid" },
-    "provider": { "type": "string", "enum": ["stripe", "mollie"] },
-    "provider_reference": { "type": "string" },
-    "difference_type": {
-      "type": "string",
-      "enum": [
-        "missing_provider_event",
-        "amount_mismatch",
-        "currency_mismatch",
-        "status_mismatch",
-        "duplicate_capture",
-        "unbalanced_ledger"
-      ]
-    },
-    "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
-    "detected_at": { "type": "string", "format": "date-time" },
-    "details": { "type": "object", "additionalProperties": true }
+    "event_type": { "const": "billing.reconciliation.difference" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reconciliation_run_id",
+        "difference_type",
+        "severity",
+        "detected_at"
+      ],
+      "properties": {
+        "reconciliation_run_id": { "type": "string", "format": "uuid" },
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "provider": { "type": "string", "enum": ["stripe", "mollie"] },
+        "provider_reference": { "type": "string" },
+        "difference_type": {
+          "type": "string",
+          "enum": [
+            "missing_provider_event",
+            "amount_mismatch",
+            "currency_mismatch",
+            "status_mismatch",
+            "duplicate_capture",
+            "unbalanced_ledger"
+          ]
+        },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+        "detected_at": { "type": "string", "format": "date-time" },
+        "details": { "type": "object", "additionalProperties": true }
+      }
+    }
   }
 }

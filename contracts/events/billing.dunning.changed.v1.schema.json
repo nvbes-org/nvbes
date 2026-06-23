@@ -4,24 +4,33 @@
   "title": "billing.dunning.changed.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "tenant_id",
-    "dunning_case_id",
-    "subscription_id",
-    "policy_state",
-    "status",
-    "changed_at"
-  ],
+  "required": ["event_type", "event_version", "payload"],
   "properties": {
-    "tenant_id": { "type": "string", "format": "uuid" },
-    "dunning_case_id": { "type": "string", "format": "uuid" },
-    "subscription_id": { "type": "string", "format": "uuid" },
-    "policy_state": {
-      "type": "string",
-      "enum": ["active", "warning", "grace", "degraded", "suspended", "canceled"]
-    },
-    "status": { "type": "string", "enum": ["open", "closed"] },
-    "changed_at": { "type": "string", "format": "date-time" },
-    "attempt_count": { "type": "integer", "minimum": 0 }
+    "event_type": { "const": "billing.dunning.changed" },
+    "event_version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "dunning_case_id",
+        "subscription_id",
+        "policy_state",
+        "status",
+        "changed_at"
+      ],
+      "properties": {
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "dunning_case_id": { "type": "string", "format": "uuid" },
+        "subscription_id": { "type": "string", "format": "uuid" },
+        "policy_state": {
+          "type": "string",
+          "enum": ["active", "warning", "grace", "degraded", "suspended", "canceled"]
+        },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "changed_at": { "type": "string", "format": "date-time" },
+        "attempt_count": { "type": "integer", "minimum": 0 }
+      }
+    }
   }
 }

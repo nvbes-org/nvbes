@@ -4,49 +4,67 @@
   "title": "billing.entitlement.changed.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "tenant_id",
-    "workspace_id",
-    "snapshot_id",
-    "plan_code",
-    "subscription_status",
-    "effective_at",
-    "entitlements"
-  ],
+  "required": ["event_type", "event_version", "payload"],
   "properties": {
-    "tenant_id": { "type": "string", "format": "uuid" },
-    "workspace_id": { "type": "string", "format": "uuid" },
-    "snapshot_id": { "type": "string", "format": "uuid" },
-    "plan_code": { "type": "string", "minLength": 1 },
-    "subscription_status": {
-      "type": "string",
-      "enum": ["trialing", "active", "grace", "past_due", "degraded", "suspended", "canceled", "ended"]
-    },
-    "effective_at": { "type": "string", "format": "date-time" },
-    "entitlements": {
+    "event_type": { "const": "billing.entitlement.changed" },
+    "event_version": { "const": 1 },
+    "payload": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "can_upload",
-        "can_create_share_links",
-        "included_storage_bytes",
-        "included_users",
-        "max_share_links",
-        "billing_locked"
+        "tenant_id",
+        "workspace_id",
+        "snapshot_id",
+        "plan_code",
+        "subscription_status",
+        "effective_at",
+        "entitlements"
       ],
       "properties": {
-        "can_upload": { "type": "boolean" },
-        "can_create_share_links": { "type": "boolean" },
-        "included_storage_bytes": { "type": "integer", "minimum": 0 },
-        "included_users": { "type": "integer", "minimum": 0 },
-        "max_share_links": { "type": "integer", "minimum": 0 },
-        "max_share_link_ttl_days": { "type": "integer", "minimum": 0 },
-        "audit_level": { "type": "string" },
-        "api_key_limit": { "type": "integer", "minimum": 0 },
-        "billing_locked": { "type": "boolean" }
+        "tenant_id": { "type": "string", "format": "uuid" },
+        "workspace_id": { "type": "string", "format": "uuid" },
+        "snapshot_id": { "type": "string", "format": "uuid" },
+        "plan_code": { "type": "string", "minLength": 1 },
+        "subscription_status": {
+          "type": "string",
+          "enum": [
+            "trialing",
+            "active",
+            "grace",
+            "past_due",
+            "degraded",
+            "suspended",
+            "canceled",
+            "ended"
+          ]
+        },
+        "effective_at": { "type": "string", "format": "date-time" },
+        "entitlements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "can_upload",
+            "can_create_share_links",
+            "included_storage_bytes",
+            "included_users",
+            "max_share_links",
+            "billing_locked"
+          ],
+          "properties": {
+            "can_upload": { "type": "boolean" },
+            "can_create_share_links": { "type": "boolean" },
+            "included_storage_bytes": { "type": "integer", "minimum": 0 },
+            "included_users": { "type": "integer", "minimum": 0 },
+            "max_share_links": { "type": "integer", "minimum": 0 },
+            "max_share_link_ttl_days": { "type": "integer", "minimum": 0 },
+            "audit_level": { "type": "string" },
+            "api_key_limit": { "type": "integer", "minimum": 0 },
+            "billing_locked": { "type": "boolean" }
+          }
+        },
+        "reason": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": true }
       }
-    },
-    "reason": { "type": "string" },
-    "metadata": { "type": "object", "additionalProperties": true }
+    }
   }
 }

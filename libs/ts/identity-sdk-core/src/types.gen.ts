@@ -1620,6 +1620,22 @@ export interface paths {
         patch: operations["update_scim_connector"];
         trace?: never;
     };
+    "/webhooks/mollie": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["handle_mollie_webhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/stripe": {
         parameters: {
             query?: never;
@@ -2393,7 +2409,11 @@ export interface components {
             email: string;
         };
         CheckoutSessionResponse: {
+            checkout_id: string;
+            payment_id?: string | null;
             provider: string;
+            provider_customer_id: string;
+            provider_price_id?: string | null;
             session_id: string;
             stripe_customer_id: string;
             stripe_price_id: string;
@@ -3358,13 +3378,26 @@ export interface components {
         ScimProvisioningConnectorsResponse: {
             connectors: components["schemas"]["ScimProvisioningConnectorView"][];
         };
+        SecurityEventCount: {
+            count: number;
+            key: string;
+        };
         SecurityEventView: {
             /** Format: date-time */
             created_at: string;
             event_type: string;
+            geo_confidence?: string | null;
+            geo_country_code?: string | null;
+            geo_network_kind?: string | null;
+            geo_risk_labels: string[];
+            /** Format: int64 */
+            geo_risk_score?: number | null;
+            geo_source?: string | null;
             /** Format: uuid */
             id: string;
             ip_address?: string | null;
+            /** Format: double */
+            risk_score?: number | null;
             status?: string | null;
             user_agent?: string | null;
         };
@@ -3372,6 +3405,14 @@ export interface components {
             events: components["schemas"]["SecurityEventView"][];
             /** Format: uuid */
             next_cursor?: string | null;
+            summary: components["schemas"]["SecurityEventsSummary"];
+        };
+        SecurityEventsSummary: {
+            by_country: components["schemas"]["SecurityEventCount"][];
+            by_network_kind: components["schemas"]["SecurityEventCount"][];
+            by_risk_label: components["schemas"]["SecurityEventCount"][];
+            high_risk_events: number;
+            total_events: number;
         };
         ServiceAccountClientView: {
             allowed_audiences: string[];
@@ -9144,6 +9185,58 @@ export interface operations {
             };
         };
     };
+    handle_mollie_webhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Raw Mollie webhook payload */
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": string;
+            };
+        };
+        responses: {
+            /** @description Webhook accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingWebhookResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     handle_stripe_webhook: {
         parameters: {
             query?: never;
@@ -9894,6 +9987,18 @@ export interface operations {
                 limit?: number;
                 /** @description Cursor for pagination */
                 before?: string;
+                /** @description Filter by resolved ISO country code */
+                geo_country_code?: string;
+                /** @description Filter by geo source */
+                geo_source?: string;
+                /** @description Filter by geo confidence */
+                geo_confidence?: string;
+                /** @description Filter by geo network kind */
+                geo_network_kind?: string;
+                /** @description Minimum geo network risk score */
+                min_geo_risk_score?: number;
+                /** @description Filter by exact geo risk label */
+                geo_risk_label?: string;
             };
             header?: never;
             path: {

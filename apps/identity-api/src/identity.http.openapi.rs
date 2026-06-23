@@ -75,6 +75,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::billing::routes::manage::get_billing_usage,
         crate::domains::billing::routes::manage::get_entitlements,
         crate::domains::billing::routes::webhooks::handle_stripe_webhook,
+        crate::domains::billing::routes::webhooks::handle_mollie_webhook,
         crate::domains::members::routes::manage::list_members,
         crate::domains::members::routes::manage::update_member,
         crate::domains::members::routes::manage::remove_member,
