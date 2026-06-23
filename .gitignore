@@ -17,7 +17,6 @@ vendor/*
 !vendor/xmlsec/
 !vendor/xmlsec/**
 debug/
-Cargo.lock
 **/*.rs.bk
 *.pdb
 **/mutants.out*/
