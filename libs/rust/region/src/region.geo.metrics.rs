@@ -37,3 +37,14 @@ pub fn record_rdap_lookup(registry: &str, outcome: &str, duration: Duration) {
     metrics::counter!("geo_rdap_lookups_total", &labels).increment(1);
     metrics::histogram!("geo_rdap_lookup_duration_seconds", &labels).record(duration.as_secs_f64());
 }
+
+pub fn record_ip_intelligence_lookup(provider: &str, outcome: &str, duration: Duration) {
+    let labels = [
+        ("provider", provider.to_string()),
+        ("outcome", outcome.to_string()),
+    ];
+
+    metrics::counter!("geo_ip_intelligence_lookups_total", &labels).increment(1);
+    metrics::histogram!("geo_ip_intelligence_lookup_duration_seconds", &labels)
+        .record(duration.as_secs_f64());
+}

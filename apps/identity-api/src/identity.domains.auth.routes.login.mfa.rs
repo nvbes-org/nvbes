@@ -75,6 +75,7 @@ pub(crate) async fn challenge_mfa(
             let error_code = err.code.clone();
             let geo_signal = crate::domains::auth::risk::geo::apply_geo_security_signal(
                 &state.db,
+                &state.config,
                 principal_id,
                 audit_ip.as_deref(),
                 35.0,

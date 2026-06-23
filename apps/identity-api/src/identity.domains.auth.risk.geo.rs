@@ -1,3 +1,4 @@
+use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
     GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
 };
@@ -13,13 +14,15 @@ pub struct GeoSecuritySignal {
 
 pub async fn apply_geo_security_signal(
     db: &PgPool,
+    config: &AppConfig,
     principal_id: Uuid,
     ip: Option<&str>,
     base_score: f64,
     mut factors: Value,
     event_type: &'static str,
 ) -> GeoSecuritySignal {
-    let Some(resolution) = resolve_and_record(db, principal_id, ip, event_type).await else {
+    let Some(resolution) = resolve_and_record(db, config, principal_id, ip, event_type).await
+    else {
         return GeoSecuritySignal {
             score: base_score,
             factors,
@@ -111,11 +114,17 @@ fn geo_metadata(resolution: Option<&GeoResolution>) -> Value {
 
 async fn resolve_and_record(
     db: &PgPool,
+    config: &AppConfig,
     principal_id: Uuid,
     ip: Option<&str>,
     request_id: &'static str,
 ) -> Option<GeoResolution> {
     let mut tx = db.begin().await.ok()?;
+    if let Err(error) =
+        crate::domains::auth::geo_intelligence::ensure_ip_intelligence_tx(&mut tx, config, ip).await
+    {
+        tracing::warn!(%error, "auth ip intelligence cache refresh failed");
+    }
     let resolution = match resolve_cached_geo_tx(&mut tx, ip, None, None).await {
         Ok(resolution) => resolution,
         Err(_) => {

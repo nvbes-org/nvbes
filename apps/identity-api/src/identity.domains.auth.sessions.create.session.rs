@@ -153,6 +153,7 @@ pub async fn create_session_for_principal(
     }
     let geo_resolution = record_login_geo_signal(
         db,
+        config,
         principal_id,
         context.ip.as_deref(),
         country,
@@ -185,6 +186,9 @@ pub async fn create_session_for_principal(
                 }),
                 "geo_source": geo_resolution.as_ref().map(|resolution| resolution.source.as_str()),
                 "geo_confidence": geo_resolution.as_ref().map(|resolution| resolution.confidence.as_str()),
+                "geo_network_kind": geo_resolution.as_ref().map(|resolution| resolution.network_kind.as_str()),
+                "geo_risk_score": geo_resolution.as_ref().map(|resolution| resolution.risk_score),
+                "geo_risk_labels": geo_resolution.as_ref().map(|resolution| &resolution.risk_labels),
                 "device_fingerprint_hash": device_fingerprint_hash,
             }),
         },
@@ -214,6 +218,9 @@ pub async fn create_session_for_principal(
                 }),
                 "geo_source": geo_resolution.as_ref().map(|resolution| resolution.source.as_str()),
                 "geo_confidence": geo_resolution.as_ref().map(|resolution| resolution.confidence.as_str()),
+                "geo_network_kind": geo_resolution.as_ref().map(|resolution| resolution.network_kind.as_str()),
+                "geo_risk_score": geo_resolution.as_ref().map(|resolution| resolution.risk_score),
+                "geo_risk_labels": geo_resolution.as_ref().map(|resolution| &resolution.risk_labels),
             }),
         },
     )

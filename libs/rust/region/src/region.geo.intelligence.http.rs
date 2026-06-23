@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::time::Instant;
 
 use reqwest::Client;
 use serde_json::Value;
@@ -102,17 +103,61 @@ impl IpIntelligenceHttpClient {
         provider: &IpIntelligenceHttpProvider,
         ip: IpAddr,
     ) -> Result<Option<IpIntelligenceLookup>, IpIntelligenceHttpError> {
+        let started_at = Instant::now();
         let mut request = self.client.get(provider.url_for_ip(ip));
         if let Some(value) = provider.authorization_header.as_deref() {
             request = request.header(reqwest::header::AUTHORIZATION, value);
         }
 
-        let response = request.send().await?;
+        let response = match request.send().await {
+            Ok(response) => response,
+            Err(error) => {
+                crate::geo::metrics::record_ip_intelligence_lookup(
+                    provider.source_code.as_str(),
+                    "request_error",
+                    started_at.elapsed(),
+                );
+                return Err(error.into());
+            }
+        };
         if !response.status().is_success() {
+            crate::geo::metrics::record_ip_intelligence_lookup(
+                provider.source_code.as_str(),
+                "http_miss",
+                started_at.elapsed(),
+            );
             return Ok(None);
         }
-        let body = response.json::<Value>().await?;
-        normalize_http_body(provider.source_code.as_str(), ip, &body).map(Some)
+        let body = match response.json::<Value>().await {
+            Ok(body) => body,
+            Err(error) => {
+                crate::geo::metrics::record_ip_intelligence_lookup(
+                    provider.source_code.as_str(),
+                    "decode_error",
+                    started_at.elapsed(),
+                );
+                return Err(error.into());
+            }
+        };
+        match normalize_http_body(provider.source_code.as_str(), ip, &body) {
+            Ok(lookup) => {
+                crate::geo::metrics::record_ip_intelligence_lookup(
+                    provider.source_code.as_str(),
+                    "hit",
+                    started_at.elapsed(),
+                );
+                Ok(Some(lookup))
+            }
+            Err(IpIntelligenceHttpError::Empty) => {
+                crate::geo::metrics::record_ip_intelligence_lookup(
+                    provider.source_code.as_str(),
+                    "empty",
+                    started_at.elapsed(),
+                );
+                Ok(None)
+            }
+            Err(error) => Err(error),
+        }
     }
 }
 
@@ -218,66 +263,5 @@ fn value_at_path<'a>(body: &'a Value, path: &str) -> Option<&'a Value> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        IpIntelligenceHttpProvider, normalize_http_body, provider_from_spec, providers_from_specs,
-    };
-    use crate::geo::types::GeoNetworkKind;
-
-    #[test]
-    fn provider_url_replaces_ip_placeholder() {
-        let provider = IpIntelligenceHttpProvider {
-            source_code: "fixture".to_string(),
-            url_template: "https://example.test/ip/{ip}".to_string(),
-            authorization_header: None,
-        };
-
-        assert_eq!(
-            provider.url_for_ip("8.8.8.8".parse().unwrap()),
-            "https://example.test/ip/8.8.8.8"
-        );
-    }
-
-    #[test]
-    fn parses_provider_specs() {
-        let providers = providers_from_specs(&[
-            "ipinfo|https://example.test/{ip}|Bearer token".to_string(),
-            "maxmind|https://risk.example/{ip}".to_string(),
-        ])
-        .unwrap();
-
-        assert_eq!(providers.len(), 2);
-        assert_eq!(providers[0].source_code, "ipinfo");
-        assert_eq!(
-            providers[0].authorization_header.as_deref(),
-            Some("Bearer token")
-        );
-        assert!(provider_from_spec("broken").is_err());
-        assert!(provider_from_spec("source|https://example.test/no-placeholder").is_err());
-    }
-
-    #[test]
-    fn normalizes_common_privacy_payload() {
-        let body = serde_json::json!({
-            "country": "fr",
-            "asn": "AS64500",
-            "org": "Example Network",
-            "privacy": {"vpn": true, "proxy": false, "tor": false, "hosting": false},
-            "risk_labels": ["commercial_vpn"]
-        });
-
-        let lookup =
-            normalize_http_body("fixture_provider", "8.8.8.8".parse().unwrap(), &body).unwrap();
-
-        assert_eq!(lookup.country_code.as_deref(), Some("FR"));
-        assert_eq!(lookup.relation.asn, Some(64500));
-        assert_eq!(lookup.relation.network_kind, Some(GeoNetworkKind::Vpn));
-        assert_eq!(lookup.relation.risk_score, Some(90));
-        assert!(
-            lookup
-                .relation
-                .risk_labels
-                .contains(&"commercial_vpn".to_string())
-        );
-    }
-}
+#[path = "region.geo.intelligence.http.tests.rs"]
+mod tests;

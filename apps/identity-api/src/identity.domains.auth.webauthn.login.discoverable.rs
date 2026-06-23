@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use nvbes_core::config::AppConfig;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
@@ -65,6 +66,7 @@ pub async fn start_discoverable_login_authentication(
 pub async fn finish_discoverable_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
+    config: &AppConfig,
     webauthn: &webauthn_rs::Webauthn,
     challenge_id: Uuid,
     credential: &PublicKeyCredential,
@@ -136,6 +138,7 @@ pub async fn finish_discoverable_login_authentication(
 
     let geo_signal = risk::geo::apply_geo_security_signal(
         db,
+        config,
         principal_id,
         ip,
         0.0,

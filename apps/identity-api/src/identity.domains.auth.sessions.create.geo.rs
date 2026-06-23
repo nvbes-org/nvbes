@@ -1,3 +1,4 @@
+use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
     GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
 };
@@ -9,6 +10,7 @@ use crate::domains::auth::risk;
 
 pub(super) async fn record_login_geo_signal(
     db: &PgPool,
+    config: &AppConfig,
     principal_id: Uuid,
     ip: Option<&str>,
     client_country: Option<&str>,
@@ -16,7 +18,7 @@ pub(super) async fn record_login_geo_signal(
     decision: &mut risk::RiskDecision,
     factors: &mut Value,
 ) -> Option<GeoResolution> {
-    let resolution = resolve_and_record(db, principal_id, ip).await?;
+    let resolution = resolve_and_record(db, config, principal_id, ip).await?;
     let mut geo_score_delta = 0.0;
     let mut geo_factors = Vec::new();
 
@@ -31,6 +33,13 @@ pub(super) async fn record_login_geo_signal(
     if resolution.source.as_str() == "fallback" {
         geo_score_delta += 10.0;
         geo_factors.push("geo_unresolved");
+    }
+    if resolution.risk_score >= 80 {
+        geo_score_delta += 25.0;
+        geo_factors.push("high_risk_network");
+    } else if resolution.risk_score >= 60 {
+        geo_score_delta += 12.0;
+        geo_factors.push("elevated_risk_network");
     }
     let resolved_country = resolution
         .location
@@ -69,6 +78,18 @@ pub(super) async fn record_login_geo_signal(
             "geo_private_network".to_string(),
             serde_json::json!(resolution.private_network),
         );
+        object.insert(
+            "geo_network_kind".to_string(),
+            serde_json::json!(resolution.network_kind.as_str()),
+        );
+        object.insert(
+            "geo_risk_score".to_string(),
+            serde_json::json!(resolution.risk_score),
+        );
+        object.insert(
+            "geo_risk_labels".to_string(),
+            serde_json::json!(resolution.risk_labels),
+        );
     }
 
     Some(resolution)
@@ -76,10 +97,16 @@ pub(super) async fn record_login_geo_signal(
 
 async fn resolve_and_record(
     db: &PgPool,
+    config: &AppConfig,
     principal_id: Uuid,
     ip: Option<&str>,
 ) -> Option<GeoResolution> {
     let mut tx = db.begin().await.ok()?;
+    if let Err(error) =
+        crate::domains::auth::geo_intelligence::ensure_ip_intelligence_tx(&mut tx, config, ip).await
+    {
+        tracing::warn!(%error, "login ip intelligence cache refresh failed");
+    }
     let resolution = match resolve_cached_geo_tx(&mut tx, ip, None, None).await {
         Ok(resolution) => resolution,
         Err(_) => {

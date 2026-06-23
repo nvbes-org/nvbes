@@ -59,6 +59,7 @@ pub(crate) async fn challenge_webauthn_start(
     let (challenge_id, options) = crate::domains::auth::webauthn::start_login_authentication(
         &state.db,
         &state.redis,
+        &state.config,
         &webauthn,
         auth_state.id,
         principal_id,
@@ -150,6 +151,7 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
         crate::domains::auth::webauthn::finish_discoverable_login_authentication(
             &state.db,
             &state.redis,
+            &state.config,
             &webauthn,
             request.challenge_id,
             &request.webauthn_response,

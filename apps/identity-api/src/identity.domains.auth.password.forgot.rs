@@ -34,6 +34,7 @@ pub async fn forgot(
             risk::current_state_summary(db, principal_id).await?;
         let (risk_score, risk_factors, geo_resolution) = password_geo_signal(
             db,
+            config,
             principal_id,
             ip.as_deref(),
             risk_score,

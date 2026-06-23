@@ -70,6 +70,7 @@ pub async fn reset(
 
     let (risk_score, risk_factors, geo_resolution) = password_geo_signal(
         db,
+        config,
         principal_id,
         ip.as_deref(),
         10.0,

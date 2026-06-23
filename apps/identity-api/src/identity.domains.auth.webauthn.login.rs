@@ -1,3 +1,4 @@
+use nvbes_core::config::AppConfig;
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -19,6 +20,7 @@ pub use discoverable::{
 pub async fn start_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
+    config: &AppConfig,
     webauthn: &webauthn_rs::Webauthn,
     auth_state_id: Uuid,
     principal_id: Uuid,
@@ -64,6 +66,7 @@ pub async fn start_login_authentication(
 
     let geo_signal = risk::geo::apply_geo_security_signal(
         db,
+        config,
         principal_id,
         ip,
         5.0,
@@ -105,6 +108,7 @@ pub async fn start_login_authentication(
 pub async fn finish_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
+    config: &AppConfig,
     webauthn: &webauthn_rs::Webauthn,
     auth_state_id: Uuid,
     principal_id: Uuid,
@@ -163,6 +167,7 @@ pub async fn finish_login_authentication(
 
     let geo_signal = risk::geo::apply_geo_security_signal(
         db,
+        config,
         principal_id,
         ip,
         0.0,

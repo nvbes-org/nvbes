@@ -120,6 +120,7 @@ async fn resolve_webauthn_method(
     match crate::domains::auth::webauthn::finish_login_authentication(
         db,
         redis,
+        config,
         &webauthn,
         auth_state_id,
         principal_id,
