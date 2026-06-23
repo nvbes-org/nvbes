@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getEntitlementsCenter } from './internal-admin.api';
+import { EntitlementsActionsPanel } from './internal-admin.entitlements-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -86,6 +87,7 @@ export function EntitlementsCenterPanel({
           value={formatCount(data?.active_trial_grant_count)}
         />
       </div>
+      <EntitlementsActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <PlanList rows={data?.active_plans ?? []} />
         <OverQuotaList

@@ -44,6 +44,13 @@ mod customer_center;
 mod developer_center;
 #[path = "internal_admin.entitlements_center.rs"]
 mod entitlements_center;
+#[path = "internal_admin.entitlements_center.actions.rs"]
+mod entitlements_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.entitlements_center.actions.tests.rs"]
+mod entitlements_center_actions_tests;
+#[path = "internal_admin.entitlements_center.mutations.rs"]
+mod entitlements_center_mutations;
 #[path = "internal_admin.http.error.rs"]
 mod error;
 #[path = "internal_admin.global_search.rs"]
@@ -74,6 +81,13 @@ mod security_center_actions;
 mod tenants;
 #[path = "internal_admin.usage_center.rs"]
 mod usage_center;
+#[path = "internal_admin.usage_center.actions.rs"]
+mod usage_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.usage_center.actions.tests.rs"]
+mod usage_center_actions_tests;
+#[path = "internal_admin.usage_center.mutations.rs"]
+mod usage_center_mutations;
 #[path = "internal_admin.users.rs"]
 mod users;
 #[path = "internal_admin.workspaces.rs"]

@@ -246,6 +246,33 @@ export type EntitlementsSnapshot = {
   unpublished_changes: UnpublishedEntitlementChange[];
 };
 
+export type EntitlementFeatureActionRequest = {
+  confirm_code: string;
+  feature_code: string;
+  value: Record<string, unknown>;
+  reason: string;
+};
+
+export type EntitlementQuotaOverrideRequest = {
+  confirm_code: string;
+  quota_code: string;
+  included_quantity: number;
+  reason: string;
+};
+
+export type EntitlementPublishRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type EntitlementActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  published_change_count: number;
+  audit_action: string;
+};
+
 export type UsageCenterSnapshot = {
   active_meter_count: number;
   usage_event_count_24h: number;

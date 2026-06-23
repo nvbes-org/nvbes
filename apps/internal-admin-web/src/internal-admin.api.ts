@@ -16,6 +16,10 @@ import type {
   CreditNoteRequest,
   CustomerCenterSnapshot,
   DeveloperCenterSnapshot,
+  EntitlementActionResult,
+  EntitlementFeatureActionRequest,
+  EntitlementPublishRequest,
+  EntitlementQuotaOverrideRequest,
   EntitlementsSnapshot,
   ExportType,
   GraceOverrideRequest,
@@ -245,6 +249,50 @@ export async function getEntitlementsCenter(credentials: AdminCredentials) {
     headers: authHeaders(credentials),
   });
   return parseJson<EntitlementsSnapshot>(response);
+}
+
+export function grantEntitlementFeature(
+  credentials: AdminCredentials,
+  body: EntitlementFeatureActionRequest,
+) {
+  return postJson<EntitlementFeatureActionRequest, EntitlementActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/entitlements/grants`,
+    body,
+  );
+}
+
+export function revokeEntitlementFeature(
+  credentials: AdminCredentials,
+  body: EntitlementFeatureActionRequest,
+) {
+  return postJson<EntitlementFeatureActionRequest, EntitlementActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/entitlements/revocations`,
+    body,
+  );
+}
+
+export function overrideEntitlementQuota(
+  credentials: AdminCredentials,
+  body: EntitlementQuotaOverrideRequest,
+) {
+  return postJson<EntitlementQuotaOverrideRequest, EntitlementActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/entitlements/quota-overrides`,
+    body,
+  );
+}
+
+export function publishEntitlementChanges(
+  credentials: AdminCredentials,
+  body: EntitlementPublishRequest,
+) {
+  return postJson<EntitlementPublishRequest, EntitlementActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/entitlements/publish`,
+    body,
+  );
 }
 
 export async function getIdentityGovernanceCenter(credentials: AdminCredentials) {

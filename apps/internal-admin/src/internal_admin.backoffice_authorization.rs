@@ -9,9 +9,11 @@ const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
 pub(crate) enum BackofficePermission {
     AccessMutate,
     BillingMutate,
+    EntitlementsMutate,
     GovernanceMutate,
     SecurityMutate,
     TenantLifecycle,
+    UsageMutate,
     UserLifecycle,
     WorkspaceLifecycle,
 }
@@ -97,7 +99,12 @@ fn parse_role(value: &str) -> Result<BackofficeRole, AppError> {
 fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
     match role {
         BackofficeRole::PlatformAdmin => true,
-        BackofficeRole::FinanceAdmin => matches!(permission, BackofficePermission::BillingMutate),
+        BackofficeRole::FinanceAdmin => matches!(
+            permission,
+            BackofficePermission::BillingMutate
+                | BackofficePermission::EntitlementsMutate
+                | BackofficePermission::UsageMutate
+        ),
         BackofficeRole::SecurityAdmin => matches!(
             permission,
             BackofficePermission::AccessMutate
@@ -133,6 +140,14 @@ mod tests {
             BackofficeRole::PlatformAdmin,
             BackofficePermission::SecurityMutate
         ));
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::EntitlementsMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::UsageMutate
+        ));
     }
 
     #[test]
@@ -164,6 +179,14 @@ mod tests {
         assert!(role_allows(
             BackofficeRole::FinanceAdmin,
             BackofficePermission::BillingMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::EntitlementsMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::UsageMutate
         ));
         assert!(!role_allows(
             BackofficeRole::FinanceAdmin,
