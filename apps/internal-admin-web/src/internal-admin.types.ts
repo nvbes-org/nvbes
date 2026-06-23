@@ -79,6 +79,245 @@ export type UserDetail = {
   updated_at: string;
 };
 
+export type SecurityCenterSnapshot = {
+  risk_events_24h: number;
+  high_risk_events_24h: number;
+  active_users_without_mfa: number;
+  suspended_principal_count: number;
+  revoked_principal_count: number;
+  unverified_user_count: number;
+  active_oauth_consent_count: number;
+  recent_risk_events: RecentRiskEvent[];
+  users_without_mfa: UserWithoutMfa[];
+};
+
+export type ComplianceCenterSnapshot = {
+  active_consent_count: number;
+  revoked_consent_count_30d: number;
+  suppressed_email_count: number;
+  email_bounce_count_24h: number;
+  email_delivery_failure_count_24h: number;
+  unverified_user_count: number;
+  recent_revoked_consents: RecentRevokedConsent[];
+  recent_suppressed_emails: RecentSuppressedEmail[];
+};
+
+export type RevenueCenterSnapshot = {
+  captured_payments_30d: MoneyTotal[];
+  open_invoices: MoneyTotal[];
+  overdue_invoices: MoneyTotal[];
+  refunds_30d: MoneyTotal[];
+  disputes_30d: MoneyTotal[];
+  active_subscription_count: number;
+  trialing_subscription_count: number;
+  open_dunning_case_count: number;
+  unresolved_reconciliation_difference_count: number;
+  recent_overdue_invoices: RecentOverdueInvoice[];
+  recent_captured_payments: RecentCapturedPayment[];
+};
+
+export type CustomerCenterSnapshot = {
+  active_tenant_count: number;
+  suspended_tenant_count: number;
+  dormant_workspace_count: number;
+  pending_invitation_count: number;
+  expired_invitation_count: number;
+  usage_events_24h: number;
+  storage_bytes_used: number;
+  file_count: number;
+  high_storage_workspaces: HighStorageWorkspace[];
+  dormant_workspaces: DormantWorkspace[];
+  tenants_with_pending_invites: TenantPendingInvites[];
+};
+
+export type OperationsCenterSnapshot = {
+  provider_event_failure_count: number;
+  provider_event_backlog_count: number;
+  export_pending_count: number;
+  export_failed_count: number;
+  reconciliation_pending_count: number;
+  reconciliation_failed_count: number;
+  unresolved_reconciliation_difference_count: number;
+  queued_email_count: number;
+  dropped_email_count_24h: number;
+  audit_events_24h: number;
+  recent_provider_failures: RecentProviderFailure[];
+  recent_export_runs: RecentExportRun[];
+  recent_reconciliation_differences: RecentReconciliationDifference[];
+};
+
+export type AccessCenterSnapshot = {
+  workspace_owner_count: number;
+  workspace_admin_count: number;
+  ownerless_workspace_count: number;
+  service_account_count: number;
+  stale_service_account_count: number;
+  oauth_client_count: number;
+  revoked_oauth_client_count: number;
+  restricted_client_policy_count: number;
+  privileged_users: PrivilegedUser[];
+  ownerless_workspaces: OwnerlessWorkspace[];
+  stale_service_accounts: StaleServiceAccount[];
+};
+
+export type PrivilegedUser = {
+  principal_id: string;
+  email: string | null;
+  name: string | null;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string;
+  workspace_name: string;
+  role: string;
+  updated_at: string;
+};
+
+export type OwnerlessWorkspace = {
+  workspace_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_name: string;
+  plan_code: string;
+  created_at: string;
+};
+
+export type StaleServiceAccount = {
+  principal_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  name: string;
+  last_rotated_at: string | null;
+  created_at: string;
+};
+
+export type RecentProviderFailure = {
+  id: string;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  provider: string;
+  provider_event_id: string;
+  event_type: string;
+  status: string;
+  received_at: string;
+};
+
+export type RecentExportRun = {
+  id: string;
+  export_type: string;
+  status: string;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecentReconciliationDifference = {
+  id: string;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  difference_type: string;
+  severity: string;
+  created_at: string;
+};
+
+export type HighStorageWorkspace = {
+  workspace_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_name: string;
+  plan_code: string;
+  used_storage_bytes: number;
+  file_count: number;
+  updated_at: string;
+};
+
+export type DormantWorkspace = {
+  workspace_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_name: string;
+  plan_code: string;
+  last_usage_at: string | null;
+  created_at: string;
+};
+
+export type TenantPendingInvites = {
+  tenant_id: string;
+  tenant_name: string;
+  pending_invitation_count: number;
+  oldest_invitation_at: string;
+};
+
+export type MoneyTotal = {
+  currency: string;
+  amount_minor: number;
+  object_count: number;
+};
+
+export type RecentOverdueInvoice = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  invoice_number: string | null;
+  status: string;
+  currency: string;
+  total_minor: number;
+  due_at: string | null;
+};
+
+export type RecentCapturedPayment = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  status: string;
+  currency: string;
+  amount_minor: number;
+  created_at: string;
+};
+
+export type RecentRevokedConsent = {
+  id: string;
+  principal_id: string;
+  email: string | null;
+  tenant_id: string;
+  tenant_name: string;
+  consent_type: string;
+  document_version: string;
+  revoked_at: string;
+};
+
+export type RecentSuppressedEmail = {
+  email: string;
+  reason: string;
+  principal_id: string | null;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  suppressed_at: string;
+};
+
+export type RecentRiskEvent = {
+  id: string;
+  principal_id: string;
+  email: string | null;
+  tenant_id: string;
+  tenant_name: string;
+  event_type: string;
+  risk_score: number;
+  decision: string;
+  created_at: string;
+};
+
+export type UserWithoutMfa = {
+  principal_id: string;
+  email: string;
+  name: string;
+  tenant_id: string;
+  tenant_name: string;
+  created_at: string;
+};
+
 export type MutationResult = {
   object_id: string;
   ledger_entry_count: number;

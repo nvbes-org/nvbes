@@ -1,22 +1,28 @@
 import { verifiedFetch } from '@nvbes/web-runtime';
 import type {
+  AccessCenterSnapshot,
   AdminCredentials,
   AuditEvent,
   BillingOverview,
   BillingRunbook,
   CommandCenterSnapshot,
+  ComplianceCenterSnapshot,
   CreditNoteRequest,
+  CustomerCenterSnapshot,
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
   ManualCompRequest,
   MutationResult,
+  OperationsCenterSnapshot,
   ProviderMigrationRequest,
   ProviderEventFailure,
   ProviderReplayRequest,
   ProviderReplayResult,
   RefundIntentRequest,
+  RevenueCenterSnapshot,
   SearchResult,
+  SecurityCenterSnapshot,
   TenantDetail,
   UserDetail,
   WorkspaceDetail,
@@ -82,6 +88,36 @@ export async function getCommandCenter(credentials: AdminCredentials) {
     headers: authHeaders(credentials),
   });
   return parseJson<CommandCenterSnapshot>(response);
+}
+
+export async function getAccessCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/access-center', { headers: authHeaders(credentials) });
+  return parseJson<AccessCenterSnapshot>(response);
+}
+
+export async function getSecurityCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/security-center', { headers: authHeaders(credentials) });
+  return parseJson<SecurityCenterSnapshot>(response);
+}
+
+export async function getComplianceCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/compliance-center', { headers: authHeaders(credentials) });
+  return parseJson<ComplianceCenterSnapshot>(response);
+}
+
+export async function getRevenueCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/revenue-center', { headers: authHeaders(credentials) });
+  return parseJson<RevenueCenterSnapshot>(response);
+}
+
+export async function getCustomerCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/customer-center', { headers: authHeaders(credentials) });
+  return parseJson<CustomerCenterSnapshot>(response);
+}
+
+export async function getOperationsCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/operations-center', { headers: authHeaders(credentials) });
+  return parseJson<OperationsCenterSnapshot>(response);
 }
 
 export async function globalSearch(credentials: AdminCredentials, query: string) {

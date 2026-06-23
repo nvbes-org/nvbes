@@ -14,7 +14,13 @@ This app owns operator-only endpoints and must stay isolated from public product
 
 ## Billing
 
+- `GET /admin/access-center`
 - `GET /admin/command-center`
+- `GET /admin/compliance-center`
+- `GET /admin/customer-center`
+- `GET /admin/operations-center`
+- `GET /admin/revenue-center`
+- `GET /admin/security-center`
 - `GET /admin/search`
 - `GET /admin/tenants/{tenantId}`
 - `GET /admin/users/{principalId}`

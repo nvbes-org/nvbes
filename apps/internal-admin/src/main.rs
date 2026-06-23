@@ -1,3 +1,5 @@
+#[path = "internal_admin.access_center.rs"]
+mod access_center;
 #[path = "internal_admin.app.rs"]
 mod app;
 #[path = "internal_admin.audit.rs"]
@@ -24,12 +26,22 @@ mod billing_admin_validation;
 mod billing_runbooks;
 #[path = "internal_admin.command_center.rs"]
 mod command_center;
+#[path = "internal_admin.compliance_center.rs"]
+mod compliance_center;
+#[path = "internal_admin.customer_center.rs"]
+mod customer_center;
 #[path = "internal_admin.http.error.rs"]
 mod error;
 #[path = "internal_admin.global_search.rs"]
 mod global_search;
+#[path = "internal_admin.operations_center.rs"]
+mod operations_center;
+#[path = "internal_admin.revenue_center.rs"]
+mod revenue_center;
 #[path = "internal_admin.http.routes.rs"]
 mod routes;
+#[path = "internal_admin.security_center.rs"]
+mod security_center;
 #[path = "internal_admin.tenants.rs"]
 mod tenants;
 #[path = "internal_admin.users.rs"]

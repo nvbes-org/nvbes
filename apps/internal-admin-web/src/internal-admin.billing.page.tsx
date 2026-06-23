@@ -12,9 +12,15 @@ import { BillingOverviewCards } from './internal-admin.billing.overview';
 import { ProviderEventFailuresPanel } from './internal-admin.billing.provider-events';
 import { BillingRunbooks } from './internal-admin.billing.runbooks';
 import { BillingSearch } from './internal-admin.billing.search';
+import { AccessCenterPanel } from './internal-admin.access-center';
 import { AuditEventsPanel } from './internal-admin.audit.events';
+import { ComplianceCenterPanel } from './internal-admin.compliance-center';
 import { CommandCenterPanel } from './internal-admin.command-center';
+import { CustomerCenterPanel } from './internal-admin.customer-center';
 import { GlobalSearchPanel } from './internal-admin.global-search';
+import { OperationsCenterPanel } from './internal-admin.operations-center';
+import { RevenueCenterPanel } from './internal-admin.revenue-center';
+import { SecurityCenterPanel } from './internal-admin.security-center';
 import { InternalAdminShell } from './internal-admin.shell';
 import { StatusStrip } from './internal-admin.status-strip';
 import type { ProviderEventFailure } from './internal-admin.types';
@@ -49,6 +55,41 @@ export function BillingOperationsPage() {
     <InternalAdminShell>
       <StatusStrip isReady={isReady} readiness={readiness} />
       <CommandCenterPanel credentials={credentials} disabled={!isReady} />
+      <RevenueCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+      />
+      <CustomerCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectWorkspace={setSelectedWorkspaceId}
+      />
+      <OperationsCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+      />
+      <AccessCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+        onSelectWorkspace={setSelectedWorkspaceId}
+      />
+      <SecurityCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+      />
+      <ComplianceCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+      />
       <GlobalSearchPanel
         credentials={credentials}
         disabled={!isReady}

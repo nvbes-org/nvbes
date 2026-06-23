@@ -3,16 +3,25 @@ import {
   Banknote,
   Building2,
   FileDown,
+  KeyRound,
   LifeBuoy,
+  Scale,
   Search,
   Shield,
   UserRound,
+  Users,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '#command-center', label: 'Command', icon: Building2 },
+  { href: '#revenue-center', label: 'Revenue', icon: Banknote },
+  { href: '#customer-center', label: 'Customer', icon: Users },
+  { href: '#operations-center', label: 'Operations', icon: Activity },
+  { href: '#access-center', label: 'Access', icon: KeyRound },
+  { href: '#security-center', label: 'Security', icon: Shield },
+  { href: '#compliance-center', label: 'Compliance', icon: Scale },
   { href: '#global-search', label: 'Global Search', icon: Search },
   { href: '#tenant-detail', label: 'Tenant', icon: Building2 },
   { href: '#workspace-detail', label: 'Workspace', icon: Building2 },
