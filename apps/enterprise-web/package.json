@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ./node_modules/vite-plus/bin/vp dev",
-    "build": "tsc -b && node ./node_modules/vite-plus/bin/vp build",
+    "dev": "node ../../node_modules/vite-plus/bin/vp dev",
+    "build": "tsc -b && node ../../node_modules/vite-plus/bin/vp build",
     "check": "pnpm run typecheck",
-    "preview": "node ./node_modules/vite-plus/bin/vp preview",
+    "preview": "node ../../node_modules/vite-plus/bin/vp preview",
     "typecheck": "tsgo -b --pretty false",
-    "lint": "node ./node_modules/vite-plus/bin/vp lint",
-    "format": "node ./node_modules/vite-plus/bin/vp fmt --write",
-    "format:check": "node ./node_modules/vite-plus/bin/vp fmt --check",
-    "test": "node ./node_modules/vite-plus/bin/vp test"
+    "lint": "node ../../node_modules/vite-plus/bin/vp lint",
+    "format": "node ../../node_modules/vite-plus/bin/vp fmt --write",
+    "format:check": "node ../../node_modules/vite-plus/bin/vp fmt --check",
+    "test": "node ../../node_modules/vite-plus/bin/vp test"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",

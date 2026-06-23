@@ -20,12 +20,12 @@
     }
   },
   "scripts": {
-    "build": "node ./node_modules/vite-plus/bin/vp pack",
+    "build": "node ../../../node_modules/vite-plus/bin/vp pack",
     "check": "pnpm run typecheck",
-    "dev": "node ./node_modules/vite-plus/bin/vp pack --watch",
-    "format:check": "node ./node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
-    "lint": "node ./node_modules/vite-plus/bin/vp lint src",
-    "test": "node ./node_modules/vite-plus/bin/vp test",
+    "dev": "node ../../../node_modules/vite-plus/bin/vp pack --watch",
+    "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
+    "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
+    "test": "node ../../../node_modules/vite-plus/bin/vp test",
     "typecheck": "tsgo -p tsconfig.json --pretty false"
   },
   "dependencies": {
