@@ -5,7 +5,10 @@ use reqwest::Client;
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::geo::types::{GeoLocation, GeoNetworkRelation};
+use crate::geo::{
+    reputation::score_relation,
+    types::{GeoLocation, GeoNetworkRelation},
+};
 
 #[derive(Debug, Error)]
 pub enum RdapLookupError {
@@ -139,7 +142,7 @@ impl RdapClient {
             return Ok(None);
         };
 
-        let relation = GeoNetworkRelation {
+        let mut relation = GeoNetworkRelation {
             source_code: registry.code().to_string(),
             registry: Some(registry.code().to_string()),
             network: None,
@@ -148,7 +151,14 @@ impl RdapClient {
             asn: string_field(&body, "handle").and_then(parse_asn),
             organization: string_field(&body, "name").or_else(|| first_entity_name(&body)),
             source_reference: string_field(&body, "handle"),
+            network_kind: None,
+            risk_score: None,
+            risk_labels: Vec::new(),
         };
+        let reputation = score_relation(&relation);
+        relation.network_kind = Some(reputation.network_kind);
+        relation.risk_score = Some(reputation.risk_score);
+        relation.risk_labels = reputation.risk_labels;
 
         crate::geo::metrics::record_rdap_lookup(registry.code(), "hit", started_at.elapsed());
         Ok(Some(RdapLookup { location, relation }))

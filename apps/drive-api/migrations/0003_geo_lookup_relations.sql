@@ -18,11 +18,12 @@ VALUES
   ('apnic', 'rdap', 'medium', 50, 'https://rdap.apnic.net/ip'),
   ('lacnic', 'rdap', 'medium', 60, 'https://rdap.lacnic.net/rdap/ip'),
   ('afrinic', 'rdap', 'medium', 70, 'https://rdap.afrinic.net/rdap/ip'),
-  ('provider_header', 'provider_header', 'medium', 80, NULL),
-  ('remote_lookup', 'rdap', 'medium', 90, NULL),
-  ('stored_profile', 'stored_profile', 'low', 100, NULL),
-  ('private_network', 'fallback', 'none', 110, NULL),
-  ('fallback', 'fallback', 'none', 120, NULL)
+  ('ip_intelligence', 'rdap', 'medium', 80, NULL),
+  ('provider_header', 'provider_header', 'medium', 90, NULL),
+  ('remote_lookup', 'rdap', 'medium', 100, NULL),
+  ('stored_profile', 'stored_profile', 'low', 110, NULL),
+  ('private_network', 'fallback', 'none', 120, NULL),
+  ('fallback', 'fallback', 'none', 130, NULL)
 ON CONFLICT (code) DO UPDATE SET
   kind = EXCLUDED.kind,
   trust_level = EXCLUDED.trust_level,
@@ -42,6 +43,10 @@ CREATE TABLE IF NOT EXISTS geo_ip_network_relations (
   organization TEXT,
   country_code CHAR(2) CHECK (country_code IS NULL OR country_code = upper(country_code)),
   source_reference TEXT,
+  network_kind TEXT NOT NULL DEFAULT 'unknown'
+    CHECK (network_kind IN ('unknown', 'residential', 'mobile', 'datacenter', 'vpn', 'proxy', 'tor')),
+  risk_score SMALLINT NOT NULL DEFAULT 50 CHECK (risk_score >= 0 AND risk_score <= 100),
+  risk_labels TEXT[] NOT NULL DEFAULT ARRAY['unknown']::TEXT[],
   raw_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ,
@@ -64,6 +69,10 @@ CREATE TABLE IF NOT EXISTS geo_personal_ip_ranges (
   priority SMALLINT NOT NULL DEFAULT 100 CHECK (priority > 0),
   source_reference TEXT,
   note TEXT,
+  network_kind TEXT NOT NULL DEFAULT 'residential'
+    CHECK (network_kind IN ('unknown', 'residential', 'mobile', 'datacenter', 'vpn', 'proxy', 'tor')),
+  risk_score SMALLINT NOT NULL DEFAULT 15 CHECK (risk_score >= 0 AND risk_score <= 100),
+  risk_labels TEXT[] NOT NULL DEFAULT ARRAY['personal_database', 'residential']::TEXT[],
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -88,6 +97,10 @@ CREATE TABLE IF NOT EXISTS geo_lookup_events (
   selected_source TEXT NOT NULL REFERENCES geo_sources(code),
   confidence TEXT NOT NULL CHECK (confidence IN ('none', 'low', 'medium', 'high')),
   private_network BOOLEAN NOT NULL DEFAULT FALSE,
+  network_kind TEXT NOT NULL DEFAULT 'unknown'
+    CHECK (network_kind IN ('unknown', 'residential', 'mobile', 'datacenter', 'vpn', 'proxy', 'tor')),
+  risk_score SMALLINT NOT NULL DEFAULT 50 CHECK (risk_score >= 0 AND risk_score <= 100),
+  risk_labels TEXT[] NOT NULL DEFAULT ARRAY['unknown']::TEXT[],
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

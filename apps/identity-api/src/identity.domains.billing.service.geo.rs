@@ -1,6 +1,6 @@
 use nvbes_region::geo::{
-    GeoLookupRequest, GeoResolution, GeoResolver, RdapClient, cached_remote_lookup_tx,
-    is_private_or_special_ip, load_personal_geo_database_tx, parse_ip,
+    GeoLookupRequest, GeoResolution, GeoResolver, RdapClient, cached_ip_intelligence_tx,
+    cached_remote_lookup_tx, is_private_or_special_ip, load_personal_geo_database_tx, parse_ip,
 };
 use sqlx::{Postgres, Transaction};
 use std::time::Duration;
@@ -18,6 +18,10 @@ pub(super) async fn resolve_checkout_geo(
         .unwrap_or(false);
     let cached_lookup = match parsed_ip.filter(|_| should_fetch_remote) {
         Some(ip) => cached_remote_lookup_tx(tx, ip).await?,
+        None => None,
+    };
+    let cached_intelligence = match parsed_ip.filter(|ip| !is_private_or_special_ip(*ip)) {
+        Some(ip) => cached_ip_intelligence_tx(tx, ip).await?,
         None => None,
     };
     let remote_lookup = if should_fetch_remote && cached_lookup.is_none() {
@@ -41,6 +45,7 @@ pub(super) async fn resolve_checkout_geo(
             ip: parsed_ip,
             trusted_country_header,
             remote_lookup,
+            network_intelligence: cached_intelligence.as_ref(),
             stored_profile_country,
             ..GeoLookupRequest::default()
         }),
@@ -69,6 +74,13 @@ pub(super) fn checkout_geo_risk(
     if resolution.source.as_str() == "fallback" {
         score += 10.0;
         factors.push("geo_unresolved".to_string());
+    }
+    if resolution.risk_score >= 80 {
+        score += 25.0;
+        factors.push("high_risk_network".to_string());
+    } else if resolution.risk_score >= 60 {
+        score += 12.0;
+        factors.push("elevated_risk_network".to_string());
     }
     if let (Some(resolved), Some(stored)) = (resolved_country, stored_country)
         && resolved != stored

@@ -3,6 +3,7 @@ const BILLING_PLATFORM_MIGRATION: &str =
 const REGIONAL_PRICE_MIGRATION: &str =
     include_str!("../migrations/0017_regional_price_mappings.sql");
 const GEO_LOOKUP_MIGRATION: &str = include_str!("../migrations/0018_geo_lookup_relations.sql");
+const GEO_REPUTATION_MIGRATION: &str = include_str!("../migrations/0019_geo_reputation_labels.sql");
 
 #[test]
 fn billing_platform_migration_covers_canonical_table_groups() {
@@ -111,6 +112,28 @@ fn geo_lookup_migration_persists_sources_relations_events_and_evidence() {
     }
     assert!(GEO_LOOKUP_MIGRATION.contains("relation_key TEXT NOT NULL"));
     assert!(GEO_LOOKUP_MIGRATION.contains("(source_code, relation_key)"));
+}
+
+#[test]
+fn geo_reputation_migration_persists_network_labels_and_scores() {
+    for needle in [
+        "network_kind",
+        "risk_score",
+        "risk_labels",
+        "datacenter",
+        "vpn",
+        "proxy",
+        "residential",
+        "mobile",
+        "idx_geo_personal_ip_ranges_kind_score",
+        "idx_geo_lookup_events_kind_score",
+        "ip_intelligence",
+    ] {
+        assert!(
+            GEO_REPUTATION_MIGRATION.contains(needle),
+            "geo reputation migration missing {needle}"
+        );
+    }
 }
 
 #[tokio::test]

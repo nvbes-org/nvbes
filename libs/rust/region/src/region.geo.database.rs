@@ -3,7 +3,7 @@ use std::net::IpAddr;
 use ipnet::IpNet;
 use thiserror::Error;
 
-use crate::geo::types::{GeoLocation, GeoNetworkRelation};
+use crate::geo::types::{GeoLocation, GeoNetworkKind, GeoNetworkRelation};
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum PersonalGeoDatabaseError {
@@ -15,13 +15,38 @@ pub enum PersonalGeoDatabaseError {
 pub struct PersonalGeoRange {
     network: IpNet,
     location: GeoLocation,
+    network_kind: GeoNetworkKind,
+    risk_score: u8,
+    risk_labels: Vec<String>,
 }
 
 impl PersonalGeoRange {
     pub fn new(network: IpNet, country_code: &str) -> Result<Self, PersonalGeoDatabaseError> {
+        Self::with_reputation(
+            network,
+            country_code,
+            GeoNetworkKind::Residential,
+            15,
+            vec!["personal_database".to_string(), "residential".to_string()],
+        )
+    }
+
+    pub fn with_reputation(
+        network: IpNet,
+        country_code: &str,
+        network_kind: GeoNetworkKind,
+        risk_score: u8,
+        risk_labels: Vec<String>,
+    ) -> Result<Self, PersonalGeoDatabaseError> {
         let location = GeoLocation::from_country_code(country_code)
             .ok_or(PersonalGeoDatabaseError::UnsupportedCountryCode)?;
-        Ok(Self { network, location })
+        Ok(Self {
+            network,
+            location,
+            network_kind,
+            risk_score,
+            risk_labels,
+        })
     }
 }
 
@@ -54,6 +79,9 @@ impl PersonalGeoDatabase {
                         asn: None,
                         organization: None,
                         source_reference: None,
+                        network_kind: Some(range.network_kind),
+                        risk_score: Some(range.risk_score),
+                        risk_labels: range.risk_labels.clone(),
                     },
                     range.location.clone(),
                 )

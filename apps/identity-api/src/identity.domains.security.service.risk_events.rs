@@ -11,6 +11,8 @@ pub(super) struct SecurityEventFilters {
     pub(super) geo_country_code: Option<String>,
     pub(super) geo_source: Option<String>,
     pub(super) geo_confidence: Option<String>,
+    pub(super) geo_network_kind: Option<String>,
+    pub(super) min_geo_risk_score: Option<i64>,
 }
 
 impl SecurityEventFilters {
@@ -21,6 +23,9 @@ impl SecurityEventFilters {
             geo_source: normalize_text_filter(input.geo_source.as_deref()).map(ToOwned::to_owned),
             geo_confidence: normalize_text_filter(input.geo_confidence.as_deref())
                 .map(ToOwned::to_owned),
+            geo_network_kind: normalize_text_filter(input.geo_network_kind.as_deref())
+                .map(ToOwned::to_owned),
+            min_geo_risk_score: input.min_geo_risk_score,
         }
     }
 }
@@ -55,6 +60,19 @@ pub(super) async fn fetch_risk_events(
             metadata #>> '{geo,geo_confidence}',
             metadata->>'geo_confidence'
           ) AS geo_confidence,
+          COALESCE(
+            risk_factors->>'geo_network_kind',
+            metadata->>'geo_network_kind'
+          ) AS geo_network_kind,
+          COALESCE(
+            NULLIF(risk_factors->>'geo_risk_score', '')::bigint,
+            NULLIF(metadata->>'geo_risk_score', '')::bigint
+          ) AS geo_risk_score,
+          COALESCE(
+            risk_factors->'geo_risk_labels',
+            metadata->'geo_risk_labels',
+            '[]'::jsonb
+          ) AS geo_risk_labels,
           created_at
         FROM risk_events
         WHERE principal_id IN (
@@ -87,6 +105,19 @@ pub(super) async fn fetch_risk_events(
               metadata->>'geo_confidence'
             ) = $6
           )
+          AND (
+            $7::text IS NULL OR COALESCE(
+              risk_factors->>'geo_network_kind',
+              metadata->>'geo_network_kind'
+            ) = $7
+          )
+          AND (
+            $8::bigint IS NULL OR COALESCE(
+              NULLIF(risk_factors->>'geo_risk_score', '')::bigint,
+              NULLIF(metadata->>'geo_risk_score', '')::bigint,
+              0
+            ) >= $8
+          )
         ORDER BY created_at DESC, id DESC
         LIMIT $3
         "#,
@@ -97,6 +128,8 @@ pub(super) async fn fetch_risk_events(
     .bind(filters.geo_country_code.as_deref())
     .bind(filters.geo_source.as_deref())
     .bind(filters.geo_confidence.as_deref())
+    .bind(filters.geo_network_kind.as_deref())
+    .bind(filters.min_geo_risk_score)
     .fetch_all(db)
     .await?;
 
@@ -104,6 +137,7 @@ pub(super) async fn fetch_risk_events(
         .map(|row| {
             let risk_factors: sqlx::types::Json<Value> = row.get("risk_factors");
             let metadata: sqlx::types::Json<Value> = row.get("metadata");
+            let geo_risk_labels: sqlx::types::Json<Value> = row.get("geo_risk_labels");
             Ok(RiskEventView {
                 id: row.get("id"),
                 principal_id: row.get("principal_id"),
@@ -119,6 +153,18 @@ pub(super) async fn fetch_risk_events(
                 geo_country_code: row.get("geo_country_code"),
                 geo_source: row.get("geo_source"),
                 geo_confidence: row.get("geo_confidence"),
+                geo_network_kind: row.get("geo_network_kind"),
+                geo_risk_score: row.get("geo_risk_score"),
+                geo_risk_labels: geo_risk_labels
+                    .0
+                    .as_array()
+                    .map(|labels| {
+                        labels
+                            .iter()
+                            .filter_map(|label| label.as_str().map(ToOwned::to_owned))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
                 created_at: row.get("created_at"),
             })
         })

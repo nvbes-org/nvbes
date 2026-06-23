@@ -41,6 +41,13 @@ pub async fn apply_geo_security_signal(
         score += 10.0;
         geo_factors.push("geo_unresolved");
     }
+    if resolution.risk_score >= 80 {
+        score += 25.0;
+        geo_factors.push("high_risk_network");
+    } else if resolution.risk_score >= 60 {
+        score += 12.0;
+        geo_factors.push("elevated_risk_network");
+    }
 
     if let Some(object) = factors.as_object_mut() {
         object.insert("geo_factors".to_string(), serde_json::json!(geo_factors));
@@ -65,6 +72,18 @@ pub async fn apply_geo_security_signal(
             "geo_private_network".to_string(),
             serde_json::json!(resolution.private_network),
         );
+        object.insert(
+            "geo_network_kind".to_string(),
+            serde_json::json!(resolution.network_kind.as_str()),
+        );
+        object.insert(
+            "geo_risk_score".to_string(),
+            serde_json::json!(resolution.risk_score),
+        );
+        object.insert(
+            "geo_risk_labels".to_string(),
+            serde_json::json!(resolution.risk_labels),
+        );
     }
 
     GeoSecuritySignal {
@@ -84,6 +103,9 @@ fn geo_metadata(resolution: Option<&GeoResolution>) -> Value {
         }),
         "geo_source": resolution.map(|resolution| resolution.source.as_str()),
         "geo_confidence": resolution.map(|resolution| resolution.confidence.as_str()),
+        "geo_network_kind": resolution.map(|resolution| resolution.network_kind.as_str()),
+        "geo_risk_score": resolution.map(|resolution| resolution.risk_score),
+        "geo_risk_labels": resolution.map(|resolution| &resolution.risk_labels),
     })
 }
 

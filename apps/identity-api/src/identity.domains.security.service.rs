@@ -38,6 +38,9 @@ pub async fn list_events(
             geo_country_code: event.geo_country_code,
             geo_source: event.geo_source,
             geo_confidence: event.geo_confidence,
+            geo_network_kind: event.geo_network_kind,
+            geo_risk_score: event.geo_risk_score,
+            geo_risk_labels: event.geo_risk_labels,
         })
         .collect::<Vec<_>>();
 

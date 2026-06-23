@@ -6,7 +6,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::geo::database::PersonalGeoDatabaseError;
-use crate::geo::types::GeoLocation;
+use crate::geo::types::{GeoLocation, GeoNetworkKind};
 
 #[derive(Debug, Error)]
 pub enum PersonalGeoStoreError {
@@ -14,6 +14,8 @@ pub enum PersonalGeoStoreError {
     Validation(#[from] PersonalGeoDatabaseError),
     #[error("personal geo range priority must be greater than zero")]
     InvalidPriority,
+    #[error("personal geo range risk score must be between 0 and 100")]
+    InvalidRiskScore,
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }
@@ -25,6 +27,9 @@ pub struct UpsertPersonalGeoRangeInput {
     pub priority: i16,
     pub source_reference: Option<String>,
     pub note: Option<String>,
+    pub network_kind: GeoNetworkKind,
+    pub risk_score: u8,
+    pub risk_labels: Vec<String>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -36,6 +41,9 @@ pub struct PersonalGeoRangeView {
     pub priority: i16,
     pub source_reference: Option<String>,
     pub note: Option<String>,
+    pub network_kind: String,
+    pub risk_score: i16,
+    pub risk_labels: Vec<String>,
     pub enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -70,8 +78,9 @@ pub async fn upsert_personal_geo_range_tx(
         r#"
         INSERT INTO geo_personal_ip_ranges (
           network, country_code, priority, source_reference, note, enabled, expires_at
+          , network_kind, risk_score, risk_labels
         )
-        VALUES ($1::cidr, $2, $3, $4, $5, TRUE, $6)
+        VALUES ($1::cidr, $2, $3, $4, $5, TRUE, $6, $7, $8, $9)
         ON CONFLICT (network)
         DO UPDATE SET
           country_code = EXCLUDED.country_code,
@@ -80,10 +89,13 @@ pub async fn upsert_personal_geo_range_tx(
           note = EXCLUDED.note,
           enabled = TRUE,
           expires_at = EXCLUDED.expires_at,
+          network_kind = EXCLUDED.network_kind,
+          risk_score = EXCLUDED.risk_score,
+          risk_labels = EXCLUDED.risk_labels,
           updated_at = NOW()
         RETURNING
           id, network::text AS network, country_code, priority, source_reference,
-          note, enabled, created_at, updated_at, expires_at
+          note, network_kind, risk_score, risk_labels, enabled, created_at, updated_at, expires_at
         "#,
     )
     .bind(input.network.to_string())
@@ -92,6 +104,9 @@ pub async fn upsert_personal_geo_range_tx(
     .bind(input.source_reference)
     .bind(input.note)
     .bind(input.expires_at)
+    .bind(input.network_kind.as_str())
+    .bind(i16::from(input.risk_score))
+    .bind(input.risk_labels)
     .fetch_one(&mut **tx)
     .await?;
 
@@ -120,7 +135,7 @@ pub async fn disable_personal_geo_range_tx(
         WHERE network = $1::cidr
         RETURNING
           id, network::text AS network, country_code, priority, source_reference,
-          note, enabled, created_at, updated_at, expires_at
+          note, network_kind, risk_score, risk_labels, enabled, created_at, updated_at, expires_at
         "#,
     )
     .bind(network.to_string())
@@ -134,6 +149,9 @@ fn validate_personal_geo_input(
     if input.priority <= 0 {
         return Err(PersonalGeoStoreError::InvalidPriority);
     }
+    if input.risk_score > 100 {
+        return Err(PersonalGeoStoreError::InvalidRiskScore);
+    }
     GeoLocation::from_country_code(&input.country_code)
         .ok_or(PersonalGeoDatabaseError::UnsupportedCountryCode)?;
     Ok(())
@@ -142,7 +160,7 @@ fn validate_personal_geo_input(
 const PERSONAL_GEO_RANGE_SELECT: &str = r#"
         SELECT
           id, network::text AS network, country_code, priority, source_reference,
-          note, enabled, created_at, updated_at, expires_at
+          note, network_kind, risk_score, risk_labels, enabled, created_at, updated_at, expires_at
         FROM geo_personal_ip_ranges
         ORDER BY enabled DESC, priority ASC, masklen(network) DESC, updated_at DESC
         "#;
@@ -158,6 +176,9 @@ mod tests {
             priority: 100,
             source_reference: Some("manual-test".to_string()),
             note: None,
+            network_kind: crate::geo::types::GeoNetworkKind::Datacenter,
+            risk_score: 70,
+            risk_labels: vec!["manual".to_string(), "datacenter".to_string()],
             expires_at: None,
         }
     }

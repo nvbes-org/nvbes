@@ -11,6 +11,8 @@ pub struct ListSecurityEventsInput {
     pub geo_country_code: Option<String>,
     pub geo_source: Option<String>,
     pub geo_confidence: Option<String>,
+    pub geo_network_kind: Option<String>,
+    pub min_geo_risk_score: Option<i64>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -31,6 +33,9 @@ pub struct SecurityEventView {
     pub geo_country_code: Option<String>,
     pub geo_source: Option<String>,
     pub geo_confidence: Option<String>,
+    pub geo_network_kind: Option<String>,
+    pub geo_risk_score: Option<i64>,
+    pub geo_risk_labels: Vec<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -85,6 +90,9 @@ pub struct RiskEventView {
     pub geo_country_code: Option<String>,
     pub geo_source: Option<String>,
     pub geo_confidence: Option<String>,
+    pub geo_network_kind: Option<String>,
+    pub geo_risk_score: Option<i64>,
+    pub geo_risk_labels: Vec<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -209,12 +217,17 @@ mod tests {
             geo_country_code: Some("FR".to_string()),
             geo_source: Some("personal_database".to_string()),
             geo_confidence: Some("high".to_string()),
+            geo_network_kind: Some("residential".to_string()),
+            geo_risk_score: Some(15),
+            geo_risk_labels: vec!["residential".to_string()],
         })
         .expect("serializes");
 
         assert_eq!(payload["geo_country_code"], "FR");
         assert_eq!(payload["geo_source"], "personal_database");
         assert_eq!(payload["geo_confidence"], "high");
+        assert_eq!(payload["geo_network_kind"], "residential");
+        assert_eq!(payload["geo_risk_score"], 15);
     }
 
     #[test]

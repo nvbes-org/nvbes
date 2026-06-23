@@ -48,6 +48,68 @@ impl GeoEvidenceSource {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GeoNetworkKind {
+    Unknown,
+    Residential,
+    Mobile,
+    Datacenter,
+    Vpn,
+    Proxy,
+    Tor,
+}
+
+impl GeoNetworkKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unknown => "unknown",
+            Self::Residential => "residential",
+            Self::Mobile => "mobile",
+            Self::Datacenter => "datacenter",
+            Self::Vpn => "vpn",
+            Self::Proxy => "proxy",
+            Self::Tor => "tor",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Self {
+        match value {
+            "residential" => Self::Residential,
+            "mobile" => Self::Mobile,
+            "datacenter" => Self::Datacenter,
+            "vpn" => Self::Vpn,
+            "proxy" => Self::Proxy,
+            "tor" => Self::Tor,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GeoRiskSignal {
+    Unknown,
+    Residential,
+    Mobile,
+    Datacenter,
+    Vpn,
+    Proxy,
+    Tor,
+}
+
+impl GeoRiskSignal {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unknown => "unknown",
+            Self::Residential => "residential",
+            Self::Mobile => "mobile",
+            Self::Datacenter => "datacenter",
+            Self::Vpn => "vpn",
+            Self::Proxy => "proxy",
+            Self::Tor => "tor",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeoNetworkRelation {
     pub source_code: String,
@@ -58,6 +120,9 @@ pub struct GeoNetworkRelation {
     pub asn: Option<i64>,
     pub organization: Option<String>,
     pub source_reference: Option<String>,
+    pub network_kind: Option<GeoNetworkKind>,
+    pub risk_score: Option<u8>,
+    pub risk_labels: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -145,6 +210,9 @@ pub struct GeoResolution {
     pub source: GeoEvidenceSource,
     pub ip: Option<IpAddr>,
     pub private_network: bool,
+    pub network_kind: GeoNetworkKind,
+    pub risk_score: u8,
+    pub risk_labels: Vec<String>,
     pub evidence: Vec<GeoEvidence>,
 }
 
@@ -160,6 +228,17 @@ impl GeoResolution {
             source: GeoEvidenceSource::Fallback,
             ip,
             private_network,
+            network_kind: if private_network {
+                GeoNetworkKind::Unknown
+            } else {
+                GeoNetworkKind::Unknown
+            },
+            risk_score: if private_network { 0 } else { 50 },
+            risk_labels: if private_network {
+                vec!["private_network".to_string()]
+            } else {
+                vec!["unknown".to_string()]
+            },
             evidence,
         }
     }

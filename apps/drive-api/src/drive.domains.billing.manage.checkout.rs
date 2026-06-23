@@ -3,8 +3,8 @@ use nvbes_audit::insert_audit_event_tx as insert_shared_audit_event;
 use nvbes_billing::validate_plan_code;
 use nvbes_region::geo::{
     GeoLookupRecordContext, GeoLookupRequest, GeoResolution, GeoResolver, RdapClient,
-    cached_remote_lookup_tx, is_private_or_special_ip, load_personal_geo_database_tx, parse_ip,
-    record_geo_resolution_tx,
+    cached_ip_intelligence_tx, cached_remote_lookup_tx, is_private_or_special_ip,
+    load_personal_geo_database_tx, parse_ip, record_geo_resolution_tx,
 };
 use sqlx::{PgPool, Postgres, Transaction};
 use std::time::Duration;
@@ -132,6 +132,9 @@ pub async fn create_checkout_session(
                 "geo_country_code": checkout_country,
                 "geo_source": geo_resolution.source.as_str(),
                 "geo_confidence": geo_resolution.confidence.as_str(),
+                "geo_network_kind": geo_resolution.network_kind.as_str(),
+                "geo_risk_score": geo_resolution.risk_score,
+                "geo_risk_labels": geo_resolution.risk_labels.clone(),
                 "price_country_code": mapping.country_code,
                 "pricing_region": mapping.pricing_region,
                 "checkout_session_id": session.id,
@@ -170,6 +173,10 @@ async fn resolve_checkout_geo(
         Some(ip) => cached_remote_lookup_tx(tx, ip).await?,
         None => None,
     };
+    let cached_intelligence = match parsed_ip.filter(|ip| !is_private_or_special_ip(*ip)) {
+        Some(ip) => cached_ip_intelligence_tx(tx, ip).await?,
+        None => None,
+    };
     let remote_lookup = if should_fetch_remote && cached_lookup.is_none() {
         match tokio::time::timeout(
             Duration::from_secs(3),
@@ -191,6 +198,7 @@ async fn resolve_checkout_geo(
             ip: parsed_ip,
             trusted_country_header,
             remote_lookup,
+            network_intelligence: cached_intelligence.as_ref(),
             stored_profile_country,
             ..GeoLookupRequest::default()
         }),

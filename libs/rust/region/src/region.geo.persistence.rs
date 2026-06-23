@@ -1,14 +1,10 @@
 use ipnet::IpNet;
 use sqlx::{Postgres, Row, Transaction};
-use std::time::Instant;
 use uuid::Uuid;
 
 use crate::geo::{
     database::{PersonalGeoDatabase, PersonalGeoRange},
-    ip::{is_private_or_special_ip, parse_ip},
-    rdap::RdapLookup,
-    resolver::{GeoLookupRequest, GeoResolver},
-    types::{GeoEvidence, GeoLocation, GeoNetworkRelation, GeoResolution},
+    types::{GeoEvidence, GeoNetworkKind, GeoNetworkRelation, GeoResolution},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -31,8 +27,9 @@ pub async fn record_geo_resolution_tx(
           purpose, subject_type, subject_id, request_id, ip_address,
           selected_country_code, selected_data_region, selected_legal_jurisdiction,
           selected_source, confidence, private_network
+          , network_kind, risk_score, risk_labels
         )
-        VALUES ($1, $2, $3, $4, $5::inet, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5::inet, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING id
         "#,
     )
@@ -47,6 +44,9 @@ pub async fn record_geo_resolution_tx(
     .bind(resolution.source.as_str())
     .bind(resolution.confidence.as_str())
     .bind(resolution.private_network)
+    .bind(resolution.network_kind.as_str())
+    .bind(resolution.risk_score as i16)
+    .bind(&resolution.risk_labels)
     .fetch_one(&mut **tx)
     .await?;
 
@@ -62,7 +62,7 @@ pub async fn load_personal_geo_database_tx(
 ) -> Result<PersonalGeoDatabase, sqlx::Error> {
     let rows = sqlx::query(
         r#"
-        SELECT network::text AS network, country_code
+        SELECT network::text AS network, country_code, network_kind, risk_score, risk_labels
         FROM geo_personal_ip_ranges
         WHERE enabled = TRUE
           AND (expires_at IS NULL OR expires_at > now())
@@ -77,92 +77,31 @@ pub async fn load_personal_geo_database_tx(
         .filter_map(|row| {
             let network = row.try_get::<String, _>("network").ok()?;
             let country_code = row.try_get::<String, _>("country_code").ok()?;
+            let network_kind = row
+                .try_get::<String, _>("network_kind")
+                .map(|value| GeoNetworkKind::from_str(&value))
+                .unwrap_or(GeoNetworkKind::Residential);
+            let risk_score = row
+                .try_get::<i16, _>("risk_score")
+                .ok()
+                .and_then(|score| u8::try_from(score).ok())
+                .unwrap_or(15);
+            let risk_labels = row
+                .try_get::<Vec<String>, _>("risk_labels")
+                .unwrap_or_else(|_| vec!["personal_database".to_string()]);
             let network = network.parse::<IpNet>().ok()?;
-            PersonalGeoRange::new(network, &country_code).ok()
+            PersonalGeoRange::with_reputation(
+                network,
+                &country_code,
+                network_kind,
+                risk_score,
+                risk_labels,
+            )
+            .ok()
         })
         .collect();
 
     Ok(PersonalGeoDatabase::new(ranges))
-}
-
-pub async fn cached_remote_lookup_tx(
-    tx: &mut Transaction<'_, Postgres>,
-    ip: std::net::IpAddr,
-) -> Result<Option<RdapLookup>, sqlx::Error> {
-    let started_at = Instant::now();
-    let row = sqlx::query(
-        r#"
-        SELECT
-          source_code, registry, network::text AS network,
-          start_ip::text AS start_ip, end_ip::text AS end_ip,
-          asn, organization, country_code, source_reference
-        FROM geo_ip_network_relations
-        WHERE country_code IS NOT NULL
-          AND (expires_at IS NULL OR expires_at > now())
-          AND (
-            (network IS NOT NULL AND network >>= $1::inet)
-            OR (start_ip IS NOT NULL AND end_ip IS NOT NULL AND $1::inet BETWEEN start_ip AND end_ip)
-          )
-        ORDER BY fetched_at DESC
-        LIMIT 1
-        "#,
-    )
-    .bind(ip.to_string())
-    .fetch_optional(&mut **tx)
-    .await?;
-
-    let Some(row) = row else {
-        crate::geo::metrics::record_geo_cache_lookup("miss", started_at.elapsed());
-        return Ok(None);
-    };
-    let country_code = row.try_get::<String, _>("country_code")?;
-    let Some(location) = GeoLocation::from_country_code(&country_code) else {
-        crate::geo::metrics::record_geo_cache_lookup("invalid_country", started_at.elapsed());
-        return Ok(None);
-    };
-
-    crate::geo::metrics::record_geo_cache_lookup("hit", started_at.elapsed());
-    Ok(Some(RdapLookup {
-        location,
-        relation: GeoNetworkRelation {
-            source_code: row.try_get("source_code")?,
-            registry: row.try_get("registry")?,
-            network: row.try_get("network")?,
-            start_ip: row
-                .try_get::<Option<String>, _>("start_ip")?
-                .and_then(|value| value.parse().ok()),
-            end_ip: row
-                .try_get::<Option<String>, _>("end_ip")?
-                .and_then(|value| value.parse().ok()),
-            asn: row.try_get("asn")?,
-            organization: row.try_get("organization")?,
-            source_reference: row.try_get("source_reference")?,
-        },
-    }))
-}
-
-pub async fn resolve_cached_geo_tx(
-    tx: &mut Transaction<'_, Postgres>,
-    ip: Option<&str>,
-    trusted_country_header: Option<&str>,
-    stored_profile_country: Option<&str>,
-) -> Result<GeoResolution, sqlx::Error> {
-    let parsed_ip = ip.and_then(parse_ip);
-    let personal_database = load_personal_geo_database_tx(tx).await?;
-    let cached_lookup = match parsed_ip.filter(|ip| !is_private_or_special_ip(*ip)) {
-        Some(ip) => cached_remote_lookup_tx(tx, ip).await?,
-        None => None,
-    };
-
-    Ok(
-        GeoResolver::new(personal_database).resolve(GeoLookupRequest {
-            ip: parsed_ip,
-            trusted_country_header,
-            remote_lookup: cached_lookup.as_ref(),
-            stored_profile_country,
-            ..GeoLookupRequest::default()
-        }),
-    )
 }
 
 async fn record_evidence_tx(
@@ -212,9 +151,9 @@ async fn upsert_network_relation_tx(
         r#"
         INSERT INTO geo_ip_network_relations (
           source_code, relation_key, registry, network, start_ip, end_ip, asn,
-          organization, country_code, source_reference
+          organization, country_code, source_reference, network_kind, risk_score, risk_labels
         )
-        VALUES ($1, $2, $3, $4::cidr, $5::inet, $6::inet, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4::cidr, $5::inet, $6::inet, $7, $8, $9, $10, $11, $12, $13)
         ON CONFLICT (source_code, relation_key)
         DO UPDATE SET
           registry = EXCLUDED.registry,
@@ -224,6 +163,9 @@ async fn upsert_network_relation_tx(
           asn = EXCLUDED.asn,
           organization = EXCLUDED.organization,
           country_code = EXCLUDED.country_code,
+          network_kind = EXCLUDED.network_kind,
+          risk_score = EXCLUDED.risk_score,
+          risk_labels = EXCLUDED.risk_labels,
           fetched_at = now()
         RETURNING id
         "#,
@@ -238,6 +180,9 @@ async fn upsert_network_relation_tx(
     .bind(relation.organization.as_deref())
     .bind(evidence.country_code.as_deref())
     .bind(relation.source_reference.as_deref())
+    .bind(relation.network_kind.map(|kind| kind.as_str()))
+    .bind(relation.risk_score.map(i16::from))
+    .bind(&relation.risk_labels)
     .fetch_one(&mut **tx)
     .await
 }
