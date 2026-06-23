@@ -172,6 +172,8 @@ async fn reset_password_updates_credentials_and_revokes_existing_sessions() {
             token: reset_token.clone(),
             new_password: "N3w$trongPassw0rd!2026".to_string(),
         },
+        None,
+        None,
     )
     .await
     .expect("password reset should succeed");
@@ -220,6 +222,8 @@ async fn reset_password_rejects_reused_token() {
             token: reset_token,
             new_password: "N3w$trongPassw0rd!2026".to_string(),
         },
+        None,
+        None,
     )
     .await
     .expect_err("reused token should be rejected");

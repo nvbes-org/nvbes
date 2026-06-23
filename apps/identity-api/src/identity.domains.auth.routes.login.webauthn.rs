@@ -54,12 +54,16 @@ pub(crate) async fn challenge_webauthn_start(
         super::require_mfa_state(&state.redis, request.state_token).await?;
 
     let webauthn = crate::domains::auth::webauthn::build_webauthn(&state.config)?;
+    let ip = meta.ip();
+    let user_agent = meta.user_agent();
     let (challenge_id, options) = crate::domains::auth::webauthn::start_login_authentication(
         &state.db,
         &state.redis,
         &webauthn,
         auth_state.id,
         principal_id,
+        ip.as_deref(),
+        user_agent.as_deref(),
     )
     .await?;
 
@@ -140,6 +144,8 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
     .await?;
 
     let webauthn = crate::domains::auth::webauthn::build_webauthn(&state.config)?;
+    let ip = meta.ip();
+    let user_agent = meta.user_agent();
     let (principal_id, email, method) =
         crate::domains::auth::webauthn::finish_discoverable_login_authentication(
             &state.db,
@@ -147,6 +153,8 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
             &webauthn,
             request.challenge_id,
             &request.webauthn_response,
+            ip.as_deref(),
+            user_agent.as_deref(),
         )
         .await?;
 

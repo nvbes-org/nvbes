@@ -454,16 +454,25 @@ CREATE TABLE stripe_price_mappings (
   meter TEXT NOT NULL DEFAULT 'subscription',
   stripe_product_id TEXT NOT NULL,
   stripe_price_id TEXT NOT NULL UNIQUE,
+  country_code CHAR(2),
+  pricing_region TEXT,
+  currency CHAR(3) NOT NULL DEFAULT 'EUR',
+  amount_minor BIGINT CHECK (amount_minor IS NULL OR amount_minor >= 0),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
   valid_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   valid_until TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (country_code IS NULL OR country_code = upper(country_code)),
+  CHECK (country_code IS NULL OR pricing_region IS NULL),
   CHECK (valid_until IS NULL OR valid_until > valid_from)
 );
 
 CREATE INDEX idx_stripe_price_mappings_plan_meter_status
   ON stripe_price_mappings (plan_id, meter, status);
+
+CREATE INDEX idx_stripe_price_mappings_plan_market
+  ON stripe_price_mappings (plan_id, meter, status, country_code, pricing_region, valid_from DESC);
 
 CREATE INDEX idx_stripe_price_mappings_price_status
   ON stripe_price_mappings (stripe_price_id, status);

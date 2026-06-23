@@ -15,7 +15,7 @@ use crate::domains::billing::service::{
     CreateCheckoutInput, CreatePortalInput, PortalSessionResponse,
 };
 use crate::http::error::AppError;
-use crate::http::request::{client_ip, user_agent};
+use crate::http::request::{client_ip, country_header, user_agent};
 use nvbes_product_analytics::ProductAnalyticsEvent;
 use std::time::Instant;
 
@@ -135,6 +135,11 @@ pub(crate) async fn create_checkout(
             cancel_url: request.cancel_url,
         },
         client_ip(&headers),
+        country_header(
+            &headers,
+            &["CF-IPCountry", "X-Vercel-IP-Country", "X-AppEngine-Country"],
+        )
+        .map(ToOwned::to_owned),
         user_agent(&headers),
     )
     .await;

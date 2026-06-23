@@ -56,6 +56,9 @@ fn worker_queue_action() -> WorkspaceAction {
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
         ("limit" = Option<i64>, Query, description = "Max results"),
         ("before" = Option<Uuid>, Query, description = "Cursor for pagination"),
+        ("geo_country_code" = Option<String>, Query, description = "Filter by resolved ISO country code"),
+        ("geo_source" = Option<String>, Query, description = "Filter by geo source"),
+        ("geo_confidence" = Option<String>, Query, description = "Filter by geo confidence"),
     ),
     responses(
         (status = 200, description = "Security events", body = SecurityEventsResponse),

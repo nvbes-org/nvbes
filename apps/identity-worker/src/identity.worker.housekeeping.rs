@@ -18,7 +18,7 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
         return Ok(());
     }
 
-    let check_in = start_worker_monitor_check_in(
+    let account_check_in = start_worker_monitor_check_in(
         &state.config.environment,
         &worker_monitor_slug(
             "identity-worker",
@@ -37,11 +37,11 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
 
     let deleted = match result {
         Ok(deleted) => {
-            check_in.finish_ok();
+            account_check_in.finish_ok();
             deleted
         }
         Err(error) => {
-            check_in.finish_error();
+            account_check_in.finish_error();
             return Err(error);
         }
     };
@@ -50,6 +50,40 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
         tracing::info!(deleted, "Expired unverified accounts cleaned up");
     }
 
+    run_geo_housekeeping(state).await?;
+
     *last_run = Instant::now();
+    Ok(())
+}
+
+async fn run_geo_housekeeping(state: &AppState) -> anyhow::Result<()> {
+    let check_in = start_worker_monitor_check_in(
+        &state.config.environment,
+        &worker_monitor_slug("identity-worker", "housekeeping-geo-lookup-cache"),
+        HOUSEKEEPING_MONITOR_SCHEDULE,
+    );
+
+    let report = nvbes_region::geo::run_geo_maintenance(&state.db).await;
+    let report = match report {
+        Ok(report) => {
+            check_in.finish_ok();
+            report
+        }
+        Err(error) => {
+            check_in.finish_error();
+            return Err(anyhow::anyhow!(error));
+        }
+    };
+
+    if report.expired_personal_ranges_disabled > 0
+        || report.expired_unreferenced_relations_deleted > 0
+    {
+        tracing::info!(
+            expired_personal_ranges_disabled = report.expired_personal_ranges_disabled,
+            expired_unreferenced_relations_deleted = report.expired_unreferenced_relations_deleted,
+            "Geo lookup maintenance completed"
+        );
+    }
+
     Ok(())
 }

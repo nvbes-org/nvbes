@@ -16,6 +16,8 @@ use crate::domains::auth::{
 };
 use crate::http::error::AppError;
 
+use super::geo_impl::record_login_geo_signal;
+
 pub struct LoginSessionContext {
     pub email: String,
     pub ip: Option<String>,
@@ -149,6 +151,16 @@ pub async fn create_session_for_principal(
             serde_json::json!(context_signals.unusual_country),
         );
     }
+    let geo_resolution = record_login_geo_signal(
+        db,
+        principal_id,
+        context.ip.as_deref(),
+        country,
+        &mut score,
+        &mut decision,
+        &mut factors,
+    )
+    .await;
     let _ = risk::record_event(
         db,
         risk::RiskEventInput {
@@ -165,6 +177,14 @@ pub async fn create_session_for_principal(
                 "tenant_id": tenant_id,
                 "workspace_id": workspace_id,
                 "country": country,
+                "geo_country_code": geo_resolution.as_ref().and_then(|resolution| {
+                    resolution
+                        .location
+                        .as_ref()
+                        .map(|location| location.country_code.as_str())
+                }),
+                "geo_source": geo_resolution.as_ref().map(|resolution| resolution.source.as_str()),
+                "geo_confidence": geo_resolution.as_ref().map(|resolution| resolution.confidence.as_str()),
                 "device_fingerprint_hash": device_fingerprint_hash,
             }),
         },
@@ -186,6 +206,14 @@ pub async fn create_session_for_principal(
                 "amr": context.amr.clone(),
                 "risk_score": score,
                 "risk_decision": decision.as_str(),
+                "geo_country_code": geo_resolution.as_ref().and_then(|resolution| {
+                    resolution
+                        .location
+                        .as_ref()
+                        .map(|location| location.country_code.as_str())
+                }),
+                "geo_source": geo_resolution.as_ref().map(|resolution| resolution.source.as_str()),
+                "geo_confidence": geo_resolution.as_ref().map(|resolution| resolution.confidence.as_str()),
             }),
         },
     )

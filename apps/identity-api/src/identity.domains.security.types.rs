@@ -8,6 +8,9 @@ use uuid::Uuid;
 pub struct ListSecurityEventsInput {
     pub limit: Option<i64>,
     pub before_id: Option<Uuid>,
+    pub geo_country_code: Option<String>,
+    pub geo_source: Option<String>,
+    pub geo_confidence: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -24,6 +27,10 @@ pub struct SecurityEventView {
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
     pub status: Option<String>,
+    pub risk_score: Option<f64>,
+    pub geo_country_code: Option<String>,
+    pub geo_source: Option<String>,
+    pub geo_confidence: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -75,6 +82,9 @@ pub struct RiskEventView {
     pub risk_factors: Value,
     pub decision: String,
     pub metadata: Value,
+    pub geo_country_code: Option<String>,
+    pub geo_source: Option<String>,
+    pub geo_confidence: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -107,8 +117,8 @@ pub struct RecoveryReviewView {
 #[cfg(test)]
 mod tests {
     use super::{
-        ListRecoveryReviewsResponse, RecoveryReviewView, WorkerQueueStatusResponse,
-        WorkerQueueStatusView,
+        ListRecoveryReviewsResponse, RecoveryReviewView, SecurityEventView,
+        WorkerQueueStatusResponse, WorkerQueueStatusView,
     };
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
@@ -178,6 +188,33 @@ mod tests {
             payload["requests"][0]["secondary_approved_at"],
             "2026-05-12T09:30:00Z"
         );
+    }
+
+    #[test]
+    fn security_event_view_serializes_geo_fields() {
+        let event_id = Uuid::from_u128(21);
+        let created_at = Utc
+            .with_ymd_and_hms(2026, 6, 23, 12, 0, 0)
+            .single()
+            .expect("valid timestamp");
+
+        let payload = serde_json::to_value(SecurityEventView {
+            id: event_id,
+            event_type: "login_success".to_string(),
+            created_at,
+            ip_address: Some("203.0.113.42".to_string()),
+            user_agent: Some("test-agent".to_string()),
+            status: Some("allow".to_string()),
+            risk_score: Some(15.0),
+            geo_country_code: Some("FR".to_string()),
+            geo_source: Some("personal_database".to_string()),
+            geo_confidence: Some("high".to_string()),
+        })
+        .expect("serializes");
+
+        assert_eq!(payload["geo_country_code"], "FR");
+        assert_eq!(payload["geo_source"], "personal_database");
+        assert_eq!(payload["geo_confidence"], "high");
     }
 
     #[test]

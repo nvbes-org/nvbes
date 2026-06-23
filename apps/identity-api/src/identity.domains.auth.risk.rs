@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+#[path = "identity.domains.auth.risk.geo.rs"]
+pub mod geo;
 #[path = "identity.domains.auth.risk.signals.rs"]
 pub mod signals;
 

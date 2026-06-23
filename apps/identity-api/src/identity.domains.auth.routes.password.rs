@@ -4,6 +4,7 @@ use crate::domains::auth::types::ChangePasswordInput;
 use crate::domains::auth::verification::require_recent_step_up;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::request::{client_ip, user_agent};
 use axum::{Json, Router, extract::Extension, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::auth::Aal;
 use nvbes_core::http::error::ErrorEnvelope;
@@ -125,6 +126,8 @@ pub(crate) async fn forgot_password(
         },
         state.config.auth_password_reset_ttl_minutes,
         &state.config.environment,
+        client_ip(&headers),
+        user_agent(&headers),
     )
     .await?;
 
@@ -166,6 +169,8 @@ pub(crate) async fn reset_password(
             token: request.token,
             new_password: request.new_password,
         },
+        client_ip(&headers),
+        user_agent(&headers),
     )
     .await?;
 

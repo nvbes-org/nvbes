@@ -1,4 +1,5 @@
 use crate::models::{BillingStateRecord, PlanRecord, StripePriceMapping};
+use crate::pricing::regional_price_selection;
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
@@ -73,6 +74,7 @@ pub async fn fetch_billing_state_tx(
         owner_principal_id: row.get("owner_principal_id"),
         owner_email: row.get("owner_email"),
         trial_ends_at: row.get("trial_ends_at"),
+        plan_id: row.get("plan_id"),
         plan_code: row.get("plan_code"),
         included_storage_gb: row.get("included_storage_gb"),
         included_users: row.get("included_users"),
@@ -123,26 +125,57 @@ pub async fn fetch_plan_by_code_tx(
 pub async fn fetch_active_price_mapping_tx(
     tx: &mut Transaction<'_, Postgres>,
     plan_id: Uuid,
+    country_code: Option<&str>,
 ) -> Result<Option<StripePriceMapping>, sqlx::Error> {
+    let selection = regional_price_selection(country_code);
     let row = sqlx::query(
         r#"
-        SELECT stripe_product_id, stripe_price_id
+        SELECT
+          stripe_product_id,
+          stripe_price_id,
+          country_code::text AS country_code,
+          pricing_region,
+          currency::text AS currency,
+          amount_minor
         FROM stripe_price_mappings
         WHERE plan_id = $1
           AND meter = 'subscription'
           AND status = 'active'
           AND valid_from <= NOW()
           AND (valid_until IS NULL OR valid_until > NOW())
-        ORDER BY valid_from DESC
+          AND (
+            country_code = $2::char(2)
+            OR (
+              country_code IS NULL
+              AND pricing_region = $3
+            )
+            OR (
+              country_code IS NULL
+              AND pricing_region IS NULL
+            )
+          )
+        ORDER BY
+          CASE
+            WHEN country_code = $2::char(2) THEN 0
+            WHEN country_code IS NULL AND pricing_region = $3 THEN 1
+            ELSE 2
+          END,
+          valid_from DESC
         LIMIT 1
         "#,
     )
     .bind(plan_id)
+    .bind(selection.country_code.as_deref())
+    .bind(selection.pricing_region.as_deref())
     .fetch_optional(&mut **tx)
     .await?;
 
     Ok(row.map(|row| StripePriceMapping {
         stripe_product_id: row.get("stripe_product_id"),
         stripe_price_id: row.get("stripe_price_id"),
+        country_code: row.get("country_code"),
+        pricing_region: row.get("pricing_region"),
+        currency: row.get("currency"),
+        amount_minor: row.get("amount_minor"),
     }))
 }

@@ -12,6 +12,8 @@ use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
 use crate::domains::auth::types::{ForgotPasswordInput, ForgotPasswordResult};
 use crate::http::error::AppError;
 
+use super::geo_impl::{geo_metadata, password_geo_signal};
+
 pub async fn forgot(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -19,6 +21,8 @@ pub async fn forgot(
     input: ForgotPasswordInput,
     reset_ttl_minutes: i64,
     environment: &str,
+    ip: Option<String>,
+    user_agent: Option<String>,
 ) -> Result<ForgotPasswordResult, AppError> {
     let email = normalize_email(&input.email);
     let principal_data = db::find_principal_and_display_name_by_email(db, &email).await?;
@@ -28,6 +32,15 @@ pub async fn forgot(
 
         let (risk_score, decision, risk_factors) =
             risk::current_state_summary(db, principal_id).await?;
+        let (risk_score, risk_factors, geo_resolution) = password_geo_signal(
+            db,
+            principal_id,
+            ip.as_deref(),
+            risk_score,
+            risk_factors,
+            "password_reset_requested",
+        )
+        .await;
         let _ = risk::record_event(
             db,
             RiskEventInput {
@@ -35,12 +48,15 @@ pub async fn forgot(
                 session_id: None,
                 device_id: None,
                 event_type: "password_reset_requested".to_string(),
-                ip_address: None,
-                user_agent: None,
+                ip_address: ip.clone(),
+                user_agent: user_agent.clone(),
                 risk_score,
                 risk_factors: risk_factors.clone(),
                 decision,
-                metadata: serde_json::json!({ "email": email }),
+                metadata: serde_json::json!({
+                    "email": email,
+                    "geo": geo_metadata(geo_resolution.as_ref()),
+                }),
             },
         )
         .await;
@@ -75,14 +91,15 @@ pub async fn forgot(
                     session_id: None,
                     device_id: None,
                     event_type: "enterprise_recovery_requested".to_string(),
-                    ip_address: None,
-                    user_agent: None,
+                    ip_address: ip.clone(),
+                    user_agent: user_agent.clone(),
                     risk_score,
                     risk_factors: risk_factors.clone(),
                     decision,
                     metadata: serde_json::json!({
                         "tenant_kind": tenant_kind,
                         "available_at": available_at,
+                        "geo": geo_metadata(geo_resolution.as_ref()),
                     }),
                 },
             )

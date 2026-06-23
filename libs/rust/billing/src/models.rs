@@ -183,6 +183,7 @@ pub struct BillingStateRecord {
     pub owner_principal_id: Uuid,
     pub owner_email: String,
     pub trial_ends_at: Option<DateTime<Utc>>,
+    pub plan_id: Uuid,
     pub plan_code: String,
     pub included_storage_gb: i32,
     pub included_users: i32,
@@ -210,6 +211,10 @@ pub struct BillingStateRecord {
 pub struct StripePriceMapping {
     pub stripe_product_id: String,
     pub stripe_price_id: String,
+    pub country_code: Option<String>,
+    pub pricing_region: Option<String>,
+    pub currency: String,
+    pub amount_minor: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

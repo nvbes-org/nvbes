@@ -33,6 +33,12 @@ pub struct PriceSelection<'a> {
     pub prices: &'a [PriceVersion],
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RegionalPriceSelection {
+    pub country_code: Option<String>,
+    pub pricing_region: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BillingInterval {
     Month,
@@ -47,6 +53,43 @@ pub fn plan_monthly_price_cents(plan_code: &str) -> i64 {
         "team" => 3_900,
         "team_plus" => 7_900,
         _ => 0,
+    }
+}
+
+pub fn regional_price_selection(country_code: Option<&str>) -> RegionalPriceSelection {
+    let country_code = country_code.and_then(normalize_billing_country);
+    let pricing_region = country_code
+        .as_deref()
+        .and_then(country_pricing_region)
+        .map(str::to_string);
+
+    RegionalPriceSelection {
+        country_code,
+        pricing_region,
+    }
+}
+
+pub fn normalize_billing_country(country_code: &str) -> Option<String> {
+    let normalized = country_code.trim().to_ascii_uppercase();
+    (normalized.len() == 2 && normalized.chars().all(|ch| ch.is_ascii_alphabetic()))
+        .then_some(normalized)
+}
+
+fn country_pricing_region(country_code: &str) -> Option<&'static str> {
+    match country_code {
+        "US" | "CA" => Some("north_america"),
+        "AR" | "BO" | "BR" | "CL" | "CO" | "CR" | "EC" | "MX" | "PE" | "UY" => Some("latam"),
+        "AT" | "BE" | "CH" | "DE" | "DK" | "ES" | "FI" | "FR" | "GB" | "IE" | "IT" | "LU"
+        | "NL" | "NO" | "PT" | "SE" => Some("western_europe"),
+        "BG" | "CZ" | "EE" | "GR" | "HR" | "HU" | "LT" | "LV" | "PL" | "RO" | "SI" | "SK" => {
+            Some("eastern_europe")
+        }
+        "AE" | "BH" | "EG" | "IL" | "JO" | "KW" | "MA" | "QA" | "SA" | "TN" | "TR" => Some("mena"),
+        "BD" | "IN" | "LK" | "NP" | "PK" => Some("south_asia"),
+        "ID" | "MY" | "PH" | "TH" | "VN" => Some("southeast_asia"),
+        "AU" | "HK" | "JP" | "KR" | "NZ" | "SG" | "TW" => Some("apac"),
+        "GH" | "KE" | "NG" | "ZA" => Some("africa"),
+        _ => None,
     }
 }
 
@@ -81,6 +124,28 @@ mod tests {
         assert_eq!(plan_monthly_price_cents("team"), 3_900);
         assert_eq!(plan_monthly_price_cents("team_plus"), 7_900);
         assert_eq!(plan_monthly_price_cents("trial"), 0);
+    }
+
+    #[test]
+    fn regional_price_selection_normalizes_country_and_region() {
+        assert_eq!(
+            regional_price_selection(Some(" fr ")),
+            RegionalPriceSelection {
+                country_code: Some("FR".to_string()),
+                pricing_region: Some("western_europe".to_string()),
+            }
+        );
+    }
+
+    #[test]
+    fn regional_price_selection_rejects_invalid_country() {
+        assert_eq!(
+            regional_price_selection(Some("FRA")),
+            RegionalPriceSelection {
+                country_code: None,
+                pricing_region: None,
+            }
+        );
     }
 
     #[test]

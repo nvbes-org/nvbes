@@ -4,6 +4,9 @@ use thiserror::Error;
 #[path = "region.timezones.rs"]
 pub mod timezones;
 
+#[path = "region.geo.rs"]
+pub mod geo;
+
 #[path = "region.profiles.mod.rs"]
 mod profiles;
 

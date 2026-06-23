@@ -1,4 +1,3 @@
-use serde_json::Value;
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -7,6 +6,11 @@ use crate::http::error::AppError;
 use sqlx::PgPool;
 
 use super::types::*;
+
+#[path = "identity.domains.security.service.risk_events.rs"]
+mod risk_events;
+
+use risk_events::{SecurityEventFilters, fetch_risk_events};
 
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;
@@ -17,7 +21,9 @@ pub async fn list_events(
     input: ListSecurityEventsInput,
 ) -> Result<SecurityEventsResponse, AppError> {
     let limit = normalize_limit(input.limit);
-    let risk_events = fetch_risk_events(db, access.workspace_id, input.before_id, limit).await?;
+    let filters = SecurityEventFilters::from_input(&input);
+    let risk_events =
+        fetch_risk_events(db, access.workspace_id, input.before_id, limit, &filters).await?;
 
     let events = risk_events
         .into_iter()
@@ -28,6 +34,10 @@ pub async fn list_events(
             ip_address: event.ip_address,
             user_agent: None,
             status: Some(event.decision),
+            risk_score: Some(event.risk_score),
+            geo_country_code: event.geo_country_code,
+            geo_source: event.geo_source,
+            geo_confidence: event.geo_confidence,
         })
         .collect::<Vec<_>>();
 
@@ -41,7 +51,14 @@ pub async fn export_events(
     db: &PgPool,
     access: &WorkspaceAccess,
 ) -> Result<SecurityExportResponse, AppError> {
-    let risk_events = fetch_risk_events(db, access.workspace_id, None, DEFAULT_LIMIT).await?;
+    let risk_events = fetch_risk_events(
+        db,
+        access.workspace_id,
+        None,
+        DEFAULT_LIMIT,
+        &SecurityEventFilters::default(),
+    )
+    .await?;
     let billing_webhook_events =
         fetch_billing_webhook_events(db, access.workspace_id, DEFAULT_LIMIT).await?;
 
@@ -145,56 +162,6 @@ pub async fn worker_queue_status(
         snapshot_at: chrono::Utc::now(),
         statuses,
     })
-}
-
-async fn fetch_risk_events(
-    db: &PgPool,
-    workspace_id: Uuid,
-    before_id: Option<Uuid>,
-    limit: i64,
-) -> Result<Vec<RiskEventView>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT
-          id, principal_id, session_id, device_id, event_type, ip_address::text AS ip_address,
-          user_agent, risk_score, risk_factors, decision, metadata, created_at
-        FROM risk_events
-        WHERE principal_id IN (
-          SELECT principal_id
-          FROM principals
-          WHERE tenant_id = (SELECT tenant_id FROM workspaces WHERE id = $1)
-        )
-          AND ($2::uuid IS NULL OR id < $2)
-        ORDER BY created_at DESC, id DESC
-        LIMIT $3
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(before_id)
-    .bind(limit)
-    .fetch_all(db)
-    .await?;
-
-    rows.into_iter()
-        .map(|row| {
-            let risk_factors: sqlx::types::Json<Value> = row.get("risk_factors");
-            let metadata: sqlx::types::Json<Value> = row.get("metadata");
-            Ok(RiskEventView {
-                id: row.get("id"),
-                principal_id: row.get("principal_id"),
-                session_id: row.get("session_id"),
-                device_id: row.get("device_id"),
-                event_type: row.get("event_type"),
-                ip_address: row.get("ip_address"),
-                user_agent: row.get("user_agent"),
-                risk_score: row.get("risk_score"),
-                risk_factors: risk_factors.0,
-                decision: row.get("decision"),
-                metadata: metadata.0,
-                created_at: row.get("created_at"),
-            })
-        })
-        .collect()
 }
 
 async fn fetch_billing_webhook_events(

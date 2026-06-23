@@ -13,6 +13,7 @@ redis = { version = "0.29", features = ["tokio-comp"] }
 futures-util = "0.3"
 nvbes-drive-api = { path = "../drive-api" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-region = { path = "../../libs/rust/region" }
 nvbes-storage = { path = "../../libs/rust/storage" }
 serde.workspace = true
 serde_json.workspace = true

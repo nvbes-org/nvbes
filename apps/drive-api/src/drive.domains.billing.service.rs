@@ -22,9 +22,19 @@ pub async fn create_checkout_session(
     access: &WorkspaceAccess,
     input: CreateCheckoutInput,
     ip: Option<String>,
+    trusted_country_header: Option<String>,
     user_agent: Option<String>,
 ) -> Result<CheckoutSessionResponse, AppError> {
-    manage::create_checkout_session(db, config, access, input, ip, user_agent).await
+    manage::create_checkout_session(
+        db,
+        config,
+        access,
+        input,
+        ip,
+        trusted_country_header,
+        user_agent,
+    )
+    .await
 }
 
 pub async fn create_portal_session(
