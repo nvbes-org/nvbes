@@ -45,6 +45,7 @@ pub async fn create_checkout_session(
     let record = db::fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
     let geo_resolution = resolve_checkout_geo(
         &mut tx,
+        config,
         ip.as_deref(),
         trusted_country_header.as_deref(),
         record.country.as_deref(),

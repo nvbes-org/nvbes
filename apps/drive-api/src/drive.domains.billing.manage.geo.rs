@@ -1,3 +1,4 @@
+use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
     GeoLookupRequest, GeoResolution, GeoResolver, IpIntelligenceHttpClient, RdapClient,
     cache_ip_intelligence_tx, cached_ip_intelligence_tx, cached_remote_lookup_tx,
@@ -6,9 +7,9 @@ use nvbes_region::geo::{
 use sqlx::{Postgres, Transaction};
 use std::time::Duration;
 
-pub(super) async fn resolve_checkout_geo(
+pub async fn resolve_checkout_geo(
     tx: &mut Transaction<'_, Postgres>,
-    config: &nvbes_core::config::AppConfig,
+    config: &AppConfig,
     ip: Option<&str>,
     trusted_country_header: Option<&str>,
     stored_profile_country: Option<&str>,
@@ -66,7 +67,7 @@ pub(super) async fn resolve_checkout_geo(
 
 async fn fetch_and_cache_ip_intelligence(
     tx: &mut Transaction<'_, Postgres>,
-    config: &nvbes_core::config::AppConfig,
+    config: &AppConfig,
     ip: std::net::IpAddr,
 ) -> Result<Option<nvbes_region::geo::IpIntelligenceLookup>, sqlx::Error> {
     if config.ip_intelligence_provider_specs.is_empty() {
@@ -104,52 +105,4 @@ async fn fetch_and_cache_ip_intelligence(
         cache_ip_intelligence_tx(tx, lookup, Some(expires_at)).await?;
     }
     Ok(lookup)
-}
-
-pub(super) fn checkout_geo_risk(
-    resolution: &GeoResolution,
-    stored_country: Option<&str>,
-) -> CheckoutGeoRisk {
-    let resolved_country = resolution
-        .location
-        .as_ref()
-        .map(|location| location.country_code.as_str());
-    let mut score = 5.0;
-    let mut factors = Vec::new();
-
-    if resolution.private_network {
-        score += 10.0;
-        factors.push("private_or_special_ip".to_string());
-    }
-    if matches!(resolution.confidence.as_str(), "none" | "low") {
-        score += 15.0;
-        factors.push("low_geo_confidence".to_string());
-    }
-    if resolution.source.as_str() == "fallback" {
-        score += 10.0;
-        factors.push("geo_unresolved".to_string());
-    }
-    if resolution.risk_score >= 80 {
-        score += 25.0;
-        factors.push("high_risk_network".to_string());
-    } else if resolution.risk_score >= 60 {
-        score += 12.0;
-        factors.push("elevated_risk_network".to_string());
-    }
-    if let (Some(resolved), Some(stored)) = (resolved_country, stored_country)
-        && resolved != stored
-    {
-        score += 25.0;
-        factors.push("geo_country_mismatch".to_string());
-    }
-
-    CheckoutGeoRisk {
-        score: f64::min(score, 100.0),
-        factors,
-    }
-}
-
-pub(super) struct CheckoutGeoRisk {
-    pub score: f64,
-    pub factors: Vec<String>,
 }

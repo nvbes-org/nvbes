@@ -4,6 +4,8 @@ pub mod cache;
 pub mod database;
 #[path = "region.geo.intelligence.rs"]
 pub mod intelligence;
+#[path = "region.geo.intelligence.http.rs"]
+pub mod intelligence_http;
 #[path = "region.geo.ip.rs"]
 pub mod ip;
 #[path = "region.geo.maintenance.rs"]
@@ -31,6 +33,10 @@ pub use database::{PersonalGeoDatabase, PersonalGeoDatabaseError, PersonalGeoRan
 pub use intelligence::{
     IpIntelligenceInput, IpIntelligenceLookup, cache_ip_intelligence_tx,
     merge_intelligence_into_relation, normalize_ip_intelligence,
+};
+pub use intelligence_http::{
+    IpIntelligenceHttpClient, IpIntelligenceHttpError, IpIntelligenceHttpProvider,
+    IpIntelligenceProviderSpecError, normalize_http_body, provider_from_spec, providers_from_specs,
 };
 pub use ip::{is_private_or_special_ip, parse_ip};
 pub use maintenance::{GeoMaintenanceReport, run_geo_maintenance, run_geo_maintenance_tx};

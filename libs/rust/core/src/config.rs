@@ -4,6 +4,8 @@ mod billing;
 mod env;
 #[path = "config.from_env.rs"]
 mod from_env;
+#[path = "config.geo.rs"]
+mod geo;
 #[path = "config.secrets.rs"]
 mod secrets;
 #[cfg(test)]
@@ -105,6 +107,9 @@ pub struct AppConfig {
     pub quarantine_retention_days: u32,
     pub scan_fail_open: bool,
     pub trusted_proxy_cidrs: Vec<String>,
+    pub ip_intelligence_provider_specs: Vec<String>,
+    pub ip_intelligence_timeout_secs: u64,
+    pub ip_intelligence_cache_ttl_hours: i64,
     pub mtls_enabled: bool,
     pub mtls_port: u16,
     #[serde(skip_serializing)]

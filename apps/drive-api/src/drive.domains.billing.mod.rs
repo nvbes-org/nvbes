@@ -8,6 +8,8 @@ pub mod manage;
 pub mod manage_checkout;
 #[path = "drive.domains.billing.manage.core.rs"]
 pub mod manage_core;
+#[path = "drive.domains.billing.manage.geo.rs"]
+pub mod manage_geo;
 #[path = "drive.domains.billing.manage.redirect_urls.rs"]
 pub mod manage_redirect_urls;
 #[path = "drive.domains.billing.models.rs"]

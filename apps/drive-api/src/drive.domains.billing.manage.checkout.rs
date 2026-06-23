@@ -1,18 +1,14 @@
 use nvbes_audit::AuditEventInput;
 use nvbes_audit::insert_audit_event_tx as insert_shared_audit_event;
 use nvbes_billing::validate_plan_code;
-use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoLookupRequest, GeoResolution, GeoResolver, RdapClient,
-    cached_ip_intelligence_tx, cached_remote_lookup_tx, is_private_or_special_ip,
-    load_personal_geo_database_tx, parse_ip, record_geo_resolution_tx,
-};
-use sqlx::{PgPool, Postgres, Transaction};
-use std::time::Duration;
+use nvbes_region::geo::{GeoLookupRecordContext, record_geo_resolution_tx};
+use sqlx::PgPool;
 
 use super::db::{
     fetch_active_price_mapping_tx, fetch_billing_state_tx, fetch_plan_by_code_tx,
     upsert_billing_customer_tx,
 };
+use super::manage_geo::resolve_checkout_geo;
 use super::manage_redirect_urls::resolve_billing_redirect_url;
 use super::stripe::{
     create_stripe_checkout_session, create_stripe_customer, create_stripe_portal_session,
@@ -36,6 +32,7 @@ pub async fn create_checkout_session(
     let record = fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
     let geo_resolution = resolve_checkout_geo(
         &mut tx,
+        config,
         ip.as_deref(),
         trusted_country_header.as_deref(),
         record.country.as_deref(),
@@ -156,53 +153,6 @@ pub async fn create_checkout_session(
         stripe_customer_id: customer_id,
         stripe_price_id: mapping.stripe_price_id,
     })
-}
-
-async fn resolve_checkout_geo(
-    tx: &mut Transaction<'_, Postgres>,
-    ip: Option<&str>,
-    trusted_country_header: Option<&str>,
-    stored_profile_country: Option<&str>,
-) -> Result<GeoResolution, sqlx::Error> {
-    let parsed_ip = ip.and_then(parse_ip);
-    let personal_database = load_personal_geo_database_tx(tx).await?;
-    let should_fetch_remote = parsed_ip
-        .map(|ip| !is_private_or_special_ip(ip) && trusted_country_header.is_none())
-        .unwrap_or(false);
-    let cached_lookup = match parsed_ip.filter(|_| should_fetch_remote) {
-        Some(ip) => cached_remote_lookup_tx(tx, ip).await?,
-        None => None,
-    };
-    let cached_intelligence = match parsed_ip.filter(|ip| !is_private_or_special_ip(*ip)) {
-        Some(ip) => cached_ip_intelligence_tx(tx, ip).await?,
-        None => None,
-    };
-    let remote_lookup = if should_fetch_remote && cached_lookup.is_none() {
-        match tokio::time::timeout(
-            Duration::from_secs(3),
-            RdapClient::new(nvbes_core::security::pinned_http_client())
-                .lookup(parsed_ip.expect("checked above")),
-        )
-        .await
-        {
-            Ok(Ok(lookup)) => lookup,
-            Ok(Err(_)) | Err(_) => None,
-        }
-    } else {
-        None
-    };
-    let remote_lookup = cached_lookup.as_ref().or(remote_lookup.as_ref());
-
-    Ok(
-        GeoResolver::new(personal_database).resolve(GeoLookupRequest {
-            ip: parsed_ip,
-            trusted_country_header,
-            remote_lookup,
-            network_intelligence: cached_intelligence.as_ref(),
-            stored_profile_country,
-            ..GeoLookupRequest::default()
-        }),
-    )
 }
 
 pub async fn create_portal_session(
