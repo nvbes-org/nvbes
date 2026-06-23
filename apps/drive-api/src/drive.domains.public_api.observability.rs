@@ -93,6 +93,7 @@ pub async fn log_denied(db: &PgPool, input: DeniedLogInput<'_>) -> Result<(), Ap
             metadata: serde_json::json!({
                 "request_id": input.request_id,
                 "error_code": input.error_code,
+                "network_block_reason": input.network_block_reason,
                 "required_scopes": input.scopes_used
             }),
         },

@@ -1,5 +1,3 @@
-#[path = "drive.domains.files.audit_geo.rs"]
-pub mod audit_geo;
 #[path = "drive.domains.files.core.rs"]
 pub mod core;
 #[path = "drive.domains.files.db.rs"]

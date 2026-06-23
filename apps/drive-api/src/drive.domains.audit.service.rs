@@ -29,6 +29,7 @@ pub struct ListAuditEventsInput {
     pub geo_network_kind: Option<String>,
     pub min_geo_risk_score: Option<i64>,
     pub geo_risk_label: Option<String>,
+    pub network_block_reason: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -62,6 +63,7 @@ pub struct AuditEventView {
     pub geo_network_kind: Option<String>,
     pub geo_risk_score: Option<i64>,
     pub geo_risk_labels: Vec<String>,
+    pub network_block_reason: Option<String>,
     pub metadata: Value,
     pub previous_event_hash: Option<String>,
     pub event_hash: String,

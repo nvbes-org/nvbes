@@ -162,7 +162,7 @@ pub async fn insert_audit_event_tx(
     tx: &mut Transaction<'_, Postgres>,
     input: AuditEventInsert<'_>,
 ) -> Result<(), sqlx::Error> {
-    let metadata = crate::domains::files::audit_geo::enrich_audit_metadata_tx(
+    let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
         tx,
         input.workspace_id,
         input.ip,

@@ -109,6 +109,7 @@ pub struct DeniedLogInput<'a> {
     pub actor_principal_id: Option<Uuid>,
     pub request_id: &'a str,
     pub error_code: &'a str,
+    pub network_block_reason: Option<&'a str>,
     pub ip: Option<&'a str>,
     pub user_agent: Option<&'a str>,
     pub scopes_used: &'a [&'a str],

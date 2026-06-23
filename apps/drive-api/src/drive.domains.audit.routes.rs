@@ -42,6 +42,7 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         ("geo_network_kind" = Option<String>, Query, description = "Filter by geo network kind"),
         ("min_geo_risk_score" = Option<i64>, Query, description = "Minimum geo risk score"),
         ("geo_risk_label" = Option<String>, Query, description = "Filter by exact geo risk label"),
+        ("network_block_reason" = Option<String>, Query, description = "Filter by API network block reason"),
     ),
     responses(
         (status = 200, description = "Audit events", body = AuditEventsResponse),

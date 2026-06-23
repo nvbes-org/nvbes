@@ -1,3 +1,5 @@
+#[path = "drive.domains.audit.geo.rs"]
+pub mod geo;
 #[path = "drive.domains.audit.models.rs"]
 pub mod models;
 #[path = "drive.domains.audit.routes.rs"]

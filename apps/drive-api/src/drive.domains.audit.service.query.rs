@@ -47,6 +47,7 @@ pub async fn export_events(
             geo_network_kind: None,
             min_geo_risk_score: None,
             geo_risk_label: None,
+            network_block_reason: None,
         },
         EXPORT_LIMIT,
     )
@@ -61,6 +62,16 @@ pub async fn export_events(
 }
 
 pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<(), AppError> {
+    let mut tx = db.begin().await?;
+    let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
+        &mut tx,
+        input.workspace_id,
+        input.ip,
+        input.action,
+        input.metadata,
+    )
+    .await?;
+
     sqlx::query(
         r#"
         INSERT INTO audit_events (
@@ -85,9 +96,10 @@ pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<()
     .bind(input.target_id)
     .bind(input.ip)
     .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(db)
+    .bind(sqlx::types::Json(metadata))
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
 
     Ok(())
 }
@@ -127,6 +139,7 @@ async fn fetch_events(
           ae.metadata #>> '{geo,geo_network_kind}' AS geo_network_kind,
           NULLIF(ae.metadata #>> '{geo,geo_risk_score}', '')::bigint AS geo_risk_score,
           COALESCE(ae.metadata #> '{geo,geo_risk_labels}', '[]'::jsonb) AS geo_risk_labels,
+          ae.metadata->>'network_block_reason' AS network_block_reason,
           ae.metadata,
           ae.previous_event_hash,
           ae.event_hash,
@@ -147,8 +160,9 @@ async fn fetch_events(
               WHERE lower(label.value) = $8
             )
           )
+          AND ($9::text IS NULL OR ae.metadata->>'network_block_reason' = $9)
         ORDER BY ae.created_at DESC, ae.id DESC
-        LIMIT $9
+        LIMIT $10
         "#,
     )
     .bind(workspace_id)
@@ -164,6 +178,7 @@ async fn fetch_events(
             .and_then(|label| normalize_optional_text(Some(label)))
             .map(|label| label.to_ascii_lowercase()),
     )
+    .bind(normalize_optional_text(input.network_block_reason))
     .bind(limit)
     .fetch_all(db)
     .await?;
@@ -196,6 +211,7 @@ async fn fetch_events(
                             .collect()
                     })
                     .unwrap_or_default(),
+                network_block_reason: row.get("network_block_reason"),
                 metadata: metadata.0,
                 previous_event_hash: row.get("previous_event_hash"),
                 event_hash: row.get("event_hash"),
