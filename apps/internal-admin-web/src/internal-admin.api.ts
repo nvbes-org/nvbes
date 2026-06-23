@@ -29,6 +29,8 @@ import type {
   RefundIntentRequest,
   RevenueCenterSnapshot,
   RiskDecisionSnapshot,
+  RunbookExecutionRequest,
+  RunbookExecutionResult,
   SearchResult,
   SecurityCenterSnapshot,
   TenantDetail,
@@ -87,6 +89,18 @@ export async function listBillingRunbooks(credentials: AdminCredentials) {
     headers: authHeaders(credentials),
   });
   return parseJson<BillingRunbook[]>(response);
+}
+
+export function executeBillingRunbook(
+  credentials: AdminCredentials,
+  runbookId: string,
+  body: RunbookExecutionRequest,
+) {
+  return postJson<RunbookExecutionRequest, RunbookExecutionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/billing/admin/runbooks/${runbookId}/execute`,
+    body,
+  );
 }
 
 export async function listAuditEvents(credentials: AdminCredentials, limit = 25) {

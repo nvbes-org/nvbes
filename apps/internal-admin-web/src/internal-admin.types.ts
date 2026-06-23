@@ -903,6 +903,17 @@ export type BillingRunbook = {
   steps: string[];
 };
 
+export type RunbookExecutionRequest = {
+  reason: string;
+};
+
+export type RunbookExecutionResult = {
+  workspace_id: string;
+  tenant_id: string;
+  runbook_id: string;
+  audit_action: string;
+};
+
 export type AuditEvent = {
   id: string;
   action: string;
