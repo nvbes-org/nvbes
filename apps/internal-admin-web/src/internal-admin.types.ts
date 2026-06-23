@@ -232,6 +232,18 @@ export type DeveloperCenterSnapshot = {
   health_issues: DeveloperHealthIssue[];
 };
 
+export type DeveloperActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type DeveloperActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
+};
+
 export type EntitlementsSnapshot = {
   active_plan_count: number;
   active_feature_count: number;
@@ -284,6 +296,32 @@ export type UsageCenterSnapshot = {
   tenant_usage_24h: TenantUsage[];
   recent_rollups: UsageRollup[];
   recent_corrections: UsageCorrection[];
+};
+
+export type UsageCorrectionRequest = {
+  confirm_code: string;
+  usage_event_id: string | null;
+  meter_code: string;
+  quantity_delta: number;
+  reason: string;
+};
+
+export type FreezeMeterRequest = {
+  confirm_code: string;
+  meter_code: string;
+  reason: string;
+};
+
+export type ReplayUsageRollupRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type UsageActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
 };
 
 export type RevenueCenterSnapshot = {

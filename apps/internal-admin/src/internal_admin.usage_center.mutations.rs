@@ -103,10 +103,7 @@ pub(crate) async fn freeze_meter(
     .fetch_optional(tx.as_mut())
     .await?
     .ok_or_else(|| {
-        AppError::conflict(
-            "meter_not_freezable",
-            "Meter is missing or already frozen.",
-        )
+        AppError::conflict("meter_not_freezable", "Meter is missing or already frozen.")
     })?;
     let action_id = insert_usage_action(
         &mut tx,

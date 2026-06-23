@@ -36,12 +36,34 @@ mod billing_runbooks;
 mod command_center;
 #[path = "internal_admin.communications_center.rs"]
 mod communications_center;
+#[path = "internal_admin.communications_center.actions.rs"]
+mod communications_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.communications_center.actions.tests.rs"]
+mod communications_center_actions_tests;
+#[path = "internal_admin.communications_center.mutations.rs"]
+mod communications_center_mutations;
+#[path = "internal_admin.communications_center.types.rs"]
+mod communications_center_types;
+#[path = "internal_admin.communications_center.validation.rs"]
+mod communications_center_validation;
 #[path = "internal_admin.compliance_center.rs"]
 mod compliance_center;
 #[path = "internal_admin.customer_center.rs"]
 mod customer_center;
 #[path = "internal_admin.developer_center.rs"]
 mod developer_center;
+#[path = "internal_admin.developer_center.actions.rs"]
+mod developer_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.developer_center.actions.tests.rs"]
+mod developer_center_actions_tests;
+#[path = "internal_admin.developer_center.mutations.rs"]
+mod developer_center_mutations;
+#[path = "internal_admin.developer_center.types.rs"]
+mod developer_center_types;
+#[path = "internal_admin.developer_center.validation.rs"]
+mod developer_center_validation;
 #[path = "internal_admin.entitlements_center.rs"]
 mod entitlements_center;
 #[path = "internal_admin.entitlements_center.actions.rs"]

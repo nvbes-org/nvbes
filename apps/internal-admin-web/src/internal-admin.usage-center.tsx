@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUsageCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { UsageActionsPanel } from './internal-admin.usage-actions';
 import type {
   AdminCredentials,
   MeterUsage,
@@ -87,6 +88,7 @@ export function UsageCenterPanel({
           value={formatCount(data?.distinct_tenant_count_24h)}
         />
       </div>
+      <UsageActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <MeterUsageList rows={data?.meter_usage_24h ?? []} />
         <TenantUsageList onSelectTenant={onSelectTenant} rows={data?.tenant_usage_24h ?? []} />

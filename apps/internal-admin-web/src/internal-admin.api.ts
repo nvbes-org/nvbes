@@ -15,6 +15,8 @@ import type {
   ComplianceCenterSnapshot,
   CreditNoteRequest,
   CustomerCenterSnapshot,
+  DeveloperActionRequest,
+  DeveloperActionResult,
   DeveloperCenterSnapshot,
   EntitlementActionResult,
   EntitlementFeatureActionRequest,
@@ -47,13 +49,17 @@ import type {
   TenantDetail,
   TenantLifecycleRequest,
   TenantLifecycleResult,
+  FreezeMeterRequest,
   UsageCenterSnapshot,
+  UsageActionResult,
+  UsageCorrectionRequest,
   UserDetail,
   UserLifecycleRequest,
   UserLifecycleResult,
   WorkspaceDetail,
   WorkspaceLifecycleRequest,
   WorkspaceLifecycleResult,
+  ReplayUsageRollupRequest,
 } from './internal-admin.types';
 
 const jsonHeaders = { 'content-type': 'application/json' };
@@ -244,6 +250,42 @@ export async function getDeveloperCenter(credentials: AdminCredentials) {
   return parseJson<DeveloperCenterSnapshot>(response);
 }
 
+export function revokeDeveloperClient(
+  credentials: AdminCredentials,
+  clientId: string,
+  body: DeveloperActionRequest,
+) {
+  return postJson<DeveloperActionRequest, DeveloperActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/developer/clients/${clientId}/revoke`,
+    body,
+  );
+}
+
+export function rotateDeveloperSecret(
+  credentials: AdminCredentials,
+  clientId: string,
+  body: DeveloperActionRequest,
+) {
+  return postJson<DeveloperActionRequest, DeveloperActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/developer/clients/${clientId}/rotate-secret`,
+    body,
+  );
+}
+
+export function approveMarketplaceApp(
+  credentials: AdminCredentials,
+  appId: string,
+  body: DeveloperActionRequest,
+) {
+  return postJson<DeveloperActionRequest, DeveloperActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/developer/marketplace-apps/${appId}/approve`,
+    body,
+  );
+}
+
 export async function getEntitlementsCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/entitlements-center', {
     headers: authHeaders(credentials),
@@ -335,6 +377,34 @@ export async function getOperationsCenter(credentials: AdminCredentials) {
 export async function getUsageCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/usage-center', { headers: authHeaders(credentials) });
   return parseJson<UsageCenterSnapshot>(response);
+}
+
+export function correctUsage(credentials: AdminCredentials, body: UsageCorrectionRequest) {
+  return postJson<UsageCorrectionRequest, UsageActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/usage/corrections`,
+    body,
+  );
+}
+
+export function freezeUsageMeter(credentials: AdminCredentials, body: FreezeMeterRequest) {
+  return postJson<FreezeMeterRequest, UsageActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/usage/meters/freeze`,
+    body,
+  );
+}
+
+export function replayUsageRollup(
+  credentials: AdminCredentials,
+  rollupId: string,
+  body: ReplayUsageRollupRequest,
+) {
+  return postJson<ReplayUsageRollupRequest, UsageActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/usage/rollups/${rollupId}/replay`,
+    body,
+  );
 }
 
 export async function globalSearch(credentials: AdminCredentials, query: string) {

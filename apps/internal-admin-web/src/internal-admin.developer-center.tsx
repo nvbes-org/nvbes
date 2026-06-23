@@ -12,6 +12,7 @@ import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getDeveloperCenter } from './internal-admin.api';
+import { DeveloperActionsPanel } from './internal-admin.developer-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -98,6 +99,7 @@ export function DeveloperCenterPanel({
           value={formatCount(data?.failing_health_check_count)}
         />
       </div>
+      <DeveloperActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <MarketplaceList
           onSelectTenant={onSelectTenant}

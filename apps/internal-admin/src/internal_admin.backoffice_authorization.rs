@@ -9,6 +9,8 @@ const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
 pub(crate) enum BackofficePermission {
     AccessMutate,
     BillingMutate,
+    CommunicationsMutate,
+    DeveloperMutate,
     EntitlementsMutate,
     GovernanceMutate,
     SecurityMutate,
@@ -102,6 +104,7 @@ fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
         BackofficeRole::FinanceAdmin => matches!(
             permission,
             BackofficePermission::BillingMutate
+                | BackofficePermission::DeveloperMutate
                 | BackofficePermission::EntitlementsMutate
                 | BackofficePermission::UsageMutate
         ),
@@ -114,7 +117,8 @@ fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
         ),
         BackofficeRole::SupportAgent => matches!(
             permission,
-            BackofficePermission::TenantLifecycle
+            BackofficePermission::CommunicationsMutate
+                | BackofficePermission::TenantLifecycle
                 | BackofficePermission::UserLifecycle
                 | BackofficePermission::WorkspaceLifecycle
         ),
@@ -147,6 +151,10 @@ mod tests {
         assert!(role_allows(
             BackofficeRole::PlatformAdmin,
             BackofficePermission::UsageMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::DeveloperMutate
         ));
     }
 
@@ -187,6 +195,10 @@ mod tests {
         assert!(role_allows(
             BackofficeRole::FinanceAdmin,
             BackofficePermission::UsageMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::DeveloperMutate
         ));
         assert!(!role_allows(
             BackofficeRole::FinanceAdmin,
