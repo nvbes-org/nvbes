@@ -1,6 +1,9 @@
-use super::types::{
-    ApiKeyMigrationTargetView, ApiKeyView, ApiRequestLogInsert, AuditEventInsert, RateLimitView,
-};
+#[path = "drive.domains.public_api.db.request_logs.rs"]
+mod request_logs;
+
+pub use request_logs::insert_api_request_log;
+
+use super::types::{ApiKeyMigrationTargetView, ApiKeyView, AuditEventInsert, RateLimitView};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
@@ -155,48 +158,19 @@ pub async fn get_workspace_for_api(
     .await
 }
 
-pub async fn insert_api_request_log(
-    db: &PgPool,
-    input: ApiRequestLogInsert<'_>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"
-        INSERT INTO api_request_logs (
-          workspace_id,
-          api_key_id,
-          actor_principal_id,
-          request_id,
-          method,
-          path,
-          status_code,
-          error_code,
-          scopes_used,
-          ip,
-          user_agent
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::inet, $11)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.api_key_id)
-    .bind(input.actor_principal_id)
-    .bind(input.request_id)
-    .bind(input.method)
-    .bind(input.path)
-    .bind(input.status_code)
-    .bind(input.error_code)
-    .bind(input.scopes_used)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .execute(db)
-    .await?;
-    Ok(())
-}
-
 pub async fn insert_audit_event_tx(
     tx: &mut Transaction<'_, Postgres>,
     input: AuditEventInsert<'_>,
 ) -> Result<(), sqlx::Error> {
+    let metadata = crate::domains::files::audit_geo::enrich_audit_metadata_tx(
+        tx,
+        input.workspace_id,
+        input.ip,
+        input.action,
+        input.metadata,
+    )
+    .await?;
+
     sqlx::query(
         r#"
         INSERT INTO audit_events (
@@ -210,7 +184,7 @@ pub async fn insert_audit_event_tx(
           user_agent,
           metadata
         )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
         "#,
     )
     .bind(input.workspace_id)
@@ -221,7 +195,7 @@ pub async fn insert_audit_event_tx(
     .bind(input.target_id)
     .bind(input.ip)
     .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
+    .bind(sqlx::types::Json(metadata))
     .execute(&mut **tx)
     .await?;
     Ok(())

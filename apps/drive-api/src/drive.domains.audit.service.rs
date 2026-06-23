@@ -26,6 +26,9 @@ pub struct ListAuditEventsInput {
     pub action: Option<String>,
     pub actor_user_id: Option<Uuid>,
     pub actor_principal_id: Option<Uuid>,
+    pub geo_network_kind: Option<String>,
+    pub min_geo_risk_score: Option<i64>,
+    pub geo_risk_label: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -55,6 +58,10 @@ pub struct AuditEventView {
     pub target_id: Option<Uuid>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
+    pub geo_country_code: Option<String>,
+    pub geo_network_kind: Option<String>,
+    pub geo_risk_score: Option<i64>,
+    pub geo_risk_labels: Vec<String>,
     pub metadata: Value,
     pub previous_event_hash: Option<String>,
     pub event_hash: String,

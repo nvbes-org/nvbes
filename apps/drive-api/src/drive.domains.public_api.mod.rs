@@ -6,10 +6,16 @@ pub mod auth;
 pub mod db;
 #[path = "drive.domains.public_api.errors.rs"]
 pub mod errors;
+#[path = "drive.domains.public_api.geo.rs"]
+pub mod geo;
 #[path = "drive.domains.public_api.http_signatures.rs"]
 pub mod http_signatures;
+#[path = "drive.domains.public_api.metrics.rs"]
+pub mod metrics;
 #[path = "drive.domains.public_api.routes.mgmt_handlers.rs"]
 pub mod mgmt_handlers;
+#[path = "drive.domains.public_api.network_policy.rs"]
+pub mod network_policy;
 #[path = "drive.domains.public_api.observability.rs"]
 pub mod observability;
 #[path = "drive.domains.public_api.request_meta.rs"]

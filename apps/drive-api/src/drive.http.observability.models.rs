@@ -81,6 +81,8 @@ impl DashboardsResponse {
                         "auth_failures",
                         "permission_denied",
                         "api_key_denied",
+                        "public_api_geo_requests_by_network_kind",
+                        "public_api_high_risk_requests",
                         "audit_events_created",
                     ],
                 },

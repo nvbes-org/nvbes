@@ -198,6 +198,15 @@ pub async fn insert_audit_event_tx(
     tx: &mut Transaction<'_, Postgres>,
     input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
+    let metadata = super::audit_geo::enrich_audit_metadata_tx(
+        tx,
+        input.workspace_id,
+        input.ip,
+        input.action,
+        input.metadata,
+    )
+    .await?;
+
     sqlx::query(
         r#"
         INSERT INTO audit_events (
@@ -211,7 +220,7 @@ pub async fn insert_audit_event_tx(
           user_agent,
           metadata
         )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
         "#,
     )
     .bind(input.workspace_id)
@@ -222,7 +231,7 @@ pub async fn insert_audit_event_tx(
     .bind(input.target_id)
     .bind(input.ip)
     .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
+    .bind(sqlx::types::Json(metadata))
     .execute(&mut **tx)
     .await?;
 

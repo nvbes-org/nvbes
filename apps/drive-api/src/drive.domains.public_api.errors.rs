@@ -29,6 +29,7 @@ pub enum PublicApiErrorKind {
     ApiKeySignatureFuture,
     ApiKeyNonceInvalid,
     WorkspaceScopeMismatch,
+    NetworkRiskBlocked,
     StepUpNotSupported,
     PermissionDenied,
 }
@@ -60,6 +61,7 @@ impl PublicApiErrorKind {
             Self::ApiKeySignatureFuture => "api_key_signature_future",
             Self::ApiKeyNonceInvalid => "api_key_nonce_invalid",
             Self::WorkspaceScopeMismatch => "workspace_suspended",
+            Self::NetworkRiskBlocked => "network_risk_blocked",
             Self::StepUpNotSupported => "step_up_not_supported_for_public_api",
             Self::PermissionDenied => "permission_denied",
         }
@@ -94,6 +96,9 @@ impl PublicApiErrorKind {
             Self::ApiKeySignatureFuture => "X-Timestamp is in the future.",
             Self::ApiKeyNonceInvalid => "X-Nonce is invalid.",
             Self::WorkspaceScopeMismatch => "API key is not scoped to this workspace.",
+            Self::NetworkRiskBlocked => {
+                "This Public API request is blocked because the source network is high risk."
+            }
             Self::StepUpNotSupported => {
                 "Step-up actions cannot be performed with Public API credentials."
             }
@@ -130,6 +135,7 @@ impl PublicApiErrorKind {
             | Self::InsufficientM2mScope
             | Self::WorkspaceRoleRequired
             | Self::WorkspaceScopeMismatch
+            | Self::NetworkRiskBlocked
             | Self::StepUpNotSupported
             | Self::PermissionDenied => StatusCode::FORBIDDEN,
         }

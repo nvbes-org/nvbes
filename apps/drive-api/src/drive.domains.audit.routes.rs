@@ -39,6 +39,9 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         ("before" = Option<Uuid>, Query, description = "Cursor: return events before this ID"),
         ("action" = Option<String>, Query, description = "Filter by action"),
         ("actorUserId" = Option<Uuid>, Query, description = "Filter by actor user ID"),
+        ("geo_network_kind" = Option<String>, Query, description = "Filter by geo network kind"),
+        ("min_geo_risk_score" = Option<i64>, Query, description = "Minimum geo risk score"),
+        ("geo_risk_label" = Option<String>, Query, description = "Filter by exact geo risk label"),
     ),
     responses(
         (status = 200, description = "Audit events", body = AuditEventsResponse),

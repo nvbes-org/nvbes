@@ -67,6 +67,16 @@ pub(super) async fn authenticate_api_key(
         expires_at,
     )
     .await?;
+    enforce_network_policy(
+        db,
+        headers,
+        request_id.as_str(),
+        required_scope,
+        workspace_id,
+        Some(api_key_id),
+        Some(created_by_principal_id),
+    )
+    .await?;
 
     super::enforce_plan_rate_limit(redis, "api_key_rate", &api_key_id.to_string(), &plan_code)
         .await?;
@@ -92,6 +102,49 @@ pub(super) async fn authenticate_api_key(
         request_id,
         m2m_client_id: None,
     })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Denied audit logging needs explicit request metadata and actor context."
+)]
+pub(super) async fn enforce_network_policy(
+    db: &PgPool,
+    headers: &axum::http::HeaderMap,
+    request_id: &str,
+    required_scope: &str,
+    workspace_id: Uuid,
+    api_key_id: Option<Uuid>,
+    actor_principal_id: Option<Uuid>,
+) -> Result<(), AppError> {
+    let ip = crate::http::request::client_ip(headers);
+    let Some(block) =
+        crate::domains::public_api::network_policy::public_api_network_block(db, ip.as_deref())
+            .await?
+    else {
+        return Ok(());
+    };
+
+    observability::log_denied(
+        db,
+        DeniedLogInput {
+            workspace_id,
+            api_key_id,
+            actor_principal_id,
+            request_id,
+            error_code: PublicApiErrorKind::NetworkRiskBlocked.code(),
+            ip: ip.as_deref(),
+            user_agent: crate::http::request::user_agent(headers).as_deref(),
+            scopes_used: &[required_scope],
+        },
+    )
+    .await?;
+    metrics::counter!(
+        "drive_public_api_network_policy_blocks_total",
+        &[("reason", block.reason.to_string())]
+    )
+    .increment(1);
+    Err(PublicApiErrorKind::NetworkRiskBlocked.app_error())
 }
 
 #[expect(

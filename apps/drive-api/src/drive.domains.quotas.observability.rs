@@ -21,7 +21,7 @@ pub async fn insert_audit_event(
           user_agent,
           metadata
         )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
         "#,
     )
     .bind(input.workspace_id)
