@@ -301,6 +301,12 @@
       "skillPath": "skills/infrastructure/dns/SKILL.md",
       "computedHash": "0305bedbf31d8e0d206a796ee552bf1a8f100ab43f43deadd8b70d54064da574"
     },
+    "dns-rebinding-attacks": {
+      "source": "yaklang/hack-skills",
+      "sourceType": "github",
+      "skillPath": "skills/dns-rebinding-attacks/SKILL.md",
+      "computedHash": "ee5ee5a40009b61419d1443d61dc79f9708b11950c9d178feda97ef1acdf5c45"
+    },
     "docker": {
       "source": "claude-dev-suite/claude-dev-suite",
       "sourceType": "github",
