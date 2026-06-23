@@ -13,8 +13,12 @@ services:
       - nvbes_target:/workspaces/nvbes/target
       - nvbes_node_modules:/workspaces/nvbes/node_modules
       - nvbes_pnpm_store:/workspaces/nvbes/pnpm-store
+      - nvbes_home_config:/home/vscode/.config
+      - nvbes_home_ssh:/home/vscode/.ssh
     environment:
       CARGO_TARGET_DIR: /workspaces/nvbes/target
+      GH_CONFIG_DIR: /home/vscode/.config/gh
+      GIT_CONFIG_GLOBAL: /home/vscode/.config/git/config
       PNPM_HOME: /usr/local/node/bin
       NVBES_DEVCONTAINER: "true"
       NVBES_ENV: development
@@ -141,6 +145,8 @@ services:
 volumes:
   nvbes_cargo_registry:
   nvbes_cargo_git:
+  nvbes_home_config:
+  nvbes_home_ssh:
   nvbes_node_modules:
   nvbes_pgdata:
   nvbes_pnpm_store:
