@@ -56,6 +56,8 @@ mod identity_governance_center;
 mod identity_governance_center_actions;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
+#[path = "internal_admin.rate_limit.rs"]
+mod rate_limit;
 #[path = "internal_admin.region_center.rs"]
 mod region_center;
 #[path = "internal_admin.revenue_center.rs"]

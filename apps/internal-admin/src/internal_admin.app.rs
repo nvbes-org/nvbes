@@ -11,11 +11,16 @@ use sqlx::PgPool;
 pub struct AppState {
     pub config: AppConfig,
     pub db: PgPool,
+    pub rate_limiter: crate::rate_limit::BackofficeRateLimiter,
 }
 
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
-        Self { config, db }
+        Self {
+            config,
+            db,
+            rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),
+        }
     }
 }
 
@@ -25,6 +30,10 @@ pub fn build_router(state: AppState) -> Router {
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             crate::idempotency::idempotency_guard,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::rate_limit::backoffice_rate_limit,
         ))
         .layer(axum::middleware::from_fn(crate::routes::security_headers))
         .layer(axum::middleware::from_fn_with_state(
