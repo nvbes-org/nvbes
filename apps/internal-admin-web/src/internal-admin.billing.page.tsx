@@ -9,6 +9,7 @@ import {
 import { BillingActions } from './internal-admin.billing.actions';
 import { BillingExports } from './internal-admin.billing.exports';
 import { BillingOverviewCards } from './internal-admin.billing.overview';
+import { BillingPlatformCenterPanel } from './internal-admin.billing-platform-center';
 import { ProviderEventFailuresPanel } from './internal-admin.billing.provider-events';
 import { BillingRunbooks } from './internal-admin.billing.runbooks';
 import { BillingSearch } from './internal-admin.billing.search';
@@ -20,16 +21,19 @@ import { ComplianceCenterPanel } from './internal-admin.compliance-center';
 import { CommandCenterPanel } from './internal-admin.command-center';
 import { CustomerCenterPanel } from './internal-admin.customer-center';
 import { DeveloperCenterPanel } from './internal-admin.developer-center';
+import { EntitlementsCenterPanel } from './internal-admin.entitlements-center';
 import { GlobalSearchPanel } from './internal-admin.global-search';
 import { IdentityGovernanceCenterPanel } from './internal-admin.identity-governance-center';
 import { OperationsCenterPanel } from './internal-admin.operations-center';
 import { RegionCenterPanel } from './internal-admin.region-center';
 import { RevenueCenterPanel } from './internal-admin.revenue-center';
+import { RiskDecisionCenterPanel } from './internal-admin.risk-decision-center';
 import { SecurityCenterPanel } from './internal-admin.security-center';
 import { InternalAdminShell } from './internal-admin.shell';
 import { StatusStrip } from './internal-admin.status-strip';
 import type { ProviderEventFailure } from './internal-admin.types';
 import { TenantDetailPanel } from './internal-admin.tenant-detail';
+import { UsageCenterPanel } from './internal-admin.usage-center';
 import { UserDetailPanel } from './internal-admin.user-detail';
 import { WorkspaceDetailPanel } from './internal-admin.workspace-detail';
 
@@ -65,6 +69,11 @@ export function BillingOperationsPage() {
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
       />
+      <BillingPlatformCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+      />
       <CustomerCenterPanel
         credentials={credentials}
         disabled={!isReady}
@@ -75,6 +84,18 @@ export function BillingOperationsPage() {
         credentials={credentials}
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
+      />
+      <EntitlementsCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectWorkspace={setSelectedWorkspaceId}
+      />
+      <UsageCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectWorkspace={setSelectedWorkspaceId}
       />
       <OperationsCenterPanel
         credentials={credentials}
@@ -99,6 +120,13 @@ export function BillingOperationsPage() {
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
         onSelectUser={setSelectedUserId}
+      />
+      <RiskDecisionCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+        onSelectWorkspace={setSelectedWorkspaceId}
       />
       <SecurityCenterPanel
         credentials={credentials}

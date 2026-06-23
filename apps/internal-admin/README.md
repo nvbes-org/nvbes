@@ -16,18 +16,22 @@ This app owns operator-only endpoints and must stay isolated from public product
 
 - `GET /admin/access-center`
 - `GET /admin/audit-evidence-center`
+- `GET /admin/billing-platform-center`
 - `GET /admin/command-center`
 - `GET /admin/communications-center`
 - `GET /admin/compliance-center`
 - `GET /admin/customer-center`
 - `GET /admin/developer-center`
+- `GET /admin/entitlements-center`
 - `GET /admin/identity-governance-center`
 - `GET /admin/operations-center`
 - `GET /admin/revenue-center`
 - `GET /admin/region-center`
+- `GET /admin/risk-decision-center`
 - `GET /admin/security-center`
 - `GET /admin/search`
 - `GET /admin/tenants/{tenantId}`
+- `GET /admin/usage-center`
 - `GET /admin/users/{principalId}`
 - `GET /admin/workspaces/{workspaceId}`
 - `GET /workspaces/{workspaceId}/admin/audit-events`

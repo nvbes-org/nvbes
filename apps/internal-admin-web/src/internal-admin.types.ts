@@ -91,6 +91,19 @@ export type SecurityCenterSnapshot = {
   users_without_mfa: UserWithoutMfa[];
 };
 
+export type RiskDecisionSnapshot = {
+  identity_risk_event_count_24h: number;
+  high_identity_risk_event_count_24h: number;
+  billing_risk_signal_count_24h: number;
+  high_billing_risk_score_count: number;
+  active_access_policy_count: number;
+  access_policy_count_24h: number;
+  recent_identity_risks: IdentityRiskDecision[];
+  billing_risk_scores: BillingRiskScore[];
+  billing_risk_signals: BillingRiskSignal[];
+  active_access_policies: AccessPolicySnapshot[];
+};
+
 export type AuditEvidenceSnapshot = {
   audit_events_24h: number;
   actorless_event_count_24h: number;
@@ -175,6 +188,33 @@ export type DeveloperCenterSnapshot = {
   health_issues: DeveloperHealthIssue[];
 };
 
+export type EntitlementsSnapshot = {
+  active_plan_count: number;
+  active_feature_count: number;
+  quota_definition_count: number;
+  active_entitlement_count: number;
+  over_quota_balance_count: number;
+  unpublished_change_count: number;
+  active_trial_grant_count: number;
+  active_plans: EntitlementPlan[];
+  over_quota_balances: OverQuotaBalance[];
+  expiring_entitlements: ExpiringEntitlement[];
+  unpublished_changes: UnpublishedEntitlementChange[];
+};
+
+export type UsageCenterSnapshot = {
+  active_meter_count: number;
+  usage_event_count_24h: number;
+  usage_quantity_24h: number;
+  correction_count_30d: number;
+  rollup_count_current_period: number;
+  distinct_tenant_count_24h: number;
+  meter_usage_24h: MeterUsage[];
+  tenant_usage_24h: TenantUsage[];
+  recent_rollups: UsageRollup[];
+  recent_corrections: UsageCorrection[];
+};
+
 export type RevenueCenterSnapshot = {
   captured_payments_30d: MoneyTotal[];
   open_invoices: MoneyTotal[];
@@ -187,6 +227,23 @@ export type RevenueCenterSnapshot = {
   unresolved_reconciliation_difference_count: number;
   recent_overdue_invoices: RecentOverdueInvoice[];
   recent_captured_payments: RecentCapturedPayment[];
+};
+
+export type BillingPlatformSnapshot = {
+  active_provider_count: number;
+  active_provider_account_count: number;
+  active_routing_rule_count: number;
+  fallback_routing_rule_count: number;
+  planned_migration_count: number;
+  pending_kyc_profile_count: number;
+  region_policy_count: number;
+  active_einvoicing_profile_count: number;
+  providers: BillingProviderSummary[];
+  routing_rules: ProviderRoutingRule[];
+  provider_migrations: ProviderMigrationRun[];
+  kyc_profiles: KycProfile[];
+  region_policies: BillingRegionPolicy[];
+  einvoicing_profiles: EinvoicingProfile[];
 };
 
 export type CustomerCenterSnapshot = {
@@ -348,6 +405,66 @@ export type RecentCapturedPayment = {
   currency: string;
   amount_minor: number;
   created_at: string;
+};
+
+export type BillingProviderSummary = {
+  provider: string;
+  status: string;
+  account_count: number;
+  updated_at: string;
+};
+
+export type ProviderRoutingRule = {
+  id: string;
+  priority: number;
+  provider: string;
+  country: string | null;
+  currency: string | null;
+  payment_method: string | null;
+  customer_type: string | null;
+  fallback_enabled: boolean;
+  status: string;
+};
+
+export type ProviderMigrationRun = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  from_provider: string;
+  to_provider: string;
+  status: string;
+  started_at: string | null;
+  updated_at: string;
+};
+
+export type KycProfile = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  company_name: string | null;
+  company_domain: string | null;
+  vat_id: string | null;
+  proof_reference: string | null;
+  updated_at: string;
+};
+
+export type BillingRegionPolicy = {
+  id: string;
+  country: string;
+  currency: string;
+  allowed_payment_methods: string[];
+  invoice_retention_years: number;
+  tax_evidence_required: boolean;
+  einvoicing_profile_code: string | null;
+};
+
+export type EinvoicingProfile = {
+  id: string;
+  code: string;
+  country: string | null;
+  format: string;
+  status: string;
+  updated_at: string;
 };
 
 export type RecentRevokedConsent = {
@@ -554,6 +671,83 @@ export type DeveloperHealthIssue = {
   checked_at: string;
 };
 
+export type EntitlementPlan = {
+  plan_id: string;
+  product_name: string;
+  plan_code: string;
+  plan_name: string;
+  active_version_count: number;
+  feature_count: number;
+};
+
+export type OverQuotaBalance = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  quota_code: string;
+  included_quantity: number;
+  used_quantity: number;
+  period_end: string;
+};
+
+export type ExpiringEntitlement = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  status: string;
+  effective_to: string;
+};
+
+export type UnpublishedEntitlementChange = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  event_id: string;
+  created_at: string;
+};
+
+export type MeterUsage = {
+  meter_code: string;
+  unit: string;
+  event_count: number;
+  quantity: number;
+};
+
+export type TenantUsage = {
+  tenant_id: string;
+  tenant_name: string;
+  event_count: number;
+  quantity: number;
+};
+
+export type UsageRollup = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  meter_code: string;
+  quantity: number;
+  unit: string;
+  period_start: string;
+  period_end: string;
+};
+
+export type UsageCorrection = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  meter_code: string;
+  quantity_delta: number;
+  reason: string;
+  created_by_principal_id: string | null;
+  created_at: string;
+};
+
 export type RecentRiskEvent = {
   id: string;
   principal_id: string;
@@ -598,6 +792,47 @@ export type SigningKeySummary = {
   activated_at: string;
   deprecated_at: string | null;
   revoked_at: string | null;
+};
+
+export type IdentityRiskDecision = {
+  id: string;
+  principal_id: string;
+  email: string | null;
+  tenant_id: string;
+  tenant_name: string;
+  event_type: string;
+  risk_score: number;
+  decision: string;
+  created_at: string;
+};
+
+export type BillingRiskScore = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  score: number;
+  decision: string;
+  created_at: string;
+};
+
+export type BillingRiskSignal = {
+  id: string;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  signal_type: string;
+  occurred_at: string;
+};
+
+export type AccessPolicySnapshot = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  policy_state: string;
+  reason: string;
+  effective_from: string;
+  effective_to: string | null;
 };
 
 export type UserWithoutMfa = {

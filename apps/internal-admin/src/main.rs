@@ -24,6 +24,8 @@ mod billing_admin_search;
 mod billing_admin_types;
 #[path = "internal_admin.billing.admin.validation.rs"]
 mod billing_admin_validation;
+#[path = "internal_admin.billing_platform_center.rs"]
+mod billing_platform_center;
 #[path = "internal_admin.billing.runbooks.rs"]
 mod billing_runbooks;
 #[path = "internal_admin.command_center.rs"]
@@ -36,6 +38,8 @@ mod compliance_center;
 mod customer_center;
 #[path = "internal_admin.developer_center.rs"]
 mod developer_center;
+#[path = "internal_admin.entitlements_center.rs"]
+mod entitlements_center;
 #[path = "internal_admin.http.error.rs"]
 mod error;
 #[path = "internal_admin.global_search.rs"]
@@ -48,12 +52,16 @@ mod operations_center;
 mod region_center;
 #[path = "internal_admin.revenue_center.rs"]
 mod revenue_center;
+#[path = "internal_admin.risk_decision_center.rs"]
+mod risk_decision_center;
 #[path = "internal_admin.http.routes.rs"]
 mod routes;
 #[path = "internal_admin.security_center.rs"]
 mod security_center;
 #[path = "internal_admin.tenants.rs"]
 mod tenants;
+#[path = "internal_admin.usage_center.rs"]
+mod usage_center;
 #[path = "internal_admin.users.rs"]
 mod users;
 #[path = "internal_admin.workspaces.rs"]

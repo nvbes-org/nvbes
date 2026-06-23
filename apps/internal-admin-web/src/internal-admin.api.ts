@@ -4,6 +4,7 @@ import type {
   AdminCredentials,
   AuditEvidenceSnapshot,
   AuditEvent,
+  BillingPlatformSnapshot,
   BillingOverview,
   BillingRunbook,
   CommandCenterSnapshot,
@@ -12,6 +13,7 @@ import type {
   CreditNoteRequest,
   CustomerCenterSnapshot,
   DeveloperCenterSnapshot,
+  EntitlementsSnapshot,
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
@@ -26,9 +28,11 @@ import type {
   RegionCenterSnapshot,
   RefundIntentRequest,
   RevenueCenterSnapshot,
+  RiskDecisionSnapshot,
   SearchResult,
   SecurityCenterSnapshot,
   TenantDetail,
+  UsageCenterSnapshot,
   UserDetail,
   WorkspaceDetail,
 } from './internal-admin.types';
@@ -134,6 +138,20 @@ export async function getRevenueCenter(credentials: AdminCredentials) {
   return parseJson<RevenueCenterSnapshot>(response);
 }
 
+export async function getRiskDecisionCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/risk-decision-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<RiskDecisionSnapshot>(response);
+}
+
+export async function getBillingPlatformCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/billing-platform-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<BillingPlatformSnapshot>(response);
+}
+
 export async function getCustomerCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/customer-center', { headers: authHeaders(credentials) });
   return parseJson<CustomerCenterSnapshot>(response);
@@ -142,6 +160,13 @@ export async function getCustomerCenter(credentials: AdminCredentials) {
 export async function getDeveloperCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/developer-center', { headers: authHeaders(credentials) });
   return parseJson<DeveloperCenterSnapshot>(response);
+}
+
+export async function getEntitlementsCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/entitlements-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<EntitlementsSnapshot>(response);
 }
 
 export async function getIdentityGovernanceCenter(credentials: AdminCredentials) {
@@ -154,6 +179,11 @@ export async function getIdentityGovernanceCenter(credentials: AdminCredentials)
 export async function getOperationsCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/operations-center', { headers: authHeaders(credentials) });
   return parseJson<OperationsCenterSnapshot>(response);
+}
+
+export async function getUsageCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/usage-center', { headers: authHeaders(credentials) });
+  return parseJson<UsageCenterSnapshot>(response);
 }
 
 export async function globalSearch(credentials: AdminCredentials, query: string) {
