@@ -2,10 +2,10 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::HeaderMap,
-    routing::get,
+    routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -19,6 +19,7 @@ struct WorkspaceDetail {
     tenant_id: Uuid,
     tenant_name: String,
     name: String,
+    status: String,
     workspace_type: String,
     plan_code: String,
     trial_ends_at: Option<DateTime<Utc>>,
@@ -34,11 +35,34 @@ struct WorkspaceDetail {
     updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+struct WorkspaceLifecycleRequest {
+    reason: String,
+}
+
+#[derive(Debug, Serialize)]
+struct WorkspaceLifecycleResult {
+    workspace_id: Uuid,
+    tenant_id: Uuid,
+    previous_status: String,
+    next_status: String,
+    audit_action: &'static str,
+}
+
 pub fn router() -> Router<AppState> {
-    Router::new().route(
-        "/admin/workspaces/{workspaceId}",
-        get(workspace_detail_route),
-    )
+    Router::new()
+        .route(
+            "/admin/workspaces/{workspaceId}",
+            get(workspace_detail_route),
+        )
+        .route(
+            "/admin/workspaces/{workspaceId}/suspend",
+            post(suspend_workspace_route),
+        )
+        .route(
+            "/admin/workspaces/{workspaceId}/reactivate",
+            post(reactivate_workspace_route),
+        )
 }
 
 async fn workspace_detail_route(
@@ -50,6 +74,46 @@ async fn workspace_detail_route(
     Ok(Json(load_workspace_detail(&state.db, workspace_id).await?))
 }
 
+async fn suspend_workspace_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Json(request): Json<WorkspaceLifecycleRequest>,
+) -> Result<Json<WorkspaceLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_workspace_status(
+            &state.db,
+            actor_id,
+            workspace_id,
+            "suspended",
+            "internal_admin.workspace.suspend",
+            request,
+        )
+        .await?,
+    ))
+}
+
+async fn reactivate_workspace_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Json(request): Json<WorkspaceLifecycleRequest>,
+) -> Result<Json<WorkspaceLifecycleResult>, AppError> {
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        change_workspace_status(
+            &state.db,
+            actor_id,
+            workspace_id,
+            "active",
+            "internal_admin.workspace.reactivate",
+            request,
+        )
+        .await?,
+    ))
+}
+
 async fn load_workspace_detail(
     db: &PgPool,
     workspace_id: Uuid,
@@ -58,7 +122,7 @@ async fn load_workspace_detail(
         r#"
         SELECT
           w.id, w.tenant_id, t.name AS tenant_name, w.name,
-          w.workspace_type::text, w.plan_code, w.trial_ends_at,
+          w.status::text, w.workspace_type::text, w.plan_code, w.trial_ends_at,
           w.created_at, w.updated_at,
           (
             SELECT COUNT(*) FROM workspace_memberships wm
@@ -110,18 +174,125 @@ async fn load_workspace_detail(
         tenant_id: row.get(1),
         tenant_name: row.get(2),
         name: row.get(3),
-        workspace_type: row.get(4),
-        plan_code: row.get(5),
-        trial_ends_at: row.get(6),
-        created_at: row.get(7),
-        updated_at: row.get(8),
-        member_count: row.get(9),
-        owner_count: row.get(10),
-        active_member_count: row.get(11),
-        service_account_count: row.get(12),
-        audit_events_24h: row.get(13),
-        open_invoice_count: row.get(14),
-        active_subscription_count: row.get(15),
-        latest_audit_at: row.get(16),
+        status: row.get(4),
+        workspace_type: row.get(5),
+        plan_code: row.get(6),
+        trial_ends_at: row.get(7),
+        created_at: row.get(8),
+        updated_at: row.get(9),
+        member_count: row.get(10),
+        owner_count: row.get(11),
+        active_member_count: row.get(12),
+        service_account_count: row.get(13),
+        audit_events_24h: row.get(14),
+        open_invoice_count: row.get(15),
+        active_subscription_count: row.get(16),
+        latest_audit_at: row.get(17),
     })
+}
+
+async fn change_workspace_status(
+    db: &PgPool,
+    actor_id: Uuid,
+    workspace_id: Uuid,
+    next_status: &'static str,
+    audit_action: &'static str,
+    request: WorkspaceLifecycleRequest,
+) -> Result<WorkspaceLifecycleResult, AppError> {
+    validate_lifecycle_reason(&request.reason)?;
+
+    let mut tx = db.begin().await?;
+    let row =
+        sqlx::query("SELECT tenant_id, status::text FROM workspaces WHERE id = $1 FOR UPDATE")
+            .bind(workspace_id)
+            .fetch_one(tx.as_mut())
+            .await?;
+    let tenant_id: Uuid = row.get("tenant_id");
+    let previous_status: String = row.get("status");
+
+    validate_workspace_status_transition(&previous_status, next_status)?;
+
+    sqlx::query(
+        "UPDATE workspaces SET status = $2::workspace_status, updated_at = NOW() WHERE id = $1",
+    )
+    .bind(workspace_id)
+    .bind(next_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO audit_events (
+           tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
+         ) VALUES (
+           $1, $2, $3, $4, 'workspace', $2,
+           jsonb_build_object('reason', $5, 'previous_status', $6, 'next_status', $7),
+           gen_random_uuid()::text
+         )",
+    )
+    .bind(tenant_id)
+    .bind(workspace_id)
+    .bind(actor_id)
+    .bind(audit_action)
+    .bind(request.reason.trim())
+    .bind(&previous_status)
+    .bind(next_status)
+    .execute(tx.as_mut())
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(WorkspaceLifecycleResult {
+        workspace_id,
+        tenant_id,
+        previous_status,
+        next_status: next_status.to_string(),
+        audit_action,
+    })
+}
+
+fn validate_lifecycle_reason(reason: &str) -> Result<(), AppError> {
+    if reason.trim().len() < 12 {
+        return Err(AppError::bad_request(
+            "audit_reason_required",
+            "Workspace lifecycle actions require a detailed audit reason.",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_workspace_status_transition(
+    previous_status: &str,
+    next_status: &'static str,
+) -> Result<(), AppError> {
+    if previous_status == "deleted" {
+        return Err(AppError::bad_request(
+            "workspace_deleted",
+            "Deleted workspaces cannot be mutated from the back-office.",
+        ));
+    }
+    if previous_status == next_status {
+        return Err(AppError::bad_request(
+            "workspace_status_unchanged",
+            "Workspace is already in the requested status.",
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lifecycle_reason_must_be_detailed() {
+        assert!(validate_lifecycle_reason("too short").is_err());
+        assert!(validate_lifecycle_reason("incident OPS-456 approved").is_ok());
+    }
+
+    #[test]
+    fn workspace_lifecycle_rejects_deleted_and_unchanged_statuses() {
+        assert!(validate_workspace_status_transition("deleted", "active").is_err());
+        assert!(validate_workspace_status_transition("active", "active").is_err());
+        assert!(validate_workspace_status_transition("active", "suspended").is_ok());
+    }
 }

@@ -1,11 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck, Building2, Clock3, Copy, CreditCard, ShieldCheck, Users } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  BadgeCheck,
+  Building2,
+  Clock3,
+  Copy,
+  CreditCard,
+  RotateCcw,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getWorkspaceDetail } from './internal-admin.api';
+import { Textarea } from '@/components/ui/textarea';
+import { getWorkspaceDetail, reactivateWorkspace, suspendWorkspace } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
-import type { AdminCredentials } from './internal-admin.types';
+import type { AdminCredentials, WorkspaceLifecycleResult } from './internal-admin.types';
+
+type WorkspaceAction = 'reactivate' | 'suspend';
 
 export function WorkspaceDetailPanel({
   credentials,
@@ -18,12 +32,38 @@ export function WorkspaceDetailPanel({
   onSelectTenant: (tenantId: string) => void;
   workspaceId: string | null;
 }) {
+  const queryClient = useQueryClient();
+  const [activeAction, setActiveAction] = useState<WorkspaceAction | null>(null);
+  const [reason, setReason] = useState('');
+  const [actionResult, setActionResult] = useState<WorkspaceLifecycleResult | null>(null);
   const workspace = useQuery({
     queryKey: ['workspace-detail', workspaceId],
     queryFn: () => getWorkspaceDetail(credentials, workspaceId ?? ''),
     enabled: !disabled && workspaceId !== null,
   });
   const data = workspace.data;
+  const mutation = useMutation({
+    mutationFn: async (action: WorkspaceAction) => {
+      if (!workspaceId) throw new Error('Workspace absent.');
+      const body = { reason };
+      return action === 'suspend'
+        ? suspendWorkspace(credentials, workspaceId, body)
+        : reactivateWorkspace(credentials, workspaceId, body);
+    },
+    onSuccess: async (result) => {
+      setActionResult(result);
+      setActiveAction(null);
+      setReason('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['workspace-detail', workspaceId] }),
+        queryClient.invalidateQueries({ queryKey: ['customer-center'] }),
+        queryClient.invalidateQueries({ queryKey: ['operations-center'] }),
+        queryClient.invalidateQueries({ queryKey: ['global-search'] }),
+      ]);
+    },
+  });
+  const availableAction =
+    data?.status === 'active' ? 'suspend' : data?.status === 'suspended' ? 'reactivate' : null;
 
   return (
     <section className="border-border bg-card mb-5 rounded-lg border p-4" id="workspace-detail">
@@ -42,7 +82,8 @@ export function WorkspaceDetailPanel({
         </div>
         {data ? (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{data.workspace_type}</Badge>
+            <Badge variant="secondary">{data.status}</Badge>
+            <Badge variant="outline">{data.workspace_type}</Badge>
             <Badge variant="outline">{data.plan_code}</Badge>
           </div>
         ) : null}
@@ -129,9 +170,134 @@ export function WorkspaceDetailPanel({
               value={formatCount(data.open_invoice_count)}
             />
           </div>
+          <WorkspaceLifecycleActions
+            activeAction={activeAction}
+            actionResult={actionResult}
+            availableAction={availableAction}
+            disabled={disabled}
+            error={mutation.error}
+            isPending={mutation.isPending}
+            onCancel={() => {
+              setActiveAction(null);
+              setReason('');
+            }}
+            onReasonChange={setReason}
+            onRun={(action) => mutation.mutate(action)}
+            onStart={(action) => {
+              setActionResult(null);
+              setActiveAction(action);
+            }}
+            reason={reason}
+            status={data.status}
+          />
         </div>
       ) : null}
     </section>
+  );
+}
+
+function WorkspaceLifecycleActions({
+  activeAction,
+  actionResult,
+  availableAction,
+  disabled,
+  error,
+  isPending,
+  onCancel,
+  onReasonChange,
+  onRun,
+  onStart,
+  reason,
+  status,
+}: {
+  activeAction: WorkspaceAction | null;
+  actionResult: WorkspaceLifecycleResult | null;
+  availableAction: WorkspaceAction | null;
+  disabled: boolean;
+  error: Error | null;
+  isPending: boolean;
+  onCancel: () => void;
+  onReasonChange: (reason: string) => void;
+  onRun: (action: WorkspaceAction) => void;
+  onStart: (action: WorkspaceAction) => void;
+  reason: string;
+  status: string;
+}) {
+  const isReasonReady = reason.trim().length >= 12;
+  const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
+
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ShieldAlert className="text-muted-foreground size-4" />
+            Cycle de vie workspace
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Statut courant: <span className="font-medium">{status}</span>
+          </p>
+        </div>
+        {availableAction ? (
+          <Button
+            disabled={disabled || isPending}
+            onClick={() => onStart(availableAction)}
+            type="button"
+            variant={availableAction === 'suspend' ? 'destructive' : 'outline'}
+          >
+            {availableAction === 'suspend' ? (
+              <ShieldAlert className="size-4" />
+            ) : (
+              <RotateCcw className="size-4" />
+            )}
+            {actionLabel}
+          </Button>
+        ) : (
+          <Badge variant="outline">Aucune action</Badge>
+        )}
+      </div>
+
+      {activeAction ? (
+        <div className="bg-muted/30 grid gap-3 rounded-md border p-3">
+          <Textarea
+            disabled={disabled || isPending}
+            onChange={(event) => onReasonChange(event.target.value)}
+            placeholder="Motif audit, incident, ticket, approbation..."
+            value={reason}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">
+              Minimum 12 caracteres requis pour executer l'action.
+            </p>
+            <div className="flex gap-2">
+              <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
+                Annuler
+              </Button>
+              <Button
+                disabled={disabled || !isReasonReady || isPending}
+                onClick={() => onRun(activeAction)}
+                type="button"
+                variant={activeAction === 'suspend' ? 'destructive' : 'default'}
+              >
+                Confirmer
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="text-destructive mt-3 text-xs">
+          {error instanceof Error ? error.message : 'Action impossible'}
+        </p>
+      ) : null}
+      {actionResult ? (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {actionResult.audit_action}: {actionResult.previous_status} vers{' '}
+          {actionResult.next_status}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

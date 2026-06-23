@@ -39,6 +39,8 @@ import type {
   UserLifecycleRequest,
   UserLifecycleResult,
   WorkspaceDetail,
+  WorkspaceLifecycleRequest,
+  WorkspaceLifecycleResult,
 } from './internal-admin.types';
 
 const jsonHeaders = { 'content-type': 'application/json' };
@@ -234,6 +236,30 @@ export async function getWorkspaceDetail(credentials: AdminCredentials, workspac
     headers: authHeaders(credentials),
   });
   return parseJson<WorkspaceDetail>(response);
+}
+
+export function suspendWorkspace(
+  credentials: AdminCredentials,
+  workspaceId: string,
+  body: WorkspaceLifecycleRequest,
+) {
+  return postJson<WorkspaceLifecycleRequest, WorkspaceLifecycleResult>(
+    credentials,
+    `/admin/workspaces/${workspaceId}/suspend`,
+    body,
+  );
+}
+
+export function reactivateWorkspace(
+  credentials: AdminCredentials,
+  workspaceId: string,
+  body: WorkspaceLifecycleRequest,
+) {
+  return postJson<WorkspaceLifecycleRequest, WorkspaceLifecycleResult>(
+    credentials,
+    `/admin/workspaces/${workspaceId}/reactivate`,
+    body,
+  );
 }
 
 export async function getUserDetail(credentials: AdminCredentials, principalId: string) {

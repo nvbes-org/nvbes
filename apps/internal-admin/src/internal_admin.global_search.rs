@@ -60,7 +60,7 @@ async fn global_search(db: &PgPool, query: &str) -> Result<Vec<GlobalSearchResul
           UNION ALL
 
           SELECT 'workspace' AS kind, w.id, w.name || ' / ' || w.plan_code AS label,
-            w.workspace_type::text AS status, w.tenant_id, w.id AS workspace_id
+            w.status::text AS status, w.tenant_id, w.id AS workspace_id
           FROM workspaces w
           WHERE w.name ILIKE $1 OR w.id::text ILIKE $1
 

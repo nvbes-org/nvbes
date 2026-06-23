@@ -52,6 +52,7 @@ export type WorkspaceDetail = {
   tenant_id: string;
   tenant_name: string;
   name: string;
+  status: string;
   workspace_type: string;
   plan_code: string;
   trial_ends_at: string | null;
@@ -65,6 +66,18 @@ export type WorkspaceDetail = {
   latest_audit_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type WorkspaceLifecycleRequest = {
+  reason: string;
+};
+
+export type WorkspaceLifecycleResult = {
+  workspace_id: string;
+  tenant_id: string;
+  previous_status: string;
+  next_status: string;
+  audit_action: string;
 };
 
 export type UserDetail = {
