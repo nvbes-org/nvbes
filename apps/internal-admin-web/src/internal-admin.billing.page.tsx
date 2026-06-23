@@ -19,6 +19,7 @@ import { CommandCenterPanel } from './internal-admin.command-center';
 import { CustomerCenterPanel } from './internal-admin.customer-center';
 import { GlobalSearchPanel } from './internal-admin.global-search';
 import { OperationsCenterPanel } from './internal-admin.operations-center';
+import { RegionCenterPanel } from './internal-admin.region-center';
 import { RevenueCenterPanel } from './internal-admin.revenue-center';
 import { SecurityCenterPanel } from './internal-admin.security-center';
 import { InternalAdminShell } from './internal-admin.shell';
@@ -89,6 +90,12 @@ export function BillingOperationsPage() {
         disabled={!isReady}
         onSelectTenant={setSelectedTenantId}
         onSelectUser={setSelectedUserId}
+      />
+      <RegionCenterPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectWorkspace={setSelectedWorkspaceId}
       />
       <GlobalSearchPanel
         credentials={credentials}

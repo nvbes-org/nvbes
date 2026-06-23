@@ -19,6 +19,7 @@ import type {
   ProviderEventFailure,
   ProviderReplayRequest,
   ProviderReplayResult,
+  RegionCenterSnapshot,
   RefundIntentRequest,
   RevenueCenterSnapshot,
   SearchResult,
@@ -103,6 +104,11 @@ export async function getSecurityCenter(credentials: AdminCredentials) {
 export async function getComplianceCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/compliance-center', { headers: authHeaders(credentials) });
   return parseJson<ComplianceCenterSnapshot>(response);
+}
+
+export async function getRegionCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/region-center', { headers: authHeaders(credentials) });
+  return parseJson<RegionCenterSnapshot>(response);
 }
 
 export async function getRevenueCenter(credentials: AdminCredentials) {

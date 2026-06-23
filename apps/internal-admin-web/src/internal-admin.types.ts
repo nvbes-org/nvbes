@@ -102,6 +102,18 @@ export type ComplianceCenterSnapshot = {
   recent_suppressed_emails: RecentSuppressedEmail[];
 };
 
+export type RegionCenterSnapshot = {
+  eu_workspace_count: number;
+  non_eu_workspace_count: number;
+  gdpr_workspace_count: number;
+  non_gdpr_workspace_count: number;
+  multi_region_tenant_count: number;
+  region_distribution: RegionDistribution[];
+  jurisdiction_distribution: JurisdictionDistribution[];
+  non_eu_workspaces: RegionWorkspace[];
+  multi_region_tenants: MultiRegionTenant[];
+};
+
 export type RevenueCenterSnapshot = {
   captured_payments_30d: MoneyTotal[];
   open_invoices: MoneyTotal[];
@@ -295,6 +307,36 @@ export type RecentSuppressedEmail = {
   tenant_id: string | null;
   tenant_name: string | null;
   suppressed_at: string;
+};
+
+export type RegionDistribution = {
+  data_region: string;
+  workspace_count: number;
+  tenant_count: number;
+};
+
+export type JurisdictionDistribution = {
+  jurisdiction: string;
+  workspace_count: number;
+  tenant_count: number;
+};
+
+export type RegionWorkspace = {
+  workspace_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_name: string;
+  data_region: string;
+  jurisdiction: string;
+  created_at: string;
+};
+
+export type MultiRegionTenant = {
+  tenant_id: string;
+  tenant_name: string;
+  workspace_count: number;
+  region_count: number;
+  regions: string[];
 };
 
 export type RecentRiskEvent = {

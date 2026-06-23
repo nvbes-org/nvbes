@@ -20,6 +20,7 @@ This app owns operator-only endpoints and must stay isolated from public product
 - `GET /admin/customer-center`
 - `GET /admin/operations-center`
 - `GET /admin/revenue-center`
+- `GET /admin/region-center`
 - `GET /admin/security-center`
 - `GET /admin/search`
 - `GET /admin/tenants/{tenantId}`
