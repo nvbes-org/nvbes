@@ -158,11 +158,115 @@ fn is_mutating_method(method: &Method) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{Json, Router, body, http::Request, routing::post};
+    use serde_json::json;
+    use sqlx::postgres::PgPoolOptions;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    use std::time::Duration;
+    use tower::ServiceExt;
+    use uuid::Uuid;
 
     #[test]
     fn mutating_methods_are_guarded() {
         assert!(is_mutating_method(&Method::POST));
         assert!(is_mutating_method(&Method::PATCH));
         assert!(!is_mutating_method(&Method::GET));
+    }
+
+    #[tokio::test]
+    async fn repeated_post_with_same_key_replays_stored_response() {
+        let Some(pool) = test_pool().await else {
+            eprintln!("skipping test: Postgres is not reachable");
+            return;
+        };
+        if !idempotency_table_exists(&pool).await {
+            eprintln!("skipping test: idempotency_responses table is missing");
+            return;
+        }
+
+        let executions = Arc::new(AtomicUsize::new(0));
+        let route_executions = Arc::clone(&executions);
+        let state = AppState::new(nvbes_core::config::AppConfig::default(), pool);
+        let app = Router::new()
+            .route(
+                "/probe",
+                post(move || {
+                    let route_executions = Arc::clone(&route_executions);
+                    async move {
+                        let value = route_executions.fetch_add(1, Ordering::SeqCst) + 1;
+                        Json(json!({ "executions": value }))
+                    }
+                }),
+            )
+            .layer(axum::middleware::from_fn_with_state(
+                state,
+                idempotency_guard,
+            ));
+        let key = format!("test-{}", Uuid::new_v4());
+
+        let first = app
+            .clone()
+            .oneshot(post_request(&key, br#"{"action":"run"}"#))
+            .await
+            .expect("first request should respond");
+        assert_eq!(first.status(), StatusCode::OK);
+
+        let second = app
+            .oneshot(post_request(&key, br#"{"action":"run"}"#))
+            .await
+            .expect("second request should replay");
+        assert_eq!(second.status(), StatusCode::OK);
+        assert_eq!(
+            second
+                .headers()
+                .get("idempotency-replayed")
+                .and_then(|value| value.to_str().ok()),
+            Some("true")
+        );
+        let body = body::to_bytes(second.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let payload: serde_json::Value =
+            serde_json::from_slice(&body).expect("body should be json");
+
+        assert_eq!(payload["executions"], json!(1));
+        assert_eq!(executions.load(Ordering::SeqCst), 1);
+    }
+
+    async fn test_pool() -> Option<sqlx::PgPool> {
+        let database_url = std::env::var("DATABASE_URL")
+            .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            PgPoolOptions::new()
+                .max_connections(1)
+                .connect(&database_url),
+        )
+        .await
+        .ok()
+        .and_then(Result::ok)
+    }
+
+    async fn idempotency_table_exists(pool: &sqlx::PgPool) -> bool {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT to_regclass('public.idempotency_responses') IS NOT NULL",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false)
+    }
+
+    fn post_request(key: &str, body: &'static [u8]) -> Request<Body> {
+        Request::builder()
+            .method(Method::POST)
+            .uri("/probe")
+            .header("idempotency-key", key)
+            .header("content-type", "application/json")
+            .body(Body::from(body))
+            .expect("request should build")
     }
 }
