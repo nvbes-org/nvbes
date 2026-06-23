@@ -1,6 +1,9 @@
 use std::net::IpAddr;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{Postgres, Transaction};
+use uuid::Uuid;
 
 use crate::geo::{
     reputation::score_relation,
@@ -30,6 +33,56 @@ pub struct IpIntelligenceInput {
 pub struct IpIntelligenceLookup {
     pub country_code: Option<String>,
     pub relation: GeoNetworkRelation,
+}
+
+pub async fn cache_ip_intelligence_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    lookup: &IpIntelligenceLookup,
+    expires_at: Option<DateTime<Utc>>,
+) -> Result<Uuid, sqlx::Error> {
+    let relation = &lookup.relation;
+    sqlx::query_scalar::<_, Uuid>(
+        r#"
+        INSERT INTO geo_ip_network_relations (
+          source_code, relation_key, registry, network, start_ip, end_ip, asn,
+          organization, country_code, source_reference, network_kind, risk_score,
+          risk_labels, expires_at
+        )
+        VALUES ($1, $2, $3, $4::cidr, $5::inet, $6::inet, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (source_code, relation_key)
+        DO UPDATE SET
+          registry = EXCLUDED.registry,
+          network = EXCLUDED.network,
+          start_ip = EXCLUDED.start_ip,
+          end_ip = EXCLUDED.end_ip,
+          asn = EXCLUDED.asn,
+          organization = EXCLUDED.organization,
+          country_code = EXCLUDED.country_code,
+          source_reference = EXCLUDED.source_reference,
+          network_kind = EXCLUDED.network_kind,
+          risk_score = EXCLUDED.risk_score,
+          risk_labels = EXCLUDED.risk_labels,
+          expires_at = EXCLUDED.expires_at,
+          fetched_at = now()
+        RETURNING id
+        "#,
+    )
+    .bind(relation.source_code.as_str())
+    .bind(relation_key(relation))
+    .bind(relation.registry.as_deref())
+    .bind(relation.network.as_deref())
+    .bind(relation.start_ip.map(|ip| ip.to_string()))
+    .bind(relation.end_ip.map(|ip| ip.to_string()))
+    .bind(relation.asn)
+    .bind(relation.organization.as_deref())
+    .bind(lookup.country_code.as_deref())
+    .bind(relation.source_reference.as_deref())
+    .bind(relation.network_kind.map(|kind| kind.as_str()))
+    .bind(relation.risk_score.map(i16::from))
+    .bind(&relation.risk_labels)
+    .bind(expires_at)
+    .fetch_one(&mut **tx)
+    .await
 }
 
 pub fn normalize_ip_intelligence(input: IpIntelligenceInput) -> IpIntelligenceLookup {
@@ -124,9 +177,23 @@ fn push_source_label(labels: &mut Vec<String>, source_code: &str) {
     }
 }
 
+fn relation_key(relation: &GeoNetworkRelation) -> String {
+    if let Some(network) = &relation.network {
+        return format!("network:{network}");
+    }
+    if let (Some(start_ip), Some(end_ip)) = (relation.start_ip, relation.end_ip) {
+        return format!("range:{start_ip}-{end_ip}");
+    }
+    relation
+        .source_reference
+        .as_deref()
+        .map(|reference| format!("ref:{reference}"))
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{IpIntelligenceInput, normalize_ip_intelligence};
+    use super::{IpIntelligenceInput, normalize_ip_intelligence, relation_key};
     use crate::geo::types::GeoNetworkKind;
 
     #[test]
@@ -160,5 +227,28 @@ mod tests {
                 .risk_labels
                 .contains(&"source:test_provider".to_string())
         );
+    }
+
+    #[test]
+    fn relation_key_prefers_network_over_single_ip_range() {
+        let lookup = normalize_ip_intelligence(IpIntelligenceInput {
+            source_code: "test_provider".to_string(),
+            ip: "8.8.8.8".parse().unwrap(),
+            country_code: None,
+            asn: None,
+            organization: None,
+            network: Some("8.8.8.0/24".to_string()),
+            source_reference: Some("fixture".to_string()),
+            is_vpn: false,
+            is_proxy: false,
+            is_tor: false,
+            is_datacenter: true,
+            is_mobile: false,
+            is_residential: false,
+            risk_score: None,
+            risk_labels: Vec::new(),
+        });
+
+        assert_eq!(relation_key(&lookup.relation), "network:8.8.8.0/24");
     }
 }

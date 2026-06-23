@@ -29,8 +29,8 @@ pub use cache::{
 };
 pub use database::{PersonalGeoDatabase, PersonalGeoDatabaseError, PersonalGeoRange};
 pub use intelligence::{
-    IpIntelligenceInput, IpIntelligenceLookup, merge_intelligence_into_relation,
-    normalize_ip_intelligence,
+    IpIntelligenceInput, IpIntelligenceLookup, cache_ip_intelligence_tx,
+    merge_intelligence_into_relation, normalize_ip_intelligence,
 };
 pub use ip::{is_private_or_special_ip, parse_ip};
 pub use maintenance::{GeoMaintenanceReport, run_geo_maintenance, run_geo_maintenance_tx};
