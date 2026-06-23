@@ -19,6 +19,8 @@ struct SecurityCenterSnapshot {
     active_oauth_consent_count: i64,
     recent_risk_events: Vec<RecentRiskEvent>,
     users_without_mfa: Vec<UserWithoutMfa>,
+    active_mfa_factors: Vec<ActiveMfaFactor>,
+    active_oauth_consents: Vec<ActiveOauthConsent>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,8 +46,38 @@ struct UserWithoutMfa {
     created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize)]
+struct ActiveMfaFactor {
+    id: Uuid,
+    principal_id: Uuid,
+    email: String,
+    tenant_id: Uuid,
+    tenant_name: String,
+    factor_type: String,
+    label: Option<String>,
+    last_used_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+struct ActiveOauthConsent {
+    id: Uuid,
+    principal_id: Uuid,
+    email: String,
+    tenant_id: Uuid,
+    tenant_name: String,
+    workspace_id: Option<Uuid>,
+    workspace_name: Option<String>,
+    client_id: Uuid,
+    scopes: Vec<String>,
+    granted_at: DateTime<Utc>,
+    expires_at: Option<DateTime<Utc>>,
+}
+
 pub fn router() -> Router<AppState> {
-    Router::new().route("/admin/security-center", get(security_center_route))
+    Router::new()
+        .route("/admin/security-center", get(security_center_route))
+        .merge(crate::security_center_actions::router())
 }
 
 async fn security_center_route(
@@ -108,6 +140,8 @@ async fn load_security_center(db: &PgPool) -> Result<SecurityCenterSnapshot, App
         active_oauth_consent_count: metrics.get("active_oauth_consent_count"),
         recent_risk_events: load_recent_risk_events(db).await?,
         users_without_mfa: load_users_without_mfa(db).await?,
+        active_mfa_factors: load_active_mfa_factors(db).await?,
+        active_oauth_consents: load_active_oauth_consents(db).await?,
     })
 }
 
@@ -171,6 +205,75 @@ async fn load_users_without_mfa(db: &PgPool) -> Result<Vec<UserWithoutMfa>, AppE
             tenant_id: row.get("tenant_id"),
             tenant_name: row.get("tenant_name"),
             created_at: row.get("created_at"),
+        })
+        .collect())
+}
+
+async fn load_active_mfa_factors(db: &PgPool) -> Result<Vec<ActiveMfaFactor>, AppError> {
+    let rows = sqlx::query(
+        r#"
+        SELECT mf.id, mf.principal_id, u.email, p.tenant_id, t.name AS tenant_name,
+          mf.factor_type::text, mf.label, mf.last_used_at, mf.created_at
+        FROM mfa_factors mf
+        JOIN principals p ON p.id = mf.principal_id
+        JOIN tenants t ON t.id = p.tenant_id
+        JOIN users u ON u.principal_id = mf.principal_id
+        WHERE mf.status::text = 'active'
+        ORDER BY COALESCE(mf.last_used_at, mf.created_at) DESC
+        LIMIT 8
+        "#,
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| ActiveMfaFactor {
+            id: row.get("id"),
+            principal_id: row.get("principal_id"),
+            email: row.get("email"),
+            tenant_id: row.get("tenant_id"),
+            tenant_name: row.get("tenant_name"),
+            factor_type: row.get("factor_type"),
+            label: row.get("label"),
+            last_used_at: row.get("last_used_at"),
+            created_at: row.get("created_at"),
+        })
+        .collect())
+}
+
+async fn load_active_oauth_consents(db: &PgPool) -> Result<Vec<ActiveOauthConsent>, AppError> {
+    let rows = sqlx::query(
+        r#"
+        SELECT oc.id, oc.principal_id, u.email, oc.tenant_id, t.name AS tenant_name,
+          oc.workspace_id, w.name AS workspace_name, oc.client_id, oc.scope,
+          oc.granted_at, oc.expires_at
+        FROM oauth_consents oc
+        JOIN tenants t ON t.id = oc.tenant_id
+        JOIN users u ON u.principal_id = oc.principal_id
+        LEFT JOIN workspaces w ON w.id = oc.workspace_id
+        WHERE oc.revoked_at IS NULL AND (oc.expires_at IS NULL OR oc.expires_at > NOW())
+        ORDER BY oc.granted_at DESC
+        LIMIT 8
+        "#,
+    )
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| ActiveOauthConsent {
+            id: row.get("id"),
+            principal_id: row.get("principal_id"),
+            email: row.get("email"),
+            tenant_id: row.get("tenant_id"),
+            tenant_name: row.get("tenant_name"),
+            workspace_id: row.get("workspace_id"),
+            workspace_name: row.get("workspace_name"),
+            client_id: row.get("client_id"),
+            scopes: row.get("scope"),
+            granted_at: row.get("granted_at"),
+            expires_at: row.get("expires_at"),
         })
         .collect())
 }

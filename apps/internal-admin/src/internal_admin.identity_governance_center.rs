@@ -93,10 +93,12 @@ struct PendingRecoveryRequest {
 }
 
 pub fn router() -> Router<AppState> {
-    Router::new().route(
-        "/admin/identity-governance-center",
-        get(identity_governance_center_route),
-    )
+    Router::new()
+        .route(
+            "/admin/identity-governance-center",
+            get(identity_governance_center_route),
+        )
+        .merge(crate::identity_governance_center_actions::router())
 }
 
 async fn identity_governance_center_route(

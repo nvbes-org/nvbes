@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSecurityCenter } from './internal-admin.api';
+import { SecurityActionSections } from './internal-admin.security-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type { AdminCredentials, RecentRiskEvent, UserWithoutMfa } from './internal-admin.types';
 
@@ -94,6 +95,13 @@ export function SecurityCenterPanel({
           onSelectUser={onSelectUser}
         />
       </div>
+      <SecurityActionSections
+        credentials={credentials}
+        disabled={disabled}
+        mfaFactors={data?.active_mfa_factors ?? []}
+        oauthConsents={data?.active_oauth_consents ?? []}
+        onSelectUser={onSelectUser}
+      />
     </section>
   );
 }

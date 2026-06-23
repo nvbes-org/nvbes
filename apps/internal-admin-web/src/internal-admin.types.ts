@@ -127,6 +127,8 @@ export type SecurityCenterSnapshot = {
   active_oauth_consent_count: number;
   recent_risk_events: RecentRiskEvent[];
   users_without_mfa: UserWithoutMfa[];
+  active_mfa_factors: ActiveMfaFactor[];
+  active_oauth_consents: ActiveOauthConsent[];
 };
 
 export type RiskDecisionSnapshot = {
@@ -786,6 +788,17 @@ export type UsageCorrection = {
   created_at: string;
 };
 
+export type GovernanceActionRequest = {
+  reason: string;
+};
+
+export type GovernanceActionResult = {
+  object_id: string;
+  tenant_id: string;
+  principal_id: string;
+  audit_action: string;
+};
+
 export type RecentRiskEvent = {
   id: string;
   principal_id: string;
@@ -880,6 +893,43 @@ export type UserWithoutMfa = {
   tenant_id: string;
   tenant_name: string;
   created_at: string;
+};
+
+export type ActiveMfaFactor = {
+  id: string;
+  principal_id: string;
+  email: string;
+  tenant_id: string;
+  tenant_name: string;
+  factor_type: string;
+  label: string | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export type ActiveOauthConsent = {
+  id: string;
+  principal_id: string;
+  email: string;
+  tenant_id: string;
+  tenant_name: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  client_id: string;
+  scopes: string[];
+  granted_at: string;
+  expires_at: string | null;
+};
+
+export type SecurityActionRequest = {
+  reason: string;
+};
+
+export type SecurityActionResult = {
+  object_id: string;
+  tenant_id: string;
+  principal_id: string;
+  audit_action: string;
 };
 
 export type MutationResult = {

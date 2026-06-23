@@ -12,12 +12,11 @@ import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getIdentityGovernanceCenter } from './internal-admin.api';
+import { IdentityGovernanceActionLists } from './internal-admin.identity-governance-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
-  BreakGlassAccount,
   OverdueAccessReview,
-  PendingRecoveryRequest,
   ScimConnector,
   SsoProvider,
   UnverifiedDomain,
@@ -110,15 +109,13 @@ export function IdentityGovernanceCenterPanel({
           onSelectTenant={onSelectTenant}
           rows={data?.overdue_access_reviews ?? []}
         />
-        <BreakGlassList
+        <IdentityGovernanceActionLists
+          breakGlassAccounts={data?.break_glass_accounts ?? []}
+          credentials={credentials}
+          disabled={disabled}
           onSelectTenant={onSelectTenant}
           onSelectUser={onSelectUser}
-          rows={data?.break_glass_accounts ?? []}
-        />
-        <RecoveryList
-          onSelectTenant={onSelectTenant}
-          onSelectUser={onSelectUser}
-          rows={data?.pending_recovery_requests ?? []}
+          recoveryRequests={data?.pending_recovery_requests ?? []}
         />
       </div>
     </section>
@@ -211,58 +208,6 @@ function AccessReviewList({
           subtitle={`${row.tenant_name} - due ${formatDate(row.due_at)}`}
           title={row.name}
           tone="danger"
-        />
-      ))}
-    </GovernanceList>
-  );
-}
-
-function BreakGlassList({
-  onSelectTenant,
-  onSelectUser,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectUser: (principalId: string) => void;
-  rows: BreakGlassAccount[];
-}) {
-  return (
-    <GovernanceList emptyLabel="Aucun compte break-glass actif." title="Break-glass accounts">
-      {rows.map((row) => (
-        <LinkedTenantRow
-          badge={row.last_used_at ? `used ${formatDate(row.last_used_at)}` : 'never used'}
-          key={`${row.tenant_id}:${row.principal_id}`}
-          onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          onSelectUser={() => onSelectUser(row.principal_id)}
-          subtitle={`${row.tenant_name} - ${row.procedure_reference}`}
-          title={row.reason}
-          tone="danger"
-        />
-      ))}
-    </GovernanceList>
-  );
-}
-
-function RecoveryList({
-  onSelectTenant,
-  onSelectUser,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectUser: (principalId: string) => void;
-  rows: PendingRecoveryRequest[];
-}) {
-  return (
-    <GovernanceList emptyLabel="Aucune recovery request pending." title="Password recovery queue">
-      {rows.map((row) => (
-        <LinkedTenantRow
-          badge={row.status}
-          key={row.id}
-          onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          onSelectUser={() => onSelectUser(row.principal_id)}
-          subtitle={`${row.tenant_name} - available ${formatDate(row.available_at)}`}
-          title={row.email}
-          tone="warning"
         />
       ))}
     </GovernanceList>

@@ -46,6 +46,8 @@ mod error;
 mod global_search;
 #[path = "internal_admin.identity_governance_center.rs"]
 mod identity_governance_center;
+#[path = "internal_admin.identity_governance_center.actions.rs"]
+mod identity_governance_center_actions;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
 #[path = "internal_admin.region_center.rs"]
@@ -58,6 +60,8 @@ mod risk_decision_center;
 mod routes;
 #[path = "internal_admin.security_center.rs"]
 mod security_center;
+#[path = "internal_admin.security_center.actions.rs"]
+mod security_center_actions;
 #[path = "internal_admin.tenants.rs"]
 mod tenants;
 #[path = "internal_admin.usage_center.rs"]

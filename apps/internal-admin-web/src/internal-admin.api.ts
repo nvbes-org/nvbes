@@ -18,6 +18,8 @@ import type {
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
+  GovernanceActionRequest,
+  GovernanceActionResult,
   IdentityGovernanceSnapshot,
   ManualCompRequest,
   MutationResult,
@@ -34,6 +36,8 @@ import type {
   RunbookExecutionResult,
   SearchResult,
   SecurityCenterSnapshot,
+  SecurityActionRequest,
+  SecurityActionResult,
   TenantDetail,
   TenantLifecycleRequest,
   TenantLifecycleResult,
@@ -143,6 +147,30 @@ export async function getSecurityCenter(credentials: AdminCredentials) {
   return parseJson<SecurityCenterSnapshot>(response);
 }
 
+export function revokeMfaFactor(
+  credentials: AdminCredentials,
+  factorId: string,
+  body: SecurityActionRequest,
+) {
+  return postJson<SecurityActionRequest, SecurityActionResult>(
+    credentials,
+    `/admin/security-center/mfa-factors/${factorId}/revoke`,
+    body,
+  );
+}
+
+export function revokeOauthConsent(
+  credentials: AdminCredentials,
+  consentId: string,
+  body: SecurityActionRequest,
+) {
+  return postJson<SecurityActionRequest, SecurityActionResult>(
+    credentials,
+    `/admin/security-center/oauth-consents/${consentId}/revoke`,
+    body,
+  );
+}
+
 export async function getComplianceCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/compliance-center', { headers: authHeaders(credentials) });
   return parseJson<ComplianceCenterSnapshot>(response);
@@ -201,6 +229,31 @@ export async function getIdentityGovernanceCenter(credentials: AdminCredentials)
     headers: authHeaders(credentials),
   });
   return parseJson<IdentityGovernanceSnapshot>(response);
+}
+
+export function revokeBreakGlassAccount(
+  credentials: AdminCredentials,
+  tenantId: string,
+  principalId: string,
+  body: GovernanceActionRequest,
+) {
+  return postJson<GovernanceActionRequest, GovernanceActionResult>(
+    credentials,
+    `/admin/identity-governance-center/break-glass/${tenantId}/${principalId}/revoke`,
+    body,
+  );
+}
+
+export function cancelRecoveryRequest(
+  credentials: AdminCredentials,
+  requestId: string,
+  body: GovernanceActionRequest,
+) {
+  return postJson<GovernanceActionRequest, GovernanceActionResult>(
+    credentials,
+    `/admin/identity-governance-center/recovery-requests/${requestId}/cancel`,
+    body,
+  );
 }
 
 export async function getOperationsCenter(credentials: AdminCredentials) {
