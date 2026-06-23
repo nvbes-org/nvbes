@@ -22,6 +22,10 @@ impl AppState {
 pub fn build_router(state: AppState) -> Router {
     crate::routes::router(&state.config)
         .layer(CompressionLayer::new())
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::idempotency::idempotency_guard,
+        ))
         .layer(axum::middleware::from_fn(crate::routes::security_headers))
         .layer(axum::middleware::from_fn_with_state(
             state.config.clone(),
