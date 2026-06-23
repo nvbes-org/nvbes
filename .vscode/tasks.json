@@ -2,13 +2,13 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "pnpm: install (root)",
+      "label": "install",
       "type": "shell",
       "command": "pnpm install",
       "problemMatcher": []
     },
     {
-      "label": "pnpm: dev",
+      "label": "dev: all",
       "type": "shell",
       "command": "pnpm dev",
       "isBackground": true,
@@ -19,25 +19,131 @@
       "problemMatcher": []
     },
     {
-      "label": "pnpm: lint",
+      "label": "dev: identity-api",
+      "type": "shell",
+      "command": "pnpm dev:identity-api",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: drive-api",
+      "type": "shell",
+      "command": "pnpm dev:drive-api",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: identity-web",
+      "type": "shell",
+      "command": "pnpm dev:identity-web",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://localhost:3001"
+        }
+      }
+    },
+    {
+      "label": "dev: drive-web",
+      "type": "shell",
+      "command": "pnpm dev:drive-web",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://localhost:5173"
+        }
+      }
+    },
+    {
+      "label": "dev: developer-web",
+      "type": "shell",
+      "command": "pnpm dev:developer-web",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://localhost:5175"
+        }
+      }
+    },
+    {
+      "label": "dev: enterprise-web",
+      "type": "shell",
+      "command": "pnpm dev:enterprise-web",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://localhost:5175"
+        }
+      }
+    },
+    {
+      "label": "lint",
       "type": "shell",
       "command": "pnpm lint",
       "problemMatcher": []
     },
     {
-      "label": "pnpm: check",
+      "label": "check",
       "type": "shell",
       "command": "pnpm check",
       "problemMatcher": []
     },
     {
-      "label": "pnpm: test",
+      "label": "test",
       "type": "shell",
       "command": "pnpm test",
       "problemMatcher": []
     },
     {
-      "label": "pnpm: verify",
+      "label": "verify",
       "type": "shell",
       "command": "pnpm verify",
       "problemMatcher": []
@@ -56,6 +162,13 @@
       "label": "cargo: check workspace",
       "type": "shell",
       "command": "cargo check --workspace",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "nx: affected",
+      "type": "shell",
+      "command": "pnpm nx:affected",
       "problemMatcher": []
     }
   ]

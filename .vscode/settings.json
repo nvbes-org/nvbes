@@ -31,5 +31,18 @@
   "git.enableSmartCommit": false,
   "git.confirmSync": false,
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "rust-analyzer.cargo.autoreload": true
+  "debug.javascript.autoAttachFilter": "smart",
+  "debug.toolBarLocation": "docked",
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "javascript.preferences.importModuleSpecifier": "non-relative",
+  "rust-analyzer.cargo.autoreload": true,
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.check.command": "check",
+  "rust-analyzer.check.allTargets": true,
+  "rust-analyzer.linkedProjects": ["Cargo.toml"],
+  "lldb.showDisassembly": "never",
+  "lldb.displayFormat": "auto",
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  }
 }

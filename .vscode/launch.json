@@ -2,31 +2,142 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Web: Launch Chrome (localhost:5173)",
-      "type": "chrome",
-      "request": "attach",
+      "name": "Web: Drive (Chrome)",
+      "type": "pwa-chrome",
+      "request": "launch",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/apps/identity-web"
+      "webRoot": "${workspaceFolder}/apps/drive-web",
+      "preLaunchTask": "dev: drive-web",
+      "sourceMaps": true
     },
     {
-      "name": "Rust: Debug identity-api",
+      "name": "Web: Identity (Chrome)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:3001",
+      "webRoot": "${workspaceFolder}/apps/identity-web",
+      "preLaunchTask": "dev: identity-web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Web: Developer (Chrome)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5175",
+      "webRoot": "${workspaceFolder}/apps/developer-web",
+      "preLaunchTask": "dev: developer-web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Web: Enterprise (Chrome)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5175",
+      "webRoot": "${workspaceFolder}/apps/enterprise-web",
+      "preLaunchTask": "dev: enterprise-web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Web: Attach Chrome (Drive)",
+      "type": "pwa-chrome",
+      "request": "attach",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/drive-web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Rust: identity-api",
       "type": "lldb",
       "request": "launch",
       "cargo": {
-        "args": ["run", "--package", "nvbes-identity-api"]
+        "args": ["build", "--package", "nvbes-identity-api"],
+        "filter": {
+          "name": "nvbes-identity-api",
+          "kind": "bin"
+        }
       },
+      "program": "${cargo:program}",
       "cwd": "${workspaceFolder}",
       "env": {
-        "PATH": "/Users/shayn/.cargo/bin:${env:PATH}"
+        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
+        "NVBES_API_PORT": "4000",
+        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes",
+        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+      },
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: drive-api",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--package", "nvbes-drive-api"],
+        "filter": {
+          "name": "nvbes-drive-api",
+          "kind": "bin"
+        }
+      },
+      "program": "${cargo:program}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
+        "NVBES_API_PORT": "4002",
+        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes_drive",
+        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+      },
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: identity-worker",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--package", "nvbes-identity-worker"],
+        "filter": {
+          "name": "nvbes-identity-worker",
+          "kind": "bin"
+        }
+      },
+      "program": "${cargo:program}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
+        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes",
+        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+      },
+      "sourceLanguages": ["rust"]
+    },
+    {
+      "name": "Rust: drive-worker",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "--package", "nvbes-drive-worker"],
+        "filter": {
+          "name": "nvbes-drive-worker",
+          "kind": "bin"
+        }
+      },
+      "program": "${cargo:program}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
+        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes_drive",
+        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
       },
       "sourceLanguages": ["rust"]
     }
   ],
   "compounds": [
     {
-      "name": "Dev + Web Debug",
-      "configurations": ["Web: Launch Chrome (localhost:5173)"],
-      "preLaunchTask": "pnpm: dev"
+      "name": "Drive: API + Web",
+      "configurations": ["Rust: drive-api", "Web: Drive (Chrome)"],
+      "stopAll": true
+    },
+    {
+      "name": "Identity: API + Web",
+      "configurations": ["Rust: identity-api", "Web: Identity (Chrome)"],
+      "stopAll": true
     }
   ]
 }
