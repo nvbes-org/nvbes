@@ -140,11 +140,7 @@ pub(super) async fn enforce_network_policy(
         },
     )
     .await?;
-    metrics::counter!(
-        "drive_public_api_network_policy_blocks_total",
-        &[("reason", block.reason.to_string())]
-    )
-    .increment(1);
+    crate::domains::public_api::metrics::record_network_policy_block(block.reason);
     Err(PublicApiErrorKind::NetworkRiskBlocked.app_error())
 }
 
