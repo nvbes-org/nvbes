@@ -210,24 +210,45 @@ fn render_csv(
     risk_events: &[RiskEventView],
     billing_webhook_events: &[BillingWebhookEventView],
 ) -> String {
-    let mut out = String::from("kind,id,field_a,field_b,field_c,created_at\n");
+    let mut out = String::from(
+        "kind,id,event_type,status,risk_score,geo_network_kind,geo_risk_score,geo_risk_labels,created_at\n",
+    );
     for event in risk_events {
         out.push_str(&format!(
-            "risk,{},{},{},{},{}\n",
-            event.id, event.event_type, event.decision, event.risk_score, event.created_at
+            "risk,{},{},{},{},{},{},{},{}\n",
+            event.id,
+            csv_cell(&event.event_type),
+            csv_cell(&event.decision),
+            event.risk_score,
+            csv_cell(event.geo_network_kind.as_deref().unwrap_or("")),
+            event
+                .geo_risk_score
+                .map(|score| score.to_string())
+                .unwrap_or_default(),
+            csv_cell(&event.geo_risk_labels.join("|")),
+            event.created_at
         ));
     }
     for event in billing_webhook_events {
         out.push_str(&format!(
-            "billing_webhook,{},{},{},{},{}\n",
+            "billing_webhook,{},{},{},{},,,{},{}\n",
             event.provider_event_id,
-            event.provider,
-            event.status,
+            csv_cell(&event.provider),
+            csv_cell(&event.status),
             event.signature_valid,
+            "",
             event.received_at
         ));
     }
     out
+}
+
+fn csv_cell(value: &str) -> String {
+    if value.contains([',', '"', '\n']) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
 }
 
 fn normalize_limit(limit: Option<i64>) -> i64 {

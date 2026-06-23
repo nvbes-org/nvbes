@@ -13,6 +13,7 @@ pub struct ListSecurityEventsInput {
     pub geo_confidence: Option<String>,
     pub geo_network_kind: Option<String>,
     pub min_geo_risk_score: Option<i64>,
+    pub geo_risk_label: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

@@ -13,6 +13,7 @@ pub(super) struct SecurityEventFilters {
     pub(super) geo_confidence: Option<String>,
     pub(super) geo_network_kind: Option<String>,
     pub(super) min_geo_risk_score: Option<i64>,
+    pub(super) geo_risk_label: Option<String>,
 }
 
 impl SecurityEventFilters {
@@ -26,6 +27,8 @@ impl SecurityEventFilters {
             geo_network_kind: normalize_text_filter(input.geo_network_kind.as_deref())
                 .map(ToOwned::to_owned),
             min_geo_risk_score: input.min_geo_risk_score,
+            geo_risk_label: normalize_text_filter(input.geo_risk_label.as_deref())
+                .map(str::to_ascii_lowercase),
         }
     }
 }
@@ -62,14 +65,17 @@ pub(super) async fn fetch_risk_events(
           ) AS geo_confidence,
           COALESCE(
             risk_factors->>'geo_network_kind',
+            metadata #>> '{geo,geo_network_kind}',
             metadata->>'geo_network_kind'
           ) AS geo_network_kind,
           COALESCE(
             NULLIF(risk_factors->>'geo_risk_score', '')::bigint,
+            NULLIF(metadata #>> '{geo,geo_risk_score}', '')::bigint,
             NULLIF(metadata->>'geo_risk_score', '')::bigint
           ) AS geo_risk_score,
           COALESCE(
             risk_factors->'geo_risk_labels',
+            metadata #> '{geo,geo_risk_labels}',
             metadata->'geo_risk_labels',
             '[]'::jsonb
           ) AS geo_risk_labels,
@@ -108,15 +114,29 @@ pub(super) async fn fetch_risk_events(
           AND (
             $7::text IS NULL OR COALESCE(
               risk_factors->>'geo_network_kind',
+              metadata #>> '{geo,geo_network_kind}',
               metadata->>'geo_network_kind'
             ) = $7
           )
           AND (
             $8::bigint IS NULL OR COALESCE(
               NULLIF(risk_factors->>'geo_risk_score', '')::bigint,
+              NULLIF(metadata #>> '{geo,geo_risk_score}', '')::bigint,
               NULLIF(metadata->>'geo_risk_score', '')::bigint,
               0
             ) >= $8
+          )
+          AND (
+            $9::text IS NULL OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(COALESCE(
+                risk_factors->'geo_risk_labels',
+                metadata #> '{geo,geo_risk_labels}',
+                metadata->'geo_risk_labels',
+                '[]'::jsonb
+              )) AS label(value)
+              WHERE lower(label.value) = $9
+            )
           )
         ORDER BY created_at DESC, id DESC
         LIMIT $3
@@ -130,6 +150,7 @@ pub(super) async fn fetch_risk_events(
     .bind(filters.geo_confidence.as_deref())
     .bind(filters.geo_network_kind.as_deref())
     .bind(filters.min_geo_risk_score)
+    .bind(filters.geo_risk_label.as_deref())
     .fetch_all(db)
     .await?;
 

@@ -61,6 +61,7 @@ fn worker_queue_action() -> WorkspaceAction {
         ("geo_confidence" = Option<String>, Query, description = "Filter by geo confidence"),
         ("geo_network_kind" = Option<String>, Query, description = "Filter by geo network kind"),
         ("min_geo_risk_score" = Option<i64>, Query, description = "Minimum geo network risk score"),
+        ("geo_risk_label" = Option<String>, Query, description = "Filter by exact geo risk label"),
     ),
     responses(
         (status = 200, description = "Security events", body = SecurityEventsResponse),
