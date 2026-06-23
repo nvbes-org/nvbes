@@ -1,7 +1,6 @@
 use super::types::{InvitationView, MemberView};
 use crate::http::error::AppError;
 use chrono::{DateTime, Utc};
-use nvbes_audit::insert_audit_event_tx as insert_shared_audit_event;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -57,13 +56,39 @@ impl InvitationRecord {
     }
 }
 
+pub struct AuditEventInput<'a> {
+    pub workspace_id: Option<Uuid>,
+    pub actor_principal_id: Option<Uuid>,
+    pub action: &'a str,
+    pub target_type: &'a str,
+    pub target_id: Option<Uuid>,
+    pub ip: Option<&'a str>,
+    pub user_agent: Option<&'a str>,
+    pub metadata: serde_json::Value,
+}
+
 pub async fn insert_audit_event(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    input: nvbes_audit::AuditEventInput<'_>,
+    input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
-    insert_shared_audit_event(tx.as_mut(), input)
-        .await
-        .map_err(AppError::from)
+    let workspace_id = input.workspace_id.ok_or_else(|| {
+        AppError::internal("missing_workspace", "Workspace audit requires a workspace.")
+    })?;
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id,
+            actor_user_id: input.actor_principal_id,
+            actor_principal_id: input.actor_principal_id,
+            action: input.action,
+            target_type: input.target_type,
+            target_id: input.target_id,
+            ip: input.ip,
+            user_agent: input.user_agent,
+            metadata: input.metadata,
+        },
+    )
+    .await
 }
 
 pub async fn revoke_user_sessions(

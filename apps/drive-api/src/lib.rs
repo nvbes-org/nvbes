@@ -6,3 +6,6 @@ pub mod db;
 pub mod domains;
 #[path = "drive.http.mod.rs"]
 pub mod http;
+#[cfg(test)]
+#[path = "drive.test_support.db.rs"]
+pub(crate) mod test_support;

@@ -1,5 +1,3 @@
-use nvbes_audit::AuditEventInput;
-use nvbes_audit::insert_audit_event_tx as insert_shared_audit_event;
 use nvbes_billing::validate_plan_code;
 use nvbes_region::geo::{GeoLookupRecordContext, record_geo_resolution_tx};
 use sqlx::PgPool;
@@ -108,13 +106,11 @@ pub async fn create_checkout_session(
     )
     .await?;
 
-    insert_shared_audit_event(
-        tx.as_mut(),
-        AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
-            workspace_id: Some(access.workspace_id),
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id: access.workspace_id,
+            actor_user_id: Some(access.auth.user_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "billing.checkout_started",
             target_type: "workspace",
@@ -186,13 +182,11 @@ pub async fn create_portal_session(
 
     let session = create_stripe_portal_session(config, &customer_id, &return_url).await?;
 
-    insert_shared_audit_event(
-        tx.as_mut(),
-        AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
-            workspace_id: Some(access.workspace_id),
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id: access.workspace_id,
+            actor_user_id: Some(access.auth.user_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "billing.portal_opened",
             target_type: "workspace",

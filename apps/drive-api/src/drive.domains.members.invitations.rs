@@ -7,7 +7,6 @@ use crate::{
     domains::authz::{WorkspaceAccess, WorkspaceRole},
     http::error::AppError,
 };
-use nvbes_audit::AuditEventInput;
 use nvbes_core::config::AppConfig;
 use nvbes_tenancy::role_as_db;
 
@@ -128,9 +127,6 @@ pub async fn invite_member(
     insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "member.invited",
@@ -266,9 +262,6 @@ pub async fn accept_invitation(
     insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id: auth.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
             workspace_id: Some(workspace_id),
             actor_principal_id: Some(auth.principal_id),
             action: "member.accepted",

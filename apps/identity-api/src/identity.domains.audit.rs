@@ -2,7 +2,7 @@ use nvbes_region::geo::{
     GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
 };
 use serde_json::Value;
-use sqlx::{Postgres, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::http::error::AppError;
@@ -17,6 +17,13 @@ pub struct AuditRecordInput<'a> {
     pub ip: Option<&'a str>,
     pub user_agent: Option<&'a str>,
     pub metadata: Value,
+}
+
+pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<(), AppError> {
+    let mut tx = db.begin().await?;
+    record_event_tx(&mut tx, input).await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 pub async fn record_event_tx(

@@ -1,6 +1,3 @@
-#[path = "drive.domains.public_api.db_tests.support.rs"]
-mod support;
-
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -9,8 +6,9 @@ use super::{
     observability::{log_denied, log_request, record_api_audit_event},
     types::{DeniedLogInput, PublicApiAuditEventInput, PublicApiLogInput},
 };
-use support::{
-    context, db_supports_public_api_geo_schema, seed_vpn_range, seed_workspace, test_pool,
+use crate::test_support::{
+    db_supports_public_api_geo_schema, public_api_context, seed_geo_range, seed_vpn_range,
+    seed_workspace, test_pool,
 };
 
 #[tokio::test]
@@ -27,7 +25,7 @@ async fn public_api_request_log_persists_geo_labels() {
 
     log_request(
         &pool,
-        &context(workspace_id, principal_id, tenant_id, request_id.clone()),
+        &public_api_context(workspace_id, principal_id, tenant_id, request_id.clone()),
         PublicApiLogInput {
             method: "GET",
             path: "/v1/files",
@@ -78,54 +76,63 @@ async fn public_api_audit_denied_and_network_policy_are_geo_labeled() {
     }
     let key = format!("public-api-audit-{}", Uuid::new_v4());
     let (principal_id, workspace_id, tenant_id) = seed_workspace(&pool, &key).await;
-    seed_vpn_range(&pool, &key).await;
+    for (reason, network, ip) in [
+        ("vpn", "8.8.4.0/24", "8.8.4.42"),
+        ("proxy", "8.8.5.0/24", "8.8.5.42"),
+        ("tor", "8.8.6.0/24", "8.8.6.42"),
+    ] {
+        seed_geo_range(&pool, &key, network, reason, 95, &[reason, "anonymous"]).await;
+        let block = public_api_network_block(&pool, workspace_id, Some(ip))
+            .await
+            .expect("network policy should resolve")
+            .expect("anonymous network range should be blocked");
+        assert_eq!(block.reason, reason);
 
-    let block = public_api_network_block(&pool, workspace_id, Some("8.8.4.42"))
+        crate::domains::public_api::metrics::record_network_policy_block(
+            block.reason,
+            block.mode.as_str(),
+        );
+        let request_id = format!("{key}-{reason}-denied");
+        log_denied(
+            &pool,
+            DeniedLogInput {
+                workspace_id,
+                api_key_id: None,
+                actor_principal_id: Some(principal_id),
+                request_id: &request_id,
+                error_code: "network_risk_blocked",
+                network_block_reason: Some(block.reason),
+                ip: Some(ip),
+                user_agent: Some("public-api-test"),
+                scopes_used: &["files:read"],
+            },
+        )
         .await
-        .expect("network policy should resolve")
-        .expect("vpn range should be blocked");
-    assert_eq!(block.reason, "vpn");
+        .expect("denied log should be persisted");
 
-    let request_id = format!("{key}-denied");
-    log_denied(
-        &pool,
-        DeniedLogInput {
-            workspace_id,
-            api_key_id: None,
-            actor_principal_id: Some(principal_id),
-            request_id: &request_id,
-            error_code: "network_risk_blocked",
-            network_block_reason: Some(block.reason),
-            ip: Some("8.8.4.42"),
-            user_agent: Some("public-api-test"),
-            scopes_used: &["files:read"],
-        },
-    )
-    .await
-    .expect("denied log should be persisted");
-
-    let audit_row = sqlx::query(
-        r#"
-        SELECT metadata
-        FROM audit_events
-        WHERE workspace_id = $1
-          AND action = 'api.request.denied'
-          AND metadata->>'request_id' = $2
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(&request_id)
-    .fetch_one(&pool)
-    .await
-    .expect("denied audit row should exist");
-    let metadata: sqlx::types::Json<serde_json::Value> = audit_row.get("metadata");
-    assert_eq!(metadata["network_block_reason"], "vpn");
-    assert_eq!(metadata["geo"]["geo_network_kind"], "vpn");
-    assert_eq!(metadata["geo"]["geo_risk_score"], 95);
+        let audit_row = sqlx::query(
+            r#"
+            SELECT metadata
+            FROM audit_events
+            WHERE workspace_id = $1
+              AND action = 'api.request.denied'
+              AND metadata->>'request_id' = $2
+            "#,
+        )
+        .bind(workspace_id)
+        .bind(&request_id)
+        .fetch_one(&pool)
+        .await
+        .expect("denied audit row should exist");
+        let metadata: sqlx::types::Json<serde_json::Value> = audit_row.get("metadata");
+        assert_eq!(metadata["network_block_reason"], reason);
+        assert_eq!(metadata["geo"]["geo_network_kind"], reason);
+        assert_eq!(metadata["geo"]["geo_risk_score"], 95);
+    }
 
     record_api_audit_event(
         &pool,
-        &context(
+        &public_api_context(
             workspace_id,
             principal_id,
             tenant_id,

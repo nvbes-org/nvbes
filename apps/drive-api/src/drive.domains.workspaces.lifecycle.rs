@@ -143,7 +143,6 @@ pub async fn create_workspace(
     insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id,
             workspace_id: Some(workspace_id),
             actor_principal_id: Some(auth.principal_id),
             action: "workspace.created",
@@ -233,7 +232,6 @@ pub async fn update_workspace(
     insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| AppError::internal("missing_tenant", "Tenant context is required."))?,
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "workspace.updated",

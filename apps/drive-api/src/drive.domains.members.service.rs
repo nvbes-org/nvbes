@@ -5,11 +5,11 @@ use crate::{
     domains::authz::{WorkspaceAccess, WorkspaceRole},
     http::error::AppError,
 };
-use nvbes_audit::AuditEventInput;
 use nvbes_core::config::AppConfig;
 use nvbes_tenancy::role_as_db;
 
 use super::db;
+use super::db::AuditEventInput;
 use super::invitations;
 pub use super::types::{
     AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
@@ -89,9 +89,6 @@ pub async fn update_member_role(
     db::insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "member.role_changed",
@@ -147,9 +144,6 @@ pub async fn remove_member(
     db::insert_audit_event(
         &mut tx,
         AuditEventInput {
-            tenant_id: access.tenant_id.ok_or_else(|| {
-                AppError::internal("missing_tenant", "Tenant context is required.")
-            })?,
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.principal_id),
             action: "member.removed",

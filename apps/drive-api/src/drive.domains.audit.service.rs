@@ -6,6 +6,9 @@ use uuid::Uuid;
 
 #[path = "drive.domains.audit.service.csv.rs"]
 mod csv;
+#[cfg(test)]
+#[path = "drive.domains.audit.service.db_tests.rs"]
+mod db_tests;
 #[path = "drive.domains.audit.service.query.rs"]
 mod query;
 #[cfg(test)]
