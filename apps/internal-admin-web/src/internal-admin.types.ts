@@ -102,6 +102,21 @@ export type ComplianceCenterSnapshot = {
   recent_suppressed_emails: RecentSuppressedEmail[];
 };
 
+export type CommunicationsCenterSnapshot = {
+  queued_message_count: number;
+  sent_message_count_24h: number;
+  delivered_message_count_24h: number;
+  failed_message_count_24h: number;
+  suppressed_email_count: number;
+  webhook_event_count_24h: number;
+  unprocessed_event_count: number;
+  status_distribution: EmailStatusDistribution[];
+  business_type_distribution: BusinessTypeDistribution[];
+  recent_failures: RecentEmailFailure[];
+  recent_suppressions: RecentEmailSuppression[];
+  recent_unprocessed_events: RecentEmailEvent[];
+};
+
 export type RegionCenterSnapshot = {
   eu_workspace_count: number;
   non_eu_workspace_count: number;
@@ -322,6 +337,42 @@ export type RecentSuppressedEmail = {
   tenant_id: string | null;
   tenant_name: string | null;
   suppressed_at: string;
+};
+
+export type EmailStatusDistribution = {
+  status: string;
+  message_count: number;
+};
+
+export type BusinessTypeDistribution = {
+  business_type: string;
+  message_count: number;
+  failure_count: number;
+};
+
+export type RecentEmailFailure = {
+  id: string;
+  business_type: string;
+  recipient_email: string;
+  provider_email_id: string | null;
+  status: string;
+  updated_at: string;
+};
+
+export type RecentEmailSuppression = {
+  email: string;
+  reason: string;
+  suppressed_at: string;
+};
+
+export type RecentEmailEvent = {
+  id: string;
+  provider_event_id: string;
+  provider_email_id: string | null;
+  email: string;
+  event_type: string;
+  occurred_at: string;
+  created_at: string;
 };
 
 export type RegionDistribution = {

@@ -16,6 +16,7 @@ This app owns operator-only endpoints and must stay isolated from public product
 
 - `GET /admin/access-center`
 - `GET /admin/command-center`
+- `GET /admin/communications-center`
 - `GET /admin/compliance-center`
 - `GET /admin/customer-center`
 - `GET /admin/developer-center`

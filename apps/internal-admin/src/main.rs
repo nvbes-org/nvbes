@@ -26,6 +26,8 @@ mod billing_admin_validation;
 mod billing_runbooks;
 #[path = "internal_admin.command_center.rs"]
 mod command_center;
+#[path = "internal_admin.communications_center.rs"]
+mod communications_center;
 #[path = "internal_admin.compliance_center.rs"]
 mod compliance_center;
 #[path = "internal_admin.customer_center.rs"]

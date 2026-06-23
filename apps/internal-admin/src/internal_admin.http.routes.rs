@@ -28,6 +28,7 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::billing_admin_provider_events::router())
         .merge(crate::billing_runbooks::router())
         .merge(crate::command_center::router())
+        .merge(crate::communications_center::router())
         .merge(crate::compliance_center::router())
         .merge(crate::customer_center::router())
         .merge(crate::developer_center::router())

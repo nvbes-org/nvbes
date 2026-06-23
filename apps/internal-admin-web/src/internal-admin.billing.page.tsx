@@ -14,6 +14,7 @@ import { BillingRunbooks } from './internal-admin.billing.runbooks';
 import { BillingSearch } from './internal-admin.billing.search';
 import { AccessCenterPanel } from './internal-admin.access-center';
 import { AuditEventsPanel } from './internal-admin.audit.events';
+import { CommunicationsCenterPanel } from './internal-admin.communications-center';
 import { ComplianceCenterPanel } from './internal-admin.compliance-center';
 import { CommandCenterPanel } from './internal-admin.command-center';
 import { CustomerCenterPanel } from './internal-admin.customer-center';
@@ -97,6 +98,7 @@ export function BillingOperationsPage() {
         onSelectTenant={setSelectedTenantId}
         onSelectUser={setSelectedUserId}
       />
+      <CommunicationsCenterPanel credentials={credentials} disabled={!isReady} />
       <RegionCenterPanel
         credentials={credentials}
         disabled={!isReady}

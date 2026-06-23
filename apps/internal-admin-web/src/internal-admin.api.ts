@@ -6,6 +6,7 @@ import type {
   BillingOverview,
   BillingRunbook,
   CommandCenterSnapshot,
+  CommunicationsCenterSnapshot,
   ComplianceCenterSnapshot,
   CreditNoteRequest,
   CustomerCenterSnapshot,
@@ -105,6 +106,13 @@ export async function getSecurityCenter(credentials: AdminCredentials) {
 export async function getComplianceCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/compliance-center', { headers: authHeaders(credentials) });
   return parseJson<ComplianceCenterSnapshot>(response);
+}
+
+export async function getCommunicationsCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/communications-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<CommunicationsCenterSnapshot>(response);
 }
 
 export async function getRegionCenter(credentials: AdminCredentials) {
