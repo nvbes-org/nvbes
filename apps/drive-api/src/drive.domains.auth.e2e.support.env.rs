@@ -71,6 +71,7 @@ pub(crate) async fn drive_app() -> axum::Router {
         database_url: test_database_url(),
         environment: "development".to_string(),
         app_name: "drive-auth-e2e-drive-test".to_string(),
+        trusted_proxy_cidrs: vec!["127.0.0.1/32".to_string()],
         ..Default::default()
     };
     let db = crate::db::Database::connect(&config)

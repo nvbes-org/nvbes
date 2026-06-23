@@ -7,6 +7,9 @@ pub mod db;
 #[cfg(test)]
 #[path = "drive.domains.public_api.db_tests.rs"]
 mod db_tests;
+#[cfg(test)]
+#[path = "drive.domains.public_api.e2e_tests.rs"]
+mod e2e_tests;
 #[path = "drive.domains.public_api.errors.rs"]
 pub mod errors;
 #[path = "drive.domains.public_api.geo.rs"]

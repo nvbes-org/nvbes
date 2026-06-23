@@ -139,6 +139,34 @@ Validation:
 - subscription interne a jour;
 - audit `billing.updated` present.
 
+## Public API Network Risk
+
+Signaux:
+
+- alerte `nvbes-public-api-network-policy-blocks`;
+- alerte `nvbes-public-api-high-geo-risk-ratio`;
+- hausse de `drive_public_api_network_policy_blocks_total`;
+- hausse du ratio `drive_public_api_high_risk_requests_total / drive_public_api_geo_requests_total`;
+- logs/audit `network_risk_blocked` avec `network_block_reason`.
+
+Severite: SEV2 si un workspace legitime est bloque, SEV3 si c'est un pic attendu de trafic hostile.
+
+Actions:
+
+- Identifier `reason`, `mode`, `workspace_id`, `request_id` et `geo_network_kind`.
+- Verifier si la policy workspace est en `enforce`, `monitor_only` ou `disabled`.
+- Comparer les labels `vpn`, `proxy`, `tor`, `datacenter` et le `geo_risk_score`.
+- Contacter le workspace owner si le blocage touche un trafic legitime.
+- Ajouter une allowlist CIDR expiree uniquement si l'origine est verifiee.
+- Passer temporairement en `monitor_only` si un faux positif large bloque une integration critique.
+
+Validation:
+
+- le compteur de blocs se stabilise;
+- les requetes legitimes repassent sans 403;
+- les audits conservent `metadata.geo` et `network_block_reason`;
+- l'allowlist temporaire a une date d'expiration.
+
 ## Jobs RGPD Bloques
 
 Signaux:
