@@ -14,6 +14,7 @@ import type { ComponentType } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getWorkspaceDetail, reactivateWorkspace, suspendWorkspace } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
@@ -34,6 +35,7 @@ export function WorkspaceDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const [activeAction, setActiveAction] = useState<WorkspaceAction | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [actionResult, setActionResult] = useState<WorkspaceLifecycleResult | null>(null);
   const workspace = useQuery({
@@ -45,7 +47,7 @@ export function WorkspaceDetailPanel({
   const mutation = useMutation({
     mutationFn: async (action: WorkspaceAction) => {
       if (!workspaceId) throw new Error('Workspace absent.');
-      const body = { reason };
+      const body = { confirm_code: confirmCode, reason };
       return action === 'suspend'
         ? suspendWorkspace(credentials, workspaceId, body)
         : reactivateWorkspace(credentials, workspaceId, body);
@@ -53,6 +55,7 @@ export function WorkspaceDetailPanel({
     onSuccess: async (result) => {
       setActionResult(result);
       setActiveAction(null);
+      setConfirmCode('');
       setReason('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['workspace-detail', workspaceId] }),
@@ -179,14 +182,17 @@ export function WorkspaceDetailPanel({
             isPending={mutation.isPending}
             onCancel={() => {
               setActiveAction(null);
+              setConfirmCode('');
               setReason('');
             }}
+            onConfirmCodeChange={setConfirmCode}
             onReasonChange={setReason}
             onRun={(action) => mutation.mutate(action)}
             onStart={(action) => {
               setActionResult(null);
               setActiveAction(action);
             }}
+            confirmCode={confirmCode}
             reason={reason}
             status={data.status}
           />
@@ -204,19 +210,23 @@ function WorkspaceLifecycleActions({
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRun,
   onStart,
   reason,
   status,
+  confirmCode,
 }: {
   activeAction: WorkspaceAction | null;
   actionResult: WorkspaceLifecycleResult | null;
   availableAction: WorkspaceAction | null;
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRun: (action: WorkspaceAction) => void;
   onStart: (action: WorkspaceAction) => void;
@@ -225,6 +235,8 @@ function WorkspaceLifecycleActions({
 }) {
   const isReasonReady = reason.trim().length >= 12;
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
+  const expectedCode = activeAction === 'suspend' ? 'SUSPEND WORKSPACE' : 'REACTIVATE WORKSPACE';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <div className="rounded-md border p-3">
@@ -265,16 +277,23 @@ function WorkspaceLifecycleActions({
             placeholder="Motif audit, incident, ticket, approbation..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-xs">
-              Minimum 12 caracteres requis pour executer l'action.
+              Motif detaille et code exact {expectedCode} requis.
             </p>
             <div className="flex gap-2">
               <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={() => onRun(activeAction)}
                 type="button"
                 variant={activeAction === 'suspend' ? 'destructive' : 'default'}

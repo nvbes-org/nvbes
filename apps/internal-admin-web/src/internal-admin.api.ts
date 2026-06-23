@@ -1,6 +1,8 @@
 import { verifiedFetch } from '@nvbes/web-runtime';
 import type {
   AccessCenterSnapshot,
+  AccessActionRequest,
+  AccessActionResult,
   AdminCredentials,
   AuditEventFilters,
   AuditEvidenceSnapshot,
@@ -56,6 +58,7 @@ function authHeaders(credentials: AdminCredentials): Record<string, string> {
   return {
     'x-nvbes-internal-token': credentials.internalToken,
     'x-nvbes-actor-principal-id': credentials.actorPrincipalId,
+    'x-nvbes-backoffice-role': credentials.backofficeRole,
   };
 }
 
@@ -133,6 +136,19 @@ export async function getCommandCenter(credentials: AdminCredentials) {
 export async function getAccessCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/access-center', { headers: authHeaders(credentials) });
   return parseJson<AccessCenterSnapshot>(response);
+}
+
+export function suspendWorkspaceMembership(
+  credentials: AdminCredentials,
+  workspaceId: string,
+  principalId: string,
+  body: AccessActionRequest,
+) {
+  return postJson<AccessActionRequest, AccessActionResult>(
+    credentials,
+    `/admin/access-center/workspace-memberships/${workspaceId}/${principalId}/suspend`,
+    body,
+  );
 }
 
 export async function getAuditEvidenceCenter(credentials: AdminCredentials) {

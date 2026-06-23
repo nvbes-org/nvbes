@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getAccessCenter } from './internal-admin.api';
+import { PrivilegedMembershipAction } from './internal-admin.access-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -95,6 +96,8 @@ export function AccessCenterPanel({
       </div>
       <div className="mt-4 grid gap-3 xl:grid-cols-3">
         <PrivilegedUsersList
+          credentials={credentials}
+          disabled={disabled}
           rows={data?.privileged_users ?? []}
           onSelectTenant={onSelectTenant}
           onSelectUser={onSelectUser}
@@ -117,11 +120,15 @@ export function AccessCenterPanel({
 }
 
 function PrivilegedUsersList({
+  credentials,
+  disabled,
   onSelectTenant,
   onSelectUser,
   onSelectWorkspace,
   rows,
 }: {
+  credentials: AdminCredentials;
+  disabled: boolean;
   onSelectTenant: (tenantId: string) => void;
   onSelectUser: (principalId: string) => void;
   onSelectWorkspace: (workspaceId: string) => void;
@@ -146,6 +153,7 @@ function PrivilegedUsersList({
               onUser={() => onSelectUser(row.principal_id)}
               onWorkspace={() => onSelectWorkspace(row.workspace_id)}
             />
+            <PrivilegedMembershipAction credentials={credentials} disabled={disabled} row={row} />
           </article>
         ))}
       </div>

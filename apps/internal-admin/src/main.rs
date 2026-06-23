@@ -1,11 +1,15 @@
 #[path = "internal_admin.access_center.rs"]
 mod access_center;
+#[path = "internal_admin.access_center.actions.rs"]
+mod access_center_actions;
 #[path = "internal_admin.app.rs"]
 mod app;
 #[path = "internal_admin.audit.rs"]
 mod audit;
 #[path = "internal_admin.audit_evidence_center.rs"]
 mod audit_evidence_center;
+#[path = "internal_admin.backoffice_authorization.rs"]
+mod backoffice_authorization;
 #[path = "internal_admin.billing.admin.rs"]
 mod billing_admin;
 #[path = "internal_admin.billing.admin.access.rs"]

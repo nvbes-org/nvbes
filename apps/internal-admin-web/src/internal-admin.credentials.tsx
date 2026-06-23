@@ -55,6 +55,14 @@ export function CredentialsPanel({
             placeholder="00000000-0000-0000-0000-000000000000"
           />
         </Field>
+        <Field label="Back-office role">
+          <Input
+            className="font-mono text-xs"
+            value={credentials.backofficeRole}
+            onChange={(event) => onChange({ ...credentials, backofficeRole: event.target.value })}
+            placeholder="platform_admin"
+          />
+        </Field>
         <Field label="Internal token">
           <div className="relative">
             <KeyRound className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />

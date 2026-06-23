@@ -59,7 +59,9 @@ struct StaleServiceAccount {
 }
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/admin/access-center", get(access_center_route))
+    Router::new()
+        .route("/admin/access-center", get(access_center_route))
+        .merge(crate::access_center_actions::router())
 }
 
 async fn access_center_route(

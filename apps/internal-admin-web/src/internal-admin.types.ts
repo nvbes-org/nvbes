@@ -2,6 +2,7 @@ export type AdminCredentials = {
   workspaceId: string;
   internalToken: string;
   actorPrincipalId: string;
+  backofficeRole: string;
 };
 
 export type SearchResult = {
@@ -37,6 +38,7 @@ export type TenantDetail = {
 };
 
 export type TenantLifecycleRequest = {
+  confirm_code: string;
   reason: string;
 };
 
@@ -69,6 +71,7 @@ export type WorkspaceDetail = {
 };
 
 export type WorkspaceLifecycleRequest = {
+  confirm_code: string;
   reason: string;
 };
 
@@ -104,6 +107,7 @@ export type UserDetail = {
 };
 
 export type UserLifecycleRequest = {
+  confirm_code: string;
   reason: string;
 };
 
@@ -340,6 +344,20 @@ export type PrivilegedUser = {
   workspace_name: string;
   role: string;
   updated_at: string;
+};
+
+export type AccessActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type AccessActionResult = {
+  workspace_id: string;
+  tenant_id: string;
+  principal_id: string;
+  previous_status: string;
+  next_status: string;
+  audit_action: string;
 };
 
 export type OwnerlessWorkspace = {
@@ -789,6 +807,7 @@ export type UsageCorrection = {
 };
 
 export type GovernanceActionRequest = {
+  confirm_code: string;
   reason: string;
 };
 
@@ -922,6 +941,7 @@ export type ActiveOauthConsent = {
 };
 
 export type SecurityActionRequest = {
+  confirm_code: string;
   reason: string;
 };
 

@@ -1,0 +1,147 @@
+use axum::http::HeaderMap;
+
+use crate::error::AppError;
+
+const ROLE_HEADER: &str = "x-nvbes-backoffice-role";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BackofficePermission {
+    AccessMutate,
+    GovernanceMutate,
+    SecurityMutate,
+    TenantLifecycle,
+    UserLifecycle,
+    WorkspaceLifecycle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BackofficeRole {
+    FinanceAdmin,
+    PlatformAdmin,
+    SecurityAdmin,
+    SupportAgent,
+    Viewer,
+}
+
+pub(crate) fn require_permission(
+    headers: &HeaderMap,
+    permission: BackofficePermission,
+) -> Result<(), AppError> {
+    let role = backoffice_role(headers)?;
+    if role_allows(role, permission) {
+        return Ok(());
+    }
+    Err(AppError::forbidden(
+        "backoffice_permission_denied",
+        "Back-office operator role is not allowed to execute this action.",
+    ))
+}
+
+pub(crate) fn require_confirmation(actual: &str, expected: &str) -> Result<(), AppError> {
+    if actual.trim() == expected {
+        return Ok(());
+    }
+    Err(AppError::bad_request(
+        "backoffice_confirmation_required",
+        "Back-office action requires the exact confirmation code.",
+    ))
+}
+
+fn backoffice_role(headers: &HeaderMap) -> Result<BackofficeRole, AppError> {
+    let value = headers
+        .get(ROLE_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| {
+            AppError::unauthorized(
+                "backoffice_role_required",
+                "Back-office requests require x-nvbes-backoffice-role.",
+            )
+        })?;
+    parse_role(value)
+}
+
+fn parse_role(value: &str) -> Result<BackofficeRole, AppError> {
+    match value.trim() {
+        "finance_admin" => Ok(BackofficeRole::FinanceAdmin),
+        "platform_admin" => Ok(BackofficeRole::PlatformAdmin),
+        "security_admin" => Ok(BackofficeRole::SecurityAdmin),
+        "support_agent" => Ok(BackofficeRole::SupportAgent),
+        "viewer" => Ok(BackofficeRole::Viewer),
+        _ => Err(AppError::bad_request(
+            "invalid_backoffice_role",
+            "Back-office role is not recognized.",
+        )),
+    }
+}
+
+fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
+    match role {
+        BackofficeRole::PlatformAdmin => true,
+        BackofficeRole::SecurityAdmin => matches!(
+            permission,
+            BackofficePermission::AccessMutate
+                | BackofficePermission::GovernanceMutate
+                | BackofficePermission::SecurityMutate
+                | BackofficePermission::UserLifecycle
+        ),
+        BackofficeRole::SupportAgent => matches!(
+            permission,
+            BackofficePermission::TenantLifecycle
+                | BackofficePermission::UserLifecycle
+                | BackofficePermission::WorkspaceLifecycle
+        ),
+        BackofficeRole::FinanceAdmin | BackofficeRole::Viewer => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn platform_admin_can_run_every_tracked_permission() {
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::TenantLifecycle
+        ));
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::AccessMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::PlatformAdmin,
+            BackofficePermission::SecurityMutate
+        ));
+    }
+
+    #[test]
+    fn viewer_cannot_mutate() {
+        assert!(!role_allows(
+            BackofficeRole::Viewer,
+            BackofficePermission::TenantLifecycle
+        ));
+    }
+
+    #[test]
+    fn security_admin_can_mutate_security_and_governance() {
+        assert!(role_allows(
+            BackofficeRole::SecurityAdmin,
+            BackofficePermission::SecurityMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::SecurityAdmin,
+            BackofficePermission::GovernanceMutate
+        ));
+        assert!(!role_allows(
+            BackofficeRole::SecurityAdmin,
+            BackofficePermission::TenantLifecycle
+        ));
+    }
+
+    #[test]
+    fn confirmation_must_match_exactly_after_trim() {
+        assert!(require_confirmation("SUSPEND TENANT", "SUSPEND TENANT").is_ok());
+        assert!(require_confirmation(" SUSPEND TENANT ", "SUSPEND TENANT").is_ok());
+        assert!(require_confirmation("suspend tenant", "SUSPEND TENANT").is_err());
+    }
+}

@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { revokeMfaFactor, revokeOauthConsent } from './internal-admin.api';
 import type {
@@ -31,16 +32,18 @@ export function SecurityActionSections({
 }) {
   const queryClient = useQueryClient();
   const [activeTarget, setActiveTarget] = useState<SecurityActionTarget | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [actionResult, setActionResult] = useState<SecurityActionResult | null>(null);
   const mutation = useMutation({
     mutationFn: async (target: SecurityActionTarget) =>
       target.kind === 'mfa'
-        ? revokeMfaFactor(credentials, target.id, { reason })
-        : revokeOauthConsent(credentials, target.id, { reason }),
+        ? revokeMfaFactor(credentials, target.id, { confirm_code: confirmCode, reason })
+        : revokeOauthConsent(credentials, target.id, { confirm_code: confirmCode, reason }),
     onSuccess: async (result) => {
       setActionResult(result);
       setActiveTarget(null);
+      setConfirmCode('');
       setReason('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['security-center'] }),
@@ -60,8 +63,10 @@ export function SecurityActionSections({
           isPending={mutation.isPending}
           onCancel={() => {
             setActiveTarget(null);
+            setConfirmCode('');
             setReason('');
           }}
+          onConfirmCodeChange={setConfirmCode}
           onReasonChange={setReason}
           onRevoke={(target) => mutation.mutate(target)}
           onSelectUser={onSelectUser}
@@ -70,6 +75,7 @@ export function SecurityActionSections({
             setActiveTarget(target);
           }}
           reason={reason}
+          confirmCode={confirmCode}
           rows={mfaFactors}
         />
         <ActiveOauthConsentList
@@ -79,8 +85,10 @@ export function SecurityActionSections({
           isPending={mutation.isPending}
           onCancel={() => {
             setActiveTarget(null);
+            setConfirmCode('');
             setReason('');
           }}
+          onConfirmCodeChange={setConfirmCode}
           onReasonChange={setReason}
           onRevoke={(target) => mutation.mutate(target)}
           onSelectUser={onSelectUser}
@@ -89,6 +97,7 @@ export function SecurityActionSections({
             setActiveTarget(target);
           }}
           reason={reason}
+          confirmCode={confirmCode}
           rows={oauthConsents}
         />
       </div>
@@ -103,10 +112,12 @@ export function SecurityActionSections({
 
 function ActiveMfaFactorList({
   activeTarget,
+  confirmCode,
   disabled,
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRevoke,
   onSelectUser,
@@ -137,10 +148,12 @@ function ActiveMfaFactorList({
               </div>
               <SecurityActionControls
                 activeTarget={activeTarget}
+                confirmCode={confirmCode}
                 disabled={disabled}
                 error={error}
                 isPending={isPending}
                 onCancel={onCancel}
+                onConfirmCodeChange={onConfirmCodeChange}
                 onReasonChange={onReasonChange}
                 onRevoke={onRevoke}
                 onSelectUser={() => onSelectUser(row.principal_id)}
@@ -158,10 +171,12 @@ function ActiveMfaFactorList({
 
 function ActiveOauthConsentList({
   activeTarget,
+  confirmCode,
   disabled,
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRevoke,
   onSelectUser,
@@ -191,10 +206,12 @@ function ActiveOauthConsentList({
               </div>
               <SecurityActionControls
                 activeTarget={activeTarget}
+                confirmCode={confirmCode}
                 disabled={disabled}
                 error={error}
                 isPending={isPending}
                 onCancel={onCancel}
+                onConfirmCodeChange={onConfirmCodeChange}
                 onReasonChange={onReasonChange}
                 onRevoke={onRevoke}
                 onSelectUser={() => onSelectUser(row.principal_id)}
@@ -212,10 +229,12 @@ function ActiveOauthConsentList({
 
 type ActionListProps<TRow> = {
   activeTarget: SecurityActionTarget | null;
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRevoke: (target: SecurityActionTarget) => void;
   onSelectUser: (principalId: string) => void;
@@ -226,10 +245,12 @@ type ActionListProps<TRow> = {
 
 function SecurityActionControls({
   activeTarget,
+  confirmCode,
   disabled,
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRevoke,
   onSelectUser,
@@ -242,6 +263,8 @@ function SecurityActionControls({
 }) {
   const isActive = activeTarget?.id === target.id && activeTarget.kind === target.kind;
   const isReasonReady = reason.trim().length >= 12;
+  const expectedCode = target.kind === 'mfa' ? 'REVOKE MFA' : 'REVOKE OAUTH CONSENT';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <div>
@@ -275,8 +298,17 @@ function SecurityActionControls({
             placeholder="Motif audit, ticket, incident, approbation..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-xs">Minimum 12 caracteres requis.</p>
+            <p className="text-muted-foreground text-xs">
+              Motif detaille et code exact {expectedCode} requis.
+            </p>
             <div className="flex gap-2">
               <Button
                 disabled={isPending}
@@ -289,7 +321,7 @@ function SecurityActionControls({
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={() => onRevoke(target)}
                 size="sm"
                 type="button"

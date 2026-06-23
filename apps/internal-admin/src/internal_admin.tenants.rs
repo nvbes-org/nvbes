@@ -10,6 +10,9 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_confirmation, require_permission,
+};
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
 
@@ -32,6 +35,7 @@ struct TenantDetail {
 
 #[derive(Debug, Deserialize)]
 struct TenantLifecycleRequest {
+    confirm_code: String,
     reason: String,
 }
 
@@ -71,6 +75,8 @@ async fn suspend_tenant_route(
     Path(tenant_id): Path<Uuid>,
     Json(request): Json<TenantLifecycleRequest>,
 ) -> Result<Json<TenantLifecycleResult>, AppError> {
+    require_permission(&headers, BackofficePermission::TenantLifecycle)?;
+    require_confirmation(&request.confirm_code, "SUSPEND TENANT")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         change_tenant_status(
@@ -91,6 +97,8 @@ async fn reactivate_tenant_route(
     Path(tenant_id): Path<Uuid>,
     Json(request): Json<TenantLifecycleRequest>,
 ) -> Result<Json<TenantLifecycleResult>, AppError> {
+    require_permission(&headers, BackofficePermission::TenantLifecycle)?;
+    require_confirmation(&request.confirm_code, "REACTIVATE TENANT")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         change_tenant_status(

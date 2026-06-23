@@ -10,6 +10,9 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_confirmation, require_permission,
+};
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
 
@@ -37,6 +40,7 @@ struct WorkspaceDetail {
 
 #[derive(Debug, Deserialize)]
 struct WorkspaceLifecycleRequest {
+    confirm_code: String,
     reason: String,
 }
 
@@ -80,6 +84,8 @@ async fn suspend_workspace_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<WorkspaceLifecycleRequest>,
 ) -> Result<Json<WorkspaceLifecycleResult>, AppError> {
+    require_permission(&headers, BackofficePermission::WorkspaceLifecycle)?;
+    require_confirmation(&request.confirm_code, "SUSPEND WORKSPACE")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         change_workspace_status(
@@ -100,6 +106,8 @@ async fn reactivate_workspace_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<WorkspaceLifecycleRequest>,
 ) -> Result<Json<WorkspaceLifecycleResult>, AppError> {
+    require_permission(&headers, BackofficePermission::WorkspaceLifecycle)?;
+    require_confirmation(&request.confirm_code, "REACTIVATE WORKSPACE")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         change_workspace_status(

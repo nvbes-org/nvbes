@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cancelRecoveryRequest, revokeBreakGlassAccount } from './internal-admin.api';
 import type {
@@ -34,16 +35,24 @@ export function IdentityGovernanceActionLists({
 }) {
   const queryClient = useQueryClient();
   const [activeTarget, setActiveTarget] = useState<GovernanceTarget | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<GovernanceActionResult | null>(null);
   const mutation = useMutation({
     mutationFn: (target: GovernanceTarget) =>
       target.kind === 'break-glass'
-        ? revokeBreakGlassAccount(credentials, target.tenantId, target.principalId, { reason })
-        : cancelRecoveryRequest(credentials, target.requestId, { reason }),
+        ? revokeBreakGlassAccount(credentials, target.tenantId, target.principalId, {
+            confirm_code: confirmCode,
+            reason,
+          })
+        : cancelRecoveryRequest(credentials, target.requestId, {
+            confirm_code: confirmCode,
+            reason,
+          }),
     onSuccess: async (data) => {
       setResult(data);
       setActiveTarget(null);
+      setConfirmCode('');
       setReason('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['identity-governance-center'] }),
@@ -62,8 +71,10 @@ export function IdentityGovernanceActionLists({
         isPending={mutation.isPending}
         onCancel={() => {
           setActiveTarget(null);
+          setConfirmCode('');
           setReason('');
         }}
+        onConfirmCodeChange={setConfirmCode}
         onReasonChange={setReason}
         onRun={(target) => mutation.mutate(target)}
         onSelectTenant={onSelectTenant}
@@ -72,6 +83,7 @@ export function IdentityGovernanceActionLists({
           setResult(null);
           setActiveTarget(target);
         }}
+        confirmCode={confirmCode}
         reason={reason}
         rows={breakGlassAccounts}
       />
@@ -82,8 +94,10 @@ export function IdentityGovernanceActionLists({
         isPending={mutation.isPending}
         onCancel={() => {
           setActiveTarget(null);
+          setConfirmCode('');
           setReason('');
         }}
+        onConfirmCodeChange={setConfirmCode}
         onReasonChange={setReason}
         onRun={(target) => mutation.mutate(target)}
         onSelectTenant={onSelectTenant}
@@ -92,6 +106,7 @@ export function IdentityGovernanceActionLists({
           setResult(null);
           setActiveTarget(target);
         }}
+        confirmCode={confirmCode}
         reason={reason}
         rows={recoveryRequests}
       />
@@ -149,10 +164,12 @@ function RecoveryActionList(props: SharedActionProps & { rows: PendingRecoveryRe
 
 type SharedActionProps = {
   activeTarget: GovernanceTarget | null;
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRun: (target: GovernanceTarget) => void;
   onSelectTenant: (tenantId: string) => void;
@@ -164,10 +181,12 @@ type SharedActionProps = {
 function ActionRow({
   activeTarget,
   badge,
+  confirmCode,
   disabled,
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRun,
   onSelectTenant,
@@ -189,6 +208,8 @@ function ActionRow({
 }) {
   const isActive = isSameTarget(activeTarget, target);
   const isReasonReady = reason.trim().length >= 12;
+  const expectedCode = target.kind === 'break-glass' ? 'REVOKE BREAK GLASS' : 'CANCEL RECOVERY';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <article className="p-3">
@@ -242,8 +263,17 @@ function ActionRow({
             placeholder="Motif audit, ticket, incident, approbation..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-xs">Minimum 12 caracteres requis.</p>
+            <p className="text-muted-foreground text-xs">
+              Motif detaille et code exact {expectedCode} requis.
+            </p>
             <div className="flex gap-2">
               <Button
                 disabled={isPending}
@@ -256,7 +286,7 @@ function ActionRow({
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={() => onRun(target)}
                 size="sm"
                 type="button"

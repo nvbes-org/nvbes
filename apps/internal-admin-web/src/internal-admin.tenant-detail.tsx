@@ -13,6 +13,7 @@ import type { ComponentType } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getTenantDetail, reactivateTenant, suspendTenant } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
@@ -31,6 +32,7 @@ export function TenantDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const [activeAction, setActiveAction] = useState<TenantAction | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [actionResult, setActionResult] = useState<TenantLifecycleResult | null>(null);
   const tenant = useQuery({
@@ -42,7 +44,7 @@ export function TenantDetailPanel({
   const mutation = useMutation({
     mutationFn: async (action: TenantAction) => {
       if (!tenantId) throw new Error('Tenant absent.');
-      const body = { reason };
+      const body = { confirm_code: confirmCode, reason };
       return action === 'suspend'
         ? suspendTenant(credentials, tenantId, body)
         : reactivateTenant(credentials, tenantId, body);
@@ -50,6 +52,7 @@ export function TenantDetailPanel({
     onSuccess: async (result) => {
       setActionResult(result);
       setActiveAction(null);
+      setConfirmCode('');
       setReason('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tenant-detail', tenantId] }),
@@ -139,14 +142,17 @@ export function TenantDetailPanel({
             isPending={mutation.isPending}
             onCancel={() => {
               setActiveAction(null);
+              setConfirmCode('');
               setReason('');
             }}
+            onConfirmCodeChange={setConfirmCode}
             onReasonChange={setReason}
             onRun={(action) => mutation.mutate(action)}
             onStart={(action) => {
               setActionResult(null);
               setActiveAction(action);
             }}
+            confirmCode={confirmCode}
             reason={reason}
             status={data.status}
           />
@@ -192,19 +198,23 @@ function TenantLifecycleActions({
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRun,
   onStart,
   reason,
   status,
+  confirmCode,
 }: {
   activeAction: TenantAction | null;
   actionResult: TenantLifecycleResult | null;
   availableAction: TenantAction | null;
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRun: (action: TenantAction) => void;
   onStart: (action: TenantAction) => void;
@@ -213,6 +223,8 @@ function TenantLifecycleActions({
 }) {
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
   const isReasonReady = reason.trim().length >= 12;
+  const expectedCode = activeAction === 'suspend' ? 'SUSPEND TENANT' : 'REACTIVATE TENANT';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <div className="rounded-md border p-3">
@@ -253,16 +265,23 @@ function TenantLifecycleActions({
             placeholder="Motif audit, ticket, approbation, impact..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-xs">
-              Minimum 12 caracteres requis pour executer l'action.
+              Motif detaille et code exact {expectedCode} requis.
             </p>
             <div className="flex gap-2">
               <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={() => onRun(activeAction)}
                 type="button"
                 variant={activeAction === 'suspend' ? 'destructive' : 'default'}

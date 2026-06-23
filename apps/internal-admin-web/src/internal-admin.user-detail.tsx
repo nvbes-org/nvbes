@@ -13,6 +13,7 @@ import type { ComponentType } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getUserDetail, reactivateUser, suspendUser } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
@@ -35,6 +36,7 @@ export function UserDetailPanel({
 }) {
   const queryClient = useQueryClient();
   const [activeAction, setActiveAction] = useState<UserAction | null>(null);
+  const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [actionResult, setActionResult] = useState<UserLifecycleResult | null>(null);
   const user = useQuery({
@@ -46,7 +48,7 @@ export function UserDetailPanel({
   const mutation = useMutation({
     mutationFn: async (action: UserAction) => {
       if (!principalId) throw new Error('User absent.');
-      const body = { reason };
+      const body = { confirm_code: confirmCode, reason };
       return action === 'suspend'
         ? suspendUser(credentials, principalId, body)
         : reactivateUser(credentials, principalId, body);
@@ -54,6 +56,7 @@ export function UserDetailPanel({
     onSuccess: async (result) => {
       setActionResult(result);
       setActiveAction(null);
+      setConfirmCode('');
       setReason('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['user-detail', principalId] }),
@@ -180,14 +183,17 @@ export function UserDetailPanel({
             isPending={mutation.isPending}
             onCancel={() => {
               setActiveAction(null);
+              setConfirmCode('');
               setReason('');
             }}
+            onConfirmCodeChange={setConfirmCode}
             onReasonChange={setReason}
             onRun={(action) => mutation.mutate(action)}
             onStart={(action) => {
               setActionResult(null);
               setActiveAction(action);
             }}
+            confirmCode={confirmCode}
             principalStatus={data.principal_status}
             reason={reason}
             userStatus={data.user_status}
@@ -206,20 +212,24 @@ function UserLifecycleActions({
   error,
   isPending,
   onCancel,
+  onConfirmCodeChange,
   onReasonChange,
   onRun,
   onStart,
   principalStatus,
   reason,
   userStatus,
+  confirmCode,
 }: {
   activeAction: UserAction | null;
   actionResult: UserLifecycleResult | null;
   availableAction: UserAction | null;
+  confirmCode: string;
   disabled: boolean;
   error: Error | null;
   isPending: boolean;
   onCancel: () => void;
+  onConfirmCodeChange: (confirmCode: string) => void;
   onReasonChange: (reason: string) => void;
   onRun: (action: UserAction) => void;
   onStart: (action: UserAction) => void;
@@ -229,6 +239,8 @@ function UserLifecycleActions({
 }) {
   const isReasonReady = reason.trim().length >= 12;
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
+  const expectedCode = activeAction === 'suspend' ? 'SUSPEND USER' : 'REACTIVATE USER';
+  const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
     <div className="rounded-md border p-3">
@@ -270,16 +282,23 @@ function UserLifecycleActions({
             placeholder="Motif audit, incident, ticket, approbation..."
             value={reason}
           />
+          <Input
+            className="font-mono text-xs"
+            disabled={disabled || isPending}
+            onChange={(event) => onConfirmCodeChange(event.target.value)}
+            placeholder={expectedCode}
+            value={confirmCode}
+          />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-xs">
-              Minimum 12 caracteres requis pour executer l'action.
+              Motif detaille et code exact {expectedCode} requis.
             </p>
             <div className="flex gap-2">
               <Button disabled={isPending} onClick={onCancel} type="button" variant="outline">
                 Annuler
               </Button>
               <Button
-                disabled={disabled || !isReasonReady || isPending}
+                disabled={disabled || !isReasonReady || !isConfirmationReady || isPending}
                 onClick={() => onRun(activeAction)}
                 type="button"
                 variant={activeAction === 'suspend' ? 'destructive' : 'default'}

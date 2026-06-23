@@ -10,11 +10,15 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_confirmation, require_permission,
+};
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
 
 #[derive(Debug, Deserialize)]
 struct SecurityActionRequest {
+    confirm_code: String,
     reason: String,
 }
 
@@ -44,6 +48,8 @@ async fn revoke_mfa_factor_route(
     Path(factor_id): Path<Uuid>,
     Json(request): Json<SecurityActionRequest>,
 ) -> Result<Json<SecurityActionResult>, AppError> {
+    require_permission(&headers, BackofficePermission::SecurityMutate)?;
+    require_confirmation(&request.confirm_code, "REVOKE MFA")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         revoke_mfa_factor(&state.db, actor_id, factor_id, request).await?,
@@ -56,6 +62,8 @@ async fn revoke_oauth_consent_route(
     Path(consent_id): Path<Uuid>,
     Json(request): Json<SecurityActionRequest>,
 ) -> Result<Json<SecurityActionResult>, AppError> {
+    require_permission(&headers, BackofficePermission::SecurityMutate)?;
+    require_confirmation(&request.confirm_code, "REVOKE OAUTH CONSENT")?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         revoke_oauth_consent(&state.db, actor_id, consent_id, request).await?,
