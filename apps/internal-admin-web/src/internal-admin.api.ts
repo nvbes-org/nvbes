@@ -14,6 +14,7 @@ import type {
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
+  IdentityGovernanceSnapshot,
   ManualCompRequest,
   MutationResult,
   OperationsCenterSnapshot,
@@ -133,6 +134,13 @@ export async function getCustomerCenter(credentials: AdminCredentials) {
 export async function getDeveloperCenter(credentials: AdminCredentials) {
   const response = await fetch('/admin/developer-center', { headers: authHeaders(credentials) });
   return parseJson<DeveloperCenterSnapshot>(response);
+}
+
+export async function getIdentityGovernanceCenter(credentials: AdminCredentials) {
+  const response = await fetch('/admin/identity-governance-center', {
+    headers: authHeaders(credentials),
+  });
+  return parseJson<IdentityGovernanceSnapshot>(response);
 }
 
 export async function getOperationsCenter(credentials: AdminCredentials) {

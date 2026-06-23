@@ -33,6 +33,7 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::customer_center::router())
         .merge(crate::developer_center::router())
         .merge(crate::global_search::router())
+        .merge(crate::identity_governance_center::router())
         .merge(crate::operations_center::router())
         .merge(crate::revenue_center::router())
         .merge(crate::region_center::router())

@@ -117,6 +117,22 @@ export type CommunicationsCenterSnapshot = {
   recent_unprocessed_events: RecentEmailEvent[];
 };
 
+export type IdentityGovernanceSnapshot = {
+  active_idp_count: number;
+  unverified_domain_count: number;
+  active_scim_connector_count: number;
+  overdue_access_review_count: number;
+  pending_review_item_count: number;
+  active_break_glass_count: number;
+  pending_recovery_count: number;
+  unverified_domains: UnverifiedDomain[];
+  sso_providers: SsoProvider[];
+  scim_connectors: ScimConnector[];
+  overdue_access_reviews: OverdueAccessReview[];
+  break_glass_accounts: BreakGlassAccount[];
+  pending_recovery_requests: PendingRecoveryRequest[];
+};
+
 export type RegionCenterSnapshot = {
   eu_workspace_count: number;
   non_eu_workspace_count: number;
@@ -372,6 +388,67 @@ export type RecentEmailEvent = {
   email: string;
   event_type: string;
   occurred_at: string;
+  created_at: string;
+};
+
+export type UnverifiedDomain = {
+  tenant_id: string;
+  tenant_name: string;
+  domain: string;
+  created_at: string;
+  verification_expires_at: string | null;
+};
+
+export type SsoProvider = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  provider_type: string;
+  name: string;
+  status: string;
+  issuer: string | null;
+  require_signed_assertions: boolean;
+  created_at: string;
+};
+
+export type ScimConnector = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  provider: string;
+  status: string;
+  base_url: string | null;
+  created_at: string;
+};
+
+export type OverdueAccessReview = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  name: string;
+  status: string;
+  due_at: string;
+  pending_item_count: number;
+};
+
+export type BreakGlassAccount = {
+  tenant_id: string;
+  tenant_name: string;
+  principal_id: string;
+  procedure_reference: string;
+  reason: string;
+  last_used_at: string | null;
+  created_at: string;
+};
+
+export type PendingRecoveryRequest = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  principal_id: string;
+  email: string;
+  status: string;
+  available_at: string;
   created_at: string;
 };
 

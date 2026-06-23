@@ -38,6 +38,8 @@ mod developer_center;
 mod error;
 #[path = "internal_admin.global_search.rs"]
 mod global_search;
+#[path = "internal_admin.identity_governance_center.rs"]
+mod identity_governance_center;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
 #[path = "internal_admin.region_center.rs"]
