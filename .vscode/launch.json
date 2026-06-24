@@ -60,9 +60,7 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
-        "NVBES_API_PORT": "4000",
-        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes",
-        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+        "NVBES_API_PORT": "4000"
       },
       "sourceLanguages": ["rust"]
     },
@@ -82,8 +80,7 @@
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
         "NVBES_API_PORT": "4002",
-        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes_drive",
-        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+        "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
       },
       "sourceLanguages": ["rust"]
     },
@@ -101,9 +98,7 @@
       "program": "${cargo:program}",
       "cwd": "${workspaceFolder}",
       "env": {
-        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
-        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes",
-        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+        "NVBES_WORKSPACE_ROOT": "${workspaceFolder}"
       },
       "sourceLanguages": ["rust"]
     },
@@ -122,8 +117,7 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
-        "NVBES_DATABASE_URL": "postgres://postgres:postgres@localhost:5432/nvbes_drive",
-        "PATH": "${env:HOME}/.cargo/bin:${env:PATH}"
+        "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
       },
       "sourceLanguages": ["rust"]
     }

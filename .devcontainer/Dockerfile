@@ -24,8 +24,12 @@ RUN apt-get update \
     golang-go \
     jq \
     lld \
+    libclang-dev \
+    libxml2-dev \
     libpq-dev \
     libssl-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
     openssh-client \
     pkg-config \
     postgresql-client \

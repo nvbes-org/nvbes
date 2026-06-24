@@ -21,6 +21,7 @@ The `workspace` container includes:
 - `sqlx-cli` with PostgreSQL support
 - OpenTofu
 - Go, Python, PostgreSQL client tools, Redis tools, ShellCheck, `jq`, `curl`, and build tooling
+- Native Rust FFI dependencies for SAML/XML security: `libxml2`, `xmlsec1`, OpenSSL, `pkg-config`, and `libclang`
 
 ## Included Services
 
