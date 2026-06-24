@@ -140,6 +140,11 @@ fn is_critical_mutation_path(path: &str) -> bool {
     let is_routing_disable = path.contains("/routing-rules/") && path.ends_with("/disable");
     let is_kyc_reject = path.contains("/kyc-profiles/") && path.ends_with("/reject");
     let is_risk_block = path.contains("/risk/policies/") && path.ends_with("/block");
+    let is_security_revoke = path.contains("/admin/security-center/")
+        && (path.ends_with("/revoke") || path.ends_with("/cancel"));
+    let is_governance_revoke = path.contains("/admin/identity-governance-center/")
+        && (path.ends_with("/revoke") || path.ends_with("/cancel"));
+    let is_access_suspend = path.contains("/admin/access-center/") && path.ends_with("/suspend");
 
     path.ends_with("/erasure-request")
         || is_region_exception
@@ -147,6 +152,9 @@ fn is_critical_mutation_path(path: &str) -> bool {
         || is_routing_disable
         || is_kyc_reject
         || is_risk_block
+        || is_security_revoke
+        || is_governance_revoke
+        || is_access_suspend
 }
 
 fn actor_key(headers: &HeaderMap) -> String {
@@ -197,10 +205,25 @@ mod tests {
             &Method::POST,
             "/workspaces/00000000-0000-0000-0000-000000000001/admin/revenue/invoices/00000000-0000-0000-0000-000000000002/hold",
         );
+        let security_critical = policy_for_request(
+            &Method::POST,
+            "/admin/security-center/mfa-factors/00000000-0000-0000-0000-000000000001/revoke",
+        );
+        let governance_critical = policy_for_request(
+            &Method::POST,
+            "/admin/identity-governance-center/recovery-requests/00000000-0000-0000-0000-000000000001/cancel",
+        );
+        let access_critical = policy_for_request(
+            &Method::POST,
+            "/admin/access-center/workspace-memberships/00000000-0000-0000-0000-000000000001/00000000-0000-0000-0000-000000000002/suspend",
+        );
 
         assert!(critical.actor_limit < mutation.actor_limit);
         assert!(critical.ip_limit < mutation.ip_limit);
         assert_eq!(critical.kind, "critical_mutation");
+        assert_eq!(security_critical.kind, "critical_mutation");
+        assert_eq!(governance_critical.kind, "critical_mutation");
+        assert_eq!(access_critical.kind, "critical_mutation");
     }
 
     #[test]

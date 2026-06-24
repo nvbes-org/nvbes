@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { correctUsage, freezeUsageMeter, replayUsageRollup } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, UsageActionResult } from './internal-admin.types';
 
 type UsageActionKind = 'correction' | 'freeze' | 'replay';
@@ -32,6 +33,7 @@ export function UsageActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<UsageActionResult | null>(null);
+  const expectedConfirmCode = expectedUsageConfirmCode(action, meterCode, rollupId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -96,7 +98,7 @@ export function UsageActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={expectedConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -113,7 +115,7 @@ export function UsageActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -169,6 +171,11 @@ function executeUsageAction(
     confirm_code: payload.confirmCode,
     reason: payload.reason,
   });
+}
+
+function expectedUsageConfirmCode(action: UsageActionKind, meterCode: string, rollupId: string) {
+  const targetId = action === 'replay' ? rollupId : meterCode;
+  return strongConfirmationCode(confirmCodes[action], targetId);
 }
 
 function ActionButton({

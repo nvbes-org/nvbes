@@ -3,5 +3,11 @@
   "projectType": "application",
   "root": "apps/internal-admin-web",
   "sourceRoot": "apps/internal-admin-web/src",
-  "tags": ["scope:internal", "type:app", "domain:internal-admin", "layer:app"]
+  "tags": ["scope:internal", "type:app", "domain:internal-admin", "layer:app"],
+  "targets": {
+    "e2e": {
+      "cache": false,
+      "command": "pnpm --dir apps/internal-admin-web test:e2e"
+    }
+  }
 }

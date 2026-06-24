@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
 };
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
@@ -50,7 +50,7 @@ async fn revoke_mfa_factor_route(
 ) -> Result<Json<SecurityActionResult>, AppError> {
     require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::SecurityMutate)?;
-    require_confirmation(&request.confirm_code, "REVOKE MFA")?;
+    require_strong_confirmation(&request.confirm_code, "REVOKE MFA", factor_id)?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         revoke_mfa_factor(&state.db, actor_id, factor_id, request).await?,
@@ -65,7 +65,7 @@ async fn revoke_oauth_consent_route(
 ) -> Result<Json<SecurityActionResult>, AppError> {
     require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::SecurityMutate)?;
-    require_confirmation(&request.confirm_code, "REVOKE OAUTH CONSENT")?;
+    require_strong_confirmation(&request.confirm_code, "REVOKE OAUTH CONSENT", consent_id)?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         revoke_oauth_consent(&state.db, actor_id, consent_id, request).await?,
@@ -265,7 +265,7 @@ mod tests {
                 factor_id,
                 actor_id,
                 "finance_admin",
-                "REVOKE MFA",
+                &crate::backoffice_authorization::strong_confirmation_code("REVOKE MFA", factor_id),
                 "ticket SEC-789 approved",
             ))
             .await
@@ -285,12 +285,25 @@ mod tests {
             .expect("route should respond");
         assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-        let accepted = app
+        let generic_confirmation = app
+            .clone()
             .oneshot(revoke_mfa_request(
                 factor_id,
                 actor_id,
                 "security_admin",
                 "REVOKE MFA",
+                "ticket SEC-789 approved",
+            ))
+            .await
+            .expect("route should respond");
+        assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+        let accepted = app
+            .oneshot(revoke_mfa_request(
+                factor_id,
+                actor_id,
+                "security_admin",
+                &crate::backoffice_authorization::strong_confirmation_code("REVOKE MFA", factor_id),
                 "ticket SEC-789 approved",
             ))
             .await

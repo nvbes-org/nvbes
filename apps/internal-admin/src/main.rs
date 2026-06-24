@@ -2,6 +2,9 @@
 mod access_center;
 #[path = "internal_admin.access_center.actions.rs"]
 mod access_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.access_center.actions.tests.rs"]
+mod access_center_actions_tests;
 #[path = "internal_admin.app.rs"]
 mod app;
 #[path = "internal_admin.audit.rs"]
@@ -109,6 +112,9 @@ mod idempotency;
 mod identity_governance_center;
 #[path = "internal_admin.identity_governance_center.actions.rs"]
 mod identity_governance_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.identity_governance_center.actions.tests.rs"]
+mod identity_governance_center_actions_tests;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
 #[path = "internal_admin.operations_center.actions.rs"]

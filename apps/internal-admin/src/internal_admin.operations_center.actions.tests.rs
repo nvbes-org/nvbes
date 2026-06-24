@@ -36,7 +36,10 @@ async fn replay_provider_event_route_enforces_role_confirmation_and_audits_succe
             event_id,
             actor_id,
             "viewer",
-            "REPLAY PROVIDER EVENT",
+            &crate::backoffice_authorization::strong_confirmation_code(
+                "REPLAY PROVIDER EVENT",
+                event_id,
+            ),
         ))
         .await
         .expect("route should respond");
@@ -55,13 +58,29 @@ async fn replay_provider_event_route_enforces_role_confirmation_and_audits_succe
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(replay_request(
             workspace_id,
             event_id,
             actor_id,
             "security_admin",
             "REPLAY PROVIDER EVENT",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(replay_request(
+            workspace_id,
+            event_id,
+            actor_id,
+            "security_admin",
+            &crate::backoffice_authorization::strong_confirmation_code(
+                "REPLAY PROVIDER EVENT",
+                event_id,
+            ),
         ))
         .await
         .expect("route should respond");

@@ -35,7 +35,10 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
             workspace_id,
             actor_id,
             "viewer",
-            "GRANT FEATURE",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "GRANT FEATURE",
+                "advanced_search",
+            ),
             "ticket ENT-123 approved",
         ))
         .await
@@ -55,12 +58,28 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(grant_request(
             workspace_id,
             actor_id,
             "finance_admin",
             "GRANT FEATURE",
+            "ticket ENT-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(grant_request(
+            workspace_id,
+            actor_id,
+            "finance_admin",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "GRANT FEATURE",
+                "advanced_search",
+            ),
             "ticket ENT-123 approved",
         ))
         .await

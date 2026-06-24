@@ -35,7 +35,10 @@ async fn correct_usage_route_enforces_role_confirmation_and_audits_success() {
             workspace_id,
             actor_id,
             "viewer",
-            "CORRECT USAGE",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "CORRECT USAGE",
+                "api_call",
+            ),
             "ticket USG-123 approved",
         ))
         .await
@@ -55,12 +58,28 @@ async fn correct_usage_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(correction_request(
             workspace_id,
             actor_id,
             "finance_admin",
             "CORRECT USAGE",
+            "ticket USG-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(correction_request(
+            workspace_id,
+            actor_id,
+            "finance_admin",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "CORRECT USAGE",
+                "api_call",
+            ),
             "ticket USG-123 approved",
         ))
         .await

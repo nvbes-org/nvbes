@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
 };
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
@@ -49,7 +49,7 @@ async fn revoke_break_glass_route(
 ) -> Result<Json<GovernanceActionResult>, AppError> {
     require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::GovernanceMutate)?;
-    require_confirmation(&request.confirm_code, "REVOKE BREAK GLASS")?;
+    require_strong_confirmation(&request.confirm_code, "REVOKE BREAK GLASS", principal_id)?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         revoke_break_glass(&state.db, actor_id, tenant_id, principal_id, request).await?,
@@ -64,7 +64,7 @@ async fn cancel_recovery_request_route(
 ) -> Result<Json<GovernanceActionResult>, AppError> {
     require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::GovernanceMutate)?;
-    require_confirmation(&request.confirm_code, "CANCEL RECOVERY")?;
+    require_strong_confirmation(&request.confirm_code, "CANCEL RECOVERY", request_id)?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         cancel_recovery_request(&state.db, actor_id, request_id, request).await?,

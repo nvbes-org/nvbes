@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
+    require_strong_confirmation_for_value,
 };
 use crate::billing_admin_access::authorize_backoffice;
 use crate::error::AppError;
@@ -61,7 +62,12 @@ async fn correct_usage_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<UsageCorrectionRequest>,
 ) -> Result<Json<UsageActionResult>, AppError> {
-    require_usage_mutation(&headers, &request.confirm_code, "CORRECT USAGE")?;
+    require_usage_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "CORRECT USAGE",
+        &request.meter_code,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         correct_usage(
@@ -85,7 +91,12 @@ async fn freeze_meter_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<FreezeMeterRequest>,
 ) -> Result<Json<UsageActionResult>, AppError> {
-    require_usage_mutation(&headers, &request.confirm_code, "FREEZE METER")?;
+    require_usage_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "FREEZE METER",
+        &request.meter_code,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         freeze_meter(
@@ -105,7 +116,7 @@ async fn replay_rollup_route(
     Path((workspace_id, rollup_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<ReplayRollupRequest>,
 ) -> Result<Json<UsageActionResult>, AppError> {
-    require_usage_mutation(&headers, &request.confirm_code, "REPLAY ROLLUP")?;
+    require_usage_mutation(&headers, &request.confirm_code, "REPLAY ROLLUP", rollup_id)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_rollup(&state.db, access, workspace_id, rollup_id, request.reason).await?,
@@ -116,8 +127,20 @@ fn require_usage_mutation(
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_idempotency_key(headers)?;
     require_permission(headers, BackofficePermission::UsageMutate)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)
+}
+
+fn require_usage_mutation_for_value(
+    headers: &HeaderMap,
+    confirm_code: &str,
+    expected_code: &str,
+    target_id: &str,
+) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::UsageMutate)?;
+    require_strong_confirmation_for_value(confirm_code, expected_code, target_id)
 }

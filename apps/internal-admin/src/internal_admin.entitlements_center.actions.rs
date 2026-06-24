@@ -10,7 +10,8 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
+    require_strong_confirmation_for_value,
 };
 use crate::billing_admin_access::authorize_backoffice;
 use crate::entitlements_center_mutations::{
@@ -68,7 +69,12 @@ async fn grant_feature_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<FeatureActionRequest>,
 ) -> Result<Json<EntitlementActionResult>, AppError> {
-    require_entitlements_mutation(&headers, &request.confirm_code, "GRANT FEATURE")?;
+    require_entitlements_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "GRANT FEATURE",
+        &request.feature_code,
+    )?;
     validate_code(&request.feature_code, "feature_code")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
@@ -98,7 +104,12 @@ async fn revoke_feature_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<FeatureActionRequest>,
 ) -> Result<Json<EntitlementActionResult>, AppError> {
-    require_entitlements_mutation(&headers, &request.confirm_code, "REVOKE FEATURE")?;
+    require_entitlements_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "REVOKE FEATURE",
+        &request.feature_code,
+    )?;
     validate_code(&request.feature_code, "feature_code")?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
@@ -128,7 +139,12 @@ async fn override_quota_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<QuotaOverrideRequest>,
 ) -> Result<Json<EntitlementActionResult>, AppError> {
-    require_entitlements_mutation(&headers, &request.confirm_code, "OVERRIDE QUOTA")?;
+    require_entitlements_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "OVERRIDE QUOTA",
+        &request.quota_code,
+    )?;
     validate_code(&request.quota_code, "quota_code")?;
     if request.included_quantity < 0 {
         return Err(AppError::bad_request(
@@ -164,7 +180,12 @@ async fn publish_entitlement_changes_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<PublishEntitlementChangesRequest>,
 ) -> Result<Json<EntitlementActionResult>, AppError> {
-    require_entitlements_mutation(&headers, &request.confirm_code, "PUBLISH ENTITLEMENTS")?;
+    require_entitlements_mutation(
+        &headers,
+        &request.confirm_code,
+        "PUBLISH ENTITLEMENTS",
+        workspace_id,
+    )?;
     validate_reason(&request.reason)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     publish_changes(&state.db, access, workspace_id, request.reason)
@@ -176,8 +197,20 @@ fn require_entitlements_mutation(
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_idempotency_key(headers)?;
     require_permission(headers, BackofficePermission::EntitlementsMutate)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)
+}
+
+fn require_entitlements_mutation_for_value(
+    headers: &HeaderMap,
+    confirm_code: &str,
+    expected_code: &str,
+    target_id: &str,
+) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::EntitlementsMutate)?;
+    require_strong_confirmation_for_value(confirm_code, expected_code, target_id)
 }

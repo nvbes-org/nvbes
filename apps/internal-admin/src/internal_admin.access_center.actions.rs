@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
 };
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
@@ -46,7 +46,7 @@ async fn suspend_workspace_membership_route(
 ) -> Result<Json<AccessActionResult>, AppError> {
     require_idempotency_key(&headers)?;
     require_permission(&headers, BackofficePermission::AccessMutate)?;
-    require_confirmation(&request.confirm_code, "SUSPEND ACCESS")?;
+    require_strong_confirmation(&request.confirm_code, "SUSPEND ACCESS", principal_id)?;
     let actor_id = actor_principal_id(&headers)?;
     Ok(Json(
         suspend_workspace_membership(&state.db, actor_id, workspace_id, principal_id, request)

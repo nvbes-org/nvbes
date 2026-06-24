@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cancelRecoveryRequest, revokeBreakGlassAccount } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type {
   AdminCredentials,
   BreakGlassAccount,
@@ -208,7 +209,10 @@ function ActionRow({
 }) {
   const isActive = isSameTarget(activeTarget, target);
   const isReasonReady = reason.trim().length >= 12;
-  const expectedCode = target.kind === 'break-glass' ? 'REVOKE BREAK GLASS' : 'CANCEL RECOVERY';
+  const expectedCode =
+    target.kind === 'break-glass'
+      ? strongConfirmationCode('REVOKE BREAK GLASS', target.principalId)
+      : strongConfirmationCode('CANCEL RECOVERY', target.requestId);
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (

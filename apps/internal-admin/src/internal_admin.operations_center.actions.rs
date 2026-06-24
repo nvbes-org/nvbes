@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
 };
 use crate::billing_admin_access::authorize_backoffice;
 use crate::error::AppError;
@@ -46,7 +46,12 @@ async fn replay_provider_event_route(
     Path((workspace_id, event_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<OperationsActionRequest>,
 ) -> Result<Json<OperationsActionResult>, AppError> {
-    require_operations_mutation(&headers, &request.confirm_code, "REPLAY PROVIDER EVENT")?;
+    require_operations_mutation(
+        &headers,
+        &request.confirm_code,
+        "REPLAY PROVIDER EVENT",
+        event_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_provider_event(&state.db, access, workspace_id, event_id, request.reason).await?,
@@ -59,7 +64,12 @@ async fn replay_export_run_route(
     Path((workspace_id, export_run_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<OperationsActionRequest>,
 ) -> Result<Json<OperationsActionResult>, AppError> {
-    require_operations_mutation(&headers, &request.confirm_code, "REPLAY EXPORT RUN")?;
+    require_operations_mutation(
+        &headers,
+        &request.confirm_code,
+        "REPLAY EXPORT RUN",
+        export_run_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_export_run(
@@ -79,7 +89,12 @@ async fn resolve_reconciliation_difference_route(
     Path((workspace_id, difference_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<OperationsActionRequest>,
 ) -> Result<Json<OperationsActionResult>, AppError> {
-    require_operations_mutation(&headers, &request.confirm_code, "RESOLVE RECON DIFFERENCE")?;
+    require_operations_mutation(
+        &headers,
+        &request.confirm_code,
+        "RESOLVE RECON DIFFERENCE",
+        difference_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         resolve_reconciliation_difference(
@@ -97,8 +112,9 @@ fn require_operations_mutation(
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_idempotency_key(headers)?;
     require_permission(headers, BackofficePermission::OperationsMutate)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)
 }

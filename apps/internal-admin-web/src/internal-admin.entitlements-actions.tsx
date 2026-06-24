@@ -12,6 +12,7 @@ import {
   publishEntitlementChanges,
   revokeEntitlementFeature,
 } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, EntitlementActionResult } from './internal-admin.types';
 
 type ActionKind = 'grant' | 'publish' | 'quota' | 'revoke';
@@ -38,6 +39,12 @@ export function EntitlementsActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<EntitlementActionResult | null>(null);
+  const expectedConfirmCode = expectedEntitlementConfirmCode(
+    credentials,
+    action,
+    featureCode,
+    quotaCode,
+  );
 
   const mutation = useMutation({
     mutationFn: () => executeAction(credentials, action, formPayload()),
@@ -107,7 +114,7 @@ export function EntitlementsActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={expectedConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -124,7 +131,7 @@ export function EntitlementsActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -188,6 +195,19 @@ function executeAction(
     confirm_code: payload.confirmCode,
     reason: payload.reason,
   });
+}
+
+function expectedEntitlementConfirmCode(
+  credentials: AdminCredentials,
+  action: ActionKind,
+  featureCode: string,
+  quotaCode: string,
+) {
+  if (action === 'grant' || action === 'revoke') {
+    return strongConfirmationCode(confirmCodes[action], featureCode);
+  }
+  if (action === 'quota') return strongConfirmationCode(confirmCodes[action], quotaCode);
+  return strongConfirmationCode(confirmCodes[action], credentials.workspaceId);
 }
 
 function ActionButton({

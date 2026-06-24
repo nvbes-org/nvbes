@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { revokeMfaFactor, revokeOauthConsent } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type {
   ActiveMfaFactor,
   ActiveOauthConsent,
@@ -263,7 +264,10 @@ function SecurityActionControls({
 }) {
   const isActive = activeTarget?.id === target.id && activeTarget.kind === target.kind;
   const isReasonReady = reason.trim().length >= 12;
-  const expectedCode = target.kind === 'mfa' ? 'REVOKE MFA' : 'REVOKE OAUTH CONSENT';
+  const expectedCode = strongConfirmationCode(
+    target.kind === 'mfa' ? 'REVOKE MFA' : 'REVOKE OAUTH CONSENT',
+    target.id,
+  );
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (

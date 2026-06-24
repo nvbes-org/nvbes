@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { suspendWorkspaceMembership } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AccessActionResult, AdminCredentials, PrivilegedUser } from './internal-admin.types';
 
 export function PrivilegedMembershipAction({
@@ -41,7 +42,7 @@ export function PrivilegedMembershipAction({
     },
   });
   const isReasonReady = reason.trim().length >= 12;
-  const expectedCode = 'SUSPEND ACCESS';
+  const expectedCode = strongConfirmationCode('SUSPEND ACCESS', row.principal_id);
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
