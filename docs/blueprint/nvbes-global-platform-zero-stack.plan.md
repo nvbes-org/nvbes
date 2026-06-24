@@ -152,6 +152,26 @@ Choix cible:
 
 Regle: pas de dual-write applicatif non controle. Preferer outbox, CDC et event log.
 
+## Runtime Realtime Candidat
+
+Erlang/Elixir est un candidat potentiel, mais uniquement pour des services realtime
+specialises. Il ne remplace pas Rust comme runtime principal pour les domaines
+metier, la crypto, les ledgers, l'identity, le billing, la signature ou les API
+critiques.
+
+Cas d'usage ou le BEAM peut etre evalue:
+
+- gateway WebSocket multi-produits;
+- presence chaude et sessions ephemeres;
+- rooms, lobbies et signaling Meet;
+- fan-out chat et notifications live;
+- awareness collaborative pour CRDT/OT;
+- supervision de nombreux processus courts et isoles.
+
+Regle: Erlang/Elixir reste une option de produit ou de hot path, pas une decision
+plateforme globale. L'introduction doit etre justifiee par un besoin prouve de
+concurrence realtime, supervision fine et connexions longues massives.
+
 ## Analytics, DaaS et Public Data
 
 Choix cible:
@@ -208,8 +228,8 @@ Choix cible:
 - Desktop Suite Drive/Doc/Slide/Sheets: object storage, OLTP metadata, OpenSearch, CRDT/OT, Kafka/NATS, snapshots.
 - PDF/Document Signer: OLTP fort, signatures HSM/KMS, audit immutable, object storage.
 - Calendar/Tasks/Boards/Forms: OLTP regional, cache Valkey, events Kafka/NATS.
-- Meet: SFU dedie, regions proches utilisateurs, object storage recordings, ClickHouse QoS.
-- Chats: ScyllaDB pour messages/timelines a grande echelle, NATS pour presence chaude, OpenSearch pour recherche.
+- Meet: SFU dedie, regions proches utilisateurs, object storage recordings, ClickHouse QoS; Erlang/Elixir candidat pour signaling, rooms et presence si le volume le justifie.
+- Chats: ScyllaDB pour messages/timelines a grande echelle, NATS pour presence chaude, OpenSearch pour recherche; Erlang/Elixir candidat pour gateway websocket, fan-out et supervision de sessions.
 - Mailbox: object storage MIME/attachments, OLTP metadata, OpenSearch, ClickHouse deliverability.
 - Site/Link Marketing: edge routing, Valkey hot routes, OLTP config, ClickHouse clickstream.
 - Photo/Video Editors: object storage, GPU workers, queues durables, pipeline media isole.
@@ -229,6 +249,7 @@ Choix cible:
 - Ne pas mettre les donnees personnelles ou hashes faibles on-chain.
 - Ne pas construire un PaaS avec seulement Kubernetes si du code utilisateur non fiable est execute.
 - Ne pas supposer qu'un fournisseur cloud unique peut couvrir souverainete, cout, latence et resilience globale.
+- Ne pas introduire Erlang/Elixir hors d'un hot path realtime clairement prouve.
 
 ## Phasage Recommande
 
