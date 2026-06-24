@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getRiskDecisionCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { RiskDecisionActionsPanel } from './internal-admin.risk-decision-actions';
 import type {
   AccessPolicySnapshot,
   AdminCredentials,
@@ -105,6 +106,7 @@ export function RiskDecisionCenterPanel({
           rows={data?.active_access_policies ?? []}
         />
       </div>
+      <RiskDecisionActionsPanel credentials={credentials} disabled={disabled} />
     </section>
   );
 }

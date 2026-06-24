@@ -49,6 +49,17 @@ mod communications_center_types;
 mod communications_center_validation;
 #[path = "internal_admin.compliance_center.rs"]
 mod compliance_center;
+#[path = "internal_admin.compliance_center.actions.rs"]
+mod compliance_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.compliance_center.actions.tests.rs"]
+mod compliance_center_actions_tests;
+#[path = "internal_admin.compliance_center.mutations.rs"]
+mod compliance_center_mutations;
+#[path = "internal_admin.compliance_center.types.rs"]
+mod compliance_center_types;
+#[path = "internal_admin.compliance_center.validation.rs"]
+mod compliance_center_validation;
 #[path = "internal_admin.customer_center.rs"]
 mod customer_center;
 #[path = "internal_admin.developer_center.rs"]
@@ -85,14 +96,60 @@ mod identity_governance_center;
 mod identity_governance_center_actions;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
+#[path = "internal_admin.operations_center.actions.rs"]
+mod operations_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.operations_center.actions.tests.rs"]
+mod operations_center_actions_tests;
+#[path = "internal_admin.operations_center.mutations.rs"]
+mod operations_center_mutations;
+#[path = "internal_admin.operations_center.types.rs"]
+mod operations_center_types;
+#[path = "internal_admin.operations_center.validation.rs"]
+mod operations_center_validation;
 #[path = "internal_admin.rate_limit.rs"]
 mod rate_limit;
 #[path = "internal_admin.region_center.rs"]
 mod region_center;
+#[path = "internal_admin.region_center.actions.rs"]
+mod region_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.region_center.actions.tests.rs"]
+mod region_center_actions_tests;
+#[path = "internal_admin.region_center.mutations.rs"]
+mod region_center_mutations;
+#[path = "internal_admin.region_center.types.rs"]
+mod region_center_types;
+#[path = "internal_admin.region_center.validation.rs"]
+mod region_center_validation;
 #[path = "internal_admin.revenue_center.rs"]
 mod revenue_center;
+#[path = "internal_admin.revenue_center.actions.rs"]
+mod revenue_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.revenue_center.actions.tests.rs"]
+mod revenue_center_actions_tests;
+#[path = "internal_admin.revenue_center.mutations.rs"]
+mod revenue_center_mutations;
+#[path = "internal_admin.revenue_center.recent.rs"]
+mod revenue_center_recent;
+#[path = "internal_admin.revenue_center.types.rs"]
+mod revenue_center_types;
+#[path = "internal_admin.revenue_center.validation.rs"]
+mod revenue_center_validation;
 #[path = "internal_admin.risk_decision_center.rs"]
 mod risk_decision_center;
+#[path = "internal_admin.risk_decision_center.actions.rs"]
+mod risk_decision_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.risk_decision_center.actions.tests.rs"]
+mod risk_decision_center_actions_tests;
+#[path = "internal_admin.risk_decision_center.mutations.rs"]
+mod risk_decision_center_mutations;
+#[path = "internal_admin.risk_decision_center.types.rs"]
+mod risk_decision_center_types;
+#[path = "internal_admin.risk_decision_center.validation.rs"]
+mod risk_decision_center_validation;
 #[path = "internal_admin.http.routes.rs"]
 mod routes;
 #[path = "internal_admin.security_center.rs"]

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getRegionCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { RegionActionsPanel } from './internal-admin.region-actions';
 import type {
   AdminCredentials,
   JurisdictionDistribution,
@@ -77,6 +78,7 @@ export function RegionCenterPanel({
           value={formatCount(data?.multi_region_tenant_count)}
         />
       </div>
+      <RegionActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <RegionDistributionList rows={data?.region_distribution ?? []} />
         <JurisdictionDistributionList rows={data?.jurisdiction_distribution ?? []} />

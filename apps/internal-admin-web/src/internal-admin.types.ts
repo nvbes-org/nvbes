@@ -148,6 +148,18 @@ export type RiskDecisionSnapshot = {
   active_access_policies: AccessPolicySnapshot[];
 };
 
+export type RiskActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type RiskActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
+};
+
 export type AuditEvidenceSnapshot = {
   audit_events_24h: number;
   actorless_event_count_24h: number;
@@ -174,6 +186,24 @@ export type ComplianceCenterSnapshot = {
   recent_suppressed_emails: RecentSuppressedEmail[];
 };
 
+export type ComplianceActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type SuppressionReviewRequest = {
+  confirm_code: string;
+  email: string;
+  reason: string;
+};
+
+export type ComplianceActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
+};
+
 export type CommunicationsCenterSnapshot = {
   queued_message_count: number;
   sent_message_count_24h: number;
@@ -187,6 +217,24 @@ export type CommunicationsCenterSnapshot = {
   recent_failures: RecentEmailFailure[];
   recent_suppressions: RecentEmailSuppression[];
   recent_unprocessed_events: RecentEmailEvent[];
+};
+
+export type CommunicationsActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type EmailSuppressionRequest = {
+  confirm_code: string;
+  email: string;
+  reason: string;
+};
+
+export type CommunicationsActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
 };
 
 export type IdentityGovernanceSnapshot = {
@@ -215,6 +263,26 @@ export type RegionCenterSnapshot = {
   jurisdiction_distribution: JurisdictionDistribution[];
   non_eu_workspaces: RegionWorkspace[];
   multi_region_tenants: MultiRegionTenant[];
+};
+
+export type RegionFlagRequest = {
+  confirm_code: string;
+  data_region: string;
+  jurisdiction: string;
+  reason: string;
+};
+
+export type RegionExceptionRequest = {
+  confirm_code: string;
+  exception_kind: string;
+  reason: string;
+};
+
+export type RegionActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
 };
 
 export type DeveloperCenterSnapshot = {
@@ -334,8 +402,22 @@ export type RevenueCenterSnapshot = {
   trialing_subscription_count: number;
   open_dunning_case_count: number;
   unresolved_reconciliation_difference_count: number;
+  recent_dunning_cases: RecentDunningCase[];
+  recent_disputes: RecentDispute[];
   recent_overdue_invoices: RecentOverdueInvoice[];
   recent_captured_payments: RecentCapturedPayment[];
+};
+
+export type RevenueActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type RevenueActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
 };
 
 export type BillingPlatformSnapshot = {
@@ -383,6 +465,18 @@ export type OperationsCenterSnapshot = {
   recent_provider_failures: RecentProviderFailure[];
   recent_export_runs: RecentExportRun[];
   recent_reconciliation_differences: RecentReconciliationDifference[];
+};
+
+export type OperationsActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type OperationsActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
 };
 
 export type AccessCenterSnapshot = {
@@ -521,6 +615,25 @@ export type RecentOverdueInvoice = {
 };
 
 export type RecentCapturedPayment = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  status: string;
+  currency: string;
+  amount_minor: number;
+  created_at: string;
+};
+
+export type RecentDunningCase = {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  status: string;
+  policy_state: string;
+  opened_at: string;
+};
+
+export type RecentDispute = {
   id: string;
   tenant_id: string;
   tenant_name: string;

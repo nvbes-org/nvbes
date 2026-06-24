@@ -11,7 +11,11 @@ import type {
   BillingOverview,
   BillingRunbook,
   CommandCenterSnapshot,
+  CommunicationsActionRequest,
+  CommunicationsActionResult,
   CommunicationsCenterSnapshot,
+  ComplianceActionRequest,
+  ComplianceActionResult,
   ComplianceCenterSnapshot,
   CreditNoteRequest,
   CustomerCenterSnapshot,
@@ -23,6 +27,7 @@ import type {
   EntitlementPublishRequest,
   EntitlementQuotaOverrideRequest,
   EntitlementsSnapshot,
+  EmailSuppressionRequest,
   ExportType,
   GraceOverrideRequest,
   GlobalSearchResult,
@@ -32,13 +37,22 @@ import type {
   ManualCompRequest,
   MutationResult,
   OperationsCenterSnapshot,
+  OperationsActionRequest,
+  OperationsActionResult,
   ProviderMigrationRequest,
   ProviderEventFailure,
   ProviderReplayRequest,
   ProviderReplayResult,
+  RegionActionResult,
   RegionCenterSnapshot,
+  RegionExceptionRequest,
+  RegionFlagRequest,
   RefundIntentRequest,
+  RevenueActionRequest,
+  RevenueActionResult,
   RevenueCenterSnapshot,
+  RiskActionRequest,
+  RiskActionResult,
   RiskDecisionSnapshot,
   RunbookExecutionRequest,
   RunbookExecutionResult,
@@ -46,6 +60,7 @@ import type {
   SecurityCenterSnapshot,
   SecurityActionRequest,
   SecurityActionResult,
+  SuppressionReviewRequest,
   TenantDetail,
   TenantLifecycleRequest,
   TenantLifecycleResult,
@@ -209,6 +224,41 @@ export async function getComplianceCenter(credentials: AdminCredentials) {
   return parseJson<ComplianceCenterSnapshot>(response);
 }
 
+export function revokeComplianceConsent(
+  credentials: AdminCredentials,
+  consentId: string,
+  body: ComplianceActionRequest,
+) {
+  return postJson<ComplianceActionRequest, ComplianceActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/compliance/consents/${consentId}/revoke`,
+    body,
+  );
+}
+
+export function requestComplianceErasure(
+  credentials: AdminCredentials,
+  principalId: string,
+  body: ComplianceActionRequest,
+) {
+  return postJson<ComplianceActionRequest, ComplianceActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/compliance/principals/${principalId}/erasure-request`,
+    body,
+  );
+}
+
+export function reviewComplianceSuppression(
+  credentials: AdminCredentials,
+  body: SuppressionReviewRequest,
+) {
+  return postJson<SuppressionReviewRequest, ComplianceActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/compliance/suppressions/review`,
+    body,
+  );
+}
+
 export async function getCommunicationsCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/communications-center', {
     headers: authHeaders(credentials),
@@ -216,9 +266,73 @@ export async function getCommunicationsCenter(credentials: AdminCredentials) {
   return parseJson<CommunicationsCenterSnapshot>(response);
 }
 
+export function replayEmailMessage(
+  credentials: AdminCredentials,
+  messageId: string,
+  body: CommunicationsActionRequest,
+) {
+  return postJson<CommunicationsActionRequest, CommunicationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/communications/emails/${messageId}/replay`,
+    body,
+  );
+}
+
+export function replayEmailWebhook(
+  credentials: AdminCredentials,
+  eventId: string,
+  body: CommunicationsActionRequest,
+) {
+  return postJson<CommunicationsActionRequest, CommunicationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/communications/webhooks/${eventId}/replay`,
+    body,
+  );
+}
+
+export function suppressEmail(credentials: AdminCredentials, body: EmailSuppressionRequest) {
+  return postJson<EmailSuppressionRequest, CommunicationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/communications/suppressions`,
+    body,
+  );
+}
+
+export function unsuppressEmail(credentials: AdminCredentials, body: EmailSuppressionRequest) {
+  return postJson<EmailSuppressionRequest, CommunicationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/communications/suppressions/remove`,
+    body,
+  );
+}
+
 export async function getRegionCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/region-center', { headers: authHeaders(credentials) });
   return parseJson<RegionCenterSnapshot>(response);
+}
+
+export function flagRegionResidency(
+  credentials: AdminCredentials,
+  targetWorkspaceId: string,
+  body: RegionFlagRequest,
+) {
+  return postJson<RegionFlagRequest, RegionActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/region/workspaces/${targetWorkspaceId}/residency-flag`,
+    body,
+  );
+}
+
+export function recordRegionException(
+  credentials: AdminCredentials,
+  targetWorkspaceId: string,
+  body: RegionExceptionRequest,
+) {
+  return postJson<RegionExceptionRequest, RegionActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/region/workspaces/${targetWorkspaceId}/exceptions`,
+    body,
+  );
 }
 
 export async function getRevenueCenter(credentials: AdminCredentials) {
@@ -226,11 +340,119 @@ export async function getRevenueCenter(credentials: AdminCredentials) {
   return parseJson<RevenueCenterSnapshot>(response);
 }
 
+export function closeDunningCase(
+  credentials: AdminCredentials,
+  caseId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/dunning-cases/${caseId}/close`,
+    body,
+  );
+}
+
+export function reopenDunningCase(
+  credentials: AdminCredentials,
+  caseId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/dunning-cases/${caseId}/reopen`,
+    body,
+  );
+}
+
+export function holdRevenueInvoice(
+  credentials: AdminCredentials,
+  invoiceId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/invoices/${invoiceId}/hold`,
+    body,
+  );
+}
+
+export function releaseRevenueInvoice(
+  credentials: AdminCredentials,
+  invoiceId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/invoices/${invoiceId}/release`,
+    body,
+  );
+}
+
+export function reviewRevenueDispute(
+  credentials: AdminCredentials,
+  disputeId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/disputes/${disputeId}/review`,
+    body,
+  );
+}
+
+export function resolveRevenueDispute(
+  credentials: AdminCredentials,
+  disputeId: string,
+  body: RevenueActionRequest,
+) {
+  return postJson<RevenueActionRequest, RevenueActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/revenue/disputes/${disputeId}/resolve`,
+    body,
+  );
+}
+
 export async function getRiskDecisionCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/risk-decision-center', {
     headers: authHeaders(credentials),
   });
   return parseJson<RiskDecisionSnapshot>(response);
+}
+
+export function approveRiskPolicy(
+  credentials: AdminCredentials,
+  policyId: string,
+  body: RiskActionRequest,
+) {
+  return postJson<RiskActionRequest, RiskActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/risk/policies/${policyId}/approve`,
+    body,
+  );
+}
+
+export function blockRiskPolicy(
+  credentials: AdminCredentials,
+  policyId: string,
+  body: RiskActionRequest,
+) {
+  return postJson<RiskActionRequest, RiskActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/risk/policies/${policyId}/block`,
+    body,
+  );
+}
+
+export function resolveRiskSignal(
+  credentials: AdminCredentials,
+  signalId: string,
+  body: RiskActionRequest,
+) {
+  return postJson<RiskActionRequest, RiskActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/risk/signals/${signalId}/resolve`,
+    body,
+  );
 }
 
 export async function getBillingPlatformCenter(credentials: AdminCredentials) {
@@ -372,6 +594,42 @@ export function cancelRecoveryRequest(
 export async function getOperationsCenter(credentials: AdminCredentials) {
   const response = await verifiedFetch('/admin/operations-center', { headers: authHeaders(credentials) });
   return parseJson<OperationsCenterSnapshot>(response);
+}
+
+export function replayOperationsProviderEvent(
+  credentials: AdminCredentials,
+  eventId: string,
+  body: OperationsActionRequest,
+) {
+  return postJson<OperationsActionRequest, OperationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/operations/provider-events/${eventId}/replay`,
+    body,
+  );
+}
+
+export function replayExportRun(
+  credentials: AdminCredentials,
+  exportRunId: string,
+  body: OperationsActionRequest,
+) {
+  return postJson<OperationsActionRequest, OperationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/operations/export-runs/${exportRunId}/replay`,
+    body,
+  );
+}
+
+export function resolveReconciliationDifference(
+  credentials: AdminCredentials,
+  differenceId: string,
+  body: OperationsActionRequest,
+) {
+  return postJson<OperationsActionRequest, OperationsActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/operations/reconciliation-differences/${differenceId}/resolve`,
+    body,
+  );
 }
 
 export async function getUsageCenter(credentials: AdminCredentials) {

@@ -7,6 +7,9 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
+use crate::revenue_center_recent::{
+    RecentDispute, RecentDunningCase, load_recent_disputes, load_recent_dunning_cases,
+};
 
 #[derive(Debug, Serialize)]
 struct RevenueCenterSnapshot {
@@ -19,6 +22,8 @@ struct RevenueCenterSnapshot {
     trialing_subscription_count: i64,
     open_dunning_case_count: i64,
     unresolved_reconciliation_difference_count: i64,
+    recent_dunning_cases: Vec<RecentDunningCase>,
+    recent_disputes: Vec<RecentDispute>,
     recent_overdue_invoices: Vec<RecentOverdueInvoice>,
     recent_captured_payments: Vec<RecentCapturedPayment>,
 }
@@ -151,6 +156,8 @@ async fn load_revenue_center(db: &PgPool) -> Result<RevenueCenterSnapshot, AppEr
         open_dunning_case_count: metrics.get("open_dunning_case_count"),
         unresolved_reconciliation_difference_count: metrics
             .get("unresolved_reconciliation_difference_count"),
+        recent_dunning_cases: load_recent_dunning_cases(db).await?,
+        recent_disputes: load_recent_disputes(db).await?,
         recent_overdue_invoices: load_recent_overdue_invoices(db).await?,
         recent_captured_payments: load_recent_captured_payments(db).await?,
     })

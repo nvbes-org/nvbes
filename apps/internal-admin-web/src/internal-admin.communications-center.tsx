@@ -3,6 +3,7 @@ import { AlertTriangle, Inbox, Mail, MailCheck, MailX, RadioTower, ShieldOff } f
 import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getCommunicationsCenter } from './internal-admin.api';
+import { CommunicationsActionsPanel } from './internal-admin.communications-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -87,6 +88,7 @@ export function CommunicationsCenterPanel({
           value={formatCount(data?.unprocessed_event_count)}
         />
       </div>
+      <CommunicationsActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <StatusDistributionList rows={data?.status_distribution ?? []} />
         <BusinessTypeList rows={data?.business_type_distribution ?? []} />

@@ -10,9 +10,14 @@ pub(crate) enum BackofficePermission {
     AccessMutate,
     BillingMutate,
     CommunicationsMutate,
+    ComplianceMutate,
     DeveloperMutate,
     EntitlementsMutate,
     GovernanceMutate,
+    OperationsMutate,
+    RegionMutate,
+    RevenueMutate,
+    RiskMutate,
     SecurityMutate,
     TenantLifecycle,
     UsageMutate,
@@ -106,12 +111,17 @@ fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
             BackofficePermission::BillingMutate
                 | BackofficePermission::DeveloperMutate
                 | BackofficePermission::EntitlementsMutate
+                | BackofficePermission::RevenueMutate
                 | BackofficePermission::UsageMutate
         ),
         BackofficeRole::SecurityAdmin => matches!(
             permission,
             BackofficePermission::AccessMutate
+                | BackofficePermission::ComplianceMutate
                 | BackofficePermission::GovernanceMutate
+                | BackofficePermission::OperationsMutate
+                | BackofficePermission::RegionMutate
+                | BackofficePermission::RiskMutate
                 | BackofficePermission::SecurityMutate
                 | BackofficePermission::UserLifecycle
         ),
@@ -176,6 +186,14 @@ mod tests {
             BackofficeRole::SecurityAdmin,
             BackofficePermission::GovernanceMutate
         ));
+        assert!(role_allows(
+            BackofficeRole::SecurityAdmin,
+            BackofficePermission::OperationsMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::SecurityAdmin,
+            BackofficePermission::RiskMutate
+        ));
         assert!(!role_allows(
             BackofficeRole::SecurityAdmin,
             BackofficePermission::TenantLifecycle
@@ -191,6 +209,10 @@ mod tests {
         assert!(role_allows(
             BackofficeRole::FinanceAdmin,
             BackofficePermission::EntitlementsMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
+            BackofficePermission::RevenueMutate
         ));
         assert!(role_allows(
             BackofficeRole::FinanceAdmin,

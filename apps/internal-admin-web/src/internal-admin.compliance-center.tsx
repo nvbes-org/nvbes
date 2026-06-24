@@ -4,6 +4,7 @@ import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getComplianceCenter } from './internal-admin.api';
+import { ComplianceActionsPanel } from './internal-admin.compliance-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -84,6 +85,7 @@ export function ComplianceCenterPanel({
           value={formatCount(data?.unverified_user_count)}
         />
       </div>
+      <ComplianceActionsPanel credentials={credentials} disabled={disabled} />
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         <RevokedConsentList
           rows={data?.recent_revoked_consents ?? []}

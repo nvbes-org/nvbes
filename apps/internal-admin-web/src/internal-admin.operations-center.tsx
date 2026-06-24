@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getOperationsCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { OperationsActionsPanel } from './internal-admin.operations-actions';
 import type {
   AdminCredentials,
   RecentExportRun,
@@ -107,6 +108,7 @@ export function OperationsCenterPanel({
           onSelectTenant={onSelectTenant}
         />
       </div>
+      <OperationsActionsPanel credentials={credentials} disabled={disabled} />
     </section>
   );
 }
@@ -129,7 +131,7 @@ function ProviderFailuresList({
           <article className="p-3" key={row.id}>
             <RowHeader
               badge={row.status}
-              subtitle={`${row.provider} - ${formatDate(row.received_at)}`}
+              subtitle={`${row.provider} - ${formatDate(row.received_at)} - ${shortId(row.id)}`}
               title={row.event_type}
               tone="danger"
             />
@@ -157,7 +159,7 @@ function ExportRunsList({ rows }: { rows: RecentExportRun[] }) {
           <article className="p-3" key={row.id}>
             <RowHeader
               badge={row.status}
-              subtitle={`${formatPeriod(row.period_start, row.period_end)} - ${formatDate(row.created_at)}`}
+              subtitle={`${formatPeriod(row.period_start, row.period_end)} - ${formatDate(row.created_at)} - ${shortId(row.id)}`}
               title={row.export_type}
               tone={row.status === 'failed' || row.status === 'error' ? 'danger' : 'default'}
             />
@@ -186,7 +188,7 @@ function ReconciliationDiffList({
           <article className="p-3" key={row.id}>
             <RowHeader
               badge={row.severity}
-              subtitle={`${row.tenant_name ?? 'unmatched'} - ${formatDate(row.created_at)}`}
+              subtitle={`${row.tenant_name ?? 'unmatched'} - ${formatDate(row.created_at)} - ${shortId(row.id)}`}
               title={row.difference_type}
               tone={row.severity === 'error' || row.severity === 'critical' ? 'danger' : 'default'}
             />
@@ -301,4 +303,8 @@ function formatDate(value: string): string {
 function formatPeriod(start: string | null, end: string | null): string {
   if (!start && !end) return 'no period';
   return `${start ?? '-'} -> ${end ?? '-'}`;
+}
+
+function shortId(value: string): string {
+  return value.slice(0, 8);
 }

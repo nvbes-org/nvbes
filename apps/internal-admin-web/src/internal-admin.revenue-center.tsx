@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getRevenueCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { RevenueActionsPanel } from './internal-admin.revenue-actions';
+import { DisputeList, DunningCaseList } from './internal-admin.revenue-lists';
 import type {
   AdminCredentials,
   MoneyTotal,
@@ -95,11 +97,14 @@ export function RevenueCenterPanel({
           rows={data?.recent_overdue_invoices ?? []}
           onSelectTenant={onSelectTenant}
         />
+        <DunningCaseList rows={data?.recent_dunning_cases ?? []} onSelectTenant={onSelectTenant} />
+        <DisputeList rows={data?.recent_disputes ?? []} onSelectTenant={onSelectTenant} />
         <CapturedPaymentList
           rows={data?.recent_captured_payments ?? []}
           onSelectTenant={onSelectTenant}
         />
       </div>
+      <RevenueActionsPanel credentials={credentials} disabled={disabled} />
     </section>
   );
 }
@@ -124,7 +129,7 @@ function OverdueInvoiceList({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{row.invoice_number ?? row.id}</p>
                 <p className="text-muted-foreground text-xs">
-                  {row.tenant_name} - due {formatDate(row.due_at)}
+                  {row.tenant_name} - due {formatDate(row.due_at)} - {shortId(row.id)}
                 </p>
               </div>
               <Badge variant="destructive">{formatMoney(row.total_minor, row.currency)}</Badge>
@@ -278,4 +283,8 @@ function formatDate(value: string | null): string {
     minute: '2-digit',
     month: '2-digit',
   });
+}
+
+function shortId(value: string): string {
+  return value.slice(0, 8);
 }
