@@ -37,7 +37,10 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
             workspace_id,
             actor_id,
             "viewer",
-            "REVOKE CLIENT",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "REVOKE CLIENT",
+                &client_id,
+            ),
             &client_id,
             "ticket DEV-123 approved",
         ))
@@ -59,12 +62,29 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(revoke_request(
             workspace_id,
             actor_id,
             "finance_admin",
             "REVOKE CLIENT",
+            &client_id,
+            "ticket DEV-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(revoke_request(
+            workspace_id,
+            actor_id,
+            "finance_admin",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "REVOKE CLIENT",
+                &client_id,
+            ),
             &client_id,
             "ticket DEV-123 approved",
         ))
@@ -114,6 +134,27 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'developer.client.revoked'
+           AND target_type = 'oauth_client'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(audit_metadata["developer_action_id"], payload["object_id"]);
+    assert_eq!(
+        audit_metadata["changes"][0],
+        json!({
+            "field": "revoked_at",
+            "before": null,
+            "after": "recorded"
+        })
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {

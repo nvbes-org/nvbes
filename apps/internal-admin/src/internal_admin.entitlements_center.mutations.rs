@@ -42,6 +42,7 @@ pub(crate) async fn insert_entitlement_action(
         input.audit_action,
         action_id,
         &input.reason,
+        entitlement_audit_metadata(workspace_id, action_id, &input),
     )
     .await?;
     tx.commit().await?;
@@ -83,6 +84,7 @@ pub(crate) async fn publish_changes(
         input.audit_action,
         action_id,
         &input.reason,
+        entitlement_audit_metadata(workspace_id, action_id, &input),
     )
     .await?;
     tx.commit().await?;
@@ -124,13 +126,15 @@ async fn insert_entitlement_audit(
     action: &'static str,
     target_id: Uuid,
     reason: &str,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
            $1, $2, $3, 'internal_admin_entitlement_action', $4,
-           jsonb_build_object('reason', $5), gen_random_uuid()::text
+           jsonb_build_object('reason', $5) || $6::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -138,9 +142,52 @@ async fn insert_entitlement_audit(
     .bind(action)
     .bind(target_id)
     .bind(reason)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())
+}
+
+fn entitlement_audit_metadata(
+    workspace_id: Uuid,
+    action_id: Uuid,
+    input: &EntitlementActionInput,
+) -> Value {
+    let change = match input.action_kind {
+        "grant_feature" => json!({
+            "field": "feature_grant",
+            "before": null,
+            "after": input.feature_code,
+        }),
+        "revoke_feature" => json!({
+            "field": "feature_grant",
+            "before": input.feature_code,
+            "after": null,
+        }),
+        "override_quota" => json!({
+            "field": "quota_override",
+            "before": null,
+            "after": input.quantity,
+        }),
+        "publish_changes" => json!({
+            "field": "published_change_count",
+            "before": 0,
+            "after": input.published_change_count,
+        }),
+        _ => json!({
+            "field": "entitlement_action",
+            "before": null,
+            "after": input.status,
+        }),
+    };
+
+    json!({
+        "object_links": {
+            "entitlement_action_id": action_id,
+            "workspace_id": workspace_id,
+        },
+        "changes": [change],
+    })
 }
 
 fn action_result(action_id: Uuid, input: EntitlementActionInput) -> EntitlementActionResult {

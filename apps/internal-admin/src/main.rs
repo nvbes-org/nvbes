@@ -10,6 +10,8 @@ mod audit;
 mod audit_evidence_center;
 #[path = "internal_admin.backoffice_authorization.rs"]
 mod backoffice_authorization;
+#[path = "internal_admin.backoffice_dual_control.rs"]
+mod backoffice_dual_control;
 #[path = "internal_admin.billing.admin.rs"]
 mod billing_admin;
 #[path = "internal_admin.billing.admin.access.rs"]
@@ -30,6 +32,19 @@ mod billing_admin_types;
 mod billing_admin_validation;
 #[path = "internal_admin.billing_platform_center.rs"]
 mod billing_platform_center;
+#[path = "internal_admin.billing_platform_center.action_log.rs"]
+mod billing_platform_center_action_log;
+#[path = "internal_admin.billing_platform_center.actions.rs"]
+mod billing_platform_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.billing_platform_center.actions.tests.rs"]
+mod billing_platform_center_actions_tests;
+#[path = "internal_admin.billing_platform_center.mutations.rs"]
+mod billing_platform_center_mutations;
+#[path = "internal_admin.billing_platform_center.types.rs"]
+mod billing_platform_center_types;
+#[path = "internal_admin.billing_platform_center.validation.rs"]
+mod billing_platform_center_validation;
 #[path = "internal_admin.billing.runbooks.rs"]
 mod billing_runbooks;
 #[path = "internal_admin.command_center.rs"]

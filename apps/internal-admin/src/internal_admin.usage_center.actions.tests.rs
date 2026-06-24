@@ -97,6 +97,30 @@ async fn correct_usage_route_enforces_role_confirmation_and_audits_success() {
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'usage.correction.created'
+           AND target_type = 'billing_usage_correction'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(
+        audit_metadata["object_links"]["usage_correction_id"],
+        payload["object_id"]
+    );
+    assert_eq!(
+        audit_metadata["changes"][1],
+        json!({
+            "field": "quantity_delta",
+            "before": 0,
+            "after": -42
+        })
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {

@@ -7,6 +7,8 @@ import type {
   AuditEventFilters,
   AuditEvidenceSnapshot,
   AuditEvent,
+  BillingPlatformActionRequest,
+  BillingPlatformActionResult,
   BillingPlatformSnapshot,
   BillingOverview,
   BillingRunbook,
@@ -80,11 +82,16 @@ import type {
 const jsonHeaders = { 'content-type': 'application/json' };
 
 function authHeaders(credentials: AdminCredentials): Record<string, string> {
-  return {
+  const headers: Record<string, string> = {
     'x-nvbes-internal-token': credentials.internalToken,
     'x-nvbes-actor-principal-id': credentials.actorPrincipalId,
     'x-nvbes-backoffice-role': credentials.backofficeRole,
   };
+  if (credentials.secondApproverPrincipalId.trim()) {
+    headers['x-nvbes-second-approver-principal-id'] = credentials.secondApproverPrincipalId;
+    headers['x-nvbes-second-approver-role'] = credentials.secondApproverRole;
+  }
+  return headers;
 }
 
 function mutationHeaders(credentials: AdminCredentials): Record<string, string> {
@@ -460,6 +467,66 @@ export async function getBillingPlatformCenter(credentials: AdminCredentials) {
     headers: authHeaders(credentials),
   });
   return parseJson<BillingPlatformSnapshot>(response);
+}
+
+export function enableProviderRoutingRule(
+  credentials: AdminCredentials,
+  ruleId: string,
+  body: BillingPlatformActionRequest,
+) {
+  return postJson<BillingPlatformActionRequest, BillingPlatformActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/billing-platform/routing-rules/${ruleId}/enable`,
+    body,
+  );
+}
+
+export function disableProviderRoutingRule(
+  credentials: AdminCredentials,
+  ruleId: string,
+  body: BillingPlatformActionRequest,
+) {
+  return postJson<BillingPlatformActionRequest, BillingPlatformActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/billing-platform/routing-rules/${ruleId}/disable`,
+    body,
+  );
+}
+
+export function approveKycProfile(
+  credentials: AdminCredentials,
+  profileId: string,
+  body: BillingPlatformActionRequest,
+) {
+  return postJson<BillingPlatformActionRequest, BillingPlatformActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/billing-platform/kyc-profiles/${profileId}/approve`,
+    body,
+  );
+}
+
+export function rejectKycProfile(
+  credentials: AdminCredentials,
+  profileId: string,
+  body: BillingPlatformActionRequest,
+) {
+  return postJson<BillingPlatformActionRequest, BillingPlatformActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/billing-platform/kyc-profiles/${profileId}/reject`,
+    body,
+  );
+}
+
+export function activateEinvoicingProfile(
+  credentials: AdminCredentials,
+  profileId: string,
+  body: BillingPlatformActionRequest,
+) {
+  return postJson<BillingPlatformActionRequest, BillingPlatformActionResult>(
+    credentials,
+    `/workspaces/${credentials.workspaceId}/admin/billing-platform/einvoicing-profiles/${profileId}/activate`,
+    body,
+  );
 }
 
 export async function getCustomerCenter(credentials: AdminCredentials) {

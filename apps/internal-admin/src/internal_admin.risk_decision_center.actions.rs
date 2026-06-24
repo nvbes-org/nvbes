@@ -10,7 +10,9 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::backoffice_authorization::{
     BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    require_strong_confirmation,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::error::AppError;
 use crate::risk_decision_center_mutations::{approve_policy, block_policy, resolve_risk_signal};
@@ -57,7 +59,9 @@ async fn block_policy_route(
     Path((workspace_id, policy_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RiskActionRequest>,
 ) -> Result<Json<RiskActionResult>, AppError> {
-    require_risk_mutation(&headers, &request.confirm_code, "BLOCK RISK POLICY")?;
+    require_risk_authorization(&headers)?;
+    require_strong_confirmation(&request.confirm_code, "BLOCK RISK POLICY", policy_id)?;
+    require_dual_control(&headers)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         block_policy(&state.db, access, workspace_id, policy_id, request.reason).await?,
@@ -82,7 +86,11 @@ fn require_risk_mutation(
     confirm_code: &str,
     expected_code: &str,
 ) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::RiskMutate)?;
+    require_risk_authorization(headers)?;
     require_confirmation(confirm_code, expected_code)
+}
+
+fn require_risk_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::RiskMutate)
 }

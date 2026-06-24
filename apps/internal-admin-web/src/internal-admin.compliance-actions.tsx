@@ -11,6 +11,7 @@ import {
   reviewComplianceSuppression,
   revokeComplianceConsent,
 } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, ComplianceActionResult } from './internal-admin.types';
 
 type ComplianceActionKind = 'erasure' | 'review-suppression' | 'revoke-consent';
@@ -36,6 +37,7 @@ export function ComplianceActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<ComplianceActionResult | null>(null);
+  const requiredConfirmCode = complianceConfirmCode(action, principalId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -109,7 +111,7 @@ export function ComplianceActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={requiredConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -126,7 +128,7 @@ export function ComplianceActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -147,6 +149,12 @@ export function ComplianceActionsPanel({
       ) : null}
     </div>
   );
+}
+
+function complianceConfirmCode(action: ComplianceActionKind, principalId: string): string {
+  const baseCode = confirmCodes[action];
+  if (action !== 'erasure') return baseCode;
+  return strongConfirmationCode(baseCode, principalId);
 }
 
 type ComplianceActionPayload = {

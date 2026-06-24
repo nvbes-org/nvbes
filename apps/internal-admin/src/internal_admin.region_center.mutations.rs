@@ -79,6 +79,23 @@ pub(crate) async fn flag_residency(
         "region.residency.flagged",
         input.target_workspace_id,
         action_id,
+        json!({
+            "object_links": {
+                "workspace_id": input.target_workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "data_region",
+                    "before": row.get::<String, _>("previous_data_region"),
+                    "after": row.get::<String, _>("next_data_region"),
+                },
+                {
+                    "field": "jurisdiction",
+                    "before": row.get::<String, _>("previous_jurisdiction"),
+                    "after": row.get::<String, _>("next_jurisdiction"),
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -138,6 +155,18 @@ pub(crate) async fn record_exception(
         "region.residency_exception.recorded",
         target_workspace_id,
         action_id,
+        json!({
+            "object_links": {
+                "workspace_id": target_workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "residency_exception",
+                    "before": null,
+                    "after": "recorded",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -200,12 +229,15 @@ async fn insert_audit(
     action: &'static str,
     target_workspace_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, 'workspace', $2, jsonb_build_object('region_action_id', $5), gen_random_uuid()::text
+           $1, $2, $3, $4, 'workspace', $2,
+           jsonb_build_object('region_action_id', $5) || $6::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -213,6 +245,7 @@ async fn insert_audit(
     .bind(access.actor_principal_id)
     .bind(action)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())

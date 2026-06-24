@@ -55,13 +55,26 @@ async fn hold_invoice_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(hold_request(
             workspace_id,
             invoice_id,
             actor_id,
             "finance_admin",
             "HOLD INVOICE",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(hold_request(
+            workspace_id,
+            invoice_id,
+            actor_id,
+            "finance_admin",
+            &crate::backoffice_authorization::strong_confirmation_code("HOLD INVOICE", invoice_id),
         ))
         .await
         .expect("route should respond");
@@ -107,6 +120,31 @@ async fn hold_invoice_route_enforces_role_confirmation_and_audits_success() {
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'revenue.invoice.held'
+           AND target_type = 'billing_invoice'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(audit_metadata["revenue_action_id"], payload["object_id"]);
+    assert_eq!(
+        audit_metadata["object_links"]["invoice_id"],
+        json!(invoice_id)
+    );
+    assert_eq!(
+        audit_metadata["changes"][0],
+        json!({
+            "field": "internal_hold",
+            "before": false,
+            "after": true
+        })
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {
@@ -209,6 +247,11 @@ fn hold_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

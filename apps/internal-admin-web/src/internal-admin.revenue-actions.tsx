@@ -14,6 +14,7 @@ import {
   resolveRevenueDispute,
   reviewRevenueDispute,
 } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, RevenueActionResult } from './internal-admin.types';
 
 type RevenueActionKind =
@@ -46,6 +47,7 @@ export function RevenueActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RevenueActionResult | null>(null);
+  const requiredConfirmCode = revenueConfirmCode(action, targetId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -120,7 +122,7 @@ export function RevenueActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={requiredConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -137,7 +139,7 @@ export function RevenueActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -158,6 +160,12 @@ export function RevenueActionsPanel({
       ) : null}
     </div>
   );
+}
+
+function revenueConfirmCode(action: RevenueActionKind, targetId: string): string {
+  const baseCode = confirmCodes[action];
+  if (action !== 'holdInvoice') return baseCode;
+  return strongConfirmationCode(baseCode, targetId);
 }
 
 type RevenueActionPayload = {

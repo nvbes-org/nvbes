@@ -36,7 +36,10 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
             workspace_id,
             actor_id,
             "viewer",
-            "SUPPRESS EMAIL",
+            &crate::backoffice_authorization::strong_confirmation_code(
+                "SUPPRESS EMAIL",
+                workspace_id,
+            ),
             &email,
             "ticket COMMS-123 approved",
         ))
@@ -58,12 +61,29 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
-    let accepted = app
+    let generic_confirmation = app
+        .clone()
         .oneshot(suppress_request(
             workspace_id,
             actor_id,
             "support_agent",
             "SUPPRESS EMAIL",
+            &email,
+            "ticket COMMS-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let accepted = app
+        .oneshot(suppress_request(
+            workspace_id,
+            actor_id,
+            "support_agent",
+            &crate::backoffice_authorization::strong_confirmation_code(
+                "SUPPRESS EMAIL",
+                workspace_id,
+            ),
             &email,
             "ticket COMMS-123 approved",
         ))
@@ -110,6 +130,35 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'communications.email.suppressed'
+           AND target_type = 'suppressed_email'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(
+        audit_metadata["communications_action_id"],
+        payload["object_id"]
+    );
+    assert_eq!(
+        audit_metadata["changes"][0],
+        json!({
+            "field": "suppression",
+            "before": null,
+            "after": "applied"
+        })
+    );
+    let expected_redacted_email = format!("{}***@example.com", &email[..1]);
+    assert_eq!(
+        audit_metadata["changes"][1]["after"],
+        json!(expected_redacted_email)
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {

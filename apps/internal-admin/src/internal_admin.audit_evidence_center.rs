@@ -36,6 +36,8 @@ struct AuditEvidenceEvent {
     target_type: String,
     target_id: Option<Uuid>,
     ip: Option<String>,
+    event_hash: String,
+    previous_event_hash: Option<String>,
     created_at: DateTime<Utc>,
 }
 
@@ -45,7 +47,7 @@ struct AuditHashAnomaly {
     tenant_id: Uuid,
     tenant_name: String,
     action: String,
-    event_hash: String,
+    event_hash: Option<String>,
     previous_event_hash: Option<String>,
     created_at: DateTime<Utc>,
 }
@@ -132,7 +134,7 @@ async fn load_audit_events(
         r#"
         SELECT ae.id, ae.tenant_id, t.name AS tenant_name, ae.workspace_id,
           ae.actor_principal_id, u.email AS actor_email, ae.action, ae.target_type,
-          ae.target_id, ae.ip::text AS ip, ae.created_at
+          ae.target_id, ae.ip::text AS ip, ae.event_hash, ae.previous_event_hash, ae.created_at
         FROM audit_events ae
         JOIN tenants t ON t.id = ae.tenant_id
         LEFT JOIN users u ON u.principal_id = ae.actor_principal_id
@@ -156,6 +158,8 @@ async fn load_audit_events(
             target_type: row.get("target_type"),
             target_id: row.get("target_id"),
             ip: row.get("ip"),
+            event_hash: row.get("event_hash"),
+            previous_event_hash: row.get("previous_event_hash"),
             created_at: row.get("created_at"),
         })
         .collect())

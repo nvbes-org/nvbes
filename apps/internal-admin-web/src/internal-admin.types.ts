@@ -3,6 +3,8 @@ export type AdminCredentials = {
   internalToken: string;
   actorPrincipalId: string;
   backofficeRole: string;
+  secondApproverPrincipalId: string;
+  secondApproverRole: string;
 };
 
 export type SearchResult = {
@@ -437,6 +439,18 @@ export type BillingPlatformSnapshot = {
   einvoicing_profiles: EinvoicingProfile[];
 };
 
+export type BillingPlatformActionRequest = {
+  confirm_code: string;
+  reason: string;
+};
+
+export type BillingPlatformActionResult = {
+  object_id: string;
+  action_kind: string;
+  status: string;
+  audit_action: string;
+};
+
 export type CustomerCenterSnapshot = {
   active_tenant_count: number;
   suspended_tenant_count: number;
@@ -681,6 +695,7 @@ export type KycProfile = {
   company_domain: string | null;
   vat_id: string | null;
   proof_reference: string | null;
+  review_status: string;
   updated_at: string;
 };
 
@@ -1019,6 +1034,8 @@ export type AuditEvidenceEvent = {
   target_type: string;
   target_id: string | null;
   ip: string | null;
+  event_hash: string;
+  previous_event_hash: string | null;
   created_at: string;
 };
 
@@ -1027,7 +1044,7 @@ export type AuditHashAnomaly = {
   tenant_id: string;
   tenant_name: string;
   action: string;
-  event_hash: string;
+  event_hash: string | null;
   previous_event_hash: string | null;
   created_at: string;
 };
@@ -1171,6 +1188,8 @@ export type AuditEvent = {
   target_type: string;
   target_id: string | null;
   metadata: unknown;
+  event_hash: string;
+  previous_event_hash: string | null;
   created_at: string;
 };
 

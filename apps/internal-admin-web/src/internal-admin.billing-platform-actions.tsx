@@ -1,24 +1,37 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ShieldAlert, XCircle } from 'lucide-react';
+import { FileText, Route, ShieldCheck, XCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { approveRiskPolicy, blockRiskPolicy, resolveRiskSignal } from './internal-admin.api';
+import {
+  activateEinvoicingProfile,
+  approveKycProfile,
+  disableProviderRoutingRule,
+  enableProviderRoutingRule,
+  rejectKycProfile,
+} from './internal-admin.api';
 import { strongConfirmationCode } from './internal-admin.strong-confirmation';
-import type { AdminCredentials, RiskActionResult } from './internal-admin.types';
+import type { AdminCredentials, BillingPlatformActionResult } from './internal-admin.types';
 
-type RiskActionKind = 'approvePolicy' | 'blockPolicy' | 'resolveSignal';
+type BillingPlatformActionKind =
+  | 'activateEinvoicing'
+  | 'approveKyc'
+  | 'disableRouting'
+  | 'enableRouting'
+  | 'rejectKyc';
 
-const confirmCodes: Record<RiskActionKind, string> = {
-  approvePolicy: 'APPROVE RISK POLICY',
-  blockPolicy: 'BLOCK RISK POLICY',
-  resolveSignal: 'RESOLVE RISK SIGNAL',
+const confirmCodes: Record<BillingPlatformActionKind, string> = {
+  enableRouting: 'ENABLE ROUTING RULE',
+  disableRouting: 'DISABLE ROUTING RULE',
+  approveKyc: 'APPROVE KYC',
+  rejectKyc: 'REJECT KYC',
+  activateEinvoicing: 'ACTIVATE EINVOICING',
 };
 
-export function RiskDecisionActionsPanel({
+export function BillingPlatformActionsPanel({
   credentials,
   disabled,
 }: {
@@ -26,23 +39,23 @@ export function RiskDecisionActionsPanel({
   disabled: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [action, setAction] = useState<RiskActionKind>('resolveSignal');
+  const [action, setAction] = useState<BillingPlatformActionKind>('approveKyc');
   const [targetId, setTargetId] = useState('');
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
-  const [result, setResult] = useState<RiskActionResult | null>(null);
-  const requiredConfirmCode = riskConfirmCode(action, targetId);
+  const [result, setResult] = useState<BillingPlatformActionResult | null>(null);
+  const requiredConfirmCode = billingPlatformConfirmCode(action, targetId);
 
   const mutation = useMutation({
     mutationFn: () =>
-      executeRiskAction(credentials, action, {
+      executeBillingPlatformAction(credentials, action, {
         confirmCode,
         reason,
         targetId,
       }),
     onSuccess: async (payload) => {
       setResult(payload);
-      await queryClient.invalidateQueries({ queryKey: ['risk-decision-center'] });
+      await queryClient.invalidateQueries({ queryKey: ['billing-platform-center'] });
     },
   });
 
@@ -50,34 +63,46 @@ export function RiskDecisionActionsPanel({
     <div className="mt-4 rounded-md border">
       <div className="flex flex-col gap-2 border-b p-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-sm font-medium">Actions risk decision</h3>
+          <h3 className="text-sm font-medium">Actions billing platform</h3>
           <p className="text-muted-foreground text-xs">
-            Approbation, blocage de policy et resolution de signal avec audit.
+            Routing provider, review KYC et activation e-invoicing avec audit.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <ActionButton
-            action="resolveSignal"
+            action="enableRouting"
             current={action}
-            label="Resolve signal"
+            label="Enable routing"
             onSelect={setAction}
           />
           <ActionButton
-            action="approvePolicy"
+            action="disableRouting"
             current={action}
-            label="Approve policy"
+            label="Disable routing"
             onSelect={setAction}
           />
           <ActionButton
-            action="blockPolicy"
+            action="approveKyc"
             current={action}
-            label="Block policy"
+            label="Approve KYC"
+            onSelect={setAction}
+          />
+          <ActionButton
+            action="rejectKyc"
+            current={action}
+            label="Reject KYC"
+            onSelect={setAction}
+          />
+          <ActionButton
+            action="activateEinvoicing"
+            current={action}
+            label="Activate e-invoicing"
             onSelect={setAction}
           />
         </div>
       </div>
       <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-4">
-        <Field label={action === 'resolveSignal' ? 'Risk signal ID' : 'Policy snapshot ID'}>
+        <Field label={targetLabel(action)}>
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setTargetId(event.target.value)}
@@ -97,7 +122,7 @@ export function RiskDecisionActionsPanel({
             <Textarea
               disabled={disabled || mutation.isPending}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="ticket RISK-123 reviewed"
+              placeholder="ticket BPL-123 approved"
               value={reason}
             />
           </Field>
@@ -128,34 +153,34 @@ export function RiskDecisionActionsPanel({
   );
 }
 
-function riskConfirmCode(action: RiskActionKind, targetId: string): string {
+function billingPlatformConfirmCode(action: BillingPlatformActionKind, targetId: string): string {
   const baseCode = confirmCodes[action];
-  if (action !== 'blockPolicy') return baseCode;
+  if (action !== 'disableRouting' && action !== 'rejectKyc') return baseCode;
   return strongConfirmationCode(baseCode, targetId);
 }
 
-type RiskActionPayload = {
+type BillingPlatformActionPayload = {
   confirmCode: string;
   reason: string;
   targetId: string;
 };
 
-function executeRiskAction(
+function executeBillingPlatformAction(
   credentials: AdminCredentials,
-  action: RiskActionKind,
-  payload: RiskActionPayload,
+  action: BillingPlatformActionKind,
+  payload: BillingPlatformActionPayload,
 ) {
   const body = {
     confirm_code: payload.confirmCode,
     reason: payload.reason,
   };
-  if (action === 'approvePolicy') {
-    return approveRiskPolicy(credentials, payload.targetId, body);
-  }
-  if (action === 'blockPolicy') {
-    return blockRiskPolicy(credentials, payload.targetId, body);
-  }
-  return resolveRiskSignal(credentials, payload.targetId, body);
+  if (action === 'enableRouting')
+    return enableProviderRoutingRule(credentials, payload.targetId, body);
+  if (action === 'disableRouting')
+    return disableProviderRoutingRule(credentials, payload.targetId, body);
+  if (action === 'approveKyc') return approveKycProfile(credentials, payload.targetId, body);
+  if (action === 'rejectKyc') return rejectKycProfile(credentials, payload.targetId, body);
+  return activateEinvoicingProfile(credentials, payload.targetId, body);
 }
 
 function ActionButton({
@@ -164,10 +189,10 @@ function ActionButton({
   label,
   onSelect,
 }: {
-  action: RiskActionKind;
-  current: RiskActionKind;
+  action: BillingPlatformActionKind;
+  current: BillingPlatformActionKind;
   label: string;
-  onSelect: (action: RiskActionKind) => void;
+  onSelect: (action: BillingPlatformActionKind) => void;
 }) {
   return (
     <Button
@@ -182,10 +207,18 @@ function ActionButton({
   );
 }
 
-function ActionIcon({ action }: { action: RiskActionKind }) {
-  if (action === 'approvePolicy') return <CheckCircle2 className="size-4" />;
-  if (action === 'blockPolicy') return <XCircle className="size-4" />;
-  return <ShieldAlert className="size-4" />;
+function ActionIcon({ action }: { action: BillingPlatformActionKind }) {
+  if (action === 'enableRouting') return <Route className="size-4" />;
+  if (action === 'disableRouting') return <XCircle className="size-4" />;
+  if (action === 'approveKyc') return <ShieldCheck className="size-4" />;
+  if (action === 'rejectKyc') return <XCircle className="size-4" />;
+  return <FileText className="size-4" />;
+}
+
+function targetLabel(action: BillingPlatformActionKind): string {
+  if (action === 'enableRouting' || action === 'disableRouting') return 'Routing rule ID';
+  if (action === 'approveKyc' || action === 'rejectKyc') return 'KYC profile ID';
+  return 'E-invoicing profile ID';
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {

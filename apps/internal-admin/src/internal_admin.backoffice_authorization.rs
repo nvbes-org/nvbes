@@ -1,4 +1,5 @@
 use axum::http::HeaderMap;
+use uuid::Uuid;
 
 use crate::error::AppError;
 
@@ -9,6 +10,7 @@ const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
 pub(crate) enum BackofficePermission {
     AccessMutate,
     BillingMutate,
+    BillingPlatformMutate,
     CommunicationsMutate,
     ComplianceMutate,
     DeveloperMutate,
@@ -56,6 +58,43 @@ pub(crate) fn require_confirmation(actual: &str, expected: &str) -> Result<(), A
         "backoffice_confirmation_required",
         "Back-office action requires the exact confirmation code.",
     ))
+}
+
+pub(crate) fn require_strong_confirmation(
+    actual: &str,
+    expected_action: &str,
+    target_id: Uuid,
+) -> Result<(), AppError> {
+    require_confirmation(
+        actual,
+        &strong_confirmation_code(expected_action, target_id),
+    )
+}
+
+pub(crate) fn require_strong_confirmation_for_value(
+    actual: &str,
+    expected_action: &str,
+    target_id: &str,
+) -> Result<(), AppError> {
+    require_confirmation(
+        actual,
+        &strong_confirmation_code_for_value(expected_action, target_id),
+    )
+}
+
+pub(crate) fn strong_confirmation_code(expected_action: &str, target_id: Uuid) -> String {
+    strong_confirmation_code_for_value(expected_action, &target_id.simple().to_string())
+}
+
+pub(crate) fn strong_confirmation_code_for_value(expected_action: &str, target_id: &str) -> String {
+    let fingerprint: String = target_id
+        .to_string()
+        .chars()
+        .filter(|character| *character != '-')
+        .take(8)
+        .collect::<String>()
+        .to_ascii_uppercase();
+    format!("{expected_action} {fingerprint}")
 }
 
 pub(crate) fn require_idempotency_key(headers: &HeaderMap) -> Result<&str, AppError> {
@@ -109,6 +148,7 @@ fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
         BackofficeRole::FinanceAdmin => matches!(
             permission,
             BackofficePermission::BillingMutate
+                | BackofficePermission::BillingPlatformMutate
                 | BackofficePermission::DeveloperMutate
                 | BackofficePermission::EntitlementsMutate
                 | BackofficePermission::RevenueMutate
@@ -208,6 +248,10 @@ mod tests {
         ));
         assert!(role_allows(
             BackofficeRole::FinanceAdmin,
+            BackofficePermission::BillingPlatformMutate
+        ));
+        assert!(role_allows(
+            BackofficeRole::FinanceAdmin,
             BackofficePermission::EntitlementsMutate
         ));
         assert!(role_allows(
@@ -233,6 +277,20 @@ mod tests {
         assert!(require_confirmation("SUSPEND TENANT", "SUSPEND TENANT").is_ok());
         assert!(require_confirmation(" SUSPEND TENANT ", "SUSPEND TENANT").is_ok());
         assert!(require_confirmation("suspend tenant", "SUSPEND TENANT").is_err());
+    }
+
+    #[test]
+    fn strong_confirmation_includes_target_fingerprint() {
+        let target_id =
+            Uuid::parse_str("018f2f61-4875-7f7a-8bc8-8f70a73d2b1f").expect("uuid should parse");
+        assert_eq!(
+            strong_confirmation_code("HOLD INVOICE", target_id),
+            "HOLD INVOICE 018F2F61"
+        );
+        assert!(require_strong_confirmation("HOLD INVOICE", "HOLD INVOICE", target_id).is_err());
+        assert!(
+            require_strong_confirmation("HOLD INVOICE 018F2F61", "HOLD INVOICE", target_id).is_ok()
+        );
     }
 
     #[test]

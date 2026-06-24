@@ -72,6 +72,25 @@ pub(crate) async fn correct_usage(
         "billing_usage_correction",
         correction_id,
         "Usage correction applied.",
+        json!({
+            "object_links": {
+                "usage_correction_id": correction_id,
+                "usage_event_id": input.usage_event_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "usage_correction",
+                    "before": null,
+                    "after": "created",
+                },
+                {
+                    "field": "quantity_delta",
+                    "before": 0,
+                    "after": input.quantity_delta,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -127,6 +146,19 @@ pub(crate) async fn freeze_meter(
         "internal_admin_usage_action",
         action_id,
         "Meter frozen by back-office.",
+        json!({
+            "object_links": {
+                "meter_id": meter_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "meter.status",
+                    "before": "active",
+                    "after": "frozen",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -181,6 +213,19 @@ pub(crate) async fn replay_rollup(
         "billing_usage_rollup",
         rollup_id,
         "Usage rollup replay requested.",
+        json!({
+            "object_links": {
+                "rollup_id": rollup_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "updated_at",
+                    "before": "recorded",
+                    "after": "refreshed",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -237,12 +282,15 @@ async fn insert_usage_audit(
     target_type: &'static str,
     target_id: Uuid,
     description: &'static str,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, jsonb_build_object('description', $6), gen_random_uuid()::text
+           $1, $2, $3, $4, $5,
+           jsonb_build_object('description', $6) || $7::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -251,6 +299,7 @@ async fn insert_usage_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(description)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())

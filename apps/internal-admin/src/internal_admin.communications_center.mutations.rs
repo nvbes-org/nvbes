@@ -26,6 +26,7 @@ pub(crate) async fn replay_email(
     .fetch_optional(tx.as_mut())
     .await?
     .ok_or_else(|| AppError::not_found("email_message_not_found", "Email message not found."))?;
+    let redacted_email = redact_email(&email);
     let action_id = insert_action(
         &mut tx,
         access,
@@ -48,6 +49,24 @@ pub(crate) async fn replay_email(
         "email_message",
         message_id,
         action_id,
+        json!({
+            "object_links": {
+                "email_message_id": message_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": "recorded",
+                    "after": "queued",
+                },
+                {
+                    "field": "recipient_email",
+                    "before": null,
+                    "after": redacted_email,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -78,6 +97,7 @@ pub(crate) async fn replay_webhook(
     .fetch_optional(tx.as_mut())
     .await?
     .ok_or_else(|| AppError::not_found("email_event_not_found", "Email event not found."))?;
+    let redacted_email = redact_email(&email);
     let action_id = insert_action(
         &mut tx,
         access,
@@ -100,6 +120,24 @@ pub(crate) async fn replay_webhook(
         "email_event",
         event_id,
         action_id,
+        json!({
+            "object_links": {
+                "email_event_id": event_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "processed_at",
+                    "before": "recorded",
+                    "after": null,
+                },
+                {
+                    "field": "email",
+                    "before": null,
+                    "after": redacted_email,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -131,6 +169,7 @@ pub(crate) async fn suppress_email(
     .bind(&reason)
     .execute(tx.as_mut())
     .await?;
+    let redacted_email = redact_email(&email);
     let action_id = insert_action(
         &mut tx,
         access,
@@ -145,6 +184,24 @@ pub(crate) async fn suppress_email(
         "suppressed_email",
         action_id,
         action_id,
+        json!({
+            "object_links": {
+                "communications_action_id": action_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "suppression",
+                    "before": null,
+                    "after": "applied",
+                },
+                {
+                    "field": "email",
+                    "before": null,
+                    "after": redacted_email,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -177,6 +234,7 @@ pub(crate) async fn unsuppress_email(
             "Suppressed email not found.",
         ));
     }
+    let redacted_email = redact_email(&email);
     let action_id = insert_action(
         &mut tx,
         access,
@@ -191,6 +249,24 @@ pub(crate) async fn unsuppress_email(
         "suppressed_email",
         action_id,
         action_id,
+        json!({
+            "object_links": {
+                "communications_action_id": action_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "suppression",
+                    "before": "applied",
+                    "after": null,
+                },
+                {
+                    "field": "email",
+                    "before": redacted_email,
+                    "after": null,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -266,12 +342,15 @@ async fn insert_audit(
     target_type: &'static str,
     target_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, jsonb_build_object('communications_action_id', $6), gen_random_uuid()::text
+           $1, $2, $3, $4, $5,
+           jsonb_build_object('communications_action_id', $6) || $7::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -280,7 +359,16 @@ async fn insert_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())
+}
+
+fn redact_email(email: &str) -> String {
+    let Some((local, domain)) = email.split_once('@') else {
+        return "redacted".to_string();
+    };
+    let first = local.chars().next().unwrap_or('*');
+    format!("{first}***@{domain}")
 }

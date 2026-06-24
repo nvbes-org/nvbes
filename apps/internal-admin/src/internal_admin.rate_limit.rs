@@ -21,6 +21,8 @@ const READ_ACTOR_LIMIT: usize = 240;
 const READ_IP_LIMIT: usize = 600;
 const MUTATION_ACTOR_LIMIT: usize = 20;
 const MUTATION_IP_LIMIT: usize = 60;
+const CRITICAL_MUTATION_ACTOR_LIMIT: usize = 5;
+const CRITICAL_MUTATION_IP_LIMIT: usize = 20;
 const WINDOW: Duration = Duration::from_secs(60);
 
 #[derive(Clone, Default)]
@@ -83,7 +85,7 @@ pub async fn backoffice_rate_limit(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let policy = policy_for_method(request.method());
+    let policy = policy_for_request(request.method(), request.uri().path());
     let actor_key = actor_key(&headers);
     let ip_key = ip_key(&headers);
 
@@ -107,11 +109,18 @@ struct BackofficeRatePolicy {
     kind: &'static str,
 }
 
-fn policy_for_method(method: &Method) -> BackofficeRatePolicy {
+fn policy_for_request(method: &Method, path: &str) -> BackofficeRatePolicy {
     if matches!(
         method,
         &Method::POST | &Method::PUT | &Method::PATCH | &Method::DELETE
     ) {
+        if is_critical_mutation_path(path) {
+            return BackofficeRatePolicy {
+                actor_limit: CRITICAL_MUTATION_ACTOR_LIMIT,
+                ip_limit: CRITICAL_MUTATION_IP_LIMIT,
+                kind: "critical_mutation",
+            };
+        }
         return BackofficeRatePolicy {
             actor_limit: MUTATION_ACTOR_LIMIT,
             ip_limit: MUTATION_IP_LIMIT,
@@ -123,6 +132,21 @@ fn policy_for_method(method: &Method) -> BackofficeRatePolicy {
         ip_limit: READ_IP_LIMIT,
         kind: "read",
     }
+}
+
+fn is_critical_mutation_path(path: &str) -> bool {
+    let is_region_exception = path.contains("/region/workspaces/") && path.ends_with("/exceptions");
+    let is_invoice_hold = path.contains("/invoices/") && path.ends_with("/hold");
+    let is_routing_disable = path.contains("/routing-rules/") && path.ends_with("/disable");
+    let is_kyc_reject = path.contains("/kyc-profiles/") && path.ends_with("/reject");
+    let is_risk_block = path.contains("/risk/policies/") && path.ends_with("/block");
+
+    path.ends_with("/erasure-request")
+        || is_region_exception
+        || is_invoice_hold
+        || is_routing_disable
+        || is_kyc_reject
+        || is_risk_block
 }
 
 fn actor_key(headers: &HeaderMap) -> String {
@@ -159,11 +183,24 @@ mod tests {
 
     #[test]
     fn mutation_policy_is_stricter_than_read_policy() {
-        let read = policy_for_method(&Method::GET);
-        let mutation = policy_for_method(&Method::POST);
+        let read = policy_for_request(&Method::GET, "/admin/command-center");
+        let mutation = policy_for_request(&Method::POST, "/admin/operations/replay");
 
         assert!(mutation.actor_limit < read.actor_limit);
         assert!(mutation.ip_limit < read.ip_limit);
+    }
+
+    #[test]
+    fn critical_mutation_policy_is_stricter_than_regular_mutation_policy() {
+        let mutation = policy_for_request(&Method::POST, "/admin/operations/replay");
+        let critical = policy_for_request(
+            &Method::POST,
+            "/workspaces/00000000-0000-0000-0000-000000000001/admin/revenue/invoices/00000000-0000-0000-0000-000000000002/hold",
+        );
+
+        assert!(critical.actor_limit < mutation.actor_limit);
+        assert!(critical.ip_limit < mutation.ip_limit);
+        assert_eq!(critical.kind, "critical_mutation");
     }
 
     #[test]
@@ -216,10 +253,50 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn critical_mutations_are_rate_limited_with_dedicated_policy() {
+        let pool = PgPoolOptions::new()
+            .connect_lazy("postgres://localhost/internal_admin_rate_limit_test")
+            .expect("lazy pool should build");
+        let state = AppState::new(nvbes_core::config::AppConfig::default(), pool);
+        let path = "/workspaces/00000000-0000-0000-0000-000000000001/admin/revenue/invoices/00000000-0000-0000-0000-000000000002/hold";
+        let app = Router::new().route(path, post(|| async { "ok" })).layer(
+            axum::middleware::from_fn_with_state(state.clone(), backoffice_rate_limit),
+        );
+
+        for _ in 0..CRITICAL_MUTATION_ACTOR_LIMIT {
+            let response = app
+                .clone()
+                .oneshot(post_request_to(path))
+                .await
+                .expect("middleware should respond");
+            assert_eq!(response.status(), StatusCode::OK);
+        }
+
+        let response = app
+            .oneshot(post_request_to(path))
+            .await
+            .expect("middleware should rate limit critical mutation");
+
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        let limit = CRITICAL_MUTATION_ACTOR_LIMIT.to_string();
+        assert_eq!(
+            response
+                .headers()
+                .get("ratelimit-limit")
+                .and_then(|value| value.to_str().ok()),
+            Some(limit.as_str())
+        );
+    }
+
     fn post_request() -> Request<Body> {
+        post_request_to("/probe")
+    }
+
+    fn post_request_to(path: &str) -> Request<Body> {
         Request::builder()
             .method(Method::POST)
-            .uri("/probe")
+            .uri(path)
             .header(ACTOR_HEADER, "00000000-0000-0000-0000-000000000001")
             .header(CLIENT_IP_HEADER, "127.0.0.1")
             .body(Body::empty())

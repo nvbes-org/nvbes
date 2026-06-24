@@ -11,6 +11,7 @@ import {
   revokeDeveloperClient,
   rotateDeveloperSecret,
 } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, DeveloperActionResult } from './internal-admin.types';
 
 type DeveloperActionKind = 'approve' | 'revoke' | 'rotate';
@@ -35,6 +36,7 @@ export function DeveloperActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<DeveloperActionResult | null>(null);
+  const expectedConfirmCode = expectedDeveloperConfirmCode(action, clientId, appId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -87,7 +89,7 @@ export function DeveloperActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={expectedConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -104,7 +106,7 @@ export function DeveloperActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -143,6 +145,15 @@ function executeDeveloperAction(
   if (action === 'revoke') return revokeDeveloperClient(credentials, payload.clientId, body);
   if (action === 'rotate') return rotateDeveloperSecret(credentials, payload.clientId, body);
   return approveMarketplaceApp(credentials, payload.appId, body);
+}
+
+function expectedDeveloperConfirmCode(
+  action: DeveloperActionKind,
+  clientId: string,
+  appId: string,
+) {
+  const targetId = action === 'approve' ? appId : clientId;
+  return strongConfirmationCode(confirmCodes[action], targetId);
 }
 
 function ActionButton({

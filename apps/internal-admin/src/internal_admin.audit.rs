@@ -32,6 +32,8 @@ struct AuditEvent {
     target_type: String,
     target_id: Option<Uuid>,
     metadata: Value,
+    event_hash: String,
+    previous_event_hash: Option<String>,
     created_at: DateTime<Utc>,
 }
 
@@ -65,7 +67,8 @@ async fn list_audit_events(
     let rows = sqlx::query(
         r#"
         SELECT ae.id, ae.action, ae.actor_principal_id, u.email AS actor_email,
-          ae.target_type, ae.target_id, ae.metadata, ae.created_at
+          ae.target_type, ae.target_id, ae.metadata, ae.event_hash, ae.previous_event_hash,
+          ae.created_at
         FROM audit_events ae
         LEFT JOIN users u ON u.principal_id = ae.actor_principal_id
         WHERE ae.tenant_id = $1
@@ -101,6 +104,8 @@ async fn list_audit_events(
             target_type: row.get("target_type"),
             target_id: row.get("target_id"),
             metadata: row.get("metadata"),
+            event_hash: row.get("event_hash"),
+            previous_event_hash: row.get("previous_event_hash"),
             created_at: row.get("created_at"),
         })
         .collect())

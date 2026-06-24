@@ -80,6 +80,29 @@ pub(crate) async fn hold_invoice(
         "billing_invoice",
         invoice_id,
         action_id,
+        json!({
+            "object_links": {
+                "invoice_id": invoice_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "internal_hold",
+                    "before": false,
+                    "after": true,
+                },
+                {
+                    "field": "internal_hold_reason",
+                    "before": null,
+                    "after": "recorded",
+                },
+                {
+                    "field": "internal_hold_by_principal_id",
+                    "before": null,
+                    "after": access.actor_principal_id,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -142,6 +165,29 @@ pub(crate) async fn release_invoice(
         "billing_invoice",
         invoice_id,
         action_id,
+        json!({
+            "object_links": {
+                "invoice_id": invoice_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "internal_hold",
+                    "before": true,
+                    "after": false,
+                },
+                {
+                    "field": "internal_hold_reason",
+                    "before": "recorded",
+                    "after": null,
+                },
+                {
+                    "field": "internal_hold_by_principal_id",
+                    "before": "recorded",
+                    "after": null,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -241,6 +287,19 @@ async fn transition_dunning_case(
         "billing_dunning_case",
         case_id,
         action_id,
+        json!({
+            "object_links": {
+                "dunning_case_id": case_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": row.get::<String, _>("previous_state"),
+                    "after": next_state,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -319,6 +378,19 @@ async fn transition_dispute(
         "billing_dispute",
         dispute_id,
         action_id,
+        json!({
+            "object_links": {
+                "dispute_id": dispute_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": row.get::<String, _>("previous_state"),
+                    "after": next_state,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -378,12 +450,15 @@ async fn insert_audit(
     target_type: &'static str,
     target_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, jsonb_build_object('revenue_action_id', $7), gen_random_uuid()::text
+           $1, $2, $3, $4, $5, $6,
+           jsonb_build_object('revenue_action_id', $7) || $8::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -393,6 +468,7 @@ async fn insert_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())

@@ -63,6 +63,26 @@ export function CredentialsPanel({
             placeholder="platform_admin"
           />
         </Field>
+        <Field label="Second approver principal ID">
+          <Input
+            className="font-mono text-xs"
+            value={credentials.secondApproverPrincipalId}
+            onChange={(event) =>
+              onChange({ ...credentials, secondApproverPrincipalId: event.target.value })
+            }
+            placeholder="00000000-0000-0000-0000-000000000000"
+          />
+        </Field>
+        <Field label="Second approver role">
+          <Input
+            className="font-mono text-xs"
+            value={credentials.secondApproverRole}
+            onChange={(event) =>
+              onChange({ ...credentials, secondApproverRole: event.target.value })
+            }
+            placeholder="platform_admin"
+          />
+        </Field>
         <Field label="Internal token">
           <div className="relative">
             <KeyRound className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />

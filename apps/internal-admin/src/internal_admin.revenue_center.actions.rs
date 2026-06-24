@@ -10,7 +10,9 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::backoffice_authorization::{
     BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    require_strong_confirmation,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::error::AppError;
 use crate::revenue_center_mutations::{
@@ -85,7 +87,9 @@ async fn hold_invoice_route(
     Path((workspace_id, invoice_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "HOLD INVOICE")?;
+    require_revenue_authorization(&headers)?;
+    require_strong_confirmation(&request.confirm_code, "HOLD INVOICE", invoice_id)?;
+    require_dual_control(&headers)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         hold_invoice(&state.db, access, workspace_id, invoice_id, request.reason).await?,
@@ -136,7 +140,11 @@ fn require_revenue_mutation(
     confirm_code: &str,
     expected_code: &str,
 ) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::RevenueMutate)?;
+    require_revenue_authorization(headers)?;
     require_confirmation(confirm_code, expected_code)
+}
+
+fn require_revenue_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::RevenueMutate)
 }

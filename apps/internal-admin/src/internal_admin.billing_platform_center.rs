@@ -68,6 +68,7 @@ struct KycProfile {
     company_domain: Option<String>,
     vat_id: Option<String>,
     proof_reference: Option<String>,
+    review_status: String,
     updated_at: DateTime<Utc>,
 }
 
@@ -247,10 +248,11 @@ async fn load_kyc_profiles(db: &PgPool) -> Result<Vec<KycProfile>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT kyc.id, kyc.tenant_id, t.name AS tenant_name, kyc.company_name,
-          kyc.company_domain, kyc.vat_id, kyc.proof_reference, kyc.updated_at
+          kyc.company_domain, kyc.vat_id, kyc.proof_reference,
+          kyc.review_status, kyc.updated_at
         FROM billing_kyc_profiles kyc
         JOIN tenants t ON t.id = kyc.tenant_id
-        ORDER BY (kyc.proof_reference IS NULL) DESC, kyc.updated_at DESC
+        ORDER BY (kyc.review_status = 'pending') DESC, kyc.updated_at DESC
         LIMIT 8
         "#,
     )
@@ -267,6 +269,7 @@ async fn load_kyc_profiles(db: &PgPool) -> Result<Vec<KycProfile>, AppError> {
             company_domain: row.get("company_domain"),
             vat_id: row.get("vat_id"),
             proof_reference: row.get("proof_reference"),
+            review_status: row.get("review_status"),
             updated_at: row.get("updated_at"),
         })
         .collect())

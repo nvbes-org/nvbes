@@ -51,8 +51,14 @@ export function BillingOperationsPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const isReady = credentialsReady(credentials);
   const readiness = useMemo(() => {
-    const filled = Object.values(credentials).filter(Boolean).length;
-    return Math.round((filled / 3) * 100);
+    const required = [
+      credentials.workspaceId,
+      credentials.internalToken,
+      credentials.actorPrincipalId,
+      credentials.backofficeRole,
+    ];
+    const filled = required.filter(Boolean).length;
+    return Math.round((filled / required.length) * 100);
   }, [credentials]);
 
   function updateCredentials(nextCredentials: typeof credentials) {

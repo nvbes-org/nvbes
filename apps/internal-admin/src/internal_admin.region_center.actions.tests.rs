@@ -10,6 +10,32 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 #[tokio::test]
+async fn region_exception_rejects_generic_confirmation_code() {
+    let pool = PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/internal_admin_region_confirmation_test")
+        .expect("lazy pool should build");
+    let app = Router::new()
+        .merge(crate::region_center_actions::router())
+        .with_state(crate::app::AppState::new(
+            nvbes_core::config::AppConfig::default(),
+            pool,
+        ));
+
+    let response = app
+        .oneshot(region_exception_request(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            "security_admin",
+            "RECORD REGION EXCEPTION",
+        ))
+        .await
+        .expect("route should respond");
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
     let Some(pool) = test_pool().await else {
         eprintln!("skipping test: Postgres is not reachable");
@@ -106,6 +132,31 @@ async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'region.residency.flagged'
+           AND target_type = 'workspace'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(audit_metadata["region_action_id"], payload["object_id"]);
+    assert_eq!(
+        audit_metadata["object_links"]["workspace_id"],
+        json!(workspace_id)
+    );
+    assert_eq!(
+        audit_metadata["changes"][0],
+        json!({
+            "field": "data_region",
+            "before": "eu",
+            "after": "us"
+        })
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {
@@ -177,6 +228,33 @@ async fn seed_workspace_with_actor(pool: &PgPool, actor_id: Uuid) -> (Uuid, Uuid
     .expect("workspace should insert");
 
     (tenant_id, workspace_id)
+}
+
+fn region_exception_request(
+    workspace_id: Uuid,
+    target_workspace_id: Uuid,
+    actor_id: Uuid,
+    role: &str,
+    confirm_code: &str,
+) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!(
+            "/workspaces/{workspace_id}/admin/region/workspaces/{target_workspace_id}/exceptions"
+        ))
+        .header("content-type", "application/json")
+        .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
+        .header("x-nvbes-actor-principal-id", actor_id.to_string())
+        .header("x-nvbes-backoffice-role", role)
+        .body(Body::from(
+            json!({
+                "confirm_code": confirm_code,
+                "exception_kind": "data_residency_exception",
+                "reason": "ticket REG-123 approved"
+            })
+            .to_string(),
+        ))
+        .expect("request should build")
 }
 
 fn flag_request(

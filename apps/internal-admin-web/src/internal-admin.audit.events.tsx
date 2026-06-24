@@ -155,6 +155,7 @@ export function AuditEventsPanel({
 
 function AuditEventRow({ event }: { event: AuditEvent }) {
   const metadata = summarizeMetadata(event.metadata);
+  const changes = auditChanges(event.metadata);
 
   return (
     <article className="bg-muted/40 rounded-md p-3">
@@ -173,7 +174,30 @@ function AuditEventRow({ event }: { event: AuditEvent }) {
           Actor: {event.actor_email ?? event.actor_principal_id ?? 'system'}
         </span>
         <span className="truncate">Event: {event.id}</span>
+        <span className="truncate font-mono">Hash: {shortHash(event.event_hash)}</span>
+        <span className="truncate font-mono">Previous: {shortHash(event.previous_event_hash)}</span>
       </div>
+      {changes.length > 0 ? (
+        <div className="mt-3 rounded-md border bg-background">
+          <div className="border-b px-2 py-1 text-xs font-medium">Diff avant/apres</div>
+          <div className="divide-y">
+            {changes.map((change) => (
+              <div
+                className="grid gap-1 px-2 py-2 text-xs md:grid-cols-[160px_1fr_1fr]"
+                key={change.field}
+              >
+                <span className="font-medium">{change.field}</span>
+                <span className="text-muted-foreground truncate">
+                  Avant: {formatAuditValue(change.before)}
+                </span>
+                <span className="text-muted-foreground truncate">
+                  Apres: {formatAuditValue(change.after)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {metadata ? (
         <pre className="bg-background text-muted-foreground mt-3 max-h-28 overflow-auto rounded-md border p-2 text-xs">
           {metadata}
@@ -181,6 +205,39 @@ function AuditEventRow({ event }: { event: AuditEvent }) {
       ) : null}
     </article>
   );
+}
+
+type AuditChange = {
+  after: unknown;
+  before: unknown;
+  field: string;
+};
+
+function auditChanges(metadata: unknown): AuditChange[] {
+  if (!isRecord(metadata) || !Array.isArray(metadata.changes)) return [];
+  return metadata.changes.flatMap((item) => {
+    if (!isRecord(item) || typeof item.field !== 'string') return [];
+    return [
+      {
+        after: item.after,
+        before: item.before,
+        field: item.field,
+      },
+    ];
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function formatAuditValue(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return value.toString();
+  }
+  return JSON.stringify(value);
 }
 
 function summarizeMetadata(value: unknown): string | null {
@@ -203,4 +260,9 @@ function formatDate(value: string): string {
     minute: '2-digit',
     month: '2-digit',
   });
+}
+
+function shortHash(value: string | null): string {
+  if (!value) return 'missing';
+  return value.length > 12 ? value.slice(0, 12) : value;
 }

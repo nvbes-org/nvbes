@@ -12,6 +12,7 @@ import {
   suppressEmail,
   unsuppressEmail,
 } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, CommunicationsActionResult } from './internal-admin.types';
 
 type CommunicationsActionKind = 'replay-email' | 'replay-webhook' | 'suppress' | 'unsuppress';
@@ -38,6 +39,12 @@ export function CommunicationsActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<CommunicationsActionResult | null>(null);
+  const expectedConfirmCode = expectedCommunicationsConfirmCode(
+    credentials,
+    action,
+    messageId,
+    eventId,
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -112,7 +119,7 @@ export function CommunicationsActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={expectedConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -129,7 +136,7 @@ export function CommunicationsActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -171,6 +178,17 @@ function executeCommunicationsAction(
   const emailBody = { ...body, email: payload.email };
   if (action === 'suppress') return suppressEmail(credentials, emailBody);
   return unsuppressEmail(credentials, emailBody);
+}
+
+function expectedCommunicationsConfirmCode(
+  credentials: AdminCredentials,
+  action: CommunicationsActionKind,
+  messageId: string,
+  eventId: string,
+) {
+  if (action === 'replay-email') return strongConfirmationCode(confirmCodes[action], messageId);
+  if (action === 'replay-webhook') return strongConfirmationCode(confirmCodes[action], eventId);
+  return strongConfirmationCode(confirmCodes[action], credentials.workspaceId);
 }
 
 function ActionButton({

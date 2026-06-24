@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { flagRegionResidency, recordRegionException } from './internal-admin.api';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, RegionActionResult } from './internal-admin.types';
 
 type RegionActionKind = 'exception' | 'flag';
@@ -32,6 +33,7 @@ export function RegionActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RegionActionResult | null>(null);
+  const requiredConfirmCode = regionConfirmCode(action, targetWorkspaceId);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -106,7 +108,7 @@ export function RegionActionsPanel({
           <Input
             disabled={disabled || mutation.isPending}
             onChange={(event) => setConfirmCode(event.target.value)}
-            placeholder={confirmCodes[action]}
+            placeholder={requiredConfirmCode}
             value={confirmCode}
           />
         </Field>
@@ -123,7 +125,7 @@ export function RegionActionsPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-3 md:flex-row md:items-center md:justify-between">
         <div className="text-muted-foreground text-xs">
-          Code requis: <span className="text-foreground font-medium">{confirmCodes[action]}</span>
+          Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
           disabled={disabled || mutation.isPending}
@@ -148,6 +150,12 @@ export function RegionActionsPanel({
       ) : null}
     </div>
   );
+}
+
+function regionConfirmCode(action: RegionActionKind, targetWorkspaceId: string): string {
+  const baseCode = confirmCodes[action];
+  if (action !== 'exception') return baseCode;
+  return strongConfirmationCode(baseCode, targetWorkspaceId);
 }
 
 type RegionActionPayload = {

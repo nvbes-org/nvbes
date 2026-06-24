@@ -10,7 +10,9 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::backoffice_authorization::{
     BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    require_strong_confirmation,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::compliance_center_mutations::{request_erasure, review_suppression, revoke_consent};
 use crate::compliance_center_types::ComplianceActionResult;
@@ -64,7 +66,9 @@ async fn request_erasure_route(
     Path((workspace_id, principal_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<ComplianceReasonRequest>,
 ) -> Result<Json<ComplianceActionResult>, AppError> {
-    require_compliance_mutation(&headers, &request.confirm_code, "REQUEST ERASURE")?;
+    require_compliance_authorization(&headers)?;
+    require_strong_confirmation(&request.confirm_code, "REQUEST ERASURE", principal_id)?;
+    require_dual_control(&headers)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         request_erasure(
@@ -103,7 +107,11 @@ fn require_compliance_mutation(
     confirm_code: &str,
     expected_code: &str,
 ) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::ComplianceMutate)?;
+    require_compliance_authorization(headers)?;
     require_confirmation(confirm_code, expected_code)
+}
+
+fn require_compliance_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::ComplianceMutate)
 }

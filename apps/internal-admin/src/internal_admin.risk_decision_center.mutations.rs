@@ -84,6 +84,29 @@ pub(crate) async fn resolve_risk_signal(
         "billing_risk_signal",
         signal_id,
         action_id,
+        json!({
+            "object_links": {
+                "risk_signal_id": signal_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "resolution_status",
+                    "before": "unresolved",
+                    "after": "resolved",
+                },
+                {
+                    "field": "resolution_reason",
+                    "before": null,
+                    "after": "recorded",
+                },
+                {
+                    "field": "resolved_by",
+                    "before": null,
+                    "after": access.actor_principal_id,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -170,6 +193,24 @@ async fn decide_policy(
         "billing_access_policy_snapshot",
         policy_id,
         action_id,
+        json!({
+            "object_links": {
+                "policy_snapshot_id": policy_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "policy_state",
+                    "before": row.get::<String, _>("previous_state"),
+                    "after": next_state,
+                },
+                {
+                    "field": "reason",
+                    "before": null,
+                    "after": "recorded",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -227,12 +268,15 @@ async fn insert_audit(
     target_type: &'static str,
     target_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, jsonb_build_object('risk_action_id', $7), gen_random_uuid()::text
+           $1, $2, $3, $4, $5, $6,
+           jsonb_build_object('risk_action_id', $7) || $8::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -242,6 +286,7 @@ async fn insert_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())

@@ -107,6 +107,31 @@ async fn replay_provider_event_route_enforces_role_confirmation_and_audits_succe
     .await
     .expect("audit count should load");
     assert_eq!(audit_count, 1);
+
+    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'operations.provider_event.replayed'
+           AND target_type = 'billing_provider_event'",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit metadata should load");
+    assert_eq!(audit_metadata["operations_action_id"], payload["object_id"]);
+    assert_eq!(
+        audit_metadata["object_links"]["provider_event_id"],
+        json!(event_id)
+    );
+    assert_eq!(
+        audit_metadata["changes"][0],
+        json!({
+            "field": "status",
+            "before": "failed",
+            "after": "received"
+        })
+    );
 }
 
 async fn test_pool() -> Option<PgPool> {

@@ -8,6 +8,8 @@ export const emptyCredentials: AdminCredentials = {
   internalToken: '',
   actorPrincipalId: '',
   backofficeRole: 'platform_admin',
+  secondApproverPrincipalId: '',
+  secondApproverRole: 'platform_admin',
 };
 
 export function loadCredentials(): AdminCredentials {
@@ -21,6 +23,14 @@ export function loadCredentials(): AdminCredentials {
       actorPrincipalId: typeof parsed.actorPrincipalId === 'string' ? parsed.actorPrincipalId : '',
       backofficeRole:
         typeof parsed.backofficeRole === 'string' ? parsed.backofficeRole : 'platform_admin',
+      secondApproverPrincipalId:
+        typeof parsed.secondApproverPrincipalId === 'string'
+          ? parsed.secondApproverPrincipalId
+          : '',
+      secondApproverRole:
+        typeof parsed.secondApproverRole === 'string'
+          ? parsed.secondApproverRole
+          : 'platform_admin',
     };
   } catch {
     return emptyCredentials;

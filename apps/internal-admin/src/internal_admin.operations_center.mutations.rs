@@ -68,6 +68,24 @@ pub(crate) async fn replay_provider_event(
         "billing_provider_event",
         event_id,
         action_id,
+        json!({
+            "object_links": {
+                "provider_event_id": event_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": row.get::<String, _>("previous_state"),
+                    "after": "received",
+                },
+                {
+                    "field": "processed_at",
+                    "before": "recorded",
+                    "after": null,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -144,6 +162,29 @@ pub(crate) async fn resolve_reconciliation_difference(
         "billing_reconciliation_difference",
         difference_id,
         action_id,
+        json!({
+            "object_links": {
+                "reconciliation_difference_id": difference_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "resolved_at",
+                    "before": null,
+                    "after": "recorded",
+                },
+                {
+                    "field": "details.resolution_reason",
+                    "before": null,
+                    "after": "recorded",
+                },
+                {
+                    "field": "details.resolved_by",
+                    "before": null,
+                    "after": access.actor_principal_id,
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -214,6 +255,19 @@ async fn transition_export_run(
         "billing_export_run",
         export_run_id,
         action_id,
+        json!({
+            "object_links": {
+                "export_run_id": export_run_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": row.get::<String, _>("previous_state"),
+                    "after": "pending",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -273,12 +327,15 @@ async fn insert_audit(
     target_type: &'static str,
     target_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, jsonb_build_object('operations_action_id', $7), gen_random_uuid()::text
+           $1, $2, $3, $4, $5, $6,
+           jsonb_build_object('operations_action_id', $7) || $8::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -288,6 +345,7 @@ async fn insert_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())

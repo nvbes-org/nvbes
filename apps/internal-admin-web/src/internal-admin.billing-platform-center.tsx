@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getBillingPlatformCenter } from './internal-admin.api';
+import { BillingPlatformActionsPanel } from './internal-admin.billing-platform-actions';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
@@ -103,6 +104,7 @@ export function BillingPlatformCenterPanel({
         <RegionPolicyList rows={data?.region_policies ?? []} />
         <EinvoicingList rows={data?.einvoicing_profiles ?? []} />
       </div>
+      <BillingPlatformActionsPanel credentials={credentials} disabled={disabled} />
     </section>
   );
 }
@@ -130,7 +132,7 @@ function RoutingRuleList({ rows }: { rows: ProviderRoutingRule[] }) {
           badge={row.fallback_enabled ? 'fallback' : row.status}
           key={row.id}
           label={`${row.priority} - ${row.provider}`}
-          meta={`${row.country ?? 'any country'} / ${row.currency ?? 'any currency'} / ${row.payment_method ?? 'any method'}`}
+          meta={`${row.country ?? 'any country'} / ${row.currency ?? 'any currency'} / ${row.payment_method ?? 'any method'} - ${shortId(row.id)}`}
           tone={row.fallback_enabled ? 'warning' : 'default'}
         />
       ))}
@@ -172,12 +174,12 @@ function KycList({
     <PlatformList emptyLabel="Aucun profil KYC." title="KYC profiles">
       {rows.map((row) => (
         <LinkedTenantRow
-          badge={row.proof_reference ? 'proofed' : 'missing proof'}
+          badge={row.review_status}
           key={row.id}
           onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          subtitle={`${row.tenant_name} - ${row.company_domain ?? row.vat_id ?? 'no company metadata'}`}
+          subtitle={`${row.tenant_name} - ${row.company_domain ?? row.vat_id ?? 'no company metadata'} - ${shortId(row.id)}`}
           title={row.company_name ?? row.tenant_name}
-          tone={row.proof_reference ? 'default' : 'warning'}
+          tone={row.review_status === 'approved' ? 'default' : 'warning'}
         />
       ))}
     </PlatformList>
@@ -207,7 +209,7 @@ function EinvoicingList({ rows }: { rows: EinvoicingProfile[] }) {
           badge={row.status}
           key={row.id}
           label={row.code}
-          meta={`${row.country ?? 'global'} - ${row.format}`}
+          meta={`${row.country ?? 'global'} - ${row.format} - ${shortId(row.id)}`}
         />
       ))}
     </PlatformList>
@@ -340,4 +342,8 @@ function formatCount(value: number | undefined): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fr-FR').format(new Date(value));
+}
+
+function shortId(value: string): string {
+  return value.slice(0, 8);
 }

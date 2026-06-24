@@ -179,6 +179,7 @@ function AuditEventList({
               {row.actor_email ?? 'Actor'}
             </Button>
           </div>
+          <HashChain eventHash={row.event_hash} previousEventHash={row.previous_event_hash} />
         </article>
       ))}
     </EvidenceList>
@@ -200,11 +201,12 @@ function HashAnomalyList({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{row.action}</p>
               <p className="text-muted-foreground truncate text-xs">
-                {row.tenant_name} - hash {row.event_hash || 'missing'}
+                {row.tenant_name} - hash {shortHash(row.event_hash)}
               </p>
             </div>
             <Badge variant="destructive">{formatDate(row.created_at)}</Badge>
           </div>
+          <HashChain eventHash={row.event_hash} previousEventHash={row.previous_event_hash} />
           <Button
             onClick={() => {
               onSelectTenant(row.tenant_id);
@@ -220,6 +222,21 @@ function HashAnomalyList({
         </article>
       ))}
     </EvidenceList>
+  );
+}
+
+function HashChain({
+  eventHash,
+  previousEventHash,
+}: {
+  eventHash: string | null;
+  previousEventHash: string | null;
+}) {
+  return (
+    <div className="text-muted-foreground mt-2 flex flex-wrap gap-2 font-mono text-[11px]">
+      <span className="rounded-md border px-2 py-1">prev:{shortHash(previousEventHash)}</span>
+      <span className="rounded-md border px-2 py-1">hash:{shortHash(eventHash)}</span>
+    </div>
   );
 }
 
@@ -308,4 +325,9 @@ function formatCount(value: number | undefined): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fr-FR').format(new Date(value));
+}
+
+function shortHash(value: string | null): string {
+  if (!value) return 'missing';
+  return value.length > 12 ? value.slice(0, 12) : value;
 }

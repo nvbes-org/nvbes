@@ -55,6 +55,19 @@ pub(crate) async fn revoke_client(
         "oauth_client",
         oauth_client_id,
         action_id,
+        json!({
+            "object_links": {
+                "oauth_client_id": oauth_client_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "revoked_at",
+                    "before": null,
+                    "after": "recorded",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -144,6 +157,26 @@ pub(crate) async fn rotate_secret(
         "developer_secret_rotation",
         rotation_id,
         action_id,
+        json!({
+            "object_links": {
+                "rotation_id": rotation_id,
+                "previous_version_id": previous_version_id,
+                "active_version_id": active_version_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "previous_secret.status",
+                    "before": "active",
+                    "after": "overlap",
+                },
+                {
+                    "field": "active_secret",
+                    "before": null,
+                    "after": "created",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -204,6 +237,29 @@ pub(crate) async fn approve_marketplace_app(
         "developer_marketplace_app",
         marketplace_app_id,
         action_id,
+        json!({
+            "object_links": {
+                "marketplace_app_id": marketplace_app_id,
+                "workspace_id": workspace_id,
+            },
+            "changes": [
+                {
+                    "field": "status",
+                    "before": "pending",
+                    "after": "approved",
+                },
+                {
+                    "field": "reviewed_by",
+                    "before": null,
+                    "after": access.actor_principal_id,
+                },
+                {
+                    "field": "review_reason",
+                    "before": null,
+                    "after": "recorded",
+                }
+            ],
+        }),
     )
     .await?;
     tx.commit().await?;
@@ -260,12 +316,15 @@ async fn insert_developer_audit(
     target_type: &'static str,
     target_id: Uuid,
     action_id: Uuid,
+    metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, jsonb_build_object('developer_action_id', $6), gen_random_uuid()::text
+           $1, $2, $3, $4, $5,
+           jsonb_build_object('developer_action_id', $6) || $7::jsonb,
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)
@@ -274,6 +333,7 @@ async fn insert_developer_audit(
     .bind(target_type)
     .bind(target_id)
     .bind(action_id)
+    .bind(metadata)
     .execute(tx.as_mut())
     .await?;
     Ok(())
