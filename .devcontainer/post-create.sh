@@ -5,6 +5,41 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+sanitize_node_options() {
+  local preload_path
+
+  case "${NODE_OPTIONS:-}" in
+    *ms-vscode.js-debug/bootloader.js*)
+      preload_path="$(printf '%s\n' "$NODE_OPTIONS" | sed -n 's/.*--require[= ]\([^ ]*ms-vscode.js-debug\/bootloader\.js\).*/\1/p')"
+      if [ -z "$preload_path" ] || [ ! -e "$preload_path" ]; then
+        unset NODE_OPTIONS
+      fi
+      ;;
+  esac
+}
+
+install_node_options_guard() {
+  local bashrc="$HOME/.bashrc"
+  local marker="# nvbes devcontainer node options guard"
+
+  touch "$bashrc"
+  if grep -Fq "$marker" "$bashrc"; then
+    return
+  fi
+
+  cat >> "$bashrc" <<'EOF'
+
+# nvbes devcontainer node options guard
+if [[ "${NODE_OPTIONS:-}" == *"ms-vscode.js-debug/bootloader.js"* ]]; then
+  __nvbes_node_preload="$(printf '%s\n' "$NODE_OPTIONS" | sed -n 's/.*--require[= ]\([^ ]*ms-vscode.js-debug\/bootloader\.js\).*/\1/p')"
+  if [ -z "$__nvbes_node_preload" ] || [ ! -e "$__nvbes_node_preload" ]; then
+    unset NODE_OPTIONS
+  fi
+  unset __nvbes_node_preload
+fi
+EOF
+}
+
 configure_git() {
   local current_name current_email github_login github_name github_email signing_key
 
@@ -48,6 +83,9 @@ configure_git() {
     git config --global commit.gpgsign true
   fi
 }
+
+sanitize_node_options
+install_node_options_guard
 
 sudo mkdir -p \
   /usr/local/cargo/git \

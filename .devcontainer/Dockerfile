@@ -38,6 +38,7 @@ RUN apt-get update \
     python3-pip \
     python3-venv \
     redis-tools \
+    ripgrep \
     shellcheck \
     unzip \
     wget \

@@ -20,7 +20,7 @@ The `workspace` container includes:
 - Rust stable with `rustfmt` and `clippy`
 - `sqlx-cli` with PostgreSQL support
 - OpenTofu
-- Go, Python, PostgreSQL client tools, Redis tools, ShellCheck, `jq`, `curl`, and build tooling
+- Go, Python, PostgreSQL client tools, Redis tools, ShellCheck, `ripgrep`, `jq`, `curl`, and build tooling
 - Native Rust FFI dependencies for SAML/XML security: `libxml2`, `xmlsec1`, OpenSSL, `pkg-config`, and `libclang`
 
 ## Included Services
@@ -72,6 +72,8 @@ If `.env` does not exist, `.devcontainer/post-create.sh` creates it from `.env.e
 The script does not overwrite an existing `.env`.
 
 When running inside the Dev Container, Compose sets `NVBES_DEVCONTAINER=true`. The shared environment loader then overrides database and Redis endpoints for container networking, so an existing host-oriented `.env` with `localhost` does not break `pnpm dev`.
+
+The post-create step also installs a shell startup guard for stale VS Code JavaScript debug bootloader preloads. If `NODE_OPTIONS` points to a deleted `ms-vscode.js-debug/bootloader.js`, the guard unsets it so Node-based commands such as `pnpm` can start normally.
 
 ## Resetting Local Data
 
