@@ -158,7 +158,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn child_keeps_trace_id_and_changes_span_id() {
         let parent =
             parse_traceparent("00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01").unwrap();

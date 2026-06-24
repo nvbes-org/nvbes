@@ -72,7 +72,7 @@ impl GeoNetworkKind {
         }
     }
 
-    pub fn from_str(value: &str) -> Self {
+    pub fn from_label(value: &str) -> Self {
         match value {
             "residential" => Self::Residential,
             "mobile" => Self::Mobile,
@@ -271,11 +271,7 @@ impl GeoResolution {
             source: GeoEvidenceSource::Fallback,
             ip,
             private_network,
-            network_kind: if private_network {
-                GeoNetworkKind::Unknown
-            } else {
-                GeoNetworkKind::Unknown
-            },
+            network_kind: GeoNetworkKind::Unknown,
             risk_score: if private_network { 0 } else { 50 },
             risk_labels: if private_network {
                 vec!["private_network".to_string()]

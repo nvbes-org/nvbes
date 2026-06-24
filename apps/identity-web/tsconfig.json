@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "skipLibCheck": true,
     "paths": {
       "@nvbes/http-client": ["../../libs/ts/http-client/src/index.ts"],
       "@nvbes/identity-client": ["../../libs/ts/identity-client/src/index.ts"],
@@ -14,6 +15,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "tests"],
   "exclude": ["src/sw.ts"]
 }

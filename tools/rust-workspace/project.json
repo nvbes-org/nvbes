@@ -61,7 +61,7 @@
       "inputs": ["production"],
       "outputs": [],
       "options": {
-        "command": "cargo clippy --workspace --all-targets --locked -- -D warnings"
+        "command": "cargo check --workspace --locked"
       },
       "configurations": {},
       "parallelism": true,

@@ -66,6 +66,42 @@ pub async fn insert_audit_event_pool<'a>(
     Ok(())
 }
 
+/// Insère un événement d'audit dans une transaction existante.
+pub async fn insert_audit_event_tx<'a>(
+    executor: &'a mut PgConnection,
+    input: AuditEventInput<'a>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        INSERT INTO audit_events (
+          tenant_id,
+          workspace_id,
+          actor_principal_id,
+          action,
+          target_type,
+          target_id,
+          ip,
+          user_agent,
+          metadata
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
+        "#,
+    )
+    .bind(input.tenant_id)
+    .bind(input.workspace_id)
+    .bind(input.actor_principal_id)
+    .bind(input.action)
+    .bind(input.target_type)
+    .bind(input.target_id)
+    .bind(input.ip)
+    .bind(input.user_agent)
+    .bind(sqlx::types::Json(input.metadata))
+    .execute(executor)
+    .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::AuditEventInput;
@@ -107,40 +143,4 @@ mod tests {
 
         assert!(!input.is_workspace_scoped());
     }
-}
-
-/// Insère un événement d'audit dans une transaction existante.
-pub async fn insert_audit_event_tx<'a>(
-    executor: &'a mut PgConnection,
-    input: AuditEventInput<'a>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          tenant_id,
-          workspace_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
-        "#,
-    )
-    .bind(input.tenant_id)
-    .bind(input.workspace_id)
-    .bind(input.actor_principal_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(executor)
-    .await?;
-
-    Ok(())
 }

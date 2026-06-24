@@ -129,7 +129,7 @@ fn relation_from_row(row: &sqlx::postgres::PgRow) -> Result<GeoNetworkRelation, 
         network_kind: row
             .try_get::<Option<String>, _>("network_kind")?
             .as_deref()
-            .map(GeoNetworkKind::from_str),
+            .map(GeoNetworkKind::from_label),
         risk_score: row
             .try_get::<Option<i16>, _>("risk_score")?
             .and_then(|score| u8::try_from(score).ok()),

@@ -12,7 +12,10 @@
     "isolatedModules": true,
     "noEmit": true,
     "ignoreDeprecations": "6.0",
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@nvbes/http-client": ["../http-client/src/index.ts"]
+    }
   },
   "include": ["src"],
   "exclude": ["src/**/__tests__/**", "src/**/*.test.ts", "src/**/*.spec.ts"]

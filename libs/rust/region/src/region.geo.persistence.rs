@@ -80,7 +80,7 @@ pub async fn load_personal_geo_database_tx(
             let country_code = row.try_get::<String, _>("country_code").ok()?;
             let network_kind = row
                 .try_get::<String, _>("network_kind")
-                .map(|value| GeoNetworkKind::from_str(&value))
+                .map(|value| GeoNetworkKind::from_label(&value))
                 .unwrap_or(GeoNetworkKind::Residential);
             let risk_score = row
                 .try_get::<i16, _>("risk_score")
