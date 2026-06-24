@@ -53,6 +53,8 @@ pub(crate) async fn challenge_mfa(
 
     let (auth_state, principal_id) =
         super::require_mfa_state(&state.redis, request.state_token).await?;
+    let request_ip = meta.ip();
+    let request_user_agent = meta.user_agent();
 
     let authenticated_method = match super::mfa_flow::resolve_authenticated_method(
         &state.db,
@@ -61,6 +63,8 @@ pub(crate) async fn challenge_mfa(
         &request,
         auth_state.id,
         principal_id,
+        request_ip.as_deref(),
+        request_user_agent.as_deref(),
     )
     .await
     {
@@ -69,6 +73,17 @@ pub(crate) async fn challenge_mfa(
             let audit_ip = meta.ip();
             let audit_user_agent = meta.user_agent();
             let error_code = err.code.clone();
+            let geo_signal = crate::domains::auth::risk::geo::apply_geo_security_signal(
+                &state.db,
+                &state.config,
+                principal_id,
+                audit_ip.as_deref(),
+                35.0,
+                serde_json::json!({ "reason": error_code }),
+                "mfa_failed",
+            )
+            .await;
+            let geo_metadata = geo_signal.metadata.clone();
             let _ = crate::domains::auth::risk::record_event(
                 &state.db,
                 crate::domains::auth::risk::RiskEventInput {
@@ -76,12 +91,15 @@ pub(crate) async fn challenge_mfa(
                     session_id: None,
                     device_id: None,
                     event_type: "mfa_failed".to_string(),
-                    ip_address: meta.ip(),
-                    user_agent: meta.user_agent(),
-                    risk_score: 35.0,
-                    risk_factors: serde_json::json!({ "reason": error_code }),
+                    ip_address: audit_ip.clone(),
+                    user_agent: audit_user_agent.clone(),
+                    risk_score: geo_signal.score,
+                    risk_factors: geo_signal.factors,
                     decision: crate::domains::auth::risk::RiskDecision::StepUp,
-                    metadata: serde_json::json!({ "state_token": request.state_token }),
+                    metadata: serde_json::json!({
+                        "state_token": request.state_token,
+                        "geo": geo_signal.metadata,
+                    }),
                 },
             )
             .await;
@@ -96,6 +114,7 @@ pub(crate) async fn challenge_mfa(
                     user_agent: audit_user_agent.as_deref(),
                     metadata: serde_json::json!({
                         "state_token": request.state_token,
+                        "geo": geo_metadata,
                     }),
                 },
             )

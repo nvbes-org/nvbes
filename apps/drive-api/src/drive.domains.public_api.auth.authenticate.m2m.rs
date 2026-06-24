@@ -52,6 +52,16 @@ pub(super) async fn authenticate_m2m(
 
     let plan_code: String = workspace.get("plan_code");
     let m2m_client_id = claims.client_id.unwrap_or_default();
+    super::api_key::enforce_network_policy(
+        db,
+        headers,
+        request_id.as_str(),
+        required_scope,
+        workspace_id,
+        None,
+        Some(principal_id),
+    )
+    .await?;
     super::enforce_plan_rate_limit(redis, "m2m_rate", &m2m_client_id, &plan_code).await?;
 
     Ok(PublicApiContext {

@@ -10,6 +10,8 @@ pub mod db;
 pub mod enterprise;
 #[path = "identity.domains.auth.password.forgot.rs"]
 mod forgot_impl;
+#[path = "identity.domains.auth.password.geo.rs"]
+mod geo_impl;
 #[path = "identity.domains.auth.password.history.rs"]
 pub mod history;
 #[path = "identity.domains.auth.password.reset.rs"]

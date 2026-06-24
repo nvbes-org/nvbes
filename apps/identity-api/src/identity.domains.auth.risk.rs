@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+#[path = "identity.domains.auth.risk.geo.rs"]
+pub mod geo;
 #[path = "identity.domains.auth.risk.signals.rs"]
 pub mod signals;
 
@@ -24,6 +26,23 @@ impl RiskDecision {
             Self::StepUp => "step_up",
             Self::Deny => "deny",
             Self::Lock => "lock",
+        }
+    }
+
+    pub const fn severity(self) -> u8 {
+        match self {
+            Self::Allow => 0,
+            Self::StepUp => 1,
+            Self::Deny => 2,
+            Self::Lock => 3,
+        }
+    }
+
+    pub fn strictest(self, other: Self) -> Self {
+        if self.severity() >= other.severity() {
+            self
+        } else {
+            other
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::models::BillingStateRecord;
+use crate::models::{BillingStateRecord, StripePriceMapping};
 use crate::pricing::plan_monthly_price_cents;
 use crate::shared::{
     EUR, EXTRA_SEAT_CENTS_PER_MONTH, STORAGE_OVERAGE_CENTS_PER_GB_MONTH, api_key_limit,
@@ -9,6 +9,13 @@ use crate::types::{
 };
 
 pub fn build_invoice_estimate(record: &BillingStateRecord) -> InvoiceEstimateView {
+    build_invoice_estimate_with_price(record, None)
+}
+
+pub fn build_invoice_estimate_with_price(
+    record: &BillingStateRecord,
+    price_mapping: Option<&StripePriceMapping>,
+) -> InvoiceEstimateView {
     let (billing_period_start, billing_period_end) = current_billing_period();
     let included_storage_bytes = i64::from(record.included_storage_gb) * 1024 * 1024 * 1024;
     let storage_overage_bytes = record
@@ -20,7 +27,7 @@ pub fn build_invoice_estimate(record: &BillingStateRecord) -> InvoiceEstimateVie
         .active_user_count
         .saturating_sub(i64::from(record.included_users));
     let seat_overage_amount_cents = seat_overage * EXTRA_SEAT_CENTS_PER_MONTH;
-    let base_amount_cents = plan_monthly_price_cents(&record.plan_code);
+    let base_amount_cents = localized_amount_cents(record, price_mapping);
     let estimated_amount_cents =
         base_amount_cents + storage_overage_amount_cents + seat_overage_amount_cents;
 
@@ -32,11 +39,18 @@ pub fn build_invoice_estimate(record: &BillingStateRecord) -> InvoiceEstimateVie
         storage_overage_amount_cents,
         seat_overage_amount_cents,
         estimated_amount_cents,
-        currency: EUR.to_string(),
+        currency: localized_currency(price_mapping),
     }
 }
 
 pub fn plan_view(record: &BillingStateRecord) -> PlanView {
+    plan_view_with_price(record, None)
+}
+
+pub fn plan_view_with_price(
+    record: &BillingStateRecord,
+    price_mapping: Option<&StripePriceMapping>,
+) -> PlanView {
     PlanView {
         code: record.plan_code.clone(),
         included_storage_gb: record.included_storage_gb,
@@ -45,9 +59,24 @@ pub fn plan_view(record: &BillingStateRecord) -> PlanView {
         max_share_links: record.max_share_links,
         audit_level: record.audit_level.clone(),
         max_share_link_ttl_days: record.max_share_link_ttl_days,
-        monthly_price_cents: plan_monthly_price_cents(&record.plan_code),
-        currency: EUR.to_string(),
+        monthly_price_cents: localized_amount_cents(record, price_mapping),
+        currency: localized_currency(price_mapping),
     }
+}
+
+fn localized_amount_cents(
+    record: &BillingStateRecord,
+    price_mapping: Option<&StripePriceMapping>,
+) -> i64 {
+    price_mapping
+        .and_then(|mapping| mapping.amount_minor)
+        .unwrap_or_else(|| plan_monthly_price_cents(&record.plan_code))
+}
+
+fn localized_currency(price_mapping: Option<&StripePriceMapping>) -> String {
+    price_mapping
+        .map(|mapping| mapping.currency.clone())
+        .unwrap_or_else(|| EUR.to_string())
 }
 
 pub fn subscription_view(record: &BillingStateRecord) -> SubscriptionView {
@@ -94,8 +123,11 @@ pub fn entitlements_view(record: &BillingStateRecord) -> ProductEntitlementsView
 
 #[cfg(test)]
 mod tests {
-    use super::{build_invoice_estimate, entitlements_view};
-    use crate::models::BillingStateRecord;
+    use super::{
+        build_invoice_estimate, build_invoice_estimate_with_price, entitlements_view,
+        plan_view_with_price,
+    };
+    use crate::models::{BillingStateRecord, StripePriceMapping};
     use uuid::Uuid;
 
     const GB: i64 = 1024 * 1024 * 1024;
@@ -107,6 +139,7 @@ mod tests {
             owner_principal_id: Uuid::nil(),
             owner_email: "owner@example.com".to_string(),
             trial_ends_at: None,
+            plan_id: Uuid::nil(),
             plan_code: "team".to_string(),
             included_storage_gb: 10,
             included_users: 2,
@@ -175,6 +208,43 @@ mod tests {
         assert_eq!(estimate.storage_overage_amount_cents, 8);
         assert_eq!(estimate.seat_overage_amount_cents, 1_800);
         assert_eq!(estimate.estimated_amount_cents, 5_708);
+        assert_eq!(estimate.currency, "EUR");
+    }
+
+    #[test]
+    fn localized_plan_view_uses_selected_price_mapping() {
+        let price_mapping = StripePriceMapping {
+            stripe_product_id: "prod_latam".to_string(),
+            stripe_price_id: "price_latam".to_string(),
+            country_code: None,
+            pricing_region: Some("latam".to_string()),
+            currency: "USD".to_string(),
+            amount_minor: Some(2_700),
+        };
+
+        let view = plan_view_with_price(&billing_record(), Some(&price_mapping));
+
+        assert_eq!(view.monthly_price_cents, 2_700);
+        assert_eq!(view.currency, "USD");
+    }
+
+    #[test]
+    fn localized_invoice_estimate_uses_selected_base_price() {
+        let mut record = billing_record();
+        record.used_storage_bytes = 12 * GB;
+        let price_mapping = StripePriceMapping {
+            stripe_product_id: "prod_fr".to_string(),
+            stripe_price_id: "price_fr".to_string(),
+            country_code: Some("FR".to_string()),
+            pricing_region: None,
+            currency: "EUR".to_string(),
+            amount_minor: Some(4_200),
+        };
+
+        let estimate = build_invoice_estimate_with_price(&record, Some(&price_mapping));
+
+        assert_eq!(estimate.base_amount_cents, 4_200);
+        assert_eq!(estimate.estimated_amount_cents, 4_208);
         assert_eq!(estimate.currency, "EUR");
     }
 }

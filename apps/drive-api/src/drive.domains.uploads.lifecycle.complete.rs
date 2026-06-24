@@ -4,11 +4,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    domains::authz::WorkspaceAccess,
-    domains::files::models::StorageObjectStatus,
-    domains::files::queries::{AuditEventInput, insert_audit_event_tx},
-    domains::quotas::FileUploadedUsageInput,
-    http::error::AppError,
+    domains::authz::WorkspaceAccess, domains::files::models::StorageObjectStatus,
+    domains::quotas::FileUploadedUsageInput, http::error::AppError,
 };
 
 use super::super::types::{CompleteUploadInput, CompleteUploadResponse};
@@ -176,9 +173,9 @@ pub async fn complete_upload(
         "file.uploaded"
     };
 
-    insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

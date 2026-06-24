@@ -182,53 +182,6 @@ pub async fn fetch_download_metadata_tx(
     })
 }
 
-pub struct AuditEventInput<'a> {
-    pub workspace_id: Uuid,
-    pub actor_user_id: Option<Uuid>,
-    pub actor_principal_id: Option<Uuid>,
-    pub action: &'a str,
-    pub target_type: &'a str,
-    pub target_id: Option<Uuid>,
-    pub ip: Option<&'a str>,
-    pub user_agent: Option<&'a str>,
-    pub metadata: serde_json::Value,
-}
-
-pub async fn insert_audit_event_tx(
-    tx: &mut Transaction<'_, Postgres>,
-    input: AuditEventInput<'_>,
-) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.actor_user_id)
-    .bind(input.actor_principal_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(&mut **tx)
-    .await?;
-
-    Ok(())
-}
-
 pub async fn ensure_parent_is_active_folder_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,

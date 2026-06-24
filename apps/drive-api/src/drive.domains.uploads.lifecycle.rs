@@ -3,9 +3,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    domains::authz::WorkspaceAccess,
-    domains::files::queries::{AuditEventInput, insert_audit_event_tx},
-    domains::uploads::models::UploadSessionStatus,
+    domains::authz::WorkspaceAccess, domains::uploads::models::UploadSessionStatus,
     http::error::AppError,
 };
 
@@ -74,9 +72,9 @@ pub async fn cancel_upload(
     db::delete_pending_storage_object_tx(&mut tx, access.workspace_id, upload.storage_object_id)
         .await?;
 
-    insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

@@ -176,7 +176,6 @@ pub async fn fetch_workspace_for_update(
 }
 
 pub struct AuditEventInput<'a> {
-    pub tenant_id: Uuid,
     pub workspace_id: Option<Uuid>,
     pub actor_principal_id: Option<Uuid>,
     pub action: &'a str,
@@ -191,11 +190,14 @@ pub async fn insert_audit_event(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
-    nvbes_audit::insert_audit_event_tx(
+    let workspace_id = input.workspace_id.ok_or_else(|| {
+        AppError::internal("missing_workspace", "Workspace audit requires a workspace.")
+    })?;
+    crate::domains::audit::record_event_tx(
         tx,
-        nvbes_audit::AuditEventInput {
-            tenant_id: input.tenant_id,
-            workspace_id: input.workspace_id,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id,
+            actor_user_id: input.actor_principal_id,
             actor_principal_id: input.actor_principal_id,
             action: input.action,
             target_type: input.target_type,
@@ -206,5 +208,4 @@ pub async fn insert_audit_event(
         },
     )
     .await
-    .map_err(AppError::from)
 }

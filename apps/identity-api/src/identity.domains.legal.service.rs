@@ -1,6 +1,5 @@
 use super::db::{self, UserConsent};
 use crate::http::error::AppError;
-use nvbes_audit::{AuditEventInput, insert_audit_event_pool};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -34,7 +33,7 @@ pub async fn grant_consent(
         "action_taken": "granted"
     });
 
-    let audit_input = AuditEventInput {
+    let audit_input = crate::domains::audit::AuditRecordInput {
         tenant_id,
         workspace_id,
         actor_principal_id: Some(principal_id),
@@ -46,7 +45,7 @@ pub async fn grant_consent(
         metadata,
     };
 
-    if let Err(e) = insert_audit_event_pool(db, audit_input).await {
+    if let Err(e) = crate::domains::audit::record_event(db, audit_input).await {
         // Log audit event failure but don't break the user experience
         tracing::error!("Failed to log USER_CONSENT_GRANTED audit event: {:?}", e);
     }
@@ -82,7 +81,7 @@ pub async fn revoke_consent(
         "action_taken": "revoked"
     });
 
-    let audit_input = AuditEventInput {
+    let audit_input = crate::domains::audit::AuditRecordInput {
         tenant_id,
         workspace_id,
         actor_principal_id: Some(principal_id),
@@ -94,7 +93,7 @@ pub async fn revoke_consent(
         metadata,
     };
 
-    if let Err(e) = insert_audit_event_pool(db, audit_input).await {
+    if let Err(e) = crate::domains::audit::record_event(db, audit_input).await {
         tracing::error!("Failed to log USER_CONSENT_REVOKED audit event: {:?}", e);
     }
 

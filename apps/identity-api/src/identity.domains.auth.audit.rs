@@ -46,9 +46,9 @@ pub async fn record_auth_event(db: &PgPool, input: AuthAuditInput<'_>) -> Result
         return Ok(());
     };
 
-    nvbes_audit::insert_audit_event_pool(
+    crate::domains::audit::record_event(
         db,
-        nvbes_audit::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id,
             workspace_id: row.get("workspace_id"),
             actor_principal_id: Some(input.principal_id),

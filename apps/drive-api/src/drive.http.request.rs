@@ -29,3 +29,9 @@ pub fn user_agent(headers: &HeaderMap) -> Option<String> {
         .and_then(|value| value.to_str().ok())
         .map(ToOwned::to_owned)
 }
+
+pub fn country_header<'a>(headers: &'a HeaderMap, names: &[&str]) -> Option<&'a str> {
+    names
+        .iter()
+        .find_map(|name| headers.get(*name).and_then(|value| value.to_str().ok()))
+}

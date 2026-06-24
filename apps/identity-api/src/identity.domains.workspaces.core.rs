@@ -152,9 +152,9 @@ pub async fn create_workspace(
     .execute(&mut *tx)
     .await?;
 
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        nvbes_audit::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id,
             workspace_id: Some(workspace_id),
             actor_principal_id: Some(auth.user_id),

@@ -147,22 +147,20 @@ pub async fn create_user_account(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, ip, user_agent, metadata, event_hash
-        )
-        VALUES ($1, $2, $3, 'user.registered', 'user', $3, $4::inet, $5, $6, $7)
-        "#,
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            tenant_id,
+            workspace_id: Some(workspace_id),
+            actor_principal_id: Some(principal_id),
+            action: "user.registered",
+            target_type: "user",
+            target_id: Some(principal_id),
+            ip: ip.as_deref(),
+            user_agent: user_agent.as_deref(),
+            metadata: serde_json::json!({"email": email}),
+        },
     )
-    .bind(tenant_id)
-    .bind(workspace_id)
-    .bind(principal_id)
-    .bind(ip.as_deref())
-    .bind(user_agent.as_deref())
-    .bind(serde_json::json!({"email": email}))
-    .bind(password::token_hash(&format!("{principal_id}:{tenant_id}:{workspace_id}")))
-    .execute(&mut *tx)
     .await?;
 
     tx.commit().await?;

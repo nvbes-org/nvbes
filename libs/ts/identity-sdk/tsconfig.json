@@ -9,6 +9,9 @@
     "emitDeclarationOnly": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@nvbes/http-client": ["../http-client/src/index.ts"]
+    }
   }
 }

@@ -1,6 +1,5 @@
 use crate::http::error::AppError;
-use sqlx::{PgPool, Postgres};
-use uuid::Uuid;
+use sqlx::PgPool;
 
 use super::db;
 use super::types::*;
@@ -35,71 +34,28 @@ pub async fn record_api_audit_event(
     context: &PublicApiContext,
     input: PublicApiAuditEventInput<'_>,
 ) -> Result<(), AppError> {
-    insert_audit_event_pool(
-        db,
-        context.workspace_id,
-        context.created_by,
-        Some(context.created_by_principal_id),
-        input.action,
-        input.target_type,
-        input.target_id,
-        input.ip,
-        input.user_agent,
-        serde_json::json!({
-            "api_key_id": context.api_key_id,
-            "key_prefix": context.key_prefix,
-            "request_id": context.request_id,
-            "details": input.metadata
-        }),
+    let mut tx = db.begin().await?;
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id: context.workspace_id,
+            actor_user_id: context.created_by,
+            actor_principal_id: Some(context.created_by_principal_id),
+            action: input.action,
+            target_type: input.target_type,
+            target_id: input.target_id,
+            ip: input.ip,
+            user_agent: input.user_agent,
+            metadata: serde_json::json!({
+                "api_key_id": context.api_key_id,
+                "key_prefix": context.key_prefix,
+                "request_id": context.request_id,
+                "details": input.metadata
+            }),
+        },
     )
-    .await
-    .map_err(AppError::from)
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Audit insertion keeps each field explicit for call-site readability."
-)]
-async fn insert_audit_event_pool(
-    pool: &sqlx::Pool<Postgres>,
-    workspace_id: Uuid,
-    actor_user_id: Option<Uuid>,
-    actor_principal_id: Option<Uuid>,
-    action: &str,
-    target_type: &str,
-    target_id: Option<Uuid>,
-    ip: Option<&str>,
-    user_agent: Option<&str>,
-    metadata: serde_json::Value,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(actor_user_id)
-    .bind(actor_principal_id)
-    .bind(action)
-    .bind(target_type)
-    .bind(target_id)
-    .bind(ip)
-    .bind(user_agent)
-    .bind(sqlx::types::Json(metadata))
-    .execute(pool)
     .await?;
-
+    tx.commit().await?;
     Ok(())
 }
 
@@ -123,9 +79,9 @@ pub async fn log_denied(db: &PgPool, input: DeniedLogInput<'_>) -> Result<(), Ap
     .await?;
 
     let mut tx = db.begin().await?;
-    db::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInsert {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: input.workspace_id,
             actor_user_id: None,
             actor_principal_id: None,
@@ -137,6 +93,7 @@ pub async fn log_denied(db: &PgPool, input: DeniedLogInput<'_>) -> Result<(), Ap
             metadata: serde_json::json!({
                 "request_id": input.request_id,
                 "error_code": input.error_code,
+                "network_block_reason": input.network_block_reason,
                 "required_scopes": input.scopes_used
             }),
         },

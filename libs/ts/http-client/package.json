@@ -10,11 +10,11 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.mts",
   "scripts": {
-    "build": "node ./node_modules/vite-plus/bin/vp pack",
+    "build": "node ../../../node_modules/vite-plus/bin/vp pack",
     "check": "pnpm run typecheck",
-    "dev": "node ./node_modules/vite-plus/bin/vp pack --watch",
-    "format:check": "node ./node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
-    "lint": "node ./node_modules/vite-plus/bin/vp lint src",
+    "dev": "node ../../../node_modules/vite-plus/bin/vp pack --watch",
+    "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
+    "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
     "typecheck": "tsc --pretty false --noEmit -p tsconfig.json"
   },
   "dependencies": {

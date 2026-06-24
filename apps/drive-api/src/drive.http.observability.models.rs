@@ -81,6 +81,9 @@ impl DashboardsResponse {
                         "auth_failures",
                         "permission_denied",
                         "api_key_denied",
+                        "public_api_geo_requests_by_network_kind",
+                        "public_api_high_risk_requests",
+                        "public_api_network_policy_blocks_by_reason",
                         "audit_events_created",
                     ],
                 },
@@ -152,6 +155,13 @@ impl CriticalAlertsResponse {
                     condition: "bucket policy scan detects public access",
                     owner: "security",
                 },
+                CriticalAlertDefinition {
+                    id: "public-api-network-risk-spike",
+                    severity: "high",
+                    signal: "security",
+                    condition: "drive_public_api_network_policy_blocks_total increases unexpectedly",
+                    owner: "security",
+                },
             ],
         }
     }
@@ -185,6 +195,11 @@ impl LogStreamsResponse {
                         "target_type",
                         "target_id",
                         "request_id",
+                        "geo_country_code",
+                        "geo_network_kind",
+                        "geo_risk_score",
+                        "geo_risk_labels",
+                        "network_block_reason",
                     ],
                     forbidden_payload: vec!["api_key_secret", "raw_password", "file_content"],
                 },
@@ -209,5 +224,41 @@ impl LogStreamsResponse {
                 },
             ],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::domains::public_api::metrics::{
+        GEO_REQUESTS_METRIC, HIGH_RISK_REQUESTS_METRIC, NETWORK_POLICY_BLOCKS_METRIC,
+    };
+
+    use super::{CriticalAlertsResponse, DashboardsResponse, LogStreamsResponse};
+
+    #[test]
+    fn observability_contract_includes_public_api_network_risk() {
+        let dashboards = DashboardsResponse::v1();
+        let alerts = CriticalAlertsResponse::v1();
+        let streams = LogStreamsResponse::v1();
+
+        assert!(dashboards.dashboards.iter().any(|dashboard| {
+            dashboard
+                .panels
+                .contains(&"public_api_network_policy_blocks_by_reason")
+        }));
+        assert!(
+            alerts
+                .alerts
+                .iter()
+                .any(|alert| alert.id == "public-api-network-risk-spike"
+                    && alert.condition.contains(NETWORK_POLICY_BLOCKS_METRIC))
+        );
+        assert!(GEO_REQUESTS_METRIC.starts_with("drive_public_api_"));
+        assert!(HIGH_RISK_REQUESTS_METRIC.starts_with("drive_public_api_"));
+        assert!(streams.streams.iter().any(|stream| {
+            stream.id == "audit"
+                && stream.allowed_payload.contains(&"geo_network_kind")
+                && stream.allowed_payload.contains(&"network_block_reason")
+        }));
     }
 }

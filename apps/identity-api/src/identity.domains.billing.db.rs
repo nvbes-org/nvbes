@@ -41,8 +41,9 @@ pub async fn fetch_plan_by_code_tx(
 pub async fn fetch_active_price_mapping_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     plan_id: Uuid,
+    country_code: Option<&str>,
 ) -> Result<StripePriceMapping, AppError> {
-    let record = nvbes_billing::db::fetch_active_price_mapping_tx(tx, plan_id)
+    let record = nvbes_billing::db::fetch_active_price_mapping_tx(tx, plan_id, country_code)
         .await?
         .ok_or_else(|| {
             AppError::conflict(
@@ -96,33 +97,32 @@ pub(crate) async fn insert_audit_event(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     input: AuditEventInput<'_>,
 ) -> Result<(), AppError> {
-    sqlx::query(
+    let tenant_id = sqlx::query_scalar::<_, Uuid>(
         r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
+        SELECT tenant_id
+        FROM workspaces
+        WHERE id = $1
         "#,
     )
     .bind(input.workspace_id)
-    .bind(input.actor_user_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(&mut **tx)
+    .fetch_one(&mut **tx)
     .await?;
 
-    Ok(())
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
+            tenant_id,
+            workspace_id: Some(input.workspace_id),
+            actor_principal_id: input.actor_user_id,
+            action: input.action,
+            target_type: input.target_type,
+            target_id: input.target_id,
+            ip: input.ip,
+            user_agent: input.user_agent,
+            metadata: input.metadata,
+        },
+    )
+    .await
 }
 
 pub async fn plan_id_for_stripe_price(

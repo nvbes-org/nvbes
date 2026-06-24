@@ -7,8 +7,8 @@ use super::logic::{
 };
 use super::observability;
 pub use super::types::{
-    AuditEventInput, BandwidthOutUsageInput, FileUploadedUsageInput, QuotaResponse,
-    StorageReleasedUsageInput, StorageThresholdAuditInput,
+    BandwidthOutUsageInput, FileUploadedUsageInput, QuotaResponse, StorageReleasedUsageInput,
+    StorageThresholdAuditInput,
 };
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
 
@@ -173,9 +173,9 @@ pub async fn release_storage_tx(
         .await?;
     }
 
-    observability::insert_audit_event(
+    crate::domains::audit::record_event_tx(
         tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: input.workspace_id,
             actor_user_id: input.actor_user_id,
             actor_principal_id: input.actor_principal_id,
@@ -215,9 +215,9 @@ pub async fn record_bandwidth_out_tx(
 
     db::update_bandwidth_usage_cache(tx, input.workspace_id).await?;
 
-    observability::insert_audit_event(
+    crate::domains::audit::record_event_tx(
         tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: input.workspace_id,
             actor_user_id: input.actor_user_id,
             actor_principal_id: input.actor_principal_id,

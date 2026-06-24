@@ -5,6 +5,8 @@ pub use super::types::{
 
 #[path = "identity.domains.billing.service.checkout.rs"]
 mod checkout;
+#[path = "identity.domains.billing.service.geo.rs"]
+mod geo;
 #[path = "identity.domains.billing.service.invoice.rs"]
 mod invoice;
 #[path = "identity.domains.billing.service.overview.rs"]

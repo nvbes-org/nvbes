@@ -1,4 +1,5 @@
 use chrono::{Duration, Utc};
+use nvbes_core::config::AppConfig;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
@@ -6,7 +7,7 @@ use uuid::Uuid;
 use webauthn_rs::prelude::PublicKeyCredential;
 
 use super::super::super::login_challenges;
-use super::super::super::risk::{self, RiskDecision, RiskEventInput};
+use super::super::super::risk::{self, RiskEventInput};
 use super::super::storage::{discoverable_keys, fetch_user_email, load_passkeys, persist_passkey};
 use super::super::types::StoredDiscoverableAuthentication;
 use crate::http::error::AppError;
@@ -65,9 +66,12 @@ pub async fn start_discoverable_login_authentication(
 pub async fn finish_discoverable_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
+    config: &AppConfig,
     webauthn: &webauthn_rs::Webauthn,
     challenge_id: Uuid,
     credential: &PublicKeyCredential,
+    ip: Option<&str>,
+    user_agent: Option<&str>,
 ) -> Result<(Uuid, String, String), AppError> {
     let mut challenge = nvbes_redis::cache::cache_get_json::<CachedDiscoverableLoginChallenge>(
         redis,
@@ -132,6 +136,19 @@ pub async fn finish_discoverable_login_authentication(
 
     let email = fetch_user_email(db, principal_id).await?;
 
+    let geo_signal = risk::geo::apply_geo_security_signal(
+        db,
+        config,
+        principal_id,
+        ip,
+        0.0,
+        json!({
+            "cred_id": format!("{:?}", result.cred_id()),
+            "challenge_id": challenge_id,
+        }),
+        "webauthn_discoverable_login_authenticated",
+    )
+    .await;
     let _ = risk::record_event(
         db,
         RiskEventInput {
@@ -139,15 +156,12 @@ pub async fn finish_discoverable_login_authentication(
             session_id: None,
             device_id: None,
             event_type: "webauthn_discoverable_login_authenticated".to_string(),
-            ip_address: None,
-            user_agent: None,
-            risk_score: 0.0,
-            risk_factors: json!({
-                "cred_id": format!("{:?}", result.cred_id()),
-                "challenge_id": challenge_id,
-            }),
-            decision: RiskDecision::Allow,
-            metadata: json!({}),
+            ip_address: ip.map(ToOwned::to_owned),
+            user_agent: user_agent.map(ToOwned::to_owned),
+            risk_score: geo_signal.score,
+            risk_factors: geo_signal.factors,
+            decision: geo_signal.decision,
+            metadata: json!({ "geo": geo_signal.metadata }),
         },
     )
     .await;

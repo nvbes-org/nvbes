@@ -4,14 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node ./node_modules/vite-plus/bin/vp dev",
-    "build": "tsc -b && node ./node_modules/vite-plus/bin/vp build",
+    "dev": "node ../../node_modules/vite-plus/bin/vp dev",
+    "build": "tsc -b && node ../../node_modules/vite-plus/bin/vp build",
     "check": "pnpm run typecheck",
-    "format": "node ./node_modules/vite-plus/bin/vp fmt --write",
-    "format:check": "node ./node_modules/vite-plus/bin/vp fmt --check",
-    "lint": "node ./node_modules/vite-plus/bin/vp lint",
-    "preview": "node ./node_modules/vite-plus/bin/vp preview",
-    "test": "node ./node_modules/vite-plus/bin/vp test",
+    "format": "node ../../node_modules/vite-plus/bin/vp fmt --write",
+    "format:check": "node ../../node_modules/vite-plus/bin/vp fmt --check",
+    "lint": "node ../../node_modules/vite-plus/bin/vp lint",
+    "preview": "node ../../node_modules/vite-plus/bin/vp preview",
+    "test": "node ../../node_modules/vite-plus/bin/vp test",
     "typecheck": "tsgo -b --pretty false"
   },
   "dependencies": {

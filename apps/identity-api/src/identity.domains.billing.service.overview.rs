@@ -5,8 +5,8 @@ use super::super::types::*;
 use super::super::{db, webhooks};
 use crate::http::error::AppError;
 use nvbes_billing::{
-    billing_account_view, build_invoice_estimate, current_billing_period, entitlements_view,
-    plan_view, subscription_view,
+    billing_account_view, build_invoice_estimate_with_price, current_billing_period,
+    entitlements_view, plan_view_with_price, subscription_view,
 };
 use nvbes_core::config::AppConfig;
 use nvbes_observability::metrics::HttpMetrics;
@@ -15,12 +15,21 @@ pub async fn get_billing(
     db: &PgPool,
     workspace_id: Uuid,
 ) -> Result<BillingOverviewResponse, AppError> {
-    let record = db::fetch_billing_state_pool(db, workspace_id).await?;
-    let estimate = build_invoice_estimate(&record);
+    let mut tx = db.begin().await?;
+    let record = super::super::db::fetch_billing_state_tx(&mut tx, workspace_id).await?;
+    let price_mapping = nvbes_billing::db::fetch_active_price_mapping_tx(
+        &mut tx,
+        record.plan_id,
+        record.country.as_deref(),
+    )
+    .await?;
+    tx.commit().await?;
+
+    let estimate = build_invoice_estimate_with_price(&record, price_mapping.as_ref());
 
     Ok(BillingOverviewResponse {
         workspace_id,
-        plan: plan_view(&record),
+        plan: plan_view_with_price(&record, price_mapping.as_ref()),
         subscription: subscription_view(&record),
         billing_account: billing_account_view(&record),
         entitlements: entitlements_view(&record),

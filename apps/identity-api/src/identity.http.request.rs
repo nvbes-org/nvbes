@@ -1,6 +1,9 @@
 use crate::http::error::AppError;
 use axum::http::HeaderMap;
-use nvbes_region::{DataRegion, country_code_to_data_region, detect_profile_from_country_code};
+use nvbes_region::{
+    DataRegion, country_code_to_data_region,
+    geo::{GeoLookupRequest, GeoResolver, parse_ip},
+};
 
 pub fn bearer_token_with_authuser(headers: &HeaderMap, authuser: &str) -> Result<String, AppError> {
     if let Some(auth_header) = headers.get("Authorization") {
@@ -142,17 +145,24 @@ pub fn gpc_enabled(headers: &HeaderMap) -> bool {
 }
 
 pub fn region_from_headers(headers: &HeaderMap) -> Option<String> {
-    ["CF-IPCountry", "X-Vercel-IP-Country", "X-AppEngine-Country"]
-        .into_iter()
-        .find_map(|name| {
-            headers
-                .get(name)
-                .and_then(|h| h.to_str().ok())
-                .and_then(|s| {
-                    detect_profile_from_country_code(s)
-                        .map(|profile| profile.country_code.to_string())
-                })
-        })
+    let trusted_country_header = country_header(
+        headers,
+        &["CF-IPCountry", "X-Vercel-IP-Country", "X-AppEngine-Country"],
+    );
+    let ip = client_ip(headers).as_deref().and_then(parse_ip);
+    let resolution = GeoResolver::default().resolve(GeoLookupRequest {
+        ip,
+        trusted_country_header,
+        ..GeoLookupRequest::default()
+    });
+
+    resolution.location.map(|location| location.country_code)
+}
+
+pub fn country_header<'a>(headers: &'a HeaderMap, names: &[&str]) -> Option<&'a str> {
+    names
+        .iter()
+        .find_map(|name| headers.get(*name).and_then(|h| h.to_str().ok()))
 }
 
 pub fn data_region_from_headers(headers: &HeaderMap) -> Option<String> {

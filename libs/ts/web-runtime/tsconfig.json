@@ -8,6 +8,5 @@
       "@nvbes/http-client": ["../http-client/src/index.ts"]
     }
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
+  "include": ["src"]
 }

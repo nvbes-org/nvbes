@@ -47,6 +47,7 @@ fn build_customer_fields_includes_workspace_metadata() {
         owner_principal_id: Uuid::new_v4(),
         owner_email: "owner@example.com".to_string(),
         trial_ends_at: None,
+        plan_id: Uuid::new_v4(),
         plan_code: "trial".to_string(),
         included_storage_gb: 0,
         included_users: 0,

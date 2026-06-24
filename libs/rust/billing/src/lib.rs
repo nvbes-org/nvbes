@@ -22,7 +22,7 @@ pub mod types;
 pub mod usage;
 pub mod views;
 
-pub use pricing::plan_monthly_price_cents;
+pub use pricing::{normalize_billing_country, plan_monthly_price_cents};
 pub use shared::{
     BillingRedirectUrlError, EUR, EXTRA_SEAT_CENTS_PER_MONTH, STORAGE_OVERAGE_CENTS_PER_GB_MONTH,
     api_key_limit, current_billing_period, div_ceil, hex_encode, parse_uuid,
@@ -34,5 +34,6 @@ pub use stripe::{
     stripe_subscription_status, timestamp_field, verify_stripe_signature,
 };
 pub use views::{
-    billing_account_view, build_invoice_estimate, entitlements_view, plan_view, subscription_view,
+    billing_account_view, build_invoice_estimate, build_invoice_estimate_with_price,
+    entitlements_view, plan_view, plan_view_with_price, subscription_view,
 };

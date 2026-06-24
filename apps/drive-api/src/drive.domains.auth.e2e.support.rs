@@ -11,5 +11,5 @@ pub(crate) use env::{
     drive_app, identity_state, spawn_identity_server, test_database_url, test_lock,
 };
 pub(crate) use schema::{cleanup, db_supports_current_schema};
-pub(crate) use seed::seed_machine_workspace_context;
+pub(crate) use seed::{seed_machine_workspace_context, seed_public_api_network_range};
 pub(crate) use token::issue_machine_token;

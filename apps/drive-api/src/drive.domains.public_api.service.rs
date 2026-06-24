@@ -31,9 +31,9 @@ pub async fn revoke_api_key(
         .await?
         .ok_or_else(|| AppError::not_found("api_key_not_found", "API key not found."))?;
 
-    db::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInsert {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

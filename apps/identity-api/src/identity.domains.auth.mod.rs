@@ -22,6 +22,8 @@ pub mod email_verification;
 pub mod email_verification_change;
 #[path = "identity.domains.auth.fingerprint.rs"]
 pub mod fingerprint;
+#[path = "identity.domains.auth.geo_intelligence.rs"]
+pub(crate) mod geo_intelligence;
 #[path = "identity.domains.auth.http_signals.rs"]
 pub mod http_signals;
 #[path = "identity.domains.auth.jwks.rs"]

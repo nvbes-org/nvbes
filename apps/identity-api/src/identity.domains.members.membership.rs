@@ -1,7 +1,6 @@
 use uuid::Uuid;
 
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
-use nvbes_audit::AuditEventInput;
 use nvbes_tenancy::role_as_db;
 use sqlx::PgPool;
 
@@ -161,9 +160,9 @@ pub async fn update_member_role(
 
     auth::sessions::revoke_all_user_sessions_tx(&mut tx, member_id).await?;
 
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: access.tenant_id.unwrap_or_default(),
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.user_id),
@@ -245,9 +244,9 @@ pub async fn remove_member(
 
     auth::sessions::revoke_all_user_sessions_tx(&mut tx, member_id).await?;
 
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: access.tenant_id.unwrap_or_default(),
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.user_id),

@@ -15,6 +15,8 @@ pub(crate) async fn resolve_authenticated_method(
     request: &MfaRequest,
     auth_state_id: Uuid,
     principal_id: Uuid,
+    ip: Option<&str>,
+    user_agent: Option<&str>,
 ) -> Result<String, AppError> {
     validate_single_factor(request)?;
 
@@ -39,6 +41,8 @@ pub(crate) async fn resolve_authenticated_method(
         auth_state_id,
         principal_id,
         credential,
+        ip,
+        user_agent,
     )
     .await
 }
@@ -106,6 +110,8 @@ async fn resolve_webauthn_method(
     auth_state_id: Uuid,
     principal_id: Uuid,
     credential: &PublicKeyCredential,
+    ip: Option<&str>,
+    user_agent: Option<&str>,
 ) -> Result<String, AppError> {
     let challenge_id = request
         .webauthn_challenge_id
@@ -114,11 +120,14 @@ async fn resolve_webauthn_method(
     match crate::domains::auth::webauthn::finish_login_authentication(
         db,
         redis,
+        config,
         &webauthn,
         auth_state_id,
         principal_id,
         challenge_id,
         credential,
+        ip,
+        user_agent,
     )
     .await
     {

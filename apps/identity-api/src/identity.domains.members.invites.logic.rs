@@ -7,7 +7,6 @@ use crate::domains::auth::types::AuthContext;
 use crate::domains::authz::WorkspaceAccess;
 use crate::domains::members::invites::InvitationRecord;
 use crate::http::error::AppError;
-use nvbes_audit::AuditEventInput;
 use nvbes_core::config::AppConfig;
 use nvbes_tenancy::role_as_db;
 use sqlx::PgPool;
@@ -110,9 +109,9 @@ pub async fn invite_member(
         &inviter.display_name,
         &invitation_token,
     )?;
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: access.tenant_id.unwrap_or_default(),
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.user_id),
@@ -229,9 +228,9 @@ pub async fn accept_invitation(
     .bind(now)
     .execute(&mut *tx)
     .await?;
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: auth.tenant_id.unwrap_or_default(),
             workspace_id: Some(workspace_id),
             actor_principal_id: Some(auth.user_id),

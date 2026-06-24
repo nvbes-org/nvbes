@@ -20,29 +20,8 @@ pub async fn record_permission_denied(
     resource: ResourceContext,
     headers: &HeaderMap,
 ) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, 'permission.denied', 'workspace', $4, $5::inet, $6, $7)
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(access.auth.audit_actor_user_id())
-    .bind(Some(access.auth.audit_actor_principal_id()))
-    .bind(access.workspace_id)
-    .bind(client_ip(headers).as_deref())
-    .bind(user_agent(headers).as_deref())
-    .bind(sqlx::types::Json(serde_json::json!({
+    let ip = client_ip(headers);
+    let metadata = serde_json::json!({
       "requested_action": format!("{action:?}"),
       "role": format!("{:?}", access.role),
       "principal_id": access.auth.principal_id,
@@ -64,9 +43,24 @@ pub async fn record_permission_denied(
         "role": actor.role,
         "client_id": actor.client_id
       }))
-    })))
-    .execute(db)
+    });
+    let mut tx = db.begin().await?;
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id: access.workspace_id,
+            actor_user_id: access.auth.audit_actor_user_id(),
+            actor_principal_id: Some(access.auth.audit_actor_principal_id()),
+            action: "permission.denied",
+            target_type: "workspace",
+            target_id: Some(access.workspace_id),
+            ip: ip.as_deref(),
+            user_agent: user_agent(headers).as_deref(),
+            metadata,
+        },
+    )
     .await?;
+    tx.commit().await?;
 
     Ok(())
 }

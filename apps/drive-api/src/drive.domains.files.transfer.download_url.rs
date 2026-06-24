@@ -7,7 +7,7 @@ use crate::{
         authz::WorkspaceAccess,
         files::{
             models::{StorageObjectStatus, StorageObjectType},
-            queries::{self as db, AuditEventInput},
+            queries as db,
         },
         quotas::BandwidthOutUsageInput,
     },
@@ -75,9 +75,9 @@ pub async fn create_download_url(
     )
     .await?;
 
-    db::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

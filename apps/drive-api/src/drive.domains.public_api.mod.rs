@@ -4,12 +4,24 @@ pub mod api_key_signatures;
 pub mod auth;
 #[path = "drive.domains.public_api.db.rs"]
 pub mod db;
+#[cfg(test)]
+#[path = "drive.domains.public_api.db_tests.rs"]
+mod db_tests;
+#[cfg(test)]
+#[path = "drive.domains.public_api.e2e_tests.rs"]
+mod e2e_tests;
 #[path = "drive.domains.public_api.errors.rs"]
 pub mod errors;
+#[path = "drive.domains.public_api.geo.rs"]
+pub mod geo;
 #[path = "drive.domains.public_api.http_signatures.rs"]
 pub mod http_signatures;
+#[path = "drive.domains.public_api.metrics.rs"]
+pub mod metrics;
 #[path = "drive.domains.public_api.routes.mgmt_handlers.rs"]
 pub mod mgmt_handlers;
+#[path = "drive.domains.public_api.network_policy.rs"]
+pub mod network_policy;
 #[path = "drive.domains.public_api.observability.rs"]
 pub mod observability;
 #[path = "drive.domains.public_api.request_meta.rs"]

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const dependencyFields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
@@ -10,11 +10,33 @@ function readJson(path) {
 }
 
 function projectFiles() {
-	const output = execFileSync("rg", ["--files", "-g", "project.json", "apps", "libs", "tools"], {
-		encoding: "utf8",
-		stdio: ["ignore", "pipe", "pipe"],
-	});
-	return output.split("\n").filter((path) => path.endsWith("project.json"));
+	try {
+		const output = execFileSync("rg", ["--files", "-g", "project.json", "apps", "libs", "tools"], {
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		return output.split("\n").filter((path) => path.endsWith("project.json"));
+	} catch (error) {
+		if (error?.code !== "ENOENT") throw error;
+		return projectFilesFromNode(["apps", "libs", "tools"]);
+	}
+}
+
+function projectFilesFromNode(roots) {
+	const files = [];
+	const visit = (dir) => {
+		if (!existsSync(dir)) return;
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			const path = join(dir, entry.name);
+			if (entry.isDirectory()) {
+				visit(path);
+			} else if (entry.isFile() && entry.name === "project.json") {
+				files.push(path);
+			}
+		}
+	};
+	for (const root of roots) visit(root);
+	return files.sort();
 }
 
 function tag(meta, prefix) {

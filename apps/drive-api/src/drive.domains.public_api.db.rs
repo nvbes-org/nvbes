@@ -1,6 +1,9 @@
-use super::types::{
-    ApiKeyMigrationTargetView, ApiKeyView, ApiRequestLogInsert, AuditEventInsert, RateLimitView,
-};
+#[path = "drive.domains.public_api.db.request_logs.rs"]
+mod request_logs;
+
+pub use request_logs::insert_api_request_log;
+
+use super::types::{ApiKeyMigrationTargetView, ApiKeyView, RateLimitView};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
@@ -153,78 +156,6 @@ pub async fn get_workspace_for_api(
     .bind(workspace_id)
     .fetch_one(db)
     .await
-}
-
-pub async fn insert_api_request_log(
-    db: &PgPool,
-    input: ApiRequestLogInsert<'_>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"
-        INSERT INTO api_request_logs (
-          workspace_id,
-          api_key_id,
-          actor_principal_id,
-          request_id,
-          method,
-          path,
-          status_code,
-          error_code,
-          scopes_used,
-          ip,
-          user_agent
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::inet, $11)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.api_key_id)
-    .bind(input.actor_principal_id)
-    .bind(input.request_id)
-    .bind(input.method)
-    .bind(input.path)
-    .bind(input.status_code)
-    .bind(input.error_code)
-    .bind(input.scopes_used)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .execute(db)
-    .await?;
-    Ok(())
-}
-
-pub async fn insert_audit_event_tx(
-    tx: &mut Transaction<'_, Postgres>,
-    input: AuditEventInsert<'_>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
-        "#,
-    )
-    .bind(input.workspace_id)
-    .bind(input.actor_user_id)
-    .bind(input.actor_principal_id)
-    .bind(input.action)
-    .bind(input.target_type)
-    .bind(input.target_id)
-    .bind(input.ip)
-    .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(&mut **tx)
-    .await?;
-    Ok(())
 }
 
 fn api_key_view(row: sqlx::postgres::PgRow) -> ApiKeyView {

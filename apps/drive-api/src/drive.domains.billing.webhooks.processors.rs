@@ -234,33 +234,19 @@ async fn insert_billing_audit(
     action: &str,
     object: &Value,
 ) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_user_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
-        "#,
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
+            workspace_id,
+            actor_user_id: None,
+            actor_principal_id: None,
+            action,
+            target_type: "billing",
+            target_id: Some(workspace_id),
+            ip: None,
+            user_agent: None,
+            metadata: object.clone(),
+        },
     )
-    .bind(workspace_id)
-    .bind(None::<Uuid>)
-    .bind(None::<Uuid>)
-    .bind(action)
-    .bind("billing")
-    .bind(workspace_id)
-    .bind(None::<&str>)
-    .bind(None::<&str>)
-    .bind(sqlx::types::Json(object.clone()))
-    .execute(tx.as_mut())
-    .await?;
-
-    Ok(())
+    .await
 }

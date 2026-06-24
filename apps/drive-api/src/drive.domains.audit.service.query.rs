@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use crate::{
@@ -44,6 +44,10 @@ pub async fn export_events(
             action: None,
             actor_user_id: None,
             actor_principal_id: None,
+            geo_network_kind: None,
+            min_geo_risk_score: None,
+            geo_risk_label: None,
+            network_block_reason: None,
         },
         EXPORT_LIMIT,
     )
@@ -58,6 +62,26 @@ pub async fn export_events(
 }
 
 pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<(), AppError> {
+    let mut tx = db.begin().await?;
+    record_event_tx(&mut tx, input).await?;
+    tx.commit().await?;
+
+    Ok(())
+}
+
+pub async fn record_event_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    input: AuditRecordInput<'_>,
+) -> Result<(), AppError> {
+    let metadata = crate::domains::audit::geo::enrich_audit_metadata_tx(
+        tx,
+        input.workspace_id,
+        input.ip,
+        input.action,
+        input.metadata,
+    )
+    .await?;
+
     sqlx::query(
         r#"
         INSERT INTO audit_events (
@@ -71,7 +95,7 @@ pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<()
           user_agent,
           metadata
         )
-        VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, $9)
         "#,
     )
     .bind(input.workspace_id)
@@ -82,8 +106,8 @@ pub async fn record_event(db: &PgPool, input: AuditRecordInput<'_>) -> Result<()
     .bind(input.target_id)
     .bind(input.ip)
     .bind(input.user_agent)
-    .bind(sqlx::types::Json(input.metadata))
-    .execute(db)
+    .bind(sqlx::types::Json(metadata))
+    .execute(&mut **tx)
     .await?;
 
     Ok(())
@@ -120,6 +144,11 @@ async fn fetch_events(
           ae.target_id,
           ae.ip::text AS ip,
           ae.user_agent,
+          ae.metadata #>> '{geo,geo_country_code}' AS geo_country_code,
+          ae.metadata #>> '{geo,geo_network_kind}' AS geo_network_kind,
+          NULLIF(ae.metadata #>> '{geo,geo_risk_score}', '')::bigint AS geo_risk_score,
+          COALESCE(ae.metadata #> '{geo,geo_risk_labels}', '[]'::jsonb) AS geo_risk_labels,
+          ae.metadata->>'network_block_reason' AS network_block_reason,
           ae.metadata,
           ae.previous_event_hash,
           ae.event_hash,
@@ -131,8 +160,18 @@ async fn fetch_events(
           AND ($3::text IS NULL OR ae.action = $3)
           AND ($4::uuid IS NULL OR ae.actor_user_id = $4)
           AND ($5::uuid IS NULL OR ae.actor_principal_id = $5)
+          AND ($6::text IS NULL OR ae.metadata #>> '{geo,geo_network_kind}' = $6)
+          AND ($7::bigint IS NULL OR COALESCE(NULLIF(ae.metadata #>> '{geo,geo_risk_score}', '')::bigint, 0) >= $7)
+          AND (
+            $8::text IS NULL OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(COALESCE(ae.metadata #> '{geo,geo_risk_labels}', '[]'::jsonb)) AS label(value)
+              WHERE lower(label.value) = $8
+            )
+          )
+          AND ($9::text IS NULL OR ae.metadata->>'network_block_reason' = $9)
         ORDER BY ae.created_at DESC, ae.id DESC
-        LIMIT $6
+        LIMIT $10
         "#,
     )
     .bind(workspace_id)
@@ -140,6 +179,15 @@ async fn fetch_events(
     .bind(normalize_optional_text(input.action))
     .bind(input.actor_user_id)
     .bind(input.actor_principal_id)
+    .bind(normalize_optional_text(input.geo_network_kind))
+    .bind(input.min_geo_risk_score)
+    .bind(
+        input
+            .geo_risk_label
+            .and_then(|label| normalize_optional_text(Some(label)))
+            .map(|label| label.to_ascii_lowercase()),
+    )
+    .bind(normalize_optional_text(input.network_block_reason))
     .bind(limit)
     .fetch_all(db)
     .await?;
@@ -147,6 +195,7 @@ async fn fetch_events(
     rows.into_iter()
         .map(|row| {
             let metadata: sqlx::types::Json<serde_json::Value> = row.get("metadata");
+            let geo_risk_labels: sqlx::types::Json<serde_json::Value> = row.get("geo_risk_labels");
             Ok(AuditEventView {
                 id: row.get("id"),
                 workspace_id: row.get("workspace_id"),
@@ -158,6 +207,20 @@ async fn fetch_events(
                 target_id: row.get("target_id"),
                 ip: row.get("ip"),
                 user_agent: row.get("user_agent"),
+                geo_country_code: row.get("geo_country_code"),
+                geo_network_kind: row.get("geo_network_kind"),
+                geo_risk_score: row.get("geo_risk_score"),
+                geo_risk_labels: geo_risk_labels
+                    .0
+                    .as_array()
+                    .map(|labels| {
+                        labels
+                            .iter()
+                            .filter_map(|label| label.as_str().map(ToOwned::to_owned))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                network_block_reason: row.get("network_block_reason"),
                 metadata: metadata.0,
                 previous_event_hash: row.get("previous_event_hash"),
                 event_hash: row.get("event_hash"),

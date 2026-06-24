@@ -1,3 +1,5 @@
+#[path = "identity.domains.auth.sessions.create.geo.rs"]
+mod geo_impl;
 #[path = "identity.domains.auth.sessions.create.login.rs"]
 mod login_impl;
 #[path = "identity.domains.auth.sessions.create.session.rs"]

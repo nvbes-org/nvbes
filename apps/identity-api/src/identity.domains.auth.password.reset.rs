@@ -7,15 +7,19 @@ use super::hash_password;
 use super::history;
 use super::token_hash;
 use super::validate_password;
-use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
+use crate::domains::auth::risk::{self, RiskEventInput};
 use crate::domains::auth::types::{ResetPasswordInput, ResetPasswordResult};
 use crate::http::error::AppError;
+
+use super::geo_impl::{geo_metadata, password_geo_signal};
 
 pub async fn reset(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     input: ResetPasswordInput,
+    ip: Option<String>,
+    user_agent: Option<String>,
 ) -> Result<ResetPasswordResult, AppError> {
     validate_password(&input.new_password)?;
 
@@ -64,6 +68,16 @@ pub async fn reset(
     history::insert_password_hash(db, principal_id, &new_hash).await?;
     history::prune_history(db, principal_id, config.auth_password_history_size).await?;
 
+    let (risk_score, risk_factors, geo_decision, geo_resolution) = password_geo_signal(
+        db,
+        config,
+        principal_id,
+        ip.as_deref(),
+        10.0,
+        serde_json::json!({ "action": "password_reset" }),
+        "password_reset_completed",
+    )
+    .await;
     let _ = risk::record_event(
         db,
         RiskEventInput {
@@ -71,12 +85,14 @@ pub async fn reset(
             session_id: None,
             device_id: None,
             event_type: "password_reset_completed".to_string(),
-            ip_address: None,
-            user_agent: None,
-            risk_score: 10.0,
-            risk_factors: serde_json::json!({ "action": "password_reset" }),
-            decision: RiskDecision::Allow,
-            metadata: serde_json::json!({}),
+            ip_address: ip.clone(),
+            user_agent: user_agent.clone(),
+            risk_score,
+            risk_factors,
+            decision: geo_decision,
+            metadata: serde_json::json!({
+                "geo": geo_metadata(geo_resolution.as_ref()),
+            }),
         },
     )
     .await;

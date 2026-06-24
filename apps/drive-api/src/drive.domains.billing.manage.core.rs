@@ -1,6 +1,6 @@
 use nvbes_billing::{
-    billing_account_view, build_invoice_estimate, current_billing_period, entitlements_view,
-    plan_view, subscription_view,
+    billing_account_view, build_invoice_estimate_with_price, current_billing_period,
+    entitlements_view, plan_view_with_price, subscription_view,
 };
 use sqlx::PgPool;
 
@@ -16,12 +16,18 @@ pub async fn get_billing(
 ) -> Result<BillingOverviewResponse, AppError> {
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
     let record = fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
-    let estimate = build_invoice_estimate(&record);
+    let price_mapping = nvbes_billing::db::fetch_active_price_mapping_tx(
+        &mut tx,
+        record.plan_id,
+        record.country.as_deref(),
+    )
+    .await?;
+    let estimate = build_invoice_estimate_with_price(&record, price_mapping.as_ref());
     tx.commit().await?;
 
     Ok(BillingOverviewResponse {
         workspace_id: access.workspace_id,
-        plan: plan_view(&record),
+        plan: plan_view_with_price(&record, price_mapping.as_ref()),
         subscription: subscription_view(&record),
         billing_account: billing_account_view(&record),
         entitlements: entitlements_view(&record),
@@ -81,9 +87,15 @@ pub async fn get_invoice_estimate(
 ) -> Result<InvoiceEstimateResponse, AppError> {
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
     let record = fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
+    let price_mapping = nvbes_billing::db::fetch_active_price_mapping_tx(
+        &mut tx,
+        record.plan_id,
+        record.country.as_deref(),
+    )
+    .await?;
     tx.commit().await?;
 
-    let estimate = build_invoice_estimate(&record);
+    let estimate = build_invoice_estimate_with_price(&record, price_mapping.as_ref());
     persist_invoice_estimate(db, &estimate).await?;
 
     Ok(InvoiceEstimateResponse { estimate })

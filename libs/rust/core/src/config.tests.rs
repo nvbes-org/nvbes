@@ -1,9 +1,9 @@
 use super::AppConfig;
 use super::env::env_or_default;
 use super::validation::{
-    validate_grafana_export_path, validate_jwt_secret, validate_observability_internal_token,
-    validate_positive_integer, validate_product_analytics, validate_profiling,
-    validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
+    validate_grafana_export_path, validate_ip_intelligence, validate_jwt_secret,
+    validate_observability_internal_token, validate_positive_integer, validate_product_analytics,
+    validate_profiling, validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
     validate_webauthn_rp_id,
 };
 
@@ -210,4 +210,29 @@ fn validate_request_e2ee_requires_strong_secret() {
         validate_request_e2ee(&config, false).expect_err("short E2EE secret must be rejected");
 
     assert!(error.contains("32"));
+}
+
+#[test]
+fn validate_ip_intelligence_rejects_bad_provider_specs() {
+    let missing_placeholder = AppConfig {
+        ip_intelligence_provider_specs: vec![
+            "ipinfo|https://example.test/no-placeholder".to_string(),
+        ],
+        ip_intelligence_timeout_secs: 2,
+        ip_intelligence_cache_ttl_hours: 24,
+        ..AppConfig::default()
+    };
+    let error = validate_ip_intelligence(&missing_placeholder, false)
+        .expect_err("provider URL must include ip placeholder");
+    assert!(error.contains("{ip}"));
+
+    let insecure = AppConfig {
+        ip_intelligence_provider_specs: vec!["ipinfo|http://example.test/{ip}".to_string()],
+        ip_intelligence_timeout_secs: 2,
+        ip_intelligence_cache_ttl_hours: 24,
+        ..AppConfig::default()
+    };
+    let error =
+        validate_ip_intelligence(&insecure, true).expect_err("strict mode must require HTTPS");
+    assert!(error.contains("HTTPS"));
 }

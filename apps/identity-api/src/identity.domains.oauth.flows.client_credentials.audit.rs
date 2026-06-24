@@ -21,9 +21,9 @@ pub(super) async fn record_machine_token_issued(
 ) -> Result<(), AppError> {
     let mut tx = db.begin().await?;
     mark_client_used(&mut tx, input.client_uuid).await?;
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        nvbes_audit::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: input.tenant_id,
             workspace_id: Some(input.workspace_id),
             actor_principal_id: Some(input.service_account_principal_id),
@@ -40,8 +40,7 @@ pub(super) async fn record_machine_token_issued(
             ),
         },
     )
-    .await
-    .map_err(|error| AppError::internal("machine_token_audit_failed", error.to_string()))?;
+    .await?;
     tx.commit().await?;
     Ok(())
 }

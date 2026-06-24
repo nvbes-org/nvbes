@@ -28,8 +28,9 @@ pub async fn fetch_plan_by_code_tx(
 pub async fn fetch_active_price_mapping_tx(
     tx: &mut Transaction<'_, Postgres>,
     plan_id: Uuid,
+    country_code: Option<&str>,
 ) -> Result<StripePriceMapping, AppError> {
-    let record = nvbes_billing::db::fetch_active_price_mapping_tx(tx, plan_id)
+    let record = nvbes_billing::db::fetch_active_price_mapping_tx(tx, plan_id, country_code)
         .await?
         .ok_or_else(|| {
             AppError::conflict(

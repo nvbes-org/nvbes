@@ -109,6 +109,7 @@ pub struct DeniedLogInput<'a> {
     pub actor_principal_id: Option<Uuid>,
     pub request_id: &'a str,
     pub error_code: &'a str,
+    pub network_block_reason: Option<&'a str>,
     pub ip: Option<&'a str>,
     pub user_agent: Option<&'a str>,
     pub scopes_used: &'a [&'a str],
@@ -126,16 +127,4 @@ pub struct ApiRequestLogInsert<'a> {
     pub scopes_used: &'a [&'a str],
     pub ip: Option<&'a str>,
     pub user_agent: Option<&'a str>,
-}
-
-pub struct AuditEventInsert<'a> {
-    pub workspace_id: Uuid,
-    pub actor_user_id: Option<Uuid>,
-    pub actor_principal_id: Option<Uuid>,
-    pub action: &'a str,
-    pub target_type: &'a str,
-    pub target_id: Option<Uuid>,
-    pub ip: Option<&'a str>,
-    pub user_agent: Option<&'a str>,
-    pub metadata: serde_json::Value,
 }

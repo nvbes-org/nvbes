@@ -1,6 +1,8 @@
 use crate::app::AppState;
 use axum::Router;
 
+#[path = "identity.domains.audit.rs"]
+pub mod audit;
 #[path = "identity.domains.auth.mod.rs"]
 pub mod auth;
 #[path = "identity.domains.authz.mod.rs"]

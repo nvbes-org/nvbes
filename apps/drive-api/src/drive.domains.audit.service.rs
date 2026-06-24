@@ -6,6 +6,9 @@ use uuid::Uuid;
 
 #[path = "drive.domains.audit.service.csv.rs"]
 mod csv;
+#[cfg(test)]
+#[path = "drive.domains.audit.service.db_tests.rs"]
+mod db_tests;
 #[path = "drive.domains.audit.service.query.rs"]
 mod query;
 #[cfg(test)]
@@ -13,7 +16,7 @@ mod query;
 mod tests;
 
 pub use csv::events_to_csv;
-pub use query::{export_events, list_events, record_event};
+pub use query::{export_events, list_events, record_event, record_event_tx};
 
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;
@@ -26,6 +29,10 @@ pub struct ListAuditEventsInput {
     pub action: Option<String>,
     pub actor_user_id: Option<Uuid>,
     pub actor_principal_id: Option<Uuid>,
+    pub geo_network_kind: Option<String>,
+    pub min_geo_risk_score: Option<i64>,
+    pub geo_risk_label: Option<String>,
+    pub network_block_reason: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -55,6 +62,11 @@ pub struct AuditEventView {
     pub target_id: Option<Uuid>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
+    pub geo_country_code: Option<String>,
+    pub geo_network_kind: Option<String>,
+    pub geo_risk_score: Option<i64>,
+    pub geo_risk_labels: Vec<String>,
+    pub network_block_reason: Option<String>,
     pub metadata: Value,
     pub previous_event_hash: Option<String>,
     pub event_hash: String,

@@ -1,5 +1,4 @@
 use chrono::{Duration, Utc};
-use nvbes_audit::AuditEventInput;
 use serde_json::Value;
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
@@ -131,9 +130,9 @@ pub async fn insert_workspace_audit(
     target_id: Option<Uuid>,
     metadata: Value,
 ) -> Result<(), AppError> {
-    nvbes_audit::insert_audit_event_tx(
-        &mut **tx,
-        AuditEventInput {
+    crate::domains::audit::record_event_tx(
+        tx,
+        crate::domains::audit::AuditRecordInput {
             tenant_id,
             workspace_id,
             actor_principal_id: Some(actor_id),
@@ -145,6 +144,5 @@ pub async fn insert_workspace_audit(
             metadata,
         },
     )
-    .await?;
-    Ok(())
+    .await
 }

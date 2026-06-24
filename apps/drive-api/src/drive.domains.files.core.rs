@@ -56,9 +56,9 @@ pub async fn create_folder(
     )
     .await?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),
@@ -113,9 +113,9 @@ pub async fn rename_object(
 
     let updated = db::update_object_name_tx(&mut tx, access.workspace_id, object_id, &name).await?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),
@@ -204,9 +204,9 @@ pub async fn move_object(
     )
     .await?;
 
-    queries::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         &mut tx,
-        queries::AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             workspace_id: access.workspace_id,
             actor_user_id: access.auth.audit_actor_user_id(),
             actor_principal_id: Some(access.auth.principal_id),

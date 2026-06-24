@@ -6,6 +6,9 @@ mod db;
 mod domains;
 #[path = "drive.http.mod.rs"]
 mod http;
+#[cfg(test)]
+#[path = "drive.test_support.db.rs"]
+mod test_support;
 
 use std::net::SocketAddr;
 use std::time::Duration;

@@ -1,6 +1,7 @@
 use super::AppConfig;
 use super::billing::billing_provider_env;
 use super::env::{env_bool, env_or_default, optional_env, parse_csv};
+use super::geo::ip_intelligence_env;
 use super::validation::validate_config_urls_and_secrets;
 
 impl AppConfig {
@@ -19,6 +20,7 @@ impl AppConfig {
             .unwrap_or(4000);
 
         let billing_provider_env = billing_provider_env()?;
+        let ip_intelligence_env = ip_intelligence_env();
 
         let config = Self {
             app_name: env_or_default(
@@ -258,6 +260,9 @@ impl AppConfig {
             trusted_proxy_cidrs: optional_env("NVBES_TRUSTED_PROXY_CIDRS")
                 .map(|value| parse_csv(&value))
                 .unwrap_or_default(),
+            ip_intelligence_provider_specs: ip_intelligence_env.provider_specs,
+            ip_intelligence_timeout_secs: ip_intelligence_env.timeout_secs,
+            ip_intelligence_cache_ttl_hours: ip_intelligence_env.cache_ttl_hours,
             mtls_enabled: env_bool("NVBES_MTLS_ENABLED", false),
             mtls_port: std::env::var("NVBES_MTLS_PORT")
                 .ok()

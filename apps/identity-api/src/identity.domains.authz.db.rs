@@ -150,34 +150,31 @@ pub async fn record_permission_denied(
     resource: ResourceContext,
     headers: &HeaderMap,
 ) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO audit_events (
-          workspace_id,
-          actor_principal_id,
-          action,
-          target_type,
-          target_id,
-          ip,
-          user_agent,
-          metadata
-        )
-        VALUES ($1, $2, 'permission.denied', 'workspace', $3, $4::inet, $5, $6)
-        "#,
+    let mut tx = db.begin().await?;
+    let tenant_id = if let Some(tenant_id) = access.tenant_id {
+        tenant_id
+    } else {
+        sqlx::query_scalar::<_, Uuid>("SELECT tenant_id FROM workspaces WHERE id = $1")
+            .bind(access.workspace_id)
+            .fetch_one(&mut *tx)
+            .await?
+    };
+    crate::domains::audit::record_event_tx(
+        &mut tx,
+        crate::domains::audit::AuditRecordInput {
+            tenant_id,
+            workspace_id: Some(access.workspace_id),
+            actor_principal_id: Some(access.auth.user_id),
+            action: "permission.denied",
+            target_type: "workspace",
+            target_id: Some(access.workspace_id),
+            ip: client_ip(headers).as_deref(),
+            user_agent: user_agent(headers).as_deref(),
+            metadata: permission_denied_metadata(access.role, action, resource),
+        },
     )
-    .bind(access.workspace_id)
-    .bind(access.auth.user_id)
-    .bind(access.workspace_id)
-    .bind(client_ip(headers).as_deref())
-    .bind(user_agent(headers).as_deref())
-    .bind(sqlx::types::Json(permission_denied_metadata(
-        access.role,
-        action,
-        resource,
-    )))
-    .execute(db)
     .await?;
-
+    tx.commit().await?;
     Ok(())
 }
 

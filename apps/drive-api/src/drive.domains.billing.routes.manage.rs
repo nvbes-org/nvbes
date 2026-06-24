@@ -15,7 +15,7 @@ use crate::{
     domains::authz::{ResourceContext, WorkspaceAction, authorize_workspace_action},
     http::{
         error::AppError,
-        request::{client_ip, user_agent},
+        request::{client_ip, country_header, user_agent},
     },
 };
 
@@ -111,6 +111,11 @@ async fn create_checkout_session(
         &access,
         request,
         client_ip(&headers),
+        country_header(
+            &headers,
+            &["CF-IPCountry", "X-Vercel-IP-Country", "X-AppEngine-Country"],
+        )
+        .map(ToOwned::to_owned),
         user_agent(&headers),
     )
     .await;

@@ -1,4 +1,3 @@
-use nvbes_audit::AuditEventInput;
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
@@ -16,9 +15,9 @@ pub async fn record_audit_event(
     ip: Option<&str>,
     user_agent: Option<&str>,
 ) -> Result<(), AppError> {
-    nvbes_audit::insert_audit_event_tx(
+    crate::domains::audit::record_event_tx(
         tx,
-        AuditEventInput {
+        crate::domains::audit::AuditRecordInput {
             tenant_id: required_tenant_id(access)?,
             workspace_id: Some(access.workspace_id),
             actor_principal_id: Some(access.auth.user_id),
@@ -31,5 +30,4 @@ pub async fn record_audit_event(
         },
     )
     .await
-    .map_err(|error| AppError::internal("audit_insert_failed", format!("{error}")))
 }

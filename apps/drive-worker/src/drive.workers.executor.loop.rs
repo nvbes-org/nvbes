@@ -8,12 +8,13 @@ use nvbes_observability::{
     worker_monitor_slug,
 };
 
-const WORKER_QUEUES: [&str; 9] = [
+const WORKER_QUEUES: [&str; 10] = [
     super::super::maintenance::JOB_UPLOADS_PURGE_EXPIRED,
     super::super::maintenance::JOB_QUOTAS_RECALCULATE,
     super::super::maintenance::JOB_TRASH_PURGE,
     super::super::maintenance::JOB_STORAGE_PURGE_DELETED,
     super::super::maintenance::JOB_STORAGE_PURGE_QUARANTINED,
+    super::super::maintenance::JOB_GEO_LOOKUP_MAINTENANCE,
     super::super::privacy::delete::JOB_PRIVACY_ACCOUNT_DELETE,
     super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE,
     super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT,
