@@ -1,22 +1,26 @@
-use axum::{
-    Router,
-    body::{self, Body},
-    http::{Request, StatusCode},
-};
+use axum::{Router, body, http::StatusCode};
 use serde_json::json;
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::time::Duration;
 use tower::ServiceExt;
 use uuid::Uuid;
 
+use crate::region_center_actions_test_support::{
+    flag_request, flag_request_with_key, flag_request_without_second_approver,
+    idempotency_schema_exists, region_action_count, region_actions_schema_exists,
+    region_audit_count, seed_workspace_with_actor, test_pool,
+};
+
 #[tokio::test]
-async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
+async fn flag_residency_route_enforces_grant_confirmation_dual_control_and_audits_success() {
     let Some(pool) = test_pool().await else {
         eprintln!("skipping test: Postgres is not reachable");
         return;
     };
     if !region_actions_schema_exists(&pool).await {
         eprintln!("skipping test: region action schema is missing");
+        return;
+    }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
         return;
     }
 
@@ -72,6 +76,48 @@ async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
+    let generic_confirmation = app
+        .clone()
+        .oneshot(flag_request(
+            workspace_id,
+            actor_id,
+            "compliance_admin",
+            "FLAG RESIDENCY",
+            "ticket REG-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let missing_dual_control = app
+        .clone()
+        .oneshot(flag_request_without_second_approver(
+            workspace_id,
+            actor_id,
+            "compliance_admin",
+            &strong_code,
+            "ticket REG-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(missing_dual_control.status(), StatusCode::BAD_REQUEST);
+
+    let missing_grant = app
+        .clone()
+        .oneshot(flag_request(
+            workspace_id,
+            actor_id,
+            "compliance_admin",
+            &strong_code,
+            "ticket REG-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(missing_grant.status(), StatusCode::FORBIDDEN);
+
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "compliance_admin")
+        .await;
+
     let accepted = app
         .oneshot(flag_request(
             workspace_id,
@@ -97,32 +143,11 @@ async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
             .await
             .expect("workspace region should load");
     assert_eq!(region, "us");
-
-    let action_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM internal_admin_region_actions
-         WHERE tenant_id = $1 AND actor_principal_id = $2
-           AND action_kind = 'flag_residency' AND target_workspace_id = $3",
-    )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .bind(workspace_id)
-    .fetch_one(&pool)
-    .await
-    .expect("action count should load");
-    assert_eq!(action_count, 1);
-
-    let audit_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM audit_events
-         WHERE tenant_id = $1 AND actor_principal_id = $2
-           AND action = 'region.residency.flagged'
-           AND target_type = 'workspace'",
-    )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .fetch_one(&pool)
-    .await
-    .expect("audit count should load");
-    assert_eq!(audit_count, 1);
+    assert_eq!(
+        region_action_count(&pool, tenant_id, actor_id, workspace_id).await,
+        1
+    );
+    assert_eq!(region_audit_count(&pool, tenant_id, actor_id).await, 1);
 
     let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
         "SELECT metadata FROM audit_events
@@ -150,101 +175,86 @@ async fn flag_residency_route_enforces_role_confirmation_and_audits_success() {
     );
 }
 
-async fn test_pool() -> Option<PgPool> {
-    let database_url = std::env::var("DATABASE_URL")
-        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-    tokio::time::timeout(
-        Duration::from_secs(2),
-        PgPoolOptions::new()
-            .max_connections(1)
-            .connect(&database_url),
-    )
-    .await
-    .ok()
-    .and_then(Result::ok)
-}
+#[tokio::test]
+async fn flag_residency_reuses_stored_idempotent_response() {
+    let Some(pool) = test_pool().await else {
+        eprintln!("skipping test: Postgres is not reachable");
+        return;
+    };
+    if !region_actions_schema_exists(&pool).await {
+        eprintln!("skipping test: region action schema is missing");
+        return;
+    }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
+        return;
+    }
+    if !idempotency_schema_exists(&pool).await {
+        eprintln!("skipping test: idempotency response schema is missing");
+        return;
+    }
 
-async fn region_actions_schema_exists(pool: &PgPool) -> bool {
-    sqlx::query_scalar::<_, bool>(
-        "SELECT to_regclass('public.tenants') IS NOT NULL
-          AND to_regclass('public.workspaces') IS NOT NULL
-          AND to_regclass('public.principals') IS NOT NULL
-          AND to_regclass('public.audit_events') IS NOT NULL
-          AND to_regclass('public.internal_admin_region_actions') IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'workspaces'
-              AND column_name = 'data_region'
-          )",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap_or(false)
-}
+    let actor_id = Uuid::new_v4();
+    let (tenant_id, workspace_id) = seed_workspace_with_actor(&pool, actor_id).await;
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "compliance_admin")
+        .await;
 
-async fn seed_workspace_with_actor(pool: &PgPool, actor_id: Uuid) -> (Uuid, Uuid) {
-    let tenant_id = Uuid::new_v4();
-    let workspace_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO tenants (id, kind, name, slug, status, security_tier)
-         VALUES ($1, 'enterprise', 'Region Tenant', $2, 'active', 'standard')",
-    )
-    .bind(tenant_id)
-    .bind(format!("region-tenant-{}", Uuid::new_v4()))
-    .execute(pool)
-    .await
-    .expect("tenant should insert");
-
-    sqlx::query(
-        "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
-         VALUES ($1, $2, 'human', 'active', 'Backoffice Actor')",
-    )
-    .bind(actor_id)
-    .bind(tenant_id)
-    .execute(pool)
-    .await
-    .expect("actor should insert");
-
-    sqlx::query(
-        "INSERT INTO workspaces (
-           id, tenant_id, name, slug, workspace_type, plan_code, data_region, jurisdiction
-         ) VALUES ($1, $2, 'Region Workspace', $3, 'team', 'enterprise', 'eu', 'gdpr')",
-    )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(format!("region-workspace-{}", Uuid::new_v4()))
-    .execute(pool)
-    .await
-    .expect("workspace should insert");
-
-    (tenant_id, workspace_id)
-}
-
-fn flag_request(
-    workspace_id: Uuid,
-    actor_id: Uuid,
-    role: &str,
-    confirm_code: &str,
-    reason: &str,
-) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!(
-            "/workspaces/{workspace_id}/admin/region/workspaces/{workspace_id}/residency-flag"
+    let state = crate::app::AppState::new(nvbes_core::config::AppConfig::default(), pool.clone());
+    let app = Router::new()
+        .merge(crate::region_center_actions::router())
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::idempotency::idempotency_guard,
         ))
-        .header("content-type", "application/json")
-        .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
-        .header("x-nvbes-actor-principal-id", actor_id.to_string())
-        .header("x-nvbes-backoffice-role", role)
-        .body(Body::from(
-            json!({
-                "confirm_code": confirm_code,
-                "data_region": "us",
-                "jurisdiction": "ccpa",
-                "reason": reason
-            })
-            .to_string(),
+        .with_state(state);
+    let confirm_code =
+        crate::backoffice_authorization::strong_confirmation_code("FLAG RESIDENCY", workspace_id);
+    let idempotency_key = format!("test-{}", Uuid::new_v4());
+
+    let first = app
+        .clone()
+        .oneshot(flag_request_with_key(
+            workspace_id,
+            actor_id,
+            "compliance_admin",
+            &confirm_code,
+            "ticket REG-123 approved",
+            &idempotency_key,
         ))
-        .expect("request should build")
+        .await
+        .expect("route should respond");
+    assert_eq!(first.status(), StatusCode::OK);
+
+    let second = app
+        .oneshot(flag_request_with_key(
+            workspace_id,
+            actor_id,
+            "compliance_admin",
+            &confirm_code,
+            "ticket REG-123 approved",
+            &idempotency_key,
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(second.status(), StatusCode::OK);
+    assert_eq!(
+        second
+            .headers()
+            .get("idempotency-replayed")
+            .and_then(|value| value.to_str().ok()),
+        Some("true")
+    );
+
+    let region =
+        sqlx::query_scalar::<_, String>("SELECT data_region::text FROM workspaces WHERE id = $1")
+            .bind(workspace_id)
+            .fetch_one(&pool)
+            .await
+            .expect("workspace region should load");
+    assert_eq!(region, "us");
+    assert_eq!(
+        region_action_count(&pool, tenant_id, actor_id, workspace_id).await,
+        1
+    );
+    assert_eq!(region_audit_count(&pool, tenant_id, actor_id).await, 1);
 }

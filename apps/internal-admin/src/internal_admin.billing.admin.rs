@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
-    require_strong_confirmation_for_value,
+    BackofficePermission, require_idempotency_key, require_operator_role_grant, require_permission,
+    require_strong_confirmation, require_strong_confirmation_for_value,
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
@@ -91,6 +91,7 @@ async fn credit_note_route(
         "CREATE CREDIT NOTE",
         request.invoice_id,
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_credit_note(&state.db, access, request).await?))
 }
@@ -107,6 +108,7 @@ async fn write_off_route(
         "WRITE OFF",
         request.invoice_id,
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_write_off(&state.db, access, request).await?))
 }
@@ -123,6 +125,7 @@ async fn refund_intent_route(
         "CREATE REFUND",
         request.payment_id,
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_refund_intent(&state.db, access, request).await?,
@@ -141,6 +144,7 @@ async fn replay_provider_event_route(
         "REPLAY EVENT",
         &request.provider_event_id,
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_provider_event(&state.db, access, request).await?,
@@ -159,6 +163,7 @@ async fn provider_migration_route(
         "PLAN MIGRATION",
         &provider_migration_target(&request),
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_provider_migration(&state.db, access, request).await?,
@@ -185,6 +190,7 @@ async fn grace_override_route(
             workspace_id,
         )?,
     }
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         override_grace_period(&state.db, access, workspace_id, request).await?,
@@ -203,6 +209,7 @@ async fn manual_comp_route(
         "CREATE COMPENSATION",
         workspace_id,
     )?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_manual_compensation(&state.db, access, request).await?,
@@ -272,290 +279,4 @@ fn provider_migration_target(request: &ProviderMigrationRequest) -> String {
         request.from_provider.trim(),
         request.to_provider.trim()
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        Router,
-        body::{self, Body},
-        http::{Request, StatusCode},
-    };
-    use serde_json::json;
-    use sqlx::{PgPool, Row, postgres::PgPoolOptions};
-    use std::time::Duration;
-    use tower::ServiceExt;
-
-    #[tokio::test]
-    async fn replay_provider_event_route_enforces_role_confirmation_and_audits_success() {
-        let Some(pool) = test_pool().await else {
-            eprintln!("skipping test: Postgres is not reachable");
-            return;
-        };
-        if !billing_replay_schema_exists(&pool).await {
-            eprintln!("skipping test: billing replay schema is missing");
-            return;
-        }
-
-        let actor_id = Uuid::new_v4();
-        let approver_id = Uuid::new_v4();
-        let provider_event_id = format!("evt_{}", Uuid::new_v4());
-        let strong_code = crate::backoffice_authorization::strong_confirmation_code_for_value(
-            "REPLAY EVENT",
-            &provider_event_id,
-        );
-        let (tenant_id, workspace_id, event_id) =
-            seed_workspace_actor_and_provider_event(&pool, actor_id, &provider_event_id).await;
-        let app = Router::new()
-            .merge(router())
-            .with_state(crate::app::AppState::new(
-                nvbes_core::config::AppConfig::default(),
-                pool.clone(),
-            ));
-
-        let denied = app
-            .clone()
-            .oneshot(replay_request(
-                workspace_id,
-                actor_id,
-                Some(approver_id),
-                "viewer",
-                &strong_code,
-                &provider_event_id,
-                "ticket BILL-456 approved",
-            ))
-            .await
-            .expect("route should respond");
-        assert_eq!(denied.status(), StatusCode::FORBIDDEN);
-
-        let wrong_confirmation = app
-            .clone()
-            .oneshot(replay_request(
-                workspace_id,
-                actor_id,
-                Some(approver_id),
-                "finance_admin",
-                "REPLAY",
-                &provider_event_id,
-                "ticket BILL-456 approved",
-            ))
-            .await
-            .expect("route should respond");
-        assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
-
-        let missing_dual_control = app
-            .clone()
-            .oneshot(replay_request(
-                workspace_id,
-                actor_id,
-                None,
-                "finance_admin",
-                &strong_code,
-                &provider_event_id,
-                "ticket BILL-456 approved",
-            ))
-            .await
-            .expect("route should respond");
-        assert_eq!(missing_dual_control.status(), StatusCode::BAD_REQUEST);
-
-        let accepted = app
-            .oneshot(replay_request(
-                workspace_id,
-                actor_id,
-                Some(approver_id),
-                "finance_admin",
-                &strong_code,
-                &provider_event_id,
-                "ticket BILL-456 approved",
-            ))
-            .await
-            .expect("route should respond");
-        assert_eq!(accepted.status(), StatusCode::OK);
-        let body = body::to_bytes(accepted.into_body(), usize::MAX)
-            .await
-            .expect("body should be readable");
-        let payload: serde_json::Value =
-            serde_json::from_slice(&body).expect("body should be json");
-        assert_eq!(payload["object_id"], json!(event_id.to_string()));
-        assert_eq!(payload["status"], json!("replayed"));
-
-        let status = sqlx::query_scalar::<_, String>(
-            "SELECT status::text FROM billing_provider_events WHERE id = $1",
-        )
-        .bind(event_id)
-        .fetch_one(&pool)
-        .await
-        .expect("provider event should exist");
-        assert_eq!(status, "replayed");
-
-        let audit_count = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM audit_events
-             WHERE tenant_id = $1 AND actor_principal_id = $2
-               AND action = 'billing.provider_event.replayed'
-               AND target_type = 'billing_provider_event'
-               AND target_id = $3",
-        )
-        .bind(tenant_id)
-        .bind(actor_id)
-        .bind(event_id)
-        .fetch_one(&pool)
-        .await
-        .expect("audit count should load");
-        assert_eq!(audit_count, 1);
-    }
-
-    async fn test_pool() -> Option<PgPool> {
-        let database_url = std::env::var("DATABASE_URL")
-            .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-        tokio::time::timeout(
-            Duration::from_secs(2),
-            PgPoolOptions::new()
-                .max_connections(1)
-                .connect(&database_url),
-        )
-        .await
-        .ok()
-        .and_then(Result::ok)
-    }
-
-    async fn billing_replay_schema_exists(pool: &PgPool) -> bool {
-        sqlx::query_scalar::<_, bool>(
-            "SELECT to_regclass('public.tenants') IS NOT NULL
-              AND to_regclass('public.principals') IS NOT NULL
-              AND to_regclass('public.workspaces') IS NOT NULL
-              AND to_regclass('public.billing_provider_events') IS NOT NULL
-              AND to_regclass('public.audit_events') IS NOT NULL",
-        )
-        .fetch_one(pool)
-        .await
-        .unwrap_or(false)
-    }
-
-    async fn seed_workspace_actor_and_provider_event(
-        pool: &PgPool,
-        actor_id: Uuid,
-        provider_event_id: &str,
-    ) -> (Uuid, Uuid, Uuid) {
-        let tenant_id = Uuid::new_v4();
-        let workspace_id = Uuid::new_v4();
-        let event_id = Uuid::new_v4();
-        let slug = format!("test-billing-tenant-{}", Uuid::new_v4());
-        sqlx::query(
-            "INSERT INTO tenants (id, kind, name, slug, status, security_tier)
-             VALUES ($1, 'enterprise', 'Test Billing Tenant', $2, 'active', 'standard')",
-        )
-        .bind(tenant_id)
-        .bind(slug)
-        .execute(pool)
-        .await
-        .expect("tenant should insert");
-
-        sqlx::query(
-            "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
-             VALUES ($1, $2, 'human', 'active', 'Backoffice Actor')",
-        )
-        .bind(actor_id)
-        .bind(tenant_id)
-        .execute(pool)
-        .await
-        .expect("actor should insert");
-
-        insert_workspace(pool, workspace_id, tenant_id).await;
-
-        sqlx::query(
-            "INSERT INTO billing_provider_events (
-               id, tenant_id, provider, provider_event_id, event_type, status,
-               signature_valid, payload_hash, payload_summary
-             ) VALUES (
-               $1, $2, 'stripe', $3, 'invoice.payment_failed', 'failed',
-               true, 'hash-test', '{}'::jsonb
-             )",
-        )
-        .bind(event_id)
-        .bind(tenant_id)
-        .bind(provider_event_id)
-        .execute(pool)
-        .await
-        .expect("provider event should insert");
-
-        (tenant_id, workspace_id, event_id)
-    }
-
-    async fn insert_workspace(pool: &PgPool, workspace_id: Uuid, tenant_id: Uuid) {
-        if workspace_status_column_exists(pool).await {
-            sqlx::query(
-                "INSERT INTO workspaces (id, tenant_id, name, workspace_type, plan_code, status)
-                 VALUES ($1, $2, 'Billing Workspace', 'team', 'team', 'active')",
-            )
-            .bind(workspace_id)
-            .bind(tenant_id)
-            .execute(pool)
-            .await
-            .expect("workspace should insert");
-            return;
-        }
-        sqlx::query(
-            "INSERT INTO workspaces (id, tenant_id, name, workspace_type, plan_code)
-             VALUES ($1, $2, 'Billing Workspace', 'team', 'team')",
-        )
-        .bind(workspace_id)
-        .bind(tenant_id)
-        .execute(pool)
-        .await
-        .expect("workspace should insert");
-    }
-
-    async fn workspace_status_column_exists(pool: &PgPool) -> bool {
-        sqlx::query(
-            "SELECT 1 FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'status'",
-        )
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten()
-        .map(|row| row.get::<i32, _>(0) == 1)
-        .unwrap_or(false)
-    }
-
-    fn replay_request(
-        workspace_id: Uuid,
-        actor_id: Uuid,
-        approver_id: Option<Uuid>,
-        role: &str,
-        confirm_code: &str,
-        provider_event_id: &str,
-        reason: &str,
-    ) -> Request<Body> {
-        let mut request = Request::builder()
-            .method("POST")
-            .uri(format!(
-                "/workspaces/{workspace_id}/billing/admin/provider-events/replay"
-            ))
-            .header("content-type", "application/json")
-            .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
-            .header("x-nvbes-actor-principal-id", actor_id.to_string())
-            .header("x-nvbes-backoffice-role", role);
-        if let Some(approver_id) = approver_id {
-            request = request
-                .header(
-                    "x-nvbes-second-approver-principal-id",
-                    approver_id.to_string(),
-                )
-                .header("x-nvbes-second-approver-role", "platform_admin");
-        }
-        request
-            .body(Body::from(
-                json!({
-                    "confirm_code": confirm_code,
-                    "provider": "stripe",
-                    "provider_event_id": provider_event_id,
-                    "reason": reason
-                })
-                .to_string(),
-            ))
-            .expect("request should build")
-    }
 }

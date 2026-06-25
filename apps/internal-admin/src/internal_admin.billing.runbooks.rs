@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_operator_role_grant, require_permission,
     require_strong_confirmation_for_value,
 };
 use crate::backoffice_dual_control::require_dual_control;
@@ -69,6 +69,7 @@ async fn execute_runbook_route(
     Json(request): Json<RunbookExecutionRequest>,
 ) -> Result<Json<RunbookExecutionResult>, AppError> {
     require_runbook_mutation(&headers, &request.confirm_code, &runbook_id)?;
+    require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     let _actor_id = actor_principal_id(&headers)?;
     Ok(Json(

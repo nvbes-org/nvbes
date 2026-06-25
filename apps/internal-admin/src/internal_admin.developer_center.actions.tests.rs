@@ -1,16 +1,16 @@
-use axum::{
-    Router,
-    body::{self, Body},
-    http::{Request, StatusCode},
-};
-use serde_json::json;
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::time::Duration;
+use axum::{Router, http::StatusCode};
 use tower::ServiceExt;
 use uuid::Uuid;
 
+use crate::developer_center_actions_test_support::{
+    assert_developer_audit_metadata, client_is_revoked, developer_action_count,
+    developer_actions_schema_exists, developer_audit_count, idempotency_schema_exists,
+    response_json, revoke_request, revoke_request_with_key, seed_workspace_actor_and_client,
+    test_pool,
+};
+
 #[tokio::test]
-async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
+async fn revoke_client_route_enforces_role_confirmation_grant_and_audits_success() {
     let Some(pool) = test_pool().await else {
         eprintln!("skipping test: Postgres is not reachable");
         return;
@@ -134,183 +134,98 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         .await
         .expect("route should respond");
     assert_eq!(accepted.status(), StatusCode::OK);
-    let body = body::to_bytes(accepted.into_body(), usize::MAX)
-        .await
-        .expect("body should be readable");
-    let payload: serde_json::Value = serde_json::from_slice(&body).expect("body should be json");
-    assert_eq!(payload["action_kind"], json!("revoke_client"));
-    assert_eq!(payload["status"], json!("applied"));
+    let payload = response_json(accepted).await;
+    assert_eq!(payload["action_kind"], "revoke_client");
+    assert_eq!(payload["status"], "applied");
 
-    let revoked = sqlx::query_scalar::<_, bool>(
-        "SELECT revoked_at IS NOT NULL FROM oauth_clients
-         WHERE tenant_id = $1 AND client_id = $2",
-    )
-    .bind(tenant_id)
-    .bind(&client_id)
-    .fetch_one(&pool)
-    .await
-    .expect("client status should load");
-    assert!(revoked);
-
-    let action_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM internal_admin_developer_actions
-         WHERE tenant_id = $1 AND actor_principal_id = $2
-           AND action_kind = 'revoke_client' AND client_id = $3",
-    )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .bind(&client_id)
-    .fetch_one(&pool)
-    .await
-    .expect("action count should load");
-    assert_eq!(action_count, 1);
-
-    let audit_count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM audit_events
-         WHERE tenant_id = $1 AND actor_principal_id = $2
-           AND action = 'developer.client.revoked'
-           AND target_type = 'oauth_client'",
-    )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .fetch_one(&pool)
-    .await
-    .expect("audit count should load");
-    assert_eq!(audit_count, 1);
-
-    let audit_metadata = sqlx::query_scalar::<_, serde_json::Value>(
-        "SELECT metadata FROM audit_events
-         WHERE tenant_id = $1 AND actor_principal_id = $2
-           AND action = 'developer.client.revoked'
-           AND target_type = 'oauth_client'",
-    )
-    .bind(tenant_id)
-    .bind(actor_id)
-    .fetch_one(&pool)
-    .await
-    .expect("audit metadata should load");
-    assert_eq!(audit_metadata["developer_action_id"], payload["object_id"]);
+    assert!(client_is_revoked(&pool, tenant_id, &client_id).await);
     assert_eq!(
-        audit_metadata["changes"][0],
-        json!({
-            "field": "revoked_at",
-            "before": null,
-            "after": "recorded"
-        })
+        developer_action_count(&pool, tenant_id, actor_id, &client_id).await,
+        1
     );
+    assert_developer_audit_metadata(&pool, tenant_id, actor_id, &payload).await;
 }
 
-async fn test_pool() -> Option<PgPool> {
-    let database_url = std::env::var("DATABASE_URL")
-        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-    tokio::time::timeout(
-        Duration::from_secs(2),
-        PgPoolOptions::new()
-            .max_connections(1)
-            .connect(&database_url),
-    )
-    .await
-    .ok()
-    .and_then(Result::ok)
-}
+#[tokio::test]
+async fn revoke_client_reuses_stored_idempotent_response() {
+    let Some(pool) = test_pool().await else {
+        eprintln!("skipping test: Postgres is not reachable");
+        return;
+    };
+    if !developer_actions_schema_exists(&pool).await {
+        eprintln!("skipping test: developer action schema is missing");
+        return;
+    }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
+        return;
+    }
+    if !idempotency_schema_exists(&pool).await {
+        eprintln!("skipping test: idempotency response schema is missing");
+        return;
+    }
 
-async fn developer_actions_schema_exists(pool: &PgPool) -> bool {
-    sqlx::query_scalar::<_, bool>(
-        "SELECT to_regclass('public.tenants') IS NOT NULL
-          AND to_regclass('public.workspaces') IS NOT NULL
-          AND to_regclass('public.principals') IS NOT NULL
-          AND to_regclass('public.oauth_clients') IS NOT NULL
-          AND to_regclass('public.audit_events') IS NOT NULL
-          AND to_regclass('public.internal_admin_developer_actions') IS NOT NULL",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap_or(false)
-}
+    let actor_id = Uuid::new_v4();
+    let client_id = format!("client_{}", Uuid::new_v4());
+    let (tenant_id, workspace_id) =
+        seed_workspace_actor_and_client(&pool, actor_id, &client_id).await;
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "developer_admin")
+        .await;
 
-async fn seed_workspace_actor_and_client(
-    pool: &PgPool,
-    actor_id: Uuid,
-    client_id: &str,
-) -> (Uuid, Uuid) {
-    let tenant_id = Uuid::new_v4();
-    let workspace_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO tenants (id, kind, name, slug, status, security_tier)
-         VALUES ($1, 'enterprise', 'Developer Tenant', $2, 'active', 'standard')",
-    )
-    .bind(tenant_id)
-    .bind(format!("developer-tenant-{}", Uuid::new_v4()))
-    .execute(pool)
-    .await
-    .expect("tenant should insert");
-
-    sqlx::query(
-        "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
-         VALUES ($1, $2, 'human', 'active', 'Backoffice Actor')",
-    )
-    .bind(actor_id)
-    .bind(tenant_id)
-    .execute(pool)
-    .await
-    .expect("actor should insert");
-
-    sqlx::query(
-        "INSERT INTO workspaces (id, tenant_id, name, slug, workspace_type, plan_code)
-         VALUES ($1, $2, 'Developer Workspace', $3, 'team', 'enterprise')",
-    )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(format!("developer-workspace-{}", Uuid::new_v4()))
-    .execute(pool)
-    .await
-    .expect("workspace should insert");
-
-    sqlx::query(
-        "INSERT INTO oauth_clients (
-           tenant_id, client_id, client_secret_hash, name, redirect_uris,
-           owner_scope_type, owner_scope_id, client_type
-         ) VALUES ($1, $2, 'hash', 'Backoffice Test Client', ARRAY['https://example.com/callback'],
-           'tenant', $1, 'confidential')",
-    )
-    .bind(tenant_id)
-    .bind(client_id)
-    .execute(pool)
-    .await
-    .expect("client should insert");
-
-    (tenant_id, workspace_id)
-}
-
-fn revoke_request(
-    workspace_id: Uuid,
-    actor_id: Uuid,
-    role: &str,
-    confirm_code: &str,
-    client_id: &str,
-    reason: &str,
-) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!(
-            "/workspaces/{workspace_id}/admin/developer/clients/{client_id}/revoke"
+    let state = crate::app::AppState::new(nvbes_core::config::AppConfig::default(), pool.clone());
+    let app = Router::new()
+        .merge(crate::developer_center_actions::router())
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::idempotency::idempotency_guard,
         ))
-        .header("content-type", "application/json")
-        .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
-        .header("x-nvbes-actor-principal-id", actor_id.to_string())
-        .header("x-nvbes-backoffice-role", role)
-        .header(
-            "x-nvbes-second-approver-principal-id",
-            Uuid::new_v4().to_string(),
-        )
-        .header("x-nvbes-second-approver-role", "platform_admin")
-        .body(Body::from(
-            json!({
-                "confirm_code": confirm_code,
-                "reason": reason
-            })
-            .to_string(),
+        .with_state(state);
+    let confirm_code = crate::backoffice_authorization::strong_confirmation_code_for_value(
+        "REVOKE CLIENT",
+        &client_id,
+    );
+    let idempotency_key = format!("test-{}", Uuid::new_v4());
+
+    let first = app
+        .clone()
+        .oneshot(revoke_request_with_key(
+            workspace_id,
+            actor_id,
+            "developer_admin",
+            &confirm_code,
+            &client_id,
+            "ticket DEV-123 approved",
+            &idempotency_key,
         ))
-        .expect("request should build")
+        .await
+        .expect("route should respond");
+    assert_eq!(first.status(), StatusCode::OK);
+
+    let second = app
+        .oneshot(revoke_request_with_key(
+            workspace_id,
+            actor_id,
+            "developer_admin",
+            &confirm_code,
+            &client_id,
+            "ticket DEV-123 approved",
+            &idempotency_key,
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(second.status(), StatusCode::OK);
+    assert_eq!(
+        second
+            .headers()
+            .get("idempotency-replayed")
+            .and_then(|value| value.to_str().ok()),
+        Some("true")
+    );
+
+    assert!(client_is_revoked(&pool, tenant_id, &client_id).await);
+    assert_eq!(
+        developer_action_count(&pool, tenant_id, actor_id, &client_id).await,
+        1
+    );
+    assert_eq!(developer_audit_count(&pool, tenant_id, actor_id).await, 1);
 }

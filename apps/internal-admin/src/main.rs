@@ -36,6 +36,12 @@ mod billing_admin_overview;
 mod billing_admin_provider_events;
 #[path = "internal_admin.billing.admin.search.rs"]
 mod billing_admin_search;
+#[cfg(test)]
+#[path = "internal_admin.billing.admin.test_support.rs"]
+mod billing_admin_test_support;
+#[cfg(test)]
+#[path = "internal_admin.billing.admin.tests.rs"]
+mod billing_admin_tests;
 #[path = "internal_admin.billing.admin.types.rs"]
 mod billing_admin_types;
 #[path = "internal_admin.billing.admin.validation.rs"]
@@ -47,6 +53,9 @@ mod billing_platform_center_action_log;
 #[path = "internal_admin.billing_platform_center.actions.rs"]
 mod billing_platform_center_actions;
 #[cfg(test)]
+#[path = "internal_admin.billing_platform_center.actions.test_support.rs"]
+mod billing_platform_center_actions_test_support;
+#[cfg(test)]
 #[path = "internal_admin.billing_platform_center.actions.tests.rs"]
 mod billing_platform_center_actions_tests;
 #[path = "internal_admin.billing_platform_center.mutations.rs"]
@@ -57,12 +66,21 @@ mod billing_platform_center_types;
 mod billing_platform_center_validation;
 #[path = "internal_admin.billing.runbooks.rs"]
 mod billing_runbooks;
+#[cfg(test)]
+#[path = "internal_admin.billing.runbooks.test_support.rs"]
+mod billing_runbooks_test_support;
+#[cfg(test)]
+#[path = "internal_admin.billing.runbooks.tests.rs"]
+mod billing_runbooks_tests;
 #[path = "internal_admin.command_center.rs"]
 mod command_center;
 #[path = "internal_admin.communications_center.rs"]
 mod communications_center;
 #[path = "internal_admin.communications_center.actions.rs"]
 mod communications_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.communications_center.actions.test_support.rs"]
+mod communications_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.communications_center.actions.tests.rs"]
 mod communications_center_actions_tests;
@@ -76,6 +94,9 @@ mod communications_center_validation;
 mod compliance_center;
 #[path = "internal_admin.compliance_center.actions.rs"]
 mod compliance_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.compliance_center.actions.test_support.rs"]
+mod compliance_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.compliance_center.actions.tests.rs"]
 mod compliance_center_actions_tests;
@@ -92,6 +113,9 @@ mod developer_center;
 #[path = "internal_admin.developer_center.actions.rs"]
 mod developer_center_actions;
 #[cfg(test)]
+#[path = "internal_admin.developer_center.actions.test_support.rs"]
+mod developer_center_actions_test_support;
+#[cfg(test)]
 #[path = "internal_admin.developer_center.actions.tests.rs"]
 mod developer_center_actions_tests;
 #[path = "internal_admin.developer_center.mutations.rs"]
@@ -104,6 +128,9 @@ mod developer_center_validation;
 mod entitlements_center;
 #[path = "internal_admin.entitlements_center.actions.rs"]
 mod entitlements_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.entitlements_center.actions.test_support.rs"]
+mod entitlements_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.entitlements_center.actions.tests.rs"]
 mod entitlements_center_actions_tests;
@@ -119,6 +146,9 @@ mod idempotency;
 mod identity_governance_center;
 #[path = "internal_admin.identity_governance_center.actions.rs"]
 mod identity_governance_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.identity_governance_center.actions.test_support.rs"]
+mod identity_governance_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.identity_governance_center.actions.tests.rs"]
 mod identity_governance_center_actions_tests;
@@ -179,6 +209,9 @@ mod region_center;
 #[path = "internal_admin.region_center.actions.rs"]
 mod region_center_actions;
 #[cfg(test)]
+#[path = "internal_admin.region_center.actions.test_support.rs"]
+mod region_center_actions_test_support;
+#[cfg(test)]
 #[path = "internal_admin.region_center.actions.tests.rs"]
 mod region_center_actions_tests;
 #[path = "internal_admin.region_center.mutations.rs"]
@@ -210,6 +243,9 @@ mod risk_decision_center;
 #[path = "internal_admin.risk_decision_center.actions.rs"]
 mod risk_decision_center_actions;
 #[cfg(test)]
+#[path = "internal_admin.risk_decision_center.actions.test_support.rs"]
+mod risk_decision_center_actions_test_support;
+#[cfg(test)]
 #[path = "internal_admin.risk_decision_center.actions.tests.rs"]
 mod risk_decision_center_actions_tests;
 #[path = "internal_admin.risk_decision_center.mutations.rs"]
@@ -239,6 +275,9 @@ mod test_operator_grants;
 mod usage_center;
 #[path = "internal_admin.usage_center.actions.rs"]
 mod usage_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.usage_center.actions.test_support.rs"]
+mod usage_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.usage_center.actions.tests.rs"]
 mod usage_center_actions_tests;
