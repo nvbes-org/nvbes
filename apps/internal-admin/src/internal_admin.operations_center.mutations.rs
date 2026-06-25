@@ -1,9 +1,10 @@
-use serde_json::{Value, json};
+use serde_json::json;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::operations_center_action_log::{OperationsActionInput, insert_action, insert_audit};
 use crate::operations_center_types::{OperationsActionResult, action_result};
 use crate::operations_center_validation::validate_reason;
 
@@ -53,6 +54,9 @@ pub(crate) async fn replay_provider_event(
             provider_event_id: Some(event_id),
             export_run_id: None,
             reconciliation_difference_id: None,
+            incident_id: None,
+            maintenance_window_id: None,
+            job_run_id: None,
             previous_state: Some(row.get("previous_state")),
             next_state: "received",
             reason,
@@ -147,6 +151,9 @@ pub(crate) async fn resolve_reconciliation_difference(
             provider_event_id: None,
             export_run_id: None,
             reconciliation_difference_id: Some(row.get("id")),
+            incident_id: None,
+            maintenance_window_id: None,
+            job_run_id: None,
             previous_state: None,
             next_state: "resolved",
             reason,
@@ -240,6 +247,9 @@ async fn transition_export_run(
             provider_event_id: None,
             export_run_id: Some(export_run_id),
             reconciliation_difference_id: None,
+            incident_id: None,
+            maintenance_window_id: None,
+            job_run_id: None,
             previous_state: Some(row.get("previous_state")),
             next_state: "pending",
             reason,
@@ -277,76 +287,4 @@ async fn transition_export_run(
         "pending",
         "operations.export_run.replayed",
     ))
-}
-
-struct OperationsActionInput {
-    action_kind: &'static str,
-    provider_event_id: Option<Uuid>,
-    export_run_id: Option<Uuid>,
-    reconciliation_difference_id: Option<Uuid>,
-    previous_state: Option<String>,
-    next_state: &'static str,
-    reason: String,
-    metadata: Value,
-}
-
-async fn insert_action(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    access: BackofficeAccess,
-    workspace_id: Uuid,
-    input: OperationsActionInput,
-) -> Result<Uuid, AppError> {
-    sqlx::query_scalar::<_, Uuid>(
-        "INSERT INTO internal_admin_operations_actions (
-           tenant_id, workspace_id, actor_principal_id, action_kind, provider_event_id,
-           export_run_id, reconciliation_difference_id, previous_state, next_state, reason, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id",
-    )
-    .bind(access.tenant_id)
-    .bind(workspace_id)
-    .bind(access.actor_principal_id)
-    .bind(input.action_kind)
-    .bind(input.provider_event_id)
-    .bind(input.export_run_id)
-    .bind(input.reconciliation_difference_id)
-    .bind(input.previous_state)
-    .bind(input.next_state)
-    .bind(input.reason)
-    .bind(input.metadata)
-    .fetch_one(tx.as_mut())
-    .await
-    .map_err(AppError::from)
-}
-
-async fn insert_audit(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    access: BackofficeAccess,
-    workspace_id: Uuid,
-    action: &'static str,
-    target_type: &'static str,
-    target_id: Uuid,
-    action_id: Uuid,
-    metadata: Value,
-) -> Result<(), AppError> {
-    sqlx::query(
-        "INSERT INTO audit_events (
-           tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
-         ) VALUES (
-           $1, $2, $3, $4, $5, $6,
-           jsonb_build_object('operations_action_id', $7) || $8::jsonb,
-           gen_random_uuid()::text
-         )",
-    )
-    .bind(access.tenant_id)
-    .bind(workspace_id)
-    .bind(access.actor_principal_id)
-    .bind(action)
-    .bind(target_type)
-    .bind(target_id)
-    .bind(action_id)
-    .bind(metadata)
-    .execute(tx.as_mut())
-    .await?;
-    Ok(())
 }

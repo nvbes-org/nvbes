@@ -11,16 +11,31 @@ use sqlx::PgPool;
 pub struct AppState {
     pub config: AppConfig,
     pub db: PgPool,
+    pub observability: nvbes_observability::metrics::HttpMetrics,
     pub rate_limiter: crate::rate_limit::BackofficeRateLimiter,
+}
+
+impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
+    fn from_ref(state: &AppState) -> Self {
+        state.observability.clone()
+    }
 }
 
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
-        Self {
+        let state = Self {
             config,
             db,
+            observability: nvbes_observability::metrics::HttpMetrics::default(),
             rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),
-        }
+        };
+        state.observability.record_postgres_pool(
+            &state.config.app_name,
+            &state.config.environment,
+            state.db.size(),
+            state.db.num_idle(),
+        );
+        state
     }
 }
 

@@ -48,6 +48,8 @@ export function RevenueActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RevenueActionResult | null>(null);
   const requiredConfirmCode = revenueConfirmCode(action, targetId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === requiredConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -142,7 +144,7 @@ export function RevenueActionsPanel({
           Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -163,9 +165,7 @@ export function RevenueActionsPanel({
 }
 
 function revenueConfirmCode(action: RevenueActionKind, targetId: string): string {
-  const baseCode = confirmCodes[action];
-  if (action !== 'holdInvoice') return baseCode;
-  return strongConfirmationCode(baseCode, targetId);
+  return strongConfirmationCode(confirmCodes[action], targetId);
 }
 
 type RevenueActionPayload = {

@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
+use crate::identity_governance_operator_grants::{OperatorGrant, OperatorRoleDistribution};
 
 #[derive(Debug, Serialize)]
 struct IdentityGovernanceSnapshot {
@@ -17,12 +18,16 @@ struct IdentityGovernanceSnapshot {
     pending_review_item_count: i64,
     active_break_glass_count: i64,
     pending_recovery_count: i64,
+    active_operator_grant_count: i64,
+    revoked_operator_grant_count: i64,
     unverified_domains: Vec<UnverifiedDomain>,
     sso_providers: Vec<SsoProvider>,
     scim_connectors: Vec<ScimConnector>,
     overdue_access_reviews: Vec<OverdueAccessReview>,
     break_glass_accounts: Vec<BreakGlassAccount>,
     pending_recovery_requests: Vec<PendingRecoveryRequest>,
+    operator_role_distribution: Vec<OperatorRoleDistribution>,
+    operator_grants: Vec<OperatorGrant>,
 }
 
 #[derive(Debug, Serialize)]
@@ -99,6 +104,7 @@ pub fn router() -> Router<AppState> {
             get(identity_governance_center_route),
         )
         .merge(crate::identity_governance_center_actions::router())
+        .merge(crate::identity_governance_operator_grant_actions::router())
 }
 
 async fn identity_governance_center_route(
@@ -110,6 +116,8 @@ async fn identity_governance_center_route(
 }
 
 async fn load_identity_governance(db: &PgPool) -> Result<IdentityGovernanceSnapshot, AppError> {
+    let operator_grants =
+        crate::identity_governance_operator_grants::load_operator_grants(db).await?;
     let metrics = sqlx::query(
         r#"
         SELECT
@@ -148,12 +156,16 @@ async fn load_identity_governance(db: &PgPool) -> Result<IdentityGovernanceSnaps
         pending_review_item_count: metrics.get("pending_review_item_count"),
         active_break_glass_count: metrics.get("active_break_glass_count"),
         pending_recovery_count: metrics.get("pending_recovery_count"),
+        active_operator_grant_count: operator_grants.active_count,
+        revoked_operator_grant_count: operator_grants.revoked_count,
         unverified_domains: load_unverified_domains(db).await?,
         sso_providers: load_sso_providers(db).await?,
         scim_connectors: load_scim_connectors(db).await?,
         overdue_access_reviews: load_overdue_access_reviews(db).await?,
         break_glass_accounts: load_break_glass_accounts(db).await?,
         pending_recovery_requests: load_pending_recovery_requests(db).await?,
+        operator_role_distribution: operator_grants.role_distribution,
+        operator_grants: operator_grants.grants,
     })
 }
 

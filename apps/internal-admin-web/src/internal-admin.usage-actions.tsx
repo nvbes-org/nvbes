@@ -34,6 +34,8 @@ export function UsageActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<UsageActionResult | null>(null);
   const expectedConfirmCode = expectedUsageConfirmCode(action, meterCode, rollupId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -118,7 +120,7 @@ export function UsageActionsPanel({
           Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >

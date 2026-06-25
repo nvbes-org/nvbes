@@ -9,6 +9,7 @@ import {
   Globe2,
   IdCard,
   KeyRound,
+  ListChecks,
   PackageCheck,
   LifeBuoy,
   Mail,
@@ -25,6 +26,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '#command-center', label: 'Command', icon: Building2 },
+  { href: '#pending-approvals', label: 'Approvals', icon: ListChecks },
   { href: '#revenue-center', label: 'Revenue', icon: Banknote },
   { href: '#billing-platform-center', label: 'Platform', icon: CreditCard },
   { href: '#customer-center', label: 'Customer', icon: Users },

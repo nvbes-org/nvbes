@@ -1,13 +1,12 @@
-use axum::{
-    Router,
-    body::{self, Body},
-    http::{Request, StatusCode},
-};
+use axum::{Router, body, http::StatusCode};
 use serde_json::json;
-use sqlx::{PgPool, postgres::PgPoolOptions};
-use std::time::Duration;
 use tower::ServiceExt;
 use uuid::Uuid;
+
+use crate::access_center_actions_test_support::{
+    access_schema_exists, idempotency_schema_exists, seed_workspace_membership, suspend_request,
+    suspend_request_with_key, test_pool,
+};
 
 #[tokio::test]
 async fn suspend_membership_rejects_generic_confirmation_and_audits_success() {
@@ -17,6 +16,10 @@ async fn suspend_membership_rejects_generic_confirmation_and_audits_success() {
     };
     if !access_schema_exists(&pool).await {
         eprintln!("skipping test: access schema is missing");
+        return;
+    }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
         return;
     }
 
@@ -44,6 +47,22 @@ async fn suspend_membership_rejects_generic_confirmation_and_audits_success() {
         .await
         .expect("route should respond");
     assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
+
+    let missing_grant = app
+        .clone()
+        .oneshot(suspend_request(
+            workspace_id,
+            target_id,
+            actor_id,
+            "security_admin",
+            &crate::backoffice_authorization::strong_confirmation_code("SUSPEND ACCESS", target_id),
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(missing_grant.status(), StatusCode::FORBIDDEN);
+
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "security_admin")
+        .await;
 
     let accepted = app
         .oneshot(suspend_request(
@@ -91,118 +110,103 @@ async fn suspend_membership_rejects_generic_confirmation_and_audits_success() {
     assert_eq!(audit_count, 1);
 }
 
-async fn test_pool() -> Option<PgPool> {
-    let database_url = std::env::var("DATABASE_URL")
-        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string());
-    tokio::time::timeout(
-        Duration::from_secs(2),
-        PgPoolOptions::new()
-            .max_connections(1)
-            .connect(&database_url),
-    )
-    .await
-    .ok()
-    .and_then(Result::ok)
-}
-
-async fn access_schema_exists(pool: &PgPool) -> bool {
-    sqlx::query_scalar::<_, bool>(
-        "SELECT to_regclass('public.tenants') IS NOT NULL
-          AND to_regclass('public.workspaces') IS NOT NULL
-          AND to_regclass('public.principals') IS NOT NULL
-          AND to_regclass('public.workspace_memberships') IS NOT NULL
-          AND to_regclass('public.audit_events') IS NOT NULL",
-    )
-    .fetch_one(pool)
-    .await
-    .unwrap_or(false)
-}
-
-async fn seed_workspace_membership(
-    pool: &PgPool,
-    actor_id: Uuid,
-    target_id: Uuid,
-    owner_id: Uuid,
-) -> (Uuid, Uuid) {
-    let tenant_id = Uuid::new_v4();
-    let workspace_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO tenants (id, kind, name, slug, status, security_tier)
-         VALUES ($1, 'enterprise', 'Access Tenant', $2, 'active', 'standard')",
-    )
-    .bind(tenant_id)
-    .bind(format!("access-tenant-{}", Uuid::new_v4()))
-    .execute(pool)
-    .await
-    .expect("tenant should insert");
-
-    for (id, display_name) in [
-        (actor_id, "Backoffice Actor"),
-        (target_id, "Target User"),
-        (owner_id, "Workspace Owner"),
-    ] {
-        sqlx::query(
-            "INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
-             VALUES ($1, $2, 'human', 'active', $3)",
-        )
-        .bind(id)
-        .bind(tenant_id)
-        .bind(display_name)
-        .execute(pool)
-        .await
-        .expect("principal should insert");
+#[tokio::test]
+async fn suspend_membership_reuses_stored_idempotent_response() {
+    let Some(pool) = test_pool().await else {
+        eprintln!("skipping test: Postgres is not reachable");
+        return;
+    };
+    if !access_schema_exists(&pool).await {
+        eprintln!("skipping test: access schema is missing");
+        return;
+    }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
+        return;
+    }
+    if !idempotency_schema_exists(&pool).await {
+        eprintln!("skipping test: idempotency response schema is missing");
+        return;
     }
 
-    sqlx::query(
-        "INSERT INTO workspaces (id, tenant_id, name, slug, workspace_type, plan_code)
-         VALUES ($1, $2, 'Access Workspace', $3, 'team', 'enterprise')",
+    let actor_id = Uuid::new_v4();
+    let target_id = Uuid::new_v4();
+    let owner_id = Uuid::new_v4();
+    let (tenant_id, workspace_id) =
+        seed_workspace_membership(&pool, actor_id, target_id, owner_id).await;
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "security_admin")
+        .await;
+
+    let state = crate::app::AppState::new(nvbes_core::config::AppConfig::default(), pool.clone());
+    let app = Router::new()
+        .merge(crate::access_center_actions::router())
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::idempotency::idempotency_guard,
+        ))
+        .with_state(state);
+    let confirm_code =
+        crate::backoffice_authorization::strong_confirmation_code("SUSPEND ACCESS", target_id);
+    let idempotency_key = format!("test-{}", Uuid::new_v4());
+
+    let first = app
+        .clone()
+        .oneshot(suspend_request_with_key(
+            workspace_id,
+            target_id,
+            actor_id,
+            "security_admin",
+            &confirm_code,
+            &idempotency_key,
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(first.status(), StatusCode::OK);
+
+    let second = app
+        .oneshot(suspend_request_with_key(
+            workspace_id,
+            target_id,
+            actor_id,
+            "security_admin",
+            &confirm_code,
+            &idempotency_key,
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(second.status(), StatusCode::OK);
+    assert_eq!(
+        second
+            .headers()
+            .get("idempotency-replayed")
+            .and_then(|value| value.to_str().ok()),
+        Some("true")
+    );
+
+    let audit_count = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM audit_events
+         WHERE tenant_id = $1 AND workspace_id = $2 AND actor_principal_id = $3
+           AND action = 'internal_admin.access.workspace_membership.suspended'
+           AND target_type = 'workspace_membership'
+           AND target_id = $4",
+    )
+    .bind(tenant_id)
+    .bind(workspace_id)
+    .bind(actor_id)
+    .bind(target_id)
+    .fetch_one(&pool)
+    .await
+    .expect("audit count should load");
+    assert_eq!(audit_count, 1);
+
+    let status = sqlx::query_scalar::<_, String>(
+        "SELECT status::text FROM workspace_memberships
+         WHERE workspace_id = $1 AND principal_id = $2",
     )
     .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(format!("access-workspace-{}", Uuid::new_v4()))
-    .execute(pool)
+    .bind(target_id)
+    .fetch_one(&pool)
     .await
-    .expect("workspace should insert");
-
-    for (principal_id, role) in [(owner_id, "owner"), (target_id, "admin")] {
-        sqlx::query(
-            "INSERT INTO workspace_memberships (workspace_id, principal_id, role, status)
-             VALUES ($1, $2, $3::workspace_member_role, 'active')",
-        )
-        .bind(workspace_id)
-        .bind(principal_id)
-        .bind(role)
-        .execute(pool)
-        .await
-        .expect("membership should insert");
-    }
-
-    (tenant_id, workspace_id)
-}
-
-fn suspend_request(
-    workspace_id: Uuid,
-    principal_id: Uuid,
-    actor_id: Uuid,
-    role: &str,
-    confirm_code: &str,
-) -> Request<Body> {
-    Request::builder()
-        .method("POST")
-        .uri(format!(
-            "/admin/access-center/workspace-memberships/{workspace_id}/{principal_id}/suspend"
-        ))
-        .header("content-type", "application/json")
-        .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
-        .header("x-nvbes-actor-principal-id", actor_id.to_string())
-        .header("x-nvbes-backoffice-role", role)
-        .body(Body::from(
-            json!({
-                "confirm_code": confirm_code,
-                "reason": "ticket IAM-123 approved"
-            })
-            .to_string(),
-        ))
-        .expect("request should build")
+    .expect("membership status should load");
+    assert_eq!(status, "suspended");
 }

@@ -19,6 +19,10 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
         eprintln!("skipping test: entitlement action schema is missing");
         return;
     }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
+        return;
+    }
 
     let actor_id = Uuid::new_v4();
     let (tenant_id, workspace_id) = seed_workspace_with_actor(&pool, actor_id).await;
@@ -45,12 +49,30 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
 
+    for role in ["finance_admin", "developer_admin", "security_admin"] {
+        let denied = app
+            .clone()
+            .oneshot(grant_request(
+                workspace_id,
+                actor_id,
+                role,
+                &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                    "GRANT FEATURE",
+                    "advanced_search",
+                ),
+                "ticket ENT-123 approved",
+            ))
+            .await
+            .expect("route should respond");
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN, "{role}");
+    }
+
     let wrong_confirmation = app
         .clone()
         .oneshot(grant_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "product_admin",
             "GRANT",
             "ticket ENT-123 approved",
         ))
@@ -63,7 +85,7 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
         .oneshot(grant_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "product_admin",
             "GRANT FEATURE",
             "ticket ENT-123 approved",
         ))
@@ -71,11 +93,29 @@ async fn grant_feature_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
 
+    let missing_grant = app
+        .clone()
+        .oneshot(grant_request(
+            workspace_id,
+            actor_id,
+            "product_admin",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "GRANT FEATURE",
+                "advanced_search",
+            ),
+            "ticket ENT-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(missing_grant.status(), StatusCode::FORBIDDEN);
+
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "product_admin").await;
+
     let accepted = app
         .oneshot(grant_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "product_admin",
             &crate::backoffice_authorization::strong_confirmation_code_for_value(
                 "GRANT FEATURE",
                 "advanced_search",
@@ -226,6 +266,11 @@ fn grant_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

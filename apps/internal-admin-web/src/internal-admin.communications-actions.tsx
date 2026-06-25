@@ -45,6 +45,8 @@ export function CommunicationsActionsPanel({
     messageId,
     eventId,
   );
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -139,7 +141,7 @@ export function CommunicationsActionsPanel({
           Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >

@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
     require_strong_confirmation,
 };
 use crate::backoffice_dual_control::require_dual_control;
@@ -61,7 +61,14 @@ async fn close_dunning_case_route(
     Path((workspace_id, case_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "CLOSE DUNNING CASE")?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "CLOSE DUNNING CASE",
+        case_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         close_dunning_case(&state.db, access, workspace_id, case_id, request.reason).await?,
@@ -74,7 +81,14 @@ async fn reopen_dunning_case_route(
     Path((workspace_id, case_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "REOPEN DUNNING CASE")?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "REOPEN DUNNING CASE",
+        case_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         reopen_dunning_case(&state.db, access, workspace_id, case_id, request.reason).await?,
@@ -87,9 +101,14 @@ async fn hold_invoice_route(
     Path((workspace_id, invoice_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_authorization(&headers)?;
-    require_strong_confirmation(&request.confirm_code, "HOLD INVOICE", invoice_id)?;
-    require_dual_control(&headers)?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "HOLD INVOICE",
+        invoice_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         hold_invoice(&state.db, access, workspace_id, invoice_id, request.reason).await?,
@@ -102,7 +121,14 @@ async fn release_invoice_route(
     Path((workspace_id, invoice_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "RELEASE INVOICE")?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "RELEASE INVOICE",
+        invoice_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         release_invoice(&state.db, access, workspace_id, invoice_id, request.reason).await?,
@@ -115,7 +141,14 @@ async fn review_dispute_route(
     Path((workspace_id, dispute_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "REVIEW DISPUTE")?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "REVIEW DISPUTE",
+        dispute_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         review_dispute(&state.db, access, workspace_id, dispute_id, request.reason).await?,
@@ -128,23 +161,33 @@ async fn resolve_dispute_route(
     Path((workspace_id, dispute_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RevenueActionRequest>,
 ) -> Result<Json<RevenueActionResult>, AppError> {
-    require_revenue_mutation(&headers, &request.confirm_code, "RESOLVE DISPUTE")?;
+    require_revenue_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "RESOLVE DISPUTE",
+        dispute_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         resolve_dispute(&state.db, access, workspace_id, dispute_id, request.reason).await?,
     ))
 }
 
-fn require_revenue_mutation(
+async fn require_revenue_mutation(
+    db: &sqlx::PgPool,
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_revenue_authorization(headers)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)?;
+    require_operator_role_grant(db, headers).await
 }
 
 fn require_revenue_authorization(headers: &HeaderMap) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::RevenueMutate)
+    require_operator_permission_headers(headers, BackofficePermission::RevenueMutate)
 }

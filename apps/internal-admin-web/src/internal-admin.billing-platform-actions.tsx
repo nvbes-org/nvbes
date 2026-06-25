@@ -45,6 +45,8 @@ export function BillingPlatformActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<BillingPlatformActionResult | null>(null);
   const requiredConfirmCode = billingPlatformConfirmCode(action, targetId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === requiredConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -133,7 +135,7 @@ export function BillingPlatformActionsPanel({
           Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -154,9 +156,7 @@ export function BillingPlatformActionsPanel({
 }
 
 function billingPlatformConfirmCode(action: BillingPlatformActionKind, targetId: string): string {
-  const baseCode = confirmCodes[action];
-  if (action !== 'disableRouting' && action !== 'rejectKyc') return baseCode;
-  return strongConfirmationCode(baseCode, targetId);
+  return strongConfirmationCode(confirmCodes[action], targetId);
 }
 
 type BillingPlatformActionPayload = {

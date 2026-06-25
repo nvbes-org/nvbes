@@ -37,6 +37,8 @@ export function DeveloperActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<DeveloperActionResult | null>(null);
   const expectedConfirmCode = expectedDeveloperConfirmCode(action, clientId, appId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -109,7 +111,7 @@ export function DeveloperActionsPanel({
           Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >

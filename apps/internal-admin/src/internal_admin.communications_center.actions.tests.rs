@@ -47,12 +47,31 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
 
+    for role in ["finance_admin", "developer_admin", "product_admin"] {
+        let denied = app
+            .clone()
+            .oneshot(suppress_request(
+                workspace_id,
+                actor_id,
+                role,
+                &crate::backoffice_authorization::strong_confirmation_code(
+                    "SUPPRESS EMAIL",
+                    workspace_id,
+                ),
+                &email,
+                "ticket COMMS-123 approved",
+            ))
+            .await
+            .expect("route should respond");
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN, "{role}");
+    }
+
     let wrong_confirmation = app
         .clone()
         .oneshot(suppress_request(
             workspace_id,
             actor_id,
-            "support_agent",
+            "operations_admin",
             "SUPPRESS",
             &email,
             "ticket COMMS-123 approved",
@@ -66,7 +85,7 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
         .oneshot(suppress_request(
             workspace_id,
             actor_id,
-            "support_agent",
+            "operations_admin",
             "SUPPRESS EMAIL",
             &email,
             "ticket COMMS-123 approved",
@@ -79,7 +98,7 @@ async fn suppress_email_route_enforces_role_confirmation_and_audits_success() {
         .oneshot(suppress_request(
             workspace_id,
             actor_id,
-            "support_agent",
+            "operations_admin",
             &crate::backoffice_authorization::strong_confirmation_code(
                 "SUPPRESS EMAIL",
                 workspace_id,
@@ -244,6 +263,11 @@ fn suppress_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { Download, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,10 +12,22 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { listAuditEvents } from './internal-admin.api';
+import { downloadEvidenceExport } from './internal-admin.audit-evidence-download';
+import { AuditEventRow } from './internal-admin.audit-event-row';
+import { sortAuditEvents } from './internal-admin.audit-sort';
+import {
+  allAuditFilterValue,
+  emptyAuditFilters,
+  loadSavedAuditViews,
+  removeAuditView,
+  saveAuditViews,
+  type AuditViewFilters,
+  type SavedAuditView,
+  upsertAuditView,
+} from './internal-admin.audit-view-state';
 import { LockedState } from './internal-admin.locked-state';
-import type { AdminCredentials, AuditEvent } from './internal-admin.types';
+import type { AdminCredentials } from './internal-admin.types';
 
-const allFilterValue = '__all__';
 const targetTypeOptions = ['tenant', 'workspace', 'principal', 'runbook', 'billing_invoice'];
 const actionOptions = [
   'internal_admin.tenant.suspend',
@@ -31,19 +42,28 @@ const actionOptions = [
 export function AuditEventsPanel({
   credentials,
   disabled,
+  onSelectTenant,
+  onSelectUser,
+  onSelectWorkspace,
 }: {
   credentials: AdminCredentials;
   disabled: boolean;
+  onSelectTenant?: (tenantId: string) => void;
+  onSelectUser?: (principalId: string) => void;
+  onSelectWorkspace?: (workspaceId: string) => void;
 }) {
-  const [action, setAction] = useState(allFilterValue);
-  const [targetType, setTargetType] = useState(allFilterValue);
-  const [query, setQuery] = useState('');
+  const [action, setAction] = useState(emptyAuditFilters.action);
+  const [sort, setSort] = useState(emptyAuditFilters.sort);
+  const [targetType, setTargetType] = useState(emptyAuditFilters.targetType);
+  const [query, setQuery] = useState(emptyAuditFilters.query);
+  const [viewName, setViewName] = useState('');
+  const [savedViews, setSavedViews] = useState<SavedAuditView[]>(loadSavedAuditViews);
   const filters = useMemo(
     () => ({
-      action: action === allFilterValue ? undefined : action,
+      action: action === allAuditFilterValue ? undefined : action,
       limit: 50,
       query,
-      targetType: targetType === allFilterValue ? undefined : targetType,
+      targetType: targetType === allAuditFilterValue ? undefined : targetType,
     }),
     [action, query, targetType],
   );
@@ -52,6 +72,12 @@ export function AuditEventsPanel({
     queryFn: () => listAuditEvents(credentials, filters),
     enabled: !disabled,
   });
+  const sortedAuditEvents = useMemo(
+    () => sortAuditEvents(auditEvents.data ?? [], sort),
+    [auditEvents.data, sort],
+  );
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   return (
     <section className="border-border bg-card rounded-lg border p-4" id="audit">
@@ -67,19 +93,36 @@ export function AuditEventsPanel({
             </p>
           </div>
         </div>
-        <Button
-          disabled={disabled || auditEvents.isFetching}
-          onClick={() => void auditEvents.refetch()}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <RefreshCw className="size-4" />
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={disabled || isExporting}
+            onClick={() => {
+              void downloadEvidenceExport(credentials, filters, {
+                setError: setExportError,
+                setIsExporting,
+              });
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Download className="size-4" />
+            Export evidence
+          </Button>
+          <Button
+            disabled={disabled || auditEvents.isFetching}
+            onClick={() => void auditEvents.refetch()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <RefreshCw className="size-4" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      <div className="mb-4 grid gap-2 lg:grid-cols-[1fr_auto_auto_auto]">
+      <div className="mb-3 grid gap-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
         <div className="relative">
           <Search className="text-muted-foreground pointer-events-none absolute top-2 left-2 size-4" />
           <Input
@@ -95,7 +138,7 @@ export function AuditEventsPanel({
             <SelectValue placeholder="Action" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={allFilterValue}>Toutes les actions</SelectItem>
+            <SelectItem value={allAuditFilterValue}>Toutes les actions</SelectItem>
             {actionOptions.map((item) => (
               <SelectItem key={item} value={item}>
                 {item}
@@ -108,7 +151,7 @@ export function AuditEventsPanel({
             <SelectValue placeholder="Target" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={allFilterValue}>Toutes les cibles</SelectItem>
+            <SelectItem value={allAuditFilterValue}>Toutes les cibles</SelectItem>
             {targetTypeOptions.map((item) => (
               <SelectItem key={item} value={item}>
                 {item}
@@ -116,17 +159,89 @@ export function AuditEventsPanel({
             ))}
           </SelectContent>
         </Select>
+        <Select
+          disabled={disabled}
+          onValueChange={(value) => setSort(value as typeof sort)}
+          value={sort}
+        >
+          <SelectTrigger className="w-full lg:w-44">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Recent first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="hash_anomalies">Hash issues</SelectItem>
+            <SelectItem value="sensitive_first">Sensitive first</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           disabled={disabled || auditEvents.isFetching}
           onClick={() => {
-            setAction(allFilterValue);
-            setTargetType(allFilterValue);
-            setQuery('');
+            applyAuditFilters(emptyAuditFilters, { setAction, setQuery, setSort, setTargetType });
           }}
           type="button"
           variant="outline"
         >
           Reset
+        </Button>
+      </div>
+      <div className="mb-4 grid gap-2 lg:grid-cols-[1fr_auto_auto_auto]">
+        <Input
+          disabled={disabled}
+          onChange={(event) => setViewName(event.target.value)}
+          placeholder="Nom de vue sauvegardee"
+          value={viewName}
+        />
+        <Button
+          disabled={disabled || !viewName.trim()}
+          onClick={() => {
+            const nextViews = upsertAuditView(savedViews, viewName, {
+              action,
+              query,
+              sort,
+              targetType,
+            });
+            setSavedViews(nextViews);
+            saveAuditViews(nextViews);
+            setViewName('');
+          }}
+          type="button"
+          variant="outline"
+        >
+          Save view
+        </Button>
+        <Select
+          disabled={disabled || savedViews.length === 0}
+          onValueChange={(viewId) => {
+            const view = savedViews.find((item) => item.id === viewId);
+            if (view) applyAuditFilters(view, { setAction, setQuery, setSort, setTargetType });
+          }}
+          value=""
+        >
+          <SelectTrigger className="w-full lg:w-60">
+            <SelectValue placeholder="Vues sauvegardees" />
+          </SelectTrigger>
+          <SelectContent>
+            {savedViews.map((view) => (
+              <SelectItem key={view.id} value={view.id}>
+                {view.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          disabled={disabled || savedViews.length === 0}
+          onClick={() => {
+            const [firstView] = savedViews;
+            if (!firstView) return;
+            const nextViews = removeAuditView(savedViews, firstView.id);
+            setSavedViews(nextViews);
+            saveAuditViews(nextViews);
+          }}
+          type="button"
+          variant="outline"
+        >
+          Delete latest
         </Button>
       </div>
 
@@ -135,8 +250,17 @@ export function AuditEventsPanel({
           <LockedState label="Connecte un contexte operateur pour consulter l'audit." />
         ) : null}
         {auditEvents.isLoading ? <Skeleton className="h-20 w-full" /> : null}
-        {(auditEvents.data ?? []).map((event) => (
-          <AuditEventRow event={event} key={event.id} />
+        {exportError ? (
+          <p className="text-destructive rounded-md border p-3 text-sm">{exportError}</p>
+        ) : null}
+        {sortedAuditEvents.map((event) => (
+          <AuditEventRow
+            event={event}
+            key={event.id}
+            onSelectTenant={onSelectTenant}
+            onSelectUser={onSelectUser}
+            onSelectWorkspace={onSelectWorkspace}
+          />
         ))}
         {auditEvents.data?.length === 0 ? (
           <p className="text-muted-foreground rounded-md border p-3 text-sm">
@@ -153,116 +277,16 @@ export function AuditEventsPanel({
   );
 }
 
-function AuditEventRow({ event }: { event: AuditEvent }) {
-  const metadata = summarizeMetadata(event.metadata);
-  const changes = auditChanges(event.metadata);
-
-  return (
-    <article className="bg-muted/40 rounded-md p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-medium">{event.action}</h3>
-          <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-            {event.target_type}
-            {event.target_id ? `:${event.target_id}` : ''}
-          </p>
-        </div>
-        <Badge variant="secondary">{formatDate(event.created_at)}</Badge>
-      </div>
-      <div className="text-muted-foreground mt-2 grid gap-1 text-xs md:grid-cols-2">
-        <span className="truncate">
-          Actor: {event.actor_email ?? event.actor_principal_id ?? 'system'}
-        </span>
-        <span className="truncate">Event: {event.id}</span>
-        <span className="truncate font-mono">Hash: {shortHash(event.event_hash)}</span>
-        <span className="truncate font-mono">Previous: {shortHash(event.previous_event_hash)}</span>
-      </div>
-      {changes.length > 0 ? (
-        <div className="mt-3 rounded-md border bg-background">
-          <div className="border-b px-2 py-1 text-xs font-medium">Diff avant/apres</div>
-          <div className="divide-y">
-            {changes.map((change) => (
-              <div
-                className="grid gap-1 px-2 py-2 text-xs md:grid-cols-[160px_1fr_1fr]"
-                key={change.field}
-              >
-                <span className="font-medium">{change.field}</span>
-                <span className="text-muted-foreground truncate">
-                  Avant: {formatAuditValue(change.before)}
-                </span>
-                <span className="text-muted-foreground truncate">
-                  Apres: {formatAuditValue(change.after)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {metadata ? (
-        <pre className="bg-background text-muted-foreground mt-3 max-h-28 overflow-auto rounded-md border p-2 text-xs">
-          {metadata}
-        </pre>
-      ) : null}
-    </article>
-  );
-}
-
-type AuditChange = {
-  after: unknown;
-  before: unknown;
-  field: string;
+type AuditFilterSetters = {
+  setAction: (value: string) => void;
+  setQuery: (value: string) => void;
+  setSort: (value: AuditViewFilters['sort']) => void;
+  setTargetType: (value: string) => void;
 };
 
-function auditChanges(metadata: unknown): AuditChange[] {
-  if (!isRecord(metadata) || !Array.isArray(metadata.changes)) return [];
-  return metadata.changes.flatMap((item) => {
-    if (!isRecord(item) || typeof item.field !== 'string') return [];
-    return [
-      {
-        after: item.after,
-        before: item.before,
-        field: item.field,
-      },
-    ];
-  });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function formatAuditValue(value: unknown): string {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return value.toString();
-  }
-  return JSON.stringify(value);
-}
-
-function summarizeMetadata(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return value.toString();
-  }
-  if (typeof value !== 'object') return null;
-  const json = JSON.stringify(value, null, 2);
-  return json === '{}' ? null : json;
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('fr-FR', {
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    month: '2-digit',
-  });
-}
-
-function shortHash(value: string | null): string {
-  if (!value) return 'missing';
-  return value.length > 12 ? value.slice(0, 12) : value;
+function applyAuditFilters(filters: AuditViewFilters, setters: AuditFilterSetters) {
+  setters.setAction(filters.action);
+  setters.setQuery(filters.query);
+  setters.setSort(filters.sort);
+  setters.setTargetType(filters.targetType);
 }

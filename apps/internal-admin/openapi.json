@@ -1,0 +1,5079 @@
+{
+  "components": {
+    "parameters": {
+      "BackofficeRole": {
+        "description": "Operator role used for center/action RBAC.",
+        "in": "header",
+        "name": "x-nvbes-backoffice-role",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/BackofficeRole"
+        }
+      },
+      "IdempotencyKey": {
+        "description": "Required on all back-office mutations.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": true,
+        "schema": {
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "SecondApproverPrincipalId": {
+        "in": "header",
+        "name": "x-nvbes-second-approver-principal-id",
+        "required": true,
+        "schema": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "SecondApproverRole": {
+        "in": "header",
+        "name": "x-nvbes-second-approver-role",
+        "required": true,
+        "schema": {
+          "enum": [
+            "platform_admin"
+          ],
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        },
+        "description": "Invalid request"
+      },
+      "Forbidden": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        },
+        "description": "Operator role is not allowed"
+      },
+      "RateLimited": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        },
+        "description": "Too many requests"
+      },
+      "Unauthorized": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        },
+        "description": "Authentication required"
+      }
+    },
+    "schemas": {
+      "AccessActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "next_status": {
+            "type": "string"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "principal_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "next_status",
+          "previous_status",
+          "principal_id",
+          "tenant_id",
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "AuditChange": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {},
+          "before": {},
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "after",
+          "before",
+          "field"
+        ],
+        "type": "object"
+      },
+      "AuditEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_principal_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/AuditChange"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "event_hash": {
+            "type": "string"
+          },
+          "hash_chain_status": {
+            "enum": [
+              "linked",
+              "chain_head",
+              "hash_anomaly"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "previous_event_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_link": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditTargetLink"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "action",
+          "actor_email",
+          "actor_principal_id",
+          "changes",
+          "created_at",
+          "event_hash",
+          "hash_chain_status",
+          "id",
+          "metadata",
+          "previous_event_hash",
+          "target_id",
+          "target_link",
+          "target_type",
+          "tenant_id",
+          "workspace_id"
+        ],
+        "type": "object"
+      },
+      "AuditEvidenceExport": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "AuditEvidenceSnapshot": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "AuditTargetLink": {
+        "additionalProperties": false,
+        "properties": {
+          "href": {
+            "enum": [
+              "#tenant-detail",
+              "#workspace-detail",
+              "#user-detail"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tenant",
+              "workspace",
+              "user"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "href",
+          "id",
+          "kind",
+          "label"
+        ],
+        "type": "object"
+      },
+      "BackofficeRole": {
+        "enum": [
+          "compliance_admin",
+          "developer_admin",
+          "finance_admin",
+          "operations_admin",
+          "platform_admin",
+          "product_admin",
+          "security_admin",
+          "support_agent",
+          "viewer"
+        ],
+        "type": "string"
+      },
+      "BillingPlatformActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "CommandCenterSnapshot": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "CommunicationsActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ComplianceActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "CriticalActionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "DeveloperActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "EntitlementActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "published_change_count": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "published_change_count",
+          "status"
+        ],
+        "type": "object"
+      },
+      "EntitlementFeatureActionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "feature_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "type": "object"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "feature_code",
+          "reason",
+          "value"
+        ],
+        "type": "object"
+      },
+      "EntitlementQuotaOverrideRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "included_quantity": {
+            "type": "number"
+          },
+          "quota_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "included_quantity",
+          "quota_code",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ],
+        "type": "object"
+      },
+      "ErrorEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "FreezeMeterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "meter_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "meter_code",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "GovernanceActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "principal_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "object_id",
+          "principal_id",
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "IncidentStateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "mitigating",
+              "resolved"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "reason",
+          "status"
+        ],
+        "type": "object"
+      },
+      "MaintenanceWindowRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "scheduled_end_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "scheduled_start_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "reason",
+          "scheduled_end_at",
+          "scheduled_start_at",
+          "title"
+        ],
+        "type": "object"
+      },
+      "OperationsActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "OperatorGrantActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "next_status": {
+            "enum": [
+              "active",
+              "revoked"
+            ],
+            "type": "string"
+          },
+          "object_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "previous_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "principal_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/BackofficeRole"
+          }
+        },
+        "required": [
+          "audit_action",
+          "next_status",
+          "object_id",
+          "previous_status",
+          "principal_id",
+          "role"
+        ],
+        "type": "object"
+      },
+      "PendingApprovalsSnapshot": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "RegionActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "RegionExceptionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "exception_kind": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "exception_kind",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "RegionFlagRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "data_region": {
+            "type": "string"
+          },
+          "jurisdiction": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "data_region",
+          "jurisdiction",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "RevenueActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "RiskActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SecurityActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "principal_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "object_id",
+          "principal_id",
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "SuppressionReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "email",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "TenantLifecycleResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "next_status": {
+            "type": "string"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "next_status",
+          "previous_status",
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "UsageActionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "type": "string"
+          },
+          "audit_action": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "audit_action",
+          "object_id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "UsageCorrectionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "meter_code": {
+            "type": "string"
+          },
+          "quantity_delta": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "usage_event_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "confirm_code",
+          "meter_code",
+          "quantity_delta",
+          "reason",
+          "usage_event_id"
+        ],
+        "type": "object"
+      },
+      "UserLifecycleResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "next_principal_status": {
+            "type": "string"
+          },
+          "next_user_status": {
+            "type": "string"
+          },
+          "previous_principal_status": {
+            "type": "string"
+          },
+          "previous_user_status": {
+            "type": "string"
+          },
+          "principal_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "next_principal_status",
+          "next_user_status",
+          "previous_principal_status",
+          "previous_user_status",
+          "principal_id",
+          "tenant_id"
+        ],
+        "type": "object"
+      },
+      "WorkspaceLifecycleResult": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_action": {
+            "type": "string"
+          },
+          "next_status": {
+            "type": "string"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_action",
+          "next_status",
+          "previous_status",
+          "tenant_id",
+          "workspace_id"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "internalToken": {
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "operatorContext": {
+        "description": "Back-office actor principal UUID. Mutations also use x-nvbes-backoffice-role and dual-control headers.",
+        "in": "header",
+        "name": "x-nvbes-actor-principal-id",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "nvbes",
+      "url": "https://nvbes.fr"
+    },
+    "description": "Private back-office API for enterprise operations. All private routes require internal authentication and operator context headers.",
+    "license": {
+      "name": "UNLICENSED"
+    },
+    "title": "nvbes Internal Admin API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/admin/access-center/workspace-memberships/{workspaceId}/{principalId}/suspend": {
+      "post": {
+        "operationId": "suspendWorkspaceMembership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Suspend workspace membership",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/audit-evidence-center": {
+      "get": {
+        "operationId": "getAuditEvidenceCenter",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEvidenceSnapshot"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Load global audit evidence health",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/admin/command-center": {
+      "get": {
+        "operationId": "getCommandCenter",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandCenterSnapshot"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Load enterprise command center",
+        "tags": [
+          "command"
+        ]
+      }
+    },
+    "/admin/identity-governance-center/break-glass/{tenantId}/{principalId}/revoke": {
+      "post": {
+        "operationId": "revokeBreakGlassAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke a break-glass account",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/identity-governance-center/operator-grants/{principalId}/{role}/grant": {
+      "post": {
+        "operationId": "grantOperatorRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BackofficeRole"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorGrantActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Grant a back-office operator role",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/identity-governance-center/operator-grants/{principalId}/{role}/revoke": {
+      "post": {
+        "operationId": "revokeOperatorRole",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/BackofficeRole"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorGrantActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke a back-office operator role",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/identity-governance-center/recovery-requests/{requestId}/cancel": {
+      "post": {
+        "operationId": "cancelRecoveryRequest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GovernanceActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Cancel an enterprise recovery request",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/pending-approvals": {
+      "get": {
+        "operationId": "getPendingApprovals",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingApprovalsSnapshot"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "List pending dual-control and review work",
+        "tags": [
+          "command"
+        ]
+      }
+    },
+    "/admin/security-center/mfa-factors/{factorId}/revoke": {
+      "post": {
+        "operationId": "revokeMfaFactor",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "factorId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke an MFA factor",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/admin/security-center/oauth-consents/{consentId}/revoke": {
+      "post": {
+        "operationId": "revokeOauthConsent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "consentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke an OAuth consent",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/admin/tenants/{tenantId}/reactivate": {
+      "post": {
+        "operationId": "reactivateTenant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Reactivate a tenant",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/tenants/{tenantId}/suspend": {
+      "post": {
+        "operationId": "suspendTenant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Suspend a tenant",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/users/{principalId}/reactivate": {
+      "post": {
+        "operationId": "reactivateUser",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Reactivate a user",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/users/{principalId}/suspend": {
+      "post": {
+        "operationId": "suspendUser",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Suspend a user",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/workspaces/{workspaceId}/reactivate": {
+      "post": {
+        "operationId": "reactivateWorkspace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Reactivate a workspace",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/admin/workspaces/{workspaceId}/suspend": {
+      "post": {
+        "operationId": "suspendWorkspace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceLifecycleResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Suspend a workspace",
+        "tags": [
+          "governance"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/audit-events": {
+      "get": {
+        "operationId": "listAuditEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEvent"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "List enriched audit events for a workspace tenant",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/audit-evidence/export": {
+      "get": {
+        "operationId": "exportAuditEvidence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEvidenceExport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Export enriched audit evidence package for a workspace tenant",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate": {
+      "post": {
+        "operationId": "activateEinvoicingProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profileId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Activate an e-invoicing profile",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/approve": {
+      "post": {
+        "operationId": "approveKycProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profileId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Approve a KYC profile",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/reject": {
+      "post": {
+        "operationId": "rejectKycProfile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "profileId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Reject a KYC profile",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/disable": {
+      "post": {
+        "operationId": "disableBillingRoutingRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Disable a billing provider routing rule",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable": {
+      "post": {
+        "operationId": "enableBillingRoutingRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ruleId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Enable a billing provider routing rule",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/communications/emails/{messageId}/replay": {
+      "post": {
+        "operationId": "replayEmailMessage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay an email message",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/communications/suppressions": {
+      "post": {
+        "operationId": "suppressEmail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Suppress an email address",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/communications/suppressions/remove": {
+      "post": {
+        "operationId": "unsuppressEmail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Unsuppress an email address",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/communications/webhooks/{eventId}/replay": {
+      "post": {
+        "operationId": "replayWebhookEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunicationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay a webhook event",
+        "tags": [
+          "communications"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/compliance/consents/{consentId}/revoke": {
+      "post": {
+        "operationId": "revokeConsent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "consentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke a consent",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/compliance/principals/{principalId}/erasure-request": {
+      "post": {
+        "operationId": "requestComplianceErasure",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "principalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Request principal erasure",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/compliance/suppressions/review": {
+      "post": {
+        "operationId": "reviewComplianceSuppression",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Review email suppression",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/developer/clients/{clientId}/revoke": {
+      "post": {
+        "operationId": "revokeDeveloperClient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke a developer client",
+        "tags": [
+          "developer"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/developer/clients/{clientId}/rotate-secret": {
+      "post": {
+        "operationId": "rotateDeveloperSecret",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Rotate a developer client secret",
+        "tags": [
+          "developer"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/developer/marketplace-apps/{appId}/approve": {
+      "post": {
+        "operationId": "approveMarketplaceApp",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "appId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeveloperActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Approve a marketplace app",
+        "tags": [
+          "developer"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/entitlements/grants": {
+      "post": {
+        "operationId": "grantEntitlementFeature",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntitlementFeatureActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Grant an entitlement feature",
+        "tags": [
+          "entitlements"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/entitlements/publish": {
+      "post": {
+        "operationId": "publishEntitlementChanges",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Publish entitlement changes",
+        "tags": [
+          "entitlements"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/entitlements/quota-overrides": {
+      "post": {
+        "operationId": "overrideEntitlementQuota",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntitlementQuotaOverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Override an entitlement quota",
+        "tags": [
+          "entitlements"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/entitlements/revocations": {
+      "post": {
+        "operationId": "revokeEntitlementFeature",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntitlementFeatureActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Revoke an entitlement feature",
+        "tags": [
+          "entitlements"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/export-runs/{exportRunId}/replay": {
+      "post": {
+        "operationId": "replayExportRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "exportRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay an export run",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/incidents/{incidentId}/state": {
+      "post": {
+        "operationId": "updateOperationsIncidentState",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "incidentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Update an operations incident state",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/job-runs/{jobRunId}/replay": {
+      "post": {
+        "operationId": "replayOperationsJobRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobRunId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay an operations job run",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/maintenance-windows": {
+      "post": {
+        "operationId": "scheduleMaintenanceWindow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceWindowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Schedule an operations maintenance window",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/provider-events/{eventId}/replay": {
+      "post": {
+        "operationId": "replayOperationsProviderEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay an operations provider event",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/operations/reconciliation-differences/{differenceId}/resolve": {
+      "post": {
+        "operationId": "resolveReconciliationDifference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "differenceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Resolve a reconciliation difference",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/exceptions": {
+      "post": {
+        "operationId": "recordRegionException",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetWorkspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionExceptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Record a data residency exception",
+        "tags": [
+          "region"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/residency-flag": {
+      "post": {
+        "operationId": "flagWorkspaceResidency",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetWorkspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionFlagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Flag workspace data residency",
+        "tags": [
+          "region"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/resolve": {
+      "post": {
+        "operationId": "resolveRevenueDispute",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "disputeId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Resolve a revenue dispute",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/review": {
+      "post": {
+        "operationId": "reviewRevenueDispute",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "disputeId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Mark a revenue dispute as under review",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/close": {
+      "post": {
+        "operationId": "closeDunningCase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Close a dunning case",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/reopen": {
+      "post": {
+        "operationId": "reopenDunningCase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "caseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Reopen a dunning case",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/hold": {
+      "post": {
+        "operationId": "holdRevenueInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invoiceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Hold an invoice",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/release": {
+      "post": {
+        "operationId": "releaseRevenueInvoice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invoiceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Release an invoice hold",
+        "tags": [
+          "revenue"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/risk/policies/{policyId}/approve": {
+      "post": {
+        "operationId": "approveRiskPolicy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policyId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Approve a risk policy",
+        "tags": [
+          "risk"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/risk/policies/{policyId}/block": {
+      "post": {
+        "operationId": "blockRiskPolicy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policyId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Block a risk policy",
+        "tags": [
+          "risk"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/risk/signals/{signalId}/resolve": {
+      "post": {
+        "operationId": "resolveRiskSignal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "signalId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Resolve a risk signal",
+        "tags": [
+          "risk"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/usage/corrections": {
+      "post": {
+        "operationId": "correctUsage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageCorrectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Correct usage",
+        "tags": [
+          "usage"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/usage/meters/freeze": {
+      "post": {
+        "operationId": "freezeUsageMeter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreezeMeterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Freeze a usage meter",
+        "tags": [
+          "usage"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/usage/rollups/{rollupId}/replay": {
+      "post": {
+        "operationId": "replayUsageRollup",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rollupId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriticalActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Replay a usage rollup",
+        "tags": [
+          "usage"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "internalToken": [],
+      "operatorContext": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "Production",
+      "url": "https://internal-admin.nvbes.fr"
+    },
+    {
+      "description": "Development",
+      "url": "http://localhost:8080"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Enterprise command center",
+      "name": "command"
+    },
+    {
+      "description": "Audit timeline and evidence",
+      "name": "audit"
+    },
+    {
+      "description": "Revenue operations",
+      "name": "revenue"
+    },
+    {
+      "description": "Billing provider operations",
+      "name": "billing-platform"
+    },
+    {
+      "description": "Developer platform operations",
+      "name": "developer"
+    },
+    {
+      "description": "Feature and quota entitlement operations",
+      "name": "entitlements"
+    },
+    {
+      "description": "Usage metering operations",
+      "name": "usage"
+    },
+    {
+      "description": "Email and webhook operations",
+      "name": "communications"
+    },
+    {
+      "description": "GDPR, consent, and suppression operations",
+      "name": "compliance"
+    },
+    {
+      "description": "Data residency operations",
+      "name": "region"
+    },
+    {
+      "description": "Risk decision operations",
+      "name": "risk"
+    },
+    {
+      "description": "Operational replay and incident workflows",
+      "name": "operations"
+    },
+    {
+      "description": "Customer and identity governance mutations",
+      "name": "governance"
+    }
+  ]
+}

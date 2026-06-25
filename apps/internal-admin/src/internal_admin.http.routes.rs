@@ -21,9 +21,11 @@ struct HealthResponse {
 
 pub fn router(config: &AppConfig) -> Router<AppState> {
     let private_routes = Router::new()
+        .route("/metrics", get(nvbes_observability::metrics_handler))
         .merge(crate::access_center::router())
         .merge(crate::audit::router())
         .merge(crate::audit_evidence_center::router())
+        .merge(crate::audit_evidence_export::router())
         .merge(crate::billing_admin::router())
         .merge(crate::billing_admin_overview::router())
         .merge(crate::billing_admin_provider_events::router())
@@ -44,6 +46,8 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::identity_governance_center::router())
         .merge(crate::operations_center_actions::router())
         .merge(crate::operations_center::router())
+        .merge(crate::openapi::router())
+        .merge(crate::pending_approvals::router())
         .merge(crate::revenue_center_actions::router())
         .merge(crate::revenue_center::router())
         .merge(crate::region_center_actions::router())

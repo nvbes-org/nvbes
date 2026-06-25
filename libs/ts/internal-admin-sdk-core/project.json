@@ -1,0 +1,15 @@
+{
+  "name": "internal-admin-sdk-core",
+  "projectType": "library",
+  "root": "libs/ts/internal-admin-sdk-core",
+  "sourceRoot": "libs/ts/internal-admin-sdk-core/src",
+  "tags": ["scope:internal", "type:lib", "domain:internal-admin", "layer:sdk"],
+  "targets": {
+    "generate:ts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/internal-admin-sdk-core generate:ts"
+      }
+    }
+  }
+}

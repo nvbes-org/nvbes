@@ -13,6 +13,7 @@ pub(crate) async fn authorize_backoffice(
     workspace_id: Uuid,
 ) -> Result<BackofficeAccess, AppError> {
     let actor_principal_id = actor_principal_id(headers)?;
+    crate::backoffice_authorization::require_operator_role_grant(db, headers).await?;
     let tenant_id = sqlx::query_scalar::<_, Uuid>("SELECT tenant_id FROM workspaces WHERE id = $1")
         .bind(workspace_id)
         .fetch_one(db)

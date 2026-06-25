@@ -1,0 +1,17 @@
+export const workspaceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+export const tenantId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+export const actorId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+export const secondApproverId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+export const principalId = '11111111-1111-4111-8111-111111111111';
+export const mfaFactorId = '22222222-2222-4222-8222-222222222222';
+export const recoveryRequestId = '33333333-3333-4333-8333-333333333333';
+export const invoiceId = '44444444-4444-4444-8444-444444444444';
+export const routingRuleId = '55555555-5555-4555-8555-555555555555';
+export const providerEventId = '66666666-6666-4666-8666-666666666666';
+export const incidentId = '67676767-6767-4676-8676-676767676767';
+export const jobRunId = '68686868-6868-4686-8686-686868686868';
+export const developerClientId = '77777777-7777-4777-8777-777777777777';
+export const emailMessageId = '88888888-8888-4888-8888-888888888888';
+export const riskPolicyId = '99999999-9999-4999-8999-999999999999';
+export const consentId = 'abababab-abab-4bab-8bab-abababababab';
+export const riskSignalId = '12121212-1212-4121-8121-121212121212';

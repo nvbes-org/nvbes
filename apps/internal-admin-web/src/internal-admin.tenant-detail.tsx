@@ -16,7 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getTenantDetail, reactivateTenant, suspendTenant } from './internal-admin.api';
+import { tenantDetailTabs } from './internal-admin.detail-tab-builders';
+import { EntityDetailTabs } from './internal-admin.detail-tabs';
 import { LockedState } from './internal-admin.locked-state';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, TenantLifecycleResult } from './internal-admin.types';
 
 type TenantAction = 'reactivate' | 'suspend';
@@ -133,6 +136,7 @@ export function TenantDetailPanel({
               value={formatCount(data.provider_failure_count)}
             />
           </div>
+          <EntityDetailTabs tabs={tenantDetailTabs(data)} />
           <TenantLifecycleActions
             activeAction={activeAction}
             actionResult={actionResult}
@@ -155,6 +159,7 @@ export function TenantDetailPanel({
             confirmCode={confirmCode}
             reason={reason}
             status={data.status}
+            tenantId={data.id}
           />
         </div>
       ) : null}
@@ -204,6 +209,7 @@ function TenantLifecycleActions({
   onStart,
   reason,
   status,
+  tenantId,
   confirmCode,
 }: {
   activeAction: TenantAction | null;
@@ -220,10 +226,14 @@ function TenantLifecycleActions({
   onStart: (action: TenantAction) => void;
   reason: string;
   status: string;
+  tenantId: string;
 }) {
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
   const isReasonReady = reason.trim().length >= 12;
-  const expectedCode = activeAction === 'suspend' ? 'SUSPEND TENANT' : 'REACTIVATE TENANT';
+  const expectedCode = strongConfirmationCode(
+    activeAction === 'suspend' ? 'SUSPEND TENANT' : 'REACTIVATE TENANT',
+    tenantId,
+  );
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (

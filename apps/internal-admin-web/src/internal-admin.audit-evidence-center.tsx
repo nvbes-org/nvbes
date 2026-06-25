@@ -2,21 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   Building2,
+  CircleDot,
   FileCheck2,
   KeyRound,
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getAuditEvidenceCenter } from './internal-admin.api';
+import { AuditEvidenceAlerts } from './internal-admin.audit-evidence-alerts';
+import {
+  EvidenceList,
+  EvidenceMetric,
+  HashChain,
+  SigningKeyList,
+  formatCount,
+  formatDate,
+  shortHash,
+} from './internal-admin.audit-evidence-widgets';
 import { LockedState } from './internal-admin.locked-state';
 import type {
   AdminCredentials,
   AuditEvidenceEvent,
   AuditHashAnomaly,
-  SigningKeySummary,
 } from './internal-admin.types';
 
 export function AuditEvidenceCenterPanel({
@@ -57,6 +66,7 @@ export function AuditEvidenceCenterPanel({
       {disabled ? (
         <LockedState label="Connecte un contexte operateur pour charger les preuves audit." />
       ) : null}
+      <AuditEvidenceAlerts alerts={data?.alerts ?? []} runtimeAlerts={data?.runtime_alerts ?? []} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
         <EvidenceMetric
           icon={FileCheck2}
@@ -86,6 +96,23 @@ export function AuditEvidenceCenterPanel({
           label="Backfilled"
           tone={(data?.backfilled_hash_count ?? 0) > 0 ? 'danger' : 'default'}
           value={formatCount(data?.backfilled_hash_count)}
+        />
+        <EvidenceMetric
+          icon={ShieldCheck}
+          label="Linked"
+          value={formatCount(data?.linked_hash_count)}
+        />
+        <EvidenceMetric
+          icon={CircleDot}
+          label="Chain heads"
+          tone={(data?.chain_head_count ?? 0) > 1 ? 'warning' : 'default'}
+          value={formatCount(data?.chain_head_count)}
+        />
+        <EvidenceMetric
+          icon={AlertTriangle}
+          label="Anomalies"
+          tone={(data?.hash_anomaly_count ?? 0) > 0 ? 'danger' : 'default'}
+          value={formatCount(data?.hash_anomaly_count)}
         />
         <EvidenceMetric
           icon={KeyRound}
@@ -179,7 +206,11 @@ function AuditEventList({
               {row.actor_email ?? 'Actor'}
             </Button>
           </div>
-          <HashChain eventHash={row.event_hash} previousEventHash={row.previous_event_hash} />
+          <HashChain
+            eventHash={row.event_hash}
+            previousEventHash={row.previous_event_hash}
+            status={row.hash_chain_status}
+          />
         </article>
       ))}
     </EvidenceList>
@@ -223,111 +254,4 @@ function HashAnomalyList({
       ))}
     </EvidenceList>
   );
-}
-
-function HashChain({
-  eventHash,
-  previousEventHash,
-}: {
-  eventHash: string | null;
-  previousEventHash: string | null;
-}) {
-  return (
-    <div className="text-muted-foreground mt-2 flex flex-wrap gap-2 font-mono text-[11px]">
-      <span className="rounded-md border px-2 py-1">prev:{shortHash(previousEventHash)}</span>
-      <span className="rounded-md border px-2 py-1">hash:{shortHash(eventHash)}</span>
-    </div>
-  );
-}
-
-function SigningKeyList({ rows }: { rows: SigningKeySummary[] }) {
-  return (
-    <EvidenceList emptyLabel="Aucune cle de signature." title="Signing keys">
-      {rows.map((row) => (
-        <div className="flex items-center justify-between gap-3 p-3" key={row.kid}>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{row.kid}</p>
-            <p className="text-muted-foreground truncate text-xs">
-              {row.algorithm} - {row.kms_key_id ?? 'local key'} - activated{' '}
-              {formatDate(row.activated_at)}
-            </p>
-          </div>
-          <Badge variant={row.status === 'revoked' ? 'destructive' : 'outline'}>{row.status}</Badge>
-        </div>
-      ))}
-    </EvidenceList>
-  );
-}
-
-function EvidenceList({
-  children,
-  emptyLabel,
-  title,
-}: {
-  children: ReactNode[];
-  emptyLabel: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">{title}</h3>
-      </div>
-      <div className="divide-y">
-        {children.length === 0 ? <EmptyRow label={emptyLabel} /> : children}
-      </div>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
-}
-
-function EvidenceMetric({
-  icon: Icon,
-  label,
-  tone = 'default',
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  tone?: 'danger' | 'default' | 'warning';
-  value: string;
-}) {
-  const iconClass =
-    tone === 'danger'
-      ? 'text-destructive size-4'
-      : tone === 'warning'
-        ? 'text-amber-500 size-4'
-        : 'size-4';
-
-  return (
-    <div className="bg-muted/30 rounded-md border p-3">
-      <div className="text-muted-foreground mb-3 flex items-center justify-between text-xs">
-        {label}
-        <Icon className={iconClass} />
-      </div>
-      <div
-        className={
-          tone === 'danger' ? 'text-destructive text-xl font-semibold' : 'text-xl font-semibold'
-        }
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function formatCount(value: number | undefined): string {
-  return typeof value === 'number' ? new Intl.NumberFormat('fr-FR').format(value) : '-';
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('fr-FR').format(new Date(value));
-}
-
-function shortHash(value: string | null): string {
-  if (!value) return 'missing';
-  return value.length > 12 ? value.slice(0, 12) : value;
 }

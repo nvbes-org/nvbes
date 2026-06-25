@@ -10,8 +10,10 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission,
+    require_strong_confirmation_for_value,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::{actor_principal_id, authorize_backoffice};
 use crate::error::AppError;
 
@@ -66,9 +68,7 @@ async fn execute_runbook_route(
     Path((workspace_id, runbook_id)): Path<(Uuid, String)>,
     Json(request): Json<RunbookExecutionRequest>,
 ) -> Result<Json<RunbookExecutionResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "EXECUTE RUNBOOK")?;
+    require_runbook_mutation(&headers, &request.confirm_code, &runbook_id)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     let _actor_id = actor_principal_id(&headers)?;
     Ok(Json(
@@ -233,9 +233,22 @@ fn validate_runbook_reason(reason: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+fn require_runbook_mutation(
+    headers: &HeaderMap,
+    confirm_code: &str,
+    runbook_id: &str,
+) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::BillingMutate)?;
+    require_strong_confirmation_for_value(confirm_code, "EXECUTE RUNBOOK", runbook_id)?;
+    require_dual_control(headers)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::HeaderMap;
+    use uuid::Uuid;
 
     #[test]
     fn runbook_slugs_cover_critical_incidents() {
@@ -252,5 +265,47 @@ mod tests {
         assert!(validate_runbook_id("unknown").is_err());
         assert!(validate_runbook_reason("short").is_err());
         assert!(validate_runbook_reason("incident OPS-123 approved").is_ok());
+    }
+
+    #[test]
+    fn runbook_mutation_requires_strong_confirmation_and_dual_control() {
+        let actor_id = Uuid::new_v4();
+        let approver_id = Uuid::new_v4();
+        let headers_without_approver = mutation_headers(actor_id, None);
+        assert!(
+            require_runbook_mutation(
+                &headers_without_approver,
+                "EXECUTE RUNBOOK PSPOUTAG",
+                "psp-outage"
+            )
+            .is_err()
+        );
+
+        let headers = mutation_headers(actor_id, Some(approver_id));
+        assert!(require_runbook_mutation(&headers, "EXECUTE RUNBOOK", "psp-outage").is_err());
+        assert!(
+            require_runbook_mutation(&headers, "EXECUTE RUNBOOK PSPOUTAG", "psp-outage").is_ok()
+        );
+    }
+
+    fn mutation_headers(actor_id: Uuid, approver_id: Option<Uuid>) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert("idempotency-key", "test-runbook-mutation".parse().unwrap());
+        headers.insert("x-nvbes-backoffice-role", "finance_admin".parse().unwrap());
+        headers.insert(
+            "x-nvbes-actor-principal-id",
+            actor_id.to_string().parse().unwrap(),
+        );
+        if let Some(approver_id) = approver_id {
+            headers.insert(
+                "x-nvbes-second-approver-principal-id",
+                approver_id.to_string().parse().unwrap(),
+            );
+            headers.insert(
+                "x-nvbes-second-approver-role",
+                "platform_admin".parse().unwrap(),
+            );
+        }
+        headers
     }
 }

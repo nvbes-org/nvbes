@@ -13,6 +13,7 @@ use nvbes_core::limiter::RateLimitInfo;
 
 use crate::app::AppState;
 use crate::error::AppError;
+use crate::observability::{record_action_request, record_rate_limited};
 
 const ACTOR_HEADER: &str = "x-nvbes-actor-principal-id";
 const CLIENT_IP_HEADER: &str = "x-nvbes-client-ip";
@@ -86,21 +87,45 @@ pub async fn backoffice_rate_limit(
     next: Next,
 ) -> Result<Response, AppError> {
     let policy = policy_for_request(request.method(), request.uri().path());
+    let method = request.method().as_str().to_string();
+    let family = action_family_for_path(request.uri().path());
     let actor_key = actor_key(&headers);
     let ip_key = ip_key(&headers);
 
-    state.rate_limiter.check(
-        &format!("actor:{actor_key}:{}", policy.kind),
-        policy.actor_limit,
-        WINDOW,
-    )?;
-    state.rate_limiter.check(
-        &format!("ip:{ip_key}:{}", policy.kind),
-        policy.ip_limit,
-        WINDOW,
-    )?;
+    let actor_info = state
+        .rate_limiter
+        .check(
+            &format!("actor:{actor_key}:{}", policy.kind),
+            policy.actor_limit,
+            WINDOW,
+        )
+        .map_err(|error| {
+            record_rate_limited(policy.kind, "actor");
+            error
+        })?;
+    let ip_info = state
+        .rate_limiter
+        .check(
+            &format!("ip:{ip_key}:{}", policy.kind),
+            policy.ip_limit,
+            WINDOW,
+        )
+        .map_err(|error| {
+            record_rate_limited(policy.kind, "ip");
+            error
+        })?;
 
-    Ok(next.run(request).await)
+    let started_at = Instant::now();
+    let mut response = next.run(request).await;
+    record_action_request(
+        family,
+        &method,
+        policy.kind,
+        response.status().as_u16(),
+        started_at.elapsed().as_secs_f64(),
+    );
+    effective_rate_limit_info(&actor_info, &ip_info).append_headers(response.headers_mut());
+    Ok(response)
 }
 
 struct BackofficeRatePolicy {
@@ -135,6 +160,10 @@ fn policy_for_request(method: &Method, path: &str) -> BackofficeRatePolicy {
 }
 
 fn is_critical_mutation_path(path: &str) -> bool {
+    if is_backoffice_action_path(path) {
+        return !path.contains("/billing/admin/exports/");
+    }
+
     let is_region_exception = path.contains("/region/workspaces/") && path.ends_with("/exceptions");
     let is_invoice_hold = path.contains("/invoices/") && path.ends_with("/hold");
     let is_routing_disable = path.contains("/routing-rules/") && path.ends_with("/disable");
@@ -155,6 +184,78 @@ fn is_critical_mutation_path(path: &str) -> bool {
         || is_security_revoke
         || is_governance_revoke
         || is_access_suspend
+}
+
+fn is_backoffice_action_path(path: &str) -> bool {
+    path.starts_with("/admin/") || path.contains("/admin/")
+}
+
+fn action_family_for_path(path: &str) -> &'static str {
+    if path.contains("/billing/admin/") {
+        return "billing_admin";
+    }
+    if path.contains("/admin/access-center/") {
+        return "access_center";
+    }
+    if path.contains("/admin/audit") {
+        return "audit";
+    }
+    if path.contains("/admin/billing-platform-center/") {
+        return "billing_platform_center";
+    }
+    if path.contains("/admin/communications-center/") {
+        return "communications_center";
+    }
+    if path.contains("/admin/compliance/") {
+        return "compliance_center";
+    }
+    if path.contains("/admin/developer-center/") {
+        return "developer_center";
+    }
+    if path.contains("/admin/entitlements-center/") {
+        return "entitlements_center";
+    }
+    if path.contains("/admin/identity-governance-center/") {
+        return "identity_governance_center";
+    }
+    if path.contains("/admin/operations-center/") {
+        return "operations_center";
+    }
+    if path.contains("/admin/region/") {
+        return "region_center";
+    }
+    if path.contains("/admin/revenue/") {
+        return "revenue_center";
+    }
+    if path.contains("/admin/risk/") {
+        return "risk_decision_center";
+    }
+    if path.contains("/admin/security-center/") {
+        return "security_center";
+    }
+    if path.contains("/admin/usage-center/") {
+        return "usage_center";
+    }
+    if path.contains("/admin/users/") {
+        return "user_lifecycle";
+    }
+    if path.contains("/admin/workspaces/") {
+        return "workspace_lifecycle";
+    }
+    if path.contains("/admin/tenants/") {
+        return "tenant_lifecycle";
+    }
+    "platform"
+}
+
+fn effective_rate_limit_info<'a>(
+    actor_info: &'a RateLimitInfo,
+    ip_info: &'a RateLimitInfo,
+) -> &'a RateLimitInfo {
+    if ip_info.remaining < actor_info.remaining {
+        return ip_info;
+    }
+    actor_info
 }
 
 fn actor_key(headers: &HeaderMap) -> String {
@@ -178,151 +279,5 @@ fn ip_key(headers: &HeaderMap) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        Router,
-        body::Body,
-        http::{Request, StatusCode},
-        routing::post,
-    };
-    use sqlx::postgres::PgPoolOptions;
-    use tower::ServiceExt;
-
-    #[test]
-    fn mutation_policy_is_stricter_than_read_policy() {
-        let read = policy_for_request(&Method::GET, "/admin/command-center");
-        let mutation = policy_for_request(&Method::POST, "/admin/operations/replay");
-
-        assert!(mutation.actor_limit < read.actor_limit);
-        assert!(mutation.ip_limit < read.ip_limit);
-    }
-
-    #[test]
-    fn critical_mutation_policy_is_stricter_than_regular_mutation_policy() {
-        let mutation = policy_for_request(&Method::POST, "/admin/operations/replay");
-        let critical = policy_for_request(
-            &Method::POST,
-            "/workspaces/00000000-0000-0000-0000-000000000001/admin/revenue/invoices/00000000-0000-0000-0000-000000000002/hold",
-        );
-        let security_critical = policy_for_request(
-            &Method::POST,
-            "/admin/security-center/mfa-factors/00000000-0000-0000-0000-000000000001/revoke",
-        );
-        let governance_critical = policy_for_request(
-            &Method::POST,
-            "/admin/identity-governance-center/recovery-requests/00000000-0000-0000-0000-000000000001/cancel",
-        );
-        let access_critical = policy_for_request(
-            &Method::POST,
-            "/admin/access-center/workspace-memberships/00000000-0000-0000-0000-000000000001/00000000-0000-0000-0000-000000000002/suspend",
-        );
-
-        assert!(critical.actor_limit < mutation.actor_limit);
-        assert!(critical.ip_limit < mutation.ip_limit);
-        assert_eq!(critical.kind, "critical_mutation");
-        assert_eq!(security_critical.kind, "critical_mutation");
-        assert_eq!(governance_critical.kind, "critical_mutation");
-        assert_eq!(access_critical.kind, "critical_mutation");
-    }
-
-    #[test]
-    fn limiter_blocks_after_limit() {
-        let limiter = BackofficeRateLimiter::default();
-        assert!(limiter.check("actor:a:mutation", 1, WINDOW).is_ok());
-        let error = limiter
-            .check("actor:a:mutation", 1, WINDOW)
-            .expect_err("second hit should be rate limited");
-
-        assert_eq!(error.code, "backoffice_rate_limited");
-    }
-
-    #[tokio::test]
-    async fn post_requests_are_rate_limited_through_http_middleware() {
-        let pool = PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/internal_admin_rate_limit_test")
-            .expect("lazy pool should build");
-        let state = AppState::new(nvbes_core::config::AppConfig::default(), pool);
-        let app = Router::new()
-            .route("/probe", post(|| async { "ok" }))
-            .layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                backoffice_rate_limit,
-            ));
-
-        for _ in 0..MUTATION_ACTOR_LIMIT {
-            let response = app
-                .clone()
-                .oneshot(post_request())
-                .await
-                .expect("middleware should respond");
-            assert_eq!(response.status(), StatusCode::OK);
-        }
-
-        let response = app
-            .oneshot(post_request())
-            .await
-            .expect("middleware should rate limit");
-
-        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
-        assert!(response.headers().contains_key("retry-after"));
-        let limit = MUTATION_ACTOR_LIMIT.to_string();
-        assert_eq!(
-            response
-                .headers()
-                .get("ratelimit-limit")
-                .and_then(|value| value.to_str().ok()),
-            Some(limit.as_str())
-        );
-    }
-
-    #[tokio::test]
-    async fn critical_mutations_are_rate_limited_with_dedicated_policy() {
-        let pool = PgPoolOptions::new()
-            .connect_lazy("postgres://localhost/internal_admin_rate_limit_test")
-            .expect("lazy pool should build");
-        let state = AppState::new(nvbes_core::config::AppConfig::default(), pool);
-        let path = "/workspaces/00000000-0000-0000-0000-000000000001/admin/revenue/invoices/00000000-0000-0000-0000-000000000002/hold";
-        let app = Router::new().route(path, post(|| async { "ok" })).layer(
-            axum::middleware::from_fn_with_state(state.clone(), backoffice_rate_limit),
-        );
-
-        for _ in 0..CRITICAL_MUTATION_ACTOR_LIMIT {
-            let response = app
-                .clone()
-                .oneshot(post_request_to(path))
-                .await
-                .expect("middleware should respond");
-            assert_eq!(response.status(), StatusCode::OK);
-        }
-
-        let response = app
-            .oneshot(post_request_to(path))
-            .await
-            .expect("middleware should rate limit critical mutation");
-
-        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
-        let limit = CRITICAL_MUTATION_ACTOR_LIMIT.to_string();
-        assert_eq!(
-            response
-                .headers()
-                .get("ratelimit-limit")
-                .and_then(|value| value.to_str().ok()),
-            Some(limit.as_str())
-        );
-    }
-
-    fn post_request() -> Request<Body> {
-        post_request_to("/probe")
-    }
-
-    fn post_request_to(path: &str) -> Request<Body> {
-        Request::builder()
-            .method(Method::POST)
-            .uri(path)
-            .header(ACTOR_HEADER, "00000000-0000-0000-0000-000000000001")
-            .header(CLIENT_IP_HEADER, "127.0.0.1")
-            .body(Body::empty())
-            .expect("request should build")
-    }
-}
+#[path = "internal_admin.rate_limit.tests.rs"]
+mod tests;

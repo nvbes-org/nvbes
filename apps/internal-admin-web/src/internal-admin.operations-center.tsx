@@ -1,5 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertTriangle, FileDown, Mail, RefreshCcw, Shield } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  CalendarClock,
+  FileDown,
+  Mail,
+  RefreshCcw,
+  Shield,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,6 +96,23 @@ export function OperationsCenterPanel({
           label="Recon diffs"
           tone={(data?.unresolved_reconciliation_difference_count ?? 0) > 0 ? 'danger' : 'default'}
           value={formatCount(data?.unresolved_reconciliation_difference_count)}
+        />
+        <OpsMetric
+          icon={AlertTriangle}
+          label="Open incidents"
+          tone={(data?.open_incident_count ?? 0) > 0 ? 'danger' : 'default'}
+          value={formatCount(data?.open_incident_count)}
+        />
+        <OpsMetric
+          icon={CalendarClock}
+          label="Maintenance"
+          value={formatCount(data?.scheduled_maintenance_window_count)}
+        />
+        <OpsMetric
+          icon={Activity}
+          label="Failed jobs"
+          tone={(data?.failed_job_run_count ?? 0) > 0 ? 'danger' : 'default'}
+          value={formatCount(data?.failed_job_run_count)}
         />
         <OpsMetric icon={Mail} label="Queued email" value={formatCount(data?.queued_email_count)} />
         <OpsMetric

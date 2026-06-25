@@ -1,9 +1,9 @@
+import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BadgeCheck,
   Building2,
   Clock3,
-  Copy,
   CreditCard,
   RotateCcw,
   ShieldAlert,
@@ -17,7 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getWorkspaceDetail, reactivateWorkspace, suspendWorkspace } from './internal-admin.api';
+import { workspaceDetailTabs } from './internal-admin.detail-tab-builders';
+import { EntityDetailTabs } from './internal-admin.detail-tabs';
 import { LockedState } from './internal-admin.locked-state';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, WorkspaceLifecycleResult } from './internal-admin.types';
 
 type WorkspaceAction = 'reactivate' | 'suspend';
@@ -128,15 +131,7 @@ export function WorkspaceDetailPanel({
                 <p className="text-sm font-medium">Workspace ID</p>
                 <p className="text-muted-foreground truncate font-mono text-xs">{data.id}</p>
               </div>
-              <Button
-                onClick={() => void navigator.clipboard.writeText(data.id)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <Copy className="size-4" />
-                Copy ID
-              </Button>
+              <ClipboardButton label="Copy ID" value={data.id} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
@@ -173,6 +168,7 @@ export function WorkspaceDetailPanel({
               value={formatCount(data.open_invoice_count)}
             />
           </div>
+          <EntityDetailTabs tabs={workspaceDetailTabs(data)} />
           <WorkspaceLifecycleActions
             activeAction={activeAction}
             actionResult={actionResult}
@@ -195,6 +191,7 @@ export function WorkspaceDetailPanel({
             confirmCode={confirmCode}
             reason={reason}
             status={data.status}
+            workspaceId={data.id}
           />
         </div>
       ) : null}
@@ -216,6 +213,7 @@ function WorkspaceLifecycleActions({
   onStart,
   reason,
   status,
+  workspaceId,
   confirmCode,
 }: {
   activeAction: WorkspaceAction | null;
@@ -232,10 +230,14 @@ function WorkspaceLifecycleActions({
   onStart: (action: WorkspaceAction) => void;
   reason: string;
   status: string;
+  workspaceId: string;
 }) {
   const isReasonReady = reason.trim().length >= 12;
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
-  const expectedCode = activeAction === 'suspend' ? 'SUSPEND WORKSPACE' : 'REACTIVATE WORKSPACE';
+  const expectedCode = strongConfirmationCode(
+    activeAction === 'suspend' ? 'SUSPEND WORKSPACE' : 'REACTIVATE WORKSPACE',
+    workspaceId,
+  );
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (

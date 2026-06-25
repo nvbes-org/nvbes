@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileDown, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CheckCircle2, FileDown, RefreshCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -7,20 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  replayExportRun,
-  replayOperationsProviderEvent,
-  resolveReconciliationDifference,
-} from './internal-admin.api';
+  executeOperationsAction,
+  operationsConfirmCodes,
+  parseIncidentStatus,
+  targetLabel,
+  type IncidentStatus,
+  type OperationsActionKind,
+} from './internal-admin.operations-action-model';
 import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, OperationsActionResult } from './internal-admin.types';
-
-type OperationsActionKind = 'replayExport' | 'replayProvider' | 'resolveRecon';
-
-const confirmCodes: Record<OperationsActionKind, string> = {
-  replayProvider: 'REPLAY PROVIDER EVENT',
-  replayExport: 'REPLAY EXPORT RUN',
-  resolveRecon: 'RESOLVE RECON DIFFERENCE',
-};
 
 export function OperationsActionsPanel({
   credentials,
@@ -32,16 +27,36 @@ export function OperationsActionsPanel({
   const queryClient = useQueryClient();
   const [action, setAction] = useState<OperationsActionKind>('replayProvider');
   const [targetId, setTargetId] = useState('');
+  const [incidentStatus, setIncidentStatus] = useState<IncidentStatus>('mitigating');
+  const [maintenanceTitle, setMaintenanceTitle] = useState('');
+  const [scheduledStart, setScheduledStart] = useState('');
+  const [scheduledEnd, setScheduledEnd] = useState('');
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<OperationsActionResult | null>(null);
-  const expectedConfirmCode = strongConfirmationCode(confirmCodes[action], targetId);
+  const confirmationTarget = action === 'maintenanceWindow' ? credentials.workspaceId : targetId;
+  const expectedConfirmCode = strongConfirmationCode(
+    operationsConfirmCodes[action],
+    confirmationTarget,
+  );
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
+  const isTargetReady = action === 'maintenanceWindow' ? true : targetId.trim().length > 0;
+  const isMaintenanceReady =
+    action !== 'maintenanceWindow' ||
+    (maintenanceTitle.trim().length >= 4 &&
+      scheduledStart.trim().length > 0 &&
+      scheduledEnd.trim().length > 0);
 
   const mutation = useMutation({
     mutationFn: () =>
       executeOperationsAction(credentials, action, {
         confirmCode,
+        incidentStatus,
+        maintenanceTitle,
         reason,
+        scheduledEnd,
+        scheduledStart,
         targetId,
       }),
     onSuccess: async (payload) => {
@@ -60,6 +75,19 @@ export function OperationsActionsPanel({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <ActionButton
+            action="incidentState"
+            current={action}
+            label="Incident"
+            onSelect={setAction}
+          />
+          <ActionButton
+            action="maintenanceWindow"
+            current={action}
+            label="Maintenance"
+            onSelect={setAction}
+          />
+          <ActionButton action="replayJob" current={action} label="Job run" onSelect={setAction} />
           <ActionButton
             action="replayProvider"
             current={action}
@@ -81,13 +109,51 @@ export function OperationsActionsPanel({
         </div>
       </div>
       <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-4">
-        <Field label={targetLabel(action)}>
-          <Input
-            disabled={disabled || mutation.isPending}
-            onChange={(event) => setTargetId(event.target.value)}
-            value={targetId}
-          />
-        </Field>
+        {action === 'maintenanceWindow' ? (
+          <>
+            <Field label="Maintenance title">
+              <Input
+                disabled={disabled || mutation.isPending}
+                onChange={(event) => setMaintenanceTitle(event.target.value)}
+                value={maintenanceTitle}
+              />
+            </Field>
+            <Field label="Start time">
+              <Input
+                disabled={disabled || mutation.isPending}
+                onChange={(event) => setScheduledStart(event.target.value)}
+                placeholder="2026-07-01T02:00:00Z"
+                value={scheduledStart}
+              />
+            </Field>
+            <Field label="End time">
+              <Input
+                disabled={disabled || mutation.isPending}
+                onChange={(event) => setScheduledEnd(event.target.value)}
+                placeholder="2026-07-01T04:00:00Z"
+                value={scheduledEnd}
+              />
+            </Field>
+          </>
+        ) : (
+          <Field label={targetLabel(action)}>
+            <Input
+              disabled={disabled || mutation.isPending}
+              onChange={(event) => setTargetId(event.target.value)}
+              value={targetId}
+            />
+          </Field>
+        )}
+        {action === 'incidentState' ? (
+          <Field label="Incident status">
+            <Input
+              disabled={disabled || mutation.isPending}
+              onChange={(event) => setIncidentStatus(parseIncidentStatus(event.target.value))}
+              placeholder="open, mitigating, resolved"
+              value={incidentStatus}
+            />
+          </Field>
+        ) : null}
         <Field label="Confirmation code">
           <Input
             disabled={disabled || mutation.isPending}
@@ -112,7 +178,14 @@ export function OperationsActionsPanel({
           Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={
+            disabled ||
+            !isTargetReady ||
+            !isMaintenanceReady ||
+            !isReasonReady ||
+            !isConfirmationReady ||
+            mutation.isPending
+          }
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -130,28 +203,6 @@ export function OperationsActionsPanel({
       ) : null}
     </div>
   );
-}
-
-type OperationsActionPayload = {
-  confirmCode: string;
-  reason: string;
-  targetId: string;
-};
-
-function executeOperationsAction(
-  credentials: AdminCredentials,
-  action: OperationsActionKind,
-  payload: OperationsActionPayload,
-) {
-  const body = {
-    confirm_code: payload.confirmCode,
-    reason: payload.reason,
-  };
-  if (action === 'replayProvider') {
-    return replayOperationsProviderEvent(credentials, payload.targetId, body);
-  }
-  if (action === 'replayExport') return replayExportRun(credentials, payload.targetId, body);
-  return resolveReconciliationDifference(credentials, payload.targetId, body);
 }
 
 function ActionButton({
@@ -179,15 +230,11 @@ function ActionButton({
 }
 
 function ActionIcon({ action }: { action: OperationsActionKind }) {
+  if (action === 'incidentState') return <AlertTriangle className="size-4" />;
+  if (action === 'maintenanceWindow') return <CalendarClock className="size-4" />;
   if (action === 'replayExport') return <FileDown className="size-4" />;
   if (action === 'resolveRecon') return <CheckCircle2 className="size-4" />;
   return <RefreshCcw className="size-4" />;
-}
-
-function targetLabel(action: OperationsActionKind): string {
-  if (action === 'replayProvider') return 'Provider event ID';
-  if (action === 'replayExport') return 'Export run ID';
-  return 'Reconciliation difference ID';
 }
 
 function Field({ children, label }: { children: ReactNode; label: string }) {

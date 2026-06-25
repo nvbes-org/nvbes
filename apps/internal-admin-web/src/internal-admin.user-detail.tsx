@@ -1,7 +1,7 @@
+import { ClipboardButton } from '@nvbes/web-ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Clock3,
-  Copy,
   KeyRound,
   RotateCcw,
   ShieldAlert,
@@ -16,7 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getUserDetail, reactivateUser, suspendUser } from './internal-admin.api';
+import { userDetailTabs } from './internal-admin.detail-tab-builders';
+import { EntityDetailTabs } from './internal-admin.detail-tabs';
 import { LockedState } from './internal-admin.locked-state';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, UserLifecycleResult } from './internal-admin.types';
 
 type UserAction = 'reactivate' | 'suspend';
@@ -112,16 +115,11 @@ export function UserDetailPanel({
               <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
                 {data.principal_id}
               </p>
-              <Button
+              <ClipboardButton
                 className="mt-3"
-                onClick={() => void navigator.clipboard.writeText(data.principal_id)}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <Copy className="size-4" />
-                Copy principal
-              </Button>
+                label="Copy principal"
+                value={data.principal_id}
+              />
             </div>
             <LinkCard
               id={data.tenant_id}
@@ -174,6 +172,7 @@ export function UserDetailPanel({
               value={formatCount(data.audit_events_24h)}
             />
           </div>
+          <EntityDetailTabs tabs={userDetailTabs(data)} />
           <UserLifecycleActions
             activeAction={activeAction}
             actionResult={actionResult}
@@ -195,6 +194,7 @@ export function UserDetailPanel({
             }}
             confirmCode={confirmCode}
             principalStatus={data.principal_status}
+            principalId={data.principal_id}
             reason={reason}
             userStatus={data.user_status}
           />
@@ -217,6 +217,7 @@ function UserLifecycleActions({
   onRun,
   onStart,
   principalStatus,
+  principalId,
   reason,
   userStatus,
   confirmCode,
@@ -233,13 +234,17 @@ function UserLifecycleActions({
   onReasonChange: (reason: string) => void;
   onRun: (action: UserAction) => void;
   onStart: (action: UserAction) => void;
+  principalId: string;
   principalStatus: string;
   reason: string;
   userStatus: string;
 }) {
   const isReasonReady = reason.trim().length >= 12;
   const actionLabel = availableAction === 'suspend' ? 'Suspendre' : 'Reactiver';
-  const expectedCode = activeAction === 'suspend' ? 'SUSPEND USER' : 'REACTIVATE USER';
+  const expectedCode = strongConfirmationCode(
+    activeAction === 'suspend' ? 'SUSPEND USER' : 'REACTIVATE USER',
+    principalId,
+  );
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (
@@ -251,7 +256,7 @@ function UserLifecycleActions({
             Cycle de vie utilisateur
           </div>
           <p className="text-muted-foreground mt-1 text-xs">
-            Principal: <span className="font-medium">{principalStatus}</span> · User:{' '}
+            Principal: <span className="font-medium">{principalStatus}</span> - User:{' '}
             <span className="font-medium">{userStatus}</span>
           </p>
         </div>

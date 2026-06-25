@@ -10,7 +10,7 @@ const permissionsPolicy =
 function cspFor(mode: string): string {
   const connectSrc =
     mode === 'development'
-      ? "connect-src 'self' ws://localhost:* http://localhost:*;"
+      ? "connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*;"
       : "connect-src 'self';";
   return `default-src 'self'; script-src 'self' ${mode === 'development' ? "'unsafe-inline' 'unsafe-eval'" : ''}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; ${connectSrc} object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;`;
 }
@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5178,
-      host: 'localhost',
+      host: '127.0.0.1',
       headers: {
         'Content-Security-Policy': cspHeader,
         'X-Frame-Options': 'DENY',
@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       port: 5178,
-      host: 'localhost',
+      host: '127.0.0.1',
       headers: {
         'Content-Security-Policy': cspHeader,
         'X-Frame-Options': 'DENY',

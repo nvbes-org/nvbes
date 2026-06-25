@@ -15,6 +15,7 @@ import {
   replayProviderEvent,
 } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type { AdminCredentials, CreditNoteRequest } from './internal-admin.types';
 
 type ActionKey =
@@ -25,6 +26,13 @@ type ActionKey =
   | 'migration'
   | 'grace'
   | 'manual-comp';
+type TargetField =
+  | 'from_provider'
+  | 'invoice_id'
+  | 'payment_id'
+  | 'provider_event_id'
+  | 'subscription_id'
+  | 'to_provider';
 
 const actionLabels: Record<ActionKey, string> = {
   'credit-note': 'Credit note',
@@ -58,8 +66,13 @@ export function BillingActions({
   const queryClient = useQueryClient();
   const [active, setActive] = useState<ActionKey>('credit-note');
   const [confirmCode, setConfirmCode] = useState('');
+  const [reason, setReason] = useState('');
+  const [targetFields, setTargetFields] = useState<Partial<Record<TargetField, string>>>({});
   const [result, setResult] = useState<string>('Aucune action executee.');
-  const expectedCode = actionConfirmCodes[active];
+  const targetValue = targetValueForAction(active, targetFields, credentials.workspaceId);
+  const expectedCode = targetValue
+    ? strongConfirmationCode(actionConfirmCodes[active], targetValue)
+    : actionConfirmCodes[active];
   const mutation = useMutation({
     mutationFn: (form: FormData) => submitAction(credentials, active, confirmCode, form),
     onSuccess: async (data) => {
@@ -77,17 +90,29 @@ export function BillingActions({
     },
     onError: (error) => setResult(error instanceof Error ? error.message : 'Action failed'),
   });
-  const canSubmit = !disabled && confirmCode.trim() === expectedCode && !mutation.isPending;
+  const canSubmit =
+    !disabled &&
+    Boolean(targetValue) &&
+    reason.trim().length >= 12 &&
+    confirmCode.trim() === expectedCode &&
+    !mutation.isPending;
 
   useEffect(() => {
     setConfirmCode('');
-  }, [active]);
+    setTargetFields(
+      active === 'replay' && replayDraft ? { provider_event_id: replayDraft.providerEventId } : {},
+    );
+  }, [active, replayDraft]);
 
   useEffect(() => {
     if (!replayDraft) return;
     setActive('replay');
     setResult('Replay form prefilled from provider event failure.');
   }, [replayDraft]);
+
+  const setTargetField = (field: TargetField, value: string) => {
+    setTargetFields((current) => ({ ...current, [field]: value }));
+  };
 
   return (
     <section className="border-border bg-card rounded-lg border p-4" id="mutations">
@@ -126,13 +151,20 @@ export function BillingActions({
         {disabled ? (
           <LockedState label="Les mutations sont bloquees tant que le contexte operateur est incomplet." />
         ) : null}
-        <ActionFields action={active} disabled={disabled} replayDraft={replayDraft} />
+        <ActionFields
+          action={active}
+          disabled={disabled}
+          onTargetFieldChange={setTargetField}
+          replayDraft={replayDraft}
+        />
         <Field label="Motif audit">
           <Textarea
             disabled={disabled}
             name="reason"
+            onChange={(event) => setReason(event.target.value)}
             placeholder="Decrire le contexte, ticket, approbation, impact..."
             required
+            value={reason}
           />
         </Field>
         <div className="bg-muted/40 rounded-md border p-3">
@@ -151,7 +183,8 @@ export function BillingActions({
             value={confirmCode}
           />
           <p className="text-muted-foreground mt-2 text-xs">
-            Le bouton Executer reste bloque tant que ce code ne correspond pas exactement.
+            Le bouton Executer reste bloque tant que la cible, le motif et ce code ne correspondent
+            pas exactement.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -180,10 +213,12 @@ export function BillingActions({
 function ActionFields({
   action,
   disabled,
+  onTargetFieldChange,
   replayDraft,
 }: {
   action: ActionKey;
   disabled: boolean;
+  onTargetFieldChange: (field: TargetField, value: string) => void;
   replayDraft: { nonce: number; provider: string; providerEventId: string } | null;
 }) {
   if (action === 'replay') {
@@ -203,6 +238,7 @@ function ActionFields({
             defaultValue={replayDraft?.providerEventId}
             disabled={disabled}
             name="provider_event_id"
+            onChange={(event) => onTargetFieldChange('provider_event_id', event.target.value)}
             required
           />
         </Field>
@@ -213,10 +249,22 @@ function ActionFields({
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="From provider">
-          <Input disabled={disabled} name="from_provider" placeholder="stripe" required />
+          <Input
+            disabled={disabled}
+            name="from_provider"
+            onChange={(event) => onTargetFieldChange('from_provider', event.target.value)}
+            placeholder="stripe"
+            required
+          />
         </Field>
         <Field label="To provider">
-          <Input disabled={disabled} name="to_provider" placeholder="mollie" required />
+          <Input
+            disabled={disabled}
+            name="to_provider"
+            onChange={(event) => onTargetFieldChange('to_provider', event.target.value)}
+            placeholder="mollie"
+            required
+          />
         </Field>
       </div>
     );
@@ -225,7 +273,11 @@ function ActionFields({
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Subscription ID">
-          <Input disabled={disabled} name="subscription_id" />
+          <Input
+            disabled={disabled}
+            name="subscription_id"
+            onChange={(event) => onTargetFieldChange('subscription_id', event.target.value)}
+          />
         </Field>
         <Field label="Grace days">
           <Input disabled={disabled} name="grace_days" required type="number" />
@@ -246,7 +298,12 @@ function ActionFields({
     return (
       <AmountFields disabled={disabled}>
         <Field label="Payment ID">
-          <Input disabled={disabled} name="payment_id" required />
+          <Input
+            disabled={disabled}
+            name="payment_id"
+            onChange={(event) => onTargetFieldChange('payment_id', event.target.value)}
+            required
+          />
         </Field>
         <Field label="Provider">
           <Input disabled={disabled} name="provider" placeholder="stripe" required />
@@ -257,7 +314,12 @@ function ActionFields({
   return (
     <AmountFields disabled={disabled}>
       <Field label="Invoice ID">
-        <Input disabled={disabled} name="invoice_id" required />
+        <Input
+          disabled={disabled}
+          name="invoice_id"
+          onChange={(event) => onTargetFieldChange('invoice_id', event.target.value)}
+          required
+        />
       </Field>
     </AmountFields>
   );
@@ -361,4 +423,21 @@ function optionalText(form: FormData, key: string): string | undefined {
 
 function numberValue(form: FormData, key: string): number {
   return Number(text(form, key));
+}
+
+function targetValueForAction(
+  action: ActionKey,
+  fields: Partial<Record<TargetField, string>>,
+  workspaceId: string,
+): string {
+  if (action === 'credit-note' || action === 'write-off') return fields.invoice_id?.trim() ?? '';
+  if (action === 'refund') return fields.payment_id?.trim() ?? '';
+  if (action === 'replay') return fields.provider_event_id?.trim() ?? '';
+  if (action === 'migration') {
+    const fromProvider = fields.from_provider?.trim() ?? '';
+    const toProvider = fields.to_provider?.trim() ?? '';
+    return fromProvider && toProvider ? `${fromProvider}->${toProvider}` : '';
+  }
+  if (action === 'grace') return fields.subscription_id?.trim() || workspaceId;
+  return workspaceId;
 }

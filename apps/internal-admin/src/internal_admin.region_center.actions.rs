@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
     require_strong_confirmation,
 };
 use crate::backoffice_dual_control::require_dual_control;
@@ -51,7 +51,14 @@ async fn flag_residency_route(
     Path((workspace_id, target_workspace_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<ResidencyFlagRequest>,
 ) -> Result<Json<RegionActionResult>, AppError> {
-    require_region_mutation(&headers, &request.confirm_code, "FLAG RESIDENCY")?;
+    require_region_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "FLAG RESIDENCY",
+        target_workspace_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         flag_residency(
@@ -75,13 +82,14 @@ async fn record_exception_route(
     Path((workspace_id, target_workspace_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<ResidencyExceptionRequest>,
 ) -> Result<Json<RegionActionResult>, AppError> {
-    require_region_authorization(&headers)?;
-    require_strong_confirmation(
+    require_region_mutation(
+        &state.db,
+        &headers,
         &request.confirm_code,
         "RECORD REGION EXCEPTION",
         target_workspace_id,
-    )?;
-    require_dual_control(&headers)?;
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         record_exception(
@@ -96,16 +104,19 @@ async fn record_exception_route(
     ))
 }
 
-fn require_region_mutation(
+async fn require_region_mutation(
+    db: &sqlx::PgPool,
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_region_authorization(headers)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)?;
+    require_operator_role_grant(db, headers).await
 }
 
 fn require_region_authorization(headers: &HeaderMap) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::RegionMutate)
+    require_operator_permission_headers(headers, BackofficePermission::RegionMutate)
 }

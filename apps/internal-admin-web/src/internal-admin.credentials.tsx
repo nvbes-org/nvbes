@@ -3,7 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { AdminCredentials } from './internal-admin.types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { AdminCredentials, BackofficeRole } from './internal-admin.types';
 
 type CredentialsPanelProps = {
   credentials: AdminCredentials;
@@ -56,12 +63,23 @@ export function CredentialsPanel({
           />
         </Field>
         <Field label="Back-office role">
-          <Input
-            className="font-mono text-xs"
+          <Select
             value={credentials.backofficeRole}
-            onChange={(event) => onChange({ ...credentials, backofficeRole: event.target.value })}
-            placeholder="platform_admin"
-          />
+            onValueChange={(value) =>
+              onChange({ ...credentials, backofficeRole: value as BackofficeRole })
+            }
+          >
+            <SelectTrigger className="w-full font-mono text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {backofficeRoles.map((role) => (
+                <SelectItem className="font-mono text-xs" key={role} value={role}>
+                  {role}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Second approver principal ID">
           <Input
@@ -74,14 +92,16 @@ export function CredentialsPanel({
           />
         </Field>
         <Field label="Second approver role">
-          <Input
-            className="font-mono text-xs"
-            value={credentials.secondApproverRole}
-            onChange={(event) =>
-              onChange({ ...credentials, secondApproverRole: event.target.value })
-            }
-            placeholder="platform_admin"
-          />
+          <Select value={credentials.secondApproverRole}>
+            <SelectTrigger className="w-full font-mono text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem className="font-mono text-xs" value="platform_admin">
+                platform_admin
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Internal token">
           <div className="relative">
@@ -103,6 +123,18 @@ export function CredentialsPanel({
     </section>
   );
 }
+
+const backofficeRoles: BackofficeRole[] = [
+  'platform_admin',
+  'finance_admin',
+  'security_admin',
+  'compliance_admin',
+  'developer_admin',
+  'operations_admin',
+  'product_admin',
+  'support_agent',
+  'viewer',
+];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

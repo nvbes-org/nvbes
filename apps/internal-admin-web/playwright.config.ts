@@ -16,7 +16,8 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'pnpm --dir apps/internal-admin-web dev',
+    command:
+      'pnpm --dir apps/internal-admin-web exec vite --host 127.0.0.1 --port 5178 --strictPort',
     cwd: '../..',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

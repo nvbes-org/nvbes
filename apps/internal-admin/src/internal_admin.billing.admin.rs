@@ -9,8 +9,10 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
+    require_strong_confirmation_for_value,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::billing_admin_exports::{build_finance_export, parse_finance_export_type};
 use crate::billing_admin_mutations::{
@@ -83,9 +85,12 @@ async fn credit_note_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<CreditNoteRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "CREATE CREDIT NOTE")?;
+    require_billing_mutation(
+        &headers,
+        &request.confirm_code,
+        "CREATE CREDIT NOTE",
+        request.invoice_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_credit_note(&state.db, access, request).await?))
 }
@@ -96,9 +101,12 @@ async fn write_off_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<CreditNoteRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "WRITE OFF")?;
+    require_billing_mutation(
+        &headers,
+        &request.confirm_code,
+        "WRITE OFF",
+        request.invoice_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(create_write_off(&state.db, access, request).await?))
 }
@@ -109,9 +117,12 @@ async fn refund_intent_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<RefundIntentRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "CREATE REFUND")?;
+    require_billing_mutation(
+        &headers,
+        &request.confirm_code,
+        "CREATE REFUND",
+        request.payment_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_refund_intent(&state.db, access, request).await?,
@@ -124,9 +135,12 @@ async fn replay_provider_event_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ProviderReplayRequest>,
 ) -> Result<Json<ProviderReplayResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "REPLAY EVENT")?;
+    require_billing_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "REPLAY EVENT",
+        &request.provider_event_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_provider_event(&state.db, access, request).await?,
@@ -139,9 +153,12 @@ async fn provider_migration_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ProviderMigrationRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "PLAN MIGRATION")?;
+    require_billing_mutation_for_value(
+        &headers,
+        &request.confirm_code,
+        "PLAN MIGRATION",
+        &provider_migration_target(&request),
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_provider_migration(&state.db, access, request).await?,
@@ -154,9 +171,20 @@ async fn grace_override_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<GraceOverrideRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "OVERRIDE GRACE")?;
+    match request.subscription_id {
+        Some(subscription_id) => require_billing_mutation(
+            &headers,
+            &request.confirm_code,
+            "OVERRIDE GRACE",
+            subscription_id,
+        )?,
+        None => require_billing_mutation(
+            &headers,
+            &request.confirm_code,
+            "OVERRIDE GRACE",
+            workspace_id,
+        )?,
+    }
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         override_grace_period(&state.db, access, workspace_id, request).await?,
@@ -169,9 +197,12 @@ async fn manual_comp_route(
     Path(workspace_id): Path<Uuid>,
     Json(request): Json<ManualCompRequest>,
 ) -> Result<Json<MutationResult>, AppError> {
-    require_idempotency_key(&headers)?;
-    require_permission(&headers, BackofficePermission::BillingMutate)?;
-    require_confirmation(&request.confirm_code, "CREATE COMPENSATION")?;
+    require_billing_mutation(
+        &headers,
+        &request.confirm_code,
+        "CREATE COMPENSATION",
+        workspace_id,
+    )?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         create_manual_compensation(&state.db, access, request).await?,
@@ -208,6 +239,41 @@ async fn finance_export_route(
     ))
 }
 
+fn require_billing_mutation(
+    headers: &HeaderMap,
+    confirm_code: &str,
+    expected_code: &str,
+    target_id: Uuid,
+) -> Result<(), AppError> {
+    require_billing_authorization(headers)?;
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)
+}
+
+fn require_billing_mutation_for_value(
+    headers: &HeaderMap,
+    confirm_code: &str,
+    expected_code: &str,
+    target_id: &str,
+) -> Result<(), AppError> {
+    require_billing_authorization(headers)?;
+    require_strong_confirmation_for_value(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)
+}
+
+fn require_billing_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, BackofficePermission::BillingMutate)
+}
+
+fn provider_migration_target(request: &ProviderMigrationRequest) -> String {
+    format!(
+        "{}->{}",
+        request.from_provider.trim(),
+        request.to_provider.trim()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,7 +299,12 @@ mod tests {
         }
 
         let actor_id = Uuid::new_v4();
+        let approver_id = Uuid::new_v4();
         let provider_event_id = format!("evt_{}", Uuid::new_v4());
+        let strong_code = crate::backoffice_authorization::strong_confirmation_code_for_value(
+            "REPLAY EVENT",
+            &provider_event_id,
+        );
         let (tenant_id, workspace_id, event_id) =
             seed_workspace_actor_and_provider_event(&pool, actor_id, &provider_event_id).await;
         let app = Router::new()
@@ -248,8 +319,9 @@ mod tests {
             .oneshot(replay_request(
                 workspace_id,
                 actor_id,
+                Some(approver_id),
                 "viewer",
-                "REPLAY EVENT",
+                &strong_code,
                 &provider_event_id,
                 "ticket BILL-456 approved",
             ))
@@ -262,6 +334,7 @@ mod tests {
             .oneshot(replay_request(
                 workspace_id,
                 actor_id,
+                Some(approver_id),
                 "finance_admin",
                 "REPLAY",
                 &provider_event_id,
@@ -271,12 +344,28 @@ mod tests {
             .expect("route should respond");
         assert_eq!(wrong_confirmation.status(), StatusCode::BAD_REQUEST);
 
+        let missing_dual_control = app
+            .clone()
+            .oneshot(replay_request(
+                workspace_id,
+                actor_id,
+                None,
+                "finance_admin",
+                &strong_code,
+                &provider_event_id,
+                "ticket BILL-456 approved",
+            ))
+            .await
+            .expect("route should respond");
+        assert_eq!(missing_dual_control.status(), StatusCode::BAD_REQUEST);
+
         let accepted = app
             .oneshot(replay_request(
                 workspace_id,
                 actor_id,
+                Some(approver_id),
                 "finance_admin",
-                "REPLAY EVENT",
+                &strong_code,
                 &provider_event_id,
                 "ticket BILL-456 approved",
             ))
@@ -434,12 +523,13 @@ mod tests {
     fn replay_request(
         workspace_id: Uuid,
         actor_id: Uuid,
+        approver_id: Option<Uuid>,
         role: &str,
         confirm_code: &str,
         provider_event_id: &str,
         reason: &str,
     ) -> Request<Body> {
-        Request::builder()
+        let mut request = Request::builder()
             .method("POST")
             .uri(format!(
                 "/workspaces/{workspace_id}/billing/admin/provider-events/replay"
@@ -447,7 +537,16 @@ mod tests {
             .header("content-type", "application/json")
             .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
             .header("x-nvbes-actor-principal-id", actor_id.to_string())
-            .header("x-nvbes-backoffice-role", role)
+            .header("x-nvbes-backoffice-role", role);
+        if let Some(approver_id) = approver_id {
+            request = request
+                .header(
+                    "x-nvbes-second-approver-principal-id",
+                    approver_id.to_string(),
+                )
+                .header("x-nvbes-second-approver-role", "platform_admin");
+        }
+        request
             .body(Body::from(
                 json!({
                     "confirm_code": confirm_code,

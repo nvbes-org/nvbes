@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_confirmation, require_idempotency_key, require_permission,
+    BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
     require_strong_confirmation,
 };
 use crate::backoffice_dual_control::require_dual_control;
@@ -46,7 +46,14 @@ async fn approve_policy_route(
     Path((workspace_id, policy_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RiskActionRequest>,
 ) -> Result<Json<RiskActionResult>, AppError> {
-    require_risk_mutation(&headers, &request.confirm_code, "APPROVE RISK POLICY")?;
+    require_risk_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "APPROVE RISK POLICY",
+        policy_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         approve_policy(&state.db, access, workspace_id, policy_id, request.reason).await?,
@@ -59,9 +66,14 @@ async fn block_policy_route(
     Path((workspace_id, policy_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RiskActionRequest>,
 ) -> Result<Json<RiskActionResult>, AppError> {
-    require_risk_authorization(&headers)?;
-    require_strong_confirmation(&request.confirm_code, "BLOCK RISK POLICY", policy_id)?;
-    require_dual_control(&headers)?;
+    require_risk_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "BLOCK RISK POLICY",
+        policy_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         block_policy(&state.db, access, workspace_id, policy_id, request.reason).await?,
@@ -74,23 +86,33 @@ async fn resolve_risk_signal_route(
     Path((workspace_id, signal_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<RiskActionRequest>,
 ) -> Result<Json<RiskActionResult>, AppError> {
-    require_risk_mutation(&headers, &request.confirm_code, "RESOLVE RISK SIGNAL")?;
+    require_risk_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "RESOLVE RISK SIGNAL",
+        signal_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         resolve_risk_signal(&state.db, access, workspace_id, signal_id, request.reason).await?,
     ))
 }
 
-fn require_risk_mutation(
+async fn require_risk_mutation(
+    db: &sqlx::PgPool,
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
+    target_id: Uuid,
 ) -> Result<(), AppError> {
     require_risk_authorization(headers)?;
-    require_confirmation(confirm_code, expected_code)
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)?;
+    require_operator_role_grant(db, headers).await
 }
 
 fn require_risk_authorization(headers: &HeaderMap) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::RiskMutate)
+    require_operator_permission_headers(headers, BackofficePermission::RiskMutate)
 }

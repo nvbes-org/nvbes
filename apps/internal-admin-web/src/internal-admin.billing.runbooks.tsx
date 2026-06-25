@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { executeBillingRunbook, listBillingRunbooks } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
+import { strongConfirmationCode } from './internal-admin.strong-confirmation';
 import type {
   AdminCredentials,
   BillingRunbook,
@@ -140,7 +141,7 @@ function RunbookCard({
   runbook: BillingRunbook;
 }) {
   const isReasonReady = reason.trim().length >= 12;
-  const expectedCode = 'EXECUTE RUNBOOK';
+  const expectedCode = strongConfirmationCode('EXECUTE RUNBOOK', runbook.id);
   const isConfirmationReady = confirmCode.trim() === expectedCode;
 
   return (

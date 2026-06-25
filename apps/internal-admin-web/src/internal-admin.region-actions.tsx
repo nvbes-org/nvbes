@@ -34,6 +34,8 @@ export function RegionActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RegionActionResult | null>(null);
   const requiredConfirmCode = regionConfirmCode(action, targetWorkspaceId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === requiredConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -128,7 +130,7 @@ export function RegionActionsPanel({
           Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -154,7 +156,6 @@ export function RegionActionsPanel({
 
 function regionConfirmCode(action: RegionActionKind, targetWorkspaceId: string): string {
   const baseCode = confirmCodes[action];
-  if (action !== 'exception') return baseCode;
   return strongConfirmationCode(baseCode, targetWorkspaceId);
 }
 

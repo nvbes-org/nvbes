@@ -32,6 +32,8 @@ export function RiskDecisionActionsPanel({
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<RiskActionResult | null>(null);
   const requiredConfirmCode = riskConfirmCode(action, targetId);
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === requiredConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -108,7 +110,7 @@ export function RiskDecisionActionsPanel({
           Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -130,7 +132,6 @@ export function RiskDecisionActionsPanel({
 
 function riskConfirmCode(action: RiskActionKind, targetId: string): string {
   const baseCode = confirmCodes[action];
-  if (action !== 'blockPolicy') return baseCode;
   return strongConfirmationCode(baseCode, targetId);
 }
 

@@ -19,6 +19,10 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         eprintln!("skipping test: developer action schema is missing");
         return;
     }
+    if !crate::test_operator_grants::operator_grants_schema_exists(&pool).await {
+        eprintln!("skipping test: operator grant schema is missing");
+        return;
+    }
 
     let actor_id = Uuid::new_v4();
     let client_id = format!("client_{}", Uuid::new_v4());
@@ -48,12 +52,31 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(denied.status(), StatusCode::FORBIDDEN);
 
+    for role in ["finance_admin", "product_admin", "security_admin"] {
+        let denied = app
+            .clone()
+            .oneshot(revoke_request(
+                workspace_id,
+                actor_id,
+                role,
+                &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                    "REVOKE CLIENT",
+                    &client_id,
+                ),
+                &client_id,
+                "ticket DEV-123 approved",
+            ))
+            .await
+            .expect("route should respond");
+        assert_eq!(denied.status(), StatusCode::FORBIDDEN, "{role}");
+    }
+
     let wrong_confirmation = app
         .clone()
         .oneshot(revoke_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "developer_admin",
             "REVOKE",
             &client_id,
             "ticket DEV-123 approved",
@@ -67,7 +90,7 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         .oneshot(revoke_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "developer_admin",
             "REVOKE CLIENT",
             &client_id,
             "ticket DEV-123 approved",
@@ -76,11 +99,31 @@ async fn revoke_client_route_enforces_role_confirmation_and_audits_success() {
         .expect("route should respond");
     assert_eq!(generic_confirmation.status(), StatusCode::BAD_REQUEST);
 
+    let missing_grant = app
+        .clone()
+        .oneshot(revoke_request(
+            workspace_id,
+            actor_id,
+            "developer_admin",
+            &crate::backoffice_authorization::strong_confirmation_code_for_value(
+                "REVOKE CLIENT",
+                &client_id,
+            ),
+            &client_id,
+            "ticket DEV-123 approved",
+        ))
+        .await
+        .expect("route should respond");
+    assert_eq!(missing_grant.status(), StatusCode::FORBIDDEN);
+
+    crate::test_operator_grants::grant_active_operator_role(&pool, actor_id, "developer_admin")
+        .await;
+
     let accepted = app
         .oneshot(revoke_request(
             workspace_id,
             actor_id,
-            "finance_admin",
+            "developer_admin",
             &crate::backoffice_authorization::strong_confirmation_code_for_value(
                 "REVOKE CLIENT",
                 &client_id,
@@ -257,6 +300,11 @@ fn revoke_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

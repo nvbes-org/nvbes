@@ -1,8 +1,11 @@
 use axum::http::HeaderMap;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::error::AppError;
+use crate::observability::{record_guard_rejection, record_permission_denied};
 
+const ACTOR_HEADER: &str = "x-nvbes-actor-principal-id";
 const ROLE_HEADER: &str = "x-nvbes-backoffice-role";
 const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
 
@@ -29,8 +32,12 @@ pub(crate) enum BackofficePermission {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BackofficeRole {
+    ComplianceAdmin,
+    DeveloperAdmin,
     FinanceAdmin,
+    OperationsAdmin,
     PlatformAdmin,
+    ProductAdmin,
     SecurityAdmin,
     SupportAgent,
     Viewer,
@@ -44,16 +51,57 @@ pub(crate) fn require_permission(
     if role_allows(role, permission) {
         return Ok(());
     }
+    record_permission_denied(permission, role.metric_name());
     Err(AppError::forbidden(
         "backoffice_permission_denied",
         "Back-office operator role is not allowed to execute this action.",
     ))
 }
 
+pub(crate) async fn require_operator_role_grant(
+    db: &PgPool,
+    headers: &HeaderMap,
+) -> Result<(), AppError> {
+    let actor_id = backoffice_actor(headers)?;
+    let role = backoffice_role(headers)?;
+    let role_name = role.metric_name();
+    let has_grant = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+          SELECT 1
+          FROM internal_admin_operator_grants
+          WHERE principal_id = $1 AND role = $2 AND status = 'active'
+        )
+        "#,
+    )
+    .bind(actor_id)
+    .bind(role_name)
+    .fetch_one(db)
+    .await?;
+
+    if has_grant {
+        return Ok(());
+    }
+    record_guard_rejection("rbac", "missing_operator_grant");
+    Err(AppError::forbidden(
+        "backoffice_operator_grant_required",
+        "Back-office actor is not granted the requested operator role.",
+    ))
+}
+
+pub(crate) fn require_operator_permission_headers(
+    headers: &HeaderMap,
+    permission: BackofficePermission,
+) -> Result<(), AppError> {
+    require_idempotency_key(headers)?;
+    require_permission(headers, permission)
+}
+
 pub(crate) fn require_confirmation(actual: &str, expected: &str) -> Result<(), AppError> {
     if actual.trim() == expected {
         return Ok(());
     }
+    record_guard_rejection("strong_confirmation", "mismatch");
     Err(AppError::bad_request(
         "backoffice_confirmation_required",
         "Back-office action requires the exact confirmation code.",
@@ -102,12 +150,14 @@ pub(crate) fn require_idempotency_key(headers: &HeaderMap) -> Result<&str, AppEr
         .get(IDEMPOTENCY_KEY_HEADER)
         .and_then(|value| value.to_str().ok())
         .ok_or_else(|| {
+            record_guard_rejection("idempotency", "missing_key");
             AppError::bad_request(
                 "idempotency_key_required",
                 "Back-office mutations require Idempotency-Key.",
             )
         })?;
     nvbes_core::idempotency::validate_key(value).map_err(|message| {
+        record_guard_rejection("idempotency", "invalid_key");
         AppError::bad_request(
             "invalid_idempotency_key",
             format!("Invalid Idempotency-Key: {message}"),
@@ -120,6 +170,7 @@ fn backoffice_role(headers: &HeaderMap) -> Result<BackofficeRole, AppError> {
         .get(ROLE_HEADER)
         .and_then(|value| value.to_str().ok())
         .ok_or_else(|| {
+            record_guard_rejection("rbac", "missing_role");
             AppError::unauthorized(
                 "backoffice_role_required",
                 "Back-office requests require x-nvbes-backoffice-role.",
@@ -128,178 +179,124 @@ fn backoffice_role(headers: &HeaderMap) -> Result<BackofficeRole, AppError> {
     parse_role(value)
 }
 
+fn backoffice_actor(headers: &HeaderMap) -> Result<Uuid, AppError> {
+    let value = headers
+        .get(ACTOR_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| {
+            record_guard_rejection("rbac", "missing_actor");
+            AppError::unauthorized(
+                "backoffice_actor_required",
+                "Back-office requests require x-nvbes-actor-principal-id.",
+            )
+        })?;
+    Uuid::parse_str(value).map_err(|_| {
+        record_guard_rejection("rbac", "invalid_actor");
+        AppError::bad_request(
+            "invalid_backoffice_actor",
+            "Back-office actor principal ID must be a UUID.",
+        )
+    })
+}
+
 fn parse_role(value: &str) -> Result<BackofficeRole, AppError> {
     match value.trim() {
+        "compliance_admin" => Ok(BackofficeRole::ComplianceAdmin),
+        "developer_admin" => Ok(BackofficeRole::DeveloperAdmin),
         "finance_admin" => Ok(BackofficeRole::FinanceAdmin),
+        "operations_admin" => Ok(BackofficeRole::OperationsAdmin),
         "platform_admin" => Ok(BackofficeRole::PlatformAdmin),
+        "product_admin" => Ok(BackofficeRole::ProductAdmin),
         "security_admin" => Ok(BackofficeRole::SecurityAdmin),
         "support_agent" => Ok(BackofficeRole::SupportAgent),
         "viewer" => Ok(BackofficeRole::Viewer),
-        _ => Err(AppError::bad_request(
-            "invalid_backoffice_role",
-            "Back-office role is not recognized.",
-        )),
+        _ => {
+            record_guard_rejection("rbac", "invalid_role");
+            Err(AppError::bad_request(
+                "invalid_backoffice_role",
+                "Back-office role is not recognized.",
+            ))
+        }
+    }
+}
+
+impl BackofficePermission {
+    pub(crate) fn metric_name(self) -> &'static str {
+        match self {
+            BackofficePermission::AccessMutate => "access_mutate",
+            BackofficePermission::BillingMutate => "billing_mutate",
+            BackofficePermission::BillingPlatformMutate => "billing_platform_mutate",
+            BackofficePermission::CommunicationsMutate => "communications_mutate",
+            BackofficePermission::ComplianceMutate => "compliance_mutate",
+            BackofficePermission::DeveloperMutate => "developer_mutate",
+            BackofficePermission::EntitlementsMutate => "entitlements_mutate",
+            BackofficePermission::GovernanceMutate => "governance_mutate",
+            BackofficePermission::OperationsMutate => "operations_mutate",
+            BackofficePermission::RegionMutate => "region_mutate",
+            BackofficePermission::RevenueMutate => "revenue_mutate",
+            BackofficePermission::RiskMutate => "risk_mutate",
+            BackofficePermission::SecurityMutate => "security_mutate",
+            BackofficePermission::TenantLifecycle => "tenant_lifecycle",
+            BackofficePermission::UsageMutate => "usage_mutate",
+            BackofficePermission::UserLifecycle => "user_lifecycle",
+            BackofficePermission::WorkspaceLifecycle => "workspace_lifecycle",
+        }
+    }
+}
+
+impl BackofficeRole {
+    fn metric_name(self) -> &'static str {
+        match self {
+            BackofficeRole::ComplianceAdmin => "compliance_admin",
+            BackofficeRole::DeveloperAdmin => "developer_admin",
+            BackofficeRole::FinanceAdmin => "finance_admin",
+            BackofficeRole::OperationsAdmin => "operations_admin",
+            BackofficeRole::PlatformAdmin => "platform_admin",
+            BackofficeRole::ProductAdmin => "product_admin",
+            BackofficeRole::SecurityAdmin => "security_admin",
+            BackofficeRole::SupportAgent => "support_agent",
+            BackofficeRole::Viewer => "viewer",
+        }
     }
 }
 
 fn role_allows(role: BackofficeRole, permission: BackofficePermission) -> bool {
     match role {
         BackofficeRole::PlatformAdmin => true,
+        BackofficeRole::ComplianceAdmin => matches!(
+            permission,
+            BackofficePermission::ComplianceMutate | BackofficePermission::RegionMutate
+        ),
+        BackofficeRole::DeveloperAdmin => {
+            matches!(permission, BackofficePermission::DeveloperMutate)
+        }
         BackofficeRole::FinanceAdmin => matches!(
             permission,
             BackofficePermission::BillingMutate
                 | BackofficePermission::BillingPlatformMutate
-                | BackofficePermission::DeveloperMutate
-                | BackofficePermission::EntitlementsMutate
                 | BackofficePermission::RevenueMutate
-                | BackofficePermission::UsageMutate
+        ),
+        BackofficeRole::OperationsAdmin => matches!(
+            permission,
+            BackofficePermission::CommunicationsMutate | BackofficePermission::OperationsMutate
+        ),
+        BackofficeRole::ProductAdmin => matches!(
+            permission,
+            BackofficePermission::EntitlementsMutate | BackofficePermission::UsageMutate
         ),
         BackofficeRole::SecurityAdmin => matches!(
             permission,
             BackofficePermission::AccessMutate
-                | BackofficePermission::ComplianceMutate
                 | BackofficePermission::GovernanceMutate
-                | BackofficePermission::OperationsMutate
-                | BackofficePermission::RegionMutate
                 | BackofficePermission::RiskMutate
                 | BackofficePermission::SecurityMutate
                 | BackofficePermission::UserLifecycle
         ),
-        BackofficeRole::SupportAgent => matches!(
-            permission,
-            BackofficePermission::CommunicationsMutate
-                | BackofficePermission::TenantLifecycle
-                | BackofficePermission::UserLifecycle
-                | BackofficePermission::WorkspaceLifecycle
-        ),
+        BackofficeRole::SupportAgent => false,
         BackofficeRole::Viewer => false,
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn platform_admin_can_run_every_tracked_permission() {
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::TenantLifecycle
-        ));
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::AccessMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::SecurityMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::EntitlementsMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::UsageMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::PlatformAdmin,
-            BackofficePermission::DeveloperMutate
-        ));
-    }
-
-    #[test]
-    fn viewer_cannot_mutate() {
-        assert!(!role_allows(
-            BackofficeRole::Viewer,
-            BackofficePermission::TenantLifecycle
-        ));
-    }
-
-    #[test]
-    fn security_admin_can_mutate_security_and_governance() {
-        assert!(role_allows(
-            BackofficeRole::SecurityAdmin,
-            BackofficePermission::SecurityMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::SecurityAdmin,
-            BackofficePermission::GovernanceMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::SecurityAdmin,
-            BackofficePermission::OperationsMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::SecurityAdmin,
-            BackofficePermission::RiskMutate
-        ));
-        assert!(!role_allows(
-            BackofficeRole::SecurityAdmin,
-            BackofficePermission::TenantLifecycle
-        ));
-    }
-
-    #[test]
-    fn finance_admin_can_only_mutate_billing() {
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::BillingMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::BillingPlatformMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::EntitlementsMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::RevenueMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::UsageMutate
-        ));
-        assert!(role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::DeveloperMutate
-        ));
-        assert!(!role_allows(
-            BackofficeRole::FinanceAdmin,
-            BackofficePermission::SecurityMutate
-        ));
-    }
-
-    #[test]
-    fn confirmation_must_match_exactly_after_trim() {
-        assert!(require_confirmation("SUSPEND TENANT", "SUSPEND TENANT").is_ok());
-        assert!(require_confirmation(" SUSPEND TENANT ", "SUSPEND TENANT").is_ok());
-        assert!(require_confirmation("suspend tenant", "SUSPEND TENANT").is_err());
-    }
-
-    #[test]
-    fn strong_confirmation_includes_target_fingerprint() {
-        let target_id =
-            Uuid::parse_str("018f2f61-4875-7f7a-8bc8-8f70a73d2b1f").expect("uuid should parse");
-        assert_eq!(
-            strong_confirmation_code("HOLD INVOICE", target_id),
-            "HOLD INVOICE 018F2F61"
-        );
-        assert!(require_strong_confirmation("HOLD INVOICE", "HOLD INVOICE", target_id).is_err());
-        assert!(
-            require_strong_confirmation("HOLD INVOICE 018F2F61", "HOLD INVOICE", target_id).is_ok()
-        );
-    }
-
-    #[test]
-    fn idempotency_key_is_required_and_validated() {
-        let headers = HeaderMap::new();
-        assert!(require_idempotency_key(&headers).is_err());
-
-        let mut headers = HeaderMap::new();
-        headers.insert(IDEMPOTENCY_KEY_HEADER, " key-123 ".parse().unwrap());
-        assert_eq!(require_idempotency_key(&headers).unwrap(), "key-123");
-    }
-}
+#[path = "internal_admin.backoffice_authorization.tests.rs"]
+mod tests;

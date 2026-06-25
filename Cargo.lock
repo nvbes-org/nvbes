@@ -3181,6 +3181,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
+ "metrics",
  "nvbes-billing",
  "nvbes-core",
  "nvbes-observability",

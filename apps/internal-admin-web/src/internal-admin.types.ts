@@ -1,10 +1,16 @@
+import type { components as InternalAdminComponents } from '@nvbes/internal-admin-sdk-core/src/types';
+
+type InternalAdminSchemas = InternalAdminComponents['schemas'];
+
+export type BackofficeRole = InternalAdminSchemas['BackofficeRole'];
+
 export type AdminCredentials = {
   workspaceId: string;
   internalToken: string;
   actorPrincipalId: string;
-  backofficeRole: string;
+  backofficeRole: BackofficeRole;
   secondApproverPrincipalId: string;
-  secondApproverRole: string;
+  secondApproverRole: 'platform_admin';
 };
 
 export type SearchResult = {
@@ -39,17 +45,9 @@ export type TenantDetail = {
   updated_at: string;
 };
 
-export type TenantLifecycleRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type TenantLifecycleRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type TenantLifecycleResult = {
-  tenant_id: string;
-  previous_status: string;
-  next_status: string;
-  audit_action: string;
-};
+export type TenantLifecycleResult = InternalAdminSchemas['TenantLifecycleResult'];
 
 export type WorkspaceDetail = {
   id: string;
@@ -72,18 +70,9 @@ export type WorkspaceDetail = {
   updated_at: string;
 };
 
-export type WorkspaceLifecycleRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type WorkspaceLifecycleRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type WorkspaceLifecycleResult = {
-  workspace_id: string;
-  tenant_id: string;
-  previous_status: string;
-  next_status: string;
-  audit_action: string;
-};
+export type WorkspaceLifecycleResult = InternalAdminSchemas['WorkspaceLifecycleResult'];
 
 export type UserDetail = {
   principal_id: string;
@@ -108,19 +97,35 @@ export type UserDetail = {
   updated_at: string;
 };
 
-export type UserLifecycleRequest = {
-  confirm_code: string;
-  reason: string;
+export type UserLifecycleRequest = InternalAdminSchemas['CriticalActionRequest'];
+
+export type UserLifecycleResult = InternalAdminSchemas['UserLifecycleResult'];
+
+export type PendingApprovalsSnapshot = {
+  pending_count: number;
+  critical_count: number;
+  overdue_count: number;
+  items: PendingApprovalItem[];
 };
 
-export type UserLifecycleResult = {
-  principal_id: string;
-  tenant_id: string;
-  previous_principal_status: string;
-  previous_user_status: string;
-  next_principal_status: string;
-  next_user_status: string;
-  audit_action: string;
+export type PendingApprovalItem = {
+  id: string;
+  center: string;
+  action: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  status: string;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  workspace_id: string | null;
+  principal_id: string | null;
+  target_type: string;
+  target_id: string;
+  target_label: string;
+  requested_by: string | null;
+  requested_at: string;
+  expires_at: string | null;
+  required_role: BackofficeRole | string;
+  audit_hint: string;
 };
 
 export type SecurityCenterSnapshot = {
@@ -150,17 +155,9 @@ export type RiskDecisionSnapshot = {
   active_access_policies: AccessPolicySnapshot[];
 };
 
-export type RiskActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type RiskActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type RiskActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type RiskActionResult = InternalAdminSchemas['RiskActionResult'];
 
 export type AuditEvidenceSnapshot = {
   audit_events_24h: number;
@@ -168,6 +165,9 @@ export type AuditEvidenceSnapshot = {
   sensitive_action_count_24h: number;
   missing_hash_count: number;
   backfilled_hash_count: number;
+  linked_hash_count: number;
+  chain_head_count: number;
+  hash_anomaly_count: number;
   active_signing_key_count: number;
   deprecated_signing_key_count: number;
   revoked_signing_key_count: number;
@@ -175,6 +175,24 @@ export type AuditEvidenceSnapshot = {
   actorless_events: AuditEvidenceEvent[];
   hash_anomalies: AuditHashAnomaly[];
   signing_keys: SigningKeySummary[];
+  alerts: AuditEvidenceAlert[];
+  runtime_alerts: RuntimeMetricAlert[];
+};
+
+export type AuditEvidenceAlert = {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  title: string;
+  count: number;
+  target_anchor: string;
+};
+
+export type RuntimeMetricAlert = {
+  id: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  title: string;
+  metric_name: string;
+  condition: string;
 };
 
 export type ComplianceCenterSnapshot = {
@@ -188,23 +206,11 @@ export type ComplianceCenterSnapshot = {
   recent_suppressed_emails: RecentSuppressedEmail[];
 };
 
-export type ComplianceActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type ComplianceActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type SuppressionReviewRequest = {
-  confirm_code: string;
-  email: string;
-  reason: string;
-};
+export type SuppressionReviewRequest = InternalAdminSchemas['SuppressionReviewRequest'];
 
-export type ComplianceActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type ComplianceActionResult = InternalAdminSchemas['ComplianceActionResult'];
 
 export type CommunicationsCenterSnapshot = {
   queued_message_count: number;
@@ -221,23 +227,11 @@ export type CommunicationsCenterSnapshot = {
   recent_unprocessed_events: RecentEmailEvent[];
 };
 
-export type CommunicationsActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type CommunicationsActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type EmailSuppressionRequest = {
-  confirm_code: string;
-  email: string;
-  reason: string;
-};
+export type EmailSuppressionRequest = InternalAdminSchemas['SuppressionReviewRequest'];
 
-export type CommunicationsActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type CommunicationsActionResult = InternalAdminSchemas['CommunicationsActionResult'];
 
 export type IdentityGovernanceSnapshot = {
   active_idp_count: number;
@@ -247,13 +241,35 @@ export type IdentityGovernanceSnapshot = {
   pending_review_item_count: number;
   active_break_glass_count: number;
   pending_recovery_count: number;
+  active_operator_grant_count: number;
+  revoked_operator_grant_count: number;
   unverified_domains: UnverifiedDomain[];
   sso_providers: SsoProvider[];
   scim_connectors: ScimConnector[];
   overdue_access_reviews: OverdueAccessReview[];
   break_glass_accounts: BreakGlassAccount[];
   pending_recovery_requests: PendingRecoveryRequest[];
+  operator_role_distribution: OperatorRoleDistribution[];
+  operator_grants: OperatorGrant[];
 };
+
+export type OperatorRoleDistribution = {
+  role: BackofficeRole | string;
+  active_count: number;
+};
+
+export type OperatorGrant = {
+  principal_id: string;
+  email: string | null;
+  display_name: string | null;
+  role: BackofficeRole | string;
+  status: 'active' | 'revoked' | string;
+  granted_at: string;
+  revoked_at: string | null;
+  reason: string | null;
+};
+
+export type OperatorGrantActionResult = InternalAdminSchemas['OperatorGrantActionResult'];
 
 export type RegionCenterSnapshot = {
   eu_workspace_count: number;
@@ -267,25 +283,11 @@ export type RegionCenterSnapshot = {
   multi_region_tenants: MultiRegionTenant[];
 };
 
-export type RegionFlagRequest = {
-  confirm_code: string;
-  data_region: string;
-  jurisdiction: string;
-  reason: string;
-};
+export type RegionFlagRequest = InternalAdminSchemas['RegionFlagRequest'];
 
-export type RegionExceptionRequest = {
-  confirm_code: string;
-  exception_kind: string;
-  reason: string;
-};
+export type RegionExceptionRequest = InternalAdminSchemas['RegionExceptionRequest'];
 
-export type RegionActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type RegionActionResult = InternalAdminSchemas['RegionActionResult'];
 
 export type DeveloperCenterSnapshot = {
   active_client_count: number;
@@ -302,17 +304,9 @@ export type DeveloperCenterSnapshot = {
   health_issues: DeveloperHealthIssue[];
 };
 
-export type DeveloperActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type DeveloperActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type DeveloperActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type DeveloperActionResult = InternalAdminSchemas['DeveloperActionResult'];
 
 export type EntitlementsSnapshot = {
   active_plan_count: number;
@@ -328,32 +322,15 @@ export type EntitlementsSnapshot = {
   unpublished_changes: UnpublishedEntitlementChange[];
 };
 
-export type EntitlementFeatureActionRequest = {
-  confirm_code: string;
-  feature_code: string;
-  value: Record<string, unknown>;
-  reason: string;
-};
+export type EntitlementFeatureActionRequest =
+  InternalAdminSchemas['EntitlementFeatureActionRequest'];
 
-export type EntitlementQuotaOverrideRequest = {
-  confirm_code: string;
-  quota_code: string;
-  included_quantity: number;
-  reason: string;
-};
+export type EntitlementQuotaOverrideRequest =
+  InternalAdminSchemas['EntitlementQuotaOverrideRequest'];
 
-export type EntitlementPublishRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type EntitlementPublishRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type EntitlementActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  published_change_count: number;
-  audit_action: string;
-};
+export type EntitlementActionResult = InternalAdminSchemas['EntitlementActionResult'];
 
 export type UsageCenterSnapshot = {
   active_meter_count: number;
@@ -368,31 +345,13 @@ export type UsageCenterSnapshot = {
   recent_corrections: UsageCorrection[];
 };
 
-export type UsageCorrectionRequest = {
-  confirm_code: string;
-  usage_event_id: string | null;
-  meter_code: string;
-  quantity_delta: number;
-  reason: string;
-};
+export type UsageCorrectionRequest = InternalAdminSchemas['UsageCorrectionRequest'];
 
-export type FreezeMeterRequest = {
-  confirm_code: string;
-  meter_code: string;
-  reason: string;
-};
+export type FreezeMeterRequest = InternalAdminSchemas['FreezeMeterRequest'];
 
-export type ReplayUsageRollupRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type ReplayUsageRollupRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type UsageActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type UsageActionResult = InternalAdminSchemas['UsageActionResult'];
 
 export type RevenueCenterSnapshot = {
   captured_payments_30d: MoneyTotal[];
@@ -410,17 +369,9 @@ export type RevenueCenterSnapshot = {
   recent_captured_payments: RecentCapturedPayment[];
 };
 
-export type RevenueActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type RevenueActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type RevenueActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type RevenueActionResult = InternalAdminSchemas['RevenueActionResult'];
 
 export type BillingPlatformSnapshot = {
   active_provider_count: number;
@@ -439,17 +390,9 @@ export type BillingPlatformSnapshot = {
   einvoicing_profiles: EinvoicingProfile[];
 };
 
-export type BillingPlatformActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type BillingPlatformActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type BillingPlatformActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type BillingPlatformActionResult = InternalAdminSchemas['BillingPlatformActionResult'];
 
 export type CustomerCenterSnapshot = {
   active_tenant_count: number;
@@ -473,6 +416,9 @@ export type OperationsCenterSnapshot = {
   reconciliation_pending_count: number;
   reconciliation_failed_count: number;
   unresolved_reconciliation_difference_count: number;
+  open_incident_count: number;
+  scheduled_maintenance_window_count: number;
+  failed_job_run_count: number;
   queued_email_count: number;
   dropped_email_count_24h: number;
   audit_events_24h: number;
@@ -481,17 +427,9 @@ export type OperationsCenterSnapshot = {
   recent_reconciliation_differences: RecentReconciliationDifference[];
 };
 
-export type OperationsActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type OperationsActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type OperationsActionResult = {
-  object_id: string;
-  action_kind: string;
-  status: string;
-  audit_action: string;
-};
+export type OperationsActionResult = InternalAdminSchemas['OperationsActionResult'];
 
 export type AccessCenterSnapshot = {
   workspace_owner_count: number;
@@ -519,19 +457,9 @@ export type PrivilegedUser = {
   updated_at: string;
 };
 
-export type AccessActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type AccessActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
-export type AccessActionResult = {
-  workspace_id: string;
-  tenant_id: string;
-  principal_id: string;
-  previous_status: string;
-  next_status: string;
-  audit_action: string;
-};
+export type AccessActionResult = InternalAdminSchemas['AccessActionResult'];
 
 export type OwnerlessWorkspace = {
   workspace_id: string;
@@ -999,10 +927,7 @@ export type UsageCorrection = {
   created_at: string;
 };
 
-export type GovernanceActionRequest = {
-  confirm_code: string;
-  reason: string;
-};
+export type GovernanceActionRequest = InternalAdminSchemas['CriticalActionRequest'];
 
 export type GovernanceActionResult = {
   object_id: string;
@@ -1036,6 +961,7 @@ export type AuditEvidenceEvent = {
   ip: string | null;
   event_hash: string;
   previous_event_hash: string | null;
+  hash_chain_status: 'chain_head' | 'hash_anomaly' | 'linked' | string;
   created_at: string;
 };
 
@@ -1180,17 +1106,31 @@ export type RunbookExecutionResult = {
   audit_action: string;
 };
 
-export type AuditEvent = {
-  id: string;
-  action: string;
-  actor_principal_id: string | null;
-  actor_email: string | null;
-  target_type: string;
-  target_id: string | null;
-  metadata: unknown;
-  event_hash: string;
-  previous_event_hash: string | null;
-  created_at: string;
+export type AuditEvent = InternalAdminSchemas['AuditEvent'];
+
+export type AuditTargetLink = InternalAdminSchemas['AuditTargetLink'];
+
+export type AuditChange = InternalAdminSchemas['AuditChange'];
+
+export type AuditEvidenceExport = {
+  export_id: string;
+  generated_at: string;
+  tenant_id: string;
+  workspace_id: string;
+  event_count: number;
+  filters: {
+    action: string | null;
+    target_type: string | null;
+    q: string | null;
+    limit: number;
+  };
+  hash_chain: {
+    head_event_hash: string | null;
+    tail_event_hash: string | null;
+    anomaly_count: number;
+    linked_count: number;
+  };
+  events: AuditEvent[];
 };
 
 export type AuditEventFilters = {

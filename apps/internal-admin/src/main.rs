@@ -3,14 +3,21 @@ mod access_center;
 #[path = "internal_admin.access_center.actions.rs"]
 mod access_center_actions;
 #[cfg(test)]
+#[path = "internal_admin.access_center.actions.test_support.rs"]
+mod access_center_actions_test_support;
+#[cfg(test)]
 #[path = "internal_admin.access_center.actions.tests.rs"]
 mod access_center_actions_tests;
 #[path = "internal_admin.app.rs"]
 mod app;
 #[path = "internal_admin.audit.rs"]
 mod audit;
+#[path = "internal_admin.audit_evidence_alerts.rs"]
+mod audit_evidence_alerts;
 #[path = "internal_admin.audit_evidence_center.rs"]
 mod audit_evidence_center;
+#[path = "internal_admin.audit_evidence_export.rs"]
+mod audit_evidence_export;
 #[path = "internal_admin.backoffice_authorization.rs"]
 mod backoffice_authorization;
 #[path = "internal_admin.backoffice_dual_control.rs"]
@@ -115,10 +122,40 @@ mod identity_governance_center_actions;
 #[cfg(test)]
 #[path = "internal_admin.identity_governance_center.actions.tests.rs"]
 mod identity_governance_center_actions_tests;
+#[path = "internal_admin.identity_governance_operator_grant_actions.rs"]
+mod identity_governance_operator_grant_actions;
+#[cfg(test)]
+#[path = "internal_admin.identity_governance_operator_grant_actions.tests.rs"]
+mod identity_governance_operator_grant_actions_tests;
+#[path = "internal_admin.identity_governance_operator_grant_validation.rs"]
+mod identity_governance_operator_grant_validation;
+#[path = "internal_admin.identity_governance_operator_grants.rs"]
+mod identity_governance_operator_grants;
+#[path = "internal_admin.observability.rs"]
+mod observability;
+#[path = "internal_admin.openapi.rs"]
+mod openapi;
+#[path = "internal_admin.openapi.action_schemas.rs"]
+mod openapi_action_schemas;
+#[path = "internal_admin.openapi.paths.rs"]
+mod openapi_paths;
+#[path = "internal_admin.openapi.paths.platform.rs"]
+mod openapi_paths_platform;
+#[path = "internal_admin.openapi.paths.workflows.rs"]
+mod openapi_paths_workflows;
+#[path = "internal_admin.openapi.schema_helpers.rs"]
+mod openapi_schema_helpers;
+#[path = "internal_admin.openapi.schemas.rs"]
+mod openapi_schemas;
 #[path = "internal_admin.operations_center.rs"]
 mod operations_center;
+#[path = "internal_admin.operations_center.action_log.rs"]
+mod operations_center_action_log;
 #[path = "internal_admin.operations_center.actions.rs"]
 mod operations_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.operations_center.actions.test_support.rs"]
+mod operations_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.operations_center.actions.tests.rs"]
 mod operations_center_actions_tests;
@@ -128,6 +165,13 @@ mod operations_center_mutations;
 mod operations_center_types;
 #[path = "internal_admin.operations_center.validation.rs"]
 mod operations_center_validation;
+#[path = "internal_admin.operations_center.workflow_mutations.rs"]
+mod operations_center_workflow_mutations;
+#[path = "internal_admin.pending_approvals.rs"]
+mod pending_approvals;
+#[cfg(test)]
+#[path = "internal_admin.pending_approvals.tests.rs"]
+mod pending_approvals_tests;
 #[path = "internal_admin.rate_limit.rs"]
 mod rate_limit;
 #[path = "internal_admin.region_center.rs"]
@@ -147,6 +191,9 @@ mod region_center_validation;
 mod revenue_center;
 #[path = "internal_admin.revenue_center.actions.rs"]
 mod revenue_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.revenue_center.actions.test_support.rs"]
+mod revenue_center_actions_test_support;
 #[cfg(test)]
 #[path = "internal_admin.revenue_center.actions.tests.rs"]
 mod revenue_center_actions_tests;
@@ -177,8 +224,17 @@ mod routes;
 mod security_center;
 #[path = "internal_admin.security_center.actions.rs"]
 mod security_center_actions;
+#[cfg(test)]
+#[path = "internal_admin.security_center.actions.test_support.rs"]
+mod security_center_actions_test_support;
+#[cfg(test)]
+#[path = "internal_admin.security_center.actions.tests.rs"]
+mod security_center_actions_tests;
 #[path = "internal_admin.tenants.rs"]
 mod tenants;
+#[cfg(test)]
+#[path = "internal_admin.test_operator_grants.rs"]
+mod test_operator_grants;
 #[path = "internal_admin.usage_center.rs"]
 mod usage_center;
 #[path = "internal_admin.usage_center.actions.rs"]
@@ -203,6 +259,14 @@ use nvbes_observability::{
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if std::env::args().any(|arg| arg == "--export-openapi") {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&openapi::openapi_document())?
+        );
+        return Ok(());
+    }
+
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
     let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();

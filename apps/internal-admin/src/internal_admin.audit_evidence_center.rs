@@ -5,27 +5,35 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
+use crate::audit_evidence_alerts::{
+    AuditEvidenceAlert, RuntimeMetricAlert, audit_evidence_alerts, runtime_metric_alerts,
+};
 use crate::billing_admin_access::actor_principal_id;
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
-struct AuditEvidenceSnapshot {
-    audit_events_24h: i64,
-    actorless_event_count_24h: i64,
-    sensitive_action_count_24h: i64,
-    missing_hash_count: i64,
-    backfilled_hash_count: i64,
-    active_signing_key_count: i64,
-    deprecated_signing_key_count: i64,
-    revoked_signing_key_count: i64,
-    recent_audit_events: Vec<AuditEvidenceEvent>,
-    actorless_events: Vec<AuditEvidenceEvent>,
-    hash_anomalies: Vec<AuditHashAnomaly>,
-    signing_keys: Vec<SigningKeySummary>,
+pub(crate) struct AuditEvidenceSnapshot {
+    pub(crate) audit_events_24h: i64,
+    pub(crate) actorless_event_count_24h: i64,
+    pub(crate) sensitive_action_count_24h: i64,
+    pub(crate) missing_hash_count: i64,
+    pub(crate) backfilled_hash_count: i64,
+    pub(crate) linked_hash_count: i64,
+    pub(crate) chain_head_count: i64,
+    pub(crate) hash_anomaly_count: i64,
+    pub(crate) active_signing_key_count: i64,
+    pub(crate) deprecated_signing_key_count: i64,
+    pub(crate) revoked_signing_key_count: i64,
+    pub(crate) recent_audit_events: Vec<AuditEvidenceEvent>,
+    pub(crate) actorless_events: Vec<AuditEvidenceEvent>,
+    pub(crate) hash_anomalies: Vec<AuditHashAnomaly>,
+    pub(crate) signing_keys: Vec<SigningKeySummary>,
+    pub(crate) alerts: Vec<AuditEvidenceAlert>,
+    pub(crate) runtime_alerts: Vec<RuntimeMetricAlert>,
 }
 
 #[derive(Debug, Serialize)]
-struct AuditEvidenceEvent {
+pub(crate) struct AuditEvidenceEvent {
     id: Uuid,
     tenant_id: Uuid,
     tenant_name: String,
@@ -38,11 +46,12 @@ struct AuditEvidenceEvent {
     ip: Option<String>,
     event_hash: String,
     previous_event_hash: Option<String>,
+    hash_chain_status: &'static str,
     created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
-struct AuditHashAnomaly {
+pub(crate) struct AuditHashAnomaly {
     id: Uuid,
     tenant_id: Uuid,
     tenant_name: String,
@@ -53,7 +62,7 @@ struct AuditHashAnomaly {
 }
 
 #[derive(Debug, Serialize)]
-struct SigningKeySummary {
+pub(crate) struct SigningKeySummary {
     kid: String,
     algorithm: String,
     status: String,
@@ -97,6 +106,20 @@ async fn load_audit_evidence(db: &PgPool) -> Result<AuditEvidenceSnapshot, AppEr
             AS missing_hash_count,
           (SELECT COUNT(*) FROM audit_events WHERE event_hash = 'backfill')
             AS backfilled_hash_count,
+          (
+            SELECT COUNT(*) FROM audit_events
+            WHERE event_hash IS NOT NULL AND event_hash <> '' AND event_hash <> 'backfill'
+              AND previous_event_hash IS NOT NULL AND previous_event_hash <> ''
+          ) AS linked_hash_count,
+          (
+            SELECT COUNT(*) FROM audit_events
+            WHERE event_hash IS NOT NULL AND event_hash <> '' AND event_hash <> 'backfill'
+              AND (previous_event_hash IS NULL OR previous_event_hash = '')
+          ) AS chain_head_count,
+          (
+            SELECT COUNT(*) FROM audit_events
+            WHERE event_hash IS NULL OR event_hash = '' OR event_hash = 'backfill'
+          ) AS hash_anomaly_count,
           (SELECT COUNT(*) FROM signing_keys WHERE status = 'active') AS active_signing_key_count,
           (SELECT COUNT(*) FROM signing_keys WHERE status = 'deprecated') AS deprecated_signing_key_count,
           (SELECT COUNT(*) FROM signing_keys WHERE status = 'revoked') AS revoked_signing_key_count
@@ -105,12 +128,15 @@ async fn load_audit_evidence(db: &PgPool) -> Result<AuditEvidenceSnapshot, AppEr
     .fetch_one(db)
     .await?;
 
-    Ok(AuditEvidenceSnapshot {
+    let snapshot = AuditEvidenceSnapshot {
         audit_events_24h: metrics.get("audit_events_24h"),
         actorless_event_count_24h: metrics.get("actorless_event_count_24h"),
         sensitive_action_count_24h: metrics.get("sensitive_action_count_24h"),
         missing_hash_count: metrics.get("missing_hash_count"),
         backfilled_hash_count: metrics.get("backfilled_hash_count"),
+        linked_hash_count: metrics.get("linked_hash_count"),
+        chain_head_count: metrics.get("chain_head_count"),
+        hash_anomaly_count: metrics.get("hash_anomaly_count"),
         active_signing_key_count: metrics.get("active_signing_key_count"),
         deprecated_signing_key_count: metrics.get("deprecated_signing_key_count"),
         revoked_signing_key_count: metrics.get("revoked_signing_key_count"),
@@ -118,7 +144,10 @@ async fn load_audit_evidence(db: &PgPool) -> Result<AuditEvidenceSnapshot, AppEr
         actorless_events: load_audit_events(db, true).await?,
         hash_anomalies: load_hash_anomalies(db).await?,
         signing_keys: load_signing_keys(db).await?,
-    })
+        alerts: Vec::new(),
+        runtime_alerts: runtime_metric_alerts(),
+    };
+    Ok(snapshot.with_alerts())
 }
 
 async fn load_audit_events(
@@ -147,22 +176,48 @@ async fn load_audit_events(
 
     Ok(rows
         .into_iter()
-        .map(|row| AuditEvidenceEvent {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            workspace_id: row.get("workspace_id"),
-            actor_principal_id: row.get("actor_principal_id"),
-            actor_email: row.get("actor_email"),
-            action: row.get("action"),
-            target_type: row.get("target_type"),
-            target_id: row.get("target_id"),
-            ip: row.get("ip"),
-            event_hash: row.get("event_hash"),
-            previous_event_hash: row.get("previous_event_hash"),
-            created_at: row.get("created_at"),
+        .map(|row| {
+            let event_hash = row.get::<String, _>("event_hash");
+            let previous_event_hash: Option<String> = row.get("previous_event_hash");
+            AuditEvidenceEvent {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                tenant_name: row.get("tenant_name"),
+                workspace_id: row.get("workspace_id"),
+                actor_principal_id: row.get("actor_principal_id"),
+                actor_email: row.get("actor_email"),
+                action: row.get("action"),
+                target_type: row.get("target_type"),
+                target_id: row.get("target_id"),
+                ip: row.get("ip"),
+                hash_chain_status: hash_chain_status(&event_hash, previous_event_hash.as_deref()),
+                event_hash,
+                previous_event_hash,
+                created_at: row.get("created_at"),
+            }
         })
         .collect())
+}
+
+fn hash_chain_status(event_hash: &str, previous_event_hash: Option<&str>) -> &'static str {
+    if event_hash.trim().is_empty() || event_hash == "backfill" {
+        return "hash_anomaly";
+    }
+    if previous_event_hash
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .is_some()
+    {
+        return "linked";
+    }
+    "chain_head"
+}
+
+impl AuditEvidenceSnapshot {
+    fn with_alerts(mut self) -> Self {
+        self.alerts = audit_evidence_alerts(&self);
+        self
+    }
 }
 
 async fn load_hash_anomalies(db: &PgPool) -> Result<Vec<AuditHashAnomaly>, AppError> {
@@ -218,4 +273,17 @@ async fn load_signing_keys(db: &PgPool) -> Result<Vec<SigningKeySummary>, AppErr
             revoked_at: row.get("revoked_at"),
         })
         .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_chain_status_marks_integrity_verdicts() {
+        assert_eq!(hash_chain_status("hash", Some("previous")), "linked");
+        assert_eq!(hash_chain_status("hash", None), "chain_head");
+        assert_eq!(hash_chain_status("backfill", None), "hash_anomaly");
+        assert_eq!(hash_chain_status("", None), "hash_anomaly");
+    }
 }

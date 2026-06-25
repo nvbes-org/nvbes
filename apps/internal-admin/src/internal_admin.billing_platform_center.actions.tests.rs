@@ -88,7 +88,7 @@ async fn approve_kyc_profile_route_enforces_role_confirmation_and_audits_success
             profile_id,
             actor_id,
             "viewer",
-            "APPROVE KYC",
+            &crate::backoffice_authorization::strong_confirmation_code("APPROVE KYC", profile_id),
         ))
         .await
         .expect("route should respond");
@@ -113,7 +113,7 @@ async fn approve_kyc_profile_route_enforces_role_confirmation_and_audits_success
             profile_id,
             actor_id,
             "finance_admin",
-            "APPROVE KYC",
+            &crate::backoffice_authorization::strong_confirmation_code("APPROVE KYC", profile_id),
         ))
         .await
         .expect("route should respond");
@@ -288,6 +288,11 @@ fn reject_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,
@@ -314,6 +319,11 @@ fn disable_routing_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,
@@ -340,6 +350,11 @@ fn approve_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

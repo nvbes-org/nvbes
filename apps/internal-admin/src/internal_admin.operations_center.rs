@@ -17,6 +17,9 @@ struct OperationsCenterSnapshot {
     reconciliation_pending_count: i64,
     reconciliation_failed_count: i64,
     unresolved_reconciliation_difference_count: i64,
+    open_incident_count: i64,
+    scheduled_maintenance_window_count: i64,
+    failed_job_run_count: i64,
     queued_email_count: i64,
     dropped_email_count_24h: i64,
     audit_events_24h: i64,
@@ -103,6 +106,18 @@ async fn load_operations_center(db: &PgPool) -> Result<OperationsCenterSnapshot,
             WHERE resolved_at IS NULL
           ) AS unresolved_reconciliation_difference_count,
           (
+            SELECT COUNT(*) FROM internal_admin_incidents
+            WHERE status IN ('open', 'mitigating')
+          ) AS open_incident_count,
+          (
+            SELECT COUNT(*) FROM internal_admin_maintenance_windows
+            WHERE status = 'scheduled' AND scheduled_end_at >= NOW()
+          ) AS scheduled_maintenance_window_count,
+          (
+            SELECT COUNT(*) FROM internal_admin_job_runs
+            WHERE status = 'failed'
+          ) AS failed_job_run_count,
+          (
             SELECT COUNT(*) FROM email_messages
             WHERE status::text = 'queued'
           ) AS queued_email_count,
@@ -129,6 +144,9 @@ async fn load_operations_center(db: &PgPool) -> Result<OperationsCenterSnapshot,
         reconciliation_failed_count: metrics.get("reconciliation_failed_count"),
         unresolved_reconciliation_difference_count: metrics
             .get("unresolved_reconciliation_difference_count"),
+        open_incident_count: metrics.get("open_incident_count"),
+        scheduled_maintenance_window_count: metrics.get("scheduled_maintenance_window_count"),
+        failed_job_run_count: metrics.get("failed_job_run_count"),
         queued_email_count: metrics.get("queued_email_count"),
         dropped_email_count_24h: metrics.get("dropped_email_count_24h"),
         audit_events_24h: metrics.get("audit_events_24h"),

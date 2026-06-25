@@ -58,6 +58,8 @@ jobs:
             nx-${{ runner.os }}-
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install Internal Admin Playwright browser
+        run: pnpm --dir apps/internal-admin-web exec playwright install --with-deps chromium
       - name: Set Nx SHAs
         uses: nrwl/nx-set-shas@v4
       - name: Format check
@@ -68,6 +70,8 @@ jobs:
         run: pnpm check:nx-boundaries
       - name: Rust workspace check
         run: pnpm exec nx run rust-workspace:check
+      - name: Internal Admin targeted check
+        run: pnpm check:internal-admin
       - name: Lint
         run: pnpm exec nx affected -t lint
       - name: Typecheck

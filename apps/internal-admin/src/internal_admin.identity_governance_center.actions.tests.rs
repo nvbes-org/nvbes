@@ -180,6 +180,11 @@ fn revoke_break_glass_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

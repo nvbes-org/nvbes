@@ -48,6 +48,8 @@ async fn resolve_risk_signal_route_enforces_role_confirmation_and_audits_success
 
     let actor_id = Uuid::new_v4();
     let (tenant_id, workspace_id, signal_id) = seed_risk_signal_with_actor(&pool, actor_id).await;
+    let strong_code =
+        crate::backoffice_authorization::strong_confirmation_code("RESOLVE RISK SIGNAL", signal_id);
     let app = Router::new()
         .merge(crate::risk_decision_center_actions::router())
         .with_state(crate::app::AppState::new(
@@ -62,7 +64,7 @@ async fn resolve_risk_signal_route_enforces_role_confirmation_and_audits_success
             signal_id,
             actor_id,
             "viewer",
-            "RESOLVE RISK SIGNAL",
+            &strong_code,
         ))
         .await
         .expect("route should respond");
@@ -87,7 +89,7 @@ async fn resolve_risk_signal_route_enforces_role_confirmation_and_audits_success
             signal_id,
             actor_id,
             "security_admin",
-            "RESOLVE RISK SIGNAL",
+            &strong_code,
         ))
         .await
         .expect("route should respond");
@@ -253,6 +255,11 @@ fn block_policy_request(
         .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
         .header("x-nvbes-actor-principal-id", actor_id.to_string())
         .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
         .body(Body::from(
             json!({
                 "confirm_code": confirm_code,

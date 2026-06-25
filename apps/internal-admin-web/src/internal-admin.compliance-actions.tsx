@@ -37,7 +37,13 @@ export function ComplianceActionsPanel({
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<ComplianceActionResult | null>(null);
-  const requiredConfirmCode = complianceConfirmCode(action, principalId);
+  const requiredConfirmCode = complianceConfirmCode(action, {
+    consentId,
+    email,
+    principalId,
+  });
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === requiredConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -131,7 +137,7 @@ export function ComplianceActionsPanel({
           Code requis: <span className="text-foreground font-medium">{requiredConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >
@@ -151,10 +157,14 @@ export function ComplianceActionsPanel({
   );
 }
 
-function complianceConfirmCode(action: ComplianceActionKind, principalId: string): string {
+function complianceConfirmCode(
+  action: ComplianceActionKind,
+  targets: { consentId: string; email: string; principalId: string },
+): string {
   const baseCode = confirmCodes[action];
-  if (action !== 'erasure') return baseCode;
-  return strongConfirmationCode(baseCode, principalId);
+  if (action === 'revoke-consent') return strongConfirmationCode(baseCode, targets.consentId);
+  if (action === 'review-suppression') return strongConfirmationCode(baseCode, targets.email);
+  return strongConfirmationCode(baseCode, targets.principalId);
 }
 
 type ComplianceActionPayload = {

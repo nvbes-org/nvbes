@@ -45,6 +45,8 @@ export function EntitlementsActionsPanel({
     featureCode,
     quotaCode,
   );
+  const isReasonReady = reason.trim().length >= 12;
+  const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
 
   const mutation = useMutation({
     mutationFn: () => executeAction(credentials, action, formPayload()),
@@ -134,7 +136,7 @@ export function EntitlementsActionsPanel({
           Code requis: <span className="text-foreground font-medium">{expectedConfirmCode}</span>
         </div>
         <Button
-          disabled={disabled || mutation.isPending}
+          disabled={disabled || !isReasonReady || !isConfirmationReady || mutation.isPending}
           onClick={() => mutation.mutate()}
           type="button"
         >

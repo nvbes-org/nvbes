@@ -25,6 +25,7 @@ import { EntitlementsCenterPanel } from './internal-admin.entitlements-center';
 import { GlobalSearchPanel } from './internal-admin.global-search';
 import { IdentityGovernanceCenterPanel } from './internal-admin.identity-governance-center';
 import { OperationsCenterPanel } from './internal-admin.operations-center';
+import { PendingApprovalsPanel } from './internal-admin.pending-approvals';
 import { RegionCenterPanel } from './internal-admin.region-center';
 import { RevenueCenterPanel } from './internal-admin.revenue-center';
 import { RiskDecisionCenterPanel } from './internal-admin.risk-decision-center';
@@ -70,6 +71,13 @@ export function BillingOperationsPage() {
     <InternalAdminShell>
       <StatusStrip isReady={isReady} readiness={readiness} />
       <CommandCenterPanel credentials={credentials} disabled={!isReady} />
+      <PendingApprovalsPanel
+        credentials={credentials}
+        disabled={!isReady}
+        onSelectTenant={setSelectedTenantId}
+        onSelectUser={setSelectedUserId}
+        onSelectWorkspace={setSelectedWorkspaceId}
+      />
       <RevenueCenterPanel
         credentials={credentials}
         disabled={!isReady}
@@ -203,7 +211,13 @@ export function BillingOperationsPage() {
               window.location.hash = 'mutations';
             }}
           />
-          <AuditEventsPanel credentials={credentials} disabled={!isReady} />
+          <AuditEventsPanel
+            credentials={credentials}
+            disabled={!isReady}
+            onSelectTenant={setSelectedTenantId}
+            onSelectUser={setSelectedUserId}
+            onSelectWorkspace={setSelectedWorkspaceId}
+          />
           <BillingActions credentials={credentials} disabled={!isReady} replayDraft={replayDraft} />
           <BillingRunbooks credentials={credentials} disabled={!isReady} />
         </div>

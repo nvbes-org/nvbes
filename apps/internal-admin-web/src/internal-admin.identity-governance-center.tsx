@@ -5,15 +5,20 @@ import {
   IdCard,
   KeyRound,
   ShieldAlert,
+  ShieldCheck,
   UserRound,
   UsersRound,
 } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { getIdentityGovernanceCenter } from './internal-admin.api';
 import { IdentityGovernanceActionLists } from './internal-admin.identity-governance-actions';
+import {
+  GovernanceList,
+  GovernanceMetric,
+  LinkedTenantRow,
+} from './internal-admin.identity-governance-list';
 import { LockedState } from './internal-admin.locked-state';
+import { OperatorGrantsPanel } from './internal-admin.operator-grants';
 import type {
   AdminCredentials,
   OverdueAccessReview,
@@ -59,7 +64,7 @@ export function IdentityGovernanceCenterPanel({
       {disabled ? (
         <LockedState label="Connecte un contexte operateur pour charger les signaux governance." />
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
         <GovernanceMetric
           icon={Fingerprint}
           label="Active IdP"
@@ -100,8 +105,20 @@ export function IdentityGovernanceCenterPanel({
           tone={(data?.pending_recovery_count ?? 0) > 0 ? 'warning' : 'default'}
           value={formatCount(data?.pending_recovery_count)}
         />
+        <GovernanceMetric
+          icon={ShieldCheck}
+          label="Operator grants"
+          tone={(data?.revoked_operator_grant_count ?? 0) > 0 ? 'warning' : 'default'}
+          value={formatCount(data?.active_operator_grant_count)}
+        />
       </div>
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        <OperatorGrantsPanel
+          credentials={credentials}
+          disabled={disabled}
+          grants={data?.operator_grants ?? []}
+          roleDistribution={data?.operator_role_distribution ?? []}
+        />
         <DomainList onSelectTenant={onSelectTenant} rows={data?.unverified_domains ?? []} />
         <SsoList onSelectTenant={onSelectTenant} rows={data?.sso_providers ?? []} />
         <ScimList onSelectTenant={onSelectTenant} rows={data?.scim_connectors ?? []} />
@@ -211,122 +228,6 @@ function AccessReviewList({
         />
       ))}
     </GovernanceList>
-  );
-}
-
-function LinkedTenantRow({
-  badge,
-  onSelectTenant,
-  onSelectUser,
-  subtitle,
-  title,
-  tone = 'default',
-}: {
-  badge: string;
-  onSelectTenant: () => void;
-  onSelectUser?: () => void;
-  subtitle: string;
-  title: string;
-  tone?: 'danger' | 'default' | 'warning';
-}) {
-  return (
-    <article className="p-3">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{title}</p>
-          <p className="text-muted-foreground truncate text-xs">{subtitle}</p>
-        </div>
-        <Badge variant={tone === 'danger' ? 'destructive' : 'outline'}>{badge}</Badge>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => {
-            onSelectTenant();
-            window.location.hash = 'tenant-detail';
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Building2 className="size-4" />
-          Tenant
-        </Button>
-        {onSelectUser ? (
-          <Button
-            onClick={() => {
-              onSelectUser();
-              window.location.hash = 'user-detail';
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <UserRound className="size-4" />
-            User
-          </Button>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function GovernanceList({
-  children,
-  emptyLabel,
-  title,
-}: {
-  children: ReactNode[];
-  emptyLabel: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">{title}</h3>
-      </div>
-      <div className="divide-y">
-        {children.length === 0 ? <EmptyRow label={emptyLabel} /> : children}
-      </div>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
-}
-
-function GovernanceMetric({
-  icon: Icon,
-  label,
-  tone = 'default',
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  tone?: 'danger' | 'default' | 'warning';
-  value: string;
-}) {
-  const iconClass =
-    tone === 'danger'
-      ? 'text-destructive size-4'
-      : tone === 'warning'
-        ? 'text-amber-500 size-4'
-        : 'size-4';
-
-  return (
-    <div className="bg-muted/30 rounded-md border p-3">
-      <div className="text-muted-foreground mb-3 flex items-center justify-between text-xs">
-        {label}
-        <Icon className={iconClass} />
-      </div>
-      <div
-        className={
-          tone === 'danger' ? 'text-destructive text-xl font-semibold' : 'text-xl font-semibold'
-        }
-      >
-        {value}
-      </div>
-    </div>
   );
 }
 

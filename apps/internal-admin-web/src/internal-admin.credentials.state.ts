@@ -1,5 +1,5 @@
 import { getSafeLocalStorage } from '@nvbes/web-runtime';
-import type { AdminCredentials } from './internal-admin.types';
+import type { AdminCredentials, BackofficeRole } from './internal-admin.types';
 
 const storageKey = 'nvbes.internal-admin.credentials';
 
@@ -21,21 +21,33 @@ export function loadCredentials(): AdminCredentials {
       workspaceId: typeof parsed.workspaceId === 'string' ? parsed.workspaceId : '',
       internalToken: typeof parsed.internalToken === 'string' ? parsed.internalToken : '',
       actorPrincipalId: typeof parsed.actorPrincipalId === 'string' ? parsed.actorPrincipalId : '',
-      backofficeRole:
-        typeof parsed.backofficeRole === 'string' ? parsed.backofficeRole : 'platform_admin',
+      backofficeRole: normalizeBackofficeRole(parsed.backofficeRole),
       secondApproverPrincipalId:
         typeof parsed.secondApproverPrincipalId === 'string'
           ? parsed.secondApproverPrincipalId
           : '',
-      secondApproverRole:
-        typeof parsed.secondApproverRole === 'string'
-          ? parsed.secondApproverRole
-          : 'platform_admin',
+      secondApproverRole: 'platform_admin',
     };
   } catch {
     return emptyCredentials;
   }
 }
+
+function normalizeBackofficeRole(value: unknown): BackofficeRole {
+  return backofficeRoles.includes(value as BackofficeRole) ? (value as BackofficeRole) : 'viewer';
+}
+
+const backofficeRoles: BackofficeRole[] = [
+  'compliance_admin',
+  'developer_admin',
+  'finance_admin',
+  'operations_admin',
+  'platform_admin',
+  'product_admin',
+  'security_admin',
+  'support_agent',
+  'viewer',
+];
 
 export function saveCredentials(credentials: AdminCredentials) {
   getSafeLocalStorage().setItem(storageKey, JSON.stringify(credentials));

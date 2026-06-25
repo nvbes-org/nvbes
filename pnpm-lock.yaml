@@ -537,6 +537,9 @@ importers:
       '@fontsource-variable/geist':
         specifier: ^5.2.9
         version: 5.2.9
+      '@nvbes/internal-admin-sdk-core':
+        specifier: workspace:*
+        version: link:../../libs/ts/internal-admin-sdk-core
       '@nvbes/web-runtime':
         specifier: workspace:*
         version: link:../../libs/ts/web-runtime
@@ -714,6 +717,12 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.1)(yaml@2.9.0))(yaml@2.9.0)'
+
+  libs/ts/internal-admin-sdk-core:
+    devDependencies:
+      openapi-typescript:
+        specifier: ^7.0.0
+        version: 7.13.0(typescript@6.0.3)
 
   libs/ts/web-runtime:
     dependencies:

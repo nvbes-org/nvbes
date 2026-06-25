@@ -9,8 +9,10 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::backoffice_authorization::{
-    BackofficePermission, require_idempotency_key, require_permission, require_strong_confirmation,
+    BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
+    require_strong_confirmation,
 };
+use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::communications_center_mutations::{
     replay_email, replay_webhook, suppress_email, unsuppress_email,
@@ -57,7 +59,14 @@ async fn replay_email_route(
     Path((workspace_id, message_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<CommunicationsReasonRequest>,
 ) -> Result<Json<CommunicationsActionResult>, AppError> {
-    require_communications_mutation(&headers, &request.confirm_code, "REPLAY EMAIL", message_id)?;
+    require_communications_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "REPLAY EMAIL",
+        message_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_email(&state.db, access, workspace_id, message_id, request.reason).await?,
@@ -70,7 +79,14 @@ async fn replay_webhook_route(
     Path((workspace_id, event_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<CommunicationsReasonRequest>,
 ) -> Result<Json<CommunicationsActionResult>, AppError> {
-    require_communications_mutation(&headers, &request.confirm_code, "REPLAY WEBHOOK", event_id)?;
+    require_communications_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "REPLAY WEBHOOK",
+        event_id,
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         replay_webhook(&state.db, access, workspace_id, event_id, request.reason).await?,
@@ -84,11 +100,13 @@ async fn suppress_email_route(
     Json(request): Json<EmailSuppressionRequest>,
 ) -> Result<Json<CommunicationsActionResult>, AppError> {
     require_communications_mutation(
+        &state.db,
         &headers,
         &request.confirm_code,
         "SUPPRESS EMAIL",
         workspace_id,
-    )?;
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         suppress_email(
@@ -109,11 +127,13 @@ async fn unsuppress_email_route(
     Json(request): Json<EmailSuppressionRequest>,
 ) -> Result<Json<CommunicationsActionResult>, AppError> {
     require_communications_mutation(
+        &state.db,
         &headers,
         &request.confirm_code,
         "UNSUPPRESS EMAIL",
         workspace_id,
-    )?;
+    )
+    .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         unsuppress_email(
@@ -127,13 +147,15 @@ async fn unsuppress_email_route(
     ))
 }
 
-fn require_communications_mutation(
+async fn require_communications_mutation(
+    db: &sqlx::PgPool,
     headers: &HeaderMap,
     confirm_code: &str,
     expected_code: &str,
     target_id: Uuid,
 ) -> Result<(), AppError> {
-    require_idempotency_key(headers)?;
-    require_permission(headers, BackofficePermission::CommunicationsMutate)?;
-    require_strong_confirmation(confirm_code, expected_code, target_id)
+    require_operator_permission_headers(headers, BackofficePermission::CommunicationsMutate)?;
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)?;
+    require_operator_role_grant(db, headers).await
 }
