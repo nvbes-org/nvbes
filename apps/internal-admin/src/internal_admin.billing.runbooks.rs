@@ -191,7 +191,23 @@ async fn execute_runbook(
            tenant_id, workspace_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
            $1, $2, $3, 'internal_admin.runbook.executed', 'runbook', $2,
-           jsonb_build_object('runbook_id', $4, 'reason', $5),
+           jsonb_build_object(
+             'runbook_id', $4,
+             'reason', $5,
+             'object_links', jsonb_build_object(
+               'runbook_id', $4,
+               'workspace_id', $2::text
+             ),
+             'target_links', jsonb_build_object(
+               'workspace_id', $2::text,
+               'target_type', 'runbook'
+             ),
+             'changes', jsonb_build_array(jsonb_build_object(
+               'field', 'runbook.execution',
+               'before', null,
+               'after', 'recorded'
+             ))
+           ),
            gen_random_uuid()::text
          )",
     )

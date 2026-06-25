@@ -4,9 +4,10 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use crate::identity_governance_center_actions_test_support::{
-    break_glass_audit_count, break_glass_revoked, governance_schema_exists,
-    idempotency_schema_exists, revoke_break_glass_request, revoke_break_glass_request_with_key,
-    revoke_break_glass_request_without_second_approver, seed_break_glass_account, test_pool,
+    break_glass_audit_count, break_glass_audit_metadata, break_glass_revoked,
+    governance_schema_exists, idempotency_schema_exists, revoke_break_glass_request,
+    revoke_break_glass_request_with_key, revoke_break_glass_request_without_second_approver,
+    seed_break_glass_account, test_pool,
 };
 
 #[tokio::test]
@@ -132,6 +133,19 @@ async fn revoke_break_glass_enforces_grant_confirmation_dual_control_and_audits_
     assert_eq!(
         break_glass_audit_count(&pool, tenant_id, actor_id, principal_id).await,
         1
+    );
+    let metadata = break_glass_audit_metadata(&pool, tenant_id, actor_id, principal_id).await;
+    assert_eq!(
+        metadata["object_links"]["principal_id"],
+        json!(principal_id.to_string())
+    );
+    assert_eq!(
+        metadata["changes"][0],
+        json!({
+            "field": "break_glass.revoked_at",
+            "before": "active",
+            "after": "revoked"
+        })
     );
 }
 

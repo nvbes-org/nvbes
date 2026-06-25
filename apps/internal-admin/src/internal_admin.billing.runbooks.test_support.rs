@@ -174,3 +174,27 @@ pub(crate) async fn runbook_audit_count(
     .await
     .expect("audit count should load")
 }
+
+pub(crate) async fn runbook_audit_metadata(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    workspace_id: Uuid,
+    actor_id: Uuid,
+    runbook_id: &str,
+) -> serde_json::Value {
+    sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND workspace_id = $2 AND actor_principal_id = $3
+           AND action = 'internal_admin.runbook.executed'
+           AND target_type = 'runbook'
+           AND target_id = $2
+           AND metadata->>'runbook_id' = $4",
+    )
+    .bind(tenant_id)
+    .bind(workspace_id)
+    .bind(actor_id)
+    .bind(runbook_id)
+    .fetch_one(pool)
+    .await
+    .expect("audit metadata should load")
+}

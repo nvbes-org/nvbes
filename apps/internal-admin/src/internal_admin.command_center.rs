@@ -14,10 +14,27 @@ struct CommandCenterSnapshot {
     workspace_count: i64,
     user_count: i64,
     audit_events_24h: i64,
+    pending_approval_count: i64,
+    critical_pending_approval_count: i64,
+    overdue_approval_count: i64,
+    open_incident_count: i64,
+    audit_hash_anomaly_count: i64,
+    sla_breach_count: i64,
     billing_provider_failures: i64,
     overdue_invoice_count: i64,
     failed_payment_count: i64,
     latest_audit_at: Option<DateTime<Utc>>,
+    today_work: Vec<CommandCenterWorkItem>,
+}
+
+#[derive(Debug, Serialize)]
+struct CommandCenterWorkItem {
+    id: &'static str,
+    label: &'static str,
+    count: i64,
+    severity: &'static str,
+    href: &'static str,
+    owner: &'static str,
 }
 
 pub fn router() -> Router<AppState> {
@@ -44,6 +61,26 @@ async fn load_command_center_snapshot(db: &PgPool) -> Result<CommandCenterSnapsh
             WHERE created_at >= NOW() - INTERVAL '24 hours'
           ) AS audit_events_24h,
           (
+            (SELECT COUNT(*) FROM developer_marketplace_apps WHERE status::text = 'pending') +
+            (SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending') +
+            (SELECT COUNT(*) FROM billing_kyc_profiles WHERE review_status = 'pending')
+          ) AS pending_approval_count,
+          (
+            SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending'
+          ) AS critical_pending_approval_count,
+          (
+            SELECT COUNT(*) FROM enterprise_password_recovery_requests
+            WHERE status = 'pending' AND available_at < NOW()
+          ) AS overdue_approval_count,
+          (
+            SELECT COUNT(*) FROM internal_admin_incidents
+            WHERE status::text NOT IN ('resolved', 'closed')
+          ) AS open_incident_count,
+          (
+            SELECT COUNT(*) FROM audit_events
+            WHERE event_hash IS NULL OR event_hash = '' OR event_hash = 'backfill'
+          ) AS audit_hash_anomaly_count,
+          (
             SELECT COUNT(*) FROM billing_provider_events
             WHERE status::text IN ('failed', 'rejected')
           ) AS billing_provider_failures,
@@ -61,14 +98,118 @@ async fn load_command_center_snapshot(db: &PgPool) -> Result<CommandCenterSnapsh
     .fetch_one(db)
     .await?;
 
+    let pending_approval_count = row.get("pending_approval_count");
+    let critical_pending_approval_count = row.get("critical_pending_approval_count");
+    let overdue_approval_count = row.get("overdue_approval_count");
+    let open_incident_count = row.get("open_incident_count");
+    let audit_hash_anomaly_count = row.get("audit_hash_anomaly_count");
+    let billing_provider_failures = row.get("billing_provider_failures");
+    let overdue_invoice_count = row.get("overdue_invoice_count");
+    let failed_payment_count = row.get("failed_payment_count");
+    let sla_breach_count = open_incident_count
+        + billing_provider_failures
+        + overdue_invoice_count
+        + failed_payment_count;
+
     Ok(CommandCenterSnapshot {
         tenant_count: row.get("tenant_count"),
         workspace_count: row.get("workspace_count"),
         user_count: row.get("user_count"),
         audit_events_24h: row.get("audit_events_24h"),
-        billing_provider_failures: row.get("billing_provider_failures"),
-        overdue_invoice_count: row.get("overdue_invoice_count"),
-        failed_payment_count: row.get("failed_payment_count"),
+        pending_approval_count,
+        critical_pending_approval_count,
+        overdue_approval_count,
+        open_incident_count,
+        audit_hash_anomaly_count,
+        sla_breach_count,
+        billing_provider_failures,
+        overdue_invoice_count,
+        failed_payment_count,
         latest_audit_at: row.get("latest_audit_at"),
+        today_work: command_center_work_items(
+            pending_approval_count,
+            critical_pending_approval_count,
+            overdue_approval_count,
+            open_incident_count,
+            audit_hash_anomaly_count,
+            sla_breach_count,
+        ),
     })
+}
+
+fn command_center_work_items(
+    pending_approval_count: i64,
+    critical_pending_approval_count: i64,
+    overdue_approval_count: i64,
+    open_incident_count: i64,
+    audit_hash_anomaly_count: i64,
+    sla_breach_count: i64,
+) -> Vec<CommandCenterWorkItem> {
+    let mut items = Vec::new();
+    push_work_item(
+        &mut items,
+        "pending-approvals",
+        "Pending approvals",
+        pending_approval_count,
+        severity_for_pending(critical_pending_approval_count, overdue_approval_count),
+        "#pending-approvals",
+        "Ops lead",
+    );
+    push_work_item(
+        &mut items,
+        "open-incidents",
+        "Open incidents",
+        open_incident_count,
+        "critical",
+        "#operations-center",
+        "Operations",
+    );
+    push_work_item(
+        &mut items,
+        "audit-anomalies",
+        "Audit anomalies",
+        audit_hash_anomaly_count,
+        "critical",
+        "#audit-evidence-center",
+        "Security",
+    );
+    push_work_item(
+        &mut items,
+        "sla-breaches",
+        "SLA pressure",
+        sla_breach_count,
+        "high",
+        "#revenue-center",
+        "Revenue ops",
+    );
+    items
+}
+
+fn push_work_item(
+    items: &mut Vec<CommandCenterWorkItem>,
+    id: &'static str,
+    label: &'static str,
+    count: i64,
+    severity: &'static str,
+    href: &'static str,
+    owner: &'static str,
+) {
+    if count <= 0 {
+        return;
+    }
+    items.push(CommandCenterWorkItem {
+        id,
+        label,
+        count,
+        severity,
+        href,
+        owner,
+    });
+}
+
+fn severity_for_pending(critical_count: i64, overdue_count: i64) -> &'static str {
+    if overdue_count > 0 || critical_count > 0 {
+        return "critical";
+    }
+    "high"
 }

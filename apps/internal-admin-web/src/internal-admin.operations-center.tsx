@@ -3,6 +3,7 @@ import {
   Activity,
   AlertTriangle,
   CalendarClock,
+  FileSearch,
   FileDown,
   Mail,
   RefreshCcw,
@@ -151,7 +152,9 @@ function ProviderFailuresList({
         <h3 className="text-sm font-medium">Provider failures</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun provider event en erreur." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucun provider event en erreur. Surveille le backlog et la signature provider." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <RowHeader
@@ -165,6 +168,7 @@ function ProviderFailuresList({
               onSelectTenant={onSelectTenant}
               tenantId={row.tenant_id}
             />
+            <AuditButton targetId={row.id} targetType="billing_provider_event" />
           </article>
         ))}
       </div>
@@ -179,7 +183,9 @@ function ExportRunsList({ rows }: { rows: RecentExportRun[] }) {
         <h3 className="text-sm font-medium">Export runs</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun export run." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucun export run recent. Les echecs et relances apparaitront ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <RowHeader
@@ -188,6 +194,7 @@ function ExportRunsList({ rows }: { rows: RecentExportRun[] }) {
               title={row.export_type}
               tone={row.status === 'failed' || row.status === 'error' ? 'danger' : 'default'}
             />
+            <AuditButton targetId={row.id} targetType="billing_export_run" />
           </article>
         ))}
       </div>
@@ -208,7 +215,9 @@ function ReconciliationDiffList({
         <h3 className="text-sm font-medium">Recon differences</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun ecart de reconciliation." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucun ecart de reconciliation ouvert. Les differences provider/ledger seront listees ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <RowHeader
@@ -222,6 +231,7 @@ function ReconciliationDiffList({
               onSelectTenant={onSelectTenant}
               tenantId={row.tenant_id}
             />
+            <AuditButton targetId={row.id} targetType="billing_reconciliation_difference" />
           </article>
         ))}
       </div>
@@ -278,8 +288,28 @@ function TenantButton({
   );
 }
 
+function AuditButton({ targetId, targetType }: { targetId: string; targetType: string }) {
+  return (
+    <Button
+      onClick={() => {
+        window.location.hash = `audit?target_type=${targetType}&q=${targetId}`;
+      }}
+      size="sm"
+      type="button"
+      variant="ghost"
+    >
+      <FileSearch className="size-4" />
+      Audit
+    </Button>
+  );
+}
+
 function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
+  return (
+    <div className="text-muted-foreground bg-muted/20 m-3 rounded-md border p-3 text-sm">
+      {label}
+    </div>
+  );
 }
 
 function OpsMetric({

@@ -420,7 +420,24 @@ async fn insert_admin_audit(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
-           $1, $2, $3, $4, $5, jsonb_build_object('reason', $6), gen_random_uuid()::text
+           $1, $2, $3, $4, $5,
+           jsonb_build_object(
+             'reason', $6,
+             'object_links', jsonb_build_object(
+               'target_id', $5::text,
+               'target_type', $4
+             ),
+             'target_links', jsonb_build_object(
+               'target_id', $5::text,
+               'target_type', $4
+             ),
+             'changes', jsonb_build_array(jsonb_build_object(
+               'field', 'billing_admin.action',
+               'before', null,
+               'after', 'recorded'
+             ))
+           ),
+           gen_random_uuid()::text
          )",
     )
     .bind(access.tenant_id)

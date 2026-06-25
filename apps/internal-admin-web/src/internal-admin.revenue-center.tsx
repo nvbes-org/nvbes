@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CreditCard, ReceiptText, Repeat2, WalletCards } from 'lucide-react';
+import {
+  AlertTriangle,
+  CreditCard,
+  FileSearch,
+  ReceiptText,
+  Repeat2,
+  WalletCards,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -122,7 +129,9 @@ function OverdueInvoiceList({
         <h3 className="text-sm font-medium">Invoices overdue</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucune invoice overdue." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucune invoice overdue. Les retards de paiement avec action de recouvrement apparaitront ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -134,7 +143,10 @@ function OverdueInvoiceList({
               </div>
               <Badge variant="destructive">{formatMoney(row.total_minor, row.currency)}</Badge>
             </div>
-            <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+            <div className="flex flex-wrap gap-2">
+              <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+              <AuditButton targetId={row.id} targetType="billing_invoice" />
+            </div>
           </article>
         ))}
       </div>
@@ -155,7 +167,9 @@ function CapturedPaymentList({
         <h3 className="text-sm font-medium">Paiements captures</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun paiement capture." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucun paiement capture recent. Les paiements utiles au rapprochement apparaitront ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -165,7 +179,10 @@ function CapturedPaymentList({
               </div>
               <Badge variant="secondary">{formatMoney(row.amount_minor, row.currency)}</Badge>
             </div>
-            <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+            <div className="flex flex-wrap gap-2">
+              <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+              <AuditButton targetId={row.id} targetType="billing_payment" />
+            </div>
           </article>
         ))}
       </div>
@@ -191,6 +208,22 @@ function TenantButton({
       variant="outline"
     >
       Open tenant
+    </Button>
+  );
+}
+
+function AuditButton({ targetId, targetType }: { targetId: string; targetType: string }) {
+  return (
+    <Button
+      onClick={() => {
+        window.location.hash = `audit?target_type=${targetType}&q=${targetId}`;
+      }}
+      size="sm"
+      type="button"
+      variant="ghost"
+    >
+      <FileSearch className="size-4" />
+      Audit
     </Button>
   );
 }
@@ -259,7 +292,11 @@ function CountMetric({
 }
 
 function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
+  return (
+    <div className="text-muted-foreground bg-muted/20 m-3 rounded-md border p-3 text-sm">
+      {label}
+    </div>
+  );
 }
 
 function formatCount(value: number | undefined): string {

@@ -1,10 +1,12 @@
 use axum::{Router, http::StatusCode};
+use serde_json::json;
 use tower::ServiceExt;
 use uuid::Uuid;
 
 use crate::billing_runbooks_test_support::{
     execute_runbook_request, execute_runbook_request_with_key, idempotency_schema_exists,
-    runbook_audit_count, runbook_schema_exists, seed_workspace_with_actor, test_pool,
+    runbook_audit_count, runbook_audit_metadata, runbook_schema_exists, seed_workspace_with_actor,
+    test_pool,
 };
 
 #[tokio::test]
@@ -65,6 +67,17 @@ async fn execute_runbook_requires_active_operator_grant_and_audits_success() {
     assert_eq!(
         runbook_audit_count(&pool, tenant_id, workspace_id, actor_id, runbook_id).await,
         1
+    );
+    let metadata =
+        runbook_audit_metadata(&pool, tenant_id, workspace_id, actor_id, runbook_id).await;
+    assert_eq!(metadata["object_links"]["runbook_id"], json!(runbook_id));
+    assert_eq!(
+        metadata["changes"][0],
+        json!({
+            "field": "runbook.execution",
+            "before": null,
+            "after": "recorded"
+        })
     );
 }
 

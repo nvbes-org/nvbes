@@ -1,18 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Building2, Gauge, PackageCheck, ScrollText, Sparkles } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import { AlertTriangle, Gauge, PackageCheck, ScrollText, Sparkles } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { getEntitlementsCenter } from './internal-admin.api';
 import { EntitlementsActionsPanel } from './internal-admin.entitlements-actions';
+import {
+  ExpiringEntitlementList,
+  OverQuotaList,
+  PlanList,
+  UnpublishedChangeList,
+} from './internal-admin.entitlements-lists';
 import { LockedState } from './internal-admin.locked-state';
-import type {
-  AdminCredentials,
-  EntitlementPlan,
-  ExpiringEntitlement,
-  OverQuotaBalance,
-  UnpublishedEntitlementChange,
-} from './internal-admin.types';
+import type { AdminCredentials } from './internal-admin.types';
 
 export function EntitlementsCenterPanel({
   credentials,
@@ -109,187 +108,6 @@ export function EntitlementsCenterPanel({
   );
 }
 
-function PlanList({ rows }: { rows: EntitlementPlan[] }) {
-  return (
-    <EntitlementList emptyLabel="Aucun plan actif." title="Active catalog">
-      {rows.map((row) => (
-        <div className="flex items-center justify-between gap-3 p-3" key={row.plan_id}>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{row.plan_name}</p>
-            <p className="text-muted-foreground truncate text-xs">
-              {row.product_name} - {row.plan_code} - {formatCount(row.active_version_count)}{' '}
-              versions
-            </p>
-          </div>
-          <Badge variant="secondary">{formatCount(row.feature_count)} features</Badge>
-        </div>
-      ))}
-    </EntitlementList>
-  );
-}
-
-function OverQuotaList({
-  onSelectTenant,
-  onSelectWorkspace,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectWorkspace: (workspaceId: string) => void;
-  rows: OverQuotaBalance[];
-}) {
-  return (
-    <EntitlementList emptyLabel="Aucun quota depasse." title="Over quota balances">
-      {rows.map((row) => (
-        <LinkedEntitlementRow
-          badge={`${formatCount(row.used_quantity - row.included_quantity)} over`}
-          key={row.id}
-          onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          onSelectWorkspace={
-            row.workspace_id ? () => onSelectWorkspace(row.workspace_id ?? '') : undefined
-          }
-          subtitle={`${row.tenant_name} - used ${formatCount(row.used_quantity)} / ${formatCount(row.included_quantity)}`}
-          title={row.quota_code}
-          tone="danger"
-        />
-      ))}
-    </EntitlementList>
-  );
-}
-
-function ExpiringEntitlementList({
-  onSelectTenant,
-  onSelectWorkspace,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectWorkspace: (workspaceId: string) => void;
-  rows: ExpiringEntitlement[];
-}) {
-  return (
-    <EntitlementList emptyLabel="Aucun entitlement expire sous 14 jours." title="Expiring rights">
-      {rows.map((row) => (
-        <LinkedEntitlementRow
-          badge={formatDate(row.effective_to)}
-          key={row.id}
-          onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          onSelectWorkspace={
-            row.workspace_id ? () => onSelectWorkspace(row.workspace_id ?? '') : undefined
-          }
-          subtitle={`${row.tenant_name} - ${row.workspace_name ?? 'tenant scoped'}`}
-          title={row.status}
-          tone="warning"
-        />
-      ))}
-    </EntitlementList>
-  );
-}
-
-function UnpublishedChangeList({
-  onSelectTenant,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  rows: UnpublishedEntitlementChange[];
-}) {
-  return (
-    <EntitlementList
-      emptyLabel="Aucun changement entitlement non publie."
-      title="Unpublished changes"
-    >
-      {rows.map((row) => (
-        <LinkedEntitlementRow
-          badge={formatDate(row.created_at)}
-          key={row.id}
-          onSelectTenant={() => onSelectTenant(row.tenant_id)}
-          subtitle={row.tenant_name}
-          title={row.event_id}
-          tone="warning"
-        />
-      ))}
-    </EntitlementList>
-  );
-}
-
-function LinkedEntitlementRow({
-  badge,
-  onSelectTenant,
-  onSelectWorkspace,
-  subtitle,
-  title,
-  tone = 'default',
-}: {
-  badge: string;
-  onSelectTenant: () => void;
-  onSelectWorkspace?: () => void;
-  subtitle: string;
-  title: string;
-  tone?: 'danger' | 'default' | 'warning';
-}) {
-  return (
-    <article className="p-3">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{title}</p>
-          <p className="text-muted-foreground truncate text-xs">{subtitle}</p>
-        </div>
-        <Badge variant={tone === 'danger' ? 'destructive' : 'outline'}>{badge}</Badge>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => {
-            onSelectTenant();
-            window.location.hash = 'tenant-detail';
-          }}
-          size="sm"
-          type="button"
-          variant="ghost"
-        >
-          <Building2 className="size-4" />
-          Tenant
-        </Button>
-        {onSelectWorkspace ? (
-          <Button
-            onClick={() => {
-              onSelectWorkspace();
-              window.location.hash = 'workspace-detail';
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Workspace
-          </Button>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
-function EntitlementList({
-  children,
-  emptyLabel,
-  title,
-}: {
-  children: ReactNode[];
-  emptyLabel: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">{title}</h3>
-      </div>
-      <div className="divide-y">
-        {children.length === 0 ? <EmptyRow label={emptyLabel} /> : children}
-      </div>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
-}
-
 function EntitlementMetric({
   icon: Icon,
   label,
@@ -327,8 +145,4 @@ function EntitlementMetric({
 
 function formatCount(value: number | undefined): string {
   return typeof value === 'number' ? new Intl.NumberFormat('fr-FR').format(value) : '-';
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('fr-FR').format(new Date(value));
 }

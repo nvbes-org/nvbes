@@ -1,3 +1,4 @@
+import { FileSearch } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { RecentDispute, RecentDunningCase } from './internal-admin.types';
@@ -15,7 +16,9 @@ export function DunningCaseList({
         <h3 className="text-sm font-medium">Dunning cases</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun dunning case ouvert." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucun dunning case ouvert. Les comptes a escalader apparaitront ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -27,7 +30,10 @@ export function DunningCaseList({
               </div>
               <Badge variant="destructive">{row.status}</Badge>
             </div>
-            <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+            <div className="flex flex-wrap gap-2">
+              <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+              <AuditButton targetId={row.id} targetType="billing_dunning_case" />
+            </div>
           </article>
         ))}
       </div>
@@ -48,7 +54,9 @@ export function DisputeList({
         <h3 className="text-sm font-medium">Disputes</h3>
       </div>
       <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucune dispute recente." /> : null}
+        {rows.length === 0 ? (
+          <EmptyRow label="Aucune dispute recente. Les litiges provider et chargebacks seront listes ici." />
+        ) : null}
         {rows.map((row) => (
           <article className="p-3" key={row.id}>
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -60,7 +68,10 @@ export function DisputeList({
               </div>
               <Badge variant="destructive">{formatMoney(row.amount_minor, row.currency)}</Badge>
             </div>
-            <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+            <div className="flex flex-wrap gap-2">
+              <TenantButton tenantId={row.tenant_id} onSelectTenant={onSelectTenant} />
+              <AuditButton targetId={row.id} targetType="billing_dispute" />
+            </div>
           </article>
         ))}
       </div>
@@ -90,8 +101,28 @@ function TenantButton({
   );
 }
 
+function AuditButton({ targetId, targetType }: { targetId: string; targetType: string }) {
+  return (
+    <Button
+      onClick={() => {
+        window.location.hash = `audit?target_type=${targetType}&q=${targetId}`;
+      }}
+      size="sm"
+      type="button"
+      variant="ghost"
+    >
+      <FileSearch className="size-4" />
+      Audit
+    </Button>
+  );
+}
+
 function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
+  return (
+    <div className="text-muted-foreground bg-muted/20 m-3 rounded-md border p-3 text-sm">
+      {label}
+    </div>
+  );
 }
 
 function formatMoney(amountMinor: number, currency: string): string {

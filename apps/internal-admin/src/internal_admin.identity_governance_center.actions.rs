@@ -195,12 +195,36 @@ async fn insert_governance_audit(
     principal_id: Uuid,
     reason: &str,
 ) -> Result<(), AppError> {
+    let (field, before, after) = match action {
+        "internal_admin.identity_governance.break_glass.revoked" => {
+            ("break_glass.revoked_at", "active", "revoked")
+        }
+        "internal_admin.identity_governance.recovery_request.cancelled" => {
+            ("recovery_request.status", "pending", "cancelled")
+        }
+        _ => ("identity_governance.status", "unknown", "recorded"),
+    };
     sqlx::query(
         "INSERT INTO audit_events (
            tenant_id, actor_principal_id, action, target_type, target_id, metadata, event_hash
          ) VALUES (
            $1, $2, $3, $4, $5,
-           jsonb_build_object('reason', $6, 'principal_id', $7::text),
+           jsonb_build_object(
+             'reason', $6,
+             'object_links', jsonb_build_object(
+               'principal_id', $7::text,
+               'target_id', $5::text
+             ),
+             'target_links', jsonb_build_object(
+               'principal_id', $7::text,
+               'target_type', $4
+             ),
+             'changes', jsonb_build_array(jsonb_build_object(
+               'field', $8,
+               'before', $9,
+               'after', $10
+             ))
+           ),
            gen_random_uuid()::text
          )",
     )
@@ -211,6 +235,9 @@ async fn insert_governance_audit(
     .bind(target_id)
     .bind(reason.trim())
     .bind(principal_id)
+    .bind(field)
+    .bind(before)
+    .bind(after)
     .execute(executor)
     .await?;
     Ok(())

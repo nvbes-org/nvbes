@@ -1,16 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { FileCheck2, MailWarning, ShieldCheck, UserRound, UsersRound } from 'lucide-react';
+import { FileCheck2, MailWarning, ShieldCheck, UsersRound } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { getComplianceCenter } from './internal-admin.api';
 import { ComplianceActionsPanel } from './internal-admin.compliance-actions';
+import { RevokedConsentList, SuppressedEmailList } from './internal-admin.compliance-lists';
 import { LockedState } from './internal-admin.locked-state';
-import type {
-  AdminCredentials,
-  RecentRevokedConsent,
-  RecentSuppressedEmail,
-} from './internal-admin.types';
+import type { AdminCredentials } from './internal-admin.types';
 
 export function ComplianceCenterPanel({
   credentials,
@@ -100,129 +96,6 @@ export function ComplianceCenterPanel({
       </div>
     </section>
   );
-}
-
-function RevokedConsentList({
-  onSelectTenant,
-  onSelectUser,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectUser: (principalId: string) => void;
-  rows: RecentRevokedConsent[];
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Consentements revoques</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun consentement revoque recent." /> : null}
-        {rows.map((row) => (
-          <article className="p-3" key={row.id}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{row.email ?? row.principal_id}</p>
-                <p className="text-muted-foreground text-xs">
-                  {row.consent_type} - {row.document_version}
-                </p>
-              </div>
-              <Badge variant="outline">{row.tenant_name}</Badge>
-            </div>
-            <LinkedRowActions
-              onTenant={() => onSelectTenant(row.tenant_id)}
-              onUser={() => onSelectUser(row.principal_id)}
-            />
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SuppressedEmailList({
-  onSelectTenant,
-  onSelectUser,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectUser: (principalId: string) => void;
-  rows: RecentSuppressedEmail[];
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Emails supprimes</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun email supprime." /> : null}
-        {rows.map((row) => (
-          <article className="p-3" key={`${row.email}:${row.suppressed_at}`}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{row.email}</p>
-                <p className="text-muted-foreground text-xs">{row.reason}</p>
-              </div>
-              <Badge variant="outline">{row.tenant_name ?? 'unmatched'}</Badge>
-            </div>
-            <LinkedRowActions
-              disabled={!row.principal_id || !row.tenant_id}
-              onTenant={() => {
-                if (row.tenant_id) onSelectTenant(row.tenant_id);
-              }}
-              onUser={() => {
-                if (row.principal_id) onSelectUser(row.principal_id);
-              }}
-            />
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LinkedRowActions({
-  disabled = false,
-  onTenant,
-  onUser,
-}: {
-  disabled?: boolean;
-  onTenant: () => void;
-  onUser: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        disabled={disabled}
-        onClick={() => {
-          onUser();
-          window.location.hash = 'user-detail';
-        }}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <UserRound className="size-4" />
-        Open user
-      </Button>
-      <Button
-        disabled={disabled}
-        onClick={() => {
-          onTenant();
-          window.location.hash = 'tenant-detail';
-        }}
-        size="sm"
-        type="button"
-        variant="ghost"
-      >
-        Tenant
-      </Button>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
 }
 
 function ComplianceMetric({

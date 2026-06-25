@@ -2,17 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Building2, Globe2, MapPinned, ShieldCheck } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { getRegionCenter } from './internal-admin.api';
 import { LockedState } from './internal-admin.locked-state';
 import { RegionActionsPanel } from './internal-admin.region-actions';
-import type {
-  AdminCredentials,
-  JurisdictionDistribution,
-  MultiRegionTenant,
-  RegionDistribution,
-  RegionWorkspace,
-} from './internal-admin.types';
+import {
+  JurisdictionDistributionList,
+  MultiRegionTenantsList,
+  NonEuWorkspacesList,
+  RegionDistributionList,
+} from './internal-admin.region-lists';
+import type { AdminCredentials } from './internal-admin.types';
 
 export function RegionCenterPanel({
   credentials,
@@ -94,170 +93,6 @@ export function RegionCenterPanel({
       </div>
     </section>
   );
-}
-
-function RegionDistributionList({ rows }: { rows: RegionDistribution[] }) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Region distribution</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucune region chargee." /> : null}
-        {rows.map((row) => (
-          <CompactRow
-            key={row.data_region}
-            label={row.data_region.toUpperCase()}
-            meta={`${formatCount(row.tenant_count)} tenants`}
-            value={`${formatCount(row.workspace_count)} workspaces`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function JurisdictionDistributionList({ rows }: { rows: JurisdictionDistribution[] }) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Jurisdiction distribution</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucune jurisdiction chargee." /> : null}
-        {rows.map((row) => (
-          <CompactRow
-            key={row.jurisdiction}
-            label={row.jurisdiction.toUpperCase()}
-            meta={`${formatCount(row.tenant_count)} tenants`}
-            value={`${formatCount(row.workspace_count)} workspaces`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function NonEuWorkspacesList({
-  onSelectTenant,
-  onSelectWorkspace,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  onSelectWorkspace: (workspaceId: string) => void;
-  rows: RegionWorkspace[];
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Non-EU workspaces</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun workspace non-EU detecte." /> : null}
-        {rows.map((row) => (
-          <article className="p-3" key={row.workspace_id}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{row.workspace_name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {row.tenant_name} - {row.jurisdiction.toUpperCase()}
-                </p>
-              </div>
-              <Badge variant="destructive">{row.data_region.toUpperCase()}</Badge>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => {
-                  onSelectWorkspace(row.workspace_id);
-                  window.location.hash = 'workspace-detail';
-                }}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <Building2 className="size-4" />
-                Open workspace
-              </Button>
-              <Button
-                onClick={() => {
-                  onSelectTenant(row.tenant_id);
-                  window.location.hash = 'tenant-detail';
-                }}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                Tenant
-              </Button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MultiRegionTenantsList({
-  onSelectTenant,
-  rows,
-}: {
-  onSelectTenant: (tenantId: string) => void;
-  rows: MultiRegionTenant[];
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">Multi-region tenants</h3>
-      </div>
-      <div className="divide-y">
-        {rows.length === 0 ? <EmptyRow label="Aucun tenant multi-region detecte." /> : null}
-        {rows.map((row) => (
-          <article className="p-3" key={row.tenant_id}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{row.tenant_name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {formatCount(row.workspace_count)} workspaces across{' '}
-                  {formatCount(row.region_count)} regions
-                </p>
-              </div>
-              <Badge variant="outline">
-                {row.regions.map((item) => item.toUpperCase()).join(', ')}
-              </Badge>
-            </div>
-            <Button
-              onClick={() => {
-                onSelectTenant(row.tenant_id);
-                window.location.hash = 'tenant-detail';
-              }}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <Building2 className="size-4" />
-              Open tenant
-            </Button>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CompactRow({ label, meta, value }: { label: string; meta: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{label}</p>
-        <p className="text-muted-foreground text-xs">{meta}</p>
-      </div>
-      <Badge variant="secondary">{value}</Badge>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
 }
 
 function RegionMetric({

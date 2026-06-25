@@ -18,6 +18,7 @@ import {
   regionSnapshot,
   revenueSnapshot,
   riskDecisionSnapshot,
+  usageSnapshot,
 } from './action-confirmation.snapshots.centers';
 import {
   globalSearchSnapshot,
@@ -163,6 +164,7 @@ function snapshotForPath(path: string) {
   if (path === '/admin/revenue-center') return revenueSnapshot();
   if (path === '/admin/risk-decision-center') return riskDecisionSnapshot();
   if (path === '/admin/security-center') return securitySnapshot();
+  if (path === '/admin/usage-center') return usageSnapshot();
   if (path === '/admin/identity-governance-center') return governanceSnapshot();
   if (path === '/admin/search') return globalSearchSnapshot();
   if (path === `/admin/tenants/${ids.tenantId}`) return tenantDetailSnapshot();

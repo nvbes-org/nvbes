@@ -1156,10 +1156,26 @@ export type CommandCenterSnapshot = {
   workspace_count: number;
   user_count: number;
   audit_events_24h: number;
+  pending_approval_count?: number;
+  critical_pending_approval_count?: number;
+  overdue_approval_count?: number;
+  open_incident_count?: number;
+  audit_hash_anomaly_count?: number;
+  sla_breach_count?: number;
   billing_provider_failures: number;
   overdue_invoice_count: number;
   failed_payment_count: number;
   latest_audit_at: string | null;
+  today_work?: CommandCenterWorkItem[];
+};
+
+export type CommandCenterWorkItem = {
+  id: string;
+  label: string;
+  count: number;
+  severity: 'critical' | 'high' | 'medium' | string;
+  href: string;
+  owner: string;
 };
 
 export type ProviderEventFailure = {

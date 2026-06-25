@@ -196,3 +196,24 @@ pub(crate) async fn break_glass_audit_count(
     .await
     .expect("audit count should load")
 }
+
+pub(crate) async fn break_glass_audit_metadata(
+    pool: &PgPool,
+    tenant_id: Uuid,
+    actor_id: Uuid,
+    principal_id: Uuid,
+) -> serde_json::Value {
+    sqlx::query_scalar::<_, serde_json::Value>(
+        "SELECT metadata FROM audit_events
+         WHERE tenant_id = $1 AND actor_principal_id = $2
+           AND action = 'internal_admin.identity_governance.break_glass.revoked'
+           AND target_type = 'break_glass_account'
+           AND target_id = $3",
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .bind(principal_id)
+    .fetch_one(pool)
+    .await
+    .expect("audit metadata should load")
+}

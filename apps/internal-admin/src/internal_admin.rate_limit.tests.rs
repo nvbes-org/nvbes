@@ -61,6 +61,34 @@ fn critical_mutation_policy_is_stricter_than_regular_mutation_policy() {
 }
 
 #[test]
+fn sensitive_backoffice_mutations_use_critical_rate_limit_policy() {
+    let sensitive_paths = [
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/billing-platform/kyc-profiles/00000000-0000-0000-0000-000000000002/approve",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/entitlements/grants",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/usage/corrections",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/developer/clients/client_live_123/revoke",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/communications/suppressions",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/compliance/principals/00000000-0000-0000-0000-000000000002/erasure-request",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/region/workspaces/00000000-0000-0000-0000-000000000002/residency-flag",
+        "/workspaces/00000000-0000-0000-0000-000000000001/admin/risk/signals/00000000-0000-0000-0000-000000000002/resolve",
+        "/workspaces/00000000-0000-0000-0000-000000000001/billing/admin/provider-events/replay",
+        "/workspaces/00000000-0000-0000-0000-000000000001/billing/admin/runbooks/psp-outage/execute",
+        "/admin/identity-governance-center/break-glass/00000000-0000-0000-0000-000000000001/00000000-0000-0000-0000-000000000002/revoke",
+        "/admin/identity-governance/operator-grants",
+        "/admin/tenants/00000000-0000-0000-0000-000000000001/suspend",
+        "/admin/workspaces/00000000-0000-0000-0000-000000000001/suspend",
+        "/admin/users/00000000-0000-0000-0000-000000000001/suspend",
+    ];
+
+    for path in sensitive_paths {
+        let policy = policy_for_request(&Method::POST, path);
+        assert_eq!(policy.kind, "critical_mutation", "{path}");
+        assert_eq!(policy.actor_limit, CRITICAL_MUTATION_ACTOR_LIMIT, "{path}");
+        assert_eq!(policy.ip_limit, CRITICAL_MUTATION_IP_LIMIT, "{path}");
+    }
+}
+
+#[test]
 fn action_family_uses_low_cardinality_route_groups() {
     assert_eq!(
         action_family_for_path("/workspaces/tenant-1/billing/admin/credit-notes"),

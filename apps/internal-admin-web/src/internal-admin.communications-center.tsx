@@ -1,18 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Inbox, Mail, MailCheck, MailX, RadioTower, ShieldOff } from 'lucide-react';
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentType } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { getCommunicationsCenter } from './internal-admin.api';
 import { CommunicationsActionsPanel } from './internal-admin.communications-actions';
+import {
+  BusinessTypeList,
+  RecentFailureList,
+  StatusDistributionList,
+  SuppressionList,
+  UnprocessedEventList,
+} from './internal-admin.communications-lists';
 import { LockedState } from './internal-admin.locked-state';
-import type {
-  AdminCredentials,
-  BusinessTypeDistribution,
-  EmailStatusDistribution,
-  RecentEmailEvent,
-  RecentEmailFailure,
-  RecentEmailSuppression,
-} from './internal-admin.types';
+import type { AdminCredentials } from './internal-admin.types';
 
 export function CommunicationsCenterPanel({
   credentials,
@@ -100,133 +100,6 @@ export function CommunicationsCenterPanel({
   );
 }
 
-function StatusDistributionList({ rows }: { rows: EmailStatusDistribution[] }) {
-  return (
-    <CommsList emptyLabel="Aucun message email." title="Status distribution">
-      {rows.map((row) => (
-        <CompactRow
-          badge={formatCount(row.message_count)}
-          key={row.status}
-          label={row.status}
-          meta="messages"
-        />
-      ))}
-    </CommsList>
-  );
-}
-
-function BusinessTypeList({ rows }: { rows: BusinessTypeDistribution[] }) {
-  return (
-    <CommsList emptyLabel="Aucun business type email." title="Business types">
-      {rows.map((row) => (
-        <CompactRow
-          badge={`${formatCount(row.failure_count)} failures`}
-          key={row.business_type}
-          label={row.business_type}
-          meta={`${formatCount(row.message_count)} messages`}
-        />
-      ))}
-    </CommsList>
-  );
-}
-
-function RecentFailureList({ rows }: { rows: RecentEmailFailure[] }) {
-  return (
-    <CommsList emptyLabel="Aucun email en echec." title="Recent failures">
-      {rows.map((row) => (
-        <CompactRow
-          badge={row.status}
-          key={row.id}
-          label={row.recipient_email}
-          meta={`${row.business_type} - ${row.provider_email_id ?? 'no provider id'}`}
-          tone="danger"
-        />
-      ))}
-    </CommsList>
-  );
-}
-
-function SuppressionList({ rows }: { rows: RecentEmailSuppression[] }) {
-  return (
-    <CommsList emptyLabel="Aucune suppression email." title="Suppressions">
-      {rows.map((row) => (
-        <CompactRow
-          badge={row.reason}
-          key={row.email}
-          label={row.email}
-          meta={formatDate(row.suppressed_at)}
-          tone="danger"
-        />
-      ))}
-    </CommsList>
-  );
-}
-
-function UnprocessedEventList({ rows }: { rows: RecentEmailEvent[] }) {
-  return (
-    <div className="xl:col-span-2">
-      <CommsList emptyLabel="Aucun event email non traite." title="Unprocessed webhook events">
-        {rows.map((row) => (
-          <CompactRow
-            badge={row.event_type}
-            key={row.id}
-            label={row.email}
-            meta={`${row.provider_event_id} - ${formatDate(row.created_at)}`}
-            tone="warning"
-          />
-        ))}
-      </CommsList>
-    </div>
-  );
-}
-
-function CompactRow({
-  badge,
-  label,
-  meta,
-  tone = 'default',
-}: {
-  badge: string;
-  label: string;
-  meta: string;
-  tone?: 'danger' | 'default' | 'warning';
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{label}</p>
-        <p className="text-muted-foreground truncate text-xs">{meta}</p>
-      </div>
-      <Badge variant={tone === 'danger' ? 'destructive' : 'outline'}>{badge}</Badge>
-    </div>
-  );
-}
-
-function CommsList({
-  children,
-  emptyLabel,
-  title,
-}: {
-  children: ReactNode[];
-  emptyLabel: string;
-  title: string;
-}) {
-  return (
-    <div className="rounded-md border">
-      <div className="border-b p-3">
-        <h3 className="text-sm font-medium">{title}</h3>
-      </div>
-      <div className="divide-y">
-        {children.length === 0 ? <EmptyRow label={emptyLabel} /> : children}
-      </div>
-    </div>
-  );
-}
-
-function EmptyRow({ label }: { label: string }) {
-  return <div className="text-muted-foreground p-4 text-sm">{label}</div>;
-}
-
 function CommsMetric({
   icon: Icon,
   label,
@@ -264,8 +137,4 @@ function CommsMetric({
 
 function formatCount(value: number | undefined): string {
   return typeof value === 'number' ? new Intl.NumberFormat('fr-FR').format(value) : '-';
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('fr-FR').format(new Date(value));
 }

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::billing_admin_test_support::{
     billing_replay_schema_exists, idempotency_schema_exists, provider_event_status,
-    replay_audit_count, replay_request, replay_request_with_key,
+    replay_audit_count, replay_audit_metadata, replay_request, replay_request_with_key,
     seed_workspace_actor_and_provider_event, test_pool,
 };
 
@@ -125,6 +125,19 @@ async fn replay_provider_event_route_enforces_grant_confirmation_and_audits_succ
     assert_eq!(
         replay_audit_count(&pool, tenant_id, actor_id, event_id).await,
         1
+    );
+    let metadata = replay_audit_metadata(&pool, tenant_id, actor_id, event_id).await;
+    assert_eq!(
+        metadata["object_links"]["target_type"],
+        json!("billing_provider_event")
+    );
+    assert_eq!(
+        metadata["changes"][0],
+        json!({
+            "field": "billing_admin.action",
+            "before": null,
+            "after": "recorded"
+        })
     );
 }
 
