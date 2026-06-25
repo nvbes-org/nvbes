@@ -6,21 +6,9 @@
   "remoteUser": "vscode",
   "shutdownAction": "stopCompose",
   "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postAttachCommand": "bash .devcontainer/open-start-page.sh",
   "forwardPorts": [
-    3001,
-    4000,
-    4002,
-    5173,
-    13000,
-    13100,
-    13200,
-    14317,
-    14318,
-    14040,
-    15432,
-    16379,
-    18001,
-    19090
+    3001, 4000, 4002, 5173, 13000, 13100, 13200, 14317, 14318, 14040, 15432, 16379, 18001, 19090
   ],
   "portsAttributes": {
     "3001": {
