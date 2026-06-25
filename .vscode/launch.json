@@ -3,43 +3,67 @@
   "configurations": [
     {
       "name": "Web: Drive (Chrome)",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/apps/drive-web",
       "preLaunchTask": "dev: drive-web",
+      "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "runtimeArgs": ["--no-first-run", "--no-default-browser-check"],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome/drive-web",
       "sourceMaps": true
     },
     {
       "name": "Web: Identity (Chrome)",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "request": "launch",
       "url": "http://localhost:3001",
       "webRoot": "${workspaceFolder}/apps/identity-web",
       "preLaunchTask": "dev: identity-web",
+      "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "runtimeArgs": ["--no-first-run", "--no-default-browser-check"],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome/identity-web",
       "sourceMaps": true
     },
     {
       "name": "Web: Developer (Chrome)",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5175",
       "webRoot": "${workspaceFolder}/apps/developer-web",
       "preLaunchTask": "dev: developer-web",
+      "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "runtimeArgs": ["--no-first-run", "--no-default-browser-check"],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome/developer-web",
       "sourceMaps": true
     },
     {
       "name": "Web: Enterprise (Chrome)",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5175",
       "webRoot": "${workspaceFolder}/apps/enterprise-web",
       "preLaunchTask": "dev: enterprise-web",
+      "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "runtimeArgs": ["--no-first-run", "--no-default-browser-check"],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome/enterprise-web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Web: Internal Admin (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5178",
+      "webRoot": "${workspaceFolder}/apps/internal-admin-web",
+      "preLaunchTask": "dev: internal-admin-web",
+      "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "runtimeArgs": ["--no-first-run", "--no-default-browser-check"],
+      "userDataDir": "${workspaceFolder}/.vscode/chrome/internal-admin-web",
       "sourceMaps": true
     },
     {
       "name": "Web: Attach Chrome (Drive)",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "request": "attach",
       "url": "http://localhost:5173",
       "webRoot": "${workspaceFolder}/apps/drive-web",
@@ -58,10 +82,12 @@
       },
       "program": "${cargo:program}",
       "cwd": "${workspaceFolder}",
+      "preLaunchTask": "port: free identity-api",
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
         "NVBES_API_PORT": "4000"
       },
+      "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]
     },
     {
@@ -77,11 +103,13 @@
       },
       "program": "${cargo:program}",
       "cwd": "${workspaceFolder}",
+      "preLaunchTask": "port: free drive-api",
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
         "NVBES_API_PORT": "4002",
         "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
       },
+      "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]
     },
     {
@@ -100,6 +128,7 @@
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}"
       },
+      "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]
     },
     {
@@ -119,6 +148,7 @@
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
         "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
       },
+      "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]
     }
   ],

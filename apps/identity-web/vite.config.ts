@@ -221,7 +221,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3001,
-      host: 'localhost',
+      strictPort: true,
+      host: '0.0.0.0',
       headers: {
         'Content-Security-Policy': cspHeader,
         'Integrity-Policy-Report-Only': integrityPolicyStyles,
@@ -263,7 +264,8 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       port: 3001,
-      host: 'localhost',
+      strictPort: true,
+      host: '0.0.0.0',
       headers: {
         'Content-Security-Policy': cspHeader,
         'Integrity-Policy': integrityPolicyStyles,

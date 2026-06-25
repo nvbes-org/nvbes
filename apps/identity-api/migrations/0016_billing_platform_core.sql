@@ -1,7 +1,5 @@
 -- Billing platform core: provider-neutral catalog, entitlements, invoices, payments and ledger.
 
-ALTER TYPE billing_provider ADD VALUE IF NOT EXISTS 'mollie';
-
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'billing_money_direction') THEN

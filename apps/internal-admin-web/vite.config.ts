@@ -59,6 +59,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5178,
+      strictPort: true,
       host: '127.0.0.1',
       headers: {
         'Content-Security-Policy': cspHeader,
@@ -74,6 +75,7 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       port: 5178,
+      strictPort: true,
       host: '127.0.0.1',
       headers: {
         'Content-Security-Policy': cspHeader,

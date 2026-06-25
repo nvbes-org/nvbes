@@ -16,7 +16,17 @@
         "reveal": "always",
         "panel": "shared"
       },
-      "problemMatcher": []
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):(?:3001|5173)"
+        }
+      }
     },
     {
       "label": "dev: identity-api",
@@ -27,7 +37,17 @@
         "reveal": "always",
         "panel": "dedicated"
       },
-      "problemMatcher": []
+      "problemMatcher": {
+        "owner": "rust",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Starting HTTP listener|Starting nvbes Identity API"
+        }
+      }
     },
     {
       "label": "dev: drive-api",
@@ -38,7 +58,17 @@
         "reveal": "always",
         "panel": "dedicated"
       },
-      "problemMatcher": []
+      "problemMatcher": {
+        "owner": "rust",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "starting nvbes API"
+        }
+      }
     },
     {
       "label": "dev: identity-web",
@@ -57,7 +87,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Local:.*http://localhost:3001"
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):3001"
         }
       }
     },
@@ -78,7 +108,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Local:.*http://localhost:5173"
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):5173"
         }
       }
     },
@@ -99,7 +129,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Local:.*http://localhost:5175"
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):5175"
         }
       }
     },
@@ -120,7 +150,28 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Local:.*http://localhost:5175"
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):5175"
+        }
+      }
+    },
+    {
+      "label": "dev: internal-admin-web",
+      "type": "shell",
+      "command": "pnpm dev:internal-admin-web",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://(?:localhost|127\\.0\\.0\\.1):5178"
         }
       }
     },
@@ -152,6 +203,26 @@
       "label": "hooks: install lefthook",
       "type": "shell",
       "command": "pnpm dlx lefthook install",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "port: free identity-api",
+      "type": "shell",
+      "command": "bash -lc 'source scripts/lib/dev-ports.sh && free_dev_port 4000 identity-api'",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "port: free drive-api",
+      "type": "shell",
+      "command": "bash -lc 'source scripts/lib/dev-ports.sh && free_dev_port 4002 drive-api'",
       "presentation": {
         "reveal": "silent",
         "panel": "shared"

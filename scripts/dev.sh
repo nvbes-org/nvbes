@@ -4,11 +4,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/test-env.sh"
+source "$SCRIPT_DIR/lib/dev-ports.sh"
 
 cd "$ROOT_DIR"
 
 cleanup() {
-  kill 0
+  terminate_child_jobs
 }
 
 trap cleanup INT TERM

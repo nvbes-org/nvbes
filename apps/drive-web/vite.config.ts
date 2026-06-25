@@ -225,6 +225,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 5173,
+      strictPort: true,
       headers: {
         'Content-Security-Policy': cspHeader,
         'Integrity-Policy-Report-Only': integrityPolicyStyles,
@@ -248,6 +249,7 @@ export default defineConfig(({ mode }) => {
     preview: {
       host: '0.0.0.0',
       port: 5173,
+      strictPort: true,
       headers: {
         'Content-Security-Policy': cspHeader,
         'Integrity-Policy': integrityPolicyStyles,

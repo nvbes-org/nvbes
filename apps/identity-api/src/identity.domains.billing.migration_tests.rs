@@ -2,8 +2,8 @@ const BILLING_PLATFORM_MIGRATION: &str =
     include_str!("../migrations/0016_billing_platform_core.sql");
 const REGIONAL_PRICE_MIGRATION: &str =
     include_str!("../migrations/0017_regional_price_mappings.sql");
-const GEO_LOOKUP_MIGRATION: &str = include_str!("../migrations/0018_geo_lookup_relations.sql");
-const GEO_REPUTATION_MIGRATION: &str = include_str!("../migrations/0019_geo_reputation_labels.sql");
+const GEO_LOOKUP_MIGRATION: &str = include_str!("../migrations/0019_geo_lookup_relations.sql");
+const GEO_REPUTATION_MIGRATION: &str = include_str!("../migrations/0021_geo_reputation_labels.sql");
 
 #[test]
 fn billing_platform_migration_covers_canonical_table_groups() {

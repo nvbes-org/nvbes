@@ -3,18 +3,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/test-env.sh"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib/dev-ports.sh"
 
 cd "$ROOT_DIR"
-
-cleanup() {
-  terminate_child_jobs
-}
-
-trap cleanup INT TERM
-
-bash "$SCRIPT_DIR/dev-identity-api.sh" &
-bash "$SCRIPT_DIR/dev-identity-web.sh" &
-cargo run -p nvbes-identity-worker &
-wait
+free_dev_port 5178 "internal-admin-web"
+exec pnpm --dir apps/internal-admin-web dev

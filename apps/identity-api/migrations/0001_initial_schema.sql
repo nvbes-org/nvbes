@@ -24,7 +24,7 @@ CREATE TYPE mfa_factor_type AS ENUM ('totp', 'webauthn', 'recovery_code');
 CREATE TYPE mfa_factor_status AS ENUM ('pending', 'active', 'revoked');
 CREATE TYPE device_kind AS ENUM ('desktop', 'mobile', 'tablet', 'security_key', 'iot', 'other');
 CREATE TYPE device_trust_level AS ENUM ('unknown', 'remembered', 'managed', 'attested', 'high_assurance');
-CREATE TYPE billing_provider AS ENUM ('stripe');
+CREATE TYPE billing_provider AS ENUM ('stripe', 'mollie');
 CREATE TYPE invitation_status AS ENUM ('pending', 'accepted', 'revoked', 'expired');
 CREATE TYPE identity_provider_type AS ENUM ('password', 'oidc', 'saml', 'webauthn', 'passkey', 'recovery_code');
 

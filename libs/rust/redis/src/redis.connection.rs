@@ -58,12 +58,7 @@ impl bb8::ErrorSink<redis::RedisError> for RedisPoolErrorSink {
 }
 
 pub async fn create_pool(config: &RedisConfig) -> Result<RedisPool, RedisError> {
-    let mut redis_url = config.url.clone();
-    if let (Some(password), Some(pos)) = (config.password.as_ref(), redis_url.find("://")) {
-        let prefix = &redis_url[..pos + 3];
-        let rest = &redis_url[pos + 3..];
-        redis_url = format!("{prefix}:{password}@{rest}");
-    }
+    let redis_url = redis_url_with_password(config);
 
     let manager = RedisConnectionManager::new(redis_url.as_str())
         .map_err(|e| RedisError::Connection(e.to_string()))?;
@@ -90,6 +85,25 @@ pub async fn create_pool(config: &RedisConfig) -> Result<RedisPool, RedisError> 
     Ok(pool)
 }
 
+fn redis_url_with_password(config: &RedisConfig) -> String {
+    let Some(password) = config.password.as_ref() else {
+        return config.url.clone();
+    };
+    let Some(scheme_end) = config.url.find("://") else {
+        return config.url.clone();
+    };
+
+    let prefix_end = scheme_end + 3;
+    let rest = &config.url[prefix_end..];
+    let authority_end = rest.find('/').unwrap_or(rest.len());
+    let authority = &rest[..authority_end];
+    if authority.contains('@') {
+        return config.url.clone();
+    }
+
+    format!("{}:{}@{}", &config.url[..prefix_end], password, rest)
+}
+
 pub async fn health_check(pool: &RedisPool) -> Result<(), RedisError> {
     let mut conn = pool.get().await?;
     let _: String = redis::cmd("PING").query_async(&mut *conn).await?;
@@ -98,7 +112,7 @@ pub async fn health_check(pool: &RedisPool) -> Result<(), RedisError> {
 
 #[cfg(test)]
 mod tests {
-    use super::RedisError;
+    use super::{RedisConfig, RedisError, redis_url_with_password};
 
     #[test]
     fn redis_error_is_transient_for_dropped_connections() {
@@ -115,5 +129,33 @@ mod tests {
         let error = serde_json::from_str::<serde_json::Value>("not-json").unwrap_err();
 
         assert!(!RedisError::Json(error).is_transient());
+    }
+
+    #[test]
+    fn redis_url_with_password_injects_password_when_url_has_no_credentials() {
+        let config = RedisConfig {
+            url: "redis://redis:6379".to_string(),
+            password: Some("redis_dev".to_string()),
+            max_connections: 10,
+        };
+
+        assert_eq!(
+            redis_url_with_password(&config),
+            "redis://:redis_dev@redis:6379"
+        );
+    }
+
+    #[test]
+    fn redis_url_with_password_preserves_url_credentials() {
+        let config = RedisConfig {
+            url: "redis://:redis_dev@redis:6379".to_string(),
+            password: Some("redis_dev".to_string()),
+            max_connections: 10,
+        };
+
+        assert_eq!(
+            redis_url_with_password(&config),
+            "redis://:redis_dev@redis:6379"
+        );
     }
 }
