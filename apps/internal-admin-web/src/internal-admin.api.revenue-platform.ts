@@ -8,7 +8,9 @@ import type { OperationBody, OperationOk, OperationPath } from './internal-admin
 import { authHeaders, parseJson, postJson } from './internal-admin.api.core';
 
 export async function getRevenueCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/revenue-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/revenue-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<RevenueCenterSnapshot>(response);
 }
 

@@ -10,7 +10,9 @@ import type { OperationBody, OperationOk, OperationPath } from './internal-admin
 import { authHeaders, parseJson, postJson } from './internal-admin.api.core';
 
 export async function getComplianceCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/compliance-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/compliance-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<ComplianceCenterSnapshot>(response);
 }
 
@@ -106,7 +108,9 @@ export function unsuppressEmail(
 }
 
 export async function getRegionCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/region-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/region-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<RegionCenterSnapshot>(response);
 }
 

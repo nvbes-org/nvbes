@@ -29,7 +29,9 @@ export async function searchBilling(credentials: AdminCredentials, query: string
 }
 
 export async function listBillingRunbooks(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/billing/runbooks', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/billing/runbooks', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<BillingRunbook[]>(response);
 }
 
@@ -46,9 +48,12 @@ export function executeBillingRunbook(
 }
 
 export async function getBillingOverview(credentials: AdminCredentials) {
-  const response = await verifiedFetch(`/workspaces/${credentials.workspaceId}/billing/admin/overview`, {
-    headers: authHeaders(credentials),
-  });
+  const response = await verifiedFetch(
+    `/workspaces/${credentials.workspaceId}/billing/admin/overview`,
+    {
+      headers: authHeaders(credentials),
+    },
+  );
   return parseJson<BillingOverview>(response);
 }
 

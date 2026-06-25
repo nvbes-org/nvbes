@@ -11,12 +11,16 @@ import type { OperationBody, OperationOk, OperationPath } from './internal-admin
 import { authHeaders, parseJson, postJson } from './internal-admin.api.core';
 
 export async function getCustomerCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/customer-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/customer-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<CustomerCenterSnapshot>(response);
 }
 
 export async function getDeveloperCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/developer-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/developer-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<DeveloperCenterSnapshot>(response);
 }
 
@@ -105,7 +109,9 @@ export function publishEntitlementChanges(
 }
 
 export async function getOperationsCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/operations-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/operations-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<OperationsCenterSnapshot>(response);
 }
 
@@ -193,7 +199,9 @@ export function resolveReconciliationDifference(
 }
 
 export async function getUsageCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/usage-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/usage-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<UsageCenterSnapshot>(response);
 }
 

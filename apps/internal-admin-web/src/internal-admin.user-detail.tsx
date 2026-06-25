@@ -115,11 +115,7 @@ export function UserDetailPanel({
               <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
                 {data.principal_id}
               </p>
-              <ClipboardButton
-                className="mt-3"
-                label="Copy principal"
-                value={data.principal_id}
-              />
+              <ClipboardButton className="mt-3" label="Copy principal" value={data.principal_id} />
             </div>
             <LinkCard
               id={data.tenant_id}

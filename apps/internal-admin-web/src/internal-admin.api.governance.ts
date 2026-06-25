@@ -12,7 +12,9 @@ import type { OperationBody, OperationOk, OperationPath } from './internal-admin
 import { authHeaders, parseJson, postJson } from './internal-admin.api.core';
 
 export async function getAccessCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/access-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/access-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<AccessCenterSnapshot>(response);
 }
 
@@ -33,7 +35,9 @@ export function suspendWorkspaceMembership(
 }
 
 export async function getSecurityCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/security-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/security-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<SecurityCenterSnapshot>(response);
 }
 

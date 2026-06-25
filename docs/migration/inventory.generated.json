@@ -1,123 +1,1069 @@
 {
   "schema_version": 1,
-  "generation": {"command":"tools/migration/inventory.mjs --write","deterministic":true},
-  "summary": {"route_files":93,"endpoints":356,"migration_files":13,"tables":179,"job_files":5,"job_references":21,"infrastructure_files":43,"doc_files":164,"secret_files":1,"secret_keys":80,"resources":25},
+  "generation": { "command": "tools/migration/inventory.mjs --write", "deterministic": true },
+  "summary": {
+    "route_files": 93,
+    "endpoints": 357,
+    "migration_files": 26,
+    "tables": 194,
+    "job_files": 5,
+    "job_references": 21,
+    "infrastructure_files": 43,
+    "doc_files": 165,
+    "secret_files": 1,
+    "secret_keys": 80,
+    "resources": 25
+  },
   "routes": [
-    {"file":"apps/drive-api/src/drive.domains.audit.routes.rs","endpoints":["/workspaces/{workspaceId}/audit-events","/workspaces/{workspaceId}/audit-events/export"]},
-    {"file":"apps/drive-api/src/drive.domains.billing.routes.entitlements.rs","endpoints":["/internal/billing/entitlement-events"]},
-    {"file":"apps/drive-api/src/drive.domains.billing.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/billing","/workspaces/{workspaceId}/billing/checkout","/workspaces/{workspaceId}/billing/invoice-estimate","/workspaces/{workspaceId}/billing/portal","/workspaces/{workspaceId}/billing/usage"]},
-    {"file":"apps/drive-api/src/drive.domains.billing.routes.webhooks.rs","endpoints":["/billing/webhooks"]},
-    {"file":"apps/drive-api/src/drive.domains.files.routes.browse.rs","endpoints":["/workspaces/{workspaceId}/folders","/workspaces/{workspaceId}/objects","/workspaces/{workspaceId}/trash"]},
-    {"file":"apps/drive-api/src/drive.domains.files.routes.download.rs","endpoints":["/workspaces/{workspaceId}/objects/{objectId}/download","/workspaces/{workspaceId}/objects/{objectId}/download-url"]},
-    {"file":"apps/drive-api/src/drive.domains.files.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/objects/{objectId}","/workspaces/{workspaceId}/objects/{objectId}/move"]},
-    {"file":"apps/drive-api/src/drive.domains.files.routes.trash.rs","endpoints":["/workspaces/{workspaceId}/objects/{objectId}/restore","/workspaces/{workspaceId}/objects/{objectId}/trash"]},
-    {"file":"apps/drive-api/src/drive.domains.members.routes.invitations.rs","endpoints":["/invitations/accept","/workspaces/{workspaceId}/invitations"]},
-    {"file":"apps/drive-api/src/drive.domains.members.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/members","/workspaces/{workspaceId}/members/{memberId}"]},
-    {"file":"apps/drive-api/src/drive.domains.privacy.routes.account.rs","endpoints":["/privacy/delete-account","/privacy/export","/privacy/requests/{requestId}"]},
-    {"file":"apps/drive-api/src/drive.domains.privacy.routes.workspace.rs","endpoints":["/workspaces/{workspaceId}/privacy/delete","/workspaces/{workspaceId}/privacy/export"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.mgmt_handlers.rs","endpoints":["/workspaces/{workspaceId}/api-keys","/workspaces/{workspaceId}/api-keys/{apiKeyId}"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.rs","endpoints":["/v1/me","/v1/workspaces","/v1/workspaces/{workspaceId}/audit-events","/v1/workspaces/{workspaceId}/folders","/v1/workspaces/{workspaceId}/objects","/v1/workspaces/{workspaceId}/objects/{objectId}","/v1/workspaces/{workspaceId}/objects/{objectId}/download-url","/v1/workspaces/{workspaceId}/objects/{objectId}/move","/v1/workspaces/{workspaceId}/objects/{objectId}/share-links","/v1/workspaces/{workspaceId}/objects/{objectId}/trash","/v1/workspaces/{workspaceId}/quota","/v1/workspaces/{workspaceId}/share-links","/v1/workspaces/{workspaceId}/share-links/{shareLinkId}","/v1/workspaces/{workspaceId}/uploads","/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel","/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete","/workspaces/{workspaceId}/api-keys","/workspaces/{workspaceId}/api-keys/{apiKeyId}"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.browse.rs","endpoints":["/v1/workspaces/{workspaceId}/folders","/v1/workspaces/{workspaceId}/objects"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs","endpoints":["/v1/workspaces/{workspaceId}/objects/{objectId}/download-url"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.mutations.rs","endpoints":["/v1/workspaces/{workspaceId}/objects/{objectId}","/v1/workspaces/{workspaceId}/objects/{objectId}/move","/v1/workspaces/{workspaceId}/objects/{objectId}/trash"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.me.rs","endpoints":["/v1/me","/v1/workspaces"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs","endpoints":["/v1/workspaces/{workspaceId}/audit-events","/v1/workspaces/{workspaceId}/quota"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs","endpoints":["/v1/workspaces/{workspaceId}/objects/{objectId}/share-links","/v1/workspaces/{workspaceId}/share-links","/v1/workspaces/{workspaceId}/share-links/{shareLinkId}"]},
-    {"file":"apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs","endpoints":["/v1/workspaces/{workspaceId}/uploads","/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel","/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete"]},
-    {"file":"apps/drive-api/src/drive.domains.quotas.routes.rs","endpoints":["/workspaces/{workspaceId}/quota"]},
-    {"file":"apps/drive-api/src/drive.domains.share_links.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/objects/{objectId}/share-links","/workspaces/{workspaceId}/share-links","/workspaces/{workspaceId}/share-links/{shareLinkId}"]},
-    {"file":"apps/drive-api/src/drive.domains.share_links.routes.public.rs","endpoints":["/public/shares/{token}","/public/shares/{token}/download-url"]},
-    {"file":"apps/drive-api/src/drive.domains.uploads.routes.core.create.rs","endpoints":["/workspaces/{workspaceId}/uploads"]},
-    {"file":"apps/drive-api/src/drive.domains.uploads.routes.core.lifecycle.rs","endpoints":["/workspaces/{workspaceId}/uploads/{uploadId}/cancel","/workspaces/{workspaceId}/uploads/{uploadId}/complete"]},
-    {"file":"apps/drive-api/src/drive.domains.uploads.routes.core.rs","endpoints":["/workspaces/{workspaceId}/uploads","/workspaces/{workspaceId}/uploads/{uploadId}","/workspaces/{workspaceId}/uploads/{uploadId}/cancel","/workspaces/{workspaceId}/uploads/{uploadId}/complete"]},
-    {"file":"apps/drive-api/src/drive.domains.workspaces.routes.manage.rs","endpoints":["/workspaces","/workspaces/{workspaceId}"]},
-    {"file":"apps/drive-api/src/drive.http.routes.rs","endpoints":["/health","/metrics","/observability/alerts/critical","/observability/dashboards","/observability/error-reporting-smoke","/observability/log-streams","/observability/network-errors"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.jwks.rs","endpoints":["/.well-known/jwks.json"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.login.identifier.rs","endpoints":["/auth/challenge/identifier","/challenge/identifier"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.login.mfa.rs","endpoints":["/auth/challenge/mfa","/challenge/mfa"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.login.pwd.rs","endpoints":["/auth/challenge/pwd","/challenge/pwd"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.login.webauthn.rs","endpoints":["/auth/challenge/webauthn/discoverable/finish","/auth/challenge/webauthn/discoverable/start","/auth/challenge/webauthn/start","/challenge/webauthn/discoverable/finish","/challenge/webauthn/discoverable/start","/challenge/webauthn/start"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.mfa.common.rs","endpoints":["/factors/{factorId}"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.mfa.recovery.rs","endpoints":["/auth/mfa/factors/{factorId}","/auth/mfa/recovery-codes","/factors/{factorId}","/recovery-codes"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.mfa.rs","endpoints":["/auth/mfa/factors","/factors"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.mfa.totp.rs","endpoints":["/auth/mfa/totp/confirm","/auth/mfa/totp/setup","/totp/confirm","/totp/setup"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.mfa.webauthn.rs","endpoints":["/auth/mfa/webauthn/register/finish","/auth/mfa/webauthn/register/start","/auth/mfa/webauthn/start","/webauthn/register/finish","/webauthn/register/start","/webauthn/start"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.password.rs","endpoints":["/auth/password/change","/auth/password/forgot","/auth/password/recovery/approve","/auth/password/reset","/password/change","/password/forgot","/password/recovery/approve","/password/reset"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.pow.rs","endpoints":["/auth/challenge/pow","/challenge/pow"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.register.rs","endpoints":["/auth/region","/auth/regions","/auth/register","/auth/verify-email","/region","/regions","/register","/verify-email"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs","endpoints":["/auth/me/export"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.profile.rs","endpoints":["/auth/me","/auth/me/delete","/auth/me/notifications","/auth/me/preferences"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.router.rs","endpoints":["/accounts","/accounts/{authuser}","/logout","/me","/me/delete","/me/export","/me/notifications","/me/preferences","/sessions","/sessions/revoke-others","/sessions/{sessionId}","/step-up","/workspaces/{workspaceId}/switch"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.rs","endpoints":["/auth/accounts","/auth/logout","/auth/me","/auth/me/delete","/auth/me/export","/auth/sessions","/auth/sessions/revoke-others","/auth/sessions/{sessionId}","/auth/step-up","/auth/workspaces/{workspaceId}/switch"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.sessions.rs","endpoints":["/auth/logout","/auth/sessions","/auth/sessions/revoke-others","/auth/sessions/{sessionId}"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.step_up.rs","endpoints":["/auth/step-up"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.session_mgmt.switch_workspace.rs","endpoints":["/auth/workspaces/{workspaceId}/switch"]},
-    {"file":"apps/identity-api/src/identity.domains.auth.routes.verification.rs","endpoints":["/auth/verify-email/change","/auth/verify-email/resend","/verify-email/change","/verify-email/resend"]},
-    {"file":"apps/identity-api/src/identity.domains.authz.routes.rs","endpoints":["/authz/decision"]},
-    {"file":"apps/identity-api/src/identity.domains.billing.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/billing/checkout","/workspaces/{workspaceId}/billing/entitlements","/workspaces/{workspaceId}/billing/overview","/workspaces/{workspaceId}/billing/portal","/workspaces/{workspaceId}/billing/usage"]},
-    {"file":"apps/identity-api/src/identity.domains.billing.routes.portal.rs","endpoints":["/billing/portal/capabilities","/workspaces/{workspaceId}/billing/portal/invoices/{invoiceId}/pdf","/workspaces/{workspaceId}/billing/portal/view"]},
-    {"file":"apps/identity-api/src/identity.domains.billing.routes.usage.rs","endpoints":["/internal/billing/usage-events"]},
-    {"file":"apps/identity-api/src/identity.domains.billing.routes.webhooks.rs","endpoints":["/webhooks/mollie","/webhooks/stripe"]},
-    {"file":"apps/identity-api/src/identity.domains.developer.apps.routes.rs","endpoints":["/developer/apps","/developer/apps/{clientId}","/developer/apps/{clientId}/redirects"]},
-    {"file":"apps/identity-api/src/identity.domains.developer.logs.routes.rs","endpoints":["/developer/logs"]},
-    {"file":"apps/identity-api/src/identity.domains.developer.routes.rs","endpoints":["/developer/console/context","/developer/console/health-checks","/developer/console/logs","/developer/console/marketplace/apps","/developer/console/marketplace/apps/{clientId}/review","/developer/console/marketplace/apps/{clientId}/submit","/developer/console/oauth-clients","/developer/console/oauth-clients/{clientId}/consent-screen","/developer/console/oauth-clients/{clientId}/secrets","/developer/console/oauth-clients/{clientId}/secrets/rotation","/developer/console/oauth-clients/{clientId}/secrets/{versionId}/revoke","/developer/console/overview","/developer/console/sandbox","/developer/console/sandbox/reset","/developer/console/scopes","/developer/console/scopes/{scopeKey}","/developer/console/service-accounts","/developer/console/tokens/debug","/developer/console/webhooks","/developer/console/webhooks/deliveries/{deliveryId}/replay","/developer/console/webhooks/{endpointId}/deliveries","/developer/me"]},
-    {"file":"apps/identity-api/src/identity.domains.developer.tokens.routes.rs","endpoints":["/developer/oauth/playground/exchange","/developer/tokens/inspect"]},
-    {"file":"apps/identity-api/src/identity.domains.developer.webhooks.routes.rs","endpoints":["/developer/webhooks","/developer/webhooks/{endpointId}"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.access_reviews.routes.rs","endpoints":["/enterprise/access-review-campaigns","/enterprise/access-review-campaigns/{campaignId}","/enterprise/access-review-campaigns/{campaignId}/close","/enterprise/access-review-campaigns/{campaignId}/export","/enterprise/access-review-campaigns/{campaignId}/items/{itemId}","/enterprise/access-review-schedules","/enterprise/access-review-schedules/{scheduleId}/disable","/enterprise/access-review-schedules/{scheduleId}/enable","/enterprise/access-review-schedules/{scheduleId}/run"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.access_reviews.routes.schedules.rs","endpoints":["/enterprise/access-review-schedules","/enterprise/access-review-schedules/{scheduleId}/disable","/enterprise/access-review-schedules/{scheduleId}/enable","/enterprise/access-review-schedules/{scheduleId}/run"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.routes.break_glass.rs","endpoints":["/enterprise/users/{userId}/break-glass","/enterprise/users/{userId}/break-glass/revoke"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.routes.developers.rs","endpoints":["/enterprise/developers/credentials/{credentialId}/revoke"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.routes.policies.rs","endpoints":["/enterprise/policies/mfa"]},
-    {"file":"apps/identity-api/src/identity.domains.enterprise.routes.rs","endpoints":["/enterprise/admin-elevation","/enterprise/audit-events","/enterprise/billing","/enterprise/context","/enterprise/developers","/enterprise/developers/credentials/{credentialId}/revoke","/enterprise/invitations","/enterprise/overview","/enterprise/policies","/enterprise/policies/mfa","/enterprise/policies/session","/enterprise/policies/simulate","/enterprise/security","/enterprise/trust-center","/enterprise/usage","/enterprise/users","/enterprise/users/{userId}/access","/enterprise/users/{userId}/break-glass","/enterprise/users/{userId}/break-glass/revoke","/enterprise/users/{userId}/reactivate","/enterprise/users/{userId}/suspend","/enterprise/workspaces"]},
-    {"file":"apps/identity-api/src/identity.domains.federation.routes.domains.rs","endpoints":["/tenants/{tenantId}/domains","/tenants/{tenantId}/domains/{domainId}","/tenants/{tenantId}/domains/{domainId}/verify"]},
-    {"file":"apps/identity-api/src/identity.domains.federation.routes.identities.rs","endpoints":["/tenants/{tenantId}/jit-provisioning","/tenants/{tenantId}/linked-identities","/tenants/{tenantId}/linked-identities/{identityId}"]},
-    {"file":"apps/identity-api/src/identity.domains.federation.routes.idp.rs","endpoints":["/tenants/{tenantId}/identity-providers","/tenants/{tenantId}/identity-providers/{providerId}","/tenants/{tenantId}/identity-providers/{providerId}/oidc/discovery","/tenants/{tenantId}/identity-providers/{providerId}/saml/metadata"]},
-    {"file":"apps/identity-api/src/identity.domains.federation.routes.protocol.rs","endpoints":["/tenants/{tenantId}/identity-providers/{providerId}/oidc/callback","/tenants/{tenantId}/identity-providers/{providerId}/saml/acs"]},
-    {"file":"apps/identity-api/src/identity.domains.federation.routes.scim.rs","endpoints":["/tenants/{tenantId}/scim-connectors","/tenants/{tenantId}/scim-connectors/{connectorId}"]},
-    {"file":"apps/identity-api/src/identity.domains.legal.routes.rs","endpoints":["/legal/consent","/legal/consent/revoke","/legal/consents","/legal/gpc"]},
-    {"file":"apps/identity-api/src/identity.domains.members.routes.invitations.rs","endpoints":["/invitations/accept","/workspaces/{workspaceId}/members"]},
-    {"file":"apps/identity-api/src/identity.domains.members.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/members","/workspaces/{workspaceId}/members/{memberId}"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.hosted.routes.rs","endpoints":["/hosted-login/start","/hosted-login/{state_id}","/hosted-login/{state_id}/authorize","/hosted-login/{state_id}/consent"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.authorize.rs","endpoints":["/authorize","/oauth/authorize"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.clients.rs","endpoints":["/","/oauth/client-policies/{policyId}","/oauth/clients","/oauth/clients/{clientId}","/oauth/clients/{clientId}/policies","/{clientId}","/{clientId}/policies","/{policyId}"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.device.rs","endpoints":["/approve","/authorize","/deny","/oauth/device/approve","/oauth/device/authorize","/oauth/device/deny","/oauth/device/verify","/verify"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.introspect.rs","endpoints":["/introspect","/oauth/introspect"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.par.rs","endpoints":["/par"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.revoke.rs","endpoints":["/oauth/revoke","/revoke"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.token.rs","endpoints":["/oauth/token","/token"]},
-    {"file":"apps/identity-api/src/identity.domains.oauth.routes.userinfo.rs","endpoints":["/oauth/userinfo","/userinfo"]},
-    {"file":"apps/identity-api/src/identity.domains.security.routes.rs","endpoints":["/workspaces/{workspaceId}/recovery-reviews","/workspaces/{workspaceId}/security-events","/workspaces/{workspaceId}/security-events/export","/workspaces/{workspaceId}/worker-queue/status"]},
-    {"file":"apps/identity-api/src/identity.domains.service_accounts.routes.manage.rs","endpoints":["/workspaces/{workspaceId}/service-accounts","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}"]},
-    {"file":"apps/identity-api/src/identity.domains.service_accounts.routes.oauth_clients.rs","endpoints":["/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}/rotate-secret","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach"]},
-    {"file":"apps/identity-api/src/identity.domains.service_accounts.routes.rs","endpoints":["/workspaces/{workspaceId}/service-accounts","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}/rotate-secret","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/reactivate","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/suspend"]},
-    {"file":"apps/identity-api/src/identity.domains.service_accounts.routes.state.rs","endpoints":["/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/reactivate","/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/suspend"]},
-    {"file":"apps/identity-api/src/identity.domains.tenants.routes.rs","endpoints":["/identity-invitations/accept","/tenants/{tenantId}","/tenants/{tenantId}/invitations","/tenants/{tenantId}/members/{principalId}","/tenants/{tenantId}/organizations","/tenants/{tenantId}/organizations/{organizationId}","/tenants/{tenantId}/organizations/{organizationId}/invitations","/tenants/{tenantId}/organizations/{organizationId}/members/{principalId}"]},
-    {"file":"apps/identity-api/src/identity.domains.workspaces.routes.manage.rs","endpoints":["/workspaces","/workspaces/{workspaceId}"]},
-    {"file":"apps/identity-api/src/identity.http.routes.rs","endpoints":["/.well-known/change-password","/.well-known/dpop-nonce","/.well-known/gpc.json","/.well-known/oauth-authorization-server","/.well-known/openid-configuration","/.well-known/passkey-endpoints","/.well-known/security.txt","/.well-known/webauthn","/csp-report","/health","/metrics","/observability/alerts/critical","/observability/dashboards","/observability/error-reporting-smoke","/observability/log-streams","/observability/network-errors"]},
-    {"file":"apps/identity-api/src/identity.http.routes.well_known.rs","endpoints":["/.well-known/change-password","/.well-known/gpc.json","/.well-known/passkey-endpoints","/.well-known/webauthn"]},
-    {"file":"apps/internal-admin/src/internal_admin.http.routes.rs","endpoints":["/health"]}
+    {
+      "file": "apps/drive-api/src/drive.domains.audit.routes.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/audit-events",
+        "/workspaces/{workspaceId}/audit-events/export"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.billing.routes.entitlements.rs",
+      "endpoints": ["/internal/billing/entitlement-events"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.billing.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/billing",
+        "/workspaces/{workspaceId}/billing/checkout",
+        "/workspaces/{workspaceId}/billing/invoice-estimate",
+        "/workspaces/{workspaceId}/billing/portal",
+        "/workspaces/{workspaceId}/billing/usage"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.billing.routes.webhooks.rs",
+      "endpoints": ["/billing/webhooks"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.files.routes.browse.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/folders",
+        "/workspaces/{workspaceId}/objects",
+        "/workspaces/{workspaceId}/trash"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.files.routes.download.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/objects/{objectId}/download",
+        "/workspaces/{workspaceId}/objects/{objectId}/download-url"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.files.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/objects/{objectId}",
+        "/workspaces/{workspaceId}/objects/{objectId}/move"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.files.routes.trash.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/objects/{objectId}/restore",
+        "/workspaces/{workspaceId}/objects/{objectId}/trash"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.members.routes.invitations.rs",
+      "endpoints": ["/invitations/accept", "/workspaces/{workspaceId}/invitations"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.members.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/members",
+        "/workspaces/{workspaceId}/members/{memberId}"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.privacy.routes.account.rs",
+      "endpoints": ["/privacy/delete-account", "/privacy/export", "/privacy/requests/{requestId}"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.privacy.routes.workspace.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/privacy/delete",
+        "/workspaces/{workspaceId}/privacy/export"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.mgmt_handlers.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/api-keys",
+        "/workspaces/{workspaceId}/api-keys/{apiKeyId}"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.rs",
+      "endpoints": [
+        "/v1/me",
+        "/v1/workspaces",
+        "/v1/workspaces/{workspaceId}/audit-events",
+        "/v1/workspaces/{workspaceId}/folders",
+        "/v1/workspaces/{workspaceId}/objects",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/download-url",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/move",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/share-links",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/trash",
+        "/v1/workspaces/{workspaceId}/quota",
+        "/v1/workspaces/{workspaceId}/share-links",
+        "/v1/workspaces/{workspaceId}/share-links/{shareLinkId}",
+        "/v1/workspaces/{workspaceId}/uploads",
+        "/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel",
+        "/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete",
+        "/workspaces/{workspaceId}/api-keys",
+        "/workspaces/{workspaceId}/api-keys/{apiKeyId}"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.browse.rs",
+      "endpoints": ["/v1/workspaces/{workspaceId}/folders", "/v1/workspaces/{workspaceId}/objects"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
+      "endpoints": ["/v1/workspaces/{workspaceId}/objects/{objectId}/download-url"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.mutations.rs",
+      "endpoints": [
+        "/v1/workspaces/{workspaceId}/objects/{objectId}",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/move",
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/trash"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.me.rs",
+      "endpoints": ["/v1/me", "/v1/workspaces"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
+      "endpoints": [
+        "/v1/workspaces/{workspaceId}/audit-events",
+        "/v1/workspaces/{workspaceId}/quota"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "endpoints": [
+        "/v1/workspaces/{workspaceId}/objects/{objectId}/share-links",
+        "/v1/workspaces/{workspaceId}/share-links",
+        "/v1/workspaces/{workspaceId}/share-links/{shareLinkId}"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+      "endpoints": [
+        "/v1/workspaces/{workspaceId}/uploads",
+        "/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel",
+        "/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.quotas.routes.rs",
+      "endpoints": ["/workspaces/{workspaceId}/quota"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.share_links.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/objects/{objectId}/share-links",
+        "/workspaces/{workspaceId}/share-links",
+        "/workspaces/{workspaceId}/share-links/{shareLinkId}"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.share_links.routes.public.rs",
+      "endpoints": ["/public/shares/{token}", "/public/shares/{token}/download-url"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.uploads.routes.core.create.rs",
+      "endpoints": ["/workspaces/{workspaceId}/uploads"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.uploads.routes.core.lifecycle.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/uploads/{uploadId}/cancel",
+        "/workspaces/{workspaceId}/uploads/{uploadId}/complete"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.uploads.routes.core.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/uploads",
+        "/workspaces/{workspaceId}/uploads/{uploadId}",
+        "/workspaces/{workspaceId}/uploads/{uploadId}/cancel",
+        "/workspaces/{workspaceId}/uploads/{uploadId}/complete"
+      ]
+    },
+    {
+      "file": "apps/drive-api/src/drive.domains.workspaces.routes.manage.rs",
+      "endpoints": ["/workspaces", "/workspaces/{workspaceId}"]
+    },
+    {
+      "file": "apps/drive-api/src/drive.http.routes.rs",
+      "endpoints": [
+        "/health",
+        "/metrics",
+        "/observability/alerts/critical",
+        "/observability/dashboards",
+        "/observability/error-reporting-smoke",
+        "/observability/log-streams",
+        "/observability/network-errors"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.jwks.rs",
+      "endpoints": ["/.well-known/jwks.json"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.login.identifier.rs",
+      "endpoints": ["/auth/challenge/identifier", "/challenge/identifier"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.login.mfa.rs",
+      "endpoints": ["/auth/challenge/mfa", "/challenge/mfa"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.login.pwd.rs",
+      "endpoints": ["/auth/challenge/pwd", "/challenge/pwd"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.login.webauthn.rs",
+      "endpoints": [
+        "/auth/challenge/webauthn/discoverable/finish",
+        "/auth/challenge/webauthn/discoverable/start",
+        "/auth/challenge/webauthn/start",
+        "/challenge/webauthn/discoverable/finish",
+        "/challenge/webauthn/discoverable/start",
+        "/challenge/webauthn/start"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.mfa.common.rs",
+      "endpoints": ["/factors/{factorId}"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.mfa.recovery.rs",
+      "endpoints": [
+        "/auth/mfa/factors/{factorId}",
+        "/auth/mfa/recovery-codes",
+        "/factors/{factorId}",
+        "/recovery-codes"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.mfa.rs",
+      "endpoints": ["/auth/mfa/factors", "/factors"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.mfa.totp.rs",
+      "endpoints": [
+        "/auth/mfa/totp/confirm",
+        "/auth/mfa/totp/setup",
+        "/totp/confirm",
+        "/totp/setup"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.mfa.webauthn.rs",
+      "endpoints": [
+        "/auth/mfa/webauthn/register/finish",
+        "/auth/mfa/webauthn/register/start",
+        "/auth/mfa/webauthn/start",
+        "/webauthn/register/finish",
+        "/webauthn/register/start",
+        "/webauthn/start"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.password.rs",
+      "endpoints": [
+        "/auth/password/change",
+        "/auth/password/forgot",
+        "/auth/password/recovery/approve",
+        "/auth/password/reset",
+        "/password/change",
+        "/password/forgot",
+        "/password/recovery/approve",
+        "/password/reset"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.pow.rs",
+      "endpoints": ["/auth/challenge/pow", "/challenge/pow"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "endpoints": [
+        "/auth/region",
+        "/auth/regions",
+        "/auth/register",
+        "/auth/verify-email",
+        "/region",
+        "/regions",
+        "/register",
+        "/verify-email"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs",
+      "endpoints": ["/auth/me/export"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.profile.rs",
+      "endpoints": ["/auth/me", "/auth/me/delete", "/auth/me/notifications", "/auth/me/preferences"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.router.rs",
+      "endpoints": [
+        "/accounts",
+        "/accounts/{authuser}",
+        "/logout",
+        "/me",
+        "/me/delete",
+        "/me/export",
+        "/me/notifications",
+        "/me/preferences",
+        "/sessions",
+        "/sessions/revoke-others",
+        "/sessions/{sessionId}",
+        "/step-up",
+        "/workspaces/{workspaceId}/switch"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.rs",
+      "endpoints": [
+        "/auth/accounts",
+        "/auth/logout",
+        "/auth/me",
+        "/auth/me/delete",
+        "/auth/me/export",
+        "/auth/sessions",
+        "/auth/sessions/revoke-others",
+        "/auth/sessions/{sessionId}",
+        "/auth/step-up",
+        "/auth/workspaces/{workspaceId}/switch"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.sessions.rs",
+      "endpoints": [
+        "/auth/logout",
+        "/auth/sessions",
+        "/auth/sessions/revoke-others",
+        "/auth/sessions/{sessionId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.step_up.rs",
+      "endpoints": ["/auth/step-up"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.switch_workspace.rs",
+      "endpoints": ["/auth/workspaces/{workspaceId}/switch"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.auth.routes.verification.rs",
+      "endpoints": [
+        "/auth/verify-email/change",
+        "/auth/verify-email/resend",
+        "/verify-email/change",
+        "/verify-email/resend"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.authz.routes.rs",
+      "endpoints": ["/authz/decision"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.billing.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/billing/checkout",
+        "/workspaces/{workspaceId}/billing/entitlements",
+        "/workspaces/{workspaceId}/billing/overview",
+        "/workspaces/{workspaceId}/billing/portal",
+        "/workspaces/{workspaceId}/billing/usage"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.billing.routes.portal.rs",
+      "endpoints": [
+        "/billing/portal/capabilities",
+        "/workspaces/{workspaceId}/billing/portal/invoices/{invoiceId}/pdf",
+        "/workspaces/{workspaceId}/billing/portal/view"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.billing.routes.usage.rs",
+      "endpoints": ["/internal/billing/usage-events"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "endpoints": ["/webhooks/mollie", "/webhooks/stripe"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.developer.apps.routes.rs",
+      "endpoints": [
+        "/developer/apps",
+        "/developer/apps/{clientId}",
+        "/developer/apps/{clientId}/redirects"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.developer.logs.routes.rs",
+      "endpoints": ["/developer/logs"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.developer.routes.rs",
+      "endpoints": [
+        "/developer/console/context",
+        "/developer/console/health-checks",
+        "/developer/console/logs",
+        "/developer/console/marketplace/apps",
+        "/developer/console/marketplace/apps/{clientId}/review",
+        "/developer/console/marketplace/apps/{clientId}/submit",
+        "/developer/console/oauth-clients",
+        "/developer/console/oauth-clients/{clientId}/consent-screen",
+        "/developer/console/oauth-clients/{clientId}/secrets",
+        "/developer/console/oauth-clients/{clientId}/secrets/rotation",
+        "/developer/console/oauth-clients/{clientId}/secrets/{versionId}/revoke",
+        "/developer/console/overview",
+        "/developer/console/sandbox",
+        "/developer/console/sandbox/reset",
+        "/developer/console/scopes",
+        "/developer/console/scopes/{scopeKey}",
+        "/developer/console/service-accounts",
+        "/developer/console/tokens/debug",
+        "/developer/console/webhooks",
+        "/developer/console/webhooks/deliveries/{deliveryId}/replay",
+        "/developer/console/webhooks/{endpointId}/deliveries",
+        "/developer/me"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.developer.tokens.routes.rs",
+      "endpoints": ["/developer/oauth/playground/exchange", "/developer/tokens/inspect"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.developer.webhooks.routes.rs",
+      "endpoints": ["/developer/webhooks", "/developer/webhooks/{endpointId}"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.access_reviews.routes.rs",
+      "endpoints": [
+        "/enterprise/access-review-campaigns",
+        "/enterprise/access-review-campaigns/{campaignId}",
+        "/enterprise/access-review-campaigns/{campaignId}/close",
+        "/enterprise/access-review-campaigns/{campaignId}/export",
+        "/enterprise/access-review-campaigns/{campaignId}/items/{itemId}",
+        "/enterprise/access-review-schedules",
+        "/enterprise/access-review-schedules/{scheduleId}/disable",
+        "/enterprise/access-review-schedules/{scheduleId}/enable",
+        "/enterprise/access-review-schedules/{scheduleId}/run"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.access_reviews.routes.schedules.rs",
+      "endpoints": [
+        "/enterprise/access-review-schedules",
+        "/enterprise/access-review-schedules/{scheduleId}/disable",
+        "/enterprise/access-review-schedules/{scheduleId}/enable",
+        "/enterprise/access-review-schedules/{scheduleId}/run"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.routes.break_glass.rs",
+      "endpoints": [
+        "/enterprise/users/{userId}/break-glass",
+        "/enterprise/users/{userId}/break-glass/revoke"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.routes.developers.rs",
+      "endpoints": ["/enterprise/developers/credentials/{credentialId}/revoke"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.routes.policies.rs",
+      "endpoints": ["/enterprise/policies/mfa"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.enterprise.routes.rs",
+      "endpoints": [
+        "/enterprise/admin-elevation",
+        "/enterprise/audit-events",
+        "/enterprise/billing",
+        "/enterprise/context",
+        "/enterprise/developers",
+        "/enterprise/developers/credentials/{credentialId}/revoke",
+        "/enterprise/invitations",
+        "/enterprise/overview",
+        "/enterprise/policies",
+        "/enterprise/policies/mfa",
+        "/enterprise/policies/session",
+        "/enterprise/policies/simulate",
+        "/enterprise/security",
+        "/enterprise/trust-center",
+        "/enterprise/usage",
+        "/enterprise/users",
+        "/enterprise/users/{userId}/access",
+        "/enterprise/users/{userId}/break-glass",
+        "/enterprise/users/{userId}/break-glass/revoke",
+        "/enterprise/users/{userId}/reactivate",
+        "/enterprise/users/{userId}/suspend",
+        "/enterprise/workspaces"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.federation.routes.domains.rs",
+      "endpoints": [
+        "/tenants/{tenantId}/domains",
+        "/tenants/{tenantId}/domains/{domainId}",
+        "/tenants/{tenantId}/domains/{domainId}/verify"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.federation.routes.identities.rs",
+      "endpoints": [
+        "/tenants/{tenantId}/jit-provisioning",
+        "/tenants/{tenantId}/linked-identities",
+        "/tenants/{tenantId}/linked-identities/{identityId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.federation.routes.idp.rs",
+      "endpoints": [
+        "/tenants/{tenantId}/identity-providers",
+        "/tenants/{tenantId}/identity-providers/{providerId}",
+        "/tenants/{tenantId}/identity-providers/{providerId}/oidc/discovery",
+        "/tenants/{tenantId}/identity-providers/{providerId}/saml/metadata"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.federation.routes.protocol.rs",
+      "endpoints": [
+        "/tenants/{tenantId}/identity-providers/{providerId}/oidc/callback",
+        "/tenants/{tenantId}/identity-providers/{providerId}/saml/acs"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.federation.routes.scim.rs",
+      "endpoints": [
+        "/tenants/{tenantId}/scim-connectors",
+        "/tenants/{tenantId}/scim-connectors/{connectorId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.legal.routes.rs",
+      "endpoints": ["/legal/consent", "/legal/consent/revoke", "/legal/consents", "/legal/gpc"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.members.routes.invitations.rs",
+      "endpoints": ["/invitations/accept", "/workspaces/{workspaceId}/members"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.members.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/members",
+        "/workspaces/{workspaceId}/members/{memberId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.hosted.routes.rs",
+      "endpoints": [
+        "/hosted-login/start",
+        "/hosted-login/{state_id}",
+        "/hosted-login/{state_id}/authorize",
+        "/hosted-login/{state_id}/consent"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.authorize.rs",
+      "endpoints": ["/authorize", "/oauth/authorize"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.clients.rs",
+      "endpoints": [
+        "/",
+        "/oauth/client-policies/{policyId}",
+        "/oauth/clients",
+        "/oauth/clients/{clientId}",
+        "/oauth/clients/{clientId}/policies",
+        "/{clientId}",
+        "/{clientId}/policies",
+        "/{policyId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.device.rs",
+      "endpoints": [
+        "/approve",
+        "/authorize",
+        "/deny",
+        "/oauth/device/approve",
+        "/oauth/device/authorize",
+        "/oauth/device/deny",
+        "/oauth/device/verify",
+        "/verify"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.introspect.rs",
+      "endpoints": ["/introspect", "/oauth/introspect"]
+    },
+    { "file": "apps/identity-api/src/identity.domains.oauth.routes.par.rs", "endpoints": ["/par"] },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.revoke.rs",
+      "endpoints": ["/oauth/revoke", "/revoke"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.token.rs",
+      "endpoints": ["/oauth/token", "/token"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.oauth.routes.userinfo.rs",
+      "endpoints": ["/oauth/userinfo", "/userinfo"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.security.routes.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/recovery-reviews",
+        "/workspaces/{workspaceId}/security-events",
+        "/workspaces/{workspaceId}/security-events/export",
+        "/workspaces/{workspaceId}/worker-queue/status"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.service_accounts.routes.manage.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/service-accounts",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.service_accounts.routes.oauth_clients.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}/rotate-secret",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.service_accounts.routes.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/service-accounts",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients/{clientId}/rotate-secret",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/reactivate",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/suspend"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.service_accounts.routes.state.rs",
+      "endpoints": [
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/reactivate",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/suspend"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.tenants.routes.rs",
+      "endpoints": [
+        "/identity-invitations/accept",
+        "/tenants/{tenantId}",
+        "/tenants/{tenantId}/invitations",
+        "/tenants/{tenantId}/members/{principalId}",
+        "/tenants/{tenantId}/organizations",
+        "/tenants/{tenantId}/organizations/{organizationId}",
+        "/tenants/{tenantId}/organizations/{organizationId}/invitations",
+        "/tenants/{tenantId}/organizations/{organizationId}/members/{principalId}"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.workspaces.routes.manage.rs",
+      "endpoints": ["/workspaces", "/workspaces/{workspaceId}"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.http.routes.rs",
+      "endpoints": [
+        "/.well-known/change-password",
+        "/.well-known/dpop-nonce",
+        "/.well-known/gpc.json",
+        "/.well-known/oauth-authorization-server",
+        "/.well-known/openid-configuration",
+        "/.well-known/passkey-endpoints",
+        "/.well-known/security.txt",
+        "/.well-known/webauthn",
+        "/csp-report",
+        "/health",
+        "/metrics",
+        "/observability/alerts/critical",
+        "/observability/dashboards",
+        "/observability/error-reporting-smoke",
+        "/observability/log-streams",
+        "/observability/network-errors"
+      ]
+    },
+    {
+      "file": "apps/identity-api/src/identity.http.routes.well_known.rs",
+      "endpoints": [
+        "/.well-known/change-password",
+        "/.well-known/gpc.json",
+        "/.well-known/passkey-endpoints",
+        "/.well-known/webauthn"
+      ]
+    },
+    {
+      "file": "apps/internal-admin/src/internal_admin.http.routes.rs",
+      "endpoints": ["/health", "/metrics"]
+    }
   ],
   "tables": [
-    {"file":"apps/drive-api/migrations/0001_initial_schema.sql","tables":["api_key_nonces","api_keys","api_request_logs","audit_events","billing_accounts","billing_adjustments","billing_entitlement_snapshots","billing_webhook_events","email_verification_tokens","invoice_estimates","mfa_factors","organization_memberships","organizations","password_reset_tokens","plans","privacy_requests","quota_usage","sessions","share_links","storage_objects","stripe_price_mappings","subscriptions","tenant_memberships","tenants","upload_parts","upload_sessions","usage_events","usage_snapshots","users","workspace_invitations","workspace_members","workspace_memberships","workspace_policies","workspaces"]},
-    {"file":"apps/drive-api/migrations/0003_geo_lookup_relations.sql","tables":["geo_ip_network_relations","geo_lookup_events","geo_lookup_evidence","geo_personal_ip_ranges","geo_sources"]},
-    {"file":"apps/drive-api/migrations/0006_public_api_network_policy.sql","tables":["public_api_network_allowlist"]},
-    {"file":"apps/identity-api/migrations/0001_initial_schema.sql","tables":["audit_events","billing_accounts","billing_webhook_events","bots","devices","email_events","email_messages","enterprise_password_recovery_requests","federated_identity_providers","idempotency_responses","invoice_estimates","mfa_factors","oauth_client_assertion_jtis","oauth_client_policies","oauth_clients","oauth_consents","oauth_scope_metadata","organization_memberships","organizations","password_history","plans","pow_challenges","principals","quota_usage","risk_events","saml_assertion_ids","saml_pending_requests","saml_sp_config","scim_provisioning_connectors","service_accounts","signing_keys","stripe_price_mappings","subscriptions","suppressed_emails","tenant_domains","tenant_memberships","tenants","usage_events","usage_snapshots","user_consents","user_identities","users","workspace_invitations","workspace_memberships","workspace_policies","workspaces"]},
-    {"file":"apps/identity-api/migrations/0006_b2b_multi_tenant.sql","tables":["organization_invitations","organization_policies","system_policies","tenant_invitations","tenant_policies"]},
-    {"file":"apps/identity-api/migrations/0008_developer_console.sql","tables":["developer_client_secret_versions","developer_consent_screens","developer_health_checks","developer_marketplace_apps","developer_role_assignments","developer_sandbox_tenants","developer_scope_registry","developer_secret_rotations","developer_token_debug_sessions","developer_webhook_deliveries","developer_webhook_endpoints"]},
-    {"file":"apps/identity-api/migrations/0009_access_review_campaigns.sql","tables":["access_review_campaigns","access_review_items"]},
-    {"file":"apps/identity-api/migrations/0010_access_review_schedules.sql","tables":["access_review_schedules"]},
-    {"file":"apps/identity-api/migrations/0011_developer_portal.sql","tables":["developer_role_assignments","developer_webhook_deliveries","developer_webhook_endpoints","developer_webhook_subscriptions"]},
-    {"file":"apps/identity-api/migrations/0012_access_review_reminders.sql","tables":["access_review_reminders"]},
-    {"file":"apps/identity-api/migrations/0014_break_glass_accounts.sql","tables":["tenant_break_glass_accounts"]},
-    {"file":"apps/identity-api/migrations/0016_billing_platform_core.sql","tables":["billing_access_policy_snapshots","billing_addons","billing_adjustments","billing_commercial_credits","billing_coupons","billing_credit_notes","billing_crypto_ledger_entries","billing_customer_profiles","billing_disputes","billing_dunning_attempts","billing_dunning_cases","billing_einvoicing_profiles","billing_entitlement_changes","billing_entitlement_snapshots","billing_export_runs","billing_features","billing_fx_rates","billing_idempotency_keys","billing_invoice_lines","billing_invoice_numbers","billing_invoices","billing_kyc_profiles","billing_ledger_entries","billing_meter_definitions","billing_payment_attempts","billing_payments","billing_plan_features","billing_plan_versions","billing_plans","billing_price_migrations","billing_price_versions","billing_pro_forma_invoices","billing_products","billing_promotions","billing_proration_lines","billing_provider_accounts","billing_provider_customers","billing_provider_events","billing_provider_mappings","billing_provider_migration_runs","billing_provider_price_mappings","billing_provider_routing_rules","billing_providers","billing_quota_balances","billing_quota_definitions","billing_reconciliation_differences","billing_reconciliation_runs","billing_refunds","billing_region_policies","billing_revenue_schedules","billing_risk_scores","billing_risk_signals","billing_subscription_changes","billing_subscription_items","billing_subscription_periods","billing_subscriptions","billing_tax_evidence","billing_tax_profiles","billing_trial_grants","billing_usage_corrections","billing_usage_events","billing_usage_rollups","billing_write_offs"]},
-    {"file":"apps/identity-api/migrations/0018_geo_lookup_relations.sql","tables":["geo_ip_network_relations","geo_lookup_events","geo_lookup_evidence","geo_personal_ip_ranges","geo_sources"]}
+    {
+      "file": "apps/drive-api/migrations/0001_initial_schema.sql",
+      "tables": [
+        "api_key_nonces",
+        "api_keys",
+        "api_request_logs",
+        "audit_events",
+        "billing_accounts",
+        "billing_adjustments",
+        "billing_entitlement_snapshots",
+        "billing_webhook_events",
+        "email_verification_tokens",
+        "invoice_estimates",
+        "mfa_factors",
+        "organization_memberships",
+        "organizations",
+        "password_reset_tokens",
+        "plans",
+        "privacy_requests",
+        "quota_usage",
+        "sessions",
+        "share_links",
+        "storage_objects",
+        "stripe_price_mappings",
+        "subscriptions",
+        "tenant_memberships",
+        "tenants",
+        "upload_parts",
+        "upload_sessions",
+        "usage_events",
+        "usage_snapshots",
+        "users",
+        "workspace_invitations",
+        "workspace_members",
+        "workspace_memberships",
+        "workspace_policies",
+        "workspaces"
+      ]
+    },
+    {
+      "file": "apps/drive-api/migrations/0003_geo_lookup_relations.sql",
+      "tables": [
+        "geo_ip_network_relations",
+        "geo_lookup_events",
+        "geo_lookup_evidence",
+        "geo_personal_ip_ranges",
+        "geo_sources"
+      ]
+    },
+    {
+      "file": "apps/drive-api/migrations/0006_public_api_network_policy.sql",
+      "tables": ["public_api_network_allowlist"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0001_initial_schema.sql",
+      "tables": [
+        "audit_events",
+        "billing_accounts",
+        "billing_webhook_events",
+        "bots",
+        "devices",
+        "email_events",
+        "email_messages",
+        "enterprise_password_recovery_requests",
+        "federated_identity_providers",
+        "idempotency_responses",
+        "invoice_estimates",
+        "mfa_factors",
+        "oauth_client_assertion_jtis",
+        "oauth_client_policies",
+        "oauth_clients",
+        "oauth_consents",
+        "oauth_scope_metadata",
+        "organization_memberships",
+        "organizations",
+        "password_history",
+        "plans",
+        "pow_challenges",
+        "principals",
+        "quota_usage",
+        "risk_events",
+        "saml_assertion_ids",
+        "saml_pending_requests",
+        "saml_sp_config",
+        "scim_provisioning_connectors",
+        "service_accounts",
+        "signing_keys",
+        "stripe_price_mappings",
+        "subscriptions",
+        "suppressed_emails",
+        "tenant_domains",
+        "tenant_memberships",
+        "tenants",
+        "usage_events",
+        "usage_snapshots",
+        "user_consents",
+        "user_identities",
+        "users",
+        "workspace_invitations",
+        "workspace_memberships",
+        "workspace_policies",
+        "workspaces"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0006_b2b_multi_tenant.sql",
+      "tables": [
+        "organization_invitations",
+        "organization_policies",
+        "system_policies",
+        "tenant_invitations",
+        "tenant_policies"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0008_developer_console.sql",
+      "tables": [
+        "developer_client_secret_versions",
+        "developer_consent_screens",
+        "developer_health_checks",
+        "developer_marketplace_apps",
+        "developer_role_assignments",
+        "developer_sandbox_tenants",
+        "developer_scope_registry",
+        "developer_secret_rotations",
+        "developer_token_debug_sessions",
+        "developer_webhook_deliveries",
+        "developer_webhook_endpoints"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0009_access_review_campaigns.sql",
+      "tables": ["access_review_campaigns", "access_review_items"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0010_access_review_schedules.sql",
+      "tables": ["access_review_schedules"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0011_developer_portal.sql",
+      "tables": [
+        "developer_role_assignments",
+        "developer_webhook_deliveries",
+        "developer_webhook_endpoints",
+        "developer_webhook_subscriptions"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0012_access_review_reminders.sql",
+      "tables": ["access_review_reminders"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0014_break_glass_accounts.sql",
+      "tables": ["tenant_break_glass_accounts"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0016_billing_platform_core.sql",
+      "tables": [
+        "billing_access_policy_snapshots",
+        "billing_addons",
+        "billing_adjustments",
+        "billing_commercial_credits",
+        "billing_coupons",
+        "billing_credit_notes",
+        "billing_crypto_ledger_entries",
+        "billing_customer_profiles",
+        "billing_disputes",
+        "billing_dunning_attempts",
+        "billing_dunning_cases",
+        "billing_einvoicing_profiles",
+        "billing_entitlement_changes",
+        "billing_entitlement_snapshots",
+        "billing_export_runs",
+        "billing_features",
+        "billing_fx_rates",
+        "billing_idempotency_keys",
+        "billing_invoice_lines",
+        "billing_invoice_numbers",
+        "billing_invoices",
+        "billing_kyc_profiles",
+        "billing_ledger_entries",
+        "billing_meter_definitions",
+        "billing_payment_attempts",
+        "billing_payments",
+        "billing_plan_features",
+        "billing_plan_versions",
+        "billing_plans",
+        "billing_price_migrations",
+        "billing_price_versions",
+        "billing_pro_forma_invoices",
+        "billing_products",
+        "billing_promotions",
+        "billing_proration_lines",
+        "billing_provider_accounts",
+        "billing_provider_customers",
+        "billing_provider_events",
+        "billing_provider_mappings",
+        "billing_provider_migration_runs",
+        "billing_provider_price_mappings",
+        "billing_provider_routing_rules",
+        "billing_providers",
+        "billing_quota_balances",
+        "billing_quota_definitions",
+        "billing_reconciliation_differences",
+        "billing_reconciliation_runs",
+        "billing_refunds",
+        "billing_region_policies",
+        "billing_revenue_schedules",
+        "billing_risk_scores",
+        "billing_risk_signals",
+        "billing_subscription_changes",
+        "billing_subscription_items",
+        "billing_subscription_periods",
+        "billing_subscriptions",
+        "billing_tax_evidence",
+        "billing_tax_profiles",
+        "billing_trial_grants",
+        "billing_usage_corrections",
+        "billing_usage_events",
+        "billing_usage_rollups",
+        "billing_write_offs"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0019_geo_lookup_relations.sql",
+      "tables": [
+        "geo_ip_network_relations",
+        "geo_lookup_events",
+        "geo_lookup_evidence",
+        "geo_personal_ip_ranges",
+        "geo_sources"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0020_internal_admin_entitlement_actions.sql",
+      "tables": ["internal_admin_entitlement_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0022_internal_admin_usage_actions.sql",
+      "tables": ["internal_admin_usage_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0023_internal_admin_developer_actions.sql",
+      "tables": ["internal_admin_developer_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0024_internal_admin_communications_actions.sql",
+      "tables": ["internal_admin_communications_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0025_internal_admin_compliance_actions.sql",
+      "tables": ["internal_admin_compliance_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0026_internal_admin_region_actions.sql",
+      "tables": ["internal_admin_region_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0027_internal_admin_risk_actions.sql",
+      "tables": ["internal_admin_risk_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0028_internal_admin_operations_actions.sql",
+      "tables": ["internal_admin_operations_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0029_internal_admin_revenue_actions.sql",
+      "tables": ["internal_admin_revenue_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0030_internal_admin_billing_platform_actions.sql",
+      "tables": ["internal_admin_billing_platform_actions"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0031_internal_admin_operator_grants.sql",
+      "tables": ["internal_admin_operator_grants"]
+    },
+    {
+      "file": "apps/identity-api/migrations/0032_internal_admin_operations_workflows.sql",
+      "tables": [
+        "internal_admin_incidents",
+        "internal_admin_job_runs",
+        "internal_admin_maintenance_windows"
+      ]
+    },
+    {
+      "file": "apps/identity-api/migrations/0033_internal_admin_idempotency_responses.sql",
+      "tables": ["idempotency_responses"]
+    }
   ],
   "jobs": [
-    {"file":"apps/drive-worker/src/drive.workers.maintenance.rs","constants":["JOB_GEO_LOOKUP_MAINTENANCE=geo.lookup_maintenance","JOB_QUOTAS_RECALCULATE=quotas.recalculate","JOB_STORAGE_PURGE_DELETED=storage.purge_deleted","JOB_STORAGE_PURGE_QUARANTINED=storage.purge_quarantined","JOB_TRASH_PURGE=trash.purge","JOB_UPLOADS_PURGE_EXPIRED=uploads.purge_expired"],"jobTypes":["JOB_GEO_LOOKUP_MAINTENANCE","JOB_STORAGE_PURGE_DELETED","JOB_UPLOADS_PURGE_EXPIRED"]},
-    {"file":"apps/drive-worker/src/drive.workers.privacy.delete.rs","constants":["JOB_PRIVACY_ACCOUNT_DELETE=privacy.account_delete","JOB_PRIVACY_WORKSPACE_DELETE=privacy.workspace_delete"],"jobTypes":[]},
-    {"file":"apps/drive-worker/src/drive.workers.privacy.export.rs","constants":["JOB_PRIVACY_ACCOUNT_EXPORT=privacy.account_export","JOB_PRIVACY_WORKSPACE_EXPORT=privacy.workspace_export"],"jobTypes":[]},
-    {"file":"apps/identity-api/src/identity.domains.billing.jobs.rs","constants":["JOB_STRIPE_WEBHOOK_PROCESS=billing.stripe.webhook.process"],"jobTypes":["JOB_STRIPE_WEBHOOK_PROCESS"]},
-    {"file":"apps/identity-api/src/identity.email.jobs.rs","constants":["JOB_DATA_EXPORT=data.export","JOB_EMAIL_SEND=email.send","JOB_EMAIL_WEBHOOK_PROCESS=email.webhook.process"],"jobTypes":["JOB_DATA_EXPORT","JOB_EMAIL_SEND","JOB_EMAIL_WEBHOOK_PROCESS"]}
+    {
+      "file": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "constants": [
+        "JOB_GEO_LOOKUP_MAINTENANCE=geo.lookup_maintenance",
+        "JOB_QUOTAS_RECALCULATE=quotas.recalculate",
+        "JOB_STORAGE_PURGE_DELETED=storage.purge_deleted",
+        "JOB_STORAGE_PURGE_QUARANTINED=storage.purge_quarantined",
+        "JOB_TRASH_PURGE=trash.purge",
+        "JOB_UPLOADS_PURGE_EXPIRED=uploads.purge_expired"
+      ],
+      "jobTypes": [
+        "JOB_GEO_LOOKUP_MAINTENANCE",
+        "JOB_STORAGE_PURGE_DELETED",
+        "JOB_UPLOADS_PURGE_EXPIRED"
+      ]
+    },
+    {
+      "file": "apps/drive-worker/src/drive.workers.privacy.delete.rs",
+      "constants": [
+        "JOB_PRIVACY_ACCOUNT_DELETE=privacy.account_delete",
+        "JOB_PRIVACY_WORKSPACE_DELETE=privacy.workspace_delete"
+      ],
+      "jobTypes": []
+    },
+    {
+      "file": "apps/drive-worker/src/drive.workers.privacy.export.rs",
+      "constants": [
+        "JOB_PRIVACY_ACCOUNT_EXPORT=privacy.account_export",
+        "JOB_PRIVACY_WORKSPACE_EXPORT=privacy.workspace_export"
+      ],
+      "jobTypes": []
+    },
+    {
+      "file": "apps/identity-api/src/identity.domains.billing.jobs.rs",
+      "constants": ["JOB_STRIPE_WEBHOOK_PROCESS=billing.stripe.webhook.process"],
+      "jobTypes": ["JOB_STRIPE_WEBHOOK_PROCESS"]
+    },
+    {
+      "file": "apps/identity-api/src/identity.email.jobs.rs",
+      "constants": [
+        "JOB_DATA_EXPORT=data.export",
+        "JOB_EMAIL_SEND=email.send",
+        "JOB_EMAIL_WEBHOOK_PROCESS=email.webhook.process"
+      ],
+      "jobTypes": ["JOB_DATA_EXPORT", "JOB_EMAIL_SEND", "JOB_EMAIL_WEBHOOK_PROCESS"]
+    }
   ],
   "infrastructure": [
     "deploy/cloud/README.md",
@@ -221,6 +1167,7 @@
     "docs/compliance/security-privacy-baseline.md",
     "docs/compliance/vulnerability-disclosure-policy.md",
     "docs/development/devcontainer.md",
+    "docs/development/start-with-nvbes-dev-container.md",
     "docs/domain/data-model.md",
     "docs/internal/README.md",
     "docs/legal/commercial-billing-policy.md",
@@ -331,33 +1278,251 @@
     "docs/testing/ux-testing.md"
   ],
   "secrets": [
-    {"file":".env.example","keys":["CLAMAV_HOST","CLAMAV_PORT","NVBES_ADDITIONAL_CORS_ORIGINS","NVBES_ANALYTICS_ID_SALT","NVBES_API_BASE_URL","NVBES_API_PORT","NVBES_APP_NAME","NVBES_AUTH_PASSWORD_RESET_TTL_MINUTES","NVBES_AUTH_REFRESH_TOKEN_TTL_HOURS","NVBES_AUTH_SESSION_TTL_HOURS","NVBES_AUTH_STEP_UP_TTL_MINUTES","NVBES_AUTH_VERIFICATION_TTL_HOURS","NVBES_BETA_SEED_EMAIL","NVBES_BETA_SEED_PASSWORD","NVBES_BETA_SEED_WORKSPACE","NVBES_BILLING_CANCEL_URL","NVBES_BILLING_PORTAL_RETURN_URL","NVBES_BILLING_SUCCESS_URL","NVBES_DATABASE_MAX_CONNECTIONS","NVBES_DATABASE_URL","NVBES_DRIVE_API_BASE_URL","NVBES_DRIVE_WORKER_METRICS_BIND_ADDR","NVBES_EMAIL_FROM_EMAIL","NVBES_EMAIL_FROM_NAME","NVBES_EMAIL_PROVIDER","NVBES_ENV","NVBES_IDENTITY_API_BASE_URL","NVBES_IDENTITY_BASE_URL","NVBES_IDENTITY_CLIENT_ID","NVBES_IDENTITY_CLIENT_SECRET","NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR","NVBES_JWT_SECRET","NVBES_LOG_PII_MASKING","NVBES_MOLLIE_API_BASE_URL","NVBES_MOLLIE_API_KEY","NVBES_MOLLIE_ENABLED","NVBES_OBSERVABILITY_INTERNAL_TOKEN","NVBES_OTLP_AUTHORIZATION_HEADER","NVBES_OTLP_ENDPOINT","NVBES_PRODUCT_ANALYTICS_ENABLED","NVBES_PRODUCT_ANALYTICS_TOKEN","NVBES_PROFILING_BASIC_AUTH_PASSWORD","NVBES_PROFILING_BASIC_AUTH_USER","NVBES_PROFILING_ENABLED","NVBES_PROFILING_ENDPOINT","NVBES_PROFILING_SAMPLE_RATE_HZ","NVBES_REDIS_MAX_CONNECTIONS","NVBES_REDIS_URL","NVBES_REQUEST_E2EE_ENABLED","NVBES_REQUEST_E2EE_KEY_ID","NVBES_REQUEST_E2EE_REQUIRED","NVBES_REQUEST_E2EE_SECRET","NVBES_STAGING_API_BASE_URL","NVBES_STAGING_DATABASE_URL","NVBES_STAGING_DRIVE_API_BASE_URL","NVBES_STAGING_IDENTITY_API_BASE_URL","NVBES_STAGING_WEB_BASE_URL","NVBES_STRIPE_API_BASE_URL","NVBES_STRIPE_SECRET_KEY","NVBES_STRIPE_WEBHOOK_SECRET","NVBES_TLS_CERT_PATH","NVBES_TLS_ENABLED","NVBES_TLS_KEY_PATH","NVBES_WEB_BASE_URL","QUARANTINE_RETENTION_DAYS","SCAN_ENABLED","SCAN_ENGINE","SCAN_FAIL_OPEN","SCAN_TIMEOUT_SECS","STORAGE_BUCKET","STORAGE_ENABLED","STORAGE_ENDPOINT","STORAGE_REGION","VITE_ANALYTICS_ID_SALT","VITE_DEVELOPER_IDENTITY_CLIENT_ID","VITE_DEVELOPER_WEB_BASE_URL","VITE_DRIVE_API_BASE_URL","VITE_IDENTITY_API_BASE_URL","VITE_IDENTITY_CLIENT_ID","VITE_IDENTITY_WEB_BASE_URL"]}
+    {
+      "file": ".env.example",
+      "keys": [
+        "CLAMAV_HOST",
+        "CLAMAV_PORT",
+        "NVBES_ADDITIONAL_CORS_ORIGINS",
+        "NVBES_ANALYTICS_ID_SALT",
+        "NVBES_API_BASE_URL",
+        "NVBES_API_PORT",
+        "NVBES_APP_NAME",
+        "NVBES_AUTH_PASSWORD_RESET_TTL_MINUTES",
+        "NVBES_AUTH_REFRESH_TOKEN_TTL_HOURS",
+        "NVBES_AUTH_SESSION_TTL_HOURS",
+        "NVBES_AUTH_STEP_UP_TTL_MINUTES",
+        "NVBES_AUTH_VERIFICATION_TTL_HOURS",
+        "NVBES_BETA_SEED_EMAIL",
+        "NVBES_BETA_SEED_PASSWORD",
+        "NVBES_BETA_SEED_WORKSPACE",
+        "NVBES_BILLING_CANCEL_URL",
+        "NVBES_BILLING_PORTAL_RETURN_URL",
+        "NVBES_BILLING_SUCCESS_URL",
+        "NVBES_DATABASE_MAX_CONNECTIONS",
+        "NVBES_DATABASE_URL",
+        "NVBES_DRIVE_API_BASE_URL",
+        "NVBES_DRIVE_WORKER_METRICS_BIND_ADDR",
+        "NVBES_EMAIL_FROM_EMAIL",
+        "NVBES_EMAIL_FROM_NAME",
+        "NVBES_EMAIL_PROVIDER",
+        "NVBES_ENV",
+        "NVBES_IDENTITY_API_BASE_URL",
+        "NVBES_IDENTITY_BASE_URL",
+        "NVBES_IDENTITY_CLIENT_ID",
+        "NVBES_IDENTITY_CLIENT_SECRET",
+        "NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR",
+        "NVBES_JWT_SECRET",
+        "NVBES_LOG_PII_MASKING",
+        "NVBES_MOLLIE_API_BASE_URL",
+        "NVBES_MOLLIE_API_KEY",
+        "NVBES_MOLLIE_ENABLED",
+        "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
+        "NVBES_OTLP_AUTHORIZATION_HEADER",
+        "NVBES_OTLP_ENDPOINT",
+        "NVBES_PRODUCT_ANALYTICS_ENABLED",
+        "NVBES_PRODUCT_ANALYTICS_TOKEN",
+        "NVBES_PROFILING_BASIC_AUTH_PASSWORD",
+        "NVBES_PROFILING_BASIC_AUTH_USER",
+        "NVBES_PROFILING_ENABLED",
+        "NVBES_PROFILING_ENDPOINT",
+        "NVBES_PROFILING_SAMPLE_RATE_HZ",
+        "NVBES_REDIS_MAX_CONNECTIONS",
+        "NVBES_REDIS_URL",
+        "NVBES_REQUEST_E2EE_ENABLED",
+        "NVBES_REQUEST_E2EE_KEY_ID",
+        "NVBES_REQUEST_E2EE_REQUIRED",
+        "NVBES_REQUEST_E2EE_SECRET",
+        "NVBES_STAGING_API_BASE_URL",
+        "NVBES_STAGING_DATABASE_URL",
+        "NVBES_STAGING_DRIVE_API_BASE_URL",
+        "NVBES_STAGING_IDENTITY_API_BASE_URL",
+        "NVBES_STAGING_WEB_BASE_URL",
+        "NVBES_STRIPE_API_BASE_URL",
+        "NVBES_STRIPE_SECRET_KEY",
+        "NVBES_STRIPE_WEBHOOK_SECRET",
+        "NVBES_TLS_CERT_PATH",
+        "NVBES_TLS_ENABLED",
+        "NVBES_TLS_KEY_PATH",
+        "NVBES_WEB_BASE_URL",
+        "QUARANTINE_RETENTION_DAYS",
+        "SCAN_ENABLED",
+        "SCAN_ENGINE",
+        "SCAN_FAIL_OPEN",
+        "SCAN_TIMEOUT_SECS",
+        "STORAGE_BUCKET",
+        "STORAGE_ENABLED",
+        "STORAGE_ENDPOINT",
+        "STORAGE_REGION",
+        "VITE_ANALYTICS_ID_SALT",
+        "VITE_DEVELOPER_IDENTITY_CLIENT_ID",
+        "VITE_DEVELOPER_WEB_BASE_URL",
+        "VITE_DRIVE_API_BASE_URL",
+        "VITE_IDENTITY_API_BASE_URL",
+        "VITE_IDENTITY_CLIENT_ID",
+        "VITE_IDENTITY_WEB_BASE_URL"
+      ]
+    }
   ],
   "resources": [
-    {"type":"bucket","source":"infrastructure/modules/scaleway-v1/storage.tf","name":"scaleway_object_bucket.files"},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.dunning.changed","schema":"contracts/events/billing.dunning.changed.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.entitlement.changed","schema":"contracts/events/billing.entitlement.changed.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.invoice.issued","schema":"contracts/events/billing.invoice.issued.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.payment.changed","schema":"contracts/events/billing.payment.changed.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.reconciliation.difference","schema":"contracts/events/billing.reconciliation.difference.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.subscription.changed","schema":"contracts/events/billing.subscription.changed.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"billing.usage.recorded","schema":"contracts/events/billing.usage.recorded.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"drive.file.created","schema":"contracts/events/drive.file.created.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"identity.user.created","schema":"contracts/events/identity.user.created.v1.schema.json","critical":true},
-    {"type":"event_topic","source":"contracts/events/manifest.json","name":"workspace.membership.created","schema":"contracts/events/workspace.membership.created.v1.schema.json","critical":true},
-    {"type":"queue","source":"apps/identity-api/src/identity.domains.billing.jobs.rs","name":"billing.stripe.webhook.process","symbol":"JOB_STRIPE_WEBHOOK_PROCESS"},
-    {"type":"queue","source":"apps/identity-api/src/identity.email.jobs.rs","name":"data.export","symbol":"JOB_DATA_EXPORT"},
-    {"type":"queue","source":"apps/identity-api/src/identity.email.jobs.rs","name":"email.send","symbol":"JOB_EMAIL_SEND"},
-    {"type":"queue","source":"apps/identity-api/src/identity.email.jobs.rs","name":"email.webhook.process","symbol":"JOB_EMAIL_WEBHOOK_PROCESS"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"geo.lookup_maintenance","symbol":"JOB_GEO_LOOKUP_MAINTENANCE"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.privacy.delete.rs","name":"privacy.account_delete","symbol":"JOB_PRIVACY_ACCOUNT_DELETE"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.privacy.export.rs","name":"privacy.account_export","symbol":"JOB_PRIVACY_ACCOUNT_EXPORT"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.privacy.delete.rs","name":"privacy.workspace_delete","symbol":"JOB_PRIVACY_WORKSPACE_DELETE"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.privacy.export.rs","name":"privacy.workspace_export","symbol":"JOB_PRIVACY_WORKSPACE_EXPORT"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"quotas.recalculate","symbol":"JOB_QUOTAS_RECALCULATE"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"storage.purge_deleted","symbol":"JOB_STORAGE_PURGE_DELETED"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"storage.purge_quarantined","symbol":"JOB_STORAGE_PURGE_QUARANTINED"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"trash.purge","symbol":"JOB_TRASH_PURGE"},
-    {"type":"queue","source":"apps/drive-worker/src/drive.workers.maintenance.rs","name":"uploads.purge_expired","symbol":"JOB_UPLOADS_PURGE_EXPIRED"}
+    {
+      "type": "bucket",
+      "source": "infrastructure/modules/scaleway-v1/storage.tf",
+      "name": "scaleway_object_bucket.files"
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.dunning.changed",
+      "schema": "contracts/events/billing.dunning.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.entitlement.changed",
+      "schema": "contracts/events/billing.entitlement.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.invoice.issued",
+      "schema": "contracts/events/billing.invoice.issued.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.payment.changed",
+      "schema": "contracts/events/billing.payment.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.reconciliation.difference",
+      "schema": "contracts/events/billing.reconciliation.difference.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.subscription.changed",
+      "schema": "contracts/events/billing.subscription.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "billing.usage.recorded",
+      "schema": "contracts/events/billing.usage.recorded.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "drive.file.created",
+      "schema": "contracts/events/drive.file.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "identity.user.created",
+      "schema": "contracts/events/identity.user.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "event_topic",
+      "source": "contracts/events/manifest.json",
+      "name": "workspace.membership.created",
+      "schema": "contracts/events/workspace.membership.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "type": "queue",
+      "source": "apps/identity-api/src/identity.domains.billing.jobs.rs",
+      "name": "billing.stripe.webhook.process",
+      "symbol": "JOB_STRIPE_WEBHOOK_PROCESS"
+    },
+    {
+      "type": "queue",
+      "source": "apps/identity-api/src/identity.email.jobs.rs",
+      "name": "data.export",
+      "symbol": "JOB_DATA_EXPORT"
+    },
+    {
+      "type": "queue",
+      "source": "apps/identity-api/src/identity.email.jobs.rs",
+      "name": "email.send",
+      "symbol": "JOB_EMAIL_SEND"
+    },
+    {
+      "type": "queue",
+      "source": "apps/identity-api/src/identity.email.jobs.rs",
+      "name": "email.webhook.process",
+      "symbol": "JOB_EMAIL_WEBHOOK_PROCESS"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "geo.lookup_maintenance",
+      "symbol": "JOB_GEO_LOOKUP_MAINTENANCE"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.privacy.delete.rs",
+      "name": "privacy.account_delete",
+      "symbol": "JOB_PRIVACY_ACCOUNT_DELETE"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.privacy.export.rs",
+      "name": "privacy.account_export",
+      "symbol": "JOB_PRIVACY_ACCOUNT_EXPORT"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.privacy.delete.rs",
+      "name": "privacy.workspace_delete",
+      "symbol": "JOB_PRIVACY_WORKSPACE_DELETE"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.privacy.export.rs",
+      "name": "privacy.workspace_export",
+      "symbol": "JOB_PRIVACY_WORKSPACE_EXPORT"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "quotas.recalculate",
+      "symbol": "JOB_QUOTAS_RECALCULATE"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "storage.purge_deleted",
+      "symbol": "JOB_STORAGE_PURGE_DELETED"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "storage.purge_quarantined",
+      "symbol": "JOB_STORAGE_PURGE_QUARANTINED"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "trash.purge",
+      "symbol": "JOB_TRASH_PURGE"
+    },
+    {
+      "type": "queue",
+      "source": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "name": "uploads.purge_expired",
+      "symbol": "JOB_UPLOADS_PURGE_EXPIRED"
+    }
   ]
 }

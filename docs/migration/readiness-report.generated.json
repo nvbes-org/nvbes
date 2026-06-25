@@ -15,7 +15,7 @@
     {
       "id": "data",
       "source": "docs/migration/data-map.generated.json",
-      "total": 179,
+      "total": 194,
       "pending": 0,
       "proof": "pnpm check:migration-data-map"
     },

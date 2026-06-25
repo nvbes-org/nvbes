@@ -43,12 +43,16 @@ export async function exportAuditEvidence(
 }
 
 export async function getCommandCenter(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/command-center', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/command-center', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<CommandCenterSnapshot>(response);
 }
 
 export async function getPendingApprovals(credentials: AdminCredentials) {
-  const response = await verifiedFetch('/admin/pending-approvals', { headers: authHeaders(credentials) });
+  const response = await verifiedFetch('/admin/pending-approvals', {
+    headers: authHeaders(credentials),
+  });
   return parseJson<PendingApprovalsSnapshot>(response);
 }
 
