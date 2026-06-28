@@ -75,6 +75,20 @@ When running inside the Dev Container, Compose sets `NVBES_DEVCONTAINER=true`. T
 
 The post-create step also installs a shell startup guard for stale VS Code JavaScript debug bootloader preloads. If `NODE_OPTIONS` points to a deleted `ms-vscode.js-debug/bootloader.js`, the guard unsets it so Node-based commands such as `pnpm` can start normally.
 
+## Persisted Editor and Tooling State
+
+The workspace service uses named Docker volumes for editor and tooling state that should survive container rebuilds:
+
+- VS Code Server user data, installed extensions, extension global storage, and workspace storage: `/home/vscode/.vscode-server`
+- VS Code Insiders Server equivalent state: `/home/vscode/.vscode-server-insiders`
+- User config used by Git, GitHub CLI, VS Code-compatible tools, and code-server-compatible config paths: `/home/vscode/.config`
+- User data used by code-server-compatible tools and some extensions or CLIs: `/home/vscode/.local/share`
+- Runtime caches used by language servers, extension helpers, browsers, and CLIs: `/home/vscode/.cache`
+- SSH keys/config for Git remotes and signing: `/home/vscode/.ssh`
+- Rust, pnpm, `node_modules`, and `target` caches are also persisted by dedicated project volumes.
+
+Workspace settings stored in the repository, such as `.vscode/settings.json`, are already persisted by the repository bind mount at `/workspaces/nvbes`.
+
 ## Resetting Local Data
 
 Inside the Dev Container:

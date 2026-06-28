@@ -75,11 +75,21 @@ RUN mkdir -p /workspace-cache/pnpm /workspace-cache/cargo-target \
 USER ${USERNAME}
 
 RUN mkdir -p \
+    /home/${USERNAME}/.cache \
     /home/${USERNAME}/.config/gh \
     /home/${USERNAME}/.config/git \
     /home/${USERNAME}/.local/bin \
+    /home/${USERNAME}/.local/share \
     /home/${USERNAME}/.ssh \
-  && chown -R "${USERNAME}:${USERNAME}" /home/${USERNAME}/.config /home/${USERNAME}/.local /home/${USERNAME}/.ssh \
+    /home/${USERNAME}/.vscode-server \
+    /home/${USERNAME}/.vscode-server-insiders \
+  && chown -R "${USERNAME}:${USERNAME}" \
+    /home/${USERNAME}/.cache \
+    /home/${USERNAME}/.config \
+    /home/${USERNAME}/.local \
+    /home/${USERNAME}/.ssh \
+    /home/${USERNAME}/.vscode-server \
+    /home/${USERNAME}/.vscode-server-insiders \
   && chmod 700 /home/${USERNAME}/.ssh
 
 WORKDIR /workspaces/nvbes

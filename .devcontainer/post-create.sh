@@ -88,12 +88,22 @@ sanitize_node_options
 install_node_options_guard
 
 sudo mkdir -p \
+  "$HOME/.cache" \
+  "$HOME/.config" \
+  "$HOME/.local/share" \
+  "$HOME/.vscode-server" \
+  "$HOME/.vscode-server-insiders" \
   /usr/local/cargo/git \
   /usr/local/cargo/registry \
   /workspaces/nvbes/node_modules \
   /workspaces/nvbes/pnpm-store \
   /workspaces/nvbes/target
 sudo chown -R "$(id -u):$(id -g)" \
+  "$HOME/.cache" \
+  "$HOME/.config" \
+  "$HOME/.local/share" \
+  "$HOME/.vscode-server" \
+  "$HOME/.vscode-server-insiders" \
   /usr/local/cargo/git \
   /usr/local/cargo/registry \
   /workspaces/nvbes/node_modules \

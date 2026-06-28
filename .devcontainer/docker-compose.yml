@@ -13,7 +13,11 @@ services:
       - nvbes_target:/workspaces/nvbes/target
       - nvbes_node_modules:/workspaces/nvbes/node_modules
       - nvbes_pnpm_store:/workspaces/nvbes/pnpm-store
+      - nvbes_vscode_server:/home/vscode/.vscode-server
+      - nvbes_vscode_server_insiders:/home/vscode/.vscode-server-insiders
+      - nvbes_home_cache:/home/vscode/.cache
       - nvbes_home_config:/home/vscode/.config
+      - nvbes_home_local_share:/home/vscode/.local/share
       - nvbes_home_ssh:/home/vscode/.ssh
     environment:
       CARGO_TARGET_DIR: /workspaces/nvbes/target
@@ -145,7 +149,9 @@ services:
 volumes:
   nvbes_cargo_registry:
   nvbes_cargo_git:
+  nvbes_home_cache:
   nvbes_home_config:
+  nvbes_home_local_share:
   nvbes_home_ssh:
   nvbes_node_modules:
   nvbes_pgdata:
@@ -153,6 +159,8 @@ volumes:
   nvbes_prometheus_data:
   nvbes_redis_data:
   nvbes_target:
+  nvbes_vscode_server:
+  nvbes_vscode_server_insiders:
 
 networks:
   nvbes_dev:
