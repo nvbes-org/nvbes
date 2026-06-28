@@ -3,7 +3,7 @@ import { clientErrorMessage } from '@nvbes/web-runtime';
 import type { MfaMethod } from './LoginPage.mfa';
 import { isInvalidSignatureError, isPasswordExpiredError } from './LoginPage.errors';
 import { normalizeMfaMethods } from './LoginPage.mfa';
-import { requestsMfa } from './useLoginPage.shared';
+import { preferredMfaMethod, requestsMfa } from './useLoginPage.shared';
 import type { PasswordMutateAsync } from './useLoginPage.steps.shared';
 
 type SubmitPasswordStepOptions = {
@@ -55,7 +55,7 @@ export async function submitPasswordStep({
         setLoginStateToken(result.state_token);
       }
       setAvailableMethods(normalizeMfaMethods(result.available_methods));
-      setMfaMethod(null);
+      setMfaMethod(preferredMfaMethod(result.available_methods));
       setStep('mfa');
       return;
     }

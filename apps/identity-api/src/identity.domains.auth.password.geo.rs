@@ -1,7 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoNetworkKind, GeoResolution, record_geo_resolution_tx,
-    resolve_cached_geo_tx,
+    GeoLookupPurpose, GeoLookupRecordContext, GeoNetworkKind, GeoResolution,
+    record_geo_resolution_tx, resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::PgPool;
@@ -153,7 +153,7 @@ async fn resolve_and_record(
     let _ = record_geo_resolution_tx(
         &mut tx,
         GeoLookupRecordContext {
-            purpose: "security",
+            purpose: GeoLookupPurpose::Security,
             subject_type: Some("principal"),
             subject_id: Some(principal_id),
             request_id: Some(request_id),

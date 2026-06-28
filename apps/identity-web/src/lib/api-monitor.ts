@@ -3,6 +3,23 @@ import { verifiedFetch } from '@nvbes/web-runtime';
 export type ConnectionStatus = 'connected' | 'disconnected' | 'checking';
 
 type Listener = (status: ConnectionStatus) => void;
+type ApiMonitorGlobal = typeof globalThis & {
+  __nvbesIdentityApiMonitor?: ApiMonitor;
+};
+
+const HEALTH_CHECK_TIMEOUT_MS = 5_000;
+
+function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  return {
+    signal: controller.signal,
+    clear: () => globalThis.clearTimeout(timeoutId),
+  };
+}
 
 class ApiMonitor {
   private status: ConnectionStatus = 'connected';
@@ -10,6 +27,7 @@ class ApiMonitor {
   private probeIntervalId: number | null = null;
   private isChecking = false;
   private fetchImpl: typeof fetch | null = null;
+  private originalFetch: typeof fetch | null = null;
 
   constructor() {
     this.setupFetchInterceptor();
@@ -43,6 +61,7 @@ class ApiMonitor {
     if (typeof window === 'undefined') return;
 
     const originalFetch = window.fetch;
+    this.originalFetch = originalFetch;
     this.fetchImpl = originalFetch.bind(window);
     window.fetch = async (input, init) => {
       const urlString =
@@ -78,12 +97,8 @@ class ApiMonitor {
         const identityApiBaseUrl =
           import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000';
         const healthUrl = `${identityApiBaseUrl}/health`;
-        const response = await verifiedFetch(healthUrl, {
-          allowedOrigins: [identityApiBaseUrl],
-          fetchImpl: this.fetchImpl ?? undefined,
-          method: 'GET',
-          cache: 'no-store',
-        });
+        const timeout = createTimeoutSignal(HEALTH_CHECK_TIMEOUT_MS);
+        const response = await this.fetchHealth(healthUrl, identityApiBaseUrl, timeout);
         if (response.ok) {
           this.setStatus('connected');
         }
@@ -102,6 +117,19 @@ class ApiMonitor {
     }
   }
 
+  dispose() {
+    this.stopProbing();
+    this.listeners.clear();
+    this.isChecking = false;
+
+    if (typeof window !== 'undefined' && this.originalFetch) {
+      window.fetch = this.originalFetch;
+    }
+
+    this.fetchImpl = null;
+    this.originalFetch = null;
+  }
+
   async checkConnectionNow() {
     if (this.isChecking) return false;
     this.isChecking = true;
@@ -110,12 +138,8 @@ class ApiMonitor {
       const identityApiBaseUrl =
         import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000';
       const healthUrl = `${identityApiBaseUrl}/health`;
-      const response = await verifiedFetch(healthUrl, {
-        allowedOrigins: [identityApiBaseUrl],
-        fetchImpl: this.fetchImpl ?? undefined,
-        method: 'GET',
-        cache: 'no-store',
-      });
+      const timeout = createTimeoutSignal(HEALTH_CHECK_TIMEOUT_MS);
+      const response = await this.fetchHealth(healthUrl, identityApiBaseUrl, timeout);
       if (response.ok) {
         this.setStatus('connected');
         return true;
@@ -130,6 +154,37 @@ class ApiMonitor {
     }
     return false;
   }
+
+  private async fetchHealth(
+    healthUrl: string,
+    identityApiBaseUrl: string,
+    timeout: { signal: AbortSignal; clear: () => void },
+  ): Promise<Response> {
+    try {
+      return await verifiedFetch(healthUrl, {
+        allowedOrigins: [identityApiBaseUrl],
+        fetchImpl: this.fetchImpl ?? undefined,
+        method: 'GET',
+        cache: 'no-store',
+        signal: timeout.signal,
+      });
+    } finally {
+      timeout.clear();
+    }
+  }
 }
 
+const apiMonitorGlobal = globalThis as ApiMonitorGlobal;
+apiMonitorGlobal.__nvbesIdentityApiMonitor?.dispose();
+
 export const apiMonitor = new ApiMonitor();
+apiMonitorGlobal.__nvbesIdentityApiMonitor = apiMonitor;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    apiMonitor.dispose();
+    if (apiMonitorGlobal.__nvbesIdentityApiMonitor === apiMonitor) {
+      delete apiMonitorGlobal.__nvbesIdentityApiMonitor;
+    }
+  });
+}

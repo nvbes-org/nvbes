@@ -1,6 +1,6 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { MfaPageAddFactorCard } from './MfaPageAddFactorCard';
+import { MfaPageAddFactorCard, MfaPageRecoveryCodesCard } from './MfaPageAddFactorCard';
 import { MfaPageFactorList } from './MfaPageFactorList';
 import { MfaPageEmptyState, MfaPageHeader, MfaPageSkeleton } from './MfaPage.layout';
 import { MfaPageStepUpDialog } from './MfaPageStepUpDialog';
@@ -36,6 +36,10 @@ export default function MfaPage() {
 
   if (loading) return <MfaPageSkeleton />;
 
+  const visibleFactors = factors.filter(
+    (factor) => factor.factor_type !== 'email' && factor.factor_type !== 'recovery_code',
+  );
+
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
       <MfaPageHeader onBack={navigateBack} />
@@ -46,13 +50,15 @@ export default function MfaPage() {
         </Alert>
       )}
 
-      {factors.length === 0 ? <MfaPageEmptyState /> : null}
+      {visibleFactors.length === 0 && !hasRecovery ? <MfaPageEmptyState /> : null}
 
-      <MfaPageFactorList factors={factors} removingId={removingId} onRemove={handleRemove} />
+      <MfaPageFactorList factors={visibleFactors} removingId={removingId} onRemove={handleRemove} />
 
       <Separator className="my-2" />
 
-      <MfaPageAddFactorCard hasRecovery={hasRecovery} onNavigate={navigateTo} />
+      <MfaPageAddFactorCard onNavigate={navigateTo} />
+
+      <MfaPageRecoveryCodesCard hasRecovery={hasRecovery} onNavigate={navigateTo} />
 
       <MfaPageStepUpDialog
         open={showStepUp}

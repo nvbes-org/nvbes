@@ -21,17 +21,28 @@ function user(): AccountPrincipal {
 }
 
 describe('PersonalInfoCard', () => {
-  it('renders account summary and editable fields inside one card', () => {
+  it('renders account form content without card chrome or duplicated identity summaries', () => {
     const markup = renderToStaticMarkup(
       <PersonalInfoCard
         user={user()}
-        fullName="Rayane Guemmoud"
         memberSince="9 juin 2026"
         firstname="Rayane"
         lastname="Guemmoud"
         username="rayane"
         birthdate="2000-01-01"
         region="FR"
+        regionLoading={false}
+        regions={[
+          {
+            country_code: 'FR',
+            data_region: 'eu-west',
+            legal_jurisdiction: 'FR',
+            primary_timezone: 'Europe/Paris',
+            timezones: ['Europe/Paris'],
+            sub_region: 'Europe',
+            display_name: 'France',
+          },
+        ]}
         editError={null}
         editSuccess={false}
         loading={false}
@@ -44,10 +55,13 @@ describe('PersonalInfoCard', () => {
       />,
     );
 
-    expect(markup.match(/data-slot="card"/g)).toHaveLength(1);
-    expect(markup).toContain('Profil');
-    expect(markup).toContain('Membre depuis');
-    expect(markup).toContain('data-slot="editable"');
-    expect(markup).toContain('Rayane');
+    expect(markup).not.toContain('data-slot="card"');
+    expect(markup).toContain('Compte cree le 9 juin 2026');
+    expect(markup).toContain('Email verifie');
+    expect(markup).toContain('id="account-firstname"');
+    expect(markup).toContain('id="account-birthdate"');
+    expect(markup).toContain('id="account-region"');
+    expect(markup).not.toContain('Nom complet');
+    expect(markup).not.toContain('rayane@example.test');
   });
 });

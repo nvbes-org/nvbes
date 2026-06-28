@@ -2,6 +2,7 @@ import { ArrowLeftIcon, CheckIcon } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -15,8 +16,12 @@ export function RegisterPageStepTwo({
   regionLoading,
   supportedRegions,
   error,
+  legalDocumentsAccepted,
   loading,
+  marketingEmailsAccepted,
   onWorkspaceNameChange,
+  onLegalDocumentsAcceptedChange,
+  onMarketingEmailsAcceptedChange,
   onRegionChange,
   onBack,
   onSubmit,
@@ -29,8 +34,12 @@ export function RegisterPageStepTwo({
   regionLoading: boolean;
   supportedRegions: SupportedRegion[];
   error: string | null;
+  legalDocumentsAccepted: boolean;
   loading: boolean;
+  marketingEmailsAccepted: boolean;
   onWorkspaceNameChange: (value: string) => void;
+  onLegalDocumentsAcceptedChange: (value: boolean) => void;
+  onMarketingEmailsAcceptedChange: (value: boolean) => void;
   onRegionChange: (value: string) => void;
   onBack: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -46,7 +55,9 @@ export function RegisterPageStepTwo({
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="register-workspace">Nom du workspace</Label>
+        <Label htmlFor="register-workspace">
+          Nom du workspace <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="register-workspace"
           type="text"
@@ -67,6 +78,46 @@ export function RegisterPageStepTwo({
         onValueChange: onRegionChange,
       })}
 
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
+        <div className="flex items-start gap-3 text-sm leading-5">
+          <Checkbox
+            id="register-legal-documents"
+            checked={legalDocumentsAccepted}
+            onCheckedChange={(checked) => onLegalDocumentsAcceptedChange(checked === true)}
+            className="mt-0.5"
+          />
+          <label htmlFor="register-legal-documents">
+            J&apos;accepte les{' '}
+            <a href="/legal/terms-of-service" className="font-medium text-primary hover:underline">
+              Conditions
+            </a>
+            , la{' '}
+            <a href="/legal/privacy-policy" className="font-medium text-primary hover:underline">
+              Confidentialité
+            </a>{' '}
+            et le{' '}
+            <a
+              href="/legal/data-processing-agreement"
+              className="font-medium text-primary hover:underline"
+            >
+              DPA
+            </a>
+            . <span className="text-destructive">*</span>
+          </label>
+        </div>
+        <div className="flex items-start gap-3 text-sm leading-5 text-muted-foreground">
+          <Checkbox
+            id="register-marketing-emails"
+            checked={marketingEmailsAccepted}
+            onCheckedChange={(checked) => onMarketingEmailsAcceptedChange(checked === true)}
+            className="mt-0.5"
+          />
+          <label htmlFor="register-marketing-emails">
+            Je souhaite recevoir les nouveautés et conseils nvbes par email.
+          </label>
+        </div>
+      </div>
+
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -84,7 +135,7 @@ export function RegisterPageStepTwo({
           <ArrowLeftIcon data-icon="inline-start" />
           Retour
         </Button>
-        <Button type="submit" className="flex-1" disabled={loading}>
+        <Button type="submit" className="flex-1" disabled={loading || !legalDocumentsAccepted}>
           {loading ? (
             <>
               <Spinner data-icon="inline-start" />

@@ -18,12 +18,7 @@ fn render_template(template: &str, replacements: &[(&str, &str)]) -> String {
 }
 
 fn from_address(config: &crate::app::AppConfig) -> Result<EmailAddress, AppError> {
-    let email = config.email_from_email.clone().ok_or_else(|| {
-        AppError::internal(
-            "email_not_configured",
-            "NVBES_EMAIL_FROM_EMAIL must be set to send emails.",
-        )
-    })?;
+    let email = require_from_email(config)?;
     Ok(EmailAddress {
         email,
         name: Some(
@@ -35,17 +30,32 @@ fn from_address(config: &crate::app::AppConfig) -> Result<EmailAddress, AppError
     })
 }
 
+pub(crate) fn ensure_delivery_configured(config: &crate::app::AppConfig) -> Result<(), AppError> {
+    require_from_email(config).map(|_| ())
+}
+
+fn require_from_email(config: &crate::app::AppConfig) -> Result<String, AppError> {
+    if let Some(email) = config.email_from_email.clone() {
+        return Ok(email);
+    }
+
+    if config.environment == "development" && config.email_provider == "mock" {
+        return Ok("dev@nvbes.local".to_string());
+    }
+
+    Err(AppError::new(
+        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+        "email_not_configured",
+        "NVBES_EMAIL_FROM_EMAIL must be set to send emails.",
+    ))
+}
+
 fn reply_to_header(config: &crate::app::AppConfig) -> Result<Vec<(String, String)>, AppError> {
     let reply_to = config
         .email_reply_to
         .clone()
-        .or_else(|| config.email_from_email.clone())
-        .ok_or_else(|| {
-            AppError::internal(
-                "email_not_configured",
-                "NVBES_EMAIL_FROM_EMAIL must be set to send emails.",
-            )
-        })?;
+        .map(Ok)
+        .unwrap_or_else(|| require_from_email(config))?;
     Ok(vec![("Reply-To".to_string(), reply_to)])
 }
 

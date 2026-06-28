@@ -53,7 +53,7 @@ export function WebauthnSetupRegisterCard({
         {showPlatformWarning ? (
           <Alert variant="destructive">
             <AlertDescription>
-              Aucun authenticator local compatible passkey/Touch ID n’a été détecté.
+              Aucun authenticator local compatible biométrie/Touch ID n’a été détecté.
             </AlertDescription>
           </Alert>
         ) : null}

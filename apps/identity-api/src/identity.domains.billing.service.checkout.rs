@@ -12,7 +12,7 @@ use nvbes_billing::{plan_monthly_price_cents, validate_plan_code};
 use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
-use nvbes_region::geo::{GeoLookupRecordContext, record_geo_resolution_tx};
+use nvbes_region::geo::{GeoLookupPurpose, GeoLookupRecordContext, record_geo_resolution_tx};
 
 use super::geo::{checkout_geo_risk, resolve_checkout_geo};
 
@@ -59,7 +59,7 @@ pub async fn create_checkout_session(
     record_geo_resolution_tx(
         &mut tx,
         GeoLookupRecordContext {
-            purpose: "payment",
+            purpose: GeoLookupPurpose::Payment,
             subject_type: Some("workspace"),
             subject_id: Some(access.workspace_id),
             request_id: None,

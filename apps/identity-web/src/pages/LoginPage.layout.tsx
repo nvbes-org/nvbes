@@ -20,17 +20,6 @@ export function LoginPageLoading() {
   );
 }
 
-export function LoginPageMobileBrand() {
-  return (
-    <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-      <div className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/15">
-        <div className="size-3 rounded-sm bg-primary" />
-      </div>
-      <span className="text-lg font-semibold tracking-tight text-foreground/85">nvbes</span>
-    </div>
-  );
-}
-
 export function LoginPageError({ message }: { message: string }) {
   return (
     <Alert variant="destructive">
@@ -42,16 +31,16 @@ export function LoginPageError({ message }: { message: string }) {
 function titleForStep(step: LoginStep) {
   if (step === 'consent') return "Demande d'autorisation";
   if (step === 'chooser') return 'Choisir un compte';
-  return 'Connexion';
+  return 'nvbes';
 }
 
 function descriptionForStep(step: LoginStep) {
-  if (step === 'identifier') return 'Entrez votre email pour commencer.';
-  if (step === 'password') return 'Saisissez votre mot de passe.';
-  if (step === 'webauthn') return 'Utilisez votre clé de sécurité.';
+  if (step === 'identifier') return 'Connectez-vous à votre espace sécurisé nvbes.';
+  if (step === 'password') return 'Confirmez votre identité pour continuer.';
+  if (step === 'webauthn') return 'Validez la connexion avec votre clé de sécurité.';
   if (step === 'consent') return "L'application souhaite accéder à votre compte.";
   if (step === 'chooser') return 'pour continuer sur nvbes';
-  return 'Vérification en deux étapes.';
+  return 'Terminez la vérification de sécurité.';
 }
 
 export function LoginPageCard({

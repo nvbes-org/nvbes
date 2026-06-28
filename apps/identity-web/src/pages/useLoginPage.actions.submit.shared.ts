@@ -10,6 +10,7 @@ export type SubmitActionOptions = Pick<
   | 'sessionToken'
   | 'mfaMethod'
   | 'totpCode'
+  | 'emailCode'
   | 'recoveryCode'
   | 'decoyRef'
   | 'mutations'

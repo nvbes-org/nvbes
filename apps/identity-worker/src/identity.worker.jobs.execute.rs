@@ -13,7 +13,10 @@ use crate::worker::analytics::capture_billing_webhook_analytics;
 
 use nvbes_redis::worker_queue::QueuedJob;
 
-use super::{process_data_export::process_data_export, process_email_event::process_email_event};
+use super::{
+    email_from_address, process_data_export::process_data_export,
+    process_email_event::process_email_event,
+};
 
 pub(super) async fn execute_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Value> {
     match job.job_type.as_str() {
@@ -45,23 +48,8 @@ async fn send_email_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Val
         .clone()
         .unwrap_or_else(|| to_email.clone());
 
-    let from_email = state
-        .config
-        .email_from_email
-        .clone()
-        .context("NVBES_EMAIL_FROM_EMAIL must be set for email sending")?;
-
     let msg = nvbes_email::EmailMessage {
-        from: nvbes_email::EmailAddress {
-            email: from_email,
-            name: Some(
-                state
-                    .config
-                    .email_from_name
-                    .clone()
-                    .unwrap_or_else(|| "nvbes".to_string()),
-            ),
-        },
+        from: email_from_address(&state.config)?,
         to: vec![nvbes_email::EmailAddress {
             email: to_email.clone(),
             name: payload.to_name,

@@ -18,7 +18,7 @@ pub use origin::{origin_from_redirect_uri, same_origin};
 
 const ALLOWED_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 const ALLOWED_HEADERS: &str = "content-type, authorization, accept, x-requested-with, idempotency-key, x-request-id, x-csrf-token, baggage, traceparent, tracestate";
-const EXPOSED_HEADERS: &str = "x-request-id, traceparent, tracestate";
+const EXPOSED_HEADERS: &str = "x-request-id, traceparent, tracestate, etag";
 
 #[derive(Clone, Default)]
 pub struct AllowedOriginRegistry {

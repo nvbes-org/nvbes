@@ -17,12 +17,6 @@ pub fn router() -> Router<AppState> {
 pub(crate) async fn challenge_pow(
     State(state): State<AppState>,
 ) -> Result<Json<crate::domains::auth::pow::PowChallenge>, AppError> {
-    if !state.config.auth_pow_enabled {
-        return Ok(Json(crate::domains::auth::pow::PowChallenge {
-            nonce: String::new(),
-            difficulty: 0,
-        }));
-    }
     let challenge = crate::domains::auth::pow::issue_challenge(
         &state.db,
         state.config.auth_pow_difficulty,

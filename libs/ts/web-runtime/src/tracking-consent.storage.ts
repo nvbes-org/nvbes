@@ -1,7 +1,6 @@
 import {
   ALL_ANALYTICS_CONSENT,
   EMPTY_ANALYTICS_CONSENT,
-  hasAnyAnalyticsConsent,
   type AnalyticsPurposeConsent,
 } from './analytics';
 import { getSafeLocalStorage } from './safe-storage';
@@ -15,8 +14,10 @@ export interface CookieConsentState {
   vendors: {
     stripe: boolean;
     identity: boolean;
-    analytics: boolean;
-    errorReporting: boolean;
+    cloudflare: boolean;
+    posthog: boolean;
+    sentry: boolean;
+    grafana: boolean;
   };
   analytics: AnalyticsPurposeConsent;
 }
@@ -35,7 +36,9 @@ type AnalyticsPurpose = keyof AnalyticsPurposeConsent;
 
 type LegacyConsentCandidate = {
   categories?: Partial<Record<ConsentCategory | 'marketing', boolean>>;
-  vendors?: Partial<Record<ConsentVendor | 'marketingVendor', boolean>>;
+  vendors?: Partial<
+    Record<ConsentVendor | 'analytics' | 'errorReporting' | 'marketingVendor', boolean>
+  >;
   analytics?: Partial<Record<AnalyticsPurpose, boolean>>;
 };
 
@@ -54,9 +57,9 @@ const STORAGE_KEY_V2 = 'nvbes.tracking-consent.v2';
 const STORAGE_KEY_V1 = 'nvbes.tracking-consent.v1';
 
 export const CATEGORY_VENDORS_MAP = {
-  essentials: ['stripe', 'identity'],
-  analytics: ['analytics'],
-  performance: ['errorReporting'],
+  essentials: ['stripe', 'identity', 'cloudflare'],
+  analytics: ['posthog'],
+  performance: ['sentry', 'grafana'],
 } as const;
 
 export const CATEGORY_ANALYTICS_PURPOSES_MAP = {
@@ -80,6 +83,37 @@ export const ANALYTICS_PURPOSE_CONSENT_TYPES = {
   featureFlags: 'analytics_feature_flags',
 } as const satisfies Record<AnalyticsPurpose, string>;
 
+export const VENDOR_CONSENT_TYPES = {
+  stripe: 'cookie_consent_vendor_stripe',
+  identity: 'cookie_consent_vendor_identity',
+  cloudflare: 'cookie_consent_vendor_cloudflare',
+  posthog: 'cookie_consent_vendor_posthog',
+  sentry: 'cookie_consent_vendor_sentry',
+  grafana: 'cookie_consent_vendor_grafana',
+} as const satisfies Record<ConsentVendor, string>;
+
+export const LEGACY_VENDOR_CONSENT_TYPES = {
+  analytics: 'cookie_consent_vendor_analytics',
+  errorReporting: 'cookie_consent_vendor_error_reporting',
+} as const;
+
+function analyticsConsentForState(
+  categories: CookieConsentState['categories'],
+  vendors: CookieConsentState['vendors'],
+): AnalyticsPurposeConsent {
+  const analyticsGranted = categories.analytics || vendors.posthog;
+  const performanceGranted = categories.performance || vendors.sentry || vendors.grafana;
+
+  return {
+    productAnalytics: analyticsGranted,
+    autocaptureHeatmaps: analyticsGranted,
+    sessionReplay: analyticsGranted,
+    surveysFeedback: analyticsGranted,
+    featureFlags: analyticsGranted,
+    errorTracking: performanceGranted,
+  };
+}
+
 export const DEFAULT_CONSENT: CookieConsentState = {
   categories: {
     essentials: true,
@@ -89,8 +123,10 @@ export const DEFAULT_CONSENT: CookieConsentState = {
   vendors: {
     stripe: true,
     identity: true,
-    analytics: false,
-    errorReporting: false,
+    cloudflare: true,
+    posthog: false,
+    sentry: false,
+    grafana: false,
   },
   analytics: EMPTY_ANALYTICS_CONSENT,
 };
@@ -104,8 +140,10 @@ export const ACCEPT_ALL_CONSENT: CookieConsentState = {
   vendors: {
     stripe: true,
     identity: true,
-    analytics: true,
-    errorReporting: true,
+    cloudflare: true,
+    posthog: true,
+    sentry: true,
+    grafana: true,
   },
   analytics: ALL_ANALYTICS_CONSENT,
 };
@@ -119,8 +157,10 @@ export const DECLINE_ALL_CONSENT: CookieConsentState = {
   vendors: {
     stripe: true,
     identity: true,
-    analytics: false,
-    errorReporting: false,
+    cloudflare: true,
+    posthog: false,
+    sentry: false,
+    grafana: false,
   },
   analytics: EMPTY_ANALYTICS_CONSENT,
 };
@@ -189,34 +229,42 @@ function normalizeConsent(value: unknown, legacyProductOnly: boolean): CookieCon
   }
 
   const candidate = value as LegacyConsentCandidate;
-  const analytics = normalizeAnalyticsConsent(candidate, legacyProductOnly);
-  const hasAnalytics = hasAnyAnalyticsConsent(analytics);
+  const legacyAnalytics = normalizeAnalyticsConsent(candidate, legacyProductOnly);
 
   const analyticsGranted =
     booleanValue(candidate.categories?.analytics, false) ||
-    analytics.productAnalytics ||
-    analytics.autocaptureHeatmaps ||
-    analytics.sessionReplay ||
-    analytics.surveysFeedback ||
-    analytics.featureFlags;
+    booleanValue(candidate.vendors?.posthog, false) ||
+    booleanValue(candidate.vendors?.analytics, false) ||
+    legacyAnalytics.productAnalytics ||
+    legacyAnalytics.autocaptureHeatmaps ||
+    legacyAnalytics.sessionReplay ||
+    legacyAnalytics.surveysFeedback ||
+    legacyAnalytics.featureFlags;
   const performanceGranted =
     booleanValue(candidate.categories?.performance, false) ||
+    booleanValue(candidate.vendors?.sentry, false) ||
+    booleanValue(candidate.vendors?.grafana, false) ||
     booleanValue(candidate.vendors?.errorReporting, false) ||
-    analytics.errorTracking;
+    legacyAnalytics.errorTracking;
+
+  const categories = {
+    essentials: true,
+    analytics: analyticsGranted,
+    performance: performanceGranted,
+  };
+  const vendors = {
+    stripe: booleanValue(candidate.vendors?.stripe, true),
+    identity: booleanValue(candidate.vendors?.identity, true),
+    cloudflare: booleanValue(candidate.vendors?.cloudflare, true),
+    posthog: booleanValue(candidate.vendors?.posthog, analyticsGranted),
+    sentry: booleanValue(candidate.vendors?.sentry, performanceGranted),
+    grafana: booleanValue(candidate.vendors?.grafana, performanceGranted),
+  };
 
   return {
-    categories: {
-      essentials: true,
-      analytics: analyticsGranted,
-      performance: performanceGranted,
-    },
-    vendors: {
-      stripe: booleanValue(candidate.vendors?.stripe, true),
-      identity: booleanValue(candidate.vendors?.identity, true),
-      analytics: hasAnalytics,
-      errorReporting: booleanValue(candidate.vendors?.errorReporting, performanceGranted),
-    },
-    analytics,
+    categories,
+    vendors,
+    analytics: analyticsConsentForState(categories, vendors),
   };
 }
 
@@ -251,13 +299,12 @@ function legacyV1Consent(accepted: boolean): CookieConsentState {
     vendors: {
       stripe: true,
       identity: true,
-      analytics: true,
-      errorReporting: true,
+      cloudflare: true,
+      posthog: true,
+      sentry: true,
+      grafana: true,
     },
-    analytics: {
-      ...EMPTY_ANALYTICS_CONSENT,
-      productAnalytics: true,
-    },
+    analytics: ALL_ANALYTICS_CONSENT,
   };
 }
 
@@ -337,7 +384,6 @@ export function isAnalyticsPurposeAccepted(purpose: AnalyticsPurpose): boolean {
 export function isVendorAccepted(vendor: ConsentVendor): boolean {
   const consent = getTrackingConsent();
   if (!consent) return false;
-  if (vendor === 'analytics') return hasAnyAnalyticsConsent(consent.analytics);
   return consent.vendors[vendor] || false;
 }
 
@@ -351,8 +397,9 @@ export function hasAnyOptionalConsent(consent: CookieConsentState): boolean {
   return (
     consent.categories.analytics ||
     consent.categories.performance ||
-    hasAnyAnalyticsConsent(consent.analytics) ||
-    consent.vendors.errorReporting
+    consent.vendors.posthog ||
+    consent.vendors.sentry ||
+    consent.vendors.grafana
   );
 }
 

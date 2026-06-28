@@ -90,8 +90,8 @@ pub struct AuthContext {
 pub struct RegisterInput {
     pub email: String,
     pub password: String,
-    pub firstname: Option<String>,
-    pub lastname: Option<String>,
+    pub firstname: String,
+    pub lastname: String,
     pub username: String,
     pub birthdate: Option<String>,
     pub region: Option<String>,

@@ -17,7 +17,9 @@ export function RegisterPageContent({
   handleStep2Back,
   handleSubmit,
   lastname,
+  legalDocumentsAccepted,
   loading,
+  marketingEmailsAccepted,
   maxBirthdate,
   minBirthdate,
   password,
@@ -27,6 +29,8 @@ export function RegisterPageContent({
   setEmail,
   setFirstname,
   setLastname,
+  setLegalDocumentsAccepted,
+  setMarketingEmailsAccepted,
   setPassword,
   setSelectedRegion,
   setUsername,
@@ -72,8 +76,12 @@ export function RegisterPageContent({
       regionLoading={regionLoading}
       supportedRegions={supportedRegions}
       error={error}
+      legalDocumentsAccepted={legalDocumentsAccepted}
       loading={loading}
+      marketingEmailsAccepted={marketingEmailsAccepted}
       onWorkspaceNameChange={setWorkspaceName}
+      onLegalDocumentsAcceptedChange={setLegalDocumentsAccepted}
+      onMarketingEmailsAcceptedChange={setMarketingEmailsAccepted}
       onRegionChange={setSelectedRegion}
       onBack={handleStep2Back}
       onSubmit={handleSubmit}

@@ -83,3 +83,20 @@ pub fn random_recovery_code() -> String {
     rand::rng().fill_bytes(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::provisioning_uri;
+
+    #[test]
+    fn provisioning_uri_uses_standard_otpauth_totp_shape() {
+        let uri = provisioning_uri("Nvbes", "rayane@example.com", "JBSWY3DPEHPK3PXP");
+
+        assert!(uri.starts_with("otpauth://totp/Nvbes:rayane%40example.com?"));
+        assert!(uri.contains("secret=JBSWY3DPEHPK3PXP"));
+        assert!(uri.contains("issuer=Nvbes"));
+        assert!(uri.contains("algorithm=SHA1"));
+        assert!(uri.contains("digits=6"));
+        assert!(uri.contains("period=30"));
+    }
+}

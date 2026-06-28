@@ -1,7 +1,12 @@
 import { createRoute } from '@tanstack/react-router';
 
 import type { accountRoute } from './identity.router';
-import { LazyMfaPage, LazyRecoveryCodesPage, LazyTotpSetupPage } from './identity.router.pages';
+import {
+  LazyEmailMfaSetupPage,
+  LazyMfaPage,
+  LazyRecoveryCodesPage,
+  LazyTotpSetupPage,
+} from './identity.router.pages';
 import { renderWebauthnSetup, withAuth } from './identity.router.shared';
 
 export function createAccountMfaRoutes(account: typeof accountRoute) {
@@ -15,6 +20,11 @@ export function createAccountMfaRoutes(account: typeof accountRoute) {
       getParentRoute: () => account,
       path: '/mfa/totp/setup',
       component: withAuth(LazyTotpSetupPage),
+    }),
+    createRoute({
+      getParentRoute: () => account,
+      path: '/mfa/email/setup',
+      component: withAuth(LazyEmailMfaSetupPage),
     }),
     createRoute({
       getParentRoute: () => account,

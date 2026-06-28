@@ -4,8 +4,6 @@ export interface PowChallenge {
 }
 
 export async function solvePowChallenge(nonce: string, difficulty: number): Promise<number> {
-  if (difficulty <= 0) return 0;
-
   try {
     const worker = new Worker(new URL('./worker.pow.ts', import.meta.url), { type: 'module' });
     const solution = await new Promise<number>((resolve, reject) => {
@@ -57,14 +55,13 @@ async function solveMainThread(nonce: string, difficulty: number): Promise<numbe
   }
 }
 
-export async function fetchPowChallenge(baseUrl: string): Promise<PowChallenge | null> {
-  try {
-    const response = await fetch(`${baseUrl}/auth/challenge/pow`, {
-      credentials: 'include',
-    });
-    if (!response.ok) return null;
-    return response.json();
-  } catch {
-    return null;
+export async function fetchPowChallenge(baseUrl: string): Promise<PowChallenge> {
+  const response = await fetch(`${baseUrl}/auth/challenge/pow`, {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error(`PoW challenge request failed with status ${response.status}`);
   }
+
+  return response.json();
 }

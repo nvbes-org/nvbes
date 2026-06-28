@@ -1,15 +1,11 @@
-import type {
-  AccountEntry,
-  AccountMe,
-  AccountPrincipal,
-  AccountWorkspace,
-} from '@nvbes/identity-client';
+import type { AccountEntry, AccountMe, AccountWorkspace } from '@nvbes/identity-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MutableRefObject } from 'react';
 import { accountQueryKeys } from '@/account.queries';
 import { updateProfile } from './AccountPersonalInfoPage.api';
 import type { UpdateProfileInput } from './AccountPersonalInfoPage.shared';
 import {
+  type AccountPersonalInfoQueryData,
   getAccountPersonalInfoContextUpdate,
   getAccountPersonalInfoQueryKey,
 } from './useAccountPersonalInfoPage.shared';
@@ -39,7 +35,12 @@ export function useAccountPersonalInfoMutation({
   return useMutation({
     mutationFn: (input: UpdateProfileInput) => updateProfile(input),
     onSuccess: (data) => {
-      queryClient.setQueryData<AccountPrincipal>(personalInfoQueryKey, data.user);
+      queryClient.setQueryData<AccountPersonalInfoQueryData>(personalInfoQueryKey, (current) => ({
+        user: data.user,
+        current_workspace_region: current?.current_workspace_region ?? null,
+        current_workspace_id: current?.current_workspace_id ?? null,
+        workspaces: current?.workspaces ?? [],
+      }));
       queryClient.setQueryData<{
         me: AccountMe | null;
         workspaces: AccountWorkspace[];

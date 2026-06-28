@@ -40,7 +40,13 @@ pub(crate) async fn resolve_mfa_challenge_methods(
 pub(crate) async fn resolve_post_password_challenge(
     db: &sqlx::PgPool,
     principal_id: Uuid,
+    risk_score: f64,
 ) -> Result<Option<Vec<String>>, AppError> {
+    if risk_score > 0.0 {
+        crate::domains::auth::mfa::email::ensure_primary_email_factor(db, principal_id).await?;
+        return Ok(Some(resolve_mfa_challenge_methods(db, principal_id).await?));
+    }
+
     let has_active_factor = crate::domains::auth::mfa::has_active_factor(db, principal_id).await?;
     let policy_context =
         crate::domains::auth::mfa_policy::fetch_policy_context(db, principal_id, has_active_factor)

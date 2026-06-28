@@ -1,5 +1,6 @@
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupPurpose, GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
@@ -23,7 +24,7 @@ pub async fn resolve_api_request_geo_tx(
     record_geo_resolution_tx(
         tx,
         GeoLookupRecordContext {
-            purpose: "drive_api",
+            purpose: GeoLookupPurpose::DriveApi,
             subject_type: Some("workspace"),
             subject_id: Some(workspace_id),
             request_id: Some(request_id),

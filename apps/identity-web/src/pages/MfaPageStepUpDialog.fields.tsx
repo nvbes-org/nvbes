@@ -51,7 +51,7 @@ export function MfaPageStepUpFormFields({
   if (stepUpMethod === 'webauthn') {
     return (
       <p className="text-sm text-muted-foreground">
-        Cliquez sur Confirmer pour utiliser votre passkey ou clé de sécurité.
+        Cliquez sur Confirmer pour utiliser votre biométrie ou clé de sécurité.
       </p>
     );
   }

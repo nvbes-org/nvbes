@@ -28,12 +28,12 @@ export function SecuritySignInOptionsCard({
             <div className="flex min-w-0 flex-col">
               <span className="text-sm font-medium">Passer le mot de passe si possible</span>
               <span className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Permet de se connecter directement avec une passkey ou une cle de securite sans
+                Permet de se connecter directement avec la biométrie ou une cle de securite sans
                 saisir de mot de passe.
               </span>
               {!overview.has_webauthn ? (
                 <span className="mt-1 text-xs font-medium text-amber-500">
-                  Ajoutez d&apos;abord une passkey ou une cle de securite dans la double
+                  Ajoutez d&apos;abord la biométrie ou une cle de securite dans la double
                   authentification pour activer cette option.
                 </span>
               ) : null}

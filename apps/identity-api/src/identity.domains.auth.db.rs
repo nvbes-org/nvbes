@@ -1,5 +1,7 @@
 #[path = "identity.domains.auth.db.account.rs"]
 mod account;
+#[path = "identity.domains.auth.db.emails.rs"]
+pub mod emails;
 #[path = "identity.domains.auth.db.factor_view.rs"]
 mod factor_view;
 #[path = "identity.domains.auth.db.preferences.rs"]

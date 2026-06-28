@@ -1,7 +1,5 @@
-import { AccountChooser } from '@/components/AccountChooser';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import type { AccountEntry } from '@/lib/account-context';
 import { canManageServiceAccounts } from '@/lib/workspace-permissions';
 import {
   AccountSidebarLogout,
@@ -10,23 +8,14 @@ import {
 } from '@/components/AccountSidebar.shared';
 
 interface AccountSidebarProps {
-  accounts: AccountEntry[];
-  loadingAccounts: boolean;
   currentWorkspaceRole?: string | null;
   onLogout: () => void;
 }
 
-export function AccountSidebar({
-  accounts,
-  loadingAccounts,
-  currentWorkspaceRole,
-  onLogout,
-}: AccountSidebarProps) {
+export function AccountSidebar({ currentWorkspaceRole, onLogout }: AccountSidebarProps) {
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
-      <AccountChooser accounts={accounts} loading={loadingAccounts} />
-
-      <ScrollArea className="flex-1 overflow-hidden px-2">
+      <ScrollArea className="flex-1 overflow-hidden px-2 pt-4">
         <nav className="flex min-w-0 flex-col gap-5">
           {accountNavSections.map((section) => (
             <div key={section.title} className="flex min-w-0 flex-col gap-1">

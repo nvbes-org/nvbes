@@ -30,3 +30,8 @@ pub(crate) struct TotpConfirmRequest {
     pub(crate) factor_id: Uuid,
     pub(crate) code: String,
 }
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct EmailMfaSetupRequest {
+    pub(crate) email_id: Uuid,
+}

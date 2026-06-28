@@ -41,6 +41,11 @@ alwaysApply: false
 5. CSS Modules / inline styles UNIQUEMENT si Tailwind impossible
 ```
 
+# Styling et design frontend
+
+- Eviter de nester des cards dans des cards. Une card doit representer un bloc autonome; pour structurer l'interieur d'une card, preferer des sections, listes, bordures, separateurs, fonds subtils ou layouts non cardes.
+- Eviter les emojis dans l'interface. Les icones de composants ou de bibliotheques (ex: Lucide) restent autorisees; l'emoji cookie est tolere uniquement pour les elements lies aux cookies.
+
 # Conventions de fichiers
 
 - Fichiers < 300 lignes. Au-dela, extraire par responsabilite.

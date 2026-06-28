@@ -11,10 +11,12 @@ import {
   confirmTotp,
   finishWebAuthnRegistration,
   generateRecoveryCodes,
+  listEmailMfaEligible,
   listMfaFactors,
   MfaError,
   registerWebAuthnCredential,
   removeMfaFactor,
+  setupEmailMfa,
   setupTotp,
   startWebAuthnAuthentication,
   startWebAuthnRegistration,
@@ -196,6 +198,27 @@ export class NvbesIdentityWeb {
     return confirmTotp(this.config.baseUrl, factorId, code, token);
   }
 
+  async listEmailMfaEligible(token?: string): Promise<{
+    emails: Array<{
+      id: string;
+      email: string;
+      is_primary: boolean;
+      verified: boolean;
+      verified_at: string | null;
+      created_at: string;
+    }>;
+    primary_min_age_hours: number;
+  }> {
+    return listEmailMfaEligible(this.config.baseUrl, token);
+  }
+
+  async setupEmailMfa(
+    emailId: string,
+    token?: string,
+  ): Promise<{ factor: MfaFactorView; mfa_enabled: boolean }> {
+    return setupEmailMfa(this.config.baseUrl, emailId, token);
+  }
+
   /**
    * Démarre l'enregistrement WebAuthn.
    */
@@ -344,6 +367,7 @@ export {
   getWebAuthnCredential,
   getWebAuthnSupport,
   isConditionalMediationSupported,
+  listEmailMfaEligible,
   listMfaFactors,
   MfaError,
   normalizeWebAuthnError,
@@ -351,6 +375,7 @@ export {
   registerWebAuthnCredential,
   removeMfaFactor,
   serializeCredential,
+  setupEmailMfa,
   setupTotp,
   startWebAuthnAuthentication,
   startWebAuthnRegistration,

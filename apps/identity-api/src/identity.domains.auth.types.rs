@@ -29,6 +29,56 @@ pub struct UserView {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EmailAddressView {
+    pub id: Uuid,
+    pub email: String,
+    pub is_primary: bool,
+    pub verified: bool,
+    pub verified_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct EmailAddressesResult {
+    pub emails: Vec<EmailAddressView>,
+    pub primary_min_age_hours: i32,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AddSecondaryEmailInput {
+    pub email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AddSecondaryEmailResult {
+    pub email: EmailAddressView,
+    pub verification_resend_available_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct ResendSecondaryEmailVerificationResult {
+    pub email: EmailAddressView,
+    pub verification_resend_available_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct PromoteSecondaryEmailResult {
+    pub email: EmailAddressView,
+    pub user: UserView,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct DeleteSecondaryEmailResult {
+    pub success: bool,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct WorkspaceView {
@@ -232,6 +282,8 @@ pub struct UserNotifications {
     pub push: bool,
     #[serde(default = "default_true")]
     pub in_app: bool,
+    #[serde(default)]
+    pub marketing_email: bool,
 }
 
 fn default_true() -> bool {

@@ -17,6 +17,7 @@ export function useLoginPageState() {
   const [availableMethods, setAvailableMethods] = useState<MfaMethod[]>([]);
   const [mfaMethod, setMfaMethod] = useState<MfaMethod | null>(null);
   const [totpCode, setTotpCode] = useState('');
+  const [emailCode, setEmailCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export function useLoginPageState() {
     setAvailableMethods([]);
     setMfaMethod(null);
     setTotpCode('');
+    setEmailCode('');
     setRecoveryCode('');
   };
 
@@ -39,6 +41,7 @@ export function useLoginPageState() {
     availableMethods,
     mfaMethod,
     totpCode,
+    emailCode,
     recoveryCode,
     error,
     setCheckingAuth,
@@ -52,11 +55,13 @@ export function useLoginPageState() {
     setAvailableMethods,
     setMfaMethod,
     setTotpCode,
+    setEmailCode,
     setRecoveryCode,
     setError,
     resetMfaState,
     hasRecovery: availableMethods.includes('recovery'),
     hasTotp: availableMethods.includes('totp'),
+    hasEmail: availableMethods.includes('email'),
     hasWebAuthn: availableMethods.includes('webauthn'),
     availableCount: availableMethods.length,
   };

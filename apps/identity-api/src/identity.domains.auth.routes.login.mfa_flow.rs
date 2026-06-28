@@ -25,6 +25,18 @@ pub(crate) async fn resolve_authenticated_method(
         return Ok("otp".to_string());
     }
 
+    if let Some(code) = request.email_code.as_deref() {
+        crate::domains::auth::mfa::email::verify_login_code(
+            db,
+            redis,
+            auth_state_id,
+            principal_id,
+            code,
+        )
+        .await?;
+        return Ok("email".to_string());
+    }
+
     if let Some(code) = request.recovery_code.as_deref() {
         crate::domains::auth::mfa::verify_recovery(db, principal_id, code).await?;
         return Ok("recovery".to_string());
@@ -49,6 +61,7 @@ pub(crate) async fn resolve_authenticated_method(
 
 fn validate_single_factor(request: &MfaRequest) -> Result<(), AppError> {
     let selected_factor_count = usize::from(request.totp_code.is_some())
+        + usize::from(request.email_code.is_some())
         + usize::from(request.recovery_code.is_some())
         + usize::from(request.webauthn_response.is_some());
     if selected_factor_count != 1 {
@@ -69,6 +82,7 @@ mod tests {
         MfaRequest {
             state_token: Uuid::nil(),
             totp_code: None,
+            email_code: None,
             recovery_code: None,
             webauthn_response: None,
             webauthn_challenge_id: None,

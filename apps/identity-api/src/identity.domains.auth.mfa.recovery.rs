@@ -8,6 +8,24 @@ use crate::http::error::AppError;
 use nvbes_core::mfa::random_recovery_code;
 use password::token_hash;
 
+pub async fn has_active_recovery_codes(db: &PgPool, user_id: Uuid) -> Result<bool, AppError> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS(
+          SELECT 1
+          FROM mfa_factors
+          WHERE principal_id = $1
+            AND factor_type = 'recovery_code'
+            AND status = 'active'
+        )
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    Ok(exists)
+}
+
 pub async fn verify_recovery(db: &PgPool, user_id: Uuid, code: &str) -> Result<(), AppError> {
     let row = sqlx::query(
         r#"
@@ -106,6 +124,20 @@ pub async fn generate_recovery(
     }
 
     let factor_id = Uuid::new_v4();
+    sqlx::query(
+        r#"
+        UPDATE mfa_factors
+        SET status = 'revoked',
+            last_used_at = NOW()
+        WHERE principal_id = $1
+          AND factor_type = 'recovery_code'
+          AND status = 'active'
+        "#,
+    )
+    .bind(user_id)
+    .execute(db)
+    .await?;
+
     sqlx::query(
         r#"
         INSERT INTO mfa_factors (id, principal_id, factor_type, status, label, factor_data, confirmed_at, created_at)

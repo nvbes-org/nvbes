@@ -1,27 +1,27 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import {
   ACCEPT_ALL_CONSENT,
   DEFAULT_CONSENT,
   DECLINE_ALL_CONSENT,
   type CookieConsentState,
 } from './tracking-consent';
-import {
-  toggleConsentCategory,
-  toggleConsentAnalyticsPurpose,
-  toggleConsentVendor,
-} from './tracking-consent.editor';
-import { TrackingConsentToggle } from './TrackingConsentToggle';
+import { toggleConsentCategory, toggleConsentVendor } from './tracking-consent.editor';
+import { TrackingConsentToggle, type TrackingConsentToggleProps } from './TrackingConsentToggle';
+
+export type TrackingConsentToggleComponent = (props: TrackingConsentToggleProps) => ReactNode;
 
 export function SharedTrackingConsentBanner({
   getTrackingConsent,
   setTrackingConsent,
   sourcePrefix,
   sessionReplayDescription,
+  ToggleComponent = TrackingConsentToggle,
 }: {
   getTrackingConsent: () => CookieConsentState | null;
   setTrackingConsent: (consent: CookieConsentState, source?: string) => void;
   sourcePrefix: string;
   sessionReplayDescription: string;
+  ToggleComponent?: TrackingConsentToggleComponent;
 }) {
   const currentConsent = getTrackingConsent();
   const hasChoice = currentConsent !== null;
@@ -36,8 +36,7 @@ export function SharedTrackingConsentBanner({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-semibold shadow-lg shadow-black/5 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-background"
-        style={{ animation: 'pulse 2s infinite' }}
+        className="fixed bottom-4 left-4 z-50 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-semibold shadow-lg shadow-black/5 backdrop-blur hover:bg-background"
       >
         🍪 Préférences Cookies
       </button>
@@ -45,7 +44,7 @@ export function SharedTrackingConsentBanner({
   }
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-50 max-h-[85vh] overflow-y-auto rounded-2xl border border-border/80 bg-background/95 p-5 shadow-2xl shadow-black/20 backdrop-blur-md transition-all duration-300 sm:inset-x-auto sm:right-4 sm:w-[32rem]">
+    <div className="fixed inset-x-4 bottom-4 z-50 max-h-[85vh] overflow-y-auto rounded-2xl border border-border/80 bg-background/95 p-5 shadow-2xl shadow-black/20 backdrop-blur-md transition-all duration-300 sm:inset-x-auto sm:left-4 sm:w-[32rem]">
       <div className="space-y-5">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -103,18 +102,22 @@ export function SharedTrackingConsentBanner({
             )}
           </div>
         ) : (
-          <div className="animate-fade-slide-up space-y-4 border-t border-border/60 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Préférences de confidentialité
-            </p>
+          <div className="space-y-4 border-t border-border/60 pt-4">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Préférences de confidentialité
+              </p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Activez uniquement les finalités utiles. Les cookies essentiels restent nécessaires
+                à la sécurité du service.
+              </p>
+            </div>
 
             <div className="max-h-[40vh] space-y-3.5 overflow-y-auto pr-1">
               <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <span>🔒</span> Essentiels et Sécurité
-                    </p>
+                    <p className="text-xs font-semibold text-foreground">Essentiels et Sécurité</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       Nécessaires au fonctionnement et à la sécurité.
                     </p>
@@ -124,133 +127,62 @@ export function SharedTrackingConsentBanner({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20 pl-5 pt-1">
-                  <span className="text-[10px] text-muted-foreground">⚡ nvbes Identity</span>
+                  <span className="text-[10px] text-muted-foreground">nvbes Identity</span>
                   <span className="text-[10px] text-muted-foreground">
-                    💳 Stripe (Paiement/Fraude)
+                    Stripe (Paiement/Fraude)
                   </span>
+                  <span className="text-[10px] text-muted-foreground">Cloudflare (WAF/CDN)</span>
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-xl border border-border/40 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <span>📈</span> Analyse d&apos;audience
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Mesure l&apos;utilisation pour améliorer le service.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={tempConsent.categories.analytics}
-                      onChange={() =>
-                        setTempConsent((prev) => toggleConsentCategory(prev, 'analytics'))
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="h-4 w-8 rounded-full bg-muted peer peer-checked:bg-primary peer-focus:outline-none peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-['']" />
-                  </label>
-                </div>
+              <div className="space-y-2 rounded-xl border border-border/40 bg-muted/10 p-3">
+                <ToggleComponent
+                  checked={tempConsent.categories.analytics}
+                  onChange={() =>
+                    setTempConsent((prev) => toggleConsentCategory(prev, 'analytics'))
+                  }
+                  label="Analyse d'audience"
+                  description="Mesure l'utilisation pour améliorer le service."
+                  large
+                />
                 <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
-                  <TrackingConsentToggle
-                    checked={tempConsent.vendors.analytics}
+                  <ToggleComponent
+                    checked={tempConsent.vendors.posthog}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'analytics', 'analytics'))
+                      setTempConsent((prev) => toggleConsentVendor(prev, 'posthog', 'analytics'))
                     }
-                    label="Analytics"
-                    description="Active ou désactive toutes les finalités Analytics."
-                  />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.productAnalytics}
-                    onChange={() =>
-                      setTempConsent((prev) =>
-                        toggleConsentAnalyticsPurpose(prev, 'productAnalytics'),
-                      )
-                    }
-                    label="Analytics produit"
-                    description="Mesure les étapes de funnel sans données personnelles."
-                  />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.featureFlags}
-                    onChange={() =>
-                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'featureFlags'))
-                    }
-                    label="Feature flags"
-                    description="Active des expériences non critiques après consentement."
-                  />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.autocaptureHeatmaps}
-                    onChange={() =>
-                      setTempConsent((prev) =>
-                        toggleConsentAnalyticsPurpose(prev, 'autocaptureHeatmaps'),
-                      )
-                    }
-                    label="Heatmaps & autocapture"
-                    description="Capture uniquement les interactions masquées et non sensibles."
-                  />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.sessionReplay}
-                    onChange={() =>
-                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'sessionReplay'))
-                    }
-                    label="Session replay"
-                    description={sessionReplayDescription}
-                  />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.surveysFeedback}
-                    onChange={() =>
-                      setTempConsent((prev) =>
-                        toggleConsentAnalyticsPurpose(prev, 'surveysFeedback'),
-                      )
-                    }
-                    label="Surveys & feedback"
-                    description="Questionnaires ciblés hors pages sensibles."
+                    label="PostHog"
+                    description={`Mesure d'audience produit, heatmaps, feature flags et ${sessionReplayDescription.toLowerCase()}`}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-xl border border-border/40 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <span>🛠️</span> Performance & Erreurs
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Suivi de la stabilité et des bugs techniques.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      checked={tempConsent.categories.performance}
-                      onChange={() =>
-                        setTempConsent((prev) => toggleConsentCategory(prev, 'performance'))
-                      }
-                      className="sr-only peer"
-                    />
-                    <div className="h-4 w-8 rounded-full bg-muted peer peer-checked:bg-primary peer-focus:outline-none peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-['']" />
-                  </label>
-                </div>
+              <div className="space-y-2 rounded-xl border border-border/40 bg-muted/10 p-3">
+                <ToggleComponent
+                  checked={tempConsent.categories.performance}
+                  onChange={() =>
+                    setTempConsent((prev) => toggleConsentCategory(prev, 'performance'))
+                  }
+                  label="Performance & erreurs"
+                  description="Suivi de la stabilité et des bugs techniques."
+                  large
+                />
                 <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
-                  <TrackingConsentToggle
-                    checked={tempConsent.vendors.errorReporting}
+                  <ToggleComponent
+                    checked={tempConsent.vendors.sentry}
                     onChange={() =>
-                      setTempConsent((prev) =>
-                        toggleConsentVendor(prev, 'errorReporting', 'performance'),
-                      )
+                      setTempConsent((prev) => toggleConsentVendor(prev, 'sentry', 'performance'))
                     }
-                    label="Error reporting"
-                    description="Rapports d'erreurs techniques."
+                    label="Sentry"
+                    description="Suivi d'erreurs applicatives côté navigateur."
                   />
-                  <TrackingConsentToggle
-                    checked={tempConsent.analytics.errorTracking}
+                  <ToggleComponent
+                    checked={tempConsent.vendors.grafana}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentAnalyticsPurpose(prev, 'errorTracking'))
+                      setTempConsent((prev) => toggleConsentVendor(prev, 'grafana', 'performance'))
                     }
-                    label="Analytics error tracking"
-                    description="Capture navigateur scrubbed pour les diagnostics produit."
+                    label="Grafana Labs"
+                    description="Observabilité technique, métriques et diagnostics de stabilité."
                   />
                 </div>
               </div>

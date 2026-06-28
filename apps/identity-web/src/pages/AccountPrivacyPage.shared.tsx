@@ -12,7 +12,12 @@ export {
   PrivacySkeleton,
   SuccessMessage,
 } from './AccountPrivacyPage.cards';
-export { consentLabels, ConsentEmptyState, ConsentRow } from './AccountPrivacyPage.consents';
+export {
+  consentLabels,
+  ConsentEmptyState,
+  ConsentRow,
+  isVisibleConsentType,
+} from './AccountPrivacyPage.consents';
 export { DeleteAccountDialog } from './AccountPrivacyPage.dialog';
 
 type AccountPrivacyPageContentProps = ReturnType<typeof useAccountPrivacyPage> & {

@@ -1,10 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   detectRegionQueryFn,
   identityAuthMutationKeys,
   supportedRegionsQueryFn,
 } from '../identity.auth.queries';
+import { detectRegionFromBrowser } from '../identity.auth.functions';
+import type { SupportedRegion } from '../identity.auth.api';
+
+const regionNameCollator = new Intl.Collator('fr', {
+  sensitivity: 'base',
+  numeric: true,
+});
+
+function regionSortLabel(region: SupportedRegion): string {
+  return region.display_name ?? region.country_code;
+}
 
 export function useRegisterPageRegions() {
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -25,8 +36,23 @@ export function useRegisterPageRegions() {
     refetchOnWindowFocus: false,
   });
 
-  const detectedRegion = regionQuery.data?.region ?? null;
-  const detectedReliability = regionQuery.data?.reliability ?? 'none';
+  const supportedRegions = useMemo(
+    () =>
+      [...(supportedRegionsQuery.data ?? [])].sort((left, right) =>
+        regionNameCollator.compare(regionSortLabel(left), regionSortLabel(right)),
+      ),
+    [supportedRegionsQuery.data],
+  );
+  const browserRegionDetection = useMemo(() => {
+    if (regionQuery.data?.region || supportedRegions.length === 0) {
+      return null;
+    }
+
+    return detectRegionFromBrowser(supportedRegions);
+  }, [regionQuery.data?.region, supportedRegions]);
+  const detectedRegion = regionQuery.data?.region ?? browserRegionDetection?.region ?? null;
+  const detectedReliability =
+    regionQuery.data?.reliability ?? browserRegionDetection?.reliability ?? 'none';
 
   useEffect(() => {
     if (detectedRegion && !selectedRegion) {
@@ -40,6 +66,6 @@ export function useRegisterPageRegions() {
     regionLoading: regionQuery.isPending,
     selectedRegion,
     setSelectedRegion,
-    supportedRegions: supportedRegionsQuery.data ?? [],
+    supportedRegions,
   };
 }

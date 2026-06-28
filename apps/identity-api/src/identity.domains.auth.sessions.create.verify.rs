@@ -14,6 +14,7 @@ use crate::http::error::AppError;
 pub struct VerifiedPrimaryLogin {
     pub principal_id: Uuid,
     pub email: String,
+    pub risk_score: f64,
 }
 
 pub async fn verify_primary_credentials(
@@ -159,5 +160,6 @@ pub async fn verify_primary_credentials(
     Ok(VerifiedPrimaryLogin {
         principal_id,
         email,
+        risk_score,
     })
 }

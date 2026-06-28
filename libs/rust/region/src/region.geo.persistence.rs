@@ -9,8 +9,33 @@ use crate::geo::{
 };
 
 #[derive(Debug, Clone, Copy)]
+pub enum GeoLookupPurpose {
+    Payment,
+    Security,
+    DataRegion,
+    Auth,
+    Audit,
+    DriveApi,
+    DriveAudit,
+}
+
+impl GeoLookupPurpose {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Payment => "payment",
+            Self::Security => "security",
+            Self::DataRegion => "data_region",
+            Self::Auth => "auth",
+            Self::Audit => "audit",
+            Self::DriveApi => "drive_api",
+            Self::DriveAudit => "drive_audit",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct GeoLookupRecordContext<'a> {
-    pub purpose: &'a str,
+    pub purpose: GeoLookupPurpose,
     pub subject_type: Option<&'a str>,
     pub subject_id: Option<Uuid>,
     pub request_id: Option<&'a str>,
@@ -34,7 +59,7 @@ pub async fn record_geo_resolution_tx(
         RETURNING id
         "#,
     )
-    .bind(context.purpose)
+    .bind(context.purpose.as_str())
     .bind(context.subject_type)
     .bind(context.subject_id)
     .bind(context.request_id)
@@ -186,4 +211,26 @@ async fn upsert_network_relation_tx(
     .bind(&relation.risk_labels)
     .fetch_one(&mut **tx)
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GeoLookupPurpose;
+
+    #[test]
+    fn geo_lookup_purpose_matches_database_labels() {
+        let purposes = [
+            (GeoLookupPurpose::Payment, "payment"),
+            (GeoLookupPurpose::Security, "security"),
+            (GeoLookupPurpose::DataRegion, "data_region"),
+            (GeoLookupPurpose::Auth, "auth"),
+            (GeoLookupPurpose::Audit, "audit"),
+            (GeoLookupPurpose::DriveApi, "drive_api"),
+            (GeoLookupPurpose::DriveAudit, "drive_audit"),
+        ];
+
+        for (purpose, database_label) in purposes {
+            assert_eq!(purpose.as_str(), database_label);
+        }
+    }
 }

@@ -11,6 +11,10 @@ import { TrackingConsentBanner } from './TrackingConsentBanner';
 
 const DRIVE_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
 const DRIVE_HEALTH_URL = `${import.meta.env.VITE_DRIVE_API_BASE_URL || '/api'}/health`;
+const REACT_QUERY_DEVTOOLS_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS_ENABLED !== 'false';
+const TANSTACK_ROUTER_DEVTOOLS_ENABLED =
+  import.meta.env.DEV && import.meta.env.VITE_TANSTACK_ROUTER_DEVTOOLS_ENABLED !== 'false';
 
 function handleRenderProfiler(
   id: string,
@@ -52,8 +56,10 @@ export function App() {
           {import.meta.env.DEV ? (
             <Profiler id="drive-web" onRender={handleRenderProfiler}>
               <RouterProvider router={router} />
-              <ReactQueryDevtools initialIsOpen={false} />
-              <TanStackRouterDevtools router={router} position="bottom-right" />
+              {REACT_QUERY_DEVTOOLS_ENABLED ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+              {TANSTACK_ROUTER_DEVTOOLS_ENABLED ? (
+                <TanStackRouterDevtools router={router} position="bottom-right" />
+              ) : null}
             </Profiler>
           ) : (
             <RouterProvider router={router} />

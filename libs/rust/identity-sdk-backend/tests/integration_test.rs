@@ -47,8 +47,8 @@ fn test_register_input_serialization() {
     let input = RegisterInput {
         email: "test@nvbes.fr".to_string(),
         password: "SecurePass123!".to_string(),
-        firstname: None,
-        lastname: None,
+        firstname: "Test".to_string(),
+        lastname: "User".to_string(),
         username: "test-user".to_string(),
         birthdate: None,
         region: Some("FR".to_string()),

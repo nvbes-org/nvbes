@@ -1,5 +1,6 @@
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupPurpose, GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::{PgPool, Postgres, Transaction};
@@ -83,7 +84,7 @@ async fn enrich_audit_metadata_tx(
     record_geo_resolution_tx(
         tx,
         GeoLookupRecordContext {
-            purpose: "identity_audit",
+            purpose: GeoLookupPurpose::Audit,
             subject_type: Some(if workspace_id.is_some() {
                 "workspace"
             } else {

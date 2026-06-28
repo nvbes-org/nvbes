@@ -4,7 +4,7 @@ import {
   type WebPushSupport,
 } from '@nvbes/web-runtime';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { Bell, Mail, Smartphone } from 'lucide-react';
+import { Bell, Mail, Megaphone, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ const NotificationsSchema = z.object({
   email: z.boolean(),
   push: z.boolean(),
   in_app: z.boolean(),
+  marketing_email: z.boolean(),
 });
 
 type NotificationPrefs = z.infer<typeof NotificationsSchema>;
@@ -122,6 +123,12 @@ export default function AccountNotificationsPage() {
       label: 'In-app',
       desc: "Notifications dans l'application.",
       Icon: Bell,
+    },
+    {
+      key: 'marketing_email' as const,
+      label: 'Nouveautes',
+      desc: 'Conseils produit et nouveautes par email.',
+      Icon: Megaphone,
     },
   ];
 

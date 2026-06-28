@@ -1,4 +1,5 @@
 import { SharedTrackingConsentBanner } from '@nvbes/web-runtime';
+import { TrackingConsentToggle } from './components/TrackingConsentToggle';
 import { getTrackingConsent, setTrackingConsent } from './tracking-consent';
 
 export function TrackingConsentBanner() {
@@ -8,6 +9,7 @@ export function TrackingConsentBanner() {
       setTrackingConsent={setTrackingConsent}
       sourcePrefix="identity-web"
       sessionReplayDescription="Relecture masquée, bloquée sur auth, MFA, billing et fichiers."
+      ToggleComponent={TrackingConsentToggle}
     />
   );
 }

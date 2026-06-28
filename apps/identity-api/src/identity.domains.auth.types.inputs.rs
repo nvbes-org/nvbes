@@ -8,8 +8,8 @@ use webauthn_rs::prelude::{PublicKeyCredential, RegisterPublicKeyCredential};
 pub struct RegisterInput {
     pub email: String,
     pub password: String,
-    pub firstname: Option<String>,
-    pub lastname: Option<String>,
+    pub firstname: String,
+    pub lastname: String,
     pub username: String,
     pub birthdate: Option<chrono::NaiveDate>,
     pub region: Option<String>,
@@ -17,6 +17,8 @@ pub struct RegisterInput {
     pub workspace_name: String,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
+    pub legal_documents_accepted: bool,
+    pub marketing_emails_accepted: bool,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

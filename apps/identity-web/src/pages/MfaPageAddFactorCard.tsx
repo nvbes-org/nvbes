@@ -2,13 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FACTOR_ADD_ACTIONS } from './MfaPage.shared';
 
-export function MfaPageAddFactorCard({
-  hasRecovery,
-  onNavigate,
-}: {
-  hasRecovery: boolean;
-  onNavigate: (path: string) => void;
-}) {
+export function MfaPageAddFactorCard({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <Card className="animate-fade-slide-up [animation-delay:300ms]">
       <CardHeader>
@@ -17,7 +11,7 @@ export function MfaPageAddFactorCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         {FACTOR_ADD_ACTIONS.map((action) => {
-          if (action.path === '/account/mfa/recovery-codes' && hasRecovery) {
+          if (action.path === '/account/mfa/recovery-codes') {
             return null;
           }
           return (
@@ -32,6 +26,36 @@ export function MfaPageAddFactorCard({
             </Button>
           );
         })}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function MfaPageRecoveryCodesCard({
+  hasRecovery,
+  onNavigate,
+}: {
+  hasRecovery: boolean;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <Card className="animate-fade-slide-up [animation-delay:350ms]">
+      <CardHeader>
+        <CardTitle>Codes de récupération</CardTitle>
+        <CardDescription>
+          {hasRecovery
+            ? 'Gardez vos codes dans un endroit sûr et régénérez-les si nécessaire.'
+            : 'Générez des codes de secours pour récupérer votre accès.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          variant={hasRecovery ? 'outline' : 'default'}
+          className="w-full justify-start"
+          onClick={() => onNavigate('/account/mfa/recovery-codes')}
+        >
+          {hasRecovery ? 'Régénérer les codes' : 'Générer les codes'}
+        </Button>
       </CardContent>
     </Card>
   );

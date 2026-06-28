@@ -13,7 +13,7 @@ import { logoutIdentitySessionMutationFn } from '@/identity.auth.queries';
 
 function LayoutSkeleton() {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-[calc(100vh-3.5rem)]">
       <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex flex-col">
         <div className="flex items-center gap-3 px-4 pt-5 pb-4">
           <Skeleton className="size-10 rounded-full" />
@@ -40,7 +40,7 @@ export default function AccountLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const { me, accounts, workspaces, loading } = useAccountContext();
+  const { me, workspaces, loading } = useAccountContext();
   const logoutMutation = useMutation({ mutationFn: logoutIdentitySessionMutationFn });
   const currentWorkspaceRole =
     workspaces.find((workspace) => workspace.id === me?.current_workspace_id)?.role ?? null;
@@ -60,7 +60,7 @@ export default function AccountLayout() {
   if (loading) return <LayoutSkeleton />;
   if (!me) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="flex flex-col gap-3 text-center">
           <p className="text-sm text-muted-foreground">Session expiree</p>
           <Button
@@ -77,15 +77,10 @@ export default function AccountLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-[calc(100vh-3.5rem)] bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex md:flex-col">
-        <AccountSidebar
-          accounts={accounts}
-          loadingAccounts={loading}
-          currentWorkspaceRole={currentWorkspaceRole}
-          onLogout={handleLogout}
-        />
+        <AccountSidebar currentWorkspaceRole={currentWorkspaceRole} onLogout={handleLogout} />
       </aside>
 
       {/* Mobile top bar + Sheet */}
@@ -100,12 +95,7 @@ export default function AccountLayout() {
             </SheetTrigger>
             <SheetContent side="left" className="w-60 p-0">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <AccountSidebar
-                accounts={accounts}
-                loadingAccounts={loading}
-                currentWorkspaceRole={currentWorkspaceRole}
-                onLogout={handleLogout}
-              />
+              <AccountSidebar currentWorkspaceRole={currentWorkspaceRole} onLogout={handleLogout} />
             </SheetContent>
           </Sheet>
           <span className="text-sm font-heading font-medium truncate">Mon compte</span>

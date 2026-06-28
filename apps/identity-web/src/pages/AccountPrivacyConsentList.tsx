@@ -3,7 +3,12 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ConsentEmptyState, ConsentRow, consentLabels } from './AccountPrivacyPage.shared';
+import {
+  ConsentEmptyState,
+  ConsentRow,
+  consentLabels,
+  isVisibleConsentType,
+} from './AccountPrivacyPage.shared';
 
 export function AccountPrivacyConsentList({
   consents,
@@ -12,8 +17,9 @@ export function AccountPrivacyConsentList({
   consents: UserConsent[];
   onRevoke: (consent: UserConsent) => void;
 }) {
+  const visibleConsents = consents.filter((consent) => isVisibleConsentType(consent.consent_type));
   const listRef = useRef<HTMLDivElement>(null);
-  const rowCount = consents.length > 0 ? consents.length * 2 - 1 : 0;
+  const rowCount = visibleConsents.length > 0 ? visibleConsents.length * 2 - 1 : 0;
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => listRef.current,
@@ -30,7 +36,7 @@ export function AccountPrivacyConsentList({
         </CardDescription>
       </CardHeader>
       <CardContent ref={listRef} className="max-h-[32rem] overflow-auto p-0">
-        {consents.length === 0 ? (
+        {visibleConsents.length === 0 ? (
           <ConsentEmptyState />
         ) : (
           <div
@@ -54,7 +60,7 @@ export function AccountPrivacyConsentList({
                 );
               }
 
-              const consent = consents[Math.floor(virtualItem.index / 2)];
+              const consent = visibleConsents[Math.floor(virtualItem.index / 2)];
               const label = consentLabels[consent.consent_type] ?? consent.consent_type;
 
               return (

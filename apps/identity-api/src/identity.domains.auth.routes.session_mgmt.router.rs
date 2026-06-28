@@ -2,7 +2,8 @@ use crate::app::AppState;
 use axum::Router;
 
 use super::{
-    forget_account_cookie, get_accounts, list_sessions, logout, me, me_delete, me_export,
+    forget_account_cookie, get_accounts, list_sessions, logout, me, me_delete, me_email_delete,
+    me_email_promote, me_email_resend_verification, me_emails_get, me_emails_post, me_export,
     me_export_download, me_notifications_get, me_notifications_put, me_preferences_get,
     me_preferences_put, me_update, revoke_all_other_sessions, revoke_session, step_up,
     switch_workspace,
@@ -55,6 +56,38 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
         .route(
             "/me",
             axum::routing::patch(me_update).layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                crate::http::middleware::jwt::jwt_auth_middleware,
+            )),
+        )
+        .route(
+            "/me/emails",
+            axum::routing::get(me_emails_get)
+                .post(me_emails_post)
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    crate::http::middleware::jwt::jwt_auth_middleware,
+                )),
+        )
+        .route(
+            "/me/emails/{emailId}/promote",
+            axum::routing::post(me_email_promote).layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                crate::http::middleware::jwt::jwt_auth_middleware,
+            )),
+        )
+        .route(
+            "/me/emails/{emailId}/resend-verification",
+            axum::routing::post(me_email_resend_verification).layer(
+                axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    crate::http::middleware::jwt::jwt_auth_middleware,
+                ),
+            ),
+        )
+        .route(
+            "/me/emails/{emailId}",
+            axum::routing::delete(me_email_delete).layer(axum::middleware::from_fn_with_state(
                 state.clone(),
                 crate::http::middleware::jwt::jwt_auth_middleware,
             )),

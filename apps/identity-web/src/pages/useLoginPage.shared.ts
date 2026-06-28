@@ -25,7 +25,13 @@ export function nextAuthUser(accounts: AccountEntry[]) {
 }
 
 export function preferredMfaMethod(methods: string[] | null | undefined): MfaMethod | null {
-  return methods?.includes('webauthn') ? 'webauthn' : null;
+  if (methods?.includes('webauthn')) {
+    return 'webauthn';
+  }
+  if (methods?.includes('totp')) {
+    return 'totp';
+  }
+  return methods?.length === 1 && methods[0] === 'email' ? 'email' : null;
 }
 
 export function consentCancelUrl(request: OAuthAuthorizeRequest): string {

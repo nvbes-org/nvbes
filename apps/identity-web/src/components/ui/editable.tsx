@@ -1,6 +1,7 @@
 'use client';
 
-import { Direction as DirectionPrimitive, Slot as SlotPrimitive } from 'radix-ui';
+import * as DirectionPrimitive from '@radix-ui/react-direction';
+import * as SlotPrimitive from '@radix-ui/react-slot';
 import * as React from 'react';
 import { useComposedRefs } from '@/lib/compose-refs';
 import { cn } from '@/lib/utils';
@@ -292,7 +293,7 @@ function Editable(props: EditableProps) {
     ],
   );
 
-  const RootPrimitive = asChild ? SlotPrimitive.Slot : 'div';
+  const RootPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'div';
 
   return (
     <StoreContext.Provider value={store}>
@@ -328,7 +329,7 @@ function EditableLabel(props: EditableLabelProps) {
   const { asChild, className, children, ref, ...labelProps } = props;
   const context = useEditableContext(LABEL_NAME);
 
-  const LabelPrimitive = asChild ? SlotPrimitive.Slot : 'label';
+  const LabelPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'label';
 
   return (
     <LabelPrimitive
@@ -359,7 +360,7 @@ function EditableArea(props: EditableAreaProps) {
   const context = useEditableContext(AREA_NAME);
   const editing = useStore((state) => state.editing);
 
-  const AreaPrimitive = asChild ? SlotPrimitive.Slot : 'div';
+  const AreaPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'div';
 
   return (
     <AreaPrimitive
@@ -457,7 +458,7 @@ function EditablePreview(props: EditablePreviewProps) {
     [propsRef, onTrigger, context.onEnterKeyDown],
   );
 
-  const PreviewPrimitive = asChild ? SlotPrimitive.Slot : 'div';
+  const PreviewPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'div';
 
   if (editing || context.readOnly) return null;
 
@@ -617,7 +618,7 @@ function EditableInput(props: EditableInputProps) {
     };
   }, [editing, onAutosize, isDisabled, isReadOnly]);
 
-  const InputPrimitive = asChild ? SlotPrimitive.Slot : 'input';
+  const InputPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'input';
 
   if (!editing && !isReadOnly) return null;
 
@@ -664,7 +665,7 @@ function EditableTrigger(props: EditableTriggerProps) {
     context.onEdit();
   }, [context.disabled, context.readOnly, context.onEdit]);
 
-  const TriggerPrimitive = asChild ? SlotPrimitive.Slot : 'button';
+  const TriggerPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'button';
 
   if (!forceMount && (editing || context.readOnly)) return null;
 
@@ -693,7 +694,7 @@ function EditableToolbar(props: EditableToolbarProps) {
   const { asChild, className, orientation = 'horizontal', ref, ...toolbarProps } = props;
   const context = useEditableContext(TOOLBAR_NAME);
 
-  const ToolbarPrimitive = asChild ? SlotPrimitive.Slot : 'div';
+  const ToolbarPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'div';
 
   return (
     <ToolbarPrimitive
@@ -734,7 +735,7 @@ function EditableCancel(props: EditableCancelProps) {
     [propsRef, context.onCancel, context.disabled, context.readOnly],
   );
 
-  const CancelPrimitive = asChild ? SlotPrimitive.Slot : 'button';
+  const CancelPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'button';
 
   if (!editing && !context.readOnly) return null;
 
@@ -776,7 +777,7 @@ function EditableSubmit(props: EditableSubmitProps) {
     [propsRef, context.onSubmit, value, context.disabled, context.readOnly],
   );
 
-  const SubmitPrimitive = asChild ? SlotPrimitive.Slot : 'button';
+  const SubmitPrimitive: React.ElementType = asChild ? SlotPrimitive.Slot : 'button';
 
   if (!editing && !context.readOnly) return null;
 

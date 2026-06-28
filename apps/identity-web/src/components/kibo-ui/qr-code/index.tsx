@@ -11,6 +11,7 @@ export type QRCodeProps = HTMLAttributes<HTMLDivElement> & {
   foreground?: string;
   background?: string;
   robustness?: 'L' | 'M' | 'Q' | 'H';
+  margin?: number;
 };
 
 const oklchRegex = /oklch\(([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\)/;
@@ -34,6 +35,7 @@ export const QRCode = ({
   foreground,
   background,
   robustness = 'M',
+  margin = 4,
   className,
   ...props
 }: QRCodeProps) => {
@@ -57,7 +59,7 @@ export const QRCode = ({
           },
           width: 200,
           errorCorrectionLevel: robustness,
-          margin: 0,
+          margin,
         });
 
         setSVG(newSvg);
@@ -67,7 +69,7 @@ export const QRCode = ({
     };
 
     void generateQR();
-  }, [data, foreground, background, robustness]);
+  }, [data, foreground, background, robustness, margin]);
 
   if (!svg) {
     return null;

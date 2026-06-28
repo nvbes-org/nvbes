@@ -9,10 +9,8 @@ pub struct IdentifierRequest {
     pub device_fingerprint: Option<serde_json::Value>,
     pub bot_guard: Option<crate::domains::auth::bot_guard::BotGuardProof>,
     pub bot_signals: Option<crate::domains::auth::bot_signals::BotSignals>,
-    #[serde(default)]
-    pub pow_nonce: Option<String>,
-    #[serde(default)]
-    pub pow_solution: Option<String>,
+    pub pow_nonce: String,
+    pub pow_solution: String,
     #[serde(default)]
     pub decoy_link_clicked: Option<bool>,
 }
@@ -34,10 +32,16 @@ pub struct PwdRequest {
 pub struct MfaRequest {
     pub state_token: Uuid,
     pub totp_code: Option<String>,
+    pub email_code: Option<String>,
     pub recovery_code: Option<String>,
     #[schema(value_type = Object)]
     pub webauthn_response: Option<PublicKeyCredential>,
     pub webauthn_challenge_id: Option<Uuid>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct EmailMfaSendRequest {
+    pub state_token: Uuid,
 }
 
 #[derive(Deserialize, ToSchema)]

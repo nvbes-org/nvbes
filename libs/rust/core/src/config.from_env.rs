@@ -197,6 +197,22 @@ impl AppConfig {
                 .ok()
                 .map(|v| v == "true")
                 .unwrap_or(true),
+            otp_provider: optional_env("NVBES_OTP_PROVIDER").unwrap_or_else(|| {
+                if optional_env("NVBES_TWILIO_VERIFY_SERVICE_SID").is_some() {
+                    "twilio_verify".to_string()
+                } else {
+                    "mock".to_string()
+                }
+            }),
+            twilio_verify_service_sid: optional_env("NVBES_TWILIO_VERIFY_SERVICE_SID"),
+            twilio_api_base_url: env_or_default(
+                "NVBES_TWILIO_API_BASE_URL",
+                std::env::var("NVBES_TWILIO_API_BASE_URL").ok(),
+                "https://verify.twilio.com",
+                false,
+            )?,
+            twilio_account_sid: optional_env("NVBES_TWILIO_ACCOUNT_SID"),
+            twilio_auth_token: optional_env("NVBES_TWILIO_AUTH_TOKEN"),
             storage_enabled: std::env::var("STORAGE_ENABLED")
                 .ok()
                 .map(|v| v == "true")

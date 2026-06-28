@@ -102,6 +102,41 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
         strict_mode,
         true,
     )?;
+    urls::validate_public_url(
+        "NVBES_TWILIO_API_BASE_URL",
+        &config.twilio_api_base_url,
+        strict_mode,
+        true,
+    )?;
+    match config.otp_provider.as_str() {
+        "mock" => {
+            if strict_mode {
+                return Err("NVBES_OTP_PROVIDER=mock is forbidden outside development".to_string());
+            }
+        }
+        "twilio_verify" => {
+            if config.twilio_account_sid.is_none() {
+                return Err(
+                    "NVBES_TWILIO_ACCOUNT_SID is required when NVBES_OTP_PROVIDER=twilio_verify"
+                        .to_string(),
+                );
+            }
+            if config.twilio_auth_token.is_none() {
+                return Err(
+                    "NVBES_TWILIO_AUTH_TOKEN is required when NVBES_OTP_PROVIDER=twilio_verify"
+                        .to_string(),
+                );
+            }
+            if config.twilio_verify_service_sid.is_none() {
+                return Err("NVBES_TWILIO_VERIFY_SERVICE_SID is required when NVBES_OTP_PROVIDER=twilio_verify".to_string());
+            }
+        }
+        provider => {
+            return Err(format!(
+                "Unsupported NVBES_OTP_PROVIDER={provider}. Supported values: mock, twilio_verify"
+            ));
+        }
+    }
     if config.billing_mollie_enabled && config.mollie_api_key.is_none() {
         return Err(
             "NVBES_MOLLIE_API_KEY is required when NVBES_MOLLIE_ENABLED is true".to_string(),

@@ -10,11 +10,28 @@ import { verifiedFetchJson } from './verified-fetch';
 const HealthReleaseSchema = z.object({
   release_id: z.string().optional().nullable(),
 });
+type HealthRelease = z.infer<typeof HealthReleaseSchema>;
+
+const healthReleaseChecks = new Map<string, Promise<HealthRelease>>();
 
 export interface VersionMismatchBannerProps {
   frontendBuildId: string | null | undefined;
   healthUrl: string;
   appName: string;
+}
+
+function loadHealthRelease(healthUrl: string): Promise<HealthRelease> {
+  const existing = healthReleaseChecks.get(healthUrl);
+  if (existing) {
+    return existing;
+  }
+
+  const check = verifiedFetchJson(healthUrl, HealthReleaseSchema, {
+    allowedOrigins: [healthUrl],
+    cache: 'no-store',
+  });
+  healthReleaseChecks.set(healthUrl, check);
+  return check;
 }
 
 export function VersionMismatchBanner({
@@ -29,10 +46,7 @@ export function VersionMismatchBanner({
 
     async function checkVersion(): Promise<void> {
       try {
-        const health = await verifiedFetchJson(healthUrl, HealthReleaseSchema, {
-          allowedOrigins: [healthUrl],
-          cache: 'no-store',
-        });
+        const health = await loadHealthRelease(healthUrl);
         if (cancelled) {
           return;
         }

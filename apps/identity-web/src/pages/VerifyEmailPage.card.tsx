@@ -52,18 +52,20 @@ export function VerifyEmailCard({
         <CardContent className="flex flex-col gap-5">
           {message ? <VerifyEmailStatusBanner status={status} message={message} /> : null}
 
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="verification-email">Email du compte</Label>
-            <Input
-              id="verification-email"
-              type="email"
-              value={emailDraft}
-              onChange={(event) => onEmailDraftChange(event.target.value)}
-              autoComplete="email"
-              disabled={emailLocked}
-              placeholder="adresse@email.com"
-            />
-          </div>
+          {!verified ? (
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="verification-email">Email du compte</Label>
+              <Input
+                id="verification-email"
+                type="email"
+                value={emailDraft}
+                onChange={(event) => onEmailDraftChange(event.target.value)}
+                autoComplete="email"
+                disabled={emailLocked}
+                placeholder="adresse@email.com"
+              />
+            </div>
+          ) : null}
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 sm:flex-row">
@@ -90,11 +92,7 @@ export function VerifyEmailCard({
                     ? `Renvoyer dans ${resendInSeconds}s`
                     : 'Renvoyer la vérification'}
             </Button>
-          ) : (
-            <Button type="button" className="w-full sm:flex-1" disabled>
-              Vérifié
-            </Button>
-          )}
+          ) : null}
         </CardFooter>
       </Card>
     </div>

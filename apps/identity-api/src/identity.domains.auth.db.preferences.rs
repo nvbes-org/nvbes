@@ -63,6 +63,7 @@ pub async fn fetch_user_notifications(
         email: notifications["email"].as_bool().unwrap_or(true),
         push: notifications["push"].as_bool().unwrap_or(true),
         in_app: notifications["in_app"].as_bool().unwrap_or(true),
+        marketing_email: notifications["marketing_email"].as_bool().unwrap_or(false),
     })
 }
 
@@ -75,6 +76,7 @@ pub async fn update_user_notifications(
         "email": input.email,
         "push": input.push,
         "in_app": input.in_app,
+        "marketing_email": input.marketing_email,
     });
 
     sqlx::query("UPDATE users SET notifications = $2, updated_at = NOW() WHERE principal_id = $1")

@@ -1,16 +1,18 @@
-import { TrackingConsentToggle } from '@nvbes/web-runtime';
 import { Badge } from '@/components/ui/badge';
 import type { CookieConsentState } from '../tracking-consent';
-import { essentialVendors, analyticsPurposes } from './CookieConsentSettings.shared';
+import {
+  analyticsVendors,
+  essentialVendors,
+  performanceVendors,
+} from './CookieConsentSettings.shared';
+import { TrackingConsentToggle } from './TrackingConsentToggle';
 
 export function CookieConsentEssentialSection() {
   return (
     <div className="space-y-2 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="flex items-center gap-1.5 font-semibold text-foreground">
-            <span>🔒</span> Essentiels et Sécurité
-          </p>
+          <p className="font-semibold text-foreground">Essentiels et Sécurité</p>
           <p className="mt-0.5 text-muted-foreground">
             Nécessaires au fonctionnement technique et à la sécurité.
           </p>
@@ -34,12 +36,10 @@ export function CookieConsentAnalyticsSection({
   cookieConsent,
   onToggleCategory,
   onToggleVendor,
-  onToggleAnalyticsPurpose,
 }: {
   cookieConsent: CookieConsentState;
   onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
   onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
-  onToggleAnalyticsPurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
     <div className="space-y-3 p-4">
@@ -51,23 +51,15 @@ export function CookieConsentAnalyticsSection({
         large
       />
       <div className="space-y-2 border-t border-border/20 px-2">
-        <TrackingConsentToggle
-          checked={cookieConsent.vendors.analytics}
-          onChange={() => onToggleVendor('analytics')}
-          label="Analytics"
-          description="Active ou désactive toutes les finalités Analytics."
-        />
-        {analyticsPurposes
-          .filter((purpose) => purpose.key !== 'errorTracking')
-          .map((purpose) => (
-            <TrackingConsentToggle
-              key={purpose.key}
-              checked={cookieConsent.analytics[purpose.key]}
-              onChange={() => onToggleAnalyticsPurpose(purpose.key)}
-              label={purpose.label}
-              description={purpose.description}
-            />
-          ))}
+        {analyticsVendors.map((vendor) => (
+          <TrackingConsentToggle
+            key={vendor.key}
+            checked={cookieConsent.vendors[vendor.key]}
+            onChange={() => onToggleVendor(vendor.key)}
+            label={vendor.label}
+            description={vendor.description}
+          />
+        ))}
       </div>
     </div>
   );
@@ -77,15 +69,11 @@ export function CookieConsentPerformanceSection({
   cookieConsent,
   onToggleCategory,
   onToggleVendor,
-  onToggleAnalyticsPurpose,
 }: {
   cookieConsent: CookieConsentState;
   onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
   onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
-  onToggleAnalyticsPurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
-  const errorTracking = analyticsPurposes.find((purpose) => purpose.key === 'errorTracking');
-
   return (
     <div className="space-y-3 p-4">
       <TrackingConsentToggle
@@ -96,20 +84,15 @@ export function CookieConsentPerformanceSection({
         large
       />
       <div className="space-y-2 border-t border-border/20 px-2">
-        <TrackingConsentToggle
-          checked={cookieConsent.vendors.errorReporting}
-          onChange={() => onToggleVendor('errorReporting')}
-          label="Error reporting"
-          description="Rapports d'erreurs techniques."
-        />
-        {errorTracking ? (
+        {performanceVendors.map((vendor) => (
           <TrackingConsentToggle
-            checked={cookieConsent.analytics.errorTracking}
-            onChange={() => onToggleAnalyticsPurpose('errorTracking')}
-            label={errorTracking.label}
-            description={errorTracking.description}
+            key={vendor.key}
+            checked={cookieConsent.vendors[vendor.key]}
+            onChange={() => onToggleVendor(vendor.key)}
+            label={vendor.label}
+            description={vendor.description}
           />
-        ) : null}
+        ))}
       </div>
     </div>
   );

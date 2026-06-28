@@ -1,4 +1,5 @@
 use bb8_redis::{RedisConnectionManager, bb8};
+use std::future::Future;
 use std::time::Duration;
 use tracing::{info, warn};
 
@@ -14,6 +15,8 @@ pub enum RedisError {
     Command(#[from] redis::RedisError),
     #[error("Redis pool error: {0}")]
     Pool(#[from] bb8::RunError<redis::RedisError>),
+    #[error("Redis operation timed out: {0}")]
+    OperationTimeout(&'static str),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 }
@@ -25,6 +28,7 @@ impl RedisError {
             Self::Command(error) => redis_error_is_transient(error),
             Self::Pool(bb8::RunError::TimedOut) => true,
             Self::Pool(bb8::RunError::User(error)) => redis_error_is_transient(error),
+            Self::OperationTimeout(_) => true,
             Self::Json(_) => false,
         }
     }
@@ -106,8 +110,22 @@ fn redis_url_with_password(config: &RedisConfig) -> String {
 
 pub async fn health_check(pool: &RedisPool) -> Result<(), RedisError> {
     let mut conn = pool.get().await?;
-    let _: String = redis::cmd("PING").query_async(&mut *conn).await?;
+    let _: String = command_with_timeout(
+        "redis_health_ping",
+        redis::cmd("PING").query_async(&mut *conn),
+    )
+    .await?;
     Ok(())
+}
+
+pub async fn command_with_timeout<T, F>(operation: &'static str, future: F) -> Result<T, RedisError>
+where
+    F: Future<Output = redis::RedisResult<T>>,
+{
+    tokio::time::timeout(Duration::from_secs(5), future)
+        .await
+        .map_err(|_| RedisError::OperationTimeout(operation))?
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

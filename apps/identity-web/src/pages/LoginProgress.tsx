@@ -13,17 +13,18 @@ const STEPS: {
   { key: 'mfa', label: 'Vérification', icon: ShieldCheckIcon },
 ];
 
-export function LoginProgress({ step }: { step: LoginStep }) {
+export function LoginProgress({ isOAuthFlow, step }: { isOAuthFlow: boolean; step: LoginStep }) {
   if (step === 'consent' || step === 'chooser') {
     return null;
   }
-  const progressStep = step === 'webauthn' ? 'password' : step;
-  const stepIndex = STEPS.findIndex((s) => s.key === progressStep);
+  const steps = isOAuthFlow ? STEPS : STEPS.filter((s) => s.key !== 'mfa');
+  const progressStep = step === 'webauthn' || (!isOAuthFlow && step === 'mfa') ? 'password' : step;
+  const stepIndex = steps.findIndex((s) => s.key === progressStep);
 
   return (
-    <div className="mb-8">
+    <div className="mb-8" aria-label={`Connexion en ${steps.length} étapes`}>
       <div className="flex items-center gap-1.5">
-        {STEPS.map((s, i) => {
+        {steps.map((s, i) => {
           const active = progressStep === s.key;
           const complete =
             (s.key === 'identifier' && (progressStep === 'password' || progressStep === 'mfa')) ||
@@ -41,7 +42,7 @@ export function LoginProgress({ step }: { step: LoginStep }) {
               >
                 <Icon className="size-3.5" />
               </div>
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div
                   className={cn(
                     'h-px w-6 transition-colors duration-500 sm:w-8',
@@ -53,7 +54,9 @@ export function LoginProgress({ step }: { step: LoginStep }) {
           );
         })}
       </div>
-      <p className="mt-2 text-xs font-medium text-muted-foreground">{STEPS[stepIndex].label}</p>
+      {stepIndex >= 0 && (
+        <p className="mt-2 text-xs font-medium text-muted-foreground">{steps[stepIndex].label}</p>
+      )}
     </div>
   );
 }

@@ -103,7 +103,7 @@ describe('tracking consent sync', () => {
 
     let authenticated = false;
     let listConsentsCalls = 0;
-    let grantConsentCalls = 0;
+    const grantedConsentTypes: string[] = [];
 
     const api = createTrackingConsentApi({
       identityClient: {
@@ -111,8 +111,8 @@ describe('tracking consent sync', () => {
           listConsentsCalls += 1;
           return [];
         },
-        grantConsent: async () => {
-          grantConsentCalls += 1;
+        grantConsent: async (consentType) => {
+          grantedConsentTypes.push(consentType);
           return {};
         },
         revokeConsent: async () => ({}),
@@ -128,7 +128,51 @@ describe('tracking consent sync', () => {
     await api.syncTrackingConsent();
 
     expect(listConsentsCalls).toBe(1);
-    expect(grantConsentCalls).toBeGreaterThan(0);
+    expect(grantedConsentTypes).toContain('cookie_consent_analytics');
+    expect(grantedConsentTypes).toContain('cookie_consent_vendor_posthog');
+    expect(grantedConsentTypes).toContain('cookie_consent_vendor_sentry');
+    expect(grantedConsentTypes).toContain('cookie_consent_vendor_grafana');
+    expect(grantedConsentTypes.some((consentType) => consentType.startsWith('analytics_'))).toBe(
+      false,
+    );
+  });
+
+  it('revokes legacy feature consent rows instead of granting them again', async () => {
+    installTestWindow();
+    installStoredConsent(ACCEPT_ALL_CONSENT);
+
+    const revokedConsentTypes: string[] = [];
+
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [
+          {
+            consent_type: 'analytics_session_replay',
+            document_version: 'v3',
+            granted_at: new Date(Date.now() - 60_000).toISOString(),
+            revoked_at: null,
+          },
+          {
+            consent_type: 'cookie_consent_vendor_analytics',
+            document_version: 'v3',
+            granted_at: new Date(Date.now() - 60_000).toISOString(),
+            revoked_at: null,
+          },
+        ],
+        grantConsent: async () => ({}),
+        revokeConsent: async (consentType) => {
+          revokedConsentTypes.push(consentType);
+          return {};
+        },
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    await api.syncTrackingConsent();
+
+    expect(revokedConsentTypes).toContain('analytics_session_replay');
+    expect(revokedConsentTypes).toContain('cookie_consent_vendor_analytics');
   });
 
   it('updates the front when the backend consent change is newer', async () => {

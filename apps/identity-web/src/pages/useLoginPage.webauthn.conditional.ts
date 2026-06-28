@@ -34,7 +34,7 @@ export async function completeConditionalWebAuthnLogin({
     start.challenge_id,
     serializeCredential(credential),
   ).catch((error: unknown) => {
-    setError(error instanceof Error ? error.message : 'Connexion passkey impossible.');
+    setError(error instanceof Error ? error.message : 'Connexion biométrique impossible.');
     return null;
   });
   if (!result) {

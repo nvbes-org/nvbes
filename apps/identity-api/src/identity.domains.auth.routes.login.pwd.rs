@@ -1,14 +1,14 @@
 use crate::app::AppState;
 use crate::domains::auth::{
-    sessions,
-    state::{delete_state, fetch_state},
+    mfa, sessions,
+    state::{create_state, delete_state, fetch_state},
 };
 use crate::http::error::AppError;
 use axum::{
     Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::post,
 };
 use nvbes_core::http::error::ErrorEnvelope;
@@ -62,20 +62,42 @@ pub(crate) async fn challenge_pwd(
     let verified =
         sessions::verify_primary_credentials(&state.db, &state.redis, &state.config, &login_input)
             .await?;
-    if let Some(available_methods) =
-        super::identifier_flow::resolve_post_password_challenge(&state.db, verified.principal_id)
-            .await?
+    if let Some(available_methods) = super::identifier_flow::resolve_post_password_challenge(
+        &state.db,
+        verified.principal_id,
+        verified.risk_score,
+    )
+    .await?
     {
-        let response = super::challenge_response(
+        let mfa_state_token = create_state(
             &state.redis,
-            StatusCode::ACCEPTED,
             Some(verified.principal_id),
             &auth_state.email,
             "mfa",
             auth_state.device_fingerprint,
-            Some(available_methods),
         )
         .await?;
+
+        if available_methods.iter().any(|method| method == "email") {
+            mfa::email::send_login_code(
+                &state.db,
+                &state.redis,
+                mfa_state_token,
+                verified.principal_id,
+            )
+            .await?;
+        }
+
+        let response = (
+            StatusCode::ACCEPTED,
+            Json(IdentifierResult {
+                next_step: "mfa".to_string(),
+                state_token: mfa_state_token,
+                available_methods: Some(available_methods),
+            }),
+        )
+            .into_response();
+
         delete_state(&state.redis, request.state_token).await?;
         return Ok(response);
     }

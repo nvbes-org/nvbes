@@ -23,7 +23,7 @@ type RegionDetection = {
   reliability: 'high' | 'medium' | 'low' | 'none';
 };
 
-function detectRegionFromBrowser(supportedRegions: SupportedRegion[]): {
+export function detectRegionFromBrowser(supportedRegions: SupportedRegion[]): {
   region: string | null;
   reliability: 'medium' | 'low' | 'none';
 } {
@@ -67,7 +67,7 @@ export async function detectRegistrationRegion(): Promise<RegionDetection> {
       return { region: serverResult.region, reliability: 'high' };
     }
 
-    return detectRegionFromBrowser(await fetchSupportedRegions());
+    return { region: null, reliability: 'none' };
   } catch (error) {
     throw normalizeClientError(error);
   }
@@ -83,8 +83,8 @@ export async function loadSupportedRegions(): Promise<SupportedRegion[]> {
 
 export async function registerIdentityAccount(input: {
   data: RegisterInput;
-  powNonce?: string;
-  powSolution?: string;
+  powNonce: string;
+  powSolution: string;
 }): Promise<RegisterResult> {
   try {
     return await submitRegister(input.data, input.powNonce, input.powSolution);
@@ -95,8 +95,8 @@ export async function registerIdentityAccount(input: {
 
 export async function submitLoginIdentifierStep(vars: {
   email: string;
-  powNonce?: string;
-  powSolution?: string;
+  powNonce: string;
+  powSolution: string;
   decoy_link_clicked?: boolean;
 }): Promise<LoginIdentifierResult> {
   try {
@@ -132,6 +132,7 @@ export async function startLoginWebauthnStep(stateToken: string): Promise<Webaut
 
 export type LoginMfaStepInput =
   | { stateToken: string; totpCode: string }
+  | { stateToken: string; emailCode: string }
   | { stateToken: string; recoveryCode: string }
   | {
       stateToken: string;
@@ -146,6 +147,12 @@ export async function submitLoginMfaStep(
     if ('totpCode' in variables) {
       return await submitLoginMfa(variables.stateToken, {
         totp_code: variables.totpCode,
+      });
+    }
+
+    if ('emailCode' in variables) {
+      return await submitLoginMfa(variables.stateToken, {
+        email_code: variables.emailCode,
       });
     }
 

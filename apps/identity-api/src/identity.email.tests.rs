@@ -24,6 +24,23 @@ async fn test_verification_email_substitution() {
 }
 
 #[tokio::test]
+async fn test_development_mock_email_uses_default_sender() {
+    let mut config = mock_config();
+    config.email_from_email = None;
+    config.email_provider = "mock".to_string();
+    config.environment = "development".to_string();
+
+    let email = verification_email(&config, "shayn@nvbes.fr", "Shayn", "123")
+        .expect("mock development email should build without explicit sender");
+
+    assert_eq!(email.from.email, "dev@nvbes.local");
+    assert_eq!(
+        email.headers,
+        vec![("Reply-To".to_string(), "dev@nvbes.local".to_string())]
+    );
+}
+
+#[tokio::test]
 async fn test_password_reset_email_substitution() {
     let config = mock_config();
     let email = password_reset_email(&config, "shayn@nvbes.fr", "Shayn", "abc")

@@ -1,5 +1,5 @@
 use nvbes_billing::validate_plan_code;
-use nvbes_region::geo::{GeoLookupRecordContext, record_geo_resolution_tx};
+use nvbes_region::geo::{GeoLookupPurpose, GeoLookupRecordContext, record_geo_resolution_tx};
 use sqlx::PgPool;
 
 use super::db::{
@@ -44,7 +44,7 @@ pub async fn create_checkout_session(
     record_geo_resolution_tx(
         &mut tx,
         GeoLookupRecordContext {
-            purpose: "payment",
+            purpose: GeoLookupPurpose::Payment,
             subject_type: Some("workspace"),
             subject_id: Some(access.workspace_id),
             request_id: None,

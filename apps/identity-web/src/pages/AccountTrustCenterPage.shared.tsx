@@ -95,7 +95,7 @@ export function TrustCenterSecurityGrid({ trustCenter }: { trustCenter: TrustCen
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
           <MetricTile label="Facteurs actifs" value={trustCenter.mfa.active_factors} />
-          <MetricTile label="Passkeys" value={trustCenter.mfa.passkey_factors} />
+          <MetricTile label="Biométrie" value={trustCenter.mfa.passkey_factors} />
         </CardContent>
       </Card>
 

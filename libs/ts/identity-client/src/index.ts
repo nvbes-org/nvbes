@@ -123,6 +123,35 @@ const AccountMeSchema = z.object({
   current_workspace_region: NullableStringSchema,
 });
 
+const EmailAddressSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  is_primary: z.boolean(),
+  verified: z.boolean(),
+  verified_at: NullableStringSchema,
+  created_at: z.string(),
+});
+
+const EmailAddressesResponseSchema = z.object({
+  emails: z.array(EmailAddressSchema),
+  primary_min_age_hours: z.number(),
+});
+
+const AddSecondaryEmailResponseSchema = z.object({
+  email: EmailAddressSchema,
+  verification_resend_available_at: z.string(),
+});
+
+const ResendSecondaryEmailVerificationResponseSchema = z.object({
+  email: EmailAddressSchema,
+  verification_resend_available_at: z.string(),
+});
+
+const PromoteSecondaryEmailResponseSchema = z.object({
+  email: EmailAddressSchema,
+  user: AccountPrincipalSchema,
+});
+
 const AccountSessionSchema = z.object({
   id: z.string(),
   tenant_id: NullableStringSchema,
@@ -188,6 +217,13 @@ export type AccountMe = z.infer<typeof AccountMeSchema>;
 export type AccountSession = z.infer<typeof AccountSessionSchema>;
 export type AccountPrincipal = z.infer<typeof AccountPrincipalSchema>;
 export type AccountEntry = z.infer<typeof AccountEntrySchema>;
+export type EmailAddress = z.infer<typeof EmailAddressSchema>;
+export type EmailAddressesResponse = z.infer<typeof EmailAddressesResponseSchema>;
+export type AddSecondaryEmailResponse = z.infer<typeof AddSecondaryEmailResponseSchema>;
+export type ResendSecondaryEmailVerificationResponse = z.infer<
+  typeof ResendSecondaryEmailVerificationResponseSchema
+>;
+export type PromoteSecondaryEmailResponse = z.infer<typeof PromoteSecondaryEmailResponseSchema>;
 export type UserConsent = z.infer<typeof UserConsentSchema>;
 export type GpcStatus = z.infer<typeof GpcStatusSchema>;
 
@@ -210,6 +246,38 @@ export class IdentityClient {
 
   getMe(options?: { signal?: AbortSignal }): Promise<AccountMe> {
     return this.http.get<AccountMe>('/auth/me', AccountMeSchema, options);
+  }
+
+  listEmails(options?: RequestOptions): Promise<EmailAddressesResponse> {
+    return this.http.get('/auth/me/emails', EmailAddressesResponseSchema, options);
+  }
+
+  addSecondaryEmail(email: string): Promise<AddSecondaryEmailResponse> {
+    return this.http.post('/auth/me/emails', AddSecondaryEmailResponseSchema, { email });
+  }
+
+  promoteSecondaryEmail(emailId: string): Promise<PromoteSecondaryEmailResponse> {
+    return this.http.post(
+      `/auth/me/emails/${encodeURIComponent(emailId)}/promote`,
+      PromoteSecondaryEmailResponseSchema,
+      {},
+    );
+  }
+
+  resendSecondaryEmailVerification(
+    emailId: string,
+  ): Promise<ResendSecondaryEmailVerificationResponse> {
+    return this.http.post(
+      `/auth/me/emails/${encodeURIComponent(emailId)}/resend-verification`,
+      ResendSecondaryEmailVerificationResponseSchema,
+      {},
+    );
+  }
+
+  deleteSecondaryEmail(emailId: string): Promise<void> {
+    return this.http
+      .delete(`/auth/me/emails/${encodeURIComponent(emailId)}`, SuccessSchema)
+      .then(() => undefined);
   }
 
   listWorkspaces(options?: { signal?: AbortSignal }): Promise<AccountWorkspace[]> {

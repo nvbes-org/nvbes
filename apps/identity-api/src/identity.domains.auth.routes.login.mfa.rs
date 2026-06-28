@@ -12,10 +12,47 @@ use axum::{
 };
 use nvbes_core::http::error::ErrorEnvelope;
 
-use super::types::MfaRequest;
+use super::types::{EmailMfaSendRequest, MfaRequest};
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/challenge/mfa", post(challenge_mfa))
+    Router::new()
+        .route("/challenge/mfa", post(challenge_mfa))
+        .route("/challenge/mfa/email/send", post(send_email_mfa_code))
+}
+
+pub(crate) async fn send_email_mfa_code(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(request): Json<EmailMfaSendRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let meta = super::LoginRequestMeta::from_headers(&headers);
+    nvbes_core::limiter::check_rate_limit_pair(
+        &state.redis,
+        "auth_login_mfa_email_send",
+        nvbes_core::limiter::RateLimitRule {
+            key: &meta.rate_limit_ip_key(),
+            max_hits: 10,
+            window: std::time::Duration::from_secs(60),
+        },
+        nvbes_core::limiter::RateLimitRule {
+            key: &format!("state:{}", request.state_token),
+            max_hits: 5,
+            window: std::time::Duration::from_secs(300),
+        },
+    )
+    .await?;
+
+    let (_auth_state, principal_id) =
+        super::require_mfa_state(&state.redis, request.state_token).await?;
+    crate::domains::auth::mfa::email::send_login_code(
+        &state.db,
+        &state.redis,
+        request.state_token,
+        principal_id,
+    )
+    .await?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 #[utoipa::path(

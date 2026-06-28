@@ -1,6 +1,3 @@
-import { MapPinIcon } from 'lucide-react';
-
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -27,45 +24,51 @@ function countryCodeToFlag(code: string): string {
 
 export function RegionSelect({
   detectedRegion,
-  reliability,
+  id = 'register-region',
   loading,
   regions,
   value,
   onValueChange,
 }: {
   detectedRegion: string | null;
+  id?: string;
   reliability: 'high' | 'medium' | 'low' | 'none';
   loading: boolean;
   regions: SupportedRegion[];
   value: string;
   onValueChange: (value: string) => void;
 }) {
+  const currentRegion = regions.find((entry) => entry.country_code === value);
+  const fallbackRegion =
+    value && !currentRegion
+      ? {
+          country_code: value,
+          display_name: value,
+          sub_region: null,
+        }
+      : null;
+  const renderedRegions = fallbackRegion ? [fallbackRegion, ...regions] : regions;
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <Label htmlFor="register-region">Région</Label>
+        <Label htmlFor={id}>
+          Région <span className="text-destructive">*</span>
+        </Label>
         {loading && (
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Spinner className="size-3" />
             Détection en cours...
           </span>
         )}
-        {!loading && detectedRegion && (
-          <Badge variant={reliability === 'none' ? 'secondary' : 'outline'}>
-            <MapPinIcon data-icon="inline-start" />
-            Détecté (
-            {reliability === 'high' ? 'IP' : reliability === 'medium' ? 'Timezone' : 'Locale'}) :{' '}
-            {detectedRegion}
-          </Badge>
-        )}
       </div>
       <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger id="register-region" className="w-full">
+        <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Sélectionnez votre pays..." />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {regions.map((entry) => (
+            {renderedRegions.map((entry) => (
               <SelectItem key={entry.country_code} value={entry.country_code}>
                 <span className="flex items-center gap-2">
                   <span className="text-base leading-none">
@@ -81,11 +84,11 @@ export function RegionSelect({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
-        {detectedRegion
-          ? 'Région détectée automatiquement. Vous pouvez la modifier si nécessaire.'
-          : 'Sélectionnez le pays où vos données seront stockées.'}
-      </p>
+      {!detectedRegion && (
+        <p className="text-xs text-muted-foreground">
+          Sélectionnez le pays où vos données seront stockées.
+        </p>
+      )}
     </div>
   );
 }

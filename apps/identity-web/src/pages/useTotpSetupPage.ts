@@ -1,10 +1,10 @@
 import { confirmTotp, setupTotp } from '@nvbes/identity-sdk-web';
 import { useNavigate } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 export function useTotpSetupPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'stepup' | 'setup' | 'confirm' | 'done'>('stepup');
+  const [step, setStep] = useState<'stepup' | 'setup' | 'confirm'>('stepup');
   const [label, setLabel] = useState('');
   const [factorId, setFactorId] = useState('');
   const [secretBase32, setSecretBase32] = useState('');
@@ -42,21 +42,13 @@ export function useTotpSetupPage() {
 
     try {
       await confirmTotp('', factorId, totpCode);
-      setStep('done');
+      void navigate({ to: '/account/mfa/recovery-codes' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'TOTP confirmation failed');
     } finally {
       setLoading(false);
     }
   };
-
-  const qrUrl = useMemo(
-    () =>
-      provisioningUri
-        ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(provisioningUri)}`
-        : null,
-    [provisioningUri],
-  );
 
   return {
     step,
@@ -65,7 +57,7 @@ export function useTotpSetupPage() {
     totpCode,
     error,
     loading,
-    qrUrl,
+    qrData: provisioningUri || null,
     navigateBack: () => void navigate({ to: '/account/security' }),
     onStepUpSuccess: () => setStep('setup'),
     onLabelChange: setLabel,

@@ -31,6 +31,15 @@ export interface WebauthnRegisterFinishRequest {
   credential: unknown;
 }
 
+export interface MfaEmailAddress {
+  id: string;
+  email: string;
+  is_primary: boolean;
+  verified: boolean;
+  verified_at: string | null;
+  created_at: string;
+}
+
 function readCsrfToken(): string | undefined {
   if (typeof document === 'undefined') {
     return undefined;
@@ -60,10 +69,34 @@ function jsonAuthHeaders(token?: string, method = 'POST'): Headers {
   return headers;
 }
 
-async function handleResponse(response: Response, context: string): Promise<never> {
+const MFA_ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: 'Les informations saisies sont incorrectes.',
+  invalid_totp_code: "Le code d'authentification est incorrect.",
+  invalid_recovery_code: 'Le code de récupération est incorrect.',
+  invalid_email_mfa_code: 'Le code reçu par email est incorrect ou a expiré.',
+  email_mfa_not_configured: "La vérification par email n'est pas disponible pour ce compte.",
+  email_mfa_requires_verified_email: 'Ajoutez un email vérifié avant d’utiliser cette méthode.',
+  email_mfa_cannot_be_removed: 'La vérification par email est requise et ne peut pas être retirée.',
+  step_up_required: 'Confirmez votre identité pour continuer.',
+  step_up_expired: 'La vérification a expiré. Recommencez.',
+  webauthn_challenge_missing: 'La vérification par clé de sécurité doit être relancée.',
+  webauthn_challenge_expired: 'La demande de clé de sécurité a expiré. Recommencez.',
+  webauthn_verification_failed: 'La clé de sécurité n’a pas pu être vérifiée.',
+  mfa_factor_not_found: 'Cette méthode de vérification est introuvable.',
+  challenge_locked: 'Trop de tentatives. Réessayez dans quelques minutes.',
+  validation_failed: 'Vérifiez les informations saisies.',
+  unauthorized: 'Votre session a expiré. Reconnectez-vous.',
+  forbidden: 'Vous ne pouvez pas effectuer cette action.',
+};
+
+function mfaErrorMessage(code: string, fallback?: string) {
+  return MFA_ERROR_MESSAGES[code] ?? fallback ?? 'La vérification a échoué. Veuillez réessayer.';
+}
+
+async function handleResponse(response: Response, _context: string): Promise<never> {
   const body = await response.json().catch(() => ({}));
   const code = body?.error?.code ?? response.statusText;
-  throw new MfaError(code, `MFA ${context} failed: ${code}`, response.status);
+  throw new MfaError(code, mfaErrorMessage(code), response.status);
 }
 
 export class MfaError extends Error {
@@ -138,6 +171,41 @@ export async function confirmTotp(
 
   if (!response.ok) {
     return handleResponse(response, 'TOTP confirm');
+  }
+
+  return response.json();
+}
+
+export async function listEmailMfaEligible(
+  baseUrl: string,
+  token?: string,
+): Promise<{ emails: MfaEmailAddress[]; primary_min_age_hours: number }> {
+  const response = await fetch(`${baseUrl}/auth/mfa/email/eligible`, {
+    headers: authHeaders(token),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    return handleResponse(response, 'email eligible');
+  }
+
+  return response.json();
+}
+
+export async function setupEmailMfa(
+  baseUrl: string,
+  emailId: string,
+  token?: string,
+): Promise<{ factor: MfaFactorView; mfa_enabled: boolean }> {
+  const response = await fetch(`${baseUrl}/auth/mfa/email/setup`, {
+    method: 'POST',
+    headers: jsonAuthHeaders(token, 'POST'),
+    credentials: 'include',
+    body: JSON.stringify({ email_id: emailId }),
+  });
+
+  if (!response.ok) {
+    return handleResponse(response, 'email setup');
   }
 
   return response.json();
@@ -230,7 +298,7 @@ export async function startWebAuthnAuthentication(
   if (!data.challenge_id) {
     throw new MfaError(
       'webauthn_challenge_missing',
-      'MFA WebAuthn auth start failed: webauthn_challenge_missing',
+      mfaErrorMessage('webauthn_challenge_missing'),
       response.status,
     );
   }

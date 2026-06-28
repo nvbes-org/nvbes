@@ -1,9 +1,16 @@
 use super::{
     ACCEPT_CH_VALUE, CLEAR_SITE_DATA_VALUE, CRITICAL_CH_VALUE, NEL_VALUE, PERMISSIONS_POLICY_VALUE,
     REPORT_TO_VALUE, TIMING_ALLOW_ORIGIN_VALUE, insert_clear_site_data_header,
-    insert_security_headers,
+    insert_security_headers, no_cache_headers,
 };
-use axum::http::{HeaderMap, HeaderName, HeaderValue, header};
+use axum::{
+    Router,
+    body::Body,
+    http::{HeaderMap, HeaderName, HeaderValue, Request, Response, header},
+    middleware::from_fn,
+    routing::get,
+};
+use tower::ServiceExt;
 
 #[test]
 fn security_headers_requests_low_entropy_client_hints() {
@@ -128,4 +135,35 @@ fn security_headers_do_not_duplicate_vary_values() {
             "origin, accept-encoding, authorization"
         ))
     );
+}
+
+#[tokio::test]
+async fn no_cache_headers_preserve_explicit_cache_control() {
+    let app = Router::new()
+        .route(
+            "/cacheable",
+            get(|| async {
+                Response::builder()
+                    .header(header::CACHE_CONTROL, "public, max-age=60")
+                    .body(Body::empty())
+                    .expect("response should build")
+            }),
+        )
+        .layer(from_fn(no_cache_headers));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cacheable")
+                .body(Body::empty())
+                .expect("request should build"),
+        )
+        .await
+        .expect("request should succeed");
+
+    assert_eq!(
+        response.headers().get(header::CACHE_CONTROL),
+        Some(&HeaderValue::from_static("public, max-age=60"))
+    );
+    assert!(response.headers().get(header::PRAGMA).is_none());
 }

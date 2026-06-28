@@ -12,6 +12,8 @@ mod router_impl;
 
 #[path = "identity.domains.auth.routes.session_mgmt.accounts.rs"]
 pub mod accounts;
+#[path = "identity.domains.auth.routes.session_mgmt.emails.rs"]
+pub mod emails;
 #[path = "identity.domains.auth.routes.session_mgmt.export.rs"]
 pub mod export;
 #[path = "identity.domains.auth.routes.session_mgmt.profile.rs"]
@@ -114,6 +116,55 @@ pub(crate) async fn revoke_all_other_sessions(
     Extension(auth): Extension<AuthContext>,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, crate::http::error::AppError> {
     sessions::revoke_all_other_sessions(State(state), Extension(auth)).await
+}
+
+pub(crate) async fn me_emails_get(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Json<crate::domains::auth::types::EmailAddressesResult>, crate::http::error::AppError> {
+    emails::me_emails_get(State(state), Extension(auth)).await
+}
+
+pub(crate) async fn me_emails_post(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(request): Json<crate::domains::auth::types::AddSecondaryEmailInput>,
+) -> Result<Json<crate::domains::auth::types::AddSecondaryEmailResult>, crate::http::error::AppError>
+{
+    emails::me_emails_post(State(state), Extension(auth), Json(request)).await
+}
+
+pub(crate) async fn me_email_promote(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(email_id): Path<uuid::Uuid>,
+) -> Result<
+    Json<crate::domains::auth::types::PromoteSecondaryEmailResult>,
+    crate::http::error::AppError,
+> {
+    emails::me_email_promote(State(state), Extension(auth), Path(email_id)).await
+}
+
+pub(crate) async fn me_email_resend_verification(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(email_id): Path<uuid::Uuid>,
+) -> Result<
+    Json<crate::domains::auth::types::ResendSecondaryEmailVerificationResult>,
+    crate::http::error::AppError,
+> {
+    emails::me_email_resend_verification(State(state), Extension(auth), Path(email_id)).await
+}
+
+pub(crate) async fn me_email_delete(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(email_id): Path<uuid::Uuid>,
+) -> Result<
+    Json<crate::domains::auth::types::DeleteSecondaryEmailResult>,
+    crate::http::error::AppError,
+> {
+    emails::me_email_delete(State(state), Extension(auth), Path(email_id)).await
 }
 
 #[utoipa::path(

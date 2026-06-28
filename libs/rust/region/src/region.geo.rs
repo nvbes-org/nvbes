@@ -41,7 +41,8 @@ pub use intelligence_http::{
 pub use ip::{is_private_or_special_ip, parse_ip};
 pub use maintenance::{GeoMaintenanceReport, run_geo_maintenance, run_geo_maintenance_tx};
 pub use persistence::{
-    GeoLookupRecordContext, load_personal_geo_database_tx, record_geo_resolution_tx,
+    GeoLookupPurpose, GeoLookupRecordContext, load_personal_geo_database_tx,
+    record_geo_resolution_tx,
 };
 pub use personal::{
     PersonalGeoRangeView, PersonalGeoStoreError, UpsertPersonalGeoRangeInput,

@@ -6,6 +6,13 @@ import type {
 } from '@nvbes/identity-client';
 import { accountQueryKeys } from '@/account.queries';
 
+export interface AccountPersonalInfoQueryData {
+  user: AccountPrincipal;
+  current_workspace_region: string | null;
+  current_workspace_id: string | null;
+  workspaces: AccountWorkspace[];
+}
+
 export function getAccountPersonalInfoQueryKey() {
   return accountQueryKeys.personalInfo;
 }
@@ -41,8 +48,4 @@ export function formatMemberSince(createdAt: string | undefined) {
     month: 'long',
     day: 'numeric',
   });
-}
-
-export function getFullName(user: AccountPrincipal | null) {
-  return [user?.firstname, user?.lastname].filter(Boolean).join(' ') || user?.display_name || '';
 }

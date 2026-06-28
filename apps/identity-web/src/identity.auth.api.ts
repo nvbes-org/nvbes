@@ -58,14 +58,47 @@ export type WebauthnAuthStartResult = z.infer<typeof WebauthnAuthStartResultSche
 
 export type RegisterInput = {
   email: string;
-  firstname?: string;
-  lastname?: string;
+  firstname: string;
+  lastname: string;
   username: string;
   birthdate?: string;
   password: string;
   workspace_name: string;
   region?: string;
+  legal_documents_accepted: boolean;
+  marketing_emails_accepted: boolean;
 };
+
+const AUTH_REQUEST_TIMEOUT_MS = 20_000;
+
+class AuthRequestTimeoutError extends Error {
+  constructor(label: string) {
+    super(`${label} n'a pas répondu à temps. Vérifiez que l'API Identity est bien disponible.`);
+    this.name = 'AuthRequestTimeoutError';
+  }
+}
+
+async function withAuthRequestTimeout<T>(
+  label: string,
+  request: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => {
+    controller.abort(new AuthRequestTimeoutError(label));
+  }, AUTH_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await request(controller.signal);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const reason = controller.signal.reason;
+      throw reason instanceof Error ? reason : new AuthRequestTimeoutError(label);
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
+}
 
 export function detectRegion(): Promise<{ region: string | null }> {
   return identityHttpClient.get('/auth/region', RegionResultSchema);
@@ -77,26 +110,42 @@ export function fetchSupportedRegions(): Promise<SupportedRegion[]> {
 
 export function submitRegister(
   input: RegisterInput,
-  powNonce?: string,
-  powSolution?: string,
+  powNonce: string,
+  powSolution: string,
 ): Promise<RegisterResult> {
-  return identityHttpClient.post('/auth/register', RegisterResultSchema, {
-    ...input,
-    ...(powNonce ? { pow_nonce: powNonce, pow_solution: powSolution } : {}),
-  });
+  return withAuthRequestTimeout("L'inscription", (signal) =>
+    identityHttpClient.post(
+      '/auth/register',
+      RegisterResultSchema,
+      {
+        ...input,
+        pow_nonce: powNonce,
+        pow_solution: powSolution,
+      },
+      { signal },
+    ),
+  );
 }
 
 export function submitLoginIdentifier(
   email: string,
-  powNonce?: string,
-  powSolution?: string,
+  powNonce: string,
+  powSolution: string,
   decoyLinkClicked?: boolean,
 ): Promise<LoginIdentifierResult> {
-  return identityHttpClient.post('/auth/challenge/identifier', LoginIdentifierResultSchema, {
-    email,
-    ...(powNonce ? { pow_nonce: powNonce, pow_solution: powSolution } : {}),
-    ...(decoyLinkClicked !== undefined ? { decoy_link_clicked: decoyLinkClicked } : {}),
-  });
+  return withAuthRequestTimeout("L'identification", (signal) =>
+    identityHttpClient.post(
+      '/auth/challenge/identifier',
+      LoginIdentifierResultSchema,
+      {
+        email,
+        pow_nonce: powNonce,
+        pow_solution: powSolution,
+        ...(decoyLinkClicked !== undefined ? { decoy_link_clicked: decoyLinkClicked } : {}),
+      },
+      { signal },
+    ),
+  );
 }
 
 export function submitLoginPassword(
@@ -142,6 +191,14 @@ export function submitLoginMfa(
   input:
     | {
         totp_code: string;
+        email_code?: never;
+        recovery_code?: never;
+        webauthn_response?: never;
+        webauthn_challenge_id?: never;
+      }
+    | {
+        email_code: string;
+        totp_code?: never;
         recovery_code?: never;
         webauthn_response?: never;
         webauthn_challenge_id?: never;
@@ -149,6 +206,7 @@ export function submitLoginMfa(
     | {
         recovery_code: string;
         totp_code?: never;
+        email_code?: never;
         webauthn_response?: never;
         webauthn_challenge_id?: never;
       }
@@ -156,6 +214,7 @@ export function submitLoginMfa(
         webauthn_response: unknown;
         webauthn_challenge_id: string;
         totp_code?: never;
+        email_code?: never;
         recovery_code?: never;
       },
 ): Promise<LoginPasswordResult> {

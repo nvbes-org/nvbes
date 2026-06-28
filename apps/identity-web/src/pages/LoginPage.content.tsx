@@ -1,6 +1,6 @@
 import type { LoginPageContentProps } from './LoginPage.content.types';
-import { LoginPageFooter } from './LoginPage.forms';
-import { LoginPageCard, LoginPageLoading, LoginPageMobileBrand } from './LoginPage.layout';
+import { LoginPageFooter, LoginPageLegalLinks } from './LoginPage.forms';
+import { LoginPageCard, LoginPageLoading } from './LoginPage.layout';
 import { LoginProgress } from './LoginProgress';
 import { LoginPageStepContent } from './LoginPage.step';
 
@@ -20,21 +20,25 @@ export function LoginPageContent({
   handlePasswordSubmit,
   handleUseAnotherAccount,
   hasRecovery,
+  hasEmail,
   hasTotp,
   hasWebAuthn,
   loading,
   identifierSubmitting,
   location,
   hostedConsent,
+  isOAuthFlow,
   mfaMethod,
   oauthRequest,
   password,
+  emailCode,
   recoveryCode,
   resetToIdentifier,
   setEmail,
   setError,
   setMfaMethod,
   setPassword,
+  setEmailCode,
   setRecoveryCode,
   setTotpCode,
   step,
@@ -49,9 +53,7 @@ export function LoginPageContent({
     <>
       <div className="flex flex-1 items-center justify-center bg-muted/30 p-4 sm:p-8">
         <div className="w-full max-w-sm animate-fade-slide-up [animation-delay:150ms]">
-          <LoginPageMobileBrand />
-
-          <LoginProgress step={step} />
+          <LoginProgress isOAuthFlow={isOAuthFlow} step={step} />
 
           <LoginPageCard
             key={step}
@@ -78,6 +80,7 @@ export function LoginPageContent({
               handlePasswordSubmit={handlePasswordSubmit}
               handleUseAnotherAccount={handleUseAnotherAccount}
               hasRecovery={hasRecovery}
+              hasEmail={hasEmail}
               hasTotp={hasTotp}
               hasWebAuthn={hasWebAuthn}
               loading={loading}
@@ -86,18 +89,21 @@ export function LoginPageContent({
               mfaMethod={mfaMethod}
               oauthRequest={oauthRequest}
               password={password}
+              emailCode={emailCode}
               recoveryCode={recoveryCode}
               resetToIdentifier={resetToIdentifier}
               setEmail={setEmail}
               setError={setError}
               setMfaMethod={setMfaMethod}
               setPassword={setPassword}
+              setEmailCode={setEmailCode}
               setRecoveryCode={setRecoveryCode}
               setTotpCode={setTotpCode}
               step={step}
               totpCode={totpCode}
             />
           </LoginPageCard>
+          <LoginPageLegalLinks />
         </div>
       </div>
     </>

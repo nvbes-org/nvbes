@@ -4,13 +4,14 @@ import type { LoginPageMfaStepProps } from './LoginPageMfaStep.types';
 
 export function LoginPageMfaMethodChoices({
   hasTotp,
+  hasEmail,
   hasWebAuthn,
   hasRecovery,
   availableCount,
   onMfaMethodSelect,
 }: Pick<
   LoginPageMfaStepProps,
-  'hasTotp' | 'hasWebAuthn' | 'hasRecovery' | 'availableCount' | 'onMfaMethodSelect'
+  'hasTotp' | 'hasEmail' | 'hasWebAuthn' | 'hasRecovery' | 'availableCount' | 'onMfaMethodSelect'
 >) {
   return (
     <div className="flex flex-col gap-2">
@@ -42,6 +43,16 @@ export function LoginPageMfaMethodChoices({
         >
           <MailIcon className="size-4 text-muted-foreground" />
           Code de récupération
+        </Button>
+      )}
+      {hasEmail && (
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3"
+          onClick={() => onMfaMethodSelect('email')}
+        >
+          <MailIcon className="size-4 text-muted-foreground" />
+          Code par email
         </Button>
       )}
       {availableCount === 0 && (

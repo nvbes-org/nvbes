@@ -12,19 +12,21 @@ export const consentLabels: Record<string, string> = {
   cookie_consent_performance: 'Cookies de performance',
   cookie_consent_vendor_stripe: 'Cookie Stripe',
   cookie_consent_vendor_identity: 'Cookie nvbes Identity',
-  cookie_consent_vendor_analytics: 'Cookie Analytics',
-  cookie_consent_vendor_error_reporting: 'Cookie error reporting',
-  analytics_product_analytics: 'Analytics produit',
-  analytics_autocapture_heatmaps: 'Analytics heatmaps & autocapture',
-  analytics_session_replay: 'Analytics session replay',
-  analytics_surveys_feedback: 'Analytics surveys & feedback',
-  analytics_error_tracking: 'Analytics error tracking',
-  analytics_feature_flags: 'Analytics feature flags',
+  cookie_consent_vendor_cloudflare: 'Cookie Cloudflare',
+  cookie_consent_vendor_posthog: 'Cookie PostHog',
+  cookie_consent_vendor_sentry: 'Cookie Sentry',
+  cookie_consent_vendor_grafana: 'Cookie Grafana Labs',
+  cookie_consent_vendor_analytics: 'Cookie Analytics legacy',
+  cookie_consent_vendor_error_reporting: 'Cookie error reporting legacy',
   marketing_emails: 'Emails marketing',
   data_processing: 'Traitement des donnees',
   third_party_sharing: 'Partage avec des tiers',
   gpc_opt_out: 'Global Privacy Control — Ne pas vendre mes donnees',
 };
+
+export function isVisibleConsentType(consentType: string): boolean {
+  return !consentType.startsWith('analytics_');
+}
 
 export function ConsentEmptyState() {
   return (

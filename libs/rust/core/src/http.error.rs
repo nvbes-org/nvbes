@@ -20,6 +20,22 @@ pub struct ErrorBody {
     pub request_id: Option<String>,
 }
 
+pub fn public_error_message(status: StatusCode, message: String) -> String {
+    if status == StatusCode::INTERNAL_SERVER_ERROR {
+        "Internal server error.".to_string()
+    } else {
+        message
+    }
+}
+
+pub fn public_error_code(status: StatusCode, code: String) -> String {
+    if status == StatusCode::INTERNAL_SERVER_ERROR {
+        "internal_error".to_string()
+    } else {
+        code
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct AppError {
     pub status: StatusCode,
@@ -90,18 +106,31 @@ impl AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         use axum::http::header;
+        let status = self.status;
+        let code = self.code;
+        let request_id = self.request_id;
+        if status == StatusCode::INTERNAL_SERVER_ERROR {
+            tracing::error!(
+                error.code = %code,
+                error.message = %self.message,
+                error.request_id = request_id.as_deref().unwrap_or(""),
+                "internal API error"
+            );
+        }
+        let code = public_error_code(status, code);
+        let message = public_error_message(status, self.message);
         let mut response = (
-            self.status,
+            status,
             Json(ErrorEnvelope {
                 error: ErrorBody {
-                    code: self.code,
-                    message: self.message,
-                    request_id: self.request_id,
+                    code,
+                    message,
+                    request_id,
                 },
             }),
         )
             .into_response();
-        if self.status == StatusCode::TOO_MANY_REQUESTS {
+        if status == StatusCode::TOO_MANY_REQUESTS {
             if let Some(seconds) = self.retry_after_seconds {
                 response
                     .headers_mut()
@@ -203,18 +232,31 @@ macro_rules! impl_app_error {
         impl IntoResponse for AppError {
             fn into_response(self) -> Response {
                 use axum::http::header;
+                let status = self.status;
+                let code = self.code;
+                let request_id = self.request_id;
+                if status == StatusCode::INTERNAL_SERVER_ERROR {
+                    tracing::error!(
+                        error.code = %code,
+                        error.message = %self.message,
+                        error.request_id = request_id.as_deref().unwrap_or(""),
+                        "internal API error"
+                    );
+                }
+                let code = $crate::http::error::public_error_code(status, code);
+                let message = $crate::http::error::public_error_message(status, self.message);
                 let mut response = (
-                    self.status,
+                    status,
                     Json(ErrorEnvelope {
                         error: ErrorBody {
-                            code: self.code,
-                            message: self.message,
-                            request_id: self.request_id,
+                            code,
+                            message,
+                            request_id,
                         },
                     }),
                 )
                     .into_response();
-                if self.status == StatusCode::TOO_MANY_REQUESTS {
+                if status == StatusCode::TOO_MANY_REQUESTS {
                     if let Some(seconds) = self.retry_after_seconds {
                         response
                             .headers_mut()
@@ -245,7 +287,7 @@ macro_rules! impl_app_error {
 
 #[cfg(test)]
 mod tests {
-    use super::AppError;
+    use super::{AppError, public_error_code, public_error_message};
     use axum::http::StatusCode;
 
     #[test]
@@ -264,5 +306,39 @@ mod tests {
 
         assert_eq!(error.status, StatusCode::TOO_MANY_REQUESTS);
         assert_eq!(error.retry_after_seconds, Some(30));
+    }
+
+    #[test]
+    fn public_error_message_hides_internal_details() {
+        let message = public_error_message(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "database constraint geo_lookup_events_purpose_check failed".to_string(),
+        );
+
+        assert_eq!(message, "Internal server error.");
+    }
+
+    #[test]
+    fn public_error_message_preserves_client_errors() {
+        let message = public_error_message(StatusCode::BAD_REQUEST, "Invalid email.".to_string());
+
+        assert_eq!(message, "Invalid email.");
+    }
+
+    #[test]
+    fn public_error_code_hides_internal_codes() {
+        let code = public_error_code(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "database_error".to_string(),
+        );
+
+        assert_eq!(code, "internal_error");
+    }
+
+    #[test]
+    fn public_error_code_preserves_client_error_codes() {
+        let code = public_error_code(StatusCode::BAD_REQUEST, "invalid_email".to_string());
+
+        assert_eq!(code, "invalid_email");
     }
 }

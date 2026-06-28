@@ -1,5 +1,6 @@
 use nvbes_region::geo::{
-    GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx, resolve_cached_geo_tx,
+    GeoLookupPurpose, GeoLookupRecordContext, GeoResolution, record_geo_resolution_tx,
+    resolve_cached_geo_tx,
 };
 use serde_json::Value;
 use sqlx::{Postgres, Transaction};
@@ -16,7 +17,7 @@ pub async fn enrich_audit_metadata_tx(
     record_geo_resolution_tx(
         tx,
         GeoLookupRecordContext {
-            purpose: "drive_audit",
+            purpose: GeoLookupPurpose::DriveAudit,
             subject_type: Some("workspace"),
             subject_id: Some(workspace_id),
             request_id: Some(action),

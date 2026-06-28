@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  deriveConsentState,
-  toggleConsentCategory,
-  toggleConsentAnalyticsPurpose,
-  toggleConsentVendor,
-  type AnalyticsPurpose,
-} from '@nvbes/web-runtime';
+import { deriveConsentState, toggleConsentCategory, toggleConsentVendor } from '@nvbes/web-runtime';
 import {
   DEFAULT_CONSENT,
   getTrackingConsent,
@@ -44,13 +38,6 @@ export function CookieConsentSettings() {
     );
   };
 
-  const toggleAnalyticsPurpose = (purpose: AnalyticsPurpose) => {
-    persistConsent(
-      toggleConsentAnalyticsPurpose(cookieConsent, purpose),
-      `identity-web:account-privacy:analytics:${purpose}`,
-    );
-  };
-
   return (
     <div className="space-y-4">
       <CookieConsentEssentialSection />
@@ -58,13 +45,11 @@ export function CookieConsentSettings() {
         cookieConsent={cookieConsent}
         onToggleCategory={toggleCategory}
         onToggleVendor={toggleVendor}
-        onToggleAnalyticsPurpose={toggleAnalyticsPurpose}
       />
       <CookieConsentPerformanceSection
         cookieConsent={cookieConsent}
         onToggleCategory={toggleCategory}
         onToggleVendor={toggleVendor}
-        onToggleAnalyticsPurpose={toggleAnalyticsPurpose}
       />
     </div>
   );

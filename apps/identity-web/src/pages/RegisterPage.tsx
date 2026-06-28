@@ -14,7 +14,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-[calc(100vh-3.5rem)]">
       <RegisterBrandPanel />
       <RegisterPageShell
         title={page.step === 1 ? 'Créer un compte' : 'Espace de travail'}

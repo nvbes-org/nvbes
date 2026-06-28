@@ -18,7 +18,7 @@ const WEBAUTHN_TIMEOUT_MS = 60_000;
 export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
   const navigate = useNavigate();
   const copy = setupCopy[kind];
-  const [step, setStep] = useState<'stepup' | 'register' | 'done'>('stepup');
+  const [step, setStep] = useState<'stepup' | 'register'>('stepup');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,7 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
       await registerWebAuthnCredential('', label || undefined, kind, undefined, {
         timeoutMs: WEBAUTHN_TIMEOUT_MS,
       });
-      setStep('done');
+      void navigate({ to: '/account/mfa/recovery-codes' });
     } catch (err) {
       if (err instanceof Error && err.message.includes('step_up_required')) {
         setStep('stepup');

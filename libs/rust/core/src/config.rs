@@ -88,6 +88,13 @@ pub struct AppConfig {
     #[serde(skip_serializing)]
     pub smtp_password: Option<String>,
     pub smtp_starttls: bool,
+    pub otp_provider: String,
+    pub twilio_verify_service_sid: Option<String>,
+    pub twilio_api_base_url: String,
+    #[serde(skip_serializing)]
+    pub twilio_account_sid: Option<String>,
+    #[serde(skip_serializing)]
+    pub twilio_auth_token: Option<String>,
     pub storage_enabled: bool,
     pub storage_bucket: String,
     pub storage_endpoint: Option<String>,

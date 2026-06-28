@@ -1055,11 +1055,15 @@ CREATE INDEX idx_email_messages_business_type ON email_messages(business_type);
 
 -- Migration: 0004_user_profile_fields.sql
 ALTER TABLE users
-    ADD COLUMN firstname VARCHAR(255),
-    ADD COLUMN lastname VARCHAR(255),
+    ADD COLUMN firstname VARCHAR(255) NOT NULL,
+    ADD COLUMN lastname VARCHAR(255) NOT NULL,
     ADD COLUMN username VARCHAR(100),
     ADD COLUMN birthdate DATE,
     ADD COLUMN region CHAR(2);
+
+ALTER TABLE users
+    ADD CONSTRAINT users_firstname_not_blank CHECK (btrim(firstname) <> ''),
+    ADD CONSTRAINT users_lastname_not_blank CHECK (btrim(lastname) <> '');
 
 CREATE UNIQUE INDEX idx_users_username ON users(username) WHERE username IS NOT NULL;
 

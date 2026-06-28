@@ -12,6 +12,6 @@ export async function syncDriveServiceWorkerErrorReportingConsent() {
 
   activeWorker.postMessage({
     type: ERROR_REPORTING_CONSENT_MESSAGE,
-    errorReportingAccepted: isVendorAccepted('errorReporting'),
+    errorReportingAccepted: isVendorAccepted('sentry') || isVendorAccepted('grafana'),
   });
 }

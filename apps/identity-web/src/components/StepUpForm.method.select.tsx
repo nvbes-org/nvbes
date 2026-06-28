@@ -42,7 +42,7 @@ export function StepUpMethodSelect({
             {hasWebAuthn && (
               <SelectItem value="webauthn" className="text-xs">
                 <span className="flex items-center gap-2">
-                  <KeyRound className="size-3.5" /> Passkey / Clé de sécurité
+                  <KeyRound className="size-3.5" /> Biométrie / Clé de sécurité
                 </span>
               </SelectItem>
             )}

@@ -1,5 +1,5 @@
 import StepUpForm from '@/components/StepUpForm';
-import { TotpConfirmCard, TotpSetupCard, TotpSetupSuccessCard } from './TotpSetupPage.shared';
+import { TotpConfirmCard, TotpSetupCard } from './TotpSetupPage.shared';
 import { useTotpSetupPage } from './useTotpSetupPage';
 
 export default function TotpSetupPage() {
@@ -10,7 +10,7 @@ export default function TotpSetupPage() {
     totpCode,
     error,
     loading,
-    qrUrl,
+    qrData,
     navigateBack,
     onStepUpSuccess,
     onLabelChange,
@@ -47,7 +47,7 @@ export default function TotpSetupPage() {
   if (step === 'confirm') {
     return (
       <TotpConfirmCard
-        qrUrl={qrUrl}
+        qrData={qrData}
         secretBase32={secretBase32}
         totpCode={totpCode}
         error={error}
@@ -59,5 +59,5 @@ export default function TotpSetupPage() {
     );
   }
 
-  return <TotpSetupSuccessCard onBack={navigateBack} />;
+  return null;
 }

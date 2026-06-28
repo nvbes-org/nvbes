@@ -1,5 +1,6 @@
 use super::AppConfig;
 use super::env::env_or_default;
+use super::validation::validate_config_urls_and_secrets;
 use super::validation::{
     validate_grafana_export_path, validate_ip_intelligence, validate_jwt_secret,
     validate_observability_internal_token, validate_positive_integer, validate_product_analytics,
@@ -210,6 +211,60 @@ fn validate_request_e2ee_requires_strong_secret() {
         validate_request_e2ee(&config, false).expect_err("short E2EE secret must be rejected");
 
     assert!(error.contains("32"));
+}
+
+#[test]
+fn validate_config_rejects_mock_otp_outside_development() {
+    let config = AppConfig {
+        environment: "production".to_string(),
+        web_base_url: "https://app.example.com".to_string(),
+        api_base_url: "https://api.example.com".to_string(),
+        billing_default_success_url: "https://app.example.com/billing/success".to_string(),
+        billing_default_cancel_url: "https://app.example.com/billing/cancel".to_string(),
+        billing_default_portal_return_url: "https://app.example.com/billing".to_string(),
+        webauthn_rp_origin: "https://app.example.com".to_string(),
+        webauthn_rp_id: "app.example.com".to_string(),
+        stripe_api_base_url: "https://api.stripe.com".to_string(),
+        mollie_api_base_url: "https://api.mollie.com".to_string(),
+        twilio_api_base_url: "https://verify.twilio.com".to_string(),
+        database_url: "postgres://postgres:postgres@db.example.com:5432/nvbes?sslmode=require"
+            .to_string(),
+        jwt_secret: "a-very-long-production-jwt-secret-value".to_string(),
+        observability_internal_token: Some("a-very-long-observability-token-value".to_string()),
+        otp_provider: "mock".to_string(),
+        ..AppConfig::default()
+    };
+
+    let error = validate_config_urls_and_secrets(&config)
+        .expect_err("strict mode must reject mock OTP provider");
+
+    assert!(error.contains("NVBES_OTP_PROVIDER=mock"));
+}
+
+#[test]
+fn validate_config_requires_twilio_verify_credentials() {
+    let config = AppConfig {
+        environment: "development".to_string(),
+        web_base_url: "http://localhost:5173".to_string(),
+        api_base_url: "http://localhost:4000".to_string(),
+        billing_default_success_url: "http://localhost:5173/billing/success".to_string(),
+        billing_default_cancel_url: "http://localhost:5173/billing/cancel".to_string(),
+        billing_default_portal_return_url: "http://localhost:5173/billing".to_string(),
+        webauthn_rp_origin: "http://localhost:3001".to_string(),
+        webauthn_rp_id: "localhost".to_string(),
+        stripe_api_base_url: "https://api.stripe.com".to_string(),
+        mollie_api_base_url: "https://api.mollie.com".to_string(),
+        database_url: "postgres://postgres:postgres@localhost:5432/nvbes".to_string(),
+        jwt_secret: "default-secret-change-me".to_string(),
+        otp_provider: "twilio_verify".to_string(),
+        twilio_api_base_url: "https://verify.twilio.com".to_string(),
+        ..AppConfig::default()
+    };
+
+    let error = validate_config_urls_and_secrets(&config)
+        .expect_err("twilio provider must require credentials");
+
+    assert!(error.contains("NVBES_TWILIO_ACCOUNT_SID"));
 }
 
 #[test]

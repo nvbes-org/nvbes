@@ -1,3 +1,5 @@
+import { CircleOffIcon } from 'lucide-react';
+
 export function LoginBrandPanel() {
   return (
     <div className="relative hidden w-[45%] overflow-hidden lg:block">
@@ -13,14 +15,14 @@ export function LoginBrandPanel() {
       />
       <div className="relative z-10 flex h-full flex-col justify-between p-12 xl:p-16">
         <div className="animate-fade-slide-up">
-          <div className="mb-16 inline-flex size-10 items-center justify-center rounded-xl bg-primary/15">
-            <div className="size-4 rounded bg-primary" />
+          <div className="mb-16 inline-flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <CircleOffIcon className="size-5 stroke-[2.5]" aria-hidden="true" />
           </div>
           <h2 className="text-4xl font-bold leading-tight tracking-tight text-foreground/85">
             nvbes
           </h2>
           <p className="mt-4 max-w-xs text-base leading-relaxed text-muted-foreground">
-            Identity & access management for modern teams. Secure. Simple. Scalable.
+            Votre cloud, sans dispersion, prêt à grandir avec votre équipe.
           </p>
         </div>
         <div className="animate-fade-slide-up [animation-delay:200ms]">

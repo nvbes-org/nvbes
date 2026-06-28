@@ -16,6 +16,8 @@ pub mod challenge_proof;
 pub mod data_export;
 #[path = "identity.domains.auth.db.rs"]
 pub mod db;
+#[path = "identity.domains.auth.email_addresses.rs"]
+pub mod email_addresses;
 #[path = "identity.domains.auth.email_verification.rs"]
 pub mod email_verification;
 #[path = "identity.domains.auth.email_verification.change.rs"]
@@ -46,6 +48,14 @@ pub mod mfa;
 pub mod mfa_policy;
 #[path = "identity.domains.auth.onboarding.rs"]
 pub mod onboarding;
+#[path = "identity.domains.auth.otp.mock.rs"]
+pub mod otp_mock;
+#[path = "identity.domains.auth.otp.provider.rs"]
+pub mod otp_provider;
+#[path = "identity.domains.auth.otp.twilio.rs"]
+pub mod otp_twilio;
+#[path = "identity.domains.auth.otp.types.rs"]
+pub mod otp_types;
 #[path = "identity.domains.auth.password.rs"]
 pub mod password;
 #[path = "identity.domains.auth.pow.rs"]

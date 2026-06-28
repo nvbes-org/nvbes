@@ -11,12 +11,15 @@ export function LoginPageMfaStep({
   loading,
   mfaMethod,
   hasTotp,
+  hasEmail,
   hasWebAuthn,
   hasRecovery,
   availableCount,
   totpCode,
+  emailCode,
   recoveryCode,
   onTotpCodeChange,
+  onEmailCodeChange,
   onRecoveryCodeChange,
   onMfaMethodSelect,
   onMfaSubmit,
@@ -28,6 +31,7 @@ export function LoginPageMfaStep({
       {!mfaMethod ? (
         <LoginPageMfaMethodChoices
           hasTotp={hasTotp}
+          hasEmail={hasEmail}
           hasWebAuthn={hasWebAuthn}
           hasRecovery={hasRecovery}
           availableCount={availableCount}
@@ -39,8 +43,10 @@ export function LoginPageMfaStep({
           loading={loading}
           mfaMethod={mfaMethod}
           totpCode={totpCode}
+          emailCode={emailCode}
           recoveryCode={recoveryCode}
           onTotpCodeChange={onTotpCodeChange}
+          onEmailCodeChange={onEmailCodeChange}
           onRecoveryCodeChange={onRecoveryCodeChange}
           onMfaSubmit={onMfaSubmit}
           onBackToMethodSelect={onBackToMethodSelect}

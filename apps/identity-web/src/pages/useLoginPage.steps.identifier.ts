@@ -1,6 +1,7 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 
 import type { MfaMethod } from './LoginPage.mfa';
+import type { PowChallengeProof } from '../identity.auth.pow';
 import { isInvalidSignatureError } from './LoginPage.errors';
 import { normalizeMfaMethods } from './LoginPage.mfa';
 import { preferredMfaMethod, requestsMfa } from './useLoginPage.shared';
@@ -9,7 +10,7 @@ import type { IdentifierMutateAsync, ResetMfaState } from './useLoginPage.steps.
 type SubmitIdentifierStepOptions = {
   email: string;
   decoyLinkClicked: boolean;
-  powChallenge: { powNonce?: string; powSolution?: string };
+  powChallenge: PowChallengeProof;
   submitIdentifier: IdentifierMutateAsync;
   resetMfaState: ResetMfaState;
   setLoginStateToken: (value: string | null) => void;

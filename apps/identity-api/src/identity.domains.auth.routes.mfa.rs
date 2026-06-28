@@ -5,6 +5,8 @@ use axum::{
     routing::get,
 };
 
+#[path = "identity.domains.auth.routes.mfa.email.rs"]
+pub mod email;
 #[path = "identity.domains.auth.routes.mfa.recovery.rs"]
 pub mod recovery;
 #[path = "identity.domains.auth.routes.mfa.totp.rs"]
@@ -50,6 +52,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             )),
         )
         .merge(totp::router(state))
+        .merge(email::router(state))
         .merge(webauthn::router(state))
         .merge(recovery::router(state))
 }

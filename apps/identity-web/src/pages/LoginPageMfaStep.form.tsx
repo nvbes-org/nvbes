@@ -9,8 +9,10 @@ export function LoginPageMfaMethodForm({
   loading,
   mfaMethod,
   totpCode,
+  emailCode,
   recoveryCode,
   onTotpCodeChange,
+  onEmailCodeChange,
   onRecoveryCodeChange,
   onMfaSubmit,
   onBackToMethodSelect,
@@ -20,8 +22,10 @@ export function LoginPageMfaMethodForm({
   | 'loading'
   | 'mfaMethod'
   | 'totpCode'
+  | 'emailCode'
   | 'recoveryCode'
   | 'onTotpCodeChange'
+  | 'onEmailCodeChange'
   | 'onRecoveryCodeChange'
   | 'onMfaSubmit'
   | 'onBackToMethodSelect'
@@ -40,6 +44,24 @@ export function LoginPageMfaMethodForm({
             maxLength={6}
             value={totpCode}
             onChange={(event) => onTotpCodeChange(event.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+      )}
+
+      {mfaMethod === 'email' && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email-mfa-code">Code reçu par email</Label>
+          <Input
+            id="email-mfa-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="000000"
+            maxLength={6}
+            value={emailCode}
+            onChange={(event) => onEmailCodeChange(event.target.value)}
             required
             autoFocus
           />

@@ -31,6 +31,9 @@ pub async fn issue_verification_email_tx(
         redis,
         &nvbes_redis::email_verification::CachedEmailVerificationToken {
             principal_id,
+            email_address_id: None,
+            email: None,
+            purpose: "primary_email".to_string(),
             token_hash: token_hash(verification_token),
             created_at: now,
             expires_at,

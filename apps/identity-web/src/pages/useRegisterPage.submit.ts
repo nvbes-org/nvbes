@@ -19,6 +19,8 @@ interface RegisterSubmitArgs {
   password: string;
   workspaceName: string;
   canProceedFromStep1: boolean;
+  legalDocumentsAccepted: boolean;
+  marketingEmailsAccepted: boolean;
   onSuccess: (args: { email: string; resendAvailableAt: string | null }) => void;
 }
 
@@ -34,6 +36,8 @@ export function useRegisterPageSubmit({
   password,
   workspaceName,
   canProceedFromStep1,
+  legalDocumentsAccepted,
+  marketingEmailsAccepted,
   onSuccess,
 }: RegisterSubmitArgs) {
   const registerMutation = useMutation({
@@ -44,7 +48,7 @@ export function useRegisterPageSubmit({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!canProceedFromStep1) {
+    if (!canProceedFromStep1 || !legalDocumentsAccepted) {
       return;
     }
 
@@ -56,13 +60,15 @@ export function useRegisterPageSubmit({
       const result = await registerMutation.mutateAsync({
         data: {
           email,
-          firstname: firstname || undefined,
-          lastname: lastname || undefined,
+          firstname: firstname.trim(),
+          lastname: lastname.trim(),
           username,
           birthdate: birthdate || undefined,
           password,
           workspace_name: workspaceName,
           region: selectedRegion || undefined,
+          legal_documents_accepted: legalDocumentsAccepted,
+          marketing_emails_accepted: marketingEmailsAccepted,
         },
         ...(await resolvePowChallenge(identityApiBaseUrl)),
       });

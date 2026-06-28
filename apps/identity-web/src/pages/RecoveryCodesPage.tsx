@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { listMfaFactors } from '@nvbes/identity-sdk-web';
+import { useEffect, useState } from 'react';
 import { downloadRecoveryCodes, generateCodesWithPassword } from './RecoveryCodesPage.actions';
 import { RecoveryCodesListStep } from './RecoveryCodesPage.list';
 import { RecoveryCodesPasswordStep } from './RecoveryCodesPage.password';
@@ -8,11 +9,36 @@ import { RecoveryCodesStepUp } from './RecoveryCodesPage.stepup';
 export default function RecoveryCodesPage() {
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<'stepup' | 'password' | 'codes'>('stepup');
+  const [step, setStep] = useState<'loading' | 'stepup' | 'password' | 'codes'>('loading');
   const [password, setPassword] = useState('');
   const [codes, setCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    listMfaFactors('')
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        const hasRecovery = result.factors.some(
+          (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
+        );
+        setStep(hasRecovery ? 'stepup' : 'password');
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStep('stepup');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,11 +59,15 @@ export default function RecoveryCodesPage() {
     downloadRecoveryCodes(codes);
   };
 
+  if (step === 'loading') {
+    return null;
+  }
+
   if (step === 'stepup') {
     return (
       <RecoveryCodesStepUp
         onSuccess={() => setStep('password')}
-        onCancel={() => void navigate({ to: '/account/security' })}
+        onCancel={() => void navigate({ to: '/account/mfa' })}
       />
     );
   }
@@ -48,7 +78,7 @@ export default function RecoveryCodesPage() {
         error={error}
         loading={loading}
         password={password}
-        onCancel={() => void navigate({ to: '/account/security' })}
+        onCancel={() => void navigate({ to: '/account/mfa' })}
         onPasswordChange={setPassword}
         onSubmit={handleGenerate}
       />
@@ -58,7 +88,7 @@ export default function RecoveryCodesPage() {
   return (
     <RecoveryCodesListStep
       codes={codes}
-      onBack={() => void navigate({ to: '/account/security' })}
+      onBack={() => void navigate({ to: '/account/mfa' })}
       onDownload={download}
     />
   );

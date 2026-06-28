@@ -32,6 +32,7 @@ pub async fn list_workspaces(
           wp.require_admin_approval_for_member_share,
           wp.default_share_link_ttl_days,
           wp.max_share_link_ttl_days,
+          wp.mfa_policy,
           w.created_at,
           w.updated_at
         FROM workspace_memberships wm

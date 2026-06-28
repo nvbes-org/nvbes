@@ -14,14 +14,12 @@ pub(crate) async fn enforce_identifier_request_guards(
     meta: &LoginRequestMeta,
     request: &IdentifierRequest,
 ) -> Result<(), AppError> {
-    if config.auth_pow_enabled {
-        crate::domains::auth::challenge_proof::require_pow_solution(
-            db,
-            request.pow_nonce.as_deref(),
-            request.pow_solution.as_deref(),
-        )
-        .await?;
-    }
+    crate::domains::auth::challenge_proof::require_pow_solution(
+        db,
+        Some(request.pow_nonce.as_str()),
+        Some(request.pow_solution.as_str()),
+    )
+    .await?;
 
     if request.decoy_link_clicked == Some(true) {
         return Err(AppError::forbidden(

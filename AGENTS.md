@@ -88,6 +88,7 @@ pub mod routes;
 ```
 
 **Règles** :
+
 - Tous les fichiers `.rs` sont dans `src/` (pas de sous-répertoires profonds)
 - Le préfixe (`identity.`, `drive.`) identifie la crate
 - Le suffixe (`service`, `routes`, `db`) identifie la couche
@@ -95,9 +96,9 @@ pub mod routes;
 
 ## Limites de taille de fichier
 
-| Seuil | Action |
-|-------|--------|
-| 300 lignes | Envisager l'extraction |
+| Seuil      | Action                    |
+| ---------- | ------------------------- |
+| 300 lignes | Envisager l'extraction    |
 | 500 lignes | **Obligation** d'extraire |
 
 Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier entièrement sans diluer son attention.
@@ -167,10 +168,16 @@ pnpm nx:affected
 5. **CSS pur / CSS Modules** — UNIQUEMENT en dernier recours, si Tailwind n'est pas disponible ou incompatible
 
 **RÈGLES IMPÉRATIVES :**
+
 - **NE JAMAIS** faire de solution "fait maison" (custom from scratch) avant d'avoir épuisé les 4 premiers niveaux
 - Tout composant custom DOIT être justifié par écrit (pourquoi rien des niveaux 1-4 ne convient)
 - Pour **TOUT NOUVEAU site web** : installer **impérativement** dans cet ordre → `tailwindcss` → `shadcn/ui` → registries nécessaires
 - Pas d'exception, pas de "vite fait" — la hiérarchie est non-négociable
+
+### Styling et design frontend
+
+- Éviter de nester des cards dans des cards. Une card doit représenter un bloc autonome; pour structurer l'intérieur d'une card, préférer des sections, listes, bordures, séparateurs, fonds subtils ou layouts non cardés.
+- Éviter les emojis dans l'interface. Les icônes de composants ou de bibliothèques (ex: Lucide) restent autorisées; l'emoji cookie est toléré uniquement pour les éléments liés aux cookies.
 
 ### Conception LLM-friendly
 

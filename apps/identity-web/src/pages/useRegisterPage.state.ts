@@ -23,6 +23,21 @@ export function useRegisterPageState() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [workspaceName, setWorkspaceName] = useState('');
+  const [workspaceNameEdited, setWorkspaceNameEdited] = useState(false);
+  const [legalDocumentsAccepted, setLegalDocumentsAccepted] = useState(false);
+  const [marketingEmailsAccepted, setMarketingEmailsAccepted] = useState(false);
+
+  const defaultWorkspaceName = useMemo(() => {
+    const trimmedUsername = username.trim();
+    return trimmedUsername ? `Espace de travail de ${trimmedUsername}` : '';
+  }, [username]);
+
+  const currentWorkspaceName = workspaceNameEdited ? workspaceName : defaultWorkspaceName;
+
+  const updateWorkspaceName = (value: string) => {
+    setWorkspaceNameEdited(true);
+    setWorkspaceName(value);
+  };
 
   const passwordResult = useMemo(() => {
     if (!password) {
@@ -34,10 +49,13 @@ export function useRegisterPageState() {
 
   return {
     birthdate,
-    canProceedFromStep1: (passwordResult?.score ?? 0) >= 3,
+    canProceedFromStep1:
+      firstname.trim() !== '' && lastname.trim() !== '' && (passwordResult?.score ?? 0) >= 3,
     email,
     firstname,
     lastname,
+    legalDocumentsAccepted,
+    marketingEmailsAccepted,
     maxBirthdate: birthdateBounds().maxBirthdate,
     minBirthdate: birthdateBounds().minBirthdate,
     password,
@@ -45,12 +63,14 @@ export function useRegisterPageState() {
     setEmail,
     setFirstname,
     setLastname,
+    setLegalDocumentsAccepted,
+    setMarketingEmailsAccepted,
     setPassword,
     setStep,
     setUsername,
-    setWorkspaceName,
+    setWorkspaceName: updateWorkspaceName,
     step,
     username,
-    workspaceName,
+    workspaceName: currentWorkspaceName,
   };
 }

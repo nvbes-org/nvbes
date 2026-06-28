@@ -1,4 +1,4 @@
-import { Fingerprint, KeyRound, ShieldAlert, Smartphone } from 'lucide-react';
+import { Fingerprint, KeyRound, ShieldAlert, TimerReset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MfaPageStepUpDialogProps } from './MfaPageStepUpDialog.types';
 
@@ -24,7 +24,7 @@ export function MfaPageStepUpMethodChoices({
           className="justify-start gap-3"
           onClick={() => onMethodSelect('totp')}
         >
-          <Smartphone className="size-4 text-muted-foreground" />
+          <TimerReset className="size-4 text-muted-foreground" />
           Code d'authentification (TOTP)
         </Button>
       )}
@@ -35,7 +35,7 @@ export function MfaPageStepUpMethodChoices({
           onClick={() => onMethodSelect('webauthn')}
         >
           <Fingerprint className="size-4 text-muted-foreground" />
-          Passkey ou clé de sécurité
+          Biométrie ou clé de sécurité
         </Button>
       )}
       {hasRecovery && (

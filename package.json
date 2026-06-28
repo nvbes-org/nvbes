@@ -8,6 +8,7 @@
     "dev:identity": "bash scripts/dev-identity.sh",
     "dev:api": "bash scripts/dev-api.sh",
     "dev:identity-api": "bash scripts/dev-identity-api.sh",
+    "dev:identity-db:reset": "bash scripts/dev-identity-db-reset.sh",
     "dev:drive": "bash scripts/dev-drive.sh",
     "dev:drive-api": "bash scripts/dev-drive-api.sh",
     "dev:drive-web": "bash scripts/dev-drive-web.sh",

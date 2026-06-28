@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@nvbes/http-client": "workspace:*",
+    "@radix-ui/react-switch": "^1.2.6",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "react": "catalog:",

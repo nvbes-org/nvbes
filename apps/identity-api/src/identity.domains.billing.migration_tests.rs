@@ -139,8 +139,8 @@ fn geo_reputation_migration_persists_network_labels_and_scores() {
 #[tokio::test]
 async fn geo_lookup_persistence_round_trips_when_database_is_available() {
     use nvbes_region::geo::{
-        GeoLookupRecordContext, GeoLookupRequest, GeoResolver, load_personal_geo_database_tx,
-        record_geo_resolution_tx,
+        GeoLookupPurpose, GeoLookupRecordContext, GeoLookupRequest, GeoResolver,
+        load_personal_geo_database_tx, record_geo_resolution_tx,
     };
     use sqlx::postgres::PgPoolOptions;
 
@@ -196,7 +196,7 @@ async fn geo_lookup_persistence_round_trips_when_database_is_available() {
     let event_id = record_geo_resolution_tx(
         &mut tx,
         GeoLookupRecordContext {
-            purpose: "payment",
+            purpose: GeoLookupPurpose::Payment,
             subject_type: Some("workspace"),
             subject_id: None,
             request_id: Some("test-geo-round-trip"),

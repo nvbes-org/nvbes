@@ -67,6 +67,17 @@ pub async fn observe_request(
     req.extensions_mut().insert(request_id.clone());
     metrics.start_request();
 
+    tracing::info!(
+        target: "nvbes::technical_log",
+        event_category = "technical_log",
+        event_name = "http.request_started",
+        request_id = %request_id,
+        trace_id = %current_traceparent.trace_id,
+        span_id = %current_traceparent.span_id,
+        method = %method,
+        path_template = %path_template,
+    );
+
     let mut response = next.run(req).await;
     let status = response.status();
     let duration_ms = started_at.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;

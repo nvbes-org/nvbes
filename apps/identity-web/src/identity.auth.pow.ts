@@ -1,9 +1,14 @@
 import { fetchPowChallenge, solvePowChallenge } from '@nvbes/identity-sdk-web';
 
-export async function resolvePowChallenge(identityApiBaseUrl: string) {
+export type PowChallengeProof = {
+  powNonce: string;
+  powSolution: string;
+};
+
+export async function resolvePowChallenge(identityApiBaseUrl: string): Promise<PowChallengeProof> {
   const challenge = await fetchPowChallenge(identityApiBaseUrl);
-  if (!challenge || challenge.difficulty <= 0) {
-    return {};
+  if (!challenge.nonce || challenge.difficulty <= 0) {
+    throw new Error('PoW challenge is required.');
   }
 
   return {

@@ -67,3 +67,23 @@ pub(crate) async fn mark_job_failed(
 pub(crate) async fn execute_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Value> {
     execute::execute_job(state, job).await
 }
+
+pub(super) fn email_from_address(
+    config: &nvbes_core::config::AppConfig,
+) -> anyhow::Result<nvbes_email::EmailAddress> {
+    let email = match config.email_from_email.clone() {
+        Some(email) => email,
+        None if config.environment == "development" => "dev@nvbes.local".to_string(),
+        None => anyhow::bail!("NVBES_EMAIL_FROM_EMAIL must be set for email sending"),
+    };
+
+    Ok(nvbes_email::EmailAddress {
+        email,
+        name: Some(
+            config
+                .email_from_name
+                .clone()
+                .unwrap_or_else(|| "nvbes".to_string()),
+        ),
+    })
+}

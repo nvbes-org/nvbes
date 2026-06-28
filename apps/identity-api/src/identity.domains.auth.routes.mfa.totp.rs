@@ -57,7 +57,6 @@ pub(crate) async fn begin_totp_enrollment(
     let result = mfa_totp::begin_totp(
         &state.db,
         auth.user_id,
-        &state.config.webauthn_rp_id,
         TotpSetupInput {
             label: request.label,
         },

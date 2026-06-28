@@ -48,12 +48,14 @@ pub(crate) async fn generate_recovery_codes(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<RecoveryCodesGenerateRequest>,
 ) -> Result<Json<RecoveryCodesResult>, AppError> {
-    crate::domains::auth::verification::require_recent_step_up(
-        &state.redis,
-        &auth,
-        Some(nvbes_core::auth::Aal::Aal2),
-    )
-    .await?;
+    if recovery::has_active_recovery_codes(&state.db, auth.user_id).await? {
+        crate::domains::auth::verification::require_recent_step_up(
+            &state.redis,
+            &auth,
+            Some(nvbes_core::auth::Aal::Aal2),
+        )
+        .await?;
+    }
     let result = recovery::generate_recovery(&state.db, auth.user_id, &request.password).await?;
     Ok(Json(result))
 }

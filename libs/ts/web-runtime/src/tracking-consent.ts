@@ -5,7 +5,9 @@ import {
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
   ANALYTICS_PURPOSE_CONSENT_TYPES,
+  LEGACY_VENDOR_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
+  VENDOR_CONSENT_TYPES,
   cloneConsent,
   getAnalyticsConsent,
   getTrackingConsent,
@@ -79,30 +81,24 @@ function backendConsentState(consents: BackendConsent[]): CookieConsentState {
   const activeVersions = activeVersionsByConsentType(consents);
   const analyticsGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_analytics') ||
-    hasActiveConsent(activeVersions, 'cookie_consent_vendor_analytics') ||
+    hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.posthog) ||
+    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.analytics) ||
     Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES).some((consentType) =>
       hasActiveConsent(activeVersions, consentType),
     );
   const performanceGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_performance') ||
-    hasActiveConsent(activeVersions, 'cookie_consent_vendor_error_reporting') ||
+    hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.sentry) ||
+    hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.grafana) ||
+    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.errorReporting) ||
     hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking);
   const analytics = {
-    productAnalytics: hasActiveConsent(
-      activeVersions,
-      ANALYTICS_PURPOSE_CONSENT_TYPES.productAnalytics,
-    ),
-    autocaptureHeatmaps: hasActiveConsent(
-      activeVersions,
-      ANALYTICS_PURPOSE_CONSENT_TYPES.autocaptureHeatmaps,
-    ),
-    sessionReplay: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.sessionReplay),
-    surveysFeedback: hasActiveConsent(
-      activeVersions,
-      ANALYTICS_PURPOSE_CONSENT_TYPES.surveysFeedback,
-    ),
-    errorTracking: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking),
-    featureFlags: hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.featureFlags),
+    productAnalytics: analyticsGranted,
+    autocaptureHeatmaps: analyticsGranted,
+    sessionReplay: analyticsGranted,
+    surveysFeedback: analyticsGranted,
+    errorTracking: performanceGranted,
+    featureFlags: analyticsGranted,
   };
 
   return {
@@ -115,16 +111,17 @@ function backendConsentState(consents: BackendConsent[]): CookieConsentState {
     },
     vendors: {
       stripe:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_stripe') ||
+        hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.stripe) ||
         DEFAULT_CONSENT.vendors.stripe,
       identity:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_identity') ||
+        hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.identity) ||
         DEFAULT_CONSENT.vendors.identity,
-      analytics:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_analytics') || analyticsGranted,
-      errorReporting:
-        hasActiveConsent(activeVersions, 'cookie_consent_vendor_error_reporting') ||
-        performanceGranted,
+      cloudflare:
+        hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.cloudflare) ||
+        DEFAULT_CONSENT.vendors.cloudflare,
+      posthog: hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.posthog) || analyticsGranted,
+      sentry: hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.sentry) || performanceGranted,
+      grafana: hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.grafana) || performanceGranted,
     },
     analytics,
   };
@@ -164,13 +161,6 @@ async function syncLocalConsentToBackend(
     performance: 'cookie_consent_performance',
   } as const satisfies Record<keyof CookieConsentState['categories'], string>;
 
-  const vendorMapping = {
-    stripe: 'cookie_consent_vendor_stripe',
-    identity: 'cookie_consent_vendor_identity',
-    analytics: 'cookie_consent_vendor_analytics',
-    errorReporting: 'cookie_consent_vendor_error_reporting',
-  } as const satisfies Record<keyof CookieConsentState['vendors'], string>;
-
   for (const [category, consentType] of Object.entries(categoryMapping)) {
     queueConsentSync(
       promises,
@@ -181,22 +171,16 @@ async function syncLocalConsentToBackend(
     );
   }
 
-  for (const [vendor, consentType] of Object.entries(vendorMapping)) {
-    const granted =
-      vendor === 'analytics'
-        ? consent.vendors.analytics
-        : consent.vendors[vendor as keyof CookieConsentState['vendors']];
+  for (const [vendor, consentType] of Object.entries(VENDOR_CONSENT_TYPES)) {
+    const granted = consent.vendors[vendor as keyof CookieConsentState['vendors']];
     queueConsentSync(promises, activeVersions, consentType, granted, client);
   }
 
-  for (const [purpose, consentType] of Object.entries(ANALYTICS_PURPOSE_CONSENT_TYPES)) {
-    queueConsentSync(
-      promises,
-      activeVersions,
-      consentType,
-      consent.analytics[purpose as keyof CookieConsentState['analytics']],
-      client,
-    );
+  for (const consentType of [
+    ...Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES),
+    ...Object.values(LEGACY_VENDOR_CONSENT_TYPES),
+  ]) {
+    queueConsentSync(promises, activeVersions, consentType, false, client);
   }
 
   queueConsentSync(
@@ -266,7 +250,9 @@ export {
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
   ANALYTICS_PURPOSE_CONSENT_TYPES,
+  LEGACY_VENDOR_CONSENT_TYPES,
   TRACKING_CONSENT_CHANGED_EVENT,
+  VENDOR_CONSENT_TYPES,
   cloneConsent,
   getAnalyticsConsent,
   getTrackingConsent,

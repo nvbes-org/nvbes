@@ -14,20 +14,40 @@ export function hasAnyAnalyticsPurpose(analytics: CookieConsentState['analytics'
   return Object.values(analytics).some((value) => value);
 }
 
-export function deriveConsentState(consent: CookieConsentState): CookieConsentState {
+function analyticsConsentForState(consent: CookieConsentState): CookieConsentState['analytics'] {
+  const analyticsGranted = consent.categories.analytics || consent.vendors.posthog;
+  const performanceGranted =
+    consent.categories.performance || consent.vendors.sentry || consent.vendors.grafana;
+
   return {
-    categories: {
-      essentials: true,
-      analytics: OPTIONAL_ANALYTICS_PURPOSES.some((purpose) => consent.analytics[purpose]),
-      performance: consent.vendors.errorReporting || consent.analytics.errorTracking,
-    },
-    vendors: {
-      stripe: true,
-      identity: true,
-      analytics: hasAnyAnalyticsPurpose(consent.analytics),
-      errorReporting: consent.vendors.errorReporting,
-    },
-    analytics: { ...consent.analytics },
+    productAnalytics: analyticsGranted,
+    autocaptureHeatmaps: analyticsGranted,
+    sessionReplay: analyticsGranted,
+    surveysFeedback: analyticsGranted,
+    featureFlags: analyticsGranted,
+    errorTracking: performanceGranted,
+  };
+}
+
+export function deriveConsentState(consent: CookieConsentState): CookieConsentState {
+  const vendors = {
+    stripe: true,
+    identity: true,
+    cloudflare: true,
+    posthog: consent.vendors.posthog,
+    sentry: consent.vendors.sentry,
+    grafana: consent.vendors.grafana,
+  };
+  const categories = {
+    essentials: true,
+    analytics: consent.categories.analytics || vendors.posthog,
+    performance: consent.categories.performance || vendors.sentry || vendors.grafana,
+  };
+
+  return {
+    categories,
+    vendors,
+    analytics: analyticsConsentForState({ ...consent, categories, vendors }),
   };
 }
 
@@ -41,21 +61,18 @@ export function toggleConsentCategory(
 
   const nextValue = !consent.categories[category];
   const nextVendors = { ...consent.vendors };
-  const nextAnalytics = { ...consent.analytics };
 
   if (category === 'analytics') {
-    for (const purpose of OPTIONAL_ANALYTICS_PURPOSES) {
-      nextAnalytics[purpose] = nextValue;
-    }
+    nextVendors.posthog = nextValue;
   } else {
-    nextVendors.errorReporting = nextValue;
-    nextAnalytics.errorTracking = nextValue;
+    nextVendors.sentry = nextValue;
+    nextVendors.grafana = nextValue;
   }
 
   return deriveConsentState({
     categories: { ...consent.categories, [category]: nextValue },
     vendors: nextVendors,
-    analytics: nextAnalytics,
+    analytics: { ...consent.analytics },
   });
 }
 
@@ -64,26 +81,19 @@ export function toggleConsentVendor(
   vendor: keyof CookieConsentState['vendors'],
   category?: keyof CookieConsentState['categories'],
 ): CookieConsentState {
-  if (vendor === 'stripe' || vendor === 'identity') {
+  void category;
+
+  if (vendor === 'stripe' || vendor === 'identity' || vendor === 'cloudflare') {
     return consent;
   }
 
   const nextValue = !consent.vendors[vendor];
   const nextVendors = { ...consent.vendors, [vendor]: nextValue };
-  const nextAnalytics = { ...consent.analytics };
-
-  if (vendor === 'analytics') {
-    for (const purpose of Object.keys(nextAnalytics) as AnalyticsPurpose[]) {
-      nextAnalytics[purpose] = nextValue;
-    }
-  } else if (category === 'performance') {
-    nextAnalytics.errorTracking = nextAnalytics.errorTracking && nextValue;
-  }
 
   return deriveConsentState({
     categories: { ...consent.categories },
     vendors: nextVendors,
-    analytics: nextAnalytics,
+    analytics: { ...consent.analytics },
   });
 }
 
@@ -91,12 +101,6 @@ export function toggleConsentAnalyticsPurpose(
   consent: CookieConsentState,
   purpose: AnalyticsPurpose,
 ): CookieConsentState {
-  return deriveConsentState({
-    categories: { ...consent.categories },
-    vendors: { ...consent.vendors },
-    analytics: {
-      ...consent.analytics,
-      [purpose]: !consent.analytics[purpose],
-    },
-  });
+  void purpose;
+  return deriveConsentState(consent);
 }

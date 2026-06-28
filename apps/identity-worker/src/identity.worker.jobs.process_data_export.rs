@@ -2,6 +2,7 @@ use anyhow::Context;
 use serde_json::Value;
 use uuid::Uuid;
 
+use super::email_from_address;
 use crate::app::AppState;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,23 +31,8 @@ pub(super) async fn process_data_export(state: &AppState, payload: &Value) -> an
         user.display_name
     );
 
-    let from_email = state
-        .config
-        .email_from_email
-        .clone()
-        .ok_or_else(|| anyhow::anyhow!("NVBES_EMAIL_FROM_EMAIL must be set"))?;
-
     let msg = nvbes_email::EmailMessage {
-        from: nvbes_email::EmailAddress {
-            email: from_email,
-            name: Some(
-                state
-                    .config
-                    .email_from_name
-                    .clone()
-                    .unwrap_or_else(|| "nvbes".to_string()),
-            ),
-        },
+        from: email_from_address(&state.config)?,
         to: vec![nvbes_email::EmailAddress {
             email: payload.email.clone(),
             name: Some(user.display_name.clone()),

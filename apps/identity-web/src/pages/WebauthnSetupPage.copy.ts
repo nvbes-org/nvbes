@@ -14,14 +14,14 @@ export const setupCopy: Record<
   }
 > = {
   passkey: {
-    title: 'Enregistrer une passkey',
+    title: 'Enregistrer une méthode biométrique',
     labelPlaceholder: 'Ex: Touch ID du Mac',
-    stepUpText: 'Pour enregistrer une passkey, veuillez confirmer votre identité.',
-    successText: 'Votre passkey est maintenant active.',
-    timeoutText: 'Passkey registration timed out. Please try again and confirm with Touch ID.',
-    buttonText: 'Enregistrer la passkey',
+    stepUpText: 'Pour enregistrer une méthode biométrique, veuillez confirmer votre identité.',
+    successText: 'Votre méthode biométrique est maintenant active.',
+    timeoutText: 'La vérification biométrique a expiré. Réessayez avec Touch ID.',
+    buttonText: 'Enregistrer la méthode biométrique',
     unsupportedText:
-      'Les passkeys ne sont pas disponibles dans ce navigateur. Ouvrez cette page dans Chrome, Arc, Safari ou Edge.',
+      'La biométrie n’est pas disponible dans ce navigateur. Ouvrez cette page dans Chrome, Arc, Safari ou Edge.',
     browserText:
       'Si aucune fenêtre Touch ID ne s’ouvre, quittez le navigateur intégré VS Code/Electron et ouvrez cette page dans Chrome, Arc, Safari ou Edge.',
   },

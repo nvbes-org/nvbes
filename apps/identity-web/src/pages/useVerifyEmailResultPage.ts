@@ -1,14 +1,16 @@
-import { createRequestHeaders } from '@nvbes/http-client';
-import { verifiedFetch } from '@nvbes/web-runtime';
+import { HttpError } from '@nvbes/http-client';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import type { VerifyEmailApiError, VerifyEmailResultState } from './VerifyEmailResultPage.shared';
+import { verifyEmailToken } from '../identity.email-verification';
 
-function csrfTokenFromCookie() {
-  const match =
-    typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) : null;
-  return match?.[1];
+function errorBody(error: unknown): VerifyEmailApiError {
+  if (error instanceof HttpError && typeof error.body === 'object' && error.body !== null) {
+    return error.body as VerifyEmailApiError;
+  }
+
+  return {};
 }
 
 export function useVerifyEmailResultPage() {
@@ -29,33 +31,24 @@ export function useVerifyEmailResultPage() {
     let cancelled = false;
 
     const verify = async () => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      const csrfToken = csrfTokenFromCookie();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
-
       try {
-        const response = await verifiedFetch('/auth/verify-email', {
-          method: 'POST',
-          headers: createRequestHeaders('POST', headers),
-          body: JSON.stringify({ token }),
-          credentials: 'include',
-        });
-
+        const data = await verifyEmailToken(token);
         if (cancelled) {
           return;
         }
 
-        if (response.ok) {
-          const data = await response.json();
+        if (data.success) {
           setResult({ kind: 'success', email: data.user?.email ?? '' });
           return;
         }
 
-        const body = (await response.json().catch(() => ({}))) as VerifyEmailApiError;
+        setResult({ kind: 'error', message: 'Échec de la vérification.' });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const body = errorBody(error);
         const code = body.error?.code ?? '';
         const message = body.error?.message ?? '';
 
@@ -70,14 +63,6 @@ export function useVerifyEmailResultPage() {
           setResult({
             kind: 'error',
             message: message || 'Échec de la vérification.',
-          });
-        }
-      } catch (error) {
-        console.error('Email verification failed:', error);
-        if (!cancelled) {
-          setResult({
-            kind: 'error',
-            message: 'Impossible de contacter le serveur.',
           });
         }
       }

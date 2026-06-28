@@ -4,6 +4,8 @@ use uuid::Uuid;
 use super::{db::map_factor_view, types::*};
 use crate::http::error::AppError;
 
+#[path = "identity.domains.auth.mfa.email.rs"]
+pub mod email;
 #[path = "identity.domains.auth.mfa.recovery.rs"]
 pub mod recovery;
 #[path = "identity.domains.auth.mfa.totp.rs"]
@@ -70,6 +72,14 @@ pub async fn get_factor(
 }
 
 pub async fn remove_factor(db: &PgPool, user_id: Uuid, factor_id: Uuid) -> Result<(), AppError> {
+    let factor = get_factor(db, user_id, factor_id).await?;
+    if factor.factor_type == "email" {
+        return Err(AppError::forbidden(
+            "email_mfa_cannot_be_removed",
+            "Email MFA is required and cannot be removed.",
+        ));
+    }
+
     sqlx::query(
         r#"
         UPDATE mfa_factors
@@ -119,8 +129,11 @@ pub fn login_methods_from_factor_types(factor_types: &[String]) -> Vec<String> {
     let has_recovery = factor_types
         .iter()
         .any(|factor_type| factor_type == "recovery_code");
+    let has_email = factor_types
+        .iter()
+        .any(|factor_type| factor_type == "email");
 
-    let mut methods = Vec::with_capacity(3);
+    let mut methods = Vec::with_capacity(4);
     if has_totp {
         methods.push("totp".to_string());
     }
@@ -129,6 +142,9 @@ pub fn login_methods_from_factor_types(factor_types: &[String]) -> Vec<String> {
     }
     if has_recovery {
         methods.push("recovery".to_string());
+    }
+    if has_email {
+        methods.push("email".to_string());
     }
 
     methods
@@ -144,8 +160,9 @@ mod tests {
             "recovery_code".to_string(),
             "webauthn".to_string(),
             "totp".to_string(),
+            "email".to_string(),
         ]);
 
-        assert_eq!(methods, vec!["totp", "webauthn", "recovery"]);
+        assert_eq!(methods, vec!["totp", "webauthn", "recovery", "email"]);
     }
 }

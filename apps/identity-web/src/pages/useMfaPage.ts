@@ -21,7 +21,9 @@ export function useMfaPage() {
     stepUpError: stepUp.stepUpError,
     hasTotp: factors.some((factor) => factor.factor_type === 'totp'),
     hasWebAuthn: factors.some((factor) => factor.factor_type === 'webauthn'),
-    hasRecovery: factors.some((factor) => factor.factor_type === 'recovery'),
+    hasRecovery: factors.some(
+      (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
+    ),
     navigateBack: () => void navigate({ to: '/account/security' }),
     navigateTo: (path: string) => void navigate({ to: path }),
     handleRemove: stepUp.handleRemove,

@@ -1,21 +1,29 @@
+import * as Switch from '@radix-ui/react-switch';
+
+export interface TrackingConsentToggleProps {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  description: string;
+  large?: boolean;
+}
+
 export function TrackingConsentToggle({
   checked,
   onChange,
   label,
   description,
   large = false,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  label: string;
-  description: string;
-  large?: boolean;
-}) {
-  const sizeClass = large ? 'w-9 h-5 after:h-4 after:w-4' : 'w-8 h-4 after:h-3 after:w-3';
-
+}: TrackingConsentToggleProps) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div>
+    <div
+      className={
+        large
+          ? 'flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-background/70 p-3'
+          : 'flex items-center justify-between gap-3'
+      }
+    >
+      <div className="min-w-0">
         <p
           className={
             large
@@ -33,12 +41,24 @@ export function TrackingConsentToggle({
           {description}
         </p>
       </div>
-      <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-        <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
-        <div
-          className={`${sizeClass} rounded-full bg-muted peer peer-checked:bg-primary peer-focus:outline-none peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:left-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:border after:border-border after:bg-background after:transition-all after:content-['']`}
+      <Switch.Root
+        checked={checked}
+        onCheckedChange={onChange}
+        aria-label={label}
+        className={
+          large
+            ? 'relative h-5 w-9 shrink-0 rounded-full bg-muted outline-none transition-colors data-[state=checked]:bg-primary focus-visible:ring-3 focus-visible:ring-ring/50'
+            : 'relative h-4 w-8 shrink-0 rounded-full bg-muted outline-none transition-colors data-[state=checked]:bg-primary focus-visible:ring-3 focus-visible:ring-ring/50'
+        }
+      >
+        <Switch.Thumb
+          className={
+            large
+              ? 'block size-4 translate-x-0.5 rounded-full border border-border bg-background shadow-sm transition-transform data-[state=checked]:translate-x-[18px]'
+              : 'block size-3 translate-x-0.5 rounded-full border border-border bg-background shadow-sm transition-transform data-[state=checked]:translate-x-[18px]'
+          }
         />
-      </label>
+      </Switch.Root>
     </div>
   );
 }

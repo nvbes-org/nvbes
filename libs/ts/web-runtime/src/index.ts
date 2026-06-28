@@ -145,7 +145,9 @@ export {
   type AnalyticsPurpose,
 } from './tracking-consent.editor';
 export { SharedTrackingConsentBanner } from './TrackingConsentBanner';
+export type { TrackingConsentToggleComponent } from './TrackingConsentBanner';
 export { TrackingConsentToggle } from './TrackingConsentToggle';
+export type { TrackingConsentToggleProps } from './TrackingConsentToggle';
 export { createSafeStorage, getSafeLocalStorage, getSafeSessionStorage } from './safe-storage';
 export type { SafeStorage, SafeStorageKind } from './safe-storage';
 export {
@@ -193,7 +195,7 @@ export type { SessionStaleReason, SessionStaleResult } from './session-stale';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
   if (error instanceof ClientRuntimeError) {
-    const base = error.message || fallback;
+    const base = clientRuntimeErrorMessage(error, fallback);
     return error.requestId ? `${base} (ref: ${error.requestId})` : base;
   }
 
@@ -201,6 +203,84 @@ export function clientErrorMessage(error: unknown, fallback = 'Une erreur est su
     return error.message || fallback;
   }
 
+  return fallback;
+}
+
+const API_ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: 'Les informations saisies sont incorrectes.',
+  unauthorized: 'Votre session a expiré. Reconnectez-vous.',
+  forbidden: 'Vous ne pouvez pas effectuer cette action.',
+  validation_failed: 'Vérifiez les informations saisies.',
+  not_found: 'La ressource demandée est introuvable.',
+  conflict: 'Cette action entre en conflit avec une modification récente.',
+  database_error: 'Une erreur est survenue. Veuillez réessayer.',
+  internal_error: 'Une erreur est survenue. Veuillez réessayer.',
+  email_error: "L'envoi de l'email a échoué. Veuillez réessayer.",
+  email_not_configured: "L'envoi d'emails n'est pas encore configuré.",
+  step_up_required: 'Confirmez votre identité pour continuer.',
+  step_up_expired: 'La vérification a expiré. Recommencez.',
+  invalid_totp_code: "Le code d'authentification est incorrect.",
+  invalid_recovery_code: 'Le code de récupération est incorrect.',
+  invalid_email_mfa_code: 'Le code reçu par email est incorrect ou a expiré.',
+  email_mfa_not_configured: "La vérification par email n'est pas disponible pour ce compte.",
+  email_mfa_requires_verified_email: 'Ajoutez un email vérifié avant d’utiliser cette méthode.',
+  email_mfa_cannot_be_removed: 'La vérification par email est requise et ne peut pas être retirée.',
+  mfa_factor_not_found: 'Cette méthode de vérification est introuvable.',
+  challenge_locked: 'Trop de tentatives. Réessayez dans quelques minutes.',
+  password_expired: 'Votre mot de passe a expiré. Réinitialisez-le pour continuer.',
+  risk_policy_blocked: 'Connexion temporairement bloquée pour protéger votre compte.',
+  email_already_exists: 'Cet email est déjà utilisé.',
+  primary_email_cannot_be_deleted: "L'email principal ne peut pas être supprimé.",
+  email_not_verified: 'Vérifiez cet email avant de continuer.',
+  email_not_mfa_eligible: "Cet email n'est pas encore disponible pour la vérification par email.",
+};
+
+function clientRuntimeErrorMessage(error: ClientRuntimeError, fallback: string): string {
+  const code = readApiErrorCode(error.body);
+  if (code && API_ERROR_MESSAGES[code]) {
+    return API_ERROR_MESSAGES[code];
+  }
+
+  if (error.kind === 'api') {
+    return httpStatusMessage(error.status, fallback);
+  }
+
+  return error.message || fallback;
+}
+
+function readApiErrorCode(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || !('error' in body)) {
+    return null;
+  }
+
+  const envelope = body as { error?: unknown };
+  if (!envelope.error || typeof envelope.error !== 'object' || !('code' in envelope.error)) {
+    return null;
+  }
+
+  const error = envelope.error as { code?: unknown };
+  return typeof error.code === 'string' ? error.code : null;
+}
+
+function httpStatusMessage(status: number | undefined, fallback: string): string {
+  if (status === 400) {
+    return 'Vérifiez les informations saisies.';
+  }
+  if (status === 401) {
+    return 'Votre session a expiré. Reconnectez-vous.';
+  }
+  if (status === 403) {
+    return 'Vous ne pouvez pas effectuer cette action.';
+  }
+  if (status === 404) {
+    return 'La ressource demandée est introuvable.';
+  }
+  if (status === 409) {
+    return 'Cette action entre en conflit avec une modification récente.';
+  }
+  if (status && status >= 500) {
+    return 'Une erreur est survenue. Veuillez réessayer.';
+  }
   return fallback;
 }
 

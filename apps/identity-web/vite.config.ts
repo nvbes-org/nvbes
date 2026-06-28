@@ -184,6 +184,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     resolve: {
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       alias: [
         {
           find: '@',

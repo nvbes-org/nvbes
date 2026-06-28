@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 export function TotpConfirmCard({
-  qrUrl,
+  qrData,
   secretBase32,
   totpCode,
   error,
@@ -18,7 +18,7 @@ export function TotpConfirmCard({
   onCancel,
   onSubmit,
 }: {
-  qrUrl: string | null;
+  qrData: string | null;
   secretBase32: string;
   totpCode: string;
   error: string | null;
@@ -32,10 +32,17 @@ export function TotpConfirmCard({
       <div className="w-full max-w-md space-y-6">
         <h1 className="text-2xl font-bold">Scanner le QR code</h1>
 
-        {qrUrl ? (
+        {qrData ? (
           <div className="flex justify-center">
             <Card className="p-2">
-              <QRCode data={qrUrl} aria-label="QR code TOTP" className="size-[200px]" />
+              <QRCode
+                data={qrData}
+                aria-label="QR code TOTP"
+                className="size-[200px]"
+                foreground="#000000"
+                background="#ffffff"
+                robustness="H"
+              />
             </Card>
           </div>
         ) : null}

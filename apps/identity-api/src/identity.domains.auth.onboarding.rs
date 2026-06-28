@@ -19,6 +19,12 @@ pub async fn register(
     let email = normalize_email(&input.email);
     validate_email(&email)?;
     validate_password(&input.password)?;
+    if !input.legal_documents_accepted {
+        return Err(AppError::bad_request(
+            "legal_documents_required",
+            "Legal documents must be accepted to create an account.",
+        ));
+    }
 
     if let Some(bd) = input.birthdate {
         nvbes_core::auth::validate_birthdate(bd, input.region.as_deref())?;
@@ -57,12 +63,14 @@ pub async fn register(
         verification_token.clone(),
         input.ip.clone(),
         input.user_agent.clone(),
+        input.legal_documents_accepted,
+        input.marketing_emails_accepted,
     )
     .await?;
     history::insert_password_hash(db, principal_id, &password_hash).await?;
     let display_name = derive_display_name(
-        input.firstname.as_deref(),
-        input.lastname.as_deref(),
+        Some(input.firstname.as_str()),
+        Some(input.lastname.as_str()),
         Some(&input.username),
     );
 
@@ -71,8 +79,8 @@ pub async fn register(
             id: principal_id,
             email: email.clone(),
             display_name,
-            firstname: input.firstname.clone(),
-            lastname: input.lastname.clone(),
+            firstname: Some(input.firstname.clone()),
+            lastname: Some(input.lastname.clone()),
             username: Some(input.username.clone()),
             birthdate: input.birthdate,
             region: input.region.clone(),
@@ -131,10 +139,71 @@ pub async fn verify_email(
         .map_err(|err| {
             AppError::internal("email_verification_token_consume_failed", err.to_string())
         })?;
+
+    if row.purpose == "secondary_email" {
+        let email_address_id = row.email_address_id.ok_or_else(|| {
+            AppError::bad_request(
+                "verification_token_invalid",
+                "Invalid secondary email verification token.",
+            )
+        })?;
+        crate::domains::auth::email_addresses::mark_secondary_verified(
+            db,
+            principal_id,
+            email_address_id,
+        )
+        .await?;
+        let user_row = sqlx::query(
+            "SELECT principal_id, email, firstname, lastname, username, birthdate, region, created_at, email_verified_at FROM users WHERE principal_id = $1"
+        )
+        .bind(principal_id)
+        .fetch_one(db)
+        .await?;
+        let firstname: Option<String> = user_row.get("firstname");
+        let lastname: Option<String> = user_row.get("lastname");
+        let username: Option<String> = user_row.get("username");
+        let display_name = derive_display_name(
+            firstname.as_deref(),
+            lastname.as_deref(),
+            username.as_deref(),
+        );
+        return Ok(VerifyEmailResult {
+            success: true,
+            user: UserView {
+                id: user_row.get("principal_id"),
+                email: user_row.get("email"),
+                display_name,
+                firstname,
+                lastname,
+                username,
+                birthdate: user_row.get("birthdate"),
+                region: user_row.get("region"),
+                email_verified: user_row
+                    .get::<Option<chrono::DateTime<Utc>>, _>("email_verified_at")
+                    .is_some(),
+                mfa_enabled: super::mfa::has_active_factor(db, principal_id).await?,
+                created_at: user_row.get("created_at"),
+            },
+        });
+    }
+
     sqlx::query("UPDATE users SET email_verified_at = NOW(), status = 'active', updated_at = NOW() WHERE principal_id = $1")
         .bind(principal_id)
         .execute(db)
         .await?;
+    sqlx::query(
+        r#"
+        UPDATE user_email_addresses
+        SET verified_at = COALESCE(verified_at, NOW()),
+            updated_at = NOW()
+        WHERE principal_id = $1
+          AND is_primary = TRUE
+          AND deleted_at IS NULL
+        "#,
+    )
+    .bind(principal_id)
+    .execute(db)
+    .await?;
     sqlx::query("UPDATE principals SET status = 'active', updated_at = NOW() WHERE id = $1")
         .bind(principal_id)
         .execute(db)

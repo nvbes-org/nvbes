@@ -11,7 +11,6 @@ use crate::http::error::AppError;
 pub async fn begin_totp(
     db: &PgPool,
     user_id: Uuid,
-    rp_id: &str,
     input: TotpSetupInput,
 ) -> Result<TotpSetupResult, AppError> {
     let secret = generate_totp_secret();
@@ -20,6 +19,11 @@ pub async fn begin_totp(
     let label = input
         .label
         .unwrap_or_else(|| "Authenticator app".to_string());
+    let account_email: String =
+        sqlx::query_scalar("SELECT email FROM users WHERE principal_id = $1")
+            .bind(user_id)
+            .fetch_one(db)
+            .await?;
 
     sqlx::query(
         r#"
@@ -51,7 +55,7 @@ pub async fn begin_totp(
             last_used_at: None,
         },
         secret_base32: secret.clone(),
-        provisioning_uri: provisioning_uri(rp_id, &label, &secret),
+        provisioning_uri: provisioning_uri("Nvbes", &account_email, &secret),
     })
 }
 

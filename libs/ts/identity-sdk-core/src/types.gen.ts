@@ -2861,8 +2861,8 @@ export interface components {
             decoy_link_clicked?: boolean | null;
             device_fingerprint?: unknown;
             email: string;
-            pow_nonce?: string | null;
-            pow_solution?: string | null;
+            pow_nonce: string;
+            pow_solution: string;
         };
         IdentifierResult: {
             available_methods?: string[] | null;
@@ -3301,11 +3301,11 @@ export interface components {
         RegisterRequest: {
             birthdate?: string | null;
             email: string;
-            firstname?: string | null;
-            lastname?: string | null;
+            firstname: string;
+            lastname: string;
             password: string;
-            pow_nonce?: string | null;
-            pow_solution?: string | null;
+            pow_nonce: string;
+            pow_solution: string;
             region?: string | null;
             username: string;
             workspace_name: string;

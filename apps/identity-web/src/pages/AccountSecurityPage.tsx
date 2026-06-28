@@ -1,8 +1,4 @@
-import {
-  SecurityEmailVerificationCard,
-  SecurityMfaCard,
-  SecuritySignInOptionsCard,
-} from './AccountSecurityPage.shared';
+import { SecurityMfaCard, SecuritySignInOptionsCard } from './AccountSecurityPage.shared';
 import { useAccountSecurityPage } from './useAccountSecurityPage';
 
 export default function AccountSecurityPage() {
@@ -29,7 +25,6 @@ export default function AccountSecurityPage() {
         pending={mutation.isPending}
         onSkipPasswordChange={(checked) => mutation.mutate(checked)}
       />
-      <SecurityEmailVerificationCard overview={overview} />
     </div>
   );
 }

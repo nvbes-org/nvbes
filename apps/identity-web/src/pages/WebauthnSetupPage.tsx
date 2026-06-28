@@ -1,9 +1,5 @@
 import StepUpForm from '@/components/StepUpForm';
-import {
-  type WebauthnSetupKind,
-  WebauthnSetupRegisterCard,
-  WebauthnSetupSuccessCard,
-} from './WebauthnSetupPage.shared';
+import { type WebauthnSetupKind, WebauthnSetupRegisterCard } from './WebauthnSetupPage.shared';
 import { useWebauthnSetupPage } from './useWebauthnSetupPage';
 
 export default function WebauthnSetupPage({ kind = 'security_key' }: { kind?: WebauthnSetupKind }) {
@@ -53,5 +49,5 @@ export default function WebauthnSetupPage({ kind = 'security_key' }: { kind?: We
     );
   }
 
-  return <WebauthnSetupSuccessCard successText={copy.successText} onBack={navigateBack} />;
+  return null;
 }

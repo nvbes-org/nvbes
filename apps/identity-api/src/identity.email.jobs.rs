@@ -56,7 +56,10 @@ pub async fn enqueue_email_job_tx(
 }
 
 pub fn is_essential_transactional_email(business_type: &str) -> bool {
-    matches!(business_type, "verification" | "password_reset")
+    matches!(
+        business_type,
+        "verification" | "password_reset" | "account_security"
+    )
 }
 
 pub async fn enqueue_email_event_job_tx(
@@ -124,6 +127,7 @@ mod tests {
     fn treats_security_messages_as_essential() {
         assert!(is_essential_transactional_email("verification"));
         assert!(is_essential_transactional_email("password_reset"));
+        assert!(is_essential_transactional_email("account_security"));
     }
 
     #[test]

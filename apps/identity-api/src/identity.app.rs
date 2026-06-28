@@ -15,6 +15,7 @@ pub struct AppState {
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub product_analytics: nvbes_product_analytics::ProductAnalytics,
     pub email: std::sync::Arc<dyn nvbes_email::EmailSender>,
+    pub otp_provider: std::sync::Arc<dyn crate::domains::auth::otp_provider::OtpProvider>,
     pub dpop_nonce: Option<std::sync::Arc<nvbes_dpop::DpopNonceStore>>,
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
@@ -77,6 +78,7 @@ impl AppState {
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             product_analytics: build_product_analytics(config)?,
             email: build_email_sender(config)?,
+            otp_provider: build_otp_provider(config)?,
             dpop_nonce,
             redis,
             rate_limiter,
@@ -98,6 +100,47 @@ impl AppState {
         );
 
         Ok(state)
+    }
+}
+
+fn build_otp_provider(
+    config: &AppConfig,
+) -> anyhow::Result<std::sync::Arc<dyn crate::domains::auth::otp_provider::OtpProvider>> {
+    match config.otp_provider.as_str() {
+        "twilio_verify" => {
+            let account_sid = config.twilio_account_sid.clone().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "NVBES_TWILIO_ACCOUNT_SID is required when NVBES_OTP_PROVIDER=twilio_verify"
+                )
+            })?;
+            let auth_token = config.twilio_auth_token.clone().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "NVBES_TWILIO_AUTH_TOKEN is required when NVBES_OTP_PROVIDER=twilio_verify"
+                )
+            })?;
+            let service_sid = config.twilio_verify_service_sid.clone().ok_or_else(|| {
+                anyhow::anyhow!("NVBES_TWILIO_VERIFY_SERVICE_SID is required when NVBES_OTP_PROVIDER=twilio_verify")
+            })?;
+            info!("OTP provider: Twilio Verify");
+            Ok(std::sync::Arc::new(
+                crate::domains::auth::otp_twilio::TwilioVerifyOtpProvider::new(
+                    account_sid,
+                    auth_token,
+                    service_sid,
+                    config.twilio_api_base_url.clone(),
+                ),
+            ))
+        }
+        "mock" => {
+            if config.environment != "development" {
+                anyhow::bail!("Mock OTP provider is forbidden outside development.");
+            }
+            info!("OTP provider: Mock (development mode)");
+            Ok(std::sync::Arc::new(
+                crate::domains::auth::otp_mock::MockOtpProvider::new(),
+            ))
+        }
+        provider => anyhow::bail!("Unsupported NVBES_OTP_PROVIDER={provider}"),
     }
 }
 

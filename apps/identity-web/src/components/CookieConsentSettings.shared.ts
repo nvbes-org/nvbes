@@ -1,52 +1,52 @@
-import type { CookieConsentState } from '../tracking-consent';
-
-export const essentialVendors = ['⚡ nvbes Identity', '💳 Stripe (Paiements et Fraude)'];
-
-export const analyticsPurposes: Array<{
-  key: keyof CookieConsentState['analytics'];
-  label: string;
-  description: string;
-}> = [
-  {
-    key: 'productAnalytics',
-    label: 'Analytics produit',
-    description: 'Funnel produit pseudonymisé, sans emails, noms ou fichiers.',
-  },
-  {
-    key: 'featureFlags',
-    label: 'Feature flags',
-    description: 'Expériences non critiques, jamais auth, sécurité ou billing.',
-  },
-  {
-    key: 'autocaptureHeatmaps',
-    label: 'Heatmaps & autocapture',
-    description: 'Interactions masquées, désactivées sur les routes sensibles.',
-  },
-  {
-    key: 'sessionReplay',
-    label: 'Session replay',
-    description: 'Replay masqué, bloqué sur auth, MFA, privacy, billing et fichiers.',
-  },
-  {
-    key: 'surveysFeedback',
-    label: 'Surveys & feedback',
-    description: 'Feedback post-auth, jamais sur les pages sensibles.',
-  },
-  {
-    key: 'errorTracking',
-    label: 'Analytics error tracking',
-    description: 'Capture navigateur scrubbed pour les diagnostics produit.',
-  },
+export const essentialVendors = [
+  'nvbes Identity',
+  'Stripe (Paiements et Fraude)',
+  'Cloudflare (WAF/CDN)',
 ];
 
-export function getConsentVendorCategory(
-  vendor: keyof CookieConsentState['vendors'],
-): keyof CookieConsentState['categories'] | undefined {
-  if (vendor === 'errorReporting') {
+export const analyticsVendors = [
+  {
+    key: 'posthog',
+    label: 'PostHog',
+    description: "Mesure d'audience produit, heatmaps, replay masqué et feature flags.",
+  },
+] as const;
+
+export const performanceVendors = [
+  {
+    key: 'sentry',
+    label: 'Sentry',
+    description: "Suivi d'erreurs applicatives côté navigateur.",
+  },
+  {
+    key: 'grafana',
+    label: 'Grafana Labs',
+    description: 'Observabilité technique, métriques et diagnostics de stabilité.',
+  },
+] as const;
+
+export type ConsentVendorKey =
+  | (typeof analyticsVendors)[number]['key']
+  | (typeof performanceVendors)[number]['key'];
+
+export const vendorCopy: Record<
+  ConsentVendorKey,
+  {
+    label: string;
+    description: string;
+  }
+> = {
+  posthog: analyticsVendors[0],
+  sentry: performanceVendors[0],
+  grafana: performanceVendors[1],
+};
+
+export function getConsentVendorCategory(vendor: string): 'analytics' | 'performance' | undefined {
+  if (vendor === 'sentry' || vendor === 'grafana') {
     return 'performance';
   }
 
-  if (vendor === 'analytics') {
+  if (vendor === 'posthog') {
     return 'analytics';
   }
 
