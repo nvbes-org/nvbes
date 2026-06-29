@@ -90,6 +90,7 @@ install_node_options_guard
 sudo mkdir -p \
   "$HOME/.cache" \
   "$HOME/.config" \
+  "$HOME/.gnupg" \
   "$HOME/.local/share" \
   "$HOME/.vscode-server" \
   "$HOME/.vscode-server-insiders" \
@@ -101,6 +102,7 @@ sudo mkdir -p \
 sudo chown -R "$(id -u):$(id -g)" \
   "$HOME/.cache" \
   "$HOME/.config" \
+  "$HOME/.gnupg" \
   "$HOME/.local/share" \
   "$HOME/.vscode-server" \
   "$HOME/.vscode-server-insiders" \
@@ -109,6 +111,7 @@ sudo chown -R "$(id -u):$(id -g)" \
   /workspaces/nvbes/node_modules \
   /workspaces/nvbes/pnpm-store \
   /workspaces/nvbes/target
+chmod 700 "$HOME/.gnupg" "$HOME/.ssh"
 
 configure_git
 

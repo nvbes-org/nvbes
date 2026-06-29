@@ -13,8 +13,9 @@ fi
 
 mkdir -p "$MARKER_DIR"
 
-if command -v code >/dev/null 2>&1; then
-  code -r "$START_PAGE"
+if command -v code >/dev/null 2>&1 && code -r "$START_PAGE"; then
+  touch "$MARKER_FILE"
+elif command -v code-insiders >/dev/null 2>&1 && code-insiders -r "$START_PAGE"; then
   touch "$MARKER_FILE"
 else
   printf 'VS Code CLI is not available; start page skipped: %s\n' "$START_PAGE" >&2

@@ -78,6 +78,7 @@ RUN mkdir -p \
     /home/${USERNAME}/.cache \
     /home/${USERNAME}/.config/gh \
     /home/${USERNAME}/.config/git \
+    /home/${USERNAME}/.gnupg \
     /home/${USERNAME}/.local/bin \
     /home/${USERNAME}/.local/share \
     /home/${USERNAME}/.ssh \
@@ -86,10 +87,11 @@ RUN mkdir -p \
   && chown -R "${USERNAME}:${USERNAME}" \
     /home/${USERNAME}/.cache \
     /home/${USERNAME}/.config \
+    /home/${USERNAME}/.gnupg \
     /home/${USERNAME}/.local \
     /home/${USERNAME}/.ssh \
     /home/${USERNAME}/.vscode-server \
     /home/${USERNAME}/.vscode-server-insiders \
-  && chmod 700 /home/${USERNAME}/.ssh
+  && chmod 700 /home/${USERNAME}/.gnupg /home/${USERNAME}/.ssh
 
 WORKDIR /workspaces/nvbes

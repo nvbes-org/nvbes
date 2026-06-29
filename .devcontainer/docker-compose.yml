@@ -17,6 +17,7 @@ services:
       - nvbes_vscode_server_insiders:/home/vscode/.vscode-server-insiders
       - nvbes_home_cache:/home/vscode/.cache
       - nvbes_home_config:/home/vscode/.config
+      - nvbes_home_gnupg:/home/vscode/.gnupg
       - nvbes_home_local_share:/home/vscode/.local/share
       - nvbes_home_ssh:/home/vscode/.ssh
     environment:
@@ -151,6 +152,7 @@ volumes:
   nvbes_cargo_git:
   nvbes_home_cache:
   nvbes_home_config:
+  nvbes_home_gnupg:
   nvbes_home_local_share:
   nvbes_home_ssh:
   nvbes_node_modules:
