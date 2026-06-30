@@ -10,7 +10,9 @@ pub struct ProviderRouteRequest {
     pub payment_method: Option<String>,
     pub amount_minor: i64,
     pub mollie_enabled: bool,
+    pub mollie_status: ProviderOperationalStatus,
     pub external_provider_fallback_enabled: bool,
+    pub external_provider_status: ProviderOperationalStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +23,7 @@ pub struct ProviderRouteDecision {
     pub estimated_fee_minor: i64,
     pub success_priority: u8,
     pub fallback_allowed: bool,
+    pub operational_status: ProviderOperationalStatus,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,6 +50,35 @@ pub enum ProviderResidencyScope {
     Local,
     Regional,
     External,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProviderOperationalStatus {
+    Available,
+    Degraded,
+    Unavailable,
+}
+
+impl ProviderOperationalStatus {
+    pub fn from_config(value: &str) -> Self {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "available" => ProviderOperationalStatus::Available,
+            "degraded" => ProviderOperationalStatus::Degraded,
+            _ => ProviderOperationalStatus::Unavailable,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ProviderOperationalStatus::Available => "available",
+            ProviderOperationalStatus::Degraded => "degraded",
+            ProviderOperationalStatus::Unavailable => "unavailable",
+        }
+    }
+
+    fn accepts_new_checkouts(self) -> bool {
+        self != ProviderOperationalStatus::Unavailable
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,6 +110,7 @@ struct ProviderCandidate {
     residency_scope: ProviderResidencyScope,
     estimated_fee_minor: i64,
     success_priority: u8,
+    operational_status: ProviderOperationalStatus,
 }
 
 pub fn route_provider(
@@ -87,21 +120,36 @@ pub fn route_provider(
     let country = country.as_deref();
     let mut candidates = Vec::new();
 
-    if request.mollie_enabled && request.currency == "EUR" {
+    if request.mollie_enabled
+        && request.currency == "EUR"
+        && request.mollie_status.accepts_new_checkouts()
+    {
         candidates.push(ProviderCandidate {
             provider: ProviderCode::Mollie,
             residency_scope: residency_scope(country, ProviderCode::Mollie),
             estimated_fee_minor: estimate_fee_minor(ProviderCode::Mollie, request.amount_minor),
-            success_priority: success_priority(country, ProviderCode::Mollie),
+            success_priority: success_priority(
+                country,
+                ProviderCode::Mollie,
+                request.mollie_status,
+            ),
+            operational_status: request.mollie_status,
         });
     }
 
-    if request.external_provider_fallback_enabled {
+    if request.external_provider_fallback_enabled
+        && request.external_provider_status.accepts_new_checkouts()
+    {
         candidates.push(ProviderCandidate {
             provider: ProviderCode::Stripe,
             residency_scope: residency_scope(country, ProviderCode::Stripe),
             estimated_fee_minor: estimate_fee_minor(ProviderCode::Stripe, request.amount_minor),
-            success_priority: success_priority(country, ProviderCode::Stripe),
+            success_priority: success_priority(
+                country,
+                ProviderCode::Stripe,
+                request.external_provider_status,
+            ),
+            operational_status: request.external_provider_status,
         });
     }
 
@@ -123,6 +171,7 @@ pub fn route_provider(
         estimated_fee_minor: selected.estimated_fee_minor,
         success_priority: selected.success_priority,
         fallback_allowed: true,
+        operational_status: selected.operational_status,
     })
 }
 
@@ -174,8 +223,12 @@ fn estimate_fee_minor(provider: ProviderCode, amount_minor: i64) -> i64 {
     }
 }
 
-fn success_priority(country: Option<&str>, provider: ProviderCode) -> u8 {
-    match provider {
+fn success_priority(
+    country: Option<&str>,
+    provider: ProviderCode,
+    status: ProviderOperationalStatus,
+) -> u8 {
+    let base = match provider {
         ProviderCode::Mollie
             if country.is_some_and(|value| matches!(value, "FR" | "BE" | "NL")) =>
         {
@@ -183,105 +236,11 @@ fn success_priority(country: Option<&str>, provider: ProviderCode) -> u8 {
         }
         ProviderCode::Mollie => 85,
         ProviderCode::Stripe => 80,
-    }
-}
+    };
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stripe_is_default_provider() {
-        let error = route_provider(&ProviderRouteRequest {
-            country: Some("US".to_string()),
-            currency: "USD".to_string(),
-            payment_method: None,
-            amount_minor: 1_000,
-            mollie_enabled: true,
-            external_provider_fallback_enabled: false,
-        });
-        assert_eq!(error, Err(ProviderRoutingError::NoCompliantProvider));
-    }
-
-    #[test]
-    fn local_provider_wins_for_french_eur_checkout() {
-        let decision = route_provider(&ProviderRouteRequest {
-            country: Some("FR".to_string()),
-            currency: "EUR".to_string(),
-            payment_method: Some("card".to_string()),
-            amount_minor: 1_000,
-            mollie_enabled: true,
-            external_provider_fallback_enabled: false,
-        })
-        .expect("local provider should be selected");
-        assert_eq!(decision.provider, ProviderCode::Mollie);
-        assert_eq!(
-            decision.reason,
-            ProviderRouteReason::LocalResidencyPreferred
-        );
-        assert_eq!(decision.residency_scope, ProviderResidencyScope::Local);
-    }
-
-    #[test]
-    fn regional_provider_wins_for_eu_eur_checkout() {
-        let decision = route_provider(&ProviderRouteRequest {
-            country: Some("DE".to_string()),
-            currency: "EUR".to_string(),
-            payment_method: Some("card".to_string()),
-            amount_minor: 1_000,
-            mollie_enabled: true,
-            external_provider_fallback_enabled: false,
-        })
-        .expect("regional provider should be selected");
-        assert_eq!(decision.provider, ProviderCode::Mollie);
-        assert_eq!(
-            decision.reason,
-            ProviderRouteReason::RegionalResidencyPreferred
-        );
-        assert_eq!(decision.residency_scope, ProviderResidencyScope::Regional);
-    }
-
-    #[test]
-    fn external_provider_is_only_used_when_fallback_is_enabled() {
-        let decision = route_provider(&ProviderRouteRequest {
-            country: Some("FR".to_string()),
-            currency: "EUR".to_string(),
-            payment_method: Some("card".to_string()),
-            amount_minor: 1_000,
-            mollie_enabled: false,
-            external_provider_fallback_enabled: true,
-        })
-        .expect("external fallback should be selected");
-        assert_eq!(decision.provider, ProviderCode::Stripe);
-        assert_eq!(
-            decision.reason,
-            ProviderRouteReason::ExternalProviderFallback
-        );
-        assert_eq!(decision.residency_scope, ProviderResidencyScope::External);
-    }
-
-    #[test]
-    fn european_provider_wins_for_eur_even_when_customer_is_outside_europe() {
-        let decision = route_provider(&ProviderRouteRequest {
-            country: Some("US".to_string()),
-            currency: "EUR".to_string(),
-            payment_method: Some("card".to_string()),
-            amount_minor: 1_000,
-            mollie_enabled: true,
-            external_provider_fallback_enabled: false,
-        })
-        .expect("regional provider should be selected");
-        assert_eq!(decision.provider, ProviderCode::Mollie);
-        assert_eq!(
-            decision.reason,
-            ProviderRouteReason::RegionalResidencyPreferred
-        );
-        assert_eq!(decision.residency_scope, ProviderResidencyScope::Regional);
-    }
-
-    #[test]
-    fn fallback_is_forbidden_after_authorization() {
-        assert!(!can_create_provider_fallback(PaymentStatus::Authorized));
-        assert!(can_create_provider_fallback(PaymentStatus::Failed));
+    match status {
+        ProviderOperationalStatus::Available => base,
+        ProviderOperationalStatus::Degraded => base.saturating_sub(20),
+        ProviderOperationalStatus::Unavailable => 0,
     }
 }

@@ -7,7 +7,9 @@ pub struct BillingProviderEnv {
     pub mollie_api_key: Option<String>,
     pub mollie_api_base_url: String,
     pub billing_mollie_enabled: bool,
+    pub billing_mollie_routing_status: String,
     pub billing_external_provider_fallback_enabled: bool,
+    pub billing_external_provider_routing_status: String,
 }
 
 pub fn billing_provider_env() -> Result<BillingProviderEnv, String> {
@@ -28,9 +30,21 @@ pub fn billing_provider_env() -> Result<BillingProviderEnv, String> {
             false,
         )?,
         billing_mollie_enabled: env_bool("NVBES_MOLLIE_ENABLED", false),
+        billing_mollie_routing_status: env_or_default(
+            "NVBES_BILLING_MOLLIE_ROUTING_STATUS",
+            std::env::var("NVBES_BILLING_MOLLIE_ROUTING_STATUS").ok(),
+            "available",
+            false,
+        )?,
         billing_external_provider_fallback_enabled: env_bool(
             "NVBES_BILLING_EXTERNAL_PROVIDER_FALLBACK_ENABLED",
             false,
         ),
+        billing_external_provider_routing_status: env_or_default(
+            "NVBES_BILLING_EXTERNAL_PROVIDER_ROUTING_STATUS",
+            std::env::var("NVBES_BILLING_EXTERNAL_PROVIDER_ROUTING_STATUS").ok(),
+            "available",
+            false,
+        )?,
     })
 }

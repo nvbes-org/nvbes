@@ -115,8 +115,11 @@ impl AppConfig {
             mollie_api_key: billing_provider_env.mollie_api_key,
             mollie_api_base_url: billing_provider_env.mollie_api_base_url,
             billing_mollie_enabled: billing_provider_env.billing_mollie_enabled,
+            billing_mollie_routing_status: billing_provider_env.billing_mollie_routing_status,
             billing_external_provider_fallback_enabled: billing_provider_env
                 .billing_external_provider_fallback_enabled,
+            billing_external_provider_routing_status: billing_provider_env
+                .billing_external_provider_routing_status,
             billing_default_success_url: env_or_default(
                 "NVBES_BILLING_SUCCESS_URL",
                 std::env::var("NVBES_BILLING_SUCCESS_URL").ok(),

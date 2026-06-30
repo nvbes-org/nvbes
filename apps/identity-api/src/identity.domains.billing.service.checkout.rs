@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-
 use super::super::types::*;
 use super::super::{db, policy, provider_mollie, provider_routing, stripe};
 use crate::domains::auth::{
@@ -13,7 +12,6 @@ use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
 use nvbes_region::geo::{GeoLookupPurpose, GeoLookupRecordContext, record_geo_resolution_tx};
-
 use super::geo::{checkout_geo_risk, resolve_checkout_geo};
 
 #[expect(
@@ -32,7 +30,6 @@ pub async fn create_checkout_session(
     user_agent: Option<String>,
 ) -> Result<CheckoutSessionResponse, AppError> {
     verification::require_recent_step_up(redis, &access.auth, Some(Aal::Aal2)).await?;
-
     policy::enforce_billing_rate_limits(
         limiter,
         access.workspace_id,
@@ -106,7 +103,13 @@ pub async fn create_checkout_session(
             payment_method: None,
             amount_minor: plan_monthly_price_cents(&target_plan.code),
             mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
+            mollie_status: provider_routing::ProviderOperationalStatus::from_config(
+                &config.billing_mollie_routing_status,
+            ),
             external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
+            external_provider_status: provider_routing::ProviderOperationalStatus::from_config(
+                &config.billing_external_provider_routing_status,
+            ),
         })
         .map_err(|error| {
             AppError::conflict(
@@ -116,6 +119,7 @@ pub async fn create_checkout_session(
         })?;
     let provider_route_reason = provider_decision.reason.as_str();
     let provider_residency_scope = provider_decision.residency_scope.as_str();
+    let provider_operational_status = provider_decision.operational_status.as_str();
 
     let checkout = match provider_decision.provider {
         ProviderCode::Stripe => {
@@ -211,6 +215,7 @@ pub async fn create_checkout_session(
                 "provider": checkout.provider,
                 "provider_route_reason": provider_route_reason,
                 "provider_residency_scope": provider_residency_scope,
+                "provider_operational_status": provider_operational_status,
                 "provider_estimated_fee_minor": provider_decision.estimated_fee_minor,
                 "provider_success_priority": provider_decision.success_priority,
                 "provider_fallback_allowed": provider_decision.fallback_allowed,
@@ -261,6 +266,7 @@ pub async fn create_checkout_session(
                 "provider": checkout.provider,
                 "provider_route_reason": provider_route_reason,
                 "provider_residency_scope": provider_residency_scope,
+                "provider_operational_status": provider_operational_status,
                 "checkout_id": checkout.checkout_id,
             }),
         },

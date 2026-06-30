@@ -21,6 +21,9 @@ pub mod provider_events;
 pub mod provider_mollie;
 #[path = "identity.domains.billing.provider.routing.rs"]
 pub mod provider_routing;
+#[cfg(test)]
+#[path = "identity.domains.billing.provider.routing.tests.rs"]
+mod provider_routing_tests;
 #[path = "identity.domains.billing.provider.stripe.rs"]
 pub mod provider_stripe;
 #[path = "identity.domains.billing.routes.rs"]
