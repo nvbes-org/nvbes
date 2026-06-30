@@ -1,6 +1,8 @@
 use crate::app::AppState;
 use axum::{Router, middleware};
 
+#[path = "identity.domains.billing.routes.admin_routing.rs"]
+pub mod admin_routing;
 #[path = "identity.domains.billing.routes.manage.rs"]
 pub mod manage;
 #[path = "identity.domains.billing.routes.portal.rs"]
@@ -11,10 +13,13 @@ pub mod usage;
 pub mod webhooks;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let internal_routes = usage::router().layer(middleware::from_fn_with_state(
-        state.config.clone(),
-        nvbes_core::http::internal_observability::internal_observability_guard,
-    ));
+    let internal_routes = Router::new()
+        .merge(usage::router())
+        .merge(admin_routing::router())
+        .layer(middleware::from_fn_with_state(
+            state.config.clone(),
+            nvbes_core::http::internal_observability::internal_observability_guard,
+        ));
 
     Router::new()
         .merge(manage::router(state))
