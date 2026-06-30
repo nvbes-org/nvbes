@@ -12,6 +12,7 @@ fn stripe_is_not_default_when_external_fallback_is_disabled() {
         currency: "USD".to_string(),
         payment_method: None,
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Available,
         external_provider_fallback_enabled: false,
@@ -27,6 +28,7 @@ fn local_provider_wins_for_french_eur_checkout() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Available,
         external_provider_fallback_enabled: false,
@@ -48,6 +50,7 @@ fn regional_provider_wins_for_eu_eur_checkout() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Available,
         external_provider_fallback_enabled: false,
@@ -69,6 +72,7 @@ fn external_provider_is_only_used_when_fallback_is_enabled() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: false,
         mollie_status: ProviderOperationalStatus::Available,
         external_provider_fallback_enabled: true,
@@ -90,6 +94,7 @@ fn european_provider_wins_for_eur_even_when_customer_is_outside_europe() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Available,
         external_provider_fallback_enabled: false,
@@ -117,6 +122,7 @@ fn unavailable_regional_provider_is_excluded() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Unavailable,
         external_provider_fallback_enabled: false,
@@ -132,6 +138,7 @@ fn degraded_provider_remains_usable_when_it_is_the_only_compliant_provider() {
         currency: "EUR".to_string(),
         payment_method: Some("card".to_string()),
         amount_minor: 1_000,
+        preferred_provider: None,
         mollie_enabled: true,
         mollie_status: ProviderOperationalStatus::Degraded,
         external_provider_fallback_enabled: false,
@@ -144,4 +151,42 @@ fn degraded_provider_remains_usable_when_it_is_the_only_compliant_provider() {
         ProviderOperationalStatus::Degraded
     );
     assert!(decision.success_priority < 95);
+}
+
+#[test]
+fn preferred_external_provider_can_override_local_provider_when_explicitly_enabled() {
+    let decision = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: Some("card".to_string()),
+        amount_minor: 1_000,
+        preferred_provider: Some(ProviderCode::Stripe),
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Available,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Available,
+    })
+    .expect("explicit external provider should be selected");
+    assert_eq!(decision.provider, ProviderCode::Stripe);
+    assert_eq!(
+        decision.reason,
+        ProviderRouteReason::ExternalProviderFallback
+    );
+}
+
+#[test]
+fn preferred_regional_provider_can_fallback_to_external_when_unavailable() {
+    let decision = route_provider(&ProviderRouteRequest {
+        country: Some("FR".to_string()),
+        currency: "EUR".to_string(),
+        payment_method: Some("card".to_string()),
+        amount_minor: 1_000,
+        preferred_provider: Some(ProviderCode::Mollie),
+        mollie_enabled: true,
+        mollie_status: ProviderOperationalStatus::Unavailable,
+        external_provider_fallback_enabled: true,
+        external_provider_status: ProviderOperationalStatus::Available,
+    })
+    .expect("external fallback should be selected when preferred regional provider is down");
+    assert_eq!(decision.provider, ProviderCode::Stripe);
 }

@@ -9,6 +9,7 @@ pub struct ProviderRouteRequest {
     pub currency: String,
     pub payment_method: Option<String>,
     pub amount_minor: i64,
+    pub preferred_provider: Option<ProviderCode>,
     pub mollie_enabled: bool,
     pub mollie_status: ProviderOperationalStatus,
     pub external_provider_fallback_enabled: bool,
@@ -120,7 +121,8 @@ pub fn route_provider(
     let country = country.as_deref();
     let mut candidates = Vec::new();
 
-    if request.mollie_enabled
+    if provider_matches_preference(request.preferred_provider, ProviderCode::Mollie)
+        && request.mollie_enabled
         && request.currency == "EUR"
         && request.mollie_status.accepts_new_checkouts()
     {
@@ -177,6 +179,10 @@ pub fn route_provider(
 
 pub fn can_create_provider_fallback(status: PaymentStatus) -> bool {
     can_fallback_to_another_provider(status)
+}
+
+fn provider_matches_preference(preferred: Option<ProviderCode>, provider: ProviderCode) -> bool {
+    preferred.is_none_or(|preferred| preferred == provider)
 }
 
 fn route_reason(

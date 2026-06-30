@@ -1,8 +1,9 @@
 use super::super::provider_routing::{
     self, ProviderOperationalStatus, ProviderRouteDecision, ProviderRoutingError,
 };
-use super::super::{db, types::AuditEventInput};
+use super::super::{db, db::ProviderRoutingRule, types::AuditEventInput};
 use crate::http::error::AppError;
+use nvbes_billing::provider::ProviderCode;
 use nvbes_core::config::AppConfig;
 use uuid::Uuid;
 
@@ -23,47 +24,63 @@ pub fn route_checkout_provider(
     config: &AppConfig,
     country: Option<&str>,
     amount_minor: i64,
+    rule: Option<&ProviderRoutingRule>,
 ) -> Result<ProviderRouteDecision, ProviderRoutingError> {
+    let preferred_provider = rule.and_then(|rule| provider_code(&rule.provider));
     provider_routing::route_provider(&provider_routing::ProviderRouteRequest {
         country: country.map(ToOwned::to_owned),
         currency: "EUR".to_string(),
         payment_method: None,
         amount_minor,
+        preferred_provider,
         mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
         mollie_status: ProviderOperationalStatus::from_config(
             &config.billing_mollie_routing_status,
         ),
-        external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
+        external_provider_fallback_enabled: external_fallback_enabled(config, rule),
         external_provider_status: ProviderOperationalStatus::from_config(
             &config.billing_external_provider_routing_status,
         ),
     })
 }
 
-pub fn checkout_route_candidates(config: &AppConfig, amount_minor: i64) -> serde_json::Value {
+pub fn checkout_route_candidates(
+    config: &AppConfig,
+    amount_minor: i64,
+    rule: Option<&ProviderRoutingRule>,
+) -> serde_json::Value {
     let mollie_enabled = config.billing_mollie_enabled && config.mollie_api_key.is_some();
     let mollie_status =
         ProviderOperationalStatus::from_config(&config.billing_mollie_routing_status);
     let external_status =
         ProviderOperationalStatus::from_config(&config.billing_external_provider_routing_status);
+    let preferred_provider = rule.and_then(|rule| provider_code(&rule.provider));
+    let external_enabled = external_fallback_enabled(config, rule);
 
     serde_json::json!([
         {
             "provider": "mollie",
             "enabled": mollie_enabled,
             "operational_status": mollie_status.as_str(),
-            "eligible": mollie_enabled && mollie_status != ProviderOperationalStatus::Unavailable,
-            "exclusion_reason": mollie_exclusion_reason(mollie_enabled, mollie_status),
+            "preferred": preferred_provider == Some(ProviderCode::Mollie),
+            "eligible": preferred_provider != Some(ProviderCode::Stripe)
+                && mollie_enabled
+                && mollie_status != ProviderOperationalStatus::Unavailable,
+            "exclusion_reason": mollie_exclusion_reason(
+                preferred_provider,
+                mollie_enabled,
+                mollie_status,
+            ),
             "estimated_fee_minor": estimate_visible_fee_minor("mollie", amount_minor),
         },
         {
             "provider": "stripe",
-            "enabled": config.billing_external_provider_fallback_enabled,
+            "enabled": external_enabled,
             "operational_status": external_status.as_str(),
-            "eligible": config.billing_external_provider_fallback_enabled
-                && external_status != ProviderOperationalStatus::Unavailable,
+            "preferred": preferred_provider == Some(ProviderCode::Stripe),
+            "eligible": external_enabled && external_status != ProviderOperationalStatus::Unavailable,
             "exclusion_reason": external_exclusion_reason(
-                config.billing_external_provider_fallback_enabled,
+                external_enabled,
                 external_status,
             ),
             "estimated_fee_minor": estimate_visible_fee_minor("stripe", amount_minor),
@@ -83,6 +100,8 @@ pub struct CheckoutRoutingBlockedAudit<'a> {
     pub mollie_routing_status: &'a str,
     pub external_provider_fallback_enabled: bool,
     pub external_provider_routing_status: &'a str,
+    pub routing_rule_id: Option<Uuid>,
+    pub routing_rule_provider: Option<&'a str>,
     pub route_candidates: serde_json::Value,
 }
 
@@ -108,6 +127,8 @@ pub async fn audit_checkout_routing_blocked(
                 "mollie_routing_status": input.mollie_routing_status,
                 "external_provider_fallback_enabled": input.external_provider_fallback_enabled,
                 "external_provider_routing_status": input.external_provider_routing_status,
+                "routing_rule_id": input.routing_rule_id,
+                "routing_rule_provider": input.routing_rule_provider,
                 "route_candidates": input.route_candidates,
             }),
         },
@@ -129,6 +150,7 @@ pub fn checkout_routing_blocked_audit<'a>(
     geo_country_code: Option<&'a str>,
     ip: Option<&'a str>,
     user_agent: Option<&'a str>,
+    rule: Option<&'a ProviderRoutingRule>,
 ) -> CheckoutRoutingBlockedAudit<'a> {
     CheckoutRoutingBlockedAudit {
         workspace_id,
@@ -140,9 +162,11 @@ pub fn checkout_routing_blocked_audit<'a>(
         user_agent,
         mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
         mollie_routing_status: &config.billing_mollie_routing_status,
-        external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
+        external_provider_fallback_enabled: external_fallback_enabled(config, rule),
         external_provider_routing_status: &config.billing_external_provider_routing_status,
-        route_candidates: checkout_route_candidates(config, amount_minor),
+        routing_rule_id: rule.map(|rule| rule.id),
+        routing_rule_provider: rule.map(|rule| rule.provider.as_str()),
+        route_candidates: checkout_route_candidates(config, amount_minor, rule),
     }
 }
 
@@ -154,10 +178,13 @@ pub fn checkout_routing_blocked_error(error: ProviderRoutingError) -> AppError {
 }
 
 fn mollie_exclusion_reason(
+    preferred_provider: Option<ProviderCode>,
     enabled: bool,
     status: ProviderOperationalStatus,
 ) -> Option<&'static str> {
-    if !enabled {
+    if preferred_provider == Some(ProviderCode::Stripe) {
+        Some("not_preferred_by_routing_rule")
+    } else if !enabled {
         Some("provider_disabled_or_unconfigured")
     } else if status == ProviderOperationalStatus::Unavailable {
         Some("provider_unavailable")
@@ -184,5 +211,20 @@ fn estimate_visible_fee_minor(provider: &str, amount_minor: i64) -> i64 {
     match provider {
         "mollie" => 25 + amount_minor * 12 / 1_000,
         _ => 25 + amount_minor * 15 / 1_000,
+    }
+}
+
+fn external_fallback_enabled(config: &AppConfig, rule: Option<&ProviderRoutingRule>) -> bool {
+    config.billing_external_provider_fallback_enabled
+        || rule.is_some_and(|rule| {
+            rule.fallback_enabled || provider_code(&rule.provider) == Some(ProviderCode::Stripe)
+        })
+}
+
+fn provider_code(provider: &str) -> Option<ProviderCode> {
+    match provider {
+        "mollie" => Some(ProviderCode::Mollie),
+        "stripe" => Some(ProviderCode::Stripe),
+        _ => None,
     }
 }

@@ -1,7 +1,10 @@
 #[path = "identity.domains.billing.db.provider_events.rs"]
 mod provider_events;
+#[path = "identity.domains.billing.db.provider_routing.rs"]
+mod provider_routing;
 
 pub use provider_events::{mark_provider_event_replayed, record_provider_event};
+pub use provider_routing::{ProviderRoutingRule, fetch_provider_routing_rule_tx};
 
 use super::types::{AuditEventInput, BillingStateRecord, PlanRecord, StripePriceMapping};
 use crate::http::error::AppError;

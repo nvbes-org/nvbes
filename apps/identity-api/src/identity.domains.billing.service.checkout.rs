@@ -1,5 +1,6 @@
 use super::super::types::*;
 use super::super::{db, policy, provider_mollie, stripe};
+use super::checkout_audit::{CheckoutStartedAudit, audit_checkout_started};
 use super::checkout_routing::{
     CheckoutProviderResult, audit_checkout_routing_blocked, checkout_route_candidates,
     checkout_routing_blocked_audit, checkout_routing_blocked_error, route_checkout_provider,
@@ -41,7 +42,6 @@ pub async fn create_checkout_session(
         "checkout",
     )
     .await?;
-
     let mut tx = db.begin().await?;
     let record = db::fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
     let geo_resolution = resolve_checkout_geo(
@@ -101,30 +101,45 @@ pub async fn create_checkout_session(
     )?;
 
     let checkout_amount_minor = plan_monthly_price_cents(&target_plan.code);
-    let route_candidates = checkout_route_candidates(config, checkout_amount_minor);
-    let provider_decision =
-        match route_checkout_provider(config, checkout_country, checkout_amount_minor) {
-            Ok(decision) => decision,
-            Err(error) => {
-                audit_checkout_routing_blocked(
-                    &mut tx,
-                    checkout_routing_blocked_audit(
-                        config,
-                        access.workspace_id,
-                        access.auth.user_id,
-                        &target_plan.code,
-                        checkout_amount_minor,
-                        error.as_str(),
-                        checkout_country,
-                        ip.as_deref(),
-                        user_agent.as_deref(),
-                    ),
-                )
-                .await?;
-                tx.commit().await?;
-                return Err(checkout_routing_blocked_error(error));
-            }
-        };
+    let routing_rule = db::fetch_provider_routing_rule_tx(
+        &mut tx,
+        checkout_country,
+        "EUR",
+        "card",
+        &record.customer_type,
+        checkout_amount_minor,
+    )
+    .await?;
+    let route_candidates =
+        checkout_route_candidates(config, checkout_amount_minor, routing_rule.as_ref());
+    let provider_decision = match route_checkout_provider(
+        config,
+        checkout_country,
+        checkout_amount_minor,
+        routing_rule.as_ref(),
+    ) {
+        Ok(decision) => decision,
+        Err(error) => {
+            audit_checkout_routing_blocked(
+                &mut tx,
+                checkout_routing_blocked_audit(
+                    config,
+                    access.workspace_id,
+                    access.auth.user_id,
+                    &target_plan.code,
+                    checkout_amount_minor,
+                    error.as_str(),
+                    checkout_country,
+                    ip.as_deref(),
+                    user_agent.as_deref(),
+                    routing_rule.as_ref(),
+                ),
+            )
+            .await?;
+            tx.commit().await?;
+            return Err(checkout_routing_blocked_error(error));
+        }
+    };
     let provider_route_reason = provider_decision.reason.as_str();
     let provider_residency_scope = provider_decision.residency_scope.as_str();
     let provider_operational_status = provider_decision.operational_status.as_str();
@@ -208,39 +223,27 @@ pub async fn create_checkout_session(
     };
     let geo_risk = checkout_geo_risk(&geo_resolution, record.country.as_deref());
 
-    db::insert_audit_event(
+    audit_checkout_started(
         &mut tx,
-        AuditEventInput {
+        CheckoutStartedAudit {
             workspace_id: access.workspace_id,
-            actor_user_id: Some(access.auth.user_id),
-            action: "billing.checkout_started",
-            target_type: "workspace",
-            target_id: Some(access.workspace_id),
+            actor_user_id: access.auth.user_id,
+            plan_code: &target_plan.code,
+            checkout_country,
             ip: ip.as_deref(),
             user_agent: user_agent.as_deref(),
-            metadata: serde_json::json!({
-                "plan_code": target_plan.code,
-                "provider": checkout.provider,
-                "provider_route_reason": provider_route_reason,
-                "provider_residency_scope": provider_residency_scope,
-                "provider_operational_status": provider_operational_status,
-                "provider_estimated_fee_minor": provider_decision.estimated_fee_minor,
-                "provider_success_priority": provider_decision.success_priority,
-                "provider_fallback_allowed": provider_decision.fallback_allowed,
-                "provider_route_candidates": route_candidates,
-                "provider_customer_id": checkout.provider_customer_id,
-                "provider_price_id": checkout.provider_price_id,
-                "geo_country_code": checkout_country,
-                "geo_source": geo_resolution.source.as_str(),
-                "geo_confidence": geo_resolution.confidence.as_str(),
-                "geo_network_kind": geo_resolution.network_kind.as_str(),
-                "geo_risk_score": geo_resolution.risk_score,
-                "geo_risk_labels": geo_resolution.risk_labels.clone(),
-                "geo_risk_factors": geo_risk.factors.clone(),
-                "price_country_code": checkout.price_country_code,
-                "pricing_region": checkout.pricing_region,
-                "checkout_id": checkout.checkout_id,
-                "payment_id": checkout.payment_id,
+            provider_decision: &provider_decision,
+            route_candidates,
+            routing_rule_id: routing_rule.as_ref().map(|rule| rule.id),
+            routing_rule_provider: routing_rule.as_ref().map(|rule| rule.provider.as_str()),
+            checkout: &checkout,
+            geo_metadata: serde_json::json!({
+                "source": geo_resolution.source.as_str(),
+                "confidence": geo_resolution.confidence.as_str(),
+                "network_kind": geo_resolution.network_kind.as_str(),
+                "risk_score": geo_resolution.risk_score,
+                "risk_labels": geo_resolution.risk_labels.clone(),
+                "risk_factors": geo_risk.factors.clone(),
             }),
         },
     )
