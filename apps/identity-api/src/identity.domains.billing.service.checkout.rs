@@ -1,8 +1,8 @@
 use super::super::types::*;
 use super::super::{db, policy, provider_mollie, stripe};
 use super::checkout_routing::{
-    CheckoutProviderResult, audit_checkout_routing_blocked, checkout_routing_blocked_audit,
-    checkout_routing_blocked_error, route_checkout_provider,
+    CheckoutProviderResult, audit_checkout_routing_blocked, checkout_route_candidates,
+    checkout_routing_blocked_audit, checkout_routing_blocked_error, route_checkout_provider,
 };
 use super::geo::{checkout_geo_risk, resolve_checkout_geo};
 use crate::domains::auth::{
@@ -100,31 +100,31 @@ pub async fn create_checkout_session(
         "NVBES_BILLING_CANCEL_URL",
     )?;
 
-    let provider_decision = match route_checkout_provider(
-        config,
-        checkout_country,
-        plan_monthly_price_cents(&target_plan.code),
-    ) {
-        Ok(decision) => decision,
-        Err(error) => {
-            audit_checkout_routing_blocked(
-                &mut tx,
-                checkout_routing_blocked_audit(
-                    config,
-                    access.workspace_id,
-                    access.auth.user_id,
-                    &target_plan.code,
-                    error.as_str(),
-                    checkout_country,
-                    ip.as_deref(),
-                    user_agent.as_deref(),
-                ),
-            )
-            .await?;
-            tx.commit().await?;
-            return Err(checkout_routing_blocked_error(error));
-        }
-    };
+    let checkout_amount_minor = plan_monthly_price_cents(&target_plan.code);
+    let route_candidates = checkout_route_candidates(config, checkout_amount_minor);
+    let provider_decision =
+        match route_checkout_provider(config, checkout_country, checkout_amount_minor) {
+            Ok(decision) => decision,
+            Err(error) => {
+                audit_checkout_routing_blocked(
+                    &mut tx,
+                    checkout_routing_blocked_audit(
+                        config,
+                        access.workspace_id,
+                        access.auth.user_id,
+                        &target_plan.code,
+                        checkout_amount_minor,
+                        error.as_str(),
+                        checkout_country,
+                        ip.as_deref(),
+                        user_agent.as_deref(),
+                    ),
+                )
+                .await?;
+                tx.commit().await?;
+                return Err(checkout_routing_blocked_error(error));
+            }
+        };
     let provider_route_reason = provider_decision.reason.as_str();
     let provider_residency_scope = provider_decision.residency_scope.as_str();
     let provider_operational_status = provider_decision.operational_status.as_str();
@@ -227,6 +227,7 @@ pub async fn create_checkout_session(
                 "provider_estimated_fee_minor": provider_decision.estimated_fee_minor,
                 "provider_success_priority": provider_decision.success_priority,
                 "provider_fallback_allowed": provider_decision.fallback_allowed,
+                "provider_route_candidates": route_candidates,
                 "provider_customer_id": checkout.provider_customer_id,
                 "provider_price_id": checkout.provider_price_id,
                 "geo_country_code": checkout_country,

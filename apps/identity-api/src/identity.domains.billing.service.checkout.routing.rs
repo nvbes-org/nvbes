@@ -40,6 +40,37 @@ pub fn route_checkout_provider(
     })
 }
 
+pub fn checkout_route_candidates(config: &AppConfig, amount_minor: i64) -> serde_json::Value {
+    let mollie_enabled = config.billing_mollie_enabled && config.mollie_api_key.is_some();
+    let mollie_status =
+        ProviderOperationalStatus::from_config(&config.billing_mollie_routing_status);
+    let external_status =
+        ProviderOperationalStatus::from_config(&config.billing_external_provider_routing_status);
+
+    serde_json::json!([
+        {
+            "provider": "mollie",
+            "enabled": mollie_enabled,
+            "operational_status": mollie_status.as_str(),
+            "eligible": mollie_enabled && mollie_status != ProviderOperationalStatus::Unavailable,
+            "exclusion_reason": mollie_exclusion_reason(mollie_enabled, mollie_status),
+            "estimated_fee_minor": estimate_visible_fee_minor("mollie", amount_minor),
+        },
+        {
+            "provider": "stripe",
+            "enabled": config.billing_external_provider_fallback_enabled,
+            "operational_status": external_status.as_str(),
+            "eligible": config.billing_external_provider_fallback_enabled
+                && external_status != ProviderOperationalStatus::Unavailable,
+            "exclusion_reason": external_exclusion_reason(
+                config.billing_external_provider_fallback_enabled,
+                external_status,
+            ),
+            "estimated_fee_minor": estimate_visible_fee_minor("stripe", amount_minor),
+        },
+    ])
+}
+
 pub struct CheckoutRoutingBlockedAudit<'a> {
     pub workspace_id: Uuid,
     pub actor_user_id: Uuid,
@@ -52,6 +83,7 @@ pub struct CheckoutRoutingBlockedAudit<'a> {
     pub mollie_routing_status: &'a str,
     pub external_provider_fallback_enabled: bool,
     pub external_provider_routing_status: &'a str,
+    pub route_candidates: serde_json::Value,
 }
 
 pub async fn audit_checkout_routing_blocked(
@@ -76,6 +108,7 @@ pub async fn audit_checkout_routing_blocked(
                 "mollie_routing_status": input.mollie_routing_status,
                 "external_provider_fallback_enabled": input.external_provider_fallback_enabled,
                 "external_provider_routing_status": input.external_provider_routing_status,
+                "route_candidates": input.route_candidates,
             }),
         },
     )
@@ -91,6 +124,7 @@ pub fn checkout_routing_blocked_audit<'a>(
     workspace_id: Uuid,
     actor_user_id: Uuid,
     plan_code: &'a str,
+    amount_minor: i64,
     routing_error: &'a str,
     geo_country_code: Option<&'a str>,
     ip: Option<&'a str>,
@@ -108,6 +142,7 @@ pub fn checkout_routing_blocked_audit<'a>(
         mollie_routing_status: &config.billing_mollie_routing_status,
         external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
         external_provider_routing_status: &config.billing_external_provider_routing_status,
+        route_candidates: checkout_route_candidates(config, amount_minor),
     }
 }
 
@@ -116,4 +151,38 @@ pub fn checkout_routing_blocked_error(error: ProviderRoutingError) -> AppError {
         error.as_str(),
         "No compliant billing provider is available for this checkout policy.",
     )
+}
+
+fn mollie_exclusion_reason(
+    enabled: bool,
+    status: ProviderOperationalStatus,
+) -> Option<&'static str> {
+    if !enabled {
+        Some("provider_disabled_or_unconfigured")
+    } else if status == ProviderOperationalStatus::Unavailable {
+        Some("provider_unavailable")
+    } else {
+        None
+    }
+}
+
+fn external_exclusion_reason(
+    enabled: bool,
+    status: ProviderOperationalStatus,
+) -> Option<&'static str> {
+    if !enabled {
+        Some("external_fallback_disabled")
+    } else if status == ProviderOperationalStatus::Unavailable {
+        Some("provider_unavailable")
+    } else {
+        None
+    }
+}
+
+fn estimate_visible_fee_minor(provider: &str, amount_minor: i64) -> i64 {
+    let amount_minor = amount_minor.max(0);
+    match provider {
+        "mollie" => 25 + amount_minor * 12 / 1_000,
+        _ => 25 + amount_minor * 15 / 1_000,
+    }
 }
