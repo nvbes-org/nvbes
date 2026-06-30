@@ -51,6 +51,7 @@ pub struct AppConfig {
     pub mollie_api_key: Option<String>,
     pub mollie_api_base_url: String,
     pub billing_mollie_enabled: bool,
+    pub billing_external_provider_fallback_enabled: bool,
     pub billing_default_success_url: String,
     pub billing_default_cancel_url: String,
     pub billing_default_portal_return_url: String,

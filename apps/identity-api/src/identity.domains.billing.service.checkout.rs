@@ -99,15 +99,25 @@ pub async fn create_checkout_session(
         "NVBES_BILLING_CANCEL_URL",
     )?;
 
-    let provider = provider_routing::route_provider(&provider_routing::ProviderRouteRequest {
-        country: checkout_country.map(ToOwned::to_owned),
-        currency: "EUR".to_string(),
-        payment_method: None,
-        amount_minor: plan_monthly_price_cents(&target_plan.code),
-        mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
-    });
+    let provider_decision =
+        provider_routing::route_provider(&provider_routing::ProviderRouteRequest {
+            country: checkout_country.map(ToOwned::to_owned),
+            currency: "EUR".to_string(),
+            payment_method: None,
+            amount_minor: plan_monthly_price_cents(&target_plan.code),
+            mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
+            external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
+        })
+        .map_err(|error| {
+            AppError::conflict(
+                error.as_str(),
+                "No compliant billing provider is available for this checkout policy.",
+            )
+        })?;
+    let provider_route_reason = provider_decision.reason.as_str();
+    let provider_residency_scope = provider_decision.residency_scope.as_str();
 
-    let checkout = match provider {
+    let checkout = match provider_decision.provider {
         ProviderCode::Stripe => {
             let mapping =
                 db::fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id, checkout_country)
@@ -199,6 +209,11 @@ pub async fn create_checkout_session(
             metadata: serde_json::json!({
                 "plan_code": target_plan.code,
                 "provider": checkout.provider,
+                "provider_route_reason": provider_route_reason,
+                "provider_residency_scope": provider_residency_scope,
+                "provider_estimated_fee_minor": provider_decision.estimated_fee_minor,
+                "provider_success_priority": provider_decision.success_priority,
+                "provider_fallback_allowed": provider_decision.fallback_allowed,
                 "provider_customer_id": checkout.provider_customer_id,
                 "provider_price_id": checkout.provider_price_id,
                 "geo_country_code": checkout_country,
@@ -244,6 +259,8 @@ pub async fn create_checkout_session(
             decision: RiskDecision::Allow,
             metadata: serde_json::json!({
                 "provider": checkout.provider,
+                "provider_route_reason": provider_route_reason,
+                "provider_residency_scope": provider_residency_scope,
                 "checkout_id": checkout.checkout_id,
             }),
         },
