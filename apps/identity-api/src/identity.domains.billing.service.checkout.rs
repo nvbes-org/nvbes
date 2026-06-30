@@ -1,6 +1,10 @@
-use sqlx::PgPool;
 use super::super::types::*;
-use super::super::{db, policy, provider_mollie, provider_routing, stripe};
+use super::super::{db, policy, provider_mollie, stripe};
+use super::checkout_routing::{
+    CheckoutProviderResult, audit_checkout_routing_blocked, checkout_routing_blocked_audit,
+    checkout_routing_blocked_error, route_checkout_provider,
+};
+use super::geo::{checkout_geo_risk, resolve_checkout_geo};
 use crate::domains::auth::{
     risk::{self, RiskDecision, RiskEventInput},
     verification,
@@ -12,7 +16,7 @@ use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
 use nvbes_region::geo::{GeoLookupPurpose, GeoLookupRecordContext, record_geo_resolution_tx};
-use super::geo::{checkout_geo_risk, resolve_checkout_geo};
+use sqlx::PgPool;
 
 #[expect(
     clippy::too_many_arguments,
@@ -96,27 +100,31 @@ pub async fn create_checkout_session(
         "NVBES_BILLING_CANCEL_URL",
     )?;
 
-    let provider_decision =
-        provider_routing::route_provider(&provider_routing::ProviderRouteRequest {
-            country: checkout_country.map(ToOwned::to_owned),
-            currency: "EUR".to_string(),
-            payment_method: None,
-            amount_minor: plan_monthly_price_cents(&target_plan.code),
-            mollie_enabled: config.billing_mollie_enabled && config.mollie_api_key.is_some(),
-            mollie_status: provider_routing::ProviderOperationalStatus::from_config(
-                &config.billing_mollie_routing_status,
-            ),
-            external_provider_fallback_enabled: config.billing_external_provider_fallback_enabled,
-            external_provider_status: provider_routing::ProviderOperationalStatus::from_config(
-                &config.billing_external_provider_routing_status,
-            ),
-        })
-        .map_err(|error| {
-            AppError::conflict(
-                error.as_str(),
-                "No compliant billing provider is available for this checkout policy.",
+    let provider_decision = match route_checkout_provider(
+        config,
+        checkout_country,
+        plan_monthly_price_cents(&target_plan.code),
+    ) {
+        Ok(decision) => decision,
+        Err(error) => {
+            audit_checkout_routing_blocked(
+                &mut tx,
+                checkout_routing_blocked_audit(
+                    config,
+                    access.workspace_id,
+                    access.auth.user_id,
+                    &target_plan.code,
+                    error.as_str(),
+                    checkout_country,
+                    ip.as_deref(),
+                    user_agent.as_deref(),
+                ),
             )
-        })?;
+            .await?;
+            tx.commit().await?;
+            return Err(checkout_routing_blocked_error(error));
+        }
+    };
     let provider_route_reason = provider_decision.reason.as_str();
     let provider_residency_scope = provider_decision.residency_scope.as_str();
     let provider_operational_status = provider_decision.operational_status.as_str();
@@ -284,17 +292,4 @@ pub async fn create_checkout_session(
         stripe_customer_id: checkout.stripe_customer_id,
         stripe_price_id: checkout.stripe_price_id,
     })
-}
-
-struct CheckoutProviderResult {
-    provider: String,
-    checkout_id: String,
-    url: String,
-    provider_customer_id: String,
-    provider_price_id: Option<String>,
-    price_country_code: Option<String>,
-    pricing_region: Option<String>,
-    payment_id: Option<String>,
-    stripe_customer_id: String,
-    stripe_price_id: String,
 }
