@@ -150,6 +150,47 @@ mod tests {
         tx.rollback().await.expect("transaction should rollback");
     }
 
+    #[tokio::test]
+    async fn new_rule_cannot_overlap_active_rule() {
+        let Some(pool) = crate::billing_platform_center_actions_test_support::test_pool().await
+        else {
+            eprintln!("skipping test: Postgres is not reachable");
+            return;
+        };
+        if !routing_rule_schema_exists(&pool).await {
+            eprintln!("skipping test: billing provider routing schema is missing");
+            return;
+        }
+
+        let mut tx = pool.begin().await.expect("transaction should start");
+        sqlx::query(
+            "INSERT INTO billing_provider_routing_rules (
+               priority, provider, country, currency, payment_method, customer_type,
+               min_amount_minor, max_amount_minor, fallback_enabled, status
+             ) VALUES (10, 'mollie', 'FR', 'EUR', 'card', 'b2b', 0, 5000, FALSE, 'active')",
+        )
+        .execute(tx.as_mut())
+        .await
+        .expect("active rule should insert");
+
+        let result = reject_active_routing_rule_overlap(
+            &mut tx,
+            RoutingRuleConflictInput {
+                exclude_rule_id: None,
+                country: Some("FR"),
+                currency: Some("EUR"),
+                payment_method: Some("card"),
+                customer_type: Some("b2b"),
+                min_amount_minor: Some(1000),
+                max_amount_minor: Some(3000),
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+        tx.rollback().await.expect("transaction should rollback");
+    }
+
     async fn routing_rule_schema_exists(pool: &sqlx::PgPool) -> bool {
         sqlx::query_scalar::<_, bool>(
             "SELECT to_regclass('public.billing_provider_routing_rules') IS NOT NULL",
