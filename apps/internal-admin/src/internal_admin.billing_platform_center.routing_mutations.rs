@@ -8,6 +8,7 @@ use crate::billing_platform_center_action_log::{
 };
 use crate::billing_platform_center_routing_rule_conflicts::{
     RoutingRuleConflictInput, reject_active_routing_rule_overlap,
+    reject_active_routing_rule_overlap_for_rule,
 };
 use crate::billing_platform_center_routing_rule_validation::{
     normalize_country, normalize_currency, validate_create_routing_rule,
@@ -42,6 +43,7 @@ pub(crate) async fn create_routing_rule(
     reject_active_routing_rule_overlap(
         &mut tx,
         RoutingRuleConflictInput {
+            exclude_rule_id: None,
             country: country.as_deref(),
             currency: currency.as_deref(),
             payment_method: input.payment_method.as_deref(),
@@ -153,6 +155,9 @@ async fn transition_routing_rule(
 ) -> Result<BillingPlatformActionResult, AppError> {
     validate_reason(&reason)?;
     let mut tx = db.begin().await?;
+    if next_state == "active" {
+        reject_active_routing_rule_overlap_for_rule(&mut tx, rule_id).await?;
+    }
     let row = sqlx::query(
         "WITH previous AS (
            SELECT id, status AS previous_state
