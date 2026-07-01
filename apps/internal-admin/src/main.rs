@@ -68,6 +68,9 @@ mod billing_platform_center_routing_mutations;
 mod billing_platform_center_routing_rule_conflicts;
 #[path = "internal_admin.billing_platform_center.routing_rule_simulation.rs"]
 mod billing_platform_center_routing_rule_simulation;
+#[cfg(test)]
+#[path = "internal_admin.billing_platform_center.routing_rule_simulation.tests.rs"]
+mod billing_platform_center_routing_rule_simulation_tests;
 #[path = "internal_admin.billing_platform_center.routing_rule_validation.rs"]
 mod billing_platform_center_routing_rule_validation;
 #[path = "internal_admin.billing_platform_center.routing_rules.rs"]

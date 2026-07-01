@@ -15,26 +15,26 @@ pub(crate) struct RoutingRuleSimulationInput {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RoutingRuleSimulationResult {
-    input: NormalizedRoutingRuleSimulationInput,
-    matched_rule: Option<MatchedRoutingRule>,
-    outcome: &'static str,
+    pub(crate) input: NormalizedRoutingRuleSimulationInput,
+    pub(crate) matched_rule: Option<MatchedRoutingRule>,
+    pub(crate) outcome: &'static str,
 }
 
 #[derive(Debug, Serialize)]
-struct NormalizedRoutingRuleSimulationInput {
-    country: Option<String>,
-    currency: String,
-    payment_method: String,
-    customer_type: String,
-    amount_minor: i64,
+pub(crate) struct NormalizedRoutingRuleSimulationInput {
+    pub(crate) country: Option<String>,
+    pub(crate) currency: String,
+    pub(crate) payment_method: String,
+    pub(crate) customer_type: String,
+    pub(crate) amount_minor: i64,
 }
 
 #[derive(Debug, Serialize)]
-struct MatchedRoutingRule {
-    id: Uuid,
-    priority: i32,
-    provider: String,
-    fallback_enabled: bool,
+pub(crate) struct MatchedRoutingRule {
+    pub(crate) id: Uuid,
+    pub(crate) priority: i32,
+    pub(crate) provider: String,
+    pub(crate) fallback_enabled: bool,
 }
 
 pub(crate) async fn simulate_routing_rule(
