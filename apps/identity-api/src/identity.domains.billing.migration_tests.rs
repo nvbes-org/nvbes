@@ -1,5 +1,6 @@
 const BILLING_PLATFORM_MIGRATION: &str =
     include_str!("../migrations/0016_billing_platform_core.sql");
+const INITIAL_SCHEMA_MIGRATION: &str = include_str!("../migrations/0001_initial_schema.sql");
 const REGIONAL_PRICE_MIGRATION: &str =
     include_str!("../migrations/0017_regional_price_mappings.sql");
 const GEO_LOOKUP_MIGRATION: &str = include_str!("../migrations/0019_geo_lookup_relations.sql");
@@ -42,8 +43,28 @@ fn billing_platform_migration_covers_canonical_table_groups() {
 
 #[test]
 fn billing_platform_migration_seeds_supported_providers() {
-    assert!(BILLING_PLATFORM_MIGRATION.contains("ADD VALUE IF NOT EXISTS 'mollie'"));
+    assert!(
+        INITIAL_SCHEMA_MIGRATION
+            .contains("CREATE TYPE billing_provider AS ENUM ('stripe', 'mollie')")
+    );
     assert!(BILLING_PLATFORM_MIGRATION.contains("VALUES ('stripe'), ('mollie')"));
+}
+
+#[test]
+fn billing_platform_migration_backfills_provider_customers() {
+    for needle in [
+        "CREATE TABLE IF NOT EXISTS billing_provider_customers",
+        "provider_customer_id TEXT NOT NULL",
+        "UNIQUE (provider, provider_customer_id)",
+        "INSERT INTO billing_provider_customers",
+        "stripe_customer_id",
+        "ON CONFLICT (provider, provider_customer_id) DO NOTHING",
+    ] {
+        assert!(
+            BILLING_PLATFORM_MIGRATION.contains(needle),
+            "billing provider customer migration missing {needle}"
+        );
+    }
 }
 
 #[test]
@@ -52,6 +73,24 @@ fn billing_platform_migration_preserves_stripe_compatibility_mappings() {
     assert!(BILLING_PLATFORM_MIGRATION.contains("billing_legacy_stripe_price_mappings"));
     assert!(BILLING_PLATFORM_MIGRATION.contains("provider_product_id AS stripe_product_id"));
     assert!(BILLING_PLATFORM_MIGRATION.contains("provider_price_id AS stripe_price_id"));
+}
+
+#[test]
+fn billing_platform_migration_backfills_provider_price_mappings() {
+    for needle in [
+        "CREATE TABLE IF NOT EXISTS billing_provider_price_mappings",
+        "provider_product_id TEXT NOT NULL",
+        "provider_price_id TEXT NOT NULL",
+        "UNIQUE (provider, provider_price_id)",
+        "INSERT INTO billing_provider_price_mappings",
+        "SELECT plan_id, 'stripe', stripe_product_id, stripe_price_id",
+        "ON CONFLICT (provider, provider_price_id) DO NOTHING",
+    ] {
+        assert!(
+            BILLING_PLATFORM_MIGRATION.contains(needle),
+            "billing provider price migration missing {needle}"
+        );
+    }
 }
 
 #[test]

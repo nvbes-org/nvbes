@@ -19,7 +19,7 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn handle_webhook(
+pub(crate) async fn handle_webhook(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,

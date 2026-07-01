@@ -47,6 +47,12 @@ use crate::app::AppState;
         crate::domains::public_api::v1_handlers::revoke_share_link,
         crate::domains::public_api::v1_handlers::get_quota,
         crate::domains::public_api::v1_handlers::list_audit_events,
+        crate::domains::billing::routes::manage::get_billing,
+        crate::domains::billing::routes::manage::create_checkout_session,
+        crate::domains::billing::routes::manage::create_portal_session,
+        crate::domains::billing::routes::manage::get_usage,
+        crate::domains::billing::routes::manage::get_invoice_estimate,
+        crate::domains::billing::routes::webhooks::handle_webhook,
     ),
 )]
 pub struct DriveApiDoc;
@@ -75,6 +81,54 @@ mod tests {
         assert!(
             path.get("post").is_none(),
             "legacy api-key creation must stay absent from openapi"
+        );
+    }
+
+    #[test]
+    fn openapi_includes_provider_neutral_billing_contracts() {
+        let openapi = serde_json::from_str::<serde_json::Value>(
+            &DriveApiDoc::openapi()
+                .to_json()
+                .expect("OpenAPI document should serialize"),
+        )
+        .expect("OpenAPI document should be valid JSON");
+
+        let paths = &openapi["paths"];
+        assert!(paths.get("/workspaces/{workspaceId}/billing").is_some());
+        assert!(
+            paths
+                .get("/workspaces/{workspaceId}/billing/checkout")
+                .is_some()
+        );
+        assert!(
+            paths
+                .get("/workspaces/{workspaceId}/billing/portal")
+                .is_some()
+        );
+
+        let schemas = &openapi["components"]["schemas"];
+        let checkout_properties = &schemas["CheckoutSessionResponse"]["properties"];
+        assert!(checkout_properties.get("provider").is_some());
+        assert!(checkout_properties.get("provider_customer_id").is_some());
+        assert!(checkout_properties.get("provider_product_id").is_some());
+        assert!(checkout_properties.get("provider_price_id").is_some());
+        assert!(checkout_properties.get("stripe_customer_id").is_some());
+
+        let portal_properties = &schemas["PortalSessionResponse"]["properties"];
+        assert!(portal_properties.get("provider").is_some());
+        assert!(portal_properties.get("provider_customer_id").is_some());
+        assert!(portal_properties.get("stripe_customer_id").is_some());
+
+        let billing_account_properties = &schemas["BillingAccountView"]["properties"];
+        assert!(
+            billing_account_properties
+                .get("provider_customer_id")
+                .is_some()
+        );
+        assert!(
+            billing_account_properties
+                .get("stripe_customer_id")
+                .is_some()
         );
     }
 }

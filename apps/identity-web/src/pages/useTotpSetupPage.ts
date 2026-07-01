@@ -1,8 +1,11 @@
 import { confirmTotp, setupTotp } from '@nvbes/identity-sdk-web';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 
 export function useTotpSetupPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
   const [step, setStep] = useState<'stepup' | 'setup' | 'confirm'>('stepup');
   const [label, setLabel] = useState('');
@@ -42,7 +45,7 @@ export function useTotpSetupPage() {
 
     try {
       await confirmTotp('', factorId, totpCode);
-      void navigate({ to: '/account/mfa/recovery-codes' });
+      void navigate({ to: '/account/mfa/recovery-codes', search: authuserSearch(authuser) });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'TOTP confirmation failed');
     } finally {
@@ -58,7 +61,8 @@ export function useTotpSetupPage() {
     error,
     loading,
     qrData: provisioningUri || null,
-    navigateBack: () => void navigate({ to: '/account/security' }),
+    navigateBack: () =>
+      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
     onStepUpSuccess: () => setStep('setup'),
     onLabelChange: setLabel,
     onTotpCodeChange: setTotpCode,

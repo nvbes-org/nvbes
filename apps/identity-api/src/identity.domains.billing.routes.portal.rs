@@ -6,12 +6,14 @@ use axum::{
     routing::get,
 };
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::domains::authz::{ResourceContext, WorkspaceAction, authorize_workspace_action};
 use crate::domains::billing::service::{self, BillingPortalView};
 use crate::http::error::AppError;
+use nvbes_core::http::error::ErrorEnvelope;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -26,7 +28,7 @@ pub fn router() -> Router<AppState> {
         )
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct BillingPortalCapabilities {
     pub exposes_provider_secret_ids: bool,
     pub payment_method_update_flow: String,
@@ -36,6 +38,15 @@ pub struct BillingPortalCapabilities {
     pub shows_credits: bool,
 }
 
+#[utoipa::path(
+    get,
+    path = "/billing/portal/capabilities",
+    tag = "billing",
+    responses(
+        (status = 200, description = "Billing portal capabilities", body = BillingPortalCapabilities),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
 pub async fn portal_capabilities() -> Json<BillingPortalCapabilities> {
     Json(BillingPortalCapabilities {
         exposes_provider_secret_ids: false,
@@ -47,6 +58,20 @@ pub async fn portal_capabilities() -> Json<BillingPortalCapabilities> {
     })
 }
 
+#[utoipa::path(
+    get,
+    path = "/workspaces/{workspaceId}/billing/portal/view",
+    tag = "billing",
+    params(
+        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+    ),
+    responses(
+        (status = 200, description = "Billing portal view", body = BillingPortalView),
+        (status = 400, description = "Bad request", body = ErrorEnvelope),
+        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+        (status = 500, description = "Internal server error", body = ErrorEnvelope),
+    ),
+)]
 pub async fn get_portal_view(
     State(state): State<AppState>,
     headers: HeaderMap,

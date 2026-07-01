@@ -18,6 +18,12 @@ const SupportedRegionSchema = z.object({
 const SupportedRegionsResultSchema = z.array(SupportedRegionSchema);
 
 const RegisterResultSchema = z.object({
+  user: z
+    .object({
+      display_name: z.string().optional(),
+      username: z.string().nullable().optional(),
+    })
+    .optional(),
   verification_resend_available_at: z.string(),
 });
 
@@ -36,9 +42,11 @@ const LoginPasswordResultSchema = z.object({
   available_methods: z.array(z.string()).nullable().optional(),
   user: z
     .object({
+      display_name: z.string().optional(),
       email: z.string().optional(),
       email_verified: z.boolean().optional(),
       mfa_enabled: z.boolean().optional(),
+      username: z.string().nullable().optional(),
     })
     .optional(),
   session_token: z.string().optional(),

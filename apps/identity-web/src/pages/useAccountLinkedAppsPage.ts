@@ -1,16 +1,21 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useState } from 'react';
 import { accountQueryKeys } from '@/account.queries';
+import { readAuthuser } from '@/identity.authuser';
 import { listLinkedApps, revokeLinkedApp, type LinkedApp } from '@/pages/AccountLinkedAppsPage.api';
 
 export function useAccountLinkedAppsPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const [revoking, setRevoking] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const linkedAppsQueryKey = accountQueryKeys.linkedApps(authuser);
 
   const { data: clients = [], isPending } = useQuery({
-    queryKey: accountQueryKeys.linkedApps,
+    queryKey: linkedAppsQueryKey,
     queryFn: ({ signal }) => listLinkedApps(signal),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -26,16 +31,16 @@ export function useAccountLinkedAppsPage() {
   });
 
   const handleRevoke = async (clientId: string) => {
-    const previous = queryClient.getQueryData<LinkedApp[]>(accountQueryKeys.linkedApps) ?? [];
+    const previous = queryClient.getQueryData<LinkedApp[]>(linkedAppsQueryKey) ?? [];
     queryClient.setQueryData<LinkedApp[]>(
-      accountQueryKeys.linkedApps,
+      linkedAppsQueryKey,
       previous.filter((client) => client.id !== clientId),
     );
     setRevoking(clientId);
     try {
       await revokeLinkedApp(clientId);
     } catch {
-      queryClient.setQueryData(accountQueryKeys.linkedApps, previous);
+      queryClient.setQueryData(linkedAppsQueryKey, previous);
     } finally {
       setRevoking(null);
     }

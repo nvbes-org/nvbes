@@ -1,13 +1,17 @@
 import type { AccountEntry, AccountMe, AccountWorkspace } from '@nvbes/identity-client';
 import { identityClient } from '@nvbes/identity-client';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useState, type FormEvent } from 'react';
 
 import { accountQueryKeys } from '@/account.queries';
 import { useAccountContext } from '@/hooks/useAccountContext';
+import { readAuthuser } from '@/identity.authuser';
 
 export function useWorkspacesPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -40,7 +44,7 @@ export function useWorkspacesPage() {
         me: AccountMe | null;
         workspaces: AccountWorkspace[];
         accounts: AccountEntry[];
-      }>(accountQueryKeys.context, (current) =>
+      }>(accountQueryKeys.context(authuser), (current) =>
         current
           ? {
               ...current,

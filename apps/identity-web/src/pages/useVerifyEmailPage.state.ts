@@ -1,5 +1,10 @@
 import { useLocation, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  clearVerificationSnapshot,
+  readVerificationSnapshot,
+  saveVerificationSnapshot,
+} from '../identity.email-verification.state';
 import type { VerificationLocationState, VerificationStatus } from './VerifyEmailPage.shared';
 
 export function useVerifyEmailPageState() {
@@ -7,22 +12,41 @@ export function useVerifyEmailPageState() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.searchStr);
   const locationState = location.state as VerificationLocationState | null;
+  const storedState = readVerificationSnapshot();
 
-  const emailFromState = locationState?.email ?? '';
+  const accountNameFromState = locationState?.accountName ?? storedState?.accountName ?? null;
+  const emailFromState = locationState?.email ?? storedState?.email ?? '';
   const token = searchParams.get('token') ?? null;
+  const resendAvailableAtFromState =
+    locationState?.resendAvailableAt ?? storedState?.resendAvailableAt ?? null;
 
   const [status, setStatus] = useState<VerificationStatus>(token ? 'verifying' : 'pending');
   const [message, setMessage] = useState<string | null>(null);
+  const [accountName] = useState(accountNameFromState);
   const [originalEmail, setOriginalEmail] = useState(emailFromState);
   const [emailDraft, setEmailDraft] = useState(emailFromState);
   const [resendAvailableAt, setResendAvailableAt] = useState<Date | null>(
-    locationState?.resendAvailableAt ? new Date(locationState.resendAvailableAt) : null,
+    resendAvailableAtFromState ? new Date(resendAvailableAtFromState) : null,
   );
   const [now, setNow] = useState(() => new Date());
   const [working, setWorking] = useState(false);
   const [verified, setVerified] = useState(false);
 
+  useEffect(() => {
+    if (verified) {
+      clearVerificationSnapshot();
+      return;
+    }
+
+    saveVerificationSnapshot({
+      accountName,
+      email: originalEmail,
+      resendAvailableAt: resendAvailableAt?.toISOString() ?? null,
+    });
+  }, [accountName, originalEmail, resendAvailableAt, verified]);
+
   return {
+    accountName,
     navigate,
     token,
     originalEmail,

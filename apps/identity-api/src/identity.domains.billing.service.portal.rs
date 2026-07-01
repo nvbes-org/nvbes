@@ -42,8 +42,9 @@ pub async fn create_portal_session(
         .await?;
 
     let customer_id = record
-        .stripe_customer_id
+        .provider_customer_id
         .clone()
+        .or_else(|| record.stripe_customer_id.clone())
         .or_else(|| record.billing_customer_id.clone())
         .ok_or_else(|| {
             AppError::conflict(
@@ -73,7 +74,7 @@ pub async fn create_portal_session(
             ip: ip.as_deref(),
             user_agent: user_agent.as_deref(),
             metadata: serde_json::json!({
-                "stripe_customer_id": customer_id,
+                "provider_customer_id": customer_id,
             }),
         },
     )

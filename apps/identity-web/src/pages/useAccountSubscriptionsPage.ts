@@ -15,13 +15,22 @@ export function useAccountSubscriptionsOverview(workspaceId: string) {
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const portalQuery = useSuspenseQuery({
+    queryKey: ['billing', 'portal-view', workspaceId],
+    queryFn: () => identityClient.getBillingPortalView(workspaceId),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const openPortal = async () => {
-    window.location.href = await identityClient.createBillingPortal(workspaceId);
+    const portal = await identityClient.createBillingPortalSession(workspaceId);
+    window.location.href = portal.url;
   };
 
   return {
     overview: overviewQuery.data,
+    portal: portalQuery.data,
     openPortal,
   };
 }

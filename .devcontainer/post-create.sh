@@ -89,6 +89,7 @@ install_node_options_guard
 
 sudo mkdir -p \
   "$HOME/.cache" \
+  "$HOME/.codex" \
   "$HOME/.config" \
   "$HOME/.gnupg" \
   "$HOME/.local/share" \
@@ -101,6 +102,7 @@ sudo mkdir -p \
   /workspaces/nvbes/target
 sudo chown -R "$(id -u):$(id -g)" \
   "$HOME/.cache" \
+  "$HOME/.codex" \
   "$HOME/.config" \
   "$HOME/.gnupg" \
   "$HOME/.local/share" \

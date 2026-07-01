@@ -13,8 +13,8 @@ export interface AccountPersonalInfoQueryData {
   workspaces: AccountWorkspace[];
 }
 
-export function getAccountPersonalInfoQueryKey() {
-  return accountQueryKeys.personalInfo;
+export function getAccountPersonalInfoQueryKey(authuser: string) {
+  return accountQueryKeys.personalInfo(authuser);
 }
 
 export function getAccountPersonalInfoContextUpdate(data: { user: AccountPrincipal }) {

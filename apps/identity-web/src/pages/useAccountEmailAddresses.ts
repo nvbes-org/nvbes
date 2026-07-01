@@ -1,15 +1,19 @@
 import { identityClient } from '@nvbes/identity-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
+import { accountQueryKeys } from '@/account.queries';
+import { readAuthuser } from '@/identity.authuser';
 import { getAccountPersonalInfoQueryKey } from './useAccountPersonalInfoPage.shared';
 
-const accountEmailsQueryKey = ['identity', 'account', 'emails'] as const;
-
 export function useAccountEmailAddresses() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const queryClient = useQueryClient();
   const [emailDraft, setEmailDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const accountEmailsQueryKey = accountQueryKeys.emails(authuser);
 
   const query = useQuery({
     queryKey: accountEmailsQueryKey,
@@ -20,7 +24,7 @@ export function useAccountEmailAddresses() {
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: accountEmailsQueryKey }),
-      queryClient.invalidateQueries({ queryKey: getAccountPersonalInfoQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAccountPersonalInfoQueryKey(authuser) }),
     ]);
   };
 

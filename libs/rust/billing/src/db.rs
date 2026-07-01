@@ -33,6 +33,7 @@ pub async fn fetch_billing_state_tx(
           s.billing_subscription_id,
           s.current_period_start,
           s.current_period_end,
+          ba.stripe_customer_id AS provider_customer_id,
           ba.stripe_customer_id,
           ba.billing_email,
           ba.country::text AS country,
@@ -87,6 +88,7 @@ pub async fn fetch_billing_state_tx(
         billing_subscription_id: row.get("billing_subscription_id"),
         current_period_start: row.get("current_period_start"),
         current_period_end: row.get("current_period_end"),
+        provider_customer_id: row.get("provider_customer_id"),
         stripe_customer_id: row.get("stripe_customer_id"),
         billing_email: row.get("billing_email"),
         country: row.get("country"),
@@ -131,6 +133,8 @@ pub async fn fetch_active_price_mapping_tx(
     let row = sqlx::query(
         r#"
         SELECT
+          stripe_product_id AS provider_product_id,
+          stripe_price_id AS provider_price_id,
           stripe_product_id,
           stripe_price_id,
           country_code::text AS country_code,
@@ -171,6 +175,8 @@ pub async fn fetch_active_price_mapping_tx(
     .await?;
 
     Ok(row.map(|row| StripePriceMapping {
+        provider_product_id: row.get("provider_product_id"),
+        provider_price_id: row.get("provider_price_id"),
         stripe_product_id: row.get("stripe_product_id"),
         stripe_price_id: row.get("stripe_price_id"),
         country_code: row.get("country_code"),

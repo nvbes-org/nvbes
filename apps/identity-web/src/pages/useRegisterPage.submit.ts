@@ -21,7 +21,11 @@ interface RegisterSubmitArgs {
   canProceedFromStep1: boolean;
   legalDocumentsAccepted: boolean;
   marketingEmailsAccepted: boolean;
-  onSuccess: (args: { email: string; resendAvailableAt: string | null }) => void;
+  onSuccess: (args: {
+    accountName: string | null;
+    email: string;
+    resendAvailableAt: string | null;
+  }) => void;
 }
 
 export function useRegisterPageSubmit({
@@ -81,7 +85,9 @@ export function useRegisterPageSubmit({
         savePendingOAuthAuthorizeRequest(oauthRequest);
       }
 
+      const accountName = (result.user?.username ?? username).trim() || null;
       onSuccess({
+        accountName,
         email,
         resendAvailableAt: result.verification_resend_available_at,
       });

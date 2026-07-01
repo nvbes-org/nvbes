@@ -30,11 +30,12 @@ export function buildPasswordSubmitAction(
       setAvailableMethods,
       setMfaMethod,
       setSessionToken,
-      navigateToVerifyEmail: (nextEmail, resendAvailableAt) => {
+      navigateToVerifyEmail: (nextEmail, resendAvailableAt, accountName) => {
         void navigate({
           to: '/verify',
           state: (state) => ({
             ...state,
+            accountName,
             email: nextEmail,
             resendAvailableAt,
           }),

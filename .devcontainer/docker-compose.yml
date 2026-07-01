@@ -1,3 +1,5 @@
+name: nvbes_devcontainer
+
 services:
   workspace:
     build:
@@ -16,6 +18,7 @@ services:
       - nvbes_vscode_server:/home/vscode/.vscode-server
       - nvbes_vscode_server_insiders:/home/vscode/.vscode-server-insiders
       - nvbes_home_cache:/home/vscode/.cache
+      - nvbes_home_codex:/home/vscode/.codex
       - nvbes_home_config:/home/vscode/.config
       - nvbes_home_gnupg:/home/vscode/.gnupg
       - nvbes_home_local_share:/home/vscode/.local/share
@@ -35,6 +38,8 @@ services:
       NVBES_DRIVE_API_BASE_URL: http://localhost:4002
       VITE_IDENTITY_API_BASE_URL: http://localhost:4000
       VITE_DRIVE_API_BASE_URL: /api
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,6 +156,7 @@ volumes:
   nvbes_cargo_registry:
   nvbes_cargo_git:
   nvbes_home_cache:
+  nvbes_home_codex:
   nvbes_home_config:
   nvbes_home_gnupg:
   nvbes_home_local_share:

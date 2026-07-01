@@ -74,6 +74,8 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::billing::routes::manage::create_portal,
         crate::domains::billing::routes::manage::get_billing_usage,
         crate::domains::billing::routes::manage::get_entitlements,
+        crate::domains::billing::routes::portal::portal_capabilities,
+        crate::domains::billing::routes::portal::get_portal_view,
         crate::domains::billing::routes::webhooks::handle_stripe_webhook,
         crate::domains::billing::routes::webhooks::handle_mollie_webhook,
         crate::domains::members::routes::manage::list_members,

@@ -3,6 +3,7 @@ import type { EmailAddress } from '@nvbes/identity-client';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -32,48 +33,53 @@ export function AccountEmailAddresses({
   onResendVerification: (emailId: string) => void;
 }) {
   return (
-    <section className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-base font-medium">Emails</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <Card>
+      <CardHeader>
+        <CardTitle>Emails</CardTitle>
+        <CardDescription>
           L&apos;email principal reste celui utilise pour la connexion et les documents du compte.
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
-      <div className="flex flex-col gap-2">
-        {emails.map((email) => (
-          <EmailAddressRow
-            key={email.id}
-            email={email}
-            loading={loading}
-            primaryMinAgeHours={primaryMinAgeHours}
-            onDelete={onDelete}
-            onPromote={onPromote}
-            onResendVerification={onResendVerification}
-          />
-        ))}
-      </div>
-
-      <form onSubmit={onAdd} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+      <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="secondary-email">Ajouter un email secondaire</Label>
-          <Input
-            id="secondary-email"
-            type="email"
-            value={emailDraft}
-            placeholder="adresse@email.com"
-            autoComplete="email"
-            onChange={(event) => onDraftChange(event.target.value)}
-          />
+          {emails.map((email) => (
+            <EmailAddressRow
+              key={email.id}
+              email={email}
+              loading={loading}
+              primaryMinAgeHours={primaryMinAgeHours}
+              onDelete={onDelete}
+              onPromote={onPromote}
+              onResendVerification={onResendVerification}
+            />
+          ))}
         </div>
-        <Button type="submit" disabled={loading || emailDraft.trim().length === 0}>
-          Ajouter
-        </Button>
-      </form>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {success ? <p className="text-sm text-primary">{success}</p> : null}
-    </section>
+        <form
+          onSubmit={onAdd}
+          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="secondary-email">Ajouter un email secondaire</Label>
+            <Input
+              id="secondary-email"
+              type="email"
+              value={emailDraft}
+              placeholder="adresse@email.com"
+              autoComplete="email"
+              onChange={(event) => onDraftChange(event.target.value)}
+            />
+          </div>
+          <Button type="submit" disabled={loading || emailDraft.trim().length === 0}>
+            Ajouter
+          </Button>
+        </form>
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {success ? <p className="text-sm text-primary">{success}</p> : null}
+      </CardContent>
+    </Card>
   );
 }
 

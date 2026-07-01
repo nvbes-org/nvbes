@@ -3,6 +3,7 @@ import { useVerifyEmailPage } from './useVerifyEmailPage';
 
 export default function VerifyEmailPage() {
   const {
+    accountName,
     canSend,
     emailChanged,
     emailDraft,
@@ -19,6 +20,7 @@ export default function VerifyEmailPage() {
 
   return (
     <VerifyEmailCard
+      accountName={accountName}
       verified={verified}
       message={message}
       status={status}

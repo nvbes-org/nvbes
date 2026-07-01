@@ -36,12 +36,14 @@ pub async fn list_cookie_accounts(
     jwt: &JwtService,
     state: &crate::app::AppState,
     headers: &HeaderMap,
+    current_authuser: &str,
 ) -> Result<(AccountChooserResult, Vec<RefreshedCookies>), AppError> {
     let mut accounts = Vec::new();
     let mut refreshed_cookies = Vec::new();
 
     for cookie in crate::http::request::session_cookie_tokens(headers) {
-        match active_account_from_cookie(db, redis, jwt, &cookie).await {
+        let current = cookie.authuser == current_authuser;
+        match active_account_from_cookie(db, redis, jwt, &cookie, current).await {
             Ok(account) => {
                 accounts.push(account);
                 continue;
@@ -58,7 +60,7 @@ pub async fn list_cookie_accounts(
                     )
                     .await
                     && let Ok(session_view) =
-                        sessions_mgmt::fetch_view(redis, auth_context.session_id, false).await
+                        sessions_mgmt::fetch_view(redis, auth_context.session_id, current).await
                 {
                     refreshed_cookies.push(cookies);
                     accounts.push(account_entry_from_auth_context(
@@ -95,9 +97,10 @@ async fn active_account_from_cookie(
     redis: &nvbes_redis::RedisPool,
     jwt: &JwtService,
     cookie: &crate::http::request::SessionCookieToken,
+    current: bool,
 ) -> Result<AccountChooserSession, AppError> {
     let auth_context = sessions::authenticate(db, redis, jwt, &cookie.token).await?;
-    let session_view = sessions_mgmt::fetch_view(redis, auth_context.session_id, false).await?;
+    let session_view = sessions_mgmt::fetch_view(redis, auth_context.session_id, current).await?;
     Ok(account_entry_from_auth_context(
         cookie.authuser.clone(),
         auth_context,
@@ -196,7 +199,11 @@ fn account_entry_from_expired_claims(
 
 #[cfg(test)]
 mod tests {
-    use super::{AccountChooserSessionStatus, account_entry_from_expired_claims};
+    use super::{
+        AccountChooserSessionStatus, account_entry_from_auth_context,
+        account_entry_from_expired_claims,
+    };
+    use crate::domains::auth::types::{AuthContext, SessionView};
     use crate::domains::auth::{db::UserRecord, jwt::types::TokenClaims};
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
@@ -257,5 +264,50 @@ mod tests {
         assert_eq!(account.user.email, "expired@example.test");
         assert_eq!(account.session.id, session_id);
         assert_eq!(account.session.expires_at, expires_at);
+    }
+
+    #[test]
+    fn active_account_preserves_current_session_flag() {
+        let user_id = Uuid::new_v4();
+        let session_id = Uuid::new_v4();
+        let now = Utc.with_ymd_and_hms(2026, 7, 1, 12, 0, 0).unwrap();
+        let account = account_entry_from_auth_context(
+            "1".to_string(),
+            AuthContext {
+                user_id,
+                user_email: "current@example.test".to_string(),
+                display_name: "Current User".to_string(),
+                email_verified_at: Some(now),
+                mfa_enabled: false,
+                tenant_id: None,
+                organization_id: None,
+                workspace_id: None,
+                workspace_region: None,
+                session_id,
+                scope: "openid profile email".to_string(),
+                acr: Some("aal1".to_string()),
+                amr: vec!["pwd".to_string()],
+                auth_time: Some(now),
+                client_id: None,
+                cnf_jkt: None,
+            },
+            SessionView {
+                id: session_id,
+                tenant_id: None,
+                organization_id: None,
+                workspace_id: None,
+                workspace_region: None,
+                created_at: now,
+                last_seen_at: now,
+                expires_at: now,
+                revoked_at: None,
+                ip: None,
+                user_agent: None,
+                current: true,
+            },
+        );
+
+        assert_eq!(account.authuser, "1");
+        assert!(account.session.current);
     }
 }

@@ -3,8 +3,9 @@ import {
   registerWebAuthnCredential,
   WebauthnBrowserError,
 } from '@nvbes/identity-sdk-web';
-import { useNavigate } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 import { setupCopy, type WebauthnSetupKind } from './WebauthnSetupPage.shared';
 
 interface WebauthnSupportState {
@@ -16,6 +17,8 @@ interface WebauthnSupportState {
 const WEBAUTHN_TIMEOUT_MS = 60_000;
 
 export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
   const copy = setupCopy[kind];
   const [step, setStep] = useState<'stepup' | 'register'>('stepup');
@@ -23,6 +26,7 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [support, setSupport] = useState<WebauthnSupportState | null>(null);
+  const registrationInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +61,11 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
   }, [copy.browserText, copy.unsupportedText]);
 
   const register = async () => {
+    if (registrationInFlight.current) {
+      return;
+    }
+
+    registrationInFlight.current = true;
     setLoading(true);
     setError(null);
 
@@ -64,7 +73,7 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
       await registerWebAuthnCredential('', label || undefined, kind, undefined, {
         timeoutMs: WEBAUTHN_TIMEOUT_MS,
       });
-      void navigate({ to: '/account/mfa/recovery-codes' });
+      void navigate({ to: '/account/mfa/recovery-codes', search: authuserSearch(authuser) });
     } catch (err) {
       if (err instanceof Error && err.message.includes('step_up_required')) {
         setStep('stepup');
@@ -74,6 +83,7 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
         setError(err instanceof Error ? err.message : 'WebAuthn registration failed');
       }
     } finally {
+      registrationInFlight.current = false;
       setLoading(false);
     }
   };
@@ -86,7 +96,8 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
     loading,
     support,
     showPlatformWarning: kind === 'passkey' && support?.platformAuthenticatorAvailable === false,
-    navigateBack: () => void navigate({ to: '/account/security' }),
+    navigateBack: () =>
+      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
     onStepUpSuccess: () => setStep('register'),
     onLabelChange: setLabel,
     onRegister: register,

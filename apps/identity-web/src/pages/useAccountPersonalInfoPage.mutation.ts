@@ -11,6 +11,7 @@ import {
 } from './useAccountPersonalInfoPage.shared';
 
 export function useAccountPersonalInfoMutation({
+  authuser,
   didInitializeFormRef,
   setBirthdate,
   setEditError,
@@ -20,6 +21,7 @@ export function useAccountPersonalInfoMutation({
   setRegion,
   setUsername,
 }: {
+  authuser: string;
   didInitializeFormRef: MutableRefObject<boolean>;
   setBirthdate: (value: string) => void;
   setEditError: (value: string | null) => void;
@@ -30,7 +32,7 @@ export function useAccountPersonalInfoMutation({
   setUsername: (value: string) => void;
 }) {
   const queryClient = useQueryClient();
-  const personalInfoQueryKey = getAccountPersonalInfoQueryKey();
+  const personalInfoQueryKey = getAccountPersonalInfoQueryKey(authuser);
 
   return useMutation({
     mutationFn: (input: UpdateProfileInput) => updateProfile(input),
@@ -45,7 +47,7 @@ export function useAccountPersonalInfoMutation({
         me: AccountMe | null;
         workspaces: AccountWorkspace[];
         accounts: AccountEntry[];
-      }>(accountQueryKeys.context, getAccountPersonalInfoContextUpdate(data));
+      }>(accountQueryKeys.context(authuser), getAccountPersonalInfoContextUpdate(data));
       didInitializeFormRef.current = true;
       setFirstname(data.user.firstname ?? '');
       setLastname(data.user.lastname ?? '');

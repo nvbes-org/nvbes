@@ -4,20 +4,23 @@ pub use account_chooser::{AccountChooserResult, AccountChooserSession};
 use axum::{
     Json,
     extract::{Path, State},
-    http::header::SET_COOKIE,
+    http::{Uri, header::SET_COOKIE},
     response::{IntoResponse, Response},
 };
 
 pub async fn get_accounts(
     State(state): State<AppState>,
+    uri: Uri,
     headers: axum::http::HeaderMap,
 ) -> Result<Response, AppError> {
+    let current_authuser = resolve_authuser(&uri, &headers);
     let (result, refreshed_cookies) = account_chooser::list_cookie_accounts(
         &state.db,
         &state.redis,
         &state.jwt,
         &state,
         &headers,
+        &current_authuser,
     )
     .await?;
     let mut response = Json(result).into_response();
@@ -30,6 +33,22 @@ pub async fn get_accounts(
             .append(SET_COOKIE, cookies.csrf_cookie);
     }
     Ok(response)
+}
+
+fn resolve_authuser(uri: &Uri, headers: &axum::http::HeaderMap) -> String {
+    uri.query()
+        .and_then(|query| {
+            url::form_urlencoded::parse(query.as_bytes())
+                .find(|(key, _)| key == "authuser")
+                .map(|(_, value)| value.into_owned())
+        })
+        .or_else(|| {
+            headers
+                .get("X-Auth-User")
+                .and_then(|header| header.to_str().ok())
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "0".to_string())
 }
 
 pub async fn forget_account_cookie(

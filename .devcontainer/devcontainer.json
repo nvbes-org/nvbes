@@ -7,8 +7,11 @@
   "shutdownAction": "stopCompose",
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "postAttachCommand": "bash .devcontainer/open-start-page.sh",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
   "forwardPorts": [
-    3001, 4000, 4002, 5173, 13000, 13100, 13200, 14317, 14318, 14040, 15432, 16379, 18001, 19090
+    3001, 4000, 4002, 5173, 13000, 13100, 13200, 14317, 14318, 14040, 15432, 16379, 18001, 19000, 19090
   ],
   "portsAttributes": {
     "3001": {
@@ -49,6 +52,9 @@
     },
     "18001": {
       "label": "RedisInsight"
+    },
+    "19000": {
+      "label": "Sentry local"
     },
     "19090": {
       "label": "Prometheus"

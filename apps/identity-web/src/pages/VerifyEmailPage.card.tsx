@@ -13,6 +13,7 @@ import type { VerificationStatus } from './VerifyEmailPage.shared';
 import { VerifyEmailStatusBanner } from './VerifyEmailPage.banner';
 
 export function VerifyEmailCard({
+  accountName,
   verified,
   message,
   status,
@@ -26,6 +27,7 @@ export function VerifyEmailCard({
   onAction,
   onBackToLogin,
 }: {
+  accountName: string | null;
   verified: boolean;
   message: string | null;
   status: VerificationStatus;
@@ -47,6 +49,11 @@ export function VerifyEmailCard({
           <CardDescription>
             {verified ? 'Compte vérifié.' : 'Confirme ton adresse email.'}
           </CardDescription>
+          {accountName ? (
+            <div className="inline-flex w-fit max-w-full items-center rounded-md border border-border bg-muted/40 px-3 py-1 text-sm font-medium text-muted-foreground">
+              <span className="truncate">Compte @{accountName}</span>
+            </div>
+          ) : null}
         </CardHeader>
 
         <CardContent className="flex flex-col gap-5">

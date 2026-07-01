@@ -4,6 +4,7 @@ export { VerifyEmailCard } from './VerifyEmailPage.card';
 export type VerificationStatus = 'pending' | 'verifying' | 'verified' | 'error' | 'sent';
 
 export type VerificationLocationState = {
+  accountName?: string | null;
   email?: string | null;
   resendAvailableAt?: string | null;
 };

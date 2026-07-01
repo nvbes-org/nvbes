@@ -39,9 +39,10 @@ pub fn router(state: &AppState) -> Router<AppState> {
 )]
 pub(crate) async fn get_accounts(
     State(state): State<AppState>,
+    uri: axum::http::Uri,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, crate::http::error::AppError> {
-    accounts::get_accounts(State(state), headers).await
+    accounts::get_accounts(State(state), uri, headers).await
 }
 
 pub(crate) async fn forget_account_cookie(

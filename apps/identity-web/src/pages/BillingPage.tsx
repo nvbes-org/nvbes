@@ -43,11 +43,16 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setCheckoutLoading(planCode);
     try {
+      const checkout = await identityClient.createBillingCheckoutSession(workspaceId, planCode);
       trackEvent('billing.checkout_started', {
         plan_code: planCode,
+        provider: checkout.provider,
+        provider_customer_id: checkout.provider_customer_id,
+        provider_product_id: checkout.provider_product_id,
+        provider_price_id: checkout.provider_price_id,
         workspace_id: workspaceId,
       });
-      window.location.href = await identityClient.createBillingCheckout(workspaceId, planCode);
+      window.location.href = checkout.url;
     } finally {
       setCheckoutLoading(null);
     }
@@ -57,7 +62,12 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setPortalLoading(true);
     try {
-      window.location.href = await identityClient.createBillingPortal(workspaceId);
+      const portal = await identityClient.createBillingPortalSession(workspaceId);
+      trackEvent('billing.portal_started', {
+        provider: portal.provider,
+        workspace_id: workspaceId,
+      });
+      window.location.href = portal.url;
     } finally {
       setPortalLoading(false);
     }

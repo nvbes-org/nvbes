@@ -225,6 +225,26 @@ SELECT plan_id, 'stripe', stripe_product_id, stripe_price_id, status, created_at
 FROM stripe_price_mappings
 ON CONFLICT (provider, provider_price_id) DO NOTHING;
 
+INSERT INTO billing_provider_customers (
+  tenant_id,
+  billing_account_id,
+  provider,
+  provider_customer_id,
+  status,
+  created_at,
+  updated_at
+)
+SELECT tenant_id,
+       id,
+       'stripe',
+       stripe_customer_id,
+       status,
+       created_at,
+       updated_at
+FROM billing_accounts
+WHERE stripe_customer_id IS NOT NULL
+ON CONFLICT (provider, provider_customer_id) DO NOTHING;
+
 INSERT INTO billing_provider_mappings (
   tenant_id,
   provider,

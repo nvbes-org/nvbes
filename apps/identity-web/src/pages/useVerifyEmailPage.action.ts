@@ -70,6 +70,9 @@ export function useVerifyEmailPageAction({
         setOriginalEmail(draft);
       } else {
         setMessage('Vérification renvoyée.');
+        if (originalEmail.length === 0) {
+          setOriginalEmail(draft);
+        }
       }
     } catch (error) {
       setStatus('error');

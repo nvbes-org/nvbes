@@ -1,13 +1,18 @@
-import { useNavigate } from '@tanstack/react-router';
 import { listMfaFactors } from '@nvbes/identity-sdk-web';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 import { downloadRecoveryCodes, generateCodesWithPassword } from './RecoveryCodesPage.actions';
 import { RecoveryCodesListStep } from './RecoveryCodesPage.list';
 import { RecoveryCodesPasswordStep } from './RecoveryCodesPage.password';
 import { RecoveryCodesStepUp } from './RecoveryCodesPage.stepup';
 
 export default function RecoveryCodesPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
+  const navigateBack = () =>
+    void navigate({ to: '/account/mfa', search: authuserSearch(authuser) });
 
   const [step, setStep] = useState<'loading' | 'stepup' | 'password' | 'codes'>('loading');
   const [password, setPassword] = useState('');
@@ -64,12 +69,7 @@ export default function RecoveryCodesPage() {
   }
 
   if (step === 'stepup') {
-    return (
-      <RecoveryCodesStepUp
-        onSuccess={() => setStep('password')}
-        onCancel={() => void navigate({ to: '/account/mfa' })}
-      />
-    );
+    return <RecoveryCodesStepUp onSuccess={() => setStep('password')} onCancel={navigateBack} />;
   }
 
   if (step === 'password') {
@@ -78,18 +78,12 @@ export default function RecoveryCodesPage() {
         error={error}
         loading={loading}
         password={password}
-        onCancel={() => void navigate({ to: '/account/mfa' })}
+        onCancel={navigateBack}
         onPasswordChange={setPassword}
         onSubmit={handleGenerate}
       />
     );
   }
 
-  return (
-    <RecoveryCodesListStep
-      codes={codes}
-      onBack={() => void navigate({ to: '/account/mfa' })}
-      onDownload={download}
-    />
-  );
+  return <RecoveryCodesListStep codes={codes} onBack={navigateBack} onDownload={download} />;
 }

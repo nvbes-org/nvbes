@@ -150,15 +150,21 @@ pub async fn create_checkout_session(
                 db::fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id, checkout_country)
                     .await?;
             let customer_id = match record
-                .stripe_customer_id
+                .provider_customer_id
                 .clone()
+                .or_else(|| record.stripe_customer_id.clone())
                 .or_else(|| record.billing_customer_id.clone())
             {
                 Some(customer_id) => customer_id,
                 None => {
                     let customer = stripe::create_stripe_customer(config, &record).await?;
-                    db::upsert_billing_customer_tx(&mut tx, access.workspace_id, &customer.id)
-                        .await?;
+                    db::upsert_provider_customer_tx(
+                        &mut tx,
+                        access.workspace_id,
+                        "stripe",
+                        &customer.id,
+                    )
+                    .await?;
                     customer.id
                 }
             };
@@ -178,7 +184,8 @@ pub async fn create_checkout_session(
                 checkout_id: session.id,
                 url: session.url,
                 provider_customer_id: customer_id.clone(),
-                provider_price_id: Some(mapping.stripe_price_id.clone()),
+                provider_product_id: Some(mapping.provider_product_id.clone()),
+                provider_price_id: Some(mapping.provider_price_id.clone()),
                 price_country_code: mapping.country_code,
                 pricing_region: mapping.pricing_region,
                 payment_id: None,
@@ -212,6 +219,7 @@ pub async fn create_checkout_session(
                 checkout_id: payment.checkout_id.clone(),
                 url: payment.url,
                 provider_customer_id,
+                provider_product_id: None,
                 provider_price_id: None,
                 price_country_code: None,
                 pricing_region: None,
@@ -291,6 +299,7 @@ pub async fn create_checkout_session(
         checkout_id: checkout.checkout_id,
         url: checkout.url,
         provider_customer_id: checkout.provider_customer_id,
+        provider_product_id: checkout.provider_product_id,
         provider_price_id: checkout.provider_price_id,
         payment_id: checkout.payment_id,
         stripe_customer_id: checkout.stripe_customer_id,

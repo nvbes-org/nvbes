@@ -1,3 +1,6 @@
+#[cfg(test)]
+#[path = "identity.domains.billing.contract.tests.rs"]
+mod contract_tests;
 #[path = "identity.domains.billing.db.rs"]
 pub mod db;
 #[path = "identity.domains.billing.entitlements.rs"]

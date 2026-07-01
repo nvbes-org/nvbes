@@ -1,8 +1,11 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 import { useMfaFactors } from './useMfaPage.factors';
 import { useMfaStepUp } from './useMfaPage.step-up';
 
 export function useMfaPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
   const { factors, loading, error, setFactors } = useMfaFactors();
   const stepUp = useMfaStepUp({ setFactors });
@@ -24,8 +27,9 @@ export function useMfaPage() {
     hasRecovery: factors.some(
       (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
     ),
-    navigateBack: () => void navigate({ to: '/account/security' }),
-    navigateTo: (path: string) => void navigate({ to: path }),
+    navigateBack: () =>
+      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
+    navigateTo: (path: string) => void navigate({ to: path, search: authuserSearch(authuser) }),
     handleRemove: stepUp.handleRemove,
     handleStepUp: stepUp.handleStepUp,
     cancelStepUp: stepUp.cancelStepUp,

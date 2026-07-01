@@ -26,14 +26,14 @@ export default function AccountSubscriptionsPage() {
 }
 
 function AccountSubscriptionsContent({ workspaceId }: { workspaceId: string }) {
-  const { overview, openPortal } = useAccountSubscriptionsOverview(workspaceId);
+  const { overview, portal, openPortal } = useAccountSubscriptionsOverview(workspaceId);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
       <AccountSubscriptionsPageHeader />
       <AccountSubscriptionsPlanOverview overview={overview} />
       <AccountSubscriptionsPeriodCard overview={overview} />
-      <AccountSubscriptionsPortalCard onOpen={openPortal} />
+      <AccountSubscriptionsPortalCard portal={portal} onOpen={openPortal} />
     </div>
   );
 }

@@ -36,6 +36,7 @@ pub struct CheckoutSessionResponse {
     pub checkout_id: String,
     pub url: String,
     pub provider_customer_id: String,
+    pub provider_product_id: Option<String>,
     pub provider_price_id: Option<String>,
     pub payment_id: Option<String>,
     pub stripe_customer_id: String,
@@ -97,6 +98,7 @@ pub struct SubscriptionView {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct BillingAccountView {
+    pub provider_customer_id: Option<String>,
     pub stripe_customer_id: Option<String>,
     pub billing_email: Option<String>,
     pub country: Option<String>,

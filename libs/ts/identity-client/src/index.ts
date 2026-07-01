@@ -191,6 +191,60 @@ const BillingRedirectSchema = z.object({
   url: z.string().url(),
 });
 
+const BillingCheckoutRedirectSchema = BillingRedirectSchema.extend({
+  provider: z.string(),
+  session_id: z.string(),
+  checkout_id: z.string(),
+  provider_customer_id: z.string(),
+  provider_product_id: z.string().nullable().optional(),
+  provider_price_id: z.string().nullable().optional(),
+  payment_id: z.string().nullable().optional(),
+  stripe_customer_id: z.string(),
+  stripe_price_id: z.string(),
+});
+
+const BillingPortalRedirectSchema = BillingRedirectSchema.extend({
+  provider: z.string(),
+  provider_customer_id: z.string(),
+  stripe_customer_id: z.string(),
+});
+
+const BillingPortalCapabilitiesSchema = z.object({
+  exposes_provider_secret_ids: z.boolean(),
+  payment_method_update_flow: z.string(),
+  payment_method_changes_delegated_to_provider: z.boolean(),
+  automatically_updates_payment_method_references: z.boolean(),
+  shows_canonical_invoices: z.boolean(),
+  shows_credits: z.boolean(),
+});
+
+const BillingPortalInvoiceSchema = z.object({
+  invoice_id: z.string(),
+  invoice_number: z.string().nullable().optional(),
+  status: z.string(),
+  total_minor: z.number(),
+  currency: z.string(),
+  issued_at: z.string().nullable().optional(),
+  due_at: z.string().nullable().optional(),
+  paid_at: z.string().nullable().optional(),
+});
+
+const BillingPortalCreditSchema = z.object({
+  amount_minor: z.number(),
+  currency: z.string(),
+});
+
+const BillingPortalViewSchema = z.object({
+  plan_code: z.string(),
+  provider: z.string(),
+  payment_method_update_flow: z.string(),
+  payment_method_changes_delegated_to_provider: z.boolean(),
+  automatically_updates_payment_method_references: z.boolean(),
+  exposes_provider_secret_ids: z.boolean(),
+  invoices: z.array(BillingPortalInvoiceSchema),
+  credits: z.array(BillingPortalCreditSchema),
+});
+
 const UserConsentSchema = z.object({
   id: z.string(),
   principal_id: z.string(),
@@ -226,6 +280,12 @@ export type ResendSecondaryEmailVerificationResponse = z.infer<
 export type PromoteSecondaryEmailResponse = z.infer<typeof PromoteSecondaryEmailResponseSchema>;
 export type UserConsent = z.infer<typeof UserConsentSchema>;
 export type GpcStatus = z.infer<typeof GpcStatusSchema>;
+export type BillingCheckoutRedirect = z.infer<typeof BillingCheckoutRedirectSchema>;
+export type BillingPortalRedirect = z.infer<typeof BillingPortalRedirectSchema>;
+export type BillingPortalCapabilities = z.infer<typeof BillingPortalCapabilitiesSchema>;
+export type BillingPortalInvoice = z.infer<typeof BillingPortalInvoiceSchema>;
+export type BillingPortalCredit = z.infer<typeof BillingPortalCreditSchema>;
+export type BillingPortalView = z.infer<typeof BillingPortalViewSchema>;
 
 export type IdentityClientOptions = {
   baseUrl?: string;
@@ -317,17 +377,46 @@ export class IdentityClient {
   }
 
   createBillingCheckout(workspaceId: string, planCode: string): Promise<string> {
-    return this.http
-      .post(`/workspaces/${workspaceId}/billing/checkout`, BillingRedirectSchema, {
+    return this.createBillingCheckoutSession(workspaceId, planCode).then(
+      (response) => response.url,
+    );
+  }
+
+  createBillingCheckoutSession(
+    workspaceId: string,
+    planCode: string,
+  ): Promise<BillingCheckoutRedirect> {
+    return this.http.post(
+      `/workspaces/${workspaceId}/billing/checkout`,
+      BillingCheckoutRedirectSchema,
+      {
         plan_code: planCode,
-      })
-      .then((response) => response.url);
+      },
+    );
   }
 
   createBillingPortal(workspaceId: string): Promise<string> {
-    return this.http
-      .post(`/workspaces/${workspaceId}/billing/portal`, BillingRedirectSchema, {})
-      .then((response) => response.url);
+    return this.createBillingPortalSession(workspaceId).then((response) => response.url);
+  }
+
+  createBillingPortalSession(workspaceId: string): Promise<BillingPortalRedirect> {
+    return this.http.post(
+      `/workspaces/${workspaceId}/billing/portal`,
+      BillingPortalRedirectSchema,
+      {},
+    );
+  }
+
+  getBillingPortalCapabilities(options?: RequestOptions): Promise<BillingPortalCapabilities> {
+    return this.http.get('/billing/portal/capabilities', BillingPortalCapabilitiesSchema, options);
+  }
+
+  getBillingPortalView(workspaceId: string, options?: RequestOptions): Promise<BillingPortalView> {
+    return this.http.get(
+      `/workspaces/${workspaceId}/billing/portal/view`,
+      BillingPortalViewSchema,
+      options,
+    );
   }
 
   getBillingOverview(workspaceId: string, options?: RequestOptions): Promise<BillingOverview> {
@@ -688,6 +777,7 @@ const BillingOverviewSchema = z.object({
   plan: PlanViewSchema,
   subscription: SubscriptionViewSchema,
   billing_account: z.object({
+    provider_customer_id: z.string().nullable().optional(),
     stripe_customer_id: z.string().nullable().optional(),
     billing_email: z.string().nullable().optional(),
     country: z.string().nullable().optional(),

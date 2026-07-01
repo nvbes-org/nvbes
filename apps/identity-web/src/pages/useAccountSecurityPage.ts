@@ -1,10 +1,12 @@
 import { identityClient } from '@nvbes/identity-client';
 import { listMfaFactors } from '@nvbes/identity-sdk-web';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useTransition } from 'react';
 import { z } from 'zod';
 
+import { accountQueryKeys } from '@/account.queries';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 import { identityHttpClient } from '../identity.http';
 
 const SecurityPreferencesSchema = z.object({
@@ -27,12 +29,15 @@ export interface SecurityOverview {
 }
 
 export function useAccountSecurityPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const queryClient = useQueryClient();
+  const securityOverviewQueryKey = accountQueryKeys.securityOverview(authuser);
 
   const { data: overview } = useSuspenseQuery({
-    queryKey: ['account', 'security-overview'],
+    queryKey: securityOverviewQueryKey,
     queryFn: async ({ signal }) => {
       const [meResult, sessionsResult, factorsResult, prefsResult] = await Promise.allSettled([
         identityClient.getMe({ signal }),
@@ -81,17 +86,29 @@ export function useAccountSecurityPage() {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['account', 'security-overview'] });
+      void queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
     },
   });
 
   return {
     isPending,
     mutation,
-    onOpenMfa: () => startTransition(() => void navigate({ to: '/account/mfa' })),
+    onOpenMfa: () =>
+      startTransition(
+        () => void navigate({ to: '/account/mfa', search: authuserSearch(authuser) }),
+      ),
     onOpenPassword: () =>
-      startTransition(() => void navigate({ to: '/account/security/password' })),
-    onOpenSessions: () => startTransition(() => void navigate({ to: '/account/sessions' })),
+      startTransition(
+        () =>
+          void navigate({
+            to: '/account/security/password',
+            search: authuserSearch(authuser),
+          }),
+      ),
+    onOpenSessions: () =>
+      startTransition(
+        () => void navigate({ to: '/account/sessions', search: authuserSearch(authuser) }),
+      ),
     overview,
   };
 }

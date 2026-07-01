@@ -173,4 +173,13 @@ describe('WebAuthn helpers', () => {
     expect(error.code).toBe('webauthn_already_registered');
     expect(error.message).toContain('already registered');
   });
+
+  it('normalizeWebAuthnError should explain overlapping browser requests', () => {
+    const error = normalizeWebAuthnError(
+      new DOMException('A request is already pending.', 'InvalidStateError'),
+    );
+
+    expect(error.code).toBe('webauthn_already_registered');
+    expect(error.message).toContain('already open');
+  });
 });

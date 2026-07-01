@@ -724,6 +724,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/portal/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["portal_capabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/developer/apps": {
         parameters: {
             query?: never;
@@ -1748,6 +1764,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/billing/portal/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_portal_view"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/billing/usage": {
         parameters: {
             query?: never;
@@ -2164,6 +2196,7 @@ export interface components {
             billing_email?: string | null;
             country?: string | null;
             customer_type: string;
+            provider_customer_id?: string | null;
             stripe_customer_id?: string | null;
             tax_exempt_status?: string | null;
             vat_number?: string | null;
@@ -2176,6 +2209,44 @@ export interface components {
             subscription: components["schemas"]["SubscriptionView"];
             /** Format: uuid */
             workspace_id: string;
+        };
+        BillingPortalCapabilities: {
+            automatically_updates_payment_method_references: boolean;
+            exposes_provider_secret_ids: boolean;
+            payment_method_changes_delegated_to_provider: boolean;
+            payment_method_update_flow: string;
+            shows_canonical_invoices: boolean;
+            shows_credits: boolean;
+        };
+        BillingPortalCreditView: {
+            /** Format: int64 */
+            amount_minor: number;
+            currency: string;
+        };
+        BillingPortalInvoiceView: {
+            currency: string;
+            /** Format: date-time */
+            due_at?: string | null;
+            /** Format: uuid */
+            invoice_id: string;
+            invoice_number?: string | null;
+            /** Format: date-time */
+            issued_at?: string | null;
+            /** Format: date-time */
+            paid_at?: string | null;
+            status: string;
+            /** Format: int64 */
+            total_minor: number;
+        };
+        BillingPortalView: {
+            automatically_updates_payment_method_references: boolean;
+            credits: components["schemas"]["BillingPortalCreditView"][];
+            exposes_provider_secret_ids: boolean;
+            invoices: components["schemas"]["BillingPortalInvoiceView"][];
+            payment_method_changes_delegated_to_provider: boolean;
+            payment_method_update_flow: string;
+            plan_code: string;
+            provider: string;
         };
         BillingUsageResponse: {
             /** Format: int64 */
@@ -2414,6 +2485,7 @@ export interface components {
             provider: string;
             provider_customer_id: string;
             provider_price_id?: string | null;
+            provider_product_id?: string | null;
             session_id: string;
             stripe_customer_id: string;
             stripe_price_id: string;
@@ -3236,6 +3308,7 @@ export interface components {
         };
         PortalSessionResponse: {
             provider: string;
+            provider_customer_id: string;
             stripe_customer_id: string;
             url: string;
         };
@@ -5112,6 +5185,13 @@ export interface operations {
                     "application/json": components["schemas"]["SupportedRegionResponse"][];
                 };
             };
+            /** @description Supported region catalog not modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     register: {
@@ -5522,6 +5602,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    portal_capabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Billing portal capabilities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPortalCapabilities"];
                 };
             };
             /** @description Internal server error */
@@ -9650,6 +9759,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortalSessionResponse"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_portal_view: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Billing portal view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPortalView"];
                 };
             };
             /** @description Bad request */

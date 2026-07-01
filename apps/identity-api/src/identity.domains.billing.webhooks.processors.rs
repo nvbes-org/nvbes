@@ -38,7 +38,7 @@ pub async fn process_checkout_completed(
     checkout::ensure_checkout_payment_status_consistency(object, subscription_id.is_some())?;
     checkout::ensure_checkout_subscription_presence(object, subscription_id.is_some())?;
 
-    db::upsert_billing_customer_tx(tx, workspace_id, &customer_id).await?;
+    db::upsert_provider_customer_tx(tx, workspace_id, "stripe", &customer_id).await?;
 
     if let Some(subscription_id) = subscription_id {
         sqlx::query(

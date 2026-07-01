@@ -60,6 +60,7 @@ fn build_customer_fields_includes_workspace_metadata() {
         billing_subscription_id: None,
         current_period_start: None,
         current_period_end: None,
+        provider_customer_id: None,
         stripe_customer_id: None,
         billing_email: None,
         country: None,

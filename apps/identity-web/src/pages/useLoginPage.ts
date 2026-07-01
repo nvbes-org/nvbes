@@ -53,8 +53,14 @@ export function useLoginPage() {
       return;
     }
 
+    const authuser = new URLSearchParams(location.searchStr).get('authuser');
+    if (authuser && authuser !== '0') {
+      window.location.assign(`/account?authuser=${encodeURIComponent(authuser)}`);
+      return;
+    }
+
     void navigate({ to: '/account' });
-  }, [navigate, returnTo]);
+  }, [location.searchStr, navigate, returnTo]);
 
   const handleHostedDecision = useCallback(
     (decision: HostedLoginDecision) => {

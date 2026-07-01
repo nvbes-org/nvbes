@@ -1,6 +1,10 @@
 import type { AccountPrincipal } from '@nvbes/identity-client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
+
+vi.mock('../src/pages/RegisterPage.region', () => ({
+  RegionSelect: ({ id }: { id: string }) => <div id={id} />,
+}));
 
 import { PersonalInfoCard } from '../src/pages/AccountPersonalInfoPage.form';
 
@@ -21,7 +25,7 @@ function user(): AccountPrincipal {
 }
 
 describe('PersonalInfoCard', () => {
-  it('renders account form content without card chrome or duplicated identity summaries', () => {
+  it('renders profile form inside a single parent card', () => {
     const markup = renderToStaticMarkup(
       <PersonalInfoCard
         user={user()}
@@ -55,7 +59,7 @@ describe('PersonalInfoCard', () => {
       />,
     );
 
-    expect(markup).not.toContain('data-slot="card"');
+    expect(markup).toContain('data-slot="card"');
     expect(markup).toContain('Compte cree le 9 juin 2026');
     expect(markup).toContain('Email verifie');
     expect(markup).toContain('id="account-firstname"');

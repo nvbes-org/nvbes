@@ -93,6 +93,7 @@ pub fn subscription_view(record: &BillingStateRecord) -> SubscriptionView {
 
 pub fn billing_account_view(record: &BillingStateRecord) -> BillingAccountView {
     BillingAccountView {
+        provider_customer_id: record.provider_customer_id.clone(),
         stripe_customer_id: record.stripe_customer_id.clone(),
         billing_email: record.billing_email.clone(),
         country: record.country.clone(),
@@ -152,6 +153,7 @@ mod tests {
             billing_subscription_id: Some("sub_123".to_string()),
             current_period_start: None,
             current_period_end: None,
+            provider_customer_id: Some("cus_123".to_string()),
             stripe_customer_id: Some("cus_123".to_string()),
             billing_email: Some("billing@example.com".to_string()),
             country: Some("FR".to_string()),
@@ -214,6 +216,8 @@ mod tests {
     #[test]
     fn localized_plan_view_uses_selected_price_mapping() {
         let price_mapping = StripePriceMapping {
+            provider_product_id: "prod_latam".to_string(),
+            provider_price_id: "price_latam".to_string(),
             stripe_product_id: "prod_latam".to_string(),
             stripe_price_id: "price_latam".to_string(),
             country_code: None,
@@ -233,6 +237,8 @@ mod tests {
         let mut record = billing_record();
         record.used_storage_bytes = 12 * GB;
         let price_mapping = StripePriceMapping {
+            provider_product_id: "prod_fr".to_string(),
+            provider_price_id: "price_fr".to_string(),
             stripe_product_id: "prod_fr".to_string(),
             stripe_price_id: "price_fr".to_string(),
             country_code: Some("FR".to_string()),

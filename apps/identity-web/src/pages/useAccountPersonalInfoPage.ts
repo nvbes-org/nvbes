@@ -1,10 +1,12 @@
 import { identityClient } from '@nvbes/identity-client';
 import type { AccountPrincipal } from '@nvbes/identity-client';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import type { SupportedRegion } from '@/identity.auth.api';
 import { identityAuthMutationKeys, supportedRegionsQueryFn } from '@/identity.auth.queries';
+import { readAuthuser } from '@/identity.authuser';
 import { fillPersonalInfoForm } from './useAccountPersonalInfoPage.form';
 import { useAccountPersonalInfoMutation } from './useAccountPersonalInfoPage.mutation';
 import {
@@ -24,6 +26,9 @@ function regionSortLabel(region: SupportedRegion): string {
 
 export function useAccountPersonalInfoPage() {
   const didInitializeFormRef = useRef(false);
+  const initializedUserIdRef = useRef<string | null>(null);
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
 
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
@@ -33,7 +38,7 @@ export function useAccountPersonalInfoPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
 
-  const personalInfoQueryKey = getAccountPersonalInfoQueryKey();
+  const personalInfoQueryKey = getAccountPersonalInfoQueryKey(authuser);
 
   const { data: account } = useQuery({
     queryKey: personalInfoQueryKey,
@@ -75,6 +80,7 @@ export function useAccountPersonalInfoPage() {
   const accountRegion = selectedUser?.region ?? currentWorkspaceRegion ?? '';
 
   const mutation = useAccountPersonalInfoMutation({
+    authuser,
     didInitializeFormRef,
     setBirthdate,
     setEditError,
@@ -86,6 +92,12 @@ export function useAccountPersonalInfoPage() {
   });
 
   useEffect(() => {
+    const selectedUserId = selectedUser?.id ?? null;
+    if (initializedUserIdRef.current !== selectedUserId) {
+      didInitializeFormRef.current = false;
+      initializedUserIdRef.current = selectedUserId;
+    }
+
     if (!selectedUser || didInitializeFormRef.current) {
       return;
     }

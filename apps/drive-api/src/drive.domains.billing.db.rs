@@ -41,9 +41,10 @@ pub async fn fetch_active_price_mapping_tx(
     Ok(record)
 }
 
-pub async fn upsert_billing_customer_tx(
+pub async fn upsert_provider_customer_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,
+    provider: &str,
     customer_id: &str,
 ) -> Result<(), AppError> {
     sqlx::query(
@@ -53,13 +54,15 @@ pub async fn upsert_billing_customer_tx(
           provider,
           stripe_customer_id
         )
-        VALUES ($1, 'stripe', $2)
+        VALUES ($1, $2::billing_provider, $3)
         ON CONFLICT (workspace_id) DO UPDATE
-        SET stripe_customer_id = EXCLUDED.stripe_customer_id,
+        SET provider = EXCLUDED.provider,
+            stripe_customer_id = EXCLUDED.stripe_customer_id,
             updated_at = NOW()
         "#,
     )
     .bind(workspace_id)
+    .bind(provider)
     .bind(customer_id)
     .execute(&mut **tx)
     .await?;

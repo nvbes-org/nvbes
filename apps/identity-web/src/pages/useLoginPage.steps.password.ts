@@ -17,7 +17,11 @@ type SubmitPasswordStepOptions = {
   setAvailableMethods: (value: MfaMethod[]) => void;
   setMfaMethod: (value: MfaMethod | null) => void;
   setSessionToken: (value: string | null) => void;
-  navigateToVerifyEmail: (email: string, resendAvailableAt: string | null) => void;
+  navigateToVerifyEmail: (
+    email: string,
+    resendAvailableAt: string | null,
+    accountName: string | null,
+  ) => void;
   navigateToForgotPassword: (email: string) => void;
   finishLogin: (sessionToken: string | null) => Promise<void>;
 };
@@ -64,6 +68,7 @@ export async function submitPasswordStep({
       navigateToVerifyEmail(
         result.user?.email ?? email,
         result.verification_resend_available_at ?? null,
+        result.user?.username?.trim() || null,
       );
       return;
     }

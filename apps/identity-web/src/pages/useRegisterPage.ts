@@ -66,11 +66,12 @@ export function useRegisterPage() {
     canProceedFromStep1,
     legalDocumentsAccepted,
     marketingEmailsAccepted,
-    onSuccess: ({ email: successEmail, resendAvailableAt }) => {
+    onSuccess: ({ accountName, email: successEmail, resendAvailableAt }) => {
       void navigate({
         to: '/verify',
         state: (state) => ({
           ...state,
+          accountName,
           email: successEmail,
           resendAvailableAt,
         }),

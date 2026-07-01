@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::http::error::AppError;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BillingPortalInvoiceView {
     pub invoice_id: Uuid,
     pub invoice_number: Option<String>,
@@ -17,13 +18,13 @@ pub struct BillingPortalInvoiceView {
     pub paid_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BillingPortalCreditView {
     pub amount_minor: i64,
     pub currency: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BillingPortalView {
     pub plan_code: String,
     pub provider: String,

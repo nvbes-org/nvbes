@@ -467,6 +467,9 @@ function webauthnDomExceptionMessage(error: DOMException, kind: WebauthnRegistra
     case 'ConstraintError':
       return 'The selected authenticator does not match the requested WebAuthn policy.';
     case 'InvalidStateError':
+      if (/pending/iu.test(error.message)) {
+        return 'A WebAuthn request is already open. Finish or cancel the current browser prompt before trying again.';
+      }
       return 'This authenticator is already registered for this account.';
     case 'NotAllowedError':
       return kind === 'passkey'

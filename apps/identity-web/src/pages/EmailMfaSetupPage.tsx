@@ -1,11 +1,12 @@
 import { listEmailMfaEligible, setupEmailMfa } from '@nvbes/identity-sdk-web';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import StepUpForm from '@/components/StepUpForm';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 
 type EligibleEmail = {
   id: string;
@@ -16,6 +17,8 @@ type EligibleEmail = {
 };
 
 export default function EmailMfaSetupPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const navigate = useNavigate();
   const [step, setStep] = useState<'stepup' | 'select' | 'done'>('stepup');
   const [emails, setEmails] = useState<EligibleEmail[]>([]);
@@ -36,7 +39,8 @@ export default function EmailMfaSetupPage() {
       .finally(() => setLoading(false));
   }, [step]);
 
-  const navigateBack = () => void navigate({ to: '/account/mfa' });
+  const navigateBack = () =>
+    void navigate({ to: '/account/mfa', search: authuserSearch(authuser) });
 
   if (step === 'stepup') {
     return (

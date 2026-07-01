@@ -23,6 +23,57 @@
     }
   ],
   "paths": {
+    "/billing/webhooks": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "handle_webhook",
+        "requestBody": {
+          "description": "Raw Stripe webhook payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingWebhookResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me": {
       "get": {
         "tags": [
@@ -1249,6 +1300,306 @@
           }
         }
       }
+    },
+    "/workspaces/{workspaceId}/billing": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_billing",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOverviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/billing/checkout": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "create_checkout_session",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/billing/invoice-estimate": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_invoice_estimate",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceEstimateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/billing/portal": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "create_portal_session",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePortalInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Portal session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{workspaceId}/billing/usage": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_usage",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingUsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1424,6 +1775,135 @@
           }
         }
       },
+      "BillingAccountView": {
+        "type": "object",
+        "required": [
+          "customer_type"
+        ],
+        "properties": {
+          "billing_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_type": {
+            "type": "string"
+          },
+          "provider_customer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stripe_customer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_exempt_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vat_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "BillingOverviewResponse": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "plan",
+          "subscription",
+          "billing_account",
+          "entitlements",
+          "invoice_estimate"
+        ],
+        "properties": {
+          "billing_account": {
+            "$ref": "#/components/schemas/BillingAccountView"
+          },
+          "entitlements": {
+            "$ref": "#/components/schemas/ProductEntitlementsView"
+          },
+          "invoice_estimate": {
+            "$ref": "#/components/schemas/InvoiceEstimateView"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanView"
+          },
+          "subscription": {
+            "$ref": "#/components/schemas/SubscriptionView"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BillingUsageResponse": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "period_start",
+          "period_end",
+          "storage",
+          "seats",
+          "bandwidth_out_bytes_month"
+        ],
+        "properties": {
+          "bandwidth_out_bytes_month": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "seats": {
+            "$ref": "#/components/schemas/UsageLineView"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/UsageLineView"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BillingWebhookResponse": {
+        "type": "object",
+        "required": [
+          "provider_event_id",
+          "status"
+        ],
+        "properties": {
+          "provider_event_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "CancelUploadResponse": {
         "type": "object",
         "required": [
@@ -1443,6 +1923,59 @@
           "upload_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "CheckoutSessionResponse": {
+        "type": "object",
+        "required": [
+          "provider",
+          "session_id",
+          "checkout_id",
+          "url",
+          "provider_customer_id",
+          "stripe_customer_id",
+          "stripe_price_id"
+        ],
+        "properties": {
+          "checkout_id": {
+            "type": "string"
+          },
+          "payment_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "provider_customer_id": {
+            "type": "string"
+          },
+          "provider_price_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_product_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "stripe_customer_id": {
+            "type": "string"
+          },
+          "stripe_price_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -1485,6 +2018,29 @@
           }
         }
       },
+      "CreateCheckoutInput": {
+        "type": "object",
+        "required": [
+          "plan_code"
+        ],
+        "properties": {
+          "cancel_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "plan_code": {
+            "type": "string"
+          },
+          "success_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "CreateFolderRequest": {
         "type": "object",
         "required": [
@@ -1500,6 +2056,17 @@
               "null"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "CreatePortalInput": {
+        "type": "object",
+        "properties": {
+          "return_url": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -1632,6 +2199,63 @@
           }
         }
       },
+      "InvoiceEstimateResponse": {
+        "type": "object",
+        "required": [
+          "estimate"
+        ],
+        "properties": {
+          "estimate": {
+            "$ref": "#/components/schemas/InvoiceEstimateView"
+          }
+        }
+      },
+      "InvoiceEstimateView": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "billing_period_start",
+          "billing_period_end",
+          "base_amount_cents",
+          "storage_overage_amount_cents",
+          "seat_overage_amount_cents",
+          "estimated_amount_cents",
+          "currency"
+        ],
+        "properties": {
+          "base_amount_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "billing_period_end": {
+            "type": "string",
+            "format": "date"
+          },
+          "billing_period_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "estimated_amount_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seat_overage_amount_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "storage_overage_amount_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ListObjectsResponse": {
         "type": "object",
         "required": [
@@ -1673,6 +2297,126 @@
         "properties": {
           "object": {
             "$ref": "#/components/schemas/StorageObjectView"
+          }
+        }
+      },
+      "PlanView": {
+        "type": "object",
+        "required": [
+          "code",
+          "included_storage_gb",
+          "included_users",
+          "retention_days",
+          "max_share_links",
+          "audit_level",
+          "max_share_link_ttl_days",
+          "monthly_price_cents",
+          "currency"
+        ],
+        "properties": {
+          "audit_level": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "included_storage_gb": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "included_users": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "max_share_link_ttl_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "max_share_links": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "monthly_price_cents": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "retention_days": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PortalSessionResponse": {
+        "type": "object",
+        "required": [
+          "provider",
+          "url",
+          "provider_customer_id",
+          "stripe_customer_id"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "provider_customer_id": {
+            "type": "string"
+          },
+          "stripe_customer_id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "ProductEntitlementsView": {
+        "type": "object",
+        "required": [
+          "can_upload",
+          "can_create_share_links",
+          "included_storage_bytes",
+          "included_users",
+          "max_share_links",
+          "max_share_link_ttl_days",
+          "audit_level",
+          "api_key_limit",
+          "billing_locked"
+        ],
+        "properties": {
+          "api_key_limit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "audit_level": {
+            "type": "string"
+          },
+          "billing_locked": {
+            "type": "boolean"
+          },
+          "can_create_share_links": {
+            "type": "boolean"
+          },
+          "can_upload": {
+            "type": "boolean"
+          },
+          "included_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "included_users": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "max_share_link_ttl_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "max_share_links": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -2065,6 +2809,54 @@
           }
         }
       },
+      "SubscriptionView": {
+        "type": "object",
+        "required": [
+          "status",
+          "billing_provider"
+        ],
+        "properties": {
+          "billing_customer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "billing_provider": {
+            "type": "string"
+          },
+          "billing_subscription_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current_period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "current_period_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "trial_ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "UpdateShareLinkRequest": {
         "type": "object",
         "properties": {
@@ -2158,6 +2950,32 @@
           "workspace_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "UsageLineView": {
+        "type": "object",
+        "required": [
+          "included_quantity",
+          "used_quantity",
+          "billable_quantity",
+          "unit"
+        ],
+        "properties": {
+          "billable_quantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "included_quantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "used_quantity": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       }

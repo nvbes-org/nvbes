@@ -30,6 +30,7 @@ export function useVerifyEmailPage() {
   });
 
   return {
+    accountName: state.accountName,
     canSend: action.canSend,
     emailChanged: action.emailChanged,
     emailDraft: state.emailDraft,

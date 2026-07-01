@@ -1,17 +1,22 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useState } from 'react';
 import { accountQueryKeys } from '@/account.queries';
 import { useAccountContext } from '@/hooks/useAccountContext';
+import { readAuthuser } from '@/identity.authuser';
 import { listLinkedIdentities, type LinkedIdentity, unlinkIdentity } from './AccountSocialPage.api';
 
 export function useAccountSocialPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const [unlinking, setUnlinking] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { me, loading: accountLoading } = useAccountContext();
   const tenantId = me?.current_tenant_id ?? null;
+  const linkedIdentitiesQueryKey = accountQueryKeys.linkedIdentities(authuser, tenantId);
 
   const { data: identities = [], isPending } = useQuery({
-    queryKey: [...accountQueryKeys.all, 'linked-identities', tenantId] as const,
+    queryKey: linkedIdentitiesQueryKey,
     queryFn: ({ signal }) =>
       tenantId ? listLinkedIdentities(tenantId, signal) : Promise.resolve([]),
     enabled: Boolean(tenantId),
@@ -25,11 +30,10 @@ export function useAccountSocialPage() {
       return;
     }
 
-    const queryKey = [...accountQueryKeys.all, 'linked-identities', tenantId] as const;
-    const previous = queryClient.getQueryData<LinkedIdentity[]>(queryKey) ?? [];
+    const previous = queryClient.getQueryData<LinkedIdentity[]>(linkedIdentitiesQueryKey) ?? [];
 
     queryClient.setQueryData<LinkedIdentity[]>(
-      queryKey,
+      linkedIdentitiesQueryKey,
       previous.filter((entry) => entry.id !== identity.id),
     );
     setUnlinking(identity.id);
@@ -37,7 +41,7 @@ export function useAccountSocialPage() {
     try {
       await unlinkIdentity(tenantId, identity.id);
     } catch {
-      queryClient.setQueryData(queryKey, previous);
+      queryClient.setQueryData(linkedIdentitiesQueryKey, previous);
     } finally {
       setUnlinking(null);
     }

@@ -1,17 +1,23 @@
 import { type AccountSession, identityClient } from '@nvbes/identity-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useState } from 'react';
 
 import { accountQueryKeys } from '@/account.queries';
+import { readAuthuser } from '@/identity.authuser';
 
 export function useAccountSessionsPage() {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
   const [revoking, setRevoking] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const sessionsQueryKey = accountQueryKeys.sessions(authuser);
+  const securityOverviewQueryKey = accountQueryKeys.securityOverview(authuser);
 
   const { data: sessions = [], isPending } = useQuery({
-    queryKey: accountQueryKeys.sessions,
+    queryKey: sessionsQueryKey,
     queryFn: ({ signal }) => identityClient.listSessions({ signal }),
     staleTime: 0,
     gcTime: 30 * 60 * 1000,
@@ -20,17 +26,17 @@ export function useAccountSessionsPage() {
 
   const handleRevoke = async (sessionId: string) => {
     setRevoking(sessionId);
-    const previous = queryClient.getQueryData<AccountSession[]>(accountQueryKeys.sessions) ?? [];
+    const previous = queryClient.getQueryData<AccountSession[]>(sessionsQueryKey) ?? [];
     queryClient.setQueryData<AccountSession[]>(
-      accountQueryKeys.sessions,
+      sessionsQueryKey,
       previous.filter((session) => session.id !== sessionId),
     );
 
     try {
       await identityClient.revokeSession(sessionId);
-      await queryClient.invalidateQueries({ queryKey: ['account', 'security-overview'] });
+      await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
     } catch {
-      queryClient.setQueryData(accountQueryKeys.sessions, previous);
+      queryClient.setQueryData(sessionsQueryKey, previous);
     } finally {
       setRevoking(null);
     }
@@ -39,7 +45,7 @@ export function useAccountSessionsPage() {
   const handleRevokeOthers = async () => {
     await identityClient.revokeOtherSessions();
     await queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
-    await queryClient.invalidateQueries({ queryKey: ['account', 'security-overview'] });
+    await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
   };
 
   const currentSession = sessions.find((session) => session.current);

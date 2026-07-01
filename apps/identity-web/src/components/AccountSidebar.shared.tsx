@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useLocation } from '@tanstack/react-router';
 import {
   Bell,
   Building,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { authuserSearch, readAuthuser } from '@/identity.authuser';
 
 export const accountNavSections = [
   {
@@ -67,9 +68,13 @@ export function SidebarNavItem({
   label: string;
   end?: boolean;
 }) {
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
+
   return (
     <Link
       to={to}
+      search={authuserSearch(authuser)}
       activeOptions={{ exact: end }}
       className="flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       activeProps={{ className: 'bg-muted text-foreground' }}

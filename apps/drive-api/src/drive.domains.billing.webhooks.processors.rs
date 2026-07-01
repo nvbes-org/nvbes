@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::super::db::{
     plan_id_by_code_tx, plan_id_for_stripe_price_tx, project_workspace_plan_tx,
-    upsert_billing_customer_tx, workspace_id_for_customer_tx,
+    upsert_provider_customer_tx, workspace_id_for_customer_tx,
 };
 use crate::http::error::AppError;
 use nvbes_billing::{
@@ -63,7 +63,7 @@ async fn process_checkout_completed(
         .and_then(Value::as_str)
         .map(str::to_owned);
 
-    upsert_billing_customer_tx(tx, workspace_id, &customer_id).await?;
+    upsert_provider_customer_tx(tx, workspace_id, "stripe", &customer_id).await?;
 
     if let Some(subscription_id) = subscription_id {
         sqlx::query(
@@ -121,7 +121,7 @@ async fn process_subscription_upsert(
     let current_period_start = timestamp_field(object, "current_period_start");
     let current_period_end = timestamp_field(object, "current_period_end");
 
-    upsert_billing_customer_tx(tx, workspace_id, &customer_id).await?;
+    upsert_provider_customer_tx(tx, workspace_id, "stripe", &customer_id).await?;
 
     sqlx::query(
         r#"

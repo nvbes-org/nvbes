@@ -4,7 +4,7 @@ use sqlx::PgPool;
 
 use super::db::{
     fetch_active_price_mapping_tx, fetch_billing_state_tx, fetch_plan_by_code_tx,
-    upsert_billing_customer_tx,
+    upsert_provider_customer_tx,
 };
 use super::manage_geo::resolve_checkout_geo;
 use super::manage_redirect_urls::resolve_billing_redirect_url;
@@ -65,14 +65,16 @@ pub async fn create_checkout_session(
     let mapping =
         fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id, checkout_country).await?;
     let customer_id = match record
-        .stripe_customer_id
+        .provider_customer_id
         .clone()
+        .or_else(|| record.stripe_customer_id.clone())
         .or_else(|| record.billing_customer_id.clone())
     {
         Some(customer_id) => customer_id,
         None => {
             let customer = create_stripe_customer(config, &record).await?;
-            upsert_billing_customer_tx(&mut tx, access.workspace_id, &customer.id).await?;
+            upsert_provider_customer_tx(&mut tx, access.workspace_id, "stripe", &customer.id)
+                .await?;
             customer.id
         }
     };
@@ -119,7 +121,10 @@ pub async fn create_checkout_session(
             user_agent: user_agent.as_deref(),
             metadata: serde_json::json!({
                 "plan_code": target_plan.code,
-                "stripe_customer_id": customer_id,
+                "provider": "stripe",
+                "provider_customer_id": customer_id,
+                "provider_price_id": mapping.provider_price_id,
+                "provider_product_id": mapping.provider_product_id,
                 "stripe_price_id": mapping.stripe_price_id,
                 "stripe_product_id": mapping.stripe_product_id,
                 "geo_country_code": checkout_country,
@@ -144,7 +149,8 @@ pub async fn create_checkout_session(
         checkout_id: session.id,
         url: session.url,
         provider_customer_id: customer_id.clone(),
-        provider_price_id: Some(mapping.stripe_price_id.clone()),
+        provider_product_id: Some(mapping.provider_product_id.clone()),
+        provider_price_id: Some(mapping.provider_price_id.clone()),
         payment_id: None,
         stripe_customer_id: customer_id,
         stripe_price_id: mapping.stripe_price_id,
@@ -162,8 +168,9 @@ pub async fn create_portal_session(
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
     let record = fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
     let customer_id = record
-        .stripe_customer_id
+        .provider_customer_id
         .clone()
+        .or_else(|| record.stripe_customer_id.clone())
         .or_else(|| record.billing_customer_id.clone())
         .ok_or_else(|| {
             AppError::conflict(
@@ -194,7 +201,8 @@ pub async fn create_portal_session(
             ip: ip.as_deref(),
             user_agent: user_agent.as_deref(),
             metadata: serde_json::json!({
-                "stripe_customer_id": customer_id,
+                "provider": "stripe",
+                "provider_customer_id": customer_id,
             }),
         },
     )

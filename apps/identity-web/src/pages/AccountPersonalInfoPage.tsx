@@ -39,7 +39,7 @@ export default function AccountPersonalInfoPage() {
         </p>
       </div>
 
-      <div className="max-w-3xl">
+      <div className="max-w-4xl">
         <PersonalInfoCard
           user={selectedUser}
           memberSince={memberSince}
@@ -62,7 +62,7 @@ export default function AccountPersonalInfoPage() {
         />
       </div>
 
-      <div className="max-w-3xl">
+      <div className="max-w-4xl">
         <AccountEmailAddresses
           emails={accountEmails.emails}
           emailDraft={accountEmails.emailDraft}

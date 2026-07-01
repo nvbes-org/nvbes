@@ -55,7 +55,7 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn get_billing(
+pub(crate) async fn get_billing(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
@@ -88,7 +88,7 @@ async fn get_billing(
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn create_checkout_session(
+pub(crate) async fn create_checkout_session(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
@@ -162,7 +162,7 @@ async fn create_checkout_session(
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn create_portal_session(
+pub(crate) async fn create_portal_session(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
@@ -217,7 +217,7 @@ async fn create_portal_session(
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn get_usage(
+pub(crate) async fn get_usage(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
@@ -248,7 +248,7 @@ async fn get_usage(
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
 )]
-async fn get_invoice_estimate(
+pub(crate) async fn get_invoice_estimate(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,

@@ -12,6 +12,7 @@ pub struct CheckoutProviderResult {
     pub checkout_id: String,
     pub url: String,
     pub provider_customer_id: String,
+    pub provider_product_id: Option<String>,
     pub provider_price_id: Option<String>,
     pub price_country_code: Option<String>,
     pub pricing_region: Option<String>,

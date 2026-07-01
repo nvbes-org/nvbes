@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from '@tanstack/react-router';
 import { accountContextQueryOptions } from '@/account.queries';
+import { readAuthuser } from '@/identity.authuser';
 import type { AccountEntry, AccountMe, AccountWorkspace } from '@/lib/account-context';
 
 type AccountContextState = {
@@ -10,7 +12,9 @@ type AccountContextState = {
 };
 
 export function useAccountContext() {
-  const { data, isPending } = useQuery(accountContextQueryOptions);
+  const location = useLocation();
+  const authuser = readAuthuser(location.searchStr);
+  const { data, isPending } = useQuery(accountContextQueryOptions(authuser));
 
   return {
     me: data?.me ?? null,

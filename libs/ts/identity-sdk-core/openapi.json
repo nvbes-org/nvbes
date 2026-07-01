@@ -1406,6 +1406,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Supported region catalog not modified"
           }
         }
       }
@@ -1895,6 +1898,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/portal/capabilities": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "portal_capabilities",
+        "responses": {
+          "200": {
+            "description": "Billing portal capabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPortalCapabilities"
                 }
               }
             }
@@ -7098,6 +7131,68 @@
         }
       }
     },
+    "/workspaces/{workspaceId}/billing/portal/view": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "get_portal_view",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing portal view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPortalView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workspaces/{workspaceId}/billing/usage": {
       "get": {
         "tags": [
@@ -9124,6 +9219,12 @@
           "customer_type": {
             "type": "string"
           },
+          "provider_customer_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "stripe_customer_id": {
             "type": [
               "string",
@@ -9173,6 +9274,150 @@
           "workspace_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "BillingPortalCapabilities": {
+        "type": "object",
+        "required": [
+          "exposes_provider_secret_ids",
+          "payment_method_update_flow",
+          "payment_method_changes_delegated_to_provider",
+          "automatically_updates_payment_method_references",
+          "shows_canonical_invoices",
+          "shows_credits"
+        ],
+        "properties": {
+          "automatically_updates_payment_method_references": {
+            "type": "boolean"
+          },
+          "exposes_provider_secret_ids": {
+            "type": "boolean"
+          },
+          "payment_method_changes_delegated_to_provider": {
+            "type": "boolean"
+          },
+          "payment_method_update_flow": {
+            "type": "string"
+          },
+          "shows_canonical_invoices": {
+            "type": "boolean"
+          },
+          "shows_credits": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BillingPortalCreditView": {
+        "type": "object",
+        "required": [
+          "amount_minor",
+          "currency"
+        ],
+        "properties": {
+          "amount_minor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          }
+        }
+      },
+      "BillingPortalInvoiceView": {
+        "type": "object",
+        "required": [
+          "invoice_id",
+          "status",
+          "total_minor",
+          "currency"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "paid_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total_minor": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "BillingPortalView": {
+        "type": "object",
+        "required": [
+          "plan_code",
+          "provider",
+          "payment_method_update_flow",
+          "payment_method_changes_delegated_to_provider",
+          "automatically_updates_payment_method_references",
+          "exposes_provider_secret_ids",
+          "invoices",
+          "credits"
+        ],
+        "properties": {
+          "automatically_updates_payment_method_references": {
+            "type": "boolean"
+          },
+          "credits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPortalCreditView"
+            }
+          },
+          "exposes_provider_secret_ids": {
+            "type": "boolean"
+          },
+          "invoices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingPortalInvoiceView"
+            }
+          },
+          "payment_method_changes_delegated_to_provider": {
+            "type": "boolean"
+          },
+          "payment_method_update_flow": {
+            "type": "string"
+          },
+          "plan_code": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
           }
         }
       },
@@ -9718,6 +9963,12 @@
             "type": "string"
           },
           "provider_price_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_product_id": {
             "type": [
               "string",
               "null"
@@ -11547,7 +11798,9 @@
       "IdentifierRequest": {
         "type": "object",
         "required": [
-          "email"
+          "email",
+          "pow_nonce",
+          "pow_solution"
         ],
         "properties": {
           "bot_guard": {
@@ -11581,16 +11834,10 @@
             "type": "string"
           },
           "pow_nonce": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "pow_solution": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           }
         }
       },
@@ -12491,6 +12738,12 @@
           "webauthn_response"
         ],
         "properties": {
+          "email_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "recovery_code": {
             "type": [
               "string",
@@ -13043,10 +13296,14 @@
         "required": [
           "provider",
           "url",
+          "provider_customer_id",
           "stripe_customer_id"
         ],
         "properties": {
           "provider": {
+            "type": "string"
+          },
+          "provider_customer_id": {
             "type": "string"
           },
           "stripe_customer_id": {
@@ -13254,8 +13511,12 @@
         "required": [
           "email",
           "password",
+          "firstname",
+          "lastname",
           "username",
-          "workspace_name"
+          "workspace_name",
+          "pow_nonce",
+          "pow_solution"
         ],
         "properties": {
           "birthdate": {
@@ -13268,31 +13529,25 @@
             "type": "string"
           },
           "firstname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "lastname": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
+          },
+          "legal_documents_accepted": {
+            "type": "boolean"
+          },
+          "marketing_emails_accepted": {
+            "type": "boolean"
           },
           "password": {
             "type": "string"
           },
           "pow_nonce": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "pow_solution": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "region": {
             "type": [
@@ -14989,6 +15244,9 @@
             "type": "boolean"
           },
           "in_app": {
+            "type": "boolean"
+          },
+          "marketing_email": {
             "type": "boolean"
           },
           "push": {

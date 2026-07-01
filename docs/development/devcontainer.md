@@ -38,6 +38,11 @@ The Dev Container Docker Compose stack starts:
 - Pyroscope on host port `localhost:14040`
 - Grafana on host port `localhost:13000`
 
+Sentry and PostHog are intentionally not started with the Dev Container. They
+are available as manual opt-in vendor stacks because each one pulls a large
+self-hosted deployment with its own databases, queues, workers, and upgrade
+process.
+
 PostgreSQL initializes both local databases:
 
 - `nvbes`
@@ -62,6 +67,56 @@ Application URLs:
 - Drive API: `http://localhost:4002`
 - Grafana: `http://localhost:13000`
 
+## Manual Sentry and PostHog
+
+The Dev Container installs Docker outside-of-Docker support, so the workspace
+shell can control optional local vendor stacks through the host Docker daemon.
+The cloned upstream stacks are kept under `.devcontainer/.vendor/`, which is
+gitignored.
+
+Sentry local:
+
+```bash
+pnpm dev:obs:sentry:install
+pnpm dev:obs:sentry:up
+pnpm dev:obs:sentry:create-user
+```
+
+Sentry is bound to `http://127.0.0.1:19000` by default. Override with
+`NVBES_SENTRY_BIND=127.0.0.1:<port>` before install if needed.
+
+PostHog local uses PostHog's upstream hobby installer and remains more
+intrusive than the Sentry wrapper: it expects a domain, may bind HTTP/HTTPS
+ports, and runs the vendor-maintained deployment script. It is therefore gated
+behind an explicit opt-in:
+
+```bash
+export NVBES_POSTHOG_LOCAL_DOMAIN=posthog.dev.example.test
+export NVBES_ACCEPT_POSTHOG_HOBBY_INSTALLER=1
+pnpm dev:obs:posthog:install
+pnpm dev:obs:posthog:up
+```
+
+Point application env vars at the local instances only after creating local
+projects/tokens in their UIs:
+
+```bash
+VITE_SENTRY_DSN=
+SENTRY_DSN=
+VITE_POSTHOG_KEY=
+VITE_POSTHOG_HOST=
+NVBES_POSTHOG_ENABLED=true
+NVBES_POSTHOG_HOST=
+NVBES_POSTHOG_PROJECT_TOKEN=
+```
+
+Stop the optional stacks without touching the core Dev Container services:
+
+```bash
+pnpm dev:obs:sentry:down
+pnpm dev:obs:posthog:down
+```
+
 ## Environment File
 
 If `.env` does not exist, `.devcontainer/post-create.sh` creates it from `.env.example` and adjusts service hostnames for container networking:
@@ -82,6 +137,7 @@ The workspace service uses named Docker volumes for editor, tooling, cache, and 
 - VS Code Server user data, installed extensions, extension global storage, and workspace storage: `/home/vscode/.vscode-server`
 - VS Code Insiders Server equivalent state: `/home/vscode/.vscode-server-insiders`
 - User config used by Git, GitHub CLI, VS Code-compatible tools, and code-server-compatible config paths: `/home/vscode/.config`
+- Codex auth, settings, local caches, and plugin state: `/home/vscode/.codex`
 - SSH keys and config used by Git remotes and SSH commit signing: `/home/vscode/.ssh`
 - GPG keys, trust database, and GPG agent state used by GPG commit signing: `/home/vscode/.gnupg`
 - User data used by code-server-compatible tools and some extensions or CLIs: `/home/vscode/.local/share`
