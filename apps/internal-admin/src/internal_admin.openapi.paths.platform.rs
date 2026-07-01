@@ -57,6 +57,15 @@ pub(crate) fn endpoints<'a>() -> Vec<CriticalEndpoint<'a>> {
             "RevenueActionResult",
         ),
         e(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules",
+            "createBillingRoutingRule",
+            "billing-platform",
+            "Create a billing provider routing rule",
+            &["workspaceId"],
+            "CreateRoutingRuleRequest",
+            "BillingPlatformActionResult",
+        ),
+        e(
             "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable",
             "enableBillingRoutingRule",
             "billing-platform",

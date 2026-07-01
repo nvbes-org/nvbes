@@ -1,4 +1,5 @@
-use axum::{Router, http::StatusCode};
+use axum::{Router, body::Body, http::Request, http::StatusCode};
+use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -55,6 +56,32 @@ async fn disable_routing_rule_rejects_generic_confirmation_code() {
             Uuid::new_v4(),
             "finance_admin",
             "DISABLE ROUTING RULE",
+        ))
+        .await
+        .expect("route should respond");
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn create_routing_rule_rejects_generic_confirmation_code() {
+    let pool = PgPoolOptions::new()
+        .connect_lazy("postgres://localhost/internal_admin_billing_platform_confirmation_test")
+        .expect("lazy pool should build");
+    let app = Router::new()
+        .merge(crate::billing_platform_center_actions::router())
+        .with_state(crate::app::AppState::new(
+            nvbes_core::config::AppConfig::default(),
+            pool,
+        ));
+    let workspace_id = Uuid::new_v4();
+
+    let response = app
+        .oneshot(create_routing_request(
+            workspace_id,
+            Uuid::new_v4(),
+            "finance_admin",
+            "CREATE ROUTING RULE",
         ))
         .await
         .expect("route should respond");
@@ -148,6 +175,45 @@ async fn approve_kyc_profile_route_enforces_role_confirmation_grant_and_audits_s
         1
     );
     assert_approve_audit_metadata(&pool, tenant_id, actor_id, profile_id, &payload).await;
+}
+
+fn create_routing_request(
+    workspace_id: Uuid,
+    actor_id: Uuid,
+    role: &str,
+    confirm_code: &str,
+) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!(
+            "/workspaces/{workspace_id}/admin/billing-platform/routing-rules"
+        ))
+        .header("content-type", "application/json")
+        .header("idempotency-key", format!("test-{}", Uuid::new_v4()))
+        .header("x-nvbes-actor-principal-id", actor_id.to_string())
+        .header("x-nvbes-backoffice-role", role)
+        .header(
+            "x-nvbes-second-approver-principal-id",
+            Uuid::new_v4().to_string(),
+        )
+        .header("x-nvbes-second-approver-role", "platform_admin")
+        .body(Body::from(
+            json!({
+                "confirm_code": confirm_code,
+                "provider": "mollie",
+                "country": "FR",
+                "currency": "EUR",
+                "payment_method": "card",
+                "customer_type": "b2b",
+                "min_amount_minor": null,
+                "max_amount_minor": null,
+                "fallback_enabled": false,
+                "priority": 10,
+                "reason": "prefer local PSP"
+            })
+            .to_string(),
+        ))
+        .expect("request should build")
 }
 
 #[tokio::test]

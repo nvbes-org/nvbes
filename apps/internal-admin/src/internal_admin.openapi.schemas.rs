@@ -32,6 +32,19 @@ pub(crate) fn components() -> Value {
                 ("confirm_code", string_schema()),
                 ("reason", string_schema())
             ]),
+            "CreateRoutingRuleRequest": object(&[
+                ("confirm_code", string_schema()),
+                ("provider", enum_schema(&["stripe", "mollie"])),
+                ("country", nullable_string()),
+                ("currency", nullable_string()),
+                ("payment_method", nullable_string()),
+                ("customer_type", nullable_string()),
+                ("min_amount_minor", json!({"type": ["number", "null"]})),
+                ("max_amount_minor", json!({"type": ["number", "null"]})),
+                ("fallback_enabled", json!({"type": "boolean"})),
+                ("priority", number_schema()),
+                ("reason", string_schema())
+            ]),
             "BackofficeRole": enum_schema(&[
                 "compliance_admin",
                 "developer_admin",

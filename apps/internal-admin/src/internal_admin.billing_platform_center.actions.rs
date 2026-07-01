@@ -15,8 +15,10 @@ use crate::backoffice_authorization::{
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
 use crate::billing_platform_center_mutations::{
-    activate_einvoicing_profile, approve_kyc_profile, disable_routing_rule, enable_routing_rule,
-    reject_kyc_profile,
+    activate_einvoicing_profile, approve_kyc_profile, reject_kyc_profile,
+};
+use crate::billing_platform_center_routing_mutations::{
+    CreateRoutingRuleInput, create_routing_rule, disable_routing_rule, enable_routing_rule,
 };
 use crate::billing_platform_center_types::BillingPlatformActionResult;
 use crate::error::AppError;
@@ -27,8 +29,27 @@ struct BillingPlatformActionRequest {
     reason: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct CreateRoutingRuleRequest {
+    confirm_code: String,
+    provider: String,
+    country: Option<String>,
+    currency: Option<String>,
+    payment_method: Option<String>,
+    customer_type: Option<String>,
+    min_amount_minor: Option<i64>,
+    max_amount_minor: Option<i64>,
+    fallback_enabled: bool,
+    priority: i32,
+    reason: String,
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules",
+            post(create_routing_rule_route),
+        )
         .route(
             "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable",
             post(enable_routing_rule_route),
@@ -49,6 +70,43 @@ pub fn router() -> Router<AppState> {
             "/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate",
             post(activate_einvoicing_profile_route),
         )
+}
+
+async fn create_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Json(request): Json<CreateRoutingRuleRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "CREATE ROUTING RULE",
+        workspace_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        create_routing_rule(
+            &state.db,
+            access,
+            workspace_id,
+            CreateRoutingRuleInput {
+                provider: request.provider,
+                country: request.country,
+                currency: request.currency,
+                payment_method: request.payment_method,
+                customer_type: request.customer_type,
+                min_amount_minor: request.min_amount_minor,
+                max_amount_minor: request.max_amount_minor,
+                fallback_enabled: request.fallback_enabled,
+                priority: request.priority,
+                reason: request.reason,
+            },
+        )
+        .await?,
+    ))
 }
 
 async fn enable_routing_rule_route(

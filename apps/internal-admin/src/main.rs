@@ -60,6 +60,8 @@ mod billing_platform_center_actions_test_support;
 mod billing_platform_center_actions_tests;
 #[path = "internal_admin.billing_platform_center.mutations.rs"]
 mod billing_platform_center_mutations;
+#[path = "internal_admin.billing_platform_center.routing_mutations.rs"]
+mod billing_platform_center_routing_mutations;
 #[path = "internal_admin.billing_platform_center.types.rs"]
 mod billing_platform_center_types;
 #[path = "internal_admin.billing_platform_center.validation.rs"]
