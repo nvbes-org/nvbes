@@ -202,6 +202,26 @@ fn insert_center_mutations(paths: &mut Map<String, Value>) {
     {
         insert_endpoint(paths, endpoint);
     }
+    paths.insert(
+        "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate".to_string(),
+        json!({
+            "get": {
+                "tags": ["billing-platform"],
+                "operationId": "simulateBillingRoutingRule",
+                "summary": "Simulate billing provider routing rule matching",
+                "parameters": [
+                    path_uuid("workspaceId"),
+                    query_param("country", "string"),
+                    query_param("currency", "string"),
+                    query_param("payment_method", "string"),
+                    query_param("customer_type", "string"),
+                    query_param("amount_minor", "integer"),
+                    {"$ref": "#/components/parameters/BackofficeRole"}
+                ],
+                "responses": json_response("RoutingRuleSimulationResult")
+            }
+        }),
+    );
 }
 
 pub(crate) fn e<'a>(

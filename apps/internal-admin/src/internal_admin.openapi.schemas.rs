@@ -45,6 +45,8 @@ pub(crate) fn components() -> Value {
                 ("priority", number_schema()),
                 ("reason", string_schema())
             ]),
+            "RoutingRuleSimulationResult": routing_rule_simulation_result(),
+            "MatchedRoutingRule": matched_routing_rule(),
             "BackofficeRole": enum_schema(&[
                 "compliance_admin",
                 "developer_admin",
@@ -193,6 +195,32 @@ pub(crate) fn components() -> Value {
             }
         }
     })
+}
+
+fn routing_rule_simulation_result() -> Value {
+    object(&[
+        (
+            "input",
+            object(&[
+                ("country", nullable_string()),
+                ("currency", string_schema()),
+                ("payment_method", string_schema()),
+                ("customer_type", string_schema()),
+                ("amount_minor", number_schema()),
+            ]),
+        ),
+        ("matched_rule", nullable_ref("MatchedRoutingRule")),
+        ("outcome", enum_schema(&["matched", "no_matching_rule"])),
+    ])
+}
+
+fn matched_routing_rule() -> Value {
+    object(&[
+        ("id", uuid_schema()),
+        ("priority", number_schema()),
+        ("provider", enum_schema(&["stripe", "mollie"])),
+        ("fallback_enabled", json!({"type": "boolean"})),
+    ])
 }
 
 pub(crate) fn operation(

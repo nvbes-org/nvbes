@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 #[path = "internal_admin.access_center.rs"]
 mod access_center;
 #[path = "internal_admin.access_center.actions.rs"]

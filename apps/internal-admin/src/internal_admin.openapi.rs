@@ -119,4 +119,29 @@ mod tests {
             assert!(document["paths"][path]["post"].is_object(), "{path}");
         }
     }
+
+    #[test]
+    fn openapi_documents_billing_routing_simulation() {
+        let document = openapi_document();
+        let operation = &document["paths"]["/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate"]
+            ["get"];
+        assert!(operation.is_object());
+        assert_eq!(operation["operationId"], "simulateBillingRoutingRule");
+        assert_eq!(
+            operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/RoutingRuleSimulationResult"
+        );
+
+        let parameters = operation["parameters"]
+            .as_array()
+            .expect("parameters should be documented");
+        let names = parameters
+            .iter()
+            .filter_map(|parameter| parameter.get("name").and_then(Value::as_str))
+            .collect::<Vec<_>>();
+        assert!(names.contains(&"workspaceId"));
+        assert!(names.contains(&"currency"));
+        assert!(names.contains(&"amount_minor"));
+        assert!(document["components"]["schemas"]["MatchedRoutingRule"].is_object());
+    }
 }
