@@ -11,7 +11,7 @@ use crate::billing_platform_center_routing_rule_conflicts::{
     reject_active_routing_rule_overlap_for_rule,
 };
 use crate::billing_platform_center_routing_rule_validation::{
-    normalize_country, normalize_currency, validate_create_routing_rule,
+    normalize_country, normalize_currency, normalize_text_filter, validate_create_routing_rule,
 };
 use crate::billing_platform_center_types::{BillingPlatformActionResult, action_result};
 use crate::billing_platform_center_validation::validate_reason;
@@ -39,6 +39,8 @@ pub(crate) async fn create_routing_rule(
     validate_create_routing_rule(&input)?;
     let country = normalize_country(input.country.as_deref());
     let currency = normalize_currency(input.currency.as_deref());
+    let payment_method = normalize_text_filter(input.payment_method.as_deref());
+    let customer_type = normalize_text_filter(input.customer_type.as_deref());
     let mut tx = db.begin().await?;
     reject_active_routing_rule_overlap(
         &mut tx,
@@ -46,8 +48,8 @@ pub(crate) async fn create_routing_rule(
             exclude_rule_id: None,
             country: country.as_deref(),
             currency: currency.as_deref(),
-            payment_method: input.payment_method.as_deref(),
-            customer_type: input.customer_type.as_deref(),
+            payment_method: payment_method.as_deref(),
+            customer_type: customer_type.as_deref(),
             min_amount_minor: input.min_amount_minor,
             max_amount_minor: input.max_amount_minor,
         },
@@ -64,8 +66,8 @@ pub(crate) async fn create_routing_rule(
     .bind(input.provider.as_str())
     .bind(country.as_deref())
     .bind(currency.as_deref())
-    .bind(input.payment_method.as_deref())
-    .bind(input.customer_type.as_deref())
+    .bind(payment_method.as_deref())
+    .bind(customer_type.as_deref())
     .bind(input.min_amount_minor)
     .bind(input.max_amount_minor)
     .bind(input.fallback_enabled)
@@ -76,8 +78,8 @@ pub(crate) async fn create_routing_rule(
         "provider": input.provider,
         "country": country,
         "currency": currency,
-        "payment_method": input.payment_method,
-        "customer_type": input.customer_type,
+        "payment_method": payment_method,
+        "customer_type": customer_type,
         "min_amount_minor": input.min_amount_minor,
         "max_amount_minor": input.max_amount_minor,
         "fallback_enabled": input.fallback_enabled,

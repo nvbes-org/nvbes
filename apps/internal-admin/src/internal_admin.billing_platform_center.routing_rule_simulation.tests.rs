@@ -193,6 +193,39 @@ async fn simulation_matches_customer_type_case_insensitively() {
     assert_eq!(matched.id, rule_id);
 }
 
+#[tokio::test]
+async fn simulation_matches_payment_method_case_insensitively() {
+    let Some(pool) = crate::billing_platform_center_actions_test_support::test_pool().await else {
+        eprintln!("skipping test: Postgres is not reachable");
+        return;
+    };
+    if !routing_rule_schema_exists(&pool).await {
+        eprintln!("skipping test: billing provider routing schema is missing");
+        return;
+    }
+
+    let customer_type = format!("sim-{}", Uuid::new_v4());
+    let rule_id = insert_test_rule(&pool, 10, "mollie", &customer_type, 0, 10_000, "active").await;
+
+    let result = simulate_routing_rule(
+        &pool,
+        RoutingRuleSimulationInput {
+            country: Some("zz".to_string()),
+            currency: "eur".to_string(),
+            payment_method: "CARD".to_string(),
+            customer_type,
+            amount_minor: 2_000,
+        },
+    )
+    .await;
+    delete_test_rule(&pool, rule_id).await;
+
+    let result = result.expect("simulation should succeed");
+    let matched = result.matched_rule.expect("rule should match");
+    assert_eq!(matched.id, rule_id);
+    assert_eq!(result.input.payment_method, "card");
+}
+
 async fn insert_test_rule(
     pool: &PgPool,
     priority: i32,

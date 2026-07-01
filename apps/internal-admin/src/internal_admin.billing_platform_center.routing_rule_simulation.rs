@@ -50,8 +50,8 @@ pub(crate) async fn simulate_routing_rule(
     let normalized = NormalizedRoutingRuleSimulationInput {
         country: input.country.as_deref().map(str::to_ascii_uppercase),
         currency: input.currency.to_ascii_uppercase(),
-        payment_method: input.payment_method,
-        customer_type: input.customer_type,
+        payment_method: input.payment_method.to_ascii_lowercase(),
+        customer_type: input.customer_type.to_ascii_lowercase(),
         amount_minor: input.amount_minor,
     };
     let row = sqlx::query(
@@ -61,7 +61,7 @@ pub(crate) async fn simulate_routing_rule(
         WHERE status = 'active'
           AND (country IS NULL OR country = $1)
           AND (currency IS NULL OR currency = $2)
-          AND (payment_method IS NULL OR payment_method = $3)
+          AND (payment_method IS NULL OR lower(payment_method) = lower($3))
           AND (customer_type IS NULL OR lower(customer_type) = lower($4))
           AND (min_amount_minor IS NULL OR min_amount_minor <= $5)
           AND (max_amount_minor IS NULL OR max_amount_minor >= $5)

@@ -18,6 +18,10 @@ pub(crate) fn normalize_currency(currency: Option<&str>) -> Option<String> {
     currency.map(str::to_ascii_uppercase)
 }
 
+pub(crate) fn normalize_text_filter(value: Option<&str>) -> Option<String> {
+    value.map(str::to_ascii_lowercase)
+}
+
 fn validate_provider(provider: &str) -> Result<(), AppError> {
     if matches!(provider, "stripe" | "mollie") {
         return Ok(());

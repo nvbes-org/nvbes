@@ -25,8 +25,8 @@ pub(crate) async fn reject_active_routing_rule_overlap(
           AND ($1::uuid IS NULL OR id <> $1)
           AND (country IS NULL OR $2::text IS NULL OR country::text = $2)
           AND (currency IS NULL OR $3::text IS NULL OR currency::text = $3)
-          AND (payment_method IS NULL OR $4::text IS NULL OR payment_method = $4)
-          AND (customer_type IS NULL OR $5::text IS NULL OR customer_type = $5)
+          AND (payment_method IS NULL OR $4::text IS NULL OR lower(payment_method) = lower($4))
+          AND (customer_type IS NULL OR $5::text IS NULL OR lower(customer_type) = lower($5))
           AND COALESCE(min_amount_minor, 0) <= COALESCE($7, 9223372036854775807)
           AND COALESCE(max_amount_minor, 9223372036854775807) >= COALESCE($6, 0)
         ORDER BY priority ASC, updated_at DESC
@@ -74,8 +74,8 @@ pub(crate) async fn reject_active_routing_rule_overlap_for_rule(
           AND id <> $1
           AND (country IS NULL OR $2::text IS NULL OR country::text = $2)
           AND (currency IS NULL OR $3::text IS NULL OR currency::text = $3)
-          AND (payment_method IS NULL OR $4::text IS NULL OR payment_method = $4)
-          AND (customer_type IS NULL OR $5::text IS NULL OR customer_type = $5)
+          AND (payment_method IS NULL OR $4::text IS NULL OR lower(payment_method) = lower($4))
+          AND (customer_type IS NULL OR $5::text IS NULL OR lower(customer_type) = lower($5))
           AND COALESCE(min_amount_minor, 0) <= COALESCE($7, 9223372036854775807)
           AND COALESCE(max_amount_minor, 9223372036854775807) >= COALESCE($6, 0)
         ORDER BY priority ASC, updated_at DESC
@@ -181,6 +181,47 @@ mod tests {
                 currency: Some("EUR"),
                 payment_method: Some("card"),
                 customer_type: Some("b2b"),
+                min_amount_minor: Some(1000),
+                max_amount_minor: Some(3000),
+            },
+        )
+        .await;
+
+        assert!(result.is_err());
+        tx.rollback().await.expect("transaction should rollback");
+    }
+
+    #[tokio::test]
+    async fn new_rule_cannot_overlap_active_rule_with_different_filter_case() {
+        let Some(pool) = crate::billing_platform_center_actions_test_support::test_pool().await
+        else {
+            eprintln!("skipping test: Postgres is not reachable");
+            return;
+        };
+        if !routing_rule_schema_exists(&pool).await {
+            eprintln!("skipping test: billing provider routing schema is missing");
+            return;
+        }
+
+        let mut tx = pool.begin().await.expect("transaction should start");
+        sqlx::query(
+            "INSERT INTO billing_provider_routing_rules (
+               priority, provider, country, currency, payment_method, customer_type,
+               min_amount_minor, max_amount_minor, fallback_enabled, status
+             ) VALUES (10, 'mollie', 'FR', 'EUR', 'card', 'b2b', 0, 5000, FALSE, 'active')",
+        )
+        .execute(tx.as_mut())
+        .await
+        .expect("active rule should insert");
+
+        let result = reject_active_routing_rule_overlap(
+            &mut tx,
+            RoutingRuleConflictInput {
+                exclude_rule_id: None,
+                country: Some("FR"),
+                currency: Some("EUR"),
+                payment_method: Some("CARD"),
+                customer_type: Some("B2B"),
                 min_amount_minor: Some(1000),
                 max_amount_minor: Some(3000),
             },

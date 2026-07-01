@@ -24,7 +24,7 @@ pub async fn fetch_provider_routing_rule_tx(
         WHERE status = 'active'
           AND (country IS NULL OR country = $1)
           AND (currency IS NULL OR currency = $2)
-          AND (payment_method IS NULL OR payment_method = $3)
+          AND (payment_method IS NULL OR lower(payment_method) = lower($3))
           AND (customer_type IS NULL OR lower(customer_type) = lower($4))
           AND (min_amount_minor IS NULL OR min_amount_minor <= $5)
           AND (max_amount_minor IS NULL OR max_amount_minor >= $5)
