@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_platform_center_routing_rules::{ProviderRoutingRule, load_routing_rules};
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
@@ -32,19 +33,6 @@ struct BillingProviderSummary {
     status: String,
     account_count: i64,
     updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize)]
-struct ProviderRoutingRule {
-    id: Uuid,
-    priority: i32,
-    provider: String,
-    country: Option<String>,
-    currency: Option<String>,
-    payment_method: Option<String>,
-    customer_type: Option<String>,
-    fallback_enabled: bool,
-    status: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -182,35 +170,6 @@ async fn load_providers(db: &PgPool) -> Result<Vec<BillingProviderSummary>, AppE
             status: row.get("status"),
             account_count: row.get("account_count"),
             updated_at: row.get("updated_at"),
-        })
-        .collect())
-}
-
-async fn load_routing_rules(db: &PgPool) -> Result<Vec<ProviderRoutingRule>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT id, priority, provider::text AS provider, country::text AS country,
-          currency::text AS currency, payment_method, customer_type, fallback_enabled, status
-        FROM billing_provider_routing_rules
-        ORDER BY priority ASC, updated_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| ProviderRoutingRule {
-            id: row.get("id"),
-            priority: row.get("priority"),
-            provider: row.get("provider"),
-            country: row.get("country"),
-            currency: row.get("currency"),
-            payment_method: row.get("payment_method"),
-            customer_type: row.get("customer_type"),
-            fallback_enabled: row.get("fallback_enabled"),
-            status: row.get("status"),
         })
         .collect())
 }
