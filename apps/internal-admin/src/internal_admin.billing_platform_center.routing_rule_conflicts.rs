@@ -106,3 +106,56 @@ fn reject_conflict(conflicting_rule_id: Option<Uuid>) -> Result<(), AppError> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn disabled_rule_cannot_be_reactivated_when_it_overlaps_active_rule() {
+        let Some(pool) = crate::billing_platform_center_actions_test_support::test_pool().await
+        else {
+            eprintln!("skipping test: Postgres is not reachable");
+            return;
+        };
+        if !routing_rule_schema_exists(&pool).await {
+            eprintln!("skipping test: billing provider routing schema is missing");
+            return;
+        }
+
+        let mut tx = pool.begin().await.expect("transaction should start");
+        sqlx::query(
+            "INSERT INTO billing_provider_routing_rules (
+               priority, provider, country, currency, payment_method, customer_type,
+               min_amount_minor, max_amount_minor, fallback_enabled, status
+             ) VALUES (10, 'mollie', 'FR', 'EUR', 'card', 'b2b', 0, 5000, FALSE, 'active')",
+        )
+        .execute(tx.as_mut())
+        .await
+        .expect("active rule should insert");
+        let disabled_rule_id = sqlx::query_scalar::<_, Uuid>(
+            "INSERT INTO billing_provider_routing_rules (
+               priority, provider, country, currency, payment_method, customer_type,
+               min_amount_minor, max_amount_minor, fallback_enabled, status
+             ) VALUES (20, 'stripe', 'FR', 'EUR', 'card', 'b2b', 1000, 3000, TRUE, 'disabled')
+             RETURNING id",
+        )
+        .fetch_one(tx.as_mut())
+        .await
+        .expect("disabled rule should insert");
+
+        let result = reject_active_routing_rule_overlap_for_rule(&mut tx, disabled_rule_id).await;
+
+        assert!(result.is_err());
+        tx.rollback().await.expect("transaction should rollback");
+    }
+
+    async fn routing_rule_schema_exists(pool: &sqlx::PgPool) -> bool {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT to_regclass('public.billing_provider_routing_rules') IS NOT NULL",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap_or(false)
+    }
+}
