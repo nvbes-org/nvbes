@@ -1,8 +1,8 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
-    routing::post,
+    routing::{get, post},
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::app::AppState;
 use crate::backoffice_authorization::{
     BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
-    require_strong_confirmation,
+    require_permission, require_strong_confirmation,
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
@@ -19,6 +19,9 @@ use crate::billing_platform_center_mutations::{
 };
 use crate::billing_platform_center_routing_mutations::{
     CreateRoutingRuleInput, create_routing_rule, disable_routing_rule, enable_routing_rule,
+};
+use crate::billing_platform_center_routing_rule_simulation::{
+    RoutingRuleSimulationInput, RoutingRuleSimulationResult, simulate_routing_rule,
 };
 use crate::billing_platform_center_types::BillingPlatformActionResult;
 use crate::error::AppError;
@@ -44,8 +47,21 @@ struct CreateRoutingRuleRequest {
     reason: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct SimulateRoutingRuleQuery {
+    country: Option<String>,
+    currency: String,
+    payment_method: String,
+    customer_type: String,
+    amount_minor: i64,
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate",
+            get(simulate_routing_rule_route),
+        )
         .route(
             "/workspaces/{workspaceId}/admin/billing-platform/routing-rules",
             post(create_routing_rule_route),
@@ -70,6 +86,29 @@ pub fn router() -> Router<AppState> {
             "/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate",
             post(activate_einvoicing_profile_route),
         )
+}
+
+async fn simulate_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Query(query): Query<SimulateRoutingRuleQuery>,
+) -> Result<Json<RoutingRuleSimulationResult>, AppError> {
+    require_billing_platform_simulation_authorization(&headers)?;
+    let _access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        simulate_routing_rule(
+            &state.db,
+            RoutingRuleSimulationInput {
+                country: query.country,
+                currency: query.currency,
+                payment_method: query.payment_method,
+                customer_type: query.customer_type,
+                amount_minor: query.amount_minor,
+            },
+        )
+        .await?,
+    ))
 }
 
 async fn create_routing_rule_route(
@@ -225,4 +264,8 @@ async fn require_billing_platform_mutation(
 
 fn require_billing_platform_authorization(headers: &HeaderMap) -> Result<(), AppError> {
     require_operator_permission_headers(headers, BackofficePermission::BillingPlatformMutate)
+}
+
+fn require_billing_platform_simulation_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_permission(headers, BackofficePermission::BillingPlatformMutate)
 }

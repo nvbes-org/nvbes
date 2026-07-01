@@ -6,6 +6,12 @@ use crate::billing_admin_types::BackofficeAccess;
 use crate::billing_platform_center_action_log::{
     BillingPlatformActionInput, insert_action, insert_audit,
 };
+use crate::billing_platform_center_routing_rule_conflicts::{
+    RoutingRuleConflictInput, reject_active_routing_rule_overlap,
+};
+use crate::billing_platform_center_routing_rule_validation::{
+    normalize_country, normalize_currency, validate_create_routing_rule,
+};
 use crate::billing_platform_center_types::{BillingPlatformActionResult, action_result};
 use crate::billing_platform_center_validation::validate_reason;
 use crate::error::AppError;
@@ -33,6 +39,18 @@ pub(crate) async fn create_routing_rule(
     let country = normalize_country(input.country.as_deref());
     let currency = normalize_currency(input.currency.as_deref());
     let mut tx = db.begin().await?;
+    reject_active_routing_rule_overlap(
+        &mut tx,
+        RoutingRuleConflictInput {
+            country: country.as_deref(),
+            currency: currency.as_deref(),
+            payment_method: input.payment_method.as_deref(),
+            customer_type: input.customer_type.as_deref(),
+            min_amount_minor: input.min_amount_minor,
+            max_amount_minor: input.max_amount_minor,
+        },
+    )
+    .await?;
     let rule_id = sqlx::query_scalar::<_, Uuid>(
         "INSERT INTO billing_provider_routing_rules (
            priority, provider, country, currency, payment_method, customer_type,
@@ -209,67 +227,6 @@ async fn transition_routing_rule(
         next_state,
         audit_action,
     ))
-}
-
-fn validate_create_routing_rule(input: &CreateRoutingRuleInput) -> Result<(), AppError> {
-    validate_provider(&input.provider)?;
-    validate_reason(&input.reason)?;
-    validate_code_len(input.country.as_deref(), 2, "invalid_routing_country")?;
-    validate_code_len(input.currency.as_deref(), 3, "invalid_routing_currency")?;
-    validate_amount_bounds(input.min_amount_minor, input.max_amount_minor)
-}
-
-fn validate_provider(provider: &str) -> Result<(), AppError> {
-    if matches!(provider, "stripe" | "mollie") {
-        return Ok(());
-    }
-    Err(AppError::bad_request(
-        "invalid_routing_provider",
-        "Routing provider is not supported.",
-    ))
-}
-
-fn validate_code_len(
-    value: Option<&str>,
-    expected: usize,
-    code: &'static str,
-) -> Result<(), AppError> {
-    if value.is_none_or(|value| value.len() == expected) {
-        return Ok(());
-    }
-    Err(AppError::bad_request(
-        code,
-        "Routing filter code is invalid.",
-    ))
-}
-
-fn validate_amount_bounds(
-    min_amount: Option<i64>,
-    max_amount: Option<i64>,
-) -> Result<(), AppError> {
-    if min_amount.is_some_and(|amount| amount < 0) || max_amount.is_some_and(|amount| amount < 0) {
-        return Err(AppError::bad_request(
-            "invalid_routing_amount",
-            "Routing amount bounds must be non-negative.",
-        ));
-    }
-    if let (Some(min_amount), Some(max_amount)) = (min_amount, max_amount)
-        && min_amount > max_amount
-    {
-        return Err(AppError::bad_request(
-            "invalid_routing_amount_range",
-            "Routing minimum amount cannot exceed maximum amount.",
-        ));
-    }
-    Ok(())
-}
-
-fn normalize_country(country: Option<&str>) -> Option<String> {
-    country.map(str::to_ascii_uppercase)
-}
-
-fn normalize_currency(currency: Option<&str>) -> Option<String> {
-    currency.map(str::to_ascii_uppercase)
 }
 
 fn routing_action_names(next_state: &'static str) -> (&'static str, &'static str) {
