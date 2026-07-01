@@ -29,7 +29,9 @@ pub fn router() -> Router<AppState> {
 #[derive(Debug, Serialize)]
 pub struct BillingPortalCapabilities {
     pub exposes_provider_secret_ids: bool,
+    pub payment_method_update_flow: String,
     pub payment_method_changes_delegated_to_provider: bool,
+    pub automatically_updates_payment_method_references: bool,
     pub shows_canonical_invoices: bool,
     pub shows_credits: bool,
 }
@@ -37,7 +39,9 @@ pub struct BillingPortalCapabilities {
 pub async fn portal_capabilities() -> Json<BillingPortalCapabilities> {
     Json(BillingPortalCapabilities {
         exposes_provider_secret_ids: false,
-        payment_method_changes_delegated_to_provider: true,
+        payment_method_update_flow: "nvbes_provider_redirect".to_string(),
+        payment_method_changes_delegated_to_provider: false,
+        automatically_updates_payment_method_references: false,
         shows_canonical_invoices: true,
         shows_credits: true,
     })
@@ -114,11 +118,18 @@ mod tests {
     fn billing_portal_capabilities_do_not_expose_provider_secret_ids() {
         let capabilities = BillingPortalCapabilities {
             exposes_provider_secret_ids: false,
-            payment_method_changes_delegated_to_provider: true,
+            payment_method_update_flow: "nvbes_provider_redirect".to_string(),
+            payment_method_changes_delegated_to_provider: false,
+            automatically_updates_payment_method_references: false,
             shows_canonical_invoices: true,
             shows_credits: true,
         };
         assert!(!capabilities.exposes_provider_secret_ids);
-        assert!(capabilities.payment_method_changes_delegated_to_provider);
+        assert_eq!(
+            capabilities.payment_method_update_flow,
+            "nvbes_provider_redirect"
+        );
+        assert!(!capabilities.payment_method_changes_delegated_to_provider);
+        assert!(!capabilities.automatically_updates_payment_method_references);
     }
 }

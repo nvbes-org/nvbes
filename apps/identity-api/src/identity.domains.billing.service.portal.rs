@@ -103,6 +103,7 @@ pub async fn create_portal_session(
     Ok(PortalSessionResponse {
         provider: "stripe".to_string(),
         url: session.url,
+        provider_customer_id: customer_id.clone(),
         stripe_customer_id: customer_id,
     })
 }

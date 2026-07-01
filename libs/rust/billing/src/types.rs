@@ -46,6 +46,7 @@ pub struct CheckoutSessionResponse {
 pub struct PortalSessionResponse {
     pub provider: String,
     pub url: String,
+    pub provider_customer_id: String,
     pub stripe_customer_id: String,
 }
 

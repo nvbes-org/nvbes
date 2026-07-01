@@ -27,7 +27,9 @@ pub struct BillingPortalCreditView {
 pub struct BillingPortalView {
     pub plan_code: String,
     pub provider: String,
+    pub payment_method_update_flow: String,
     pub payment_method_changes_delegated_to_provider: bool,
+    pub automatically_updates_payment_method_references: bool,
     pub exposes_provider_secret_ids: bool,
     pub invoices: Vec<BillingPortalInvoiceView>,
     pub credits: Vec<BillingPortalCreditView>,
@@ -45,7 +47,9 @@ pub async fn get_portal_view(
     Ok(BillingPortalView {
         plan_code: billing.plan.code,
         provider: billing.subscription.billing_provider,
-        payment_method_changes_delegated_to_provider: true,
+        payment_method_update_flow: "nvbes_provider_redirect".to_string(),
+        payment_method_changes_delegated_to_provider: false,
+        automatically_updates_payment_method_references: false,
         exposes_provider_secret_ids: false,
         invoices,
         credits,
@@ -155,7 +159,9 @@ mod tests {
         let view = BillingPortalView {
             plan_code: "team".to_string(),
             provider: "stripe".to_string(),
-            payment_method_changes_delegated_to_provider: true,
+            payment_method_update_flow: "nvbes_provider_redirect".to_string(),
+            payment_method_changes_delegated_to_provider: false,
+            automatically_updates_payment_method_references: false,
             exposes_provider_secret_ids: false,
             invoices: vec![BillingPortalInvoiceView {
                 invoice_id: Uuid::nil(),
@@ -174,7 +180,9 @@ mod tests {
         };
 
         assert!(!view.exposes_provider_secret_ids);
-        assert!(view.payment_method_changes_delegated_to_provider);
+        assert_eq!(view.payment_method_update_flow, "nvbes_provider_redirect");
+        assert!(!view.payment_method_changes_delegated_to_provider);
+        assert!(!view.automatically_updates_payment_method_references);
         assert_eq!(
             view.invoices[0].invoice_number.as_deref(),
             Some("NVBES-2026-000001")
