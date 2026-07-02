@@ -165,53 +165,14 @@ pub async fn plan_id_for_provider_price(
     provider: &str,
     provider_price_id: &str,
 ) -> Result<Uuid, AppError> {
-    if let Some(plan_id) = sqlx::query_scalar::<_, Uuid>(
-        r#"
-        SELECT legacy_plan_id
-        FROM billing_provider_price_mappings
-        WHERE provider = $1::billing_provider
-          AND provider_price_id = $2
-          AND status = 'active'
-          AND legacy_plan_id IS NOT NULL
-        ORDER BY created_at DESC
-        LIMIT 1
-        "#,
-    )
-    .bind(provider)
-    .bind(provider_price_id)
-    .fetch_optional(&mut **tx)
-    .await?
-    {
-        return Ok(plan_id);
-    }
-
-    if provider != "stripe" {
-        return Err(AppError::bad_request(
-            "unknown_provider_price",
-            "Provider price is not mapped to a nvbes plan.",
-        ));
-    }
-
-    let plan_id = sqlx::query_scalar::<_, Uuid>(
-        r#"
-        SELECT plan_id
-        FROM stripe_price_mappings
-        WHERE stripe_price_id = $1
-          AND status = 'active'
-        ORDER BY valid_from DESC
-        LIMIT 1
-        "#,
-    )
-    .bind(provider_price_id)
-    .fetch_optional(&mut **tx)
-    .await?;
-
-    plan_id.ok_or_else(|| {
-        AppError::bad_request(
-            "unknown_provider_price",
-            "Provider price is not mapped to a nvbes plan.",
-        )
-    })
+    nvbes_billing::db::plan_id_for_provider_price_tx(tx, provider, provider_price_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::bad_request(
+                "unknown_provider_price",
+                "Provider price is not mapped to a nvbes plan.",
+            )
+        })
 }
 
 pub async fn plan_id_by_code(
