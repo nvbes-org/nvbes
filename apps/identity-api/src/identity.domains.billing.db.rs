@@ -6,7 +6,7 @@ mod provider_routing;
 pub use provider_events::{mark_provider_event_replayed, record_provider_event};
 pub use provider_routing::{ProviderRoutingRule, fetch_provider_routing_rule_tx};
 
-use super::types::{AuditEventInput, BillingStateRecord, PlanRecord, StripePriceMapping};
+use super::types::{AuditEventInput, BillingStateRecord, PlanRecord, ProviderPriceMapping};
 use crate::http::error::AppError;
 use nvbes_billing::pricing::regional_price_selection;
 use sqlx::{PgPool, Row};
@@ -73,7 +73,7 @@ pub async fn fetch_active_price_mapping_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     plan_id: Uuid,
     country_code: Option<&str>,
-) -> Result<StripePriceMapping, AppError> {
+) -> Result<ProviderPriceMapping, AppError> {
     if let Some(record) = fetch_active_provider_price_mapping_tx(tx, plan_id, country_code).await? {
         return Ok(record);
     }
@@ -92,7 +92,7 @@ async fn fetch_active_provider_price_mapping_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     plan_id: Uuid,
     country_code: Option<&str>,
-) -> Result<Option<StripePriceMapping>, AppError> {
+) -> Result<Option<ProviderPriceMapping>, AppError> {
     let selection = regional_price_selection(country_code);
     let row = sqlx::query(
         r#"
@@ -136,7 +136,7 @@ async fn fetch_active_provider_price_mapping_tx(
     .fetch_optional(&mut **tx)
     .await?;
 
-    Ok(row.map(|row| StripePriceMapping {
+    Ok(row.map(|row| ProviderPriceMapping {
         provider_product_id: row.get("provider_product_id"),
         provider_price_id: row.get("provider_price_id"),
         stripe_product_id: row.get("stripe_product_id"),
@@ -291,8 +291,8 @@ pub async fn plan_id_for_stripe_price(
 
     plan_id.ok_or_else(|| {
         AppError::bad_request(
-            "unknown_stripe_price",
-            "Stripe price is not mapped to a nvbes plan.",
+            "unknown_provider_price",
+            "Provider price is not mapped to a nvbes plan.",
         )
     })
 }
@@ -326,8 +326,8 @@ pub async fn workspace_id_for_subscription(
 
     workspace_id.ok_or_else(|| {
         AppError::bad_request(
-            "unknown_stripe_subscription",
-            "Stripe subscription is not mapped to a workspace.",
+            "unknown_provider_subscription",
+            "Provider subscription is not mapped to a workspace.",
         )
     })
 }

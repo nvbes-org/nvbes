@@ -65,6 +65,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
       const portal = await identityClient.createBillingPortalSession(workspaceId);
       trackEvent('billing.portal_started', {
         provider: portal.provider,
+        provider_customer_id: portal.provider_customer_id,
         workspace_id: workspaceId,
       });
       window.location.href = portal.url;
@@ -81,7 +82,11 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
 
       <CurrentPlanCard overview={overview} />
 
-      <BillingPortalCard portalLoading={portalLoading} onPortal={() => void handlePortal()} />
+      <BillingPortalCard
+        provider={overview.subscription.billing_provider}
+        portalLoading={portalLoading}
+        onPortal={() => void handlePortal()}
+      />
 
       <BillingPlansList
         currentPlanCode={currentPlanCode}

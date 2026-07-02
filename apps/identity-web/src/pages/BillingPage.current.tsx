@@ -72,9 +72,11 @@ export function CurrentPlanCard({ overview }: { overview: BillingOverview }) {
 }
 
 export function BillingPortalCard({
+  provider,
   portalLoading,
   onPortal,
 }: {
+  provider: string;
   portalLoading: boolean;
   onPortal: () => void;
 }) {
@@ -83,7 +85,7 @@ export function BillingPortalCard({
       <CardHeader>
         <CardTitle>Portail de facturation</CardTitle>
         <CardDescription>
-          Accedez a votre portail Stripe pour gerer vos moyens de paiement et factures.
+          Accedez au portail de paiement {provider} pour gerer vos moyens de paiement et factures.
         </CardDescription>
       </CardHeader>
       <CardFooter>

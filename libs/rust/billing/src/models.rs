@@ -209,7 +209,7 @@ pub struct BillingStateRecord {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct StripePriceMapping {
+pub struct ProviderPriceMapping {
     pub provider_product_id: String,
     pub provider_price_id: String,
     pub stripe_product_id: String,
@@ -219,6 +219,8 @@ pub struct StripePriceMapping {
     pub currency: String,
     pub amount_minor: Option<i64>,
 }
+
+pub type StripePriceMapping = ProviderPriceMapping;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PlanRecord {

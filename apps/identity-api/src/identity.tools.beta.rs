@@ -9,7 +9,7 @@ mod seed;
 #[path = "identity.tools.beta.workspace.rs"]
 mod workspace;
 
-const REQUIRED_STRIPE_PLAN_CODES: [&str; 3] = ["solo_pro", "team", "team_plus"];
+const REQUIRED_PROVIDER_PRICE_PLAN_CODES: [&str; 3] = ["solo_pro", "team", "team_plus"];
 
 pub enum BetaCliCommand {
     ExtractEmailToken {
@@ -21,12 +21,15 @@ pub enum BetaCliCommand {
         password: String,
         workspace_name: String,
     },
-    CheckStripeMappings,
+    CheckProviderPriceMappings,
 }
 
 pub fn parse_cli_command(args: &[String]) -> anyhow::Result<Option<BetaCliCommand>> {
-    if args.iter().any(|arg| arg == "--check-stripe-mappings") {
-        return Ok(Some(BetaCliCommand::CheckStripeMappings));
+    if args
+        .iter()
+        .any(|arg| arg == "--check-provider-price-mappings" || arg == "--check-stripe-mappings")
+    {
+        return Ok(Some(BetaCliCommand::CheckProviderPriceMappings));
     }
 
     if args.iter().any(|arg| arg == "--prepare-beta-e2e-account") {
@@ -103,8 +106,8 @@ pub async fn run_cli_command(command: BetaCliCommand) -> anyhow::Result<()> {
             )
             .await?;
         }
-        BetaCliCommand::CheckStripeMappings => {
-            check_active_stripe_mappings(&pool).await?;
+        BetaCliCommand::CheckProviderPriceMappings => {
+            check_active_provider_price_mappings(&pool).await?;
         }
     }
 
@@ -125,8 +128,8 @@ fn extract_arg_value(args: &[String], flag: &str) -> Option<String> {
         .map(|window| window[1].clone())
 }
 
-async fn check_active_stripe_mappings(pool: &sqlx::PgPool) -> anyhow::Result<()> {
-    for plan_code in REQUIRED_STRIPE_PLAN_CODES {
+async fn check_active_provider_price_mappings(pool: &sqlx::PgPool) -> anyhow::Result<()> {
+    for plan_code in REQUIRED_PROVIDER_PRICE_PLAN_CODES {
         let plan_id: Option<uuid::Uuid> = sqlx::query_scalar(
             r#"
             SELECT id
@@ -143,35 +146,37 @@ async fn check_active_stripe_mappings(pool: &sqlx::PgPool) -> anyhow::Result<()>
             bail!("Plan {plan_code} is missing.");
         };
 
-        let mapping: Option<(String, String)> = sqlx::query_as(
+        let mapping: Option<(String, String, String)> = sqlx::query_as(
             r#"
-            SELECT stripe_product_id, stripe_price_id
-            FROM stripe_price_mappings
-            WHERE plan_id = $1
-              AND meter = 'subscription'
+            SELECT provider::text, provider_product_id, provider_price_id
+            FROM billing_provider_price_mappings
+            WHERE legacy_plan_id = $1
               AND status = 'active'
-              AND valid_from <= NOW()
-              AND (valid_until IS NULL OR valid_until > NOW())
-            ORDER BY valid_from DESC
+            ORDER BY updated_at DESC, created_at DESC
             LIMIT 1
             "#,
         )
         .bind(plan_id)
         .fetch_optional(pool)
         .await
-        .context("Failed to read Stripe price mappings.")?;
+        .context("Failed to read provider price mappings.")?;
 
-        let Some((stripe_product_id, stripe_price_id)) = mapping else {
-            bail!("Missing active Stripe mapping for plan {plan_code}.");
+        let Some((provider, provider_product_id, provider_price_id)) = mapping else {
+            bail!("Missing active provider price mapping for plan {plan_code}.");
         };
 
-        if !stripe_product_id.starts_with("prod_") || !stripe_price_id.starts_with("price_") {
+        if provider == "stripe"
+            && (!provider_product_id.starts_with("prod_")
+                || !provider_price_id.starts_with("price_"))
+        {
             bail!(
-                "Stripe mapping for plan {plan_code} does not look like a real Stripe test mapping."
+                "Provider price mapping for plan {plan_code} does not look like a real Stripe test mapping."
             );
         }
 
-        println!("{plan_code}: product={stripe_product_id} price={stripe_price_id}");
+        println!(
+            "{plan_code}: provider={provider} product={provider_product_id} price={provider_price_id}"
+        );
     }
 
     Ok(())

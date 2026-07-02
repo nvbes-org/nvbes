@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
-pub use nvbes_billing::models::{BillingStateRecord, PlanRecord, StripePriceMapping};
+pub use nvbes_billing::models::{BillingStateRecord, PlanRecord, ProviderPriceMapping};
 
 pub async fn fetch_billing_state_tx(
     tx: &mut Transaction<'_, Postgres>,
@@ -29,13 +29,13 @@ pub async fn fetch_active_price_mapping_tx(
     tx: &mut Transaction<'_, Postgres>,
     plan_id: Uuid,
     country_code: Option<&str>,
-) -> Result<StripePriceMapping, AppError> {
+) -> Result<ProviderPriceMapping, AppError> {
     let record = nvbes_billing::db::fetch_active_price_mapping_tx(tx, plan_id, country_code)
         .await?
         .ok_or_else(|| {
             AppError::conflict(
-                "missing_stripe_price_mapping",
-                "No active Stripe price mapping exists for this plan.",
+                "missing_provider_price_mapping",
+                "No active provider price mapping exists for this plan.",
             )
         })?;
     Ok(record)
@@ -103,8 +103,8 @@ pub async fn plan_id_for_stripe_price_tx(
 
     plan_id.ok_or_else(|| {
         AppError::bad_request(
-            "unknown_stripe_price",
-            "Stripe price is not mapped to a nvbes plan.",
+            "unknown_provider_price",
+            "Provider price is not mapped to a nvbes plan.",
         )
     })
 }
@@ -129,7 +129,8 @@ pub async fn workspace_id_for_customer_tx(
         r#"
         SELECT workspace_id
         FROM billing_accounts
-        WHERE stripe_customer_id = $1
+        WHERE provider = 'stripe'
+          AND stripe_customer_id = $1
         UNION
         SELECT workspace_id
         FROM subscriptions
@@ -143,8 +144,8 @@ pub async fn workspace_id_for_customer_tx(
 
     workspace_id.ok_or_else(|| {
         AppError::bad_request(
-            "unknown_stripe_customer",
-            "Stripe customer is not mapped to a workspace.",
+            "unknown_provider_customer",
+            "Provider customer is not mapped to a workspace.",
         )
     })
 }

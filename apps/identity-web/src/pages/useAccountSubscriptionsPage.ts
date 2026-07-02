@@ -1,6 +1,7 @@
 import { identityClient } from '@nvbes/identity-client';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useAccountContext } from '@/hooks/useAccountContext';
+import { trackEvent } from '../identity.analytics';
 
 export function useAccountSubscriptionsWorkspaceId() {
   const { me } = useAccountContext();
@@ -25,6 +26,11 @@ export function useAccountSubscriptionsOverview(workspaceId: string) {
 
   const openPortal = async () => {
     const portal = await identityClient.createBillingPortalSession(workspaceId);
+    trackEvent('billing.portal_started', {
+      provider: portal.provider,
+      provider_customer_id: portal.provider_customer_id,
+      workspace_id: workspaceId,
+    });
     window.location.href = portal.url;
   };
 

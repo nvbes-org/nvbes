@@ -26,7 +26,7 @@ pub fn ensure_subscription_workspace_alignment(
     if metadata_workspace_id.is_some_and(|value| value != mapped_workspace_id) {
         return Err(AppError::bad_request(
             "webhook_workspace_mismatch",
-            "Subscription metadata does not match the Stripe customer mapping.",
+            "Subscription metadata does not match the provider customer mapping.",
         ));
     }
 

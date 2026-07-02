@@ -1,4 +1,4 @@
-use crate::models::{BillingStateRecord, StripePriceMapping};
+use crate::models::{BillingStateRecord, ProviderPriceMapping};
 use crate::pricing::plan_monthly_price_cents;
 use crate::shared::{
     EUR, EXTRA_SEAT_CENTS_PER_MONTH, STORAGE_OVERAGE_CENTS_PER_GB_MONTH, api_key_limit,
@@ -14,7 +14,7 @@ pub fn build_invoice_estimate(record: &BillingStateRecord) -> InvoiceEstimateVie
 
 pub fn build_invoice_estimate_with_price(
     record: &BillingStateRecord,
-    price_mapping: Option<&StripePriceMapping>,
+    price_mapping: Option<&ProviderPriceMapping>,
 ) -> InvoiceEstimateView {
     let (billing_period_start, billing_period_end) = current_billing_period();
     let included_storage_bytes = i64::from(record.included_storage_gb) * 1024 * 1024 * 1024;
@@ -49,7 +49,7 @@ pub fn plan_view(record: &BillingStateRecord) -> PlanView {
 
 pub fn plan_view_with_price(
     record: &BillingStateRecord,
-    price_mapping: Option<&StripePriceMapping>,
+    price_mapping: Option<&ProviderPriceMapping>,
 ) -> PlanView {
     PlanView {
         code: record.plan_code.clone(),
@@ -66,14 +66,14 @@ pub fn plan_view_with_price(
 
 fn localized_amount_cents(
     record: &BillingStateRecord,
-    price_mapping: Option<&StripePriceMapping>,
+    price_mapping: Option<&ProviderPriceMapping>,
 ) -> i64 {
     price_mapping
         .and_then(|mapping| mapping.amount_minor)
         .unwrap_or_else(|| plan_monthly_price_cents(&record.plan_code))
 }
 
-fn localized_currency(price_mapping: Option<&StripePriceMapping>) -> String {
+fn localized_currency(price_mapping: Option<&ProviderPriceMapping>) -> String {
     price_mapping
         .map(|mapping| mapping.currency.clone())
         .unwrap_or_else(|| EUR.to_string())
@@ -128,7 +128,7 @@ mod tests {
         build_invoice_estimate, build_invoice_estimate_with_price, entitlements_view,
         plan_view_with_price,
     };
-    use crate::models::{BillingStateRecord, StripePriceMapping};
+    use crate::models::{BillingStateRecord, ProviderPriceMapping};
     use uuid::Uuid;
 
     const GB: i64 = 1024 * 1024 * 1024;
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn localized_plan_view_uses_selected_price_mapping() {
-        let price_mapping = StripePriceMapping {
+        let price_mapping = ProviderPriceMapping {
             provider_product_id: "prod_latam".to_string(),
             provider_price_id: "price_latam".to_string(),
             stripe_product_id: "prod_latam".to_string(),
@@ -236,7 +236,7 @@ mod tests {
     fn localized_invoice_estimate_uses_selected_base_price() {
         let mut record = billing_record();
         record.used_storage_bytes = 12 * GB;
-        let price_mapping = StripePriceMapping {
+        let price_mapping = ProviderPriceMapping {
             provider_product_id: "prod_fr".to_string(),
             provider_price_id: "price_fr".to_string(),
             stripe_product_id: "prod_fr".to_string(),

@@ -1,4 +1,4 @@
-pub use billing_shared::models::{BillingStateRecord, PlanRecord, StripePriceMapping};
+pub use billing_shared::models::{BillingStateRecord, PlanRecord, ProviderPriceMapping};
 pub use billing_shared::types::{
     BillingOverviewResponse, BillingUsageResponse, BillingWebhookResponse, CheckoutSessionResponse,
     CreateCheckoutInput, CreatePortalInput, InvoiceEstimateResponse, PlanView,

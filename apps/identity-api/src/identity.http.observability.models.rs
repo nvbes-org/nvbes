@@ -82,7 +82,7 @@ impl DashboardsResponse {
                 DashboardDefinition {
                     id: "billing-worker",
                     name: "Billing Worker",
-                    purpose: "Track Stripe queue depth, stale jobs, retries, and dead-letter pressure.",
+                    purpose: "Track billing provider queue depth, stale jobs, retries, and dead-letter pressure.",
                     signals: vec![
                         "worker_queue_depth",
                         "worker_queue_oldest_age_seconds",

@@ -1,4 +1,4 @@
-use crate::models::{BillingStateRecord, PlanRecord, StripePriceMapping};
+use crate::models::{BillingStateRecord, PlanRecord, ProviderPriceMapping};
 use crate::pricing::regional_price_selection;
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
@@ -128,7 +128,7 @@ pub async fn fetch_active_price_mapping_tx(
     tx: &mut Transaction<'_, Postgres>,
     plan_id: Uuid,
     country_code: Option<&str>,
-) -> Result<Option<StripePriceMapping>, sqlx::Error> {
+) -> Result<Option<ProviderPriceMapping>, sqlx::Error> {
     let selection = regional_price_selection(country_code);
     let row = sqlx::query(
         r#"
@@ -174,7 +174,7 @@ pub async fn fetch_active_price_mapping_tx(
     .fetch_optional(&mut **tx)
     .await?;
 
-    Ok(row.map(|row| StripePriceMapping {
+    Ok(row.map(|row| ProviderPriceMapping {
         provider_product_id: row.get("provider_product_id"),
         provider_price_id: row.get("provider_price_id"),
         stripe_product_id: row.get("stripe_product_id"),
