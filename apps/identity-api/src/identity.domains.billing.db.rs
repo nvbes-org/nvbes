@@ -115,12 +115,14 @@ pub async fn upsert_provider_customer_tx(
     sqlx::query(
         r#"
         UPDATE subscriptions
-        SET billing_customer_id = $2,
+        SET billing_provider = $2::billing_provider,
+            billing_customer_id = $3,
             updated_at = NOW()
         WHERE workspace_id = $1
         "#,
     )
     .bind(workspace_id)
+    .bind(provider)
     .bind(customer_id)
     .execute(&mut **tx)
     .await?;

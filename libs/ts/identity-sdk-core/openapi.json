@@ -9946,9 +9946,7 @@
           "session_id",
           "checkout_id",
           "url",
-          "provider_customer_id",
-          "stripe_customer_id",
-          "stripe_price_id"
+          "provider_customer_id"
         ],
         "properties": {
           "checkout_id": {
@@ -9982,10 +9980,16 @@
             "type": "string"
           },
           "stripe_customer_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "stripe_price_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "url": {
             "type": "string"
@@ -13300,8 +13304,7 @@
         "required": [
           "provider",
           "url",
-          "provider_customer_id",
-          "stripe_customer_id"
+          "provider_customer_id"
         ],
         "properties": {
           "provider": {
@@ -13311,7 +13314,10 @@
             "type": "string"
           },
           "stripe_customer_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "url": {
             "type": "string"

@@ -149,25 +149,21 @@ pub async fn create_checkout_session(
             let mapping =
                 db::fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id, checkout_country)
                     .await?;
-            let customer_id = match record
-                .provider_customer_id
-                .clone()
-                .or_else(|| record.stripe_customer_id.clone())
-                .or_else(|| record.billing_customer_id.clone())
-            {
-                Some(customer_id) => customer_id,
-                None => {
-                    let customer = stripe::create_stripe_customer(config, &record).await?;
-                    db::upsert_provider_customer_tx(
-                        &mut tx,
-                        access.workspace_id,
-                        "stripe",
-                        &customer.id,
-                    )
-                    .await?;
-                    customer.id
-                }
-            };
+            let customer_id =
+                match nvbes_billing::provider_customer_id_for(&record, ProviderCode::Stripe) {
+                    Some(customer_id) => customer_id,
+                    None => {
+                        let customer = stripe::create_stripe_customer(config, &record).await?;
+                        db::upsert_provider_customer_tx(
+                            &mut tx,
+                            access.workspace_id,
+                            "stripe",
+                            &customer.id,
+                        )
+                        .await?;
+                        customer.id
+                    }
+                };
             let session = stripe::create_stripe_checkout_session(
                 config,
                 &customer_id,
@@ -189,15 +185,14 @@ pub async fn create_checkout_session(
                 price_country_code: mapping.country_code,
                 pricing_region: mapping.pricing_region,
                 payment_id: None,
-                stripe_customer_id: customer_id,
-                stripe_price_id: mapping.stripe_price_id,
+                stripe_customer_id: Some(customer_id),
+                stripe_price_id: Some(mapping.stripe_price_id),
             }
         }
         ProviderCode::Mollie => {
-            let provider_customer_id = record
-                .billing_customer_id
-                .clone()
-                .unwrap_or_else(|| access.workspace_id.to_string());
+            let provider_customer_id =
+                nvbes_billing::provider_customer_id_for(&record, ProviderCode::Mollie)
+                    .unwrap_or_else(|| access.workspace_id.to_string());
             let payment = provider_mollie::create_mollie_payment(
                 config,
                 &ProviderCheckoutInput {
@@ -224,8 +219,8 @@ pub async fn create_checkout_session(
                 price_country_code: None,
                 pricing_region: None,
                 payment_id: Some(payment.checkout_id),
-                stripe_customer_id: String::new(),
-                stripe_price_id: String::new(),
+                stripe_customer_id: None,
+                stripe_price_id: None,
             }
         }
     };

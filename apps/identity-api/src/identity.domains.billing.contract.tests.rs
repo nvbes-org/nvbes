@@ -39,6 +39,15 @@ fn openapi_includes_billing_portal_contracts() {
             .get("stripe_customer_id")
             .is_some()
     );
+    let portal_required = schemas["PortalSessionResponse"]["required"]
+        .as_array()
+        .expect("PortalSessionResponse should declare required fields");
+    assert!(
+        !portal_required
+            .iter()
+            .any(|field| field.as_str() == Some("stripe_customer_id")),
+        "legacy portal stripe_customer_id must stay optional"
+    );
 
     let checkout_session_properties = &schemas["CheckoutSessionResponse"]["properties"];
     assert!(
@@ -51,6 +60,17 @@ fn openapi_includes_billing_portal_contracts() {
             .get("provider_price_id")
             .is_some()
     );
+    let checkout_required = schemas["CheckoutSessionResponse"]["required"]
+        .as_array()
+        .expect("CheckoutSessionResponse should declare required fields");
+    for legacy_field in ["stripe_customer_id", "stripe_price_id"] {
+        assert!(
+            !checkout_required
+                .iter()
+                .any(|field| field.as_str() == Some(legacy_field)),
+            "legacy field must stay optional: {legacy_field}"
+        );
+    }
 
     let webhook_response_properties = &schemas["BillingWebhookResponse"]["properties"];
     assert!(webhook_response_properties.get("provider").is_some());

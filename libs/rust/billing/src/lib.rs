@@ -23,6 +23,7 @@ pub mod usage;
 pub mod views;
 
 pub use pricing::{normalize_billing_country, plan_monthly_price_cents};
+pub use provider::{provider_code, provider_customer_id_for, provider_supports_external_portal};
 pub use shared::{
     BillingRedirectUrlError, EUR, EXTRA_SEAT_CENTS_PER_MONTH, STORAGE_OVERAGE_CENTS_PER_GB_MONTH,
     api_key_limit, current_billing_period, div_ceil, hex_encode, parse_uuid,

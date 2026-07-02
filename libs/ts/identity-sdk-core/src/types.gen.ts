@@ -2488,8 +2488,8 @@ export interface components {
             provider_price_id?: string | null;
             provider_product_id?: string | null;
             session_id: string;
-            stripe_customer_id: string;
-            stripe_price_id: string;
+            stripe_customer_id?: string | null;
+            stripe_price_id?: string | null;
             url: string;
         };
         CloseAccessReviewCampaignInput: {
@@ -3310,7 +3310,7 @@ export interface components {
         PortalSessionResponse: {
             provider: string;
             provider_customer_id: string;
-            stripe_customer_id: string;
+            stripe_customer_id?: string | null;
             url: string;
         };
         PowChallenge: {

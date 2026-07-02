@@ -56,6 +56,7 @@ fn build_customer_fields_includes_workspace_metadata() {
         audit_level: "standard".to_string(),
         max_share_link_ttl_days: 90,
         subscription_status: "trialing".to_string(),
+        billing_provider: "stripe".to_string(),
         billing_customer_id: None,
         billing_subscription_id: None,
         current_period_start: None,

@@ -82,7 +82,7 @@ fn localized_currency(price_mapping: Option<&ProviderPriceMapping>) -> String {
 pub fn subscription_view(record: &BillingStateRecord) -> SubscriptionView {
     SubscriptionView {
         status: record.subscription_status.clone(),
-        billing_provider: "stripe".to_string(),
+        billing_provider: record.billing_provider.clone(),
         billing_customer_id: record.billing_customer_id.clone(),
         billing_subscription_id: record.billing_subscription_id.clone(),
         current_period_start: record.current_period_start,
@@ -126,7 +126,7 @@ pub fn entitlements_view(record: &BillingStateRecord) -> ProductEntitlementsView
 mod tests {
     use super::{
         build_invoice_estimate, build_invoice_estimate_with_price, entitlements_view,
-        plan_view_with_price,
+        plan_view_with_price, subscription_view,
     };
     use crate::models::{BillingStateRecord, ProviderPriceMapping};
     use uuid::Uuid;
@@ -149,6 +149,7 @@ mod tests {
             audit_level: "standard".to_string(),
             max_share_link_ttl_days: 30,
             subscription_status: "active".to_string(),
+            billing_provider: "stripe".to_string(),
             billing_customer_id: Some("cus_123".to_string()),
             billing_subscription_id: Some("sub_123".to_string()),
             current_period_start: None,
@@ -179,6 +180,16 @@ mod tests {
         assert_eq!(entitlements.audit_level, "standard");
         assert_eq!(entitlements.api_key_limit, 5);
         assert!(!entitlements.billing_locked);
+    }
+
+    #[test]
+    fn subscription_view_uses_record_billing_provider() {
+        let mut record = billing_record();
+        record.billing_provider = "mollie".to_string();
+
+        let subscription = subscription_view(&record);
+
+        assert_eq!(subscription.billing_provider, "mollie");
     }
 
     #[test]

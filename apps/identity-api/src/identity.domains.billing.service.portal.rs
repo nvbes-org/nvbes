@@ -7,6 +7,7 @@ use crate::domains::auth::{
     verification,
 };
 use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
+use nvbes_billing::provider::ProviderCode;
 use nvbes_core::auth::Aal;
 use nvbes_core::config::AppConfig;
 use nvbes_core::limiter::RateLimiter;
@@ -41,11 +42,21 @@ pub async fn create_portal_session(
     policy::enforce_billing_risk_policy(db, access.workspace_id, access.auth.user_id, &record)
         .await?;
 
-    let customer_id = record
-        .provider_customer_id
-        .clone()
-        .or_else(|| record.stripe_customer_id.clone())
-        .or_else(|| record.billing_customer_id.clone())
+    let billing_provider =
+        nvbes_billing::provider_code(&record.billing_provider).ok_or_else(|| {
+            AppError::conflict(
+                "unknown_billing_provider",
+                "Billing provider is not supported.",
+            )
+        })?;
+    if !nvbes_billing::provider_supports_external_portal(billing_provider) {
+        return Err(AppError::conflict(
+            "provider_portal_unavailable",
+            "Billing portal is not available for the current billing provider.",
+        ));
+    }
+
+    let customer_id = nvbes_billing::provider_customer_id_for(&record, ProviderCode::Stripe)
         .ok_or_else(|| {
             AppError::conflict(
                 "missing_billing_customer",
@@ -105,6 +116,6 @@ pub async fn create_portal_session(
         provider: "stripe".to_string(),
         url: session.url,
         provider_customer_id: customer_id.clone(),
-        stripe_customer_id: customer_id,
+        stripe_customer_id: Some(customer_id),
     })
 }

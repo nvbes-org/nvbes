@@ -69,7 +69,8 @@ async fn process_checkout_completed(
         sqlx::query(
             r#"
             UPDATE subscriptions
-            SET billing_subscription_id = $2,
+            SET billing_provider = 'stripe',
+                billing_subscription_id = $2,
                 billing_customer_id = $3,
                 updated_at = NOW()
             WHERE workspace_id = $1
@@ -128,6 +129,7 @@ async fn process_subscription_upsert(
         UPDATE subscriptions
         SET plan_id = $2,
             status = $3::subscription_status,
+            billing_provider = 'stripe',
             billing_customer_id = $4,
             billing_subscription_id = $5,
             current_period_start = $6,
@@ -212,6 +214,7 @@ async fn process_invoice_payment_failed(
         r#"
         UPDATE subscriptions
         SET status = 'past_due',
+            billing_provider = 'stripe',
             updated_at = NOW()
         WHERE workspace_id = $1
         "#,

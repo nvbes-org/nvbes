@@ -17,8 +17,8 @@ pub struct CheckoutProviderResult {
     pub price_country_code: Option<String>,
     pub pricing_region: Option<String>,
     pub payment_id: Option<String>,
-    pub stripe_customer_id: String,
-    pub stripe_price_id: String,
+    pub stripe_customer_id: Option<String>,
+    pub stripe_price_id: Option<String>,
 }
 
 pub fn route_checkout_provider(

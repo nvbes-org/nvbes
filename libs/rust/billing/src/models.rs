@@ -192,6 +192,7 @@ pub struct BillingStateRecord {
     pub audit_level: String,
     pub max_share_link_ttl_days: i32,
     pub subscription_status: String,
+    pub billing_provider: String,
     pub billing_customer_id: Option<String>,
     pub billing_subscription_id: Option<String>,
     pub current_period_start: Option<DateTime<Utc>>,

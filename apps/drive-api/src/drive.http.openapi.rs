@@ -113,11 +113,31 @@ mod tests {
         assert!(checkout_properties.get("provider_product_id").is_some());
         assert!(checkout_properties.get("provider_price_id").is_some());
         assert!(checkout_properties.get("stripe_customer_id").is_some());
+        let checkout_required = schemas["CheckoutSessionResponse"]["required"]
+            .as_array()
+            .expect("CheckoutSessionResponse should declare required fields");
+        for legacy_field in ["stripe_customer_id", "stripe_price_id"] {
+            assert!(
+                !checkout_required
+                    .iter()
+                    .any(|field| field.as_str() == Some(legacy_field)),
+                "legacy field must stay optional: {legacy_field}"
+            );
+        }
 
         let portal_properties = &schemas["PortalSessionResponse"]["properties"];
         assert!(portal_properties.get("provider").is_some());
         assert!(portal_properties.get("provider_customer_id").is_some());
         assert!(portal_properties.get("stripe_customer_id").is_some());
+        let portal_required = schemas["PortalSessionResponse"]["required"]
+            .as_array()
+            .expect("PortalSessionResponse should declare required fields");
+        assert!(
+            !portal_required
+                .iter()
+                .any(|field| field.as_str() == Some("stripe_customer_id")),
+            "legacy portal stripe_customer_id must stay optional"
+        );
 
         let webhook_response_properties = &schemas["BillingWebhookResponse"]["properties"];
         assert!(webhook_response_properties.get("provider").is_some());

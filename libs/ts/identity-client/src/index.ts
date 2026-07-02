@@ -199,14 +199,14 @@ const BillingCheckoutRedirectSchema = BillingRedirectSchema.extend({
   provider_product_id: z.string().nullable().optional(),
   provider_price_id: z.string().nullable().optional(),
   payment_id: z.string().nullable().optional(),
-  stripe_customer_id: z.string(),
-  stripe_price_id: z.string(),
+  stripe_customer_id: z.string().nullable().optional(),
+  stripe_price_id: z.string().nullable().optional(),
 });
 
 const BillingPortalRedirectSchema = BillingRedirectSchema.extend({
   provider: z.string(),
   provider_customer_id: z.string(),
-  stripe_customer_id: z.string(),
+  stripe_customer_id: z.string().nullable().optional(),
 });
 
 const BillingPortalCapabilitiesSchema = z.object({

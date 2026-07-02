@@ -12,6 +12,9 @@ pub mod manage_core;
 pub mod manage_geo;
 #[path = "drive.domains.billing.manage.redirect_urls.rs"]
 pub mod manage_redirect_urls;
+#[cfg(test)]
+#[path = "drive.domains.billing.migration_tests.rs"]
+mod migration_tests;
 #[path = "drive.domains.billing.models.rs"]
 pub mod models;
 #[path = "drive.domains.billing.routes.rs"]

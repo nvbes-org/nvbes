@@ -1,3 +1,4 @@
+use nvbes_billing::provider::ProviderCode;
 use nvbes_billing::validate_plan_code;
 use nvbes_region::geo::{GeoLookupPurpose, GeoLookupRecordContext, record_geo_resolution_tx};
 use sqlx::PgPool;
@@ -64,12 +65,7 @@ pub async fn create_checkout_session(
 
     let mapping =
         fetch_active_price_mapping_tx(&mut tx, target_plan.plan_id, checkout_country).await?;
-    let customer_id = match record
-        .provider_customer_id
-        .clone()
-        .or_else(|| record.stripe_customer_id.clone())
-        .or_else(|| record.billing_customer_id.clone())
-    {
+    let customer_id = match nvbes_billing::provider_customer_id_for(&record, ProviderCode::Stripe) {
         Some(customer_id) => customer_id,
         None => {
             let customer = create_stripe_customer(config, &record).await?;
@@ -152,8 +148,8 @@ pub async fn create_checkout_session(
         provider_product_id: Some(mapping.provider_product_id.clone()),
         provider_price_id: Some(mapping.provider_price_id.clone()),
         payment_id: None,
-        stripe_customer_id: customer_id,
-        stripe_price_id: mapping.stripe_price_id,
+        stripe_customer_id: Some(customer_id),
+        stripe_price_id: Some(mapping.stripe_price_id),
     })
 }
 
@@ -167,11 +163,21 @@ pub async fn create_portal_session(
 ) -> Result<PortalSessionResponse, AppError> {
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
     let record = fetch_billing_state_tx(&mut tx, access.workspace_id).await?;
-    let customer_id = record
-        .provider_customer_id
-        .clone()
-        .or_else(|| record.stripe_customer_id.clone())
-        .or_else(|| record.billing_customer_id.clone())
+    let billing_provider =
+        nvbes_billing::provider_code(&record.billing_provider).ok_or_else(|| {
+            AppError::conflict(
+                "unknown_billing_provider",
+                "Billing provider is not supported.",
+            )
+        })?;
+    if !nvbes_billing::provider_supports_external_portal(billing_provider) {
+        return Err(AppError::conflict(
+            "provider_portal_unavailable",
+            "Billing portal is not available for the current billing provider.",
+        ));
+    }
+
+    let customer_id = nvbes_billing::provider_customer_id_for(&record, ProviderCode::Stripe)
         .ok_or_else(|| {
             AppError::conflict(
                 "missing_billing_customer",
@@ -214,6 +220,6 @@ pub async fn create_portal_session(
         provider: "stripe".to_string(),
         url: session.url,
         provider_customer_id: customer_id.clone(),
-        stripe_customer_id: customer_id,
+        stripe_customer_id: Some(customer_id),
     })
 }

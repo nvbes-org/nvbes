@@ -39,8 +39,8 @@ pub struct CheckoutSessionResponse {
     pub provider_product_id: Option<String>,
     pub provider_price_id: Option<String>,
     pub payment_id: Option<String>,
-    pub stripe_customer_id: String,
-    pub stripe_price_id: String,
+    pub stripe_customer_id: Option<String>,
+    pub stripe_price_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -48,7 +48,7 @@ pub struct PortalSessionResponse {
     pub provider: String,
     pub url: String,
     pub provider_customer_id: String,
-    pub stripe_customer_id: String,
+    pub stripe_customer_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
