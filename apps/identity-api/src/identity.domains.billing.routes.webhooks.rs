@@ -72,6 +72,7 @@ pub(crate) async fn handle_mollie_webhook(
     let record = db::record_provider_event(&state.db, &event, None).await?;
 
     Ok(Json(BillingWebhookResponse {
+        provider: record.provider,
         provider_event_id: record.provider_event_id,
         status: "accepted".to_string(),
     }))

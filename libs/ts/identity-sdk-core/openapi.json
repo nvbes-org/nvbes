@@ -9459,10 +9459,14 @@
       "BillingWebhookResponse": {
         "type": "object",
         "required": [
+          "provider",
           "provider_event_id",
           "status"
         ],
         "properties": {
+          "provider": {
+            "type": "string"
+          },
           "provider_event_id": {
             "type": "string"
           },

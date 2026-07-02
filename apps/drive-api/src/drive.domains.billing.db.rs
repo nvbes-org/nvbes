@@ -47,7 +47,7 @@ pub async fn upsert_provider_customer_tx(
     provider: &str,
     customer_id: &str,
 ) -> Result<(), AppError> {
-    sqlx::query(
+    let billing_account_id = sqlx::query_scalar::<_, Uuid>(
         r#"
         INSERT INTO billing_accounts (
           workspace_id,
@@ -59,9 +59,34 @@ pub async fn upsert_provider_customer_tx(
         SET provider = EXCLUDED.provider,
             stripe_customer_id = EXCLUDED.stripe_customer_id,
             updated_at = NOW()
+        RETURNING id
         "#,
     )
     .bind(workspace_id)
+    .bind(provider)
+    .bind(customer_id)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO billing_provider_customers (
+          workspace_id,
+          billing_account_id,
+          provider,
+          provider_customer_id,
+          status
+        )
+        VALUES ($1, $2, $3::billing_provider, $4, 'active')
+        ON CONFLICT (provider, provider_customer_id) DO UPDATE
+        SET billing_account_id = EXCLUDED.billing_account_id,
+            workspace_id = EXCLUDED.workspace_id,
+            status = 'active',
+            updated_at = NOW()
+        "#,
+    )
+    .bind(workspace_id)
+    .bind(billing_account_id)
     .bind(provider)
     .bind(customer_id)
     .execute(&mut **tx)
@@ -83,10 +108,38 @@ pub async fn upsert_provider_customer_tx(
     Ok(())
 }
 
-pub async fn plan_id_for_stripe_price_tx(
+pub async fn plan_id_for_provider_price_tx(
     tx: &mut Transaction<'_, Postgres>,
-    stripe_price_id: &str,
+    provider: &str,
+    provider_price_id: &str,
 ) -> Result<Uuid, AppError> {
+    if let Some(plan_id) = sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT legacy_plan_id
+        FROM billing_provider_price_mappings
+        WHERE provider = $1::billing_provider
+          AND provider_price_id = $2
+          AND status = 'active'
+          AND legacy_plan_id IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(provider)
+    .bind(provider_price_id)
+    .fetch_optional(&mut **tx)
+    .await?
+    {
+        return Ok(plan_id);
+    }
+
+    if provider != "stripe" {
+        return Err(AppError::bad_request(
+            "unknown_provider_price",
+            "Provider price is not mapped to a nvbes plan.",
+        ));
+    }
+
     let plan_id = sqlx::query_scalar::<_, Uuid>(
         r#"
         SELECT plan_id
@@ -97,7 +150,7 @@ pub async fn plan_id_for_stripe_price_tx(
         LIMIT 1
         "#,
     )
-    .bind(stripe_price_id)
+    .bind(provider_price_id)
     .fetch_optional(&mut **tx)
     .await?;
 
@@ -127,6 +180,13 @@ pub async fn workspace_id_for_customer_tx(
 ) -> Result<Uuid, AppError> {
     let workspace_id = sqlx::query_scalar::<_, Uuid>(
         r#"
+        SELECT ba.workspace_id
+        FROM billing_provider_customers pc
+        INNER JOIN billing_accounts ba ON ba.id = pc.billing_account_id
+        WHERE pc.provider = 'stripe'
+          AND pc.provider_customer_id = $1
+          AND pc.status = 'active'
+        UNION
         SELECT workspace_id
         FROM billing_accounts
         WHERE provider = 'stripe'

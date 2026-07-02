@@ -52,6 +52,14 @@ fn openapi_includes_billing_portal_contracts() {
             .is_some()
     );
 
+    let webhook_response_properties = &schemas["BillingWebhookResponse"]["properties"];
+    assert!(webhook_response_properties.get("provider").is_some());
+    assert!(
+        webhook_response_properties
+            .get("provider_event_id")
+            .is_some()
+    );
+
     let billing_account_properties = &schemas["BillingAccountView"]["properties"];
     assert!(
         billing_account_properties

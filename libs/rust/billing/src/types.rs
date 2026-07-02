@@ -68,6 +68,7 @@ pub struct InvoiceEstimateResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct BillingWebhookResponse {
+    pub provider: String,
     pub provider_event_id: String,
     pub status: String,
 }

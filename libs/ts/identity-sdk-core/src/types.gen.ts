@@ -2261,6 +2261,7 @@ export interface components {
             workspace_id: string;
         };
         BillingWebhookResponse: {
+            provider: string;
             provider_event_id: string;
             status: string;
         };

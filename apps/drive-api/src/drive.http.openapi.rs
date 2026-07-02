@@ -119,6 +119,14 @@ mod tests {
         assert!(portal_properties.get("provider_customer_id").is_some());
         assert!(portal_properties.get("stripe_customer_id").is_some());
 
+        let webhook_response_properties = &schemas["BillingWebhookResponse"]["properties"];
+        assert!(webhook_response_properties.get("provider").is_some());
+        assert!(
+            webhook_response_properties
+                .get("provider_event_id")
+                .is_some()
+        );
+
         let billing_account_properties = &schemas["BillingAccountView"]["properties"];
         assert!(
             billing_account_properties

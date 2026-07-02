@@ -74,13 +74,13 @@ pub async fn process_subscription_upsert(
     subscription::ensure_subscription_item_consistency(object)?;
     subscription::ensure_subscription_price_consistency(object)?;
     subscription::ensure_subscription_quantity_consistency(object)?;
-    let stripe_price_id = object
+    let provider_price_id = object
         .pointer("/items/data/0/price/id")
         .and_then(Value::as_str)
         .ok_or_else(|| {
             AppError::bad_request("webhook_missing_price", "Subscription is missing price id.")
         })?;
-    let plan_id = db::plan_id_for_stripe_price(tx, stripe_price_id).await?;
+    let plan_id = db::plan_id_for_provider_price(tx, "stripe", provider_price_id).await?;
     let status = stripe_subscription_status(object.get("status").and_then(Value::as_str));
     let current_period_start = timestamp_field(object, "current_period_start");
     let current_period_end = timestamp_field(object, "current_period_end");

@@ -33,7 +33,7 @@ pub async fn fetch_billing_state_tx(
           s.billing_subscription_id,
           s.current_period_start,
           s.current_period_end,
-          ba.stripe_customer_id AS provider_customer_id,
+          COALESCE(provider_customer.provider_customer_id, ba.stripe_customer_id) AS provider_customer_id,
           ba.stripe_customer_id,
           ba.billing_email,
           ba.country::text AS country,
@@ -55,6 +55,15 @@ pub async fn fetch_billing_state_tx(
         )
         LEFT JOIN subscriptions s ON s.workspace_id = w.id
         LEFT JOIN billing_accounts ba ON ba.workspace_id = w.id
+        LEFT JOIN LATERAL (
+          SELECT pc.provider_customer_id
+          FROM billing_provider_customers pc
+          WHERE pc.billing_account_id = ba.id
+            AND pc.provider = ba.provider
+            AND pc.status = 'active'
+          ORDER BY pc.updated_at DESC
+          LIMIT 1
+        ) provider_customer ON TRUE
         LEFT JOIN quota_usage qu ON qu.workspace_id = w.id
         LEFT JOIN LATERAL (
           SELECT COUNT(*)::bigint AS active_user_count
@@ -130,7 +139,62 @@ pub async fn fetch_active_price_mapping_tx(
     country_code: Option<&str>,
 ) -> Result<Option<ProviderPriceMapping>, sqlx::Error> {
     let selection = regional_price_selection(country_code);
-    let row = sqlx::query(
+    let provider_row = sqlx::query(
+        r#"
+        SELECT
+          provider_product_id,
+          provider_price_id,
+          provider_product_id AS stripe_product_id,
+          provider_price_id AS stripe_price_id,
+          country_code::text AS country_code,
+          pricing_region,
+          currency::text AS currency,
+          amount_minor
+        FROM billing_provider_price_mappings
+        WHERE provider = 'stripe'
+          AND legacy_plan_id = $1
+          AND status = 'active'
+          AND (
+            country_code = $2::char(2)
+            OR (
+              country_code IS NULL
+              AND pricing_region = $3
+            )
+            OR (
+              country_code IS NULL
+              AND pricing_region IS NULL
+            )
+          )
+        ORDER BY
+          CASE
+            WHEN country_code = $2::char(2) THEN 0
+            WHEN country_code IS NULL AND pricing_region = $3 THEN 1
+            ELSE 2
+          END,
+          created_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(plan_id)
+    .bind(selection.country_code.as_deref())
+    .bind(selection.pricing_region.as_deref())
+    .fetch_optional(&mut **tx)
+    .await?;
+
+    if let Some(row) = provider_row {
+        return Ok(Some(ProviderPriceMapping {
+            provider_product_id: row.get("provider_product_id"),
+            provider_price_id: row.get("provider_price_id"),
+            stripe_product_id: row.get("stripe_product_id"),
+            stripe_price_id: row.get("stripe_price_id"),
+            country_code: row.get("country_code"),
+            pricing_region: row.get("pricing_region"),
+            currency: row.get("currency"),
+            amount_minor: row.get("amount_minor"),
+        }));
+    }
+
+    let legacy_row = sqlx::query(
         r#"
         SELECT
           stripe_product_id AS provider_product_id,
@@ -174,7 +238,7 @@ pub async fn fetch_active_price_mapping_tx(
     .fetch_optional(&mut **tx)
     .await?;
 
-    Ok(row.map(|row| ProviderPriceMapping {
+    Ok(legacy_row.map(|row| ProviderPriceMapping {
         provider_product_id: row.get("provider_product_id"),
         provider_price_id: row.get("provider_price_id"),
         stripe_product_id: row.get("stripe_product_id"),

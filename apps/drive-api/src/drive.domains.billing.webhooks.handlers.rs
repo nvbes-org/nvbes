@@ -48,6 +48,7 @@ pub async fn handle_webhook(
     if inserted.rows_affected() == 0 {
         tx.commit().await?;
         return Ok(BillingWebhookResponse {
+            provider: "stripe".to_string(),
             provider_event_id: event.id,
             status: "duplicate".to_string(),
         });
@@ -79,6 +80,7 @@ pub async fn handle_webhook(
             }
 
             Ok(BillingWebhookResponse {
+                provider: "stripe".to_string(),
                 provider_event_id: event.id,
                 status: "processed".to_string(),
             })

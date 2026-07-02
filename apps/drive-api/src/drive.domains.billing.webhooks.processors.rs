@@ -3,7 +3,7 @@ use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 use super::super::db::{
-    plan_id_by_code_tx, plan_id_for_stripe_price_tx, project_workspace_plan_tx,
+    plan_id_by_code_tx, plan_id_for_provider_price_tx, project_workspace_plan_tx,
     upsert_provider_customer_tx, workspace_id_for_customer_tx,
 };
 use crate::http::error::AppError;
@@ -110,13 +110,13 @@ async fn process_subscription_upsert(
             "Subscription is missing customer id.",
         )
     })?;
-    let stripe_price_id = object
+    let provider_price_id = object
         .pointer("/items/data/0/price/id")
         .and_then(Value::as_str)
         .ok_or_else(|| {
             AppError::bad_request("webhook_missing_price", "Subscription is missing price id.")
         })?;
-    let plan_id = plan_id_for_stripe_price_tx(tx, stripe_price_id).await?;
+    let plan_id = plan_id_for_provider_price_tx(tx, "stripe", provider_price_id).await?;
     let status = stripe_subscription_status(object.get("status").and_then(Value::as_str));
     let current_period_start = timestamp_field(object, "current_period_start");
     let current_period_end = timestamp_field(object, "current_period_end");

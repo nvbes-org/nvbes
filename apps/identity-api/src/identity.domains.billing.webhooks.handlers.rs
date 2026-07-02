@@ -82,6 +82,7 @@ pub async fn handle_webhook(
                 started_at.elapsed(),
             );
             return Ok(BillingWebhookResponse {
+                provider: "stripe".to_string(),
                 provider_event_id: event.id,
                 status: "duplicate".to_string(),
             });
@@ -153,6 +154,7 @@ pub async fn handle_webhook(
                             started_at.elapsed(),
                         );
                         return Ok(BillingWebhookResponse {
+                            provider: "stripe".to_string(),
                             provider_event_id: event.id,
                             status: "duplicate".to_string(),
                         });
@@ -210,6 +212,7 @@ pub async fn handle_webhook(
         started_at.elapsed(),
     );
     Ok(BillingWebhookResponse {
+        provider: "stripe".to_string(),
         provider_event_id: event.id,
         status: "accepted".to_string(),
     })
