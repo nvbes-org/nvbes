@@ -139,36 +139,14 @@ pub async fn workspace_id_for_customer_tx(
     tx: &mut Transaction<'_, Postgres>,
     customer_id: &str,
 ) -> Result<Uuid, AppError> {
-    let workspace_id = sqlx::query_scalar::<_, Uuid>(
-        r#"
-        SELECT ba.workspace_id
-        FROM billing_provider_customers pc
-        INNER JOIN billing_accounts ba ON ba.id = pc.billing_account_id
-        WHERE pc.provider = 'stripe'
-          AND pc.provider_customer_id = $1
-          AND pc.status = 'active'
-        UNION
-        SELECT workspace_id
-        FROM billing_accounts
-        WHERE provider = 'stripe'
-          AND stripe_customer_id = $1
-        UNION
-        SELECT workspace_id
-        FROM subscriptions
-        WHERE billing_customer_id = $1
-        LIMIT 1
-        "#,
-    )
-    .bind(customer_id)
-    .fetch_optional(&mut **tx)
-    .await?;
-
-    workspace_id.ok_or_else(|| {
-        AppError::bad_request(
-            "unknown_provider_customer",
-            "Provider customer is not mapped to a workspace.",
-        )
-    })
+    nvbes_billing::db::workspace_id_for_provider_customer_tx(tx, "stripe", customer_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::bad_request(
+                "unknown_provider_customer",
+                "Provider customer is not mapped to a workspace.",
+            )
+        })
 }
 
 pub async fn project_workspace_plan_tx(

@@ -293,3 +293,35 @@ pub async fn plan_id_for_provider_price_tx(
     .fetch_optional(&mut **tx)
     .await
 }
+
+pub async fn workspace_id_for_provider_customer_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    provider: &str,
+    provider_customer_id: &str,
+) -> Result<Option<Uuid>, sqlx::Error> {
+    sqlx::query_scalar::<_, Uuid>(
+        r#"
+        SELECT ba.workspace_id
+        FROM billing_provider_customers pc
+        INNER JOIN billing_accounts ba ON ba.id = pc.billing_account_id
+        WHERE pc.provider = $1::billing_provider
+          AND pc.provider_customer_id = $2
+          AND pc.status = 'active'
+        UNION
+        SELECT workspace_id
+        FROM billing_accounts
+        WHERE provider = $1::billing_provider
+          AND stripe_customer_id = $2
+        UNION
+        SELECT workspace_id
+        FROM subscriptions
+        WHERE billing_provider = $1::billing_provider
+          AND billing_customer_id = $2
+        LIMIT 1
+        "#,
+    )
+    .bind(provider)
+    .bind(provider_customer_id)
+    .fetch_optional(&mut **tx)
+    .await
+}
