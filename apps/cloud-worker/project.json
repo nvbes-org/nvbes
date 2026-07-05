@@ -1,0 +1,12 @@
+{
+  "name": "cloud-worker",
+  "projectType": "application",
+  "root": "apps/cloud-worker",
+  "sourceRoot": "apps/cloud-worker/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:cloud",
+    "layer:app"
+  ]
+}

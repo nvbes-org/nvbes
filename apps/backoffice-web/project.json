@@ -1,0 +1,18 @@
+{
+  "name": "backoffice-web",
+  "projectType": "application",
+  "root": "apps/backoffice-web",
+  "sourceRoot": "apps/backoffice-web/src",
+  "tags": [
+    "scope:internal",
+    "type:app",
+    "domain:backoffice",
+    "layer:app"
+  ],
+  "targets": {
+    "e2e": {
+      "cache": false,
+      "command": "pnpm --dir apps/backoffice-web test:e2e"
+    }
+  }
+}

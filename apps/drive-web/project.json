@@ -1,7 +1,0 @@
-{
-  "name": "drive-web",
-  "projectType": "application",
-  "root": "apps/drive-web",
-  "sourceRoot": "apps/drive-web/src",
-  "tags": ["scope:oss", "type:app", "domain:drive", "layer:app"]
-}

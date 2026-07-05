@@ -1,0 +1,26 @@
+[package]
+name = "nvbes-billing-service"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "nvbes-billing-service"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-redis = { path = "../../libs/rust/redis" }
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tower = "0.5"
+tower-http = { workspace = true }
+tracing.workspace = true
+uuid.workspace = true

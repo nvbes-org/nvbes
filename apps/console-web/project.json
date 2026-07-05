@@ -1,0 +1,12 @@
+{
+  "name": "console-web",
+  "projectType": "application",
+  "root": "apps/console-web",
+  "sourceRoot": "apps/console-web/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:developer",
+    "layer:app"
+  ]
+}

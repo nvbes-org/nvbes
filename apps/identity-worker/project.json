@@ -1,7 +1,0 @@
-{
-  "name": "identity-worker",
-  "projectType": "application",
-  "root": "apps/identity-worker",
-  "sourceRoot": "apps/identity-worker/src",
-  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
-}

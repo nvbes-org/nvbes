@@ -1,0 +1,12 @@
+{
+  "name": "cloud-service",
+  "projectType": "application",
+  "root": "apps/cloud-service",
+  "sourceRoot": "apps/cloud-service/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:cloud",
+    "layer:app"
+  ]
+}

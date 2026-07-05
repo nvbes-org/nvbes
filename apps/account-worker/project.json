@@ -1,0 +1,12 @@
+{
+  "name": "account-worker",
+  "projectType": "application",
+  "root": "apps/account-worker",
+  "sourceRoot": "apps/account-worker/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:account",
+    "layer:app"
+  ]
+}

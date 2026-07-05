@@ -1,8 +1,8 @@
 {
-  "name": "billing-worker",
+  "name": "billing-service",
   "projectType": "application",
-  "root": "apps/billing-worker",
-  "sourceRoot": "apps/billing-worker/src",
+  "root": "apps/billing-service",
+  "sourceRoot": "apps/billing-service/src",
   "tags": [
     "scope:oss",
     "type:app",
