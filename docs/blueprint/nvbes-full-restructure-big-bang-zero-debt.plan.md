@@ -292,6 +292,20 @@ precedente sont stables.
 Etat actuel: fondation documentaire et controles CI initiaux en place. La
 structuration n'est pas encore eligible au cutover production.
 
+### Statut d'Execution - 2026-07-05
+
+Le refactor Account/Cloud Big Bang est le lot actif de taxonomie runtime. Le
+scope gele, les noms legacy, les noms cibles, les owners, les sources de
+donnees, les contracts, les jobs, les variables d'environnement, les images et
+l'observabilite sont recenses dans
+[Inventaire Account Cloud Big Bang](../migration/account-cloud-big-bang.inventory.md).
+
+Decision de taxonomie: les anciens runtimes `identity-*` deviennent Account,
+les anciens runtimes `drive-*` deviennent Cloud, `billing-api` devient
+`billing-service`, `developer-web` devient `console-web`, `internal-admin*`
+devient Backoffice, et `gateway-graphql` devient `gateway-cloud`. Aucun alias de
+compatibilite runtime ne doit survivre au cutover.
+
 Termine cote repository:
 
 - ADR clean rebuild et boundaries OSS/Cloud/Internal;
