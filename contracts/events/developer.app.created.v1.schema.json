@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/developer.app.created.v1.schema.json",
+  "title": "developer.app.created v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "developer.app.created"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "client_id",
+        "created_by"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_by": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

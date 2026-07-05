@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/enterprise.federation.provider.changed.v1.schema.json",
+  "title": "enterprise.federation.provider.changed v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "enterprise.federation.provider.changed"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "provider_id",
+        "protocol",
+        "status"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "provider_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "protocol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

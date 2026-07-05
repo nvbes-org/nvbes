@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/enterprise.break_glass.activated.v1.schema.json",
+  "title": "enterprise.break_glass.activated v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "enterprise.break_glass.activated"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "grant_id",
+        "principal_id",
+        "expires_at"
+      ],
+      "properties": {
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "grant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "principal_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

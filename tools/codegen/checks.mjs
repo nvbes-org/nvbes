@@ -57,7 +57,21 @@ requireIncludes('libs/ts/backoffice-service-sdk-core/openapi.json', 'nvbes Backo
 requireIncludes('libs/rust/identity-sdk-backend/src/lib.rs', 'pub use client::IdentityClient;');
 requireIncludes('libs/go/identity-sdk/sdk.go', 'package identitysdk');
 requireIncludes('contracts/protobuf/nvbes/platform/v1/common.proto', 'syntax = "proto3";');
+requireIncludes('contracts/protobuf/nvbes/account/v1/account.proto', 'service AccountService');
+requireIncludes('contracts/protobuf/nvbes/cloud/v1/cloud.proto', 'service CloudService');
+requireIncludes('contracts/protobuf/nvbes/developer/v1/developer.proto', 'service DeveloperService');
+requireIncludes('contracts/protobuf/nvbes/enterprise/v1/enterprise.proto', 'service EnterpriseService');
+requireIncludes('contracts/protobuf/nvbes/billing/v1/billing.proto', 'RecordLedgerEntry');
 requireIncludes('contracts/events/manifest.json', 'identity.user.created');
+requireIncludes('contracts/events/manifest.json', 'account.user.created');
+requireIncludes('contracts/events/manifest.json', 'cloud.workspace.created');
+requireIncludes('contracts/events/manifest.json', 'developer.app.created');
+requireIncludes('contracts/events/manifest.json', 'enterprise.policy.changed');
+requireIncludes('contracts/openapi/manifest.json', '"surface": "account"');
+requireIncludes('contracts/openapi/manifest.json', '"name": "cloud-public-v1"');
+requireIncludes('contracts/openapi/manifest.json', 'docs/api/openapi/cloud-public-v1.openapi.json');
+requireIncludes('docs/api/openapi/cloud-public-v1.openapi.json', 'nvbes Cloud API');
+requireIncludes('docs/api/openapi/cloud-public-v1.openapi.json', 'https://cloud.nvbes.fr');
 
 if (errors.length > 0) {
   console.error('Codegen coverage checks failed:');

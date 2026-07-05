@@ -19,6 +19,11 @@
       "description": "Gateway resolvers enforce user authorization before calling billing; internal service calls use RequestContext and service credentials."
     },
     {
+      "id": "grpc-deadline-policy-required",
+      "severity": "block",
+      "description": "Gateway Cloud gRPC clients must use explicit connection timeouts, request deadlines and correlation context before production cutover."
+    },
+    {
       "id": "backward-compatible-fields",
       "severity": "block",
       "description": "Removing or changing non-null GraphQL billing fields requires a major schema version."

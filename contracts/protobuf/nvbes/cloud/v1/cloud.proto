@@ -1,0 +1,279 @@
+syntax = "proto3";
+
+package nvbes.cloud.v1;
+
+import "google/protobuf/timestamp.proto";
+import "nvbes/platform/v1/common.proto";
+
+service CloudService {
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace);
+  rpc GetWorkspace(GetWorkspaceRequest) returns (Workspace);
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace);
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (WorkspaceDeletion);
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (ListWorkspacesResponse);
+  rpc AddWorkspaceMember(AddWorkspaceMemberRequest) returns (WorkspaceMember);
+  rpc UpdateWorkspaceMember(UpdateWorkspaceMemberRequest) returns (WorkspaceMember);
+  rpc RemoveWorkspaceMember(RemoveWorkspaceMemberRequest) returns (WorkspaceMembershipRemoval);
+  rpc ListWorkspaceMembers(ListWorkspaceMembersRequest) returns (ListWorkspaceMembersResponse);
+  rpc CreateFolder(CreateFolderRequest) returns (DriveObject);
+  rpc ListDriveObjects(ListDriveObjectsRequest) returns (ListDriveObjectsResponse);
+  rpc MoveDriveObject(MoveDriveObjectRequest) returns (DriveObject);
+  rpc TrashDriveObject(TrashDriveObjectRequest) returns (DriveObject);
+  rpc RestoreDriveObject(RestoreDriveObjectRequest) returns (DriveObject);
+  rpc CreateUpload(CreateUploadRequest) returns (UploadSession);
+  rpc CompleteUpload(CompleteUploadRequest) returns (DriveObject);
+  rpc GetDownloadUrl(GetDownloadUrlRequest) returns (DownloadUrl);
+  rpc GetWorkspaceQuota(GetWorkspaceQuotaRequest) returns (WorkspaceQuota);
+  rpc ReserveStorage(ReserveStorageRequest) returns (StorageReservation);
+  rpc ReleaseStorage(ReleaseStorageRequest) returns (StorageRelease);
+}
+
+message CreateWorkspaceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string name = 2;
+  string region_id = 3;
+  string data_residency = 4;
+}
+
+message GetWorkspaceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message UpdateWorkspaceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string name = 3;
+  string default_role = 4;
+}
+
+message DeleteWorkspaceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string reason = 3;
+}
+
+message ListWorkspacesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  nvbes.platform.v1.CursorPageRequest page = 2;
+}
+
+message AddWorkspaceMemberRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string principal_id = 3;
+  string role = 4;
+}
+
+message UpdateWorkspaceMemberRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string principal_id = 3;
+  string role = 4;
+  string status = 5;
+}
+
+message RemoveWorkspaceMemberRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string principal_id = 3;
+  string reason = 4;
+}
+
+message ListWorkspaceMembersRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  nvbes.platform.v1.CursorPageRequest page = 3;
+}
+
+message CreateFolderRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string parent_object_id = 3;
+  string name = 4;
+}
+
+message ListDriveObjectsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string parent_object_id = 3;
+  nvbes.platform.v1.CursorPageRequest page = 4;
+}
+
+message MoveDriveObjectRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string object_id = 3;
+  string target_parent_object_id = 4;
+}
+
+message TrashDriveObjectRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string object_id = 3;
+}
+
+message RestoreDriveObjectRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string object_id = 3;
+}
+
+message CreateUploadRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string parent_object_id = 3;
+  string file_name = 4;
+  int64 size_bytes = 5;
+  string content_type = 6;
+  string checksum_sha256 = 7;
+}
+
+message CompleteUploadRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string upload_id = 3;
+}
+
+message GetDownloadUrlRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string object_id = 3;
+}
+
+message GetWorkspaceQuotaRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message ReserveStorageRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string reservation_key = 3;
+  int64 bytes = 4;
+}
+
+message ReleaseStorageRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string reservation_id = 3;
+  string reason = 4;
+}
+
+message Workspace {
+  string workspace_id = 1;
+  string name = 2;
+  string region_id = 3;
+  string data_residency = 4;
+  WorkspaceStatus status = 5;
+}
+
+message WorkspaceDeletion {
+  string workspace_id = 1;
+  WorkspaceDeletionStatus status = 2;
+}
+
+message ListWorkspacesResponse {
+  repeated Workspace workspaces = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message WorkspaceMember {
+  string workspace_id = 1;
+  string principal_id = 2;
+  string role = 3;
+  WorkspaceMemberStatus status = 4;
+  string joined_at = 5;
+}
+
+message WorkspaceMembershipRemoval {
+  string workspace_id = 1;
+  string principal_id = 2;
+  bool removed = 3;
+}
+
+message ListWorkspaceMembersResponse {
+  repeated WorkspaceMember members = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message DriveObject {
+  reserved 7;
+
+  string object_id = 1;
+  string workspace_id = 2;
+  string parent_object_id = 3;
+  string name = 4;
+  DriveObjectKind object_kind = 5;
+  int64 size_bytes = 6;
+  DriveObjectStatus status = 8;
+}
+
+message ListDriveObjectsResponse {
+  repeated DriveObject objects = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message UploadSession {
+  string upload_id = 1;
+  string upload_url = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message DownloadUrl {
+  string object_id = 1;
+  string download_url = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message WorkspaceQuota {
+  string workspace_id = 1;
+  int64 used_bytes = 2;
+  int64 reserved_bytes = 3;
+  int64 limit_bytes = 4;
+}
+
+message StorageReservation {
+  string reservation_id = 1;
+  string workspace_id = 2;
+  int64 bytes = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message StorageRelease {
+  string reservation_id = 1;
+  bool released = 2;
+}
+
+enum WorkspaceStatus {
+  WORKSPACE_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_STATUS_ACTIVE = 1;
+  WORKSPACE_STATUS_SUSPENDED = 2;
+  WORKSPACE_STATUS_DELETING = 3;
+}
+
+enum WorkspaceDeletionStatus {
+  WORKSPACE_DELETION_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_DELETION_STATUS_ACCEPTED = 1;
+  WORKSPACE_DELETION_STATUS_COMPLETED = 2;
+}
+
+enum WorkspaceMemberStatus {
+  WORKSPACE_MEMBER_STATUS_UNSPECIFIED = 0;
+  WORKSPACE_MEMBER_STATUS_ACTIVE = 1;
+  WORKSPACE_MEMBER_STATUS_SUSPENDED = 2;
+  WORKSPACE_MEMBER_STATUS_REMOVED = 3;
+}
+
+enum DriveObjectKind {
+  DRIVE_OBJECT_KIND_UNSPECIFIED = 0;
+  DRIVE_OBJECT_KIND_FILE = 1;
+  DRIVE_OBJECT_KIND_FOLDER = 2;
+}
+
+enum DriveObjectStatus {
+  DRIVE_OBJECT_STATUS_UNSPECIFIED = 0;
+  DRIVE_OBJECT_STATUS_ACTIVE = 1;
+  DRIVE_OBJECT_STATUS_TRASHED = 2;
+  DRIVE_OBJECT_STATUS_DELETED = 3;
+}

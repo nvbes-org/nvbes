@@ -1,0 +1,202 @@
+syntax = "proto3";
+
+package nvbes.developer.v1;
+
+import "nvbes/platform/v1/common.proto";
+
+service DeveloperService {
+  rpc ListApps(ListAppsRequest) returns (ListAppsResponse);
+  rpc CreateApp(CreateAppRequest) returns (DeveloperApp);
+  rpc UpdateApp(UpdateAppRequest) returns (DeveloperApp);
+  rpc RotateAppSecret(RotateAppSecretRequest) returns (AppSecret);
+  rpc DeleteApp(DeleteAppRequest) returns (AppDeletion);
+  rpc ListWebhookEndpoints(ListWebhookEndpointsRequest) returns (ListWebhookEndpointsResponse);
+  rpc CreateWebhookEndpoint(CreateWebhookEndpointRequest) returns (WebhookEndpoint);
+  rpc UpdateWebhookEndpoint(UpdateWebhookEndpointRequest) returns (WebhookEndpoint);
+  rpc ReplayWebhookDelivery(ReplayWebhookDeliveryRequest) returns (WebhookDelivery);
+  rpc CreateDeveloperToken(CreateDeveloperTokenRequest) returns (DeveloperToken);
+  rpc RevokeDeveloperToken(RevokeDeveloperTokenRequest) returns (TokenRevocation);
+  rpc CreateSandbox(CreateSandboxRequest) returns (Sandbox);
+  rpc ResetSandbox(ResetSandboxRequest) returns (Sandbox);
+  rpc ListApiLogs(ListApiLogsRequest) returns (ListApiLogsResponse);
+}
+
+message ListAppsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  nvbes.platform.v1.CursorPageRequest page = 3;
+}
+
+message CreateAppRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string name = 3;
+  repeated string redirect_uris = 4;
+  repeated string scopes = 5;
+}
+
+message UpdateAppRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string client_id = 3;
+  string name = 4;
+  repeated string redirect_uris = 5;
+  repeated string scopes = 6;
+  string status = 7;
+}
+
+message RotateAppSecretRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string client_id = 3;
+  string reason = 4;
+}
+
+message DeleteAppRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string client_id = 3;
+}
+
+message ListWebhookEndpointsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  nvbes.platform.v1.CursorPageRequest page = 3;
+}
+
+message CreateWebhookEndpointRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string url = 3;
+  repeated string event_types = 4;
+}
+
+message UpdateWebhookEndpointRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string endpoint_id = 3;
+  string url = 4;
+  repeated string event_types = 5;
+  string status = 6;
+}
+
+message ReplayWebhookDeliveryRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string delivery_id = 3;
+}
+
+message CreateDeveloperTokenRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string name = 3;
+  repeated string scopes = 4;
+  string expires_at = 5;
+}
+
+message RevokeDeveloperTokenRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string token_id = 3;
+  string reason = 4;
+}
+
+message CreateSandboxRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string template = 3;
+}
+
+message ResetSandboxRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string sandbox_id = 3;
+}
+
+message ListApiLogsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string client_id = 3;
+  nvbes.platform.v1.CursorPageRequest page = 4;
+}
+
+message DeveloperApp {
+  string client_id = 1;
+  string workspace_id = 2;
+  string name = 3;
+  repeated string redirect_uris = 4;
+  repeated string scopes = 5;
+  string status = 6;
+}
+
+message ListAppsResponse {
+  repeated DeveloperApp apps = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message AppSecret {
+  string client_id = 1;
+  string secret_id = 2;
+  string secret_value = 3;
+  string created_at = 4;
+}
+
+message AppDeletion {
+  string client_id = 1;
+  bool deleted = 2;
+}
+
+message WebhookEndpoint {
+  string endpoint_id = 1;
+  string workspace_id = 2;
+  string url = 3;
+  repeated string event_types = 4;
+  string status = 5;
+}
+
+message ListWebhookEndpointsResponse {
+  repeated WebhookEndpoint endpoints = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message WebhookDelivery {
+  string delivery_id = 1;
+  string endpoint_id = 2;
+  string event_type = 3;
+  string status = 4;
+  string attempted_at = 5;
+}
+
+message DeveloperToken {
+  string token_id = 1;
+  string token_value = 2;
+  string name = 3;
+  repeated string scopes = 4;
+  string expires_at = 5;
+}
+
+message TokenRevocation {
+  string token_id = 1;
+  bool revoked = 2;
+}
+
+message Sandbox {
+  string sandbox_id = 1;
+  string workspace_id = 2;
+  string status = 3;
+  string reset_at = 4;
+}
+
+message ApiLogEntry {
+  string request_id = 1;
+  string client_id = 2;
+  string method = 3;
+  string path = 4;
+  int32 status_code = 5;
+  string occurred_at = 6;
+}
+
+message ListApiLogsResponse {
+  repeated ApiLogEntry logs = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}

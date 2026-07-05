@@ -2,6 +2,90 @@
   "envelope": "contracts/events/envelope.schema.json",
   "events": [
     {
+      "event_type": "account.user.created",
+      "event_version": 1,
+      "schema": "contracts/events/account.user.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.session.created",
+      "event_version": 1,
+      "schema": "contracts/events/account.session.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.token.revoked",
+      "event_version": 1,
+      "schema": "contracts/events/account.token.revoked.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "account.billing.facade.requested",
+      "event_version": 1,
+      "schema": "contracts/events/account.billing.facade.requested.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "cloud.workspace.created",
+      "event_version": 1,
+      "schema": "contracts/events/cloud.workspace.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "cloud.workspace.membership.created",
+      "event_version": 1,
+      "schema": "contracts/events/cloud.workspace.membership.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "cloud.workspace.quota.changed",
+      "event_version": 1,
+      "schema": "contracts/events/cloud.workspace.quota.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "developer.app.created",
+      "event_version": 1,
+      "schema": "contracts/events/developer.app.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "developer.webhook.endpoint.created",
+      "event_version": 1,
+      "schema": "contracts/events/developer.webhook.endpoint.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "developer.token.created",
+      "event_version": 1,
+      "schema": "contracts/events/developer.token.created.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "enterprise.policy.changed",
+      "event_version": 1,
+      "schema": "contracts/events/enterprise.policy.changed.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "enterprise.access_review.started",
+      "event_version": 1,
+      "schema": "contracts/events/enterprise.access_review.started.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "enterprise.break_glass.activated",
+      "event_version": 1,
+      "schema": "contracts/events/enterprise.break_glass.activated.v1.schema.json",
+      "critical": true
+    },
+    {
+      "event_type": "enterprise.federation.provider.changed",
+      "event_version": 1,
+      "schema": "contracts/events/enterprise.federation.provider.changed.v1.schema.json",
+      "critical": true
+    },
+    {
       "event_type": "identity.user.created",
       "event_version": 1,
       "schema": "contracts/events/identity.user.created.v1.schema.json",
