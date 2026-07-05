@@ -38,14 +38,15 @@ can be generated.
 |---|---|---|
 | `apps/billing-api` / `nvbes-billing-api` | `apps/billing-service` / `nvbes-billing-service` | Billing |
 | `apps/drive-api` / `nvbes-drive-api` | `apps/cloud-service` / `nvbes-cloud-service` | Cloud |
+| `apps/drive-web` / `nvbes-drive-web` | `apps/cloud-web` / `nvbes-cloud-web` | Cloud |
+| `apps/drive-worker` / `nvbes-drive-worker` | `apps/cloud-worker` / `nvbes-cloud-worker` | Cloud |
 | `apps/developer-web` / `nvbes-developer-web` | `apps/console-web` / `nvbes-console-web` | Developer |
 | `apps/identity-api` / `nvbes-identity-api` | `apps/account-service` / `nvbes-account-service` | Account |
 | `apps/identity-web` / `nvbes-identity-web` | `apps/account-web` / `nvbes-account-web` | Account |
+| `apps/identity-worker` / `nvbes-identity-worker` | `apps/account-worker` / `nvbes-account-worker` | Account |
 | `apps/internal-admin` / `nvbes-internal-admin` | `apps/backoffice-service` / `nvbes-backoffice-service` | Backoffice |
 | `apps/internal-admin-web` / `nvbes-internal-admin-web` | `apps/backoffice-web` / `nvbes-backoffice-web` | Backoffice |
 | `apps/gateway-graphql` / `nvbes-gateway-graphql` | `apps/gateway-cloud` / `nvbes-gateway-cloud` | Gateway Cloud |
-| `apps/identity-worker` / `nvbes-identity-worker` | `apps/account-worker` / `nvbes-account-worker` | Account |
-| `apps/drive-worker` / `nvbes-drive-worker` | `apps/cloud-worker` / `nvbes-cloud-worker` | Cloud |
 
 New services required by the cutover:
 
