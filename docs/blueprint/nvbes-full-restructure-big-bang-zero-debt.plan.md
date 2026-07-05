@@ -299,6 +299,8 @@ scope gele, les noms legacy, les noms cibles, les owners, les sources de
 donnees, les contracts, les jobs, les variables d'environnement, les images et
 l'observabilite sont recenses dans
 [Inventaire Account Cloud Big Bang](../migration/account-cloud-big-bang.inventory.md).
+La decision d'architecture est verrouillee par
+[ADR Account Cloud Service Taxonomy](../adr/2026-07-05-account-cloud-service-taxonomy.md).
 
 Decision de taxonomie: les anciens runtimes `identity-*` deviennent Account,
 les anciens runtimes `drive-*` deviennent Cloud, `billing-api` devient
