@@ -1,5 +1,5 @@
 use chrono::Utc;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
@@ -38,12 +38,7 @@ pub(super) async fn seed_admin_workspace(
     let service_account_name = format!("Service Account {}", Uuid::new_v4().simple());
     let admin_email = format!("identity-admin-{}@example.com", Uuid::new_v4());
     let now = Utc::now();
-    let plan_row = sqlx::query("SELECT id, code FROM plans ORDER BY created_at ASC LIMIT 1")
-        .fetch_one(pool)
-        .await
-        .expect("plan should exist");
-    let plan_id: Uuid = plan_row.get("id");
-    let plan_code: String = plan_row.get("code");
+    let plan_code = "team".to_string();
     let password_hash =
         crate::domains::auth::hash_password("Admin$trongPassw0rd!").expect("password should hash");
     let client_secret_hash =
@@ -101,18 +96,16 @@ pub(super) async fn seed_admin_workspace(
           workspace_type,
           name,
           owner_user_id,
-          plan_id,
           plan_code,
           created_at,
           updated_at
         )
-        VALUES ($1, $2, 'team', 'Identity Route Test Workspace', $3, $4, $5, $6, $6)
+        VALUES ($1, $2, 'team', 'Identity Route Test Workspace', $3, $4, $5, $5)
         "#,
     )
     .bind(workspace_id)
     .bind(tenant_id)
     .bind(admin_principal_id)
-    .bind(plan_id)
     .bind(&plan_code)
     .bind(now)
     .execute(pool)

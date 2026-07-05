@@ -8,7 +8,7 @@ Le service porte:
 - les sessions Redis et tokens OAuth/OIDC;
 - la gouvernance `tenant -> organization? -> workspace`;
 - les memberships, workspaces, membres et une partie des decisions d'acces;
-- la facturation et les integrations produit qui restent centralisees dans Identity;
+- l'introspection et les decisions d'acces consommees par les autres services;
 - les principals machine (`service accounts`) et les clients OAuth M2M rattachés a un workspace.
 
 ## Architecture
@@ -16,7 +16,7 @@ Le service porte:
 - **Framework** : Axum + Tokio
 - **Base de données** : PostgreSQL (sqlx)
 - **Auth** : OAuth 2.1 / OIDC, JWT courts, refresh tokens opaques rotatifs stockes dans Redis
-- **Billing** : Stripe
+- **Billing** : service separe `billing-api`; Identity fournit l'authz et les vues web peuvent consommer Billing
 - **Structure** : fichiers Rust plats en dot-notation, modules exposes via `#[path]`
 
 ## Structure du code
@@ -32,7 +32,6 @@ src/
 ├── identity.domains.oauth.*
 ├── identity.domains.workspaces.*
 ├── identity.domains.members.*
-├── identity.domains.billing.*
 ├── identity.domains.federation.*
 ├── identity.domains.security.*
 ├── identity.domains.legal.*
@@ -132,14 +131,6 @@ Pour les principals humains, `principal_id` et `user_id` sont alignes sauf deleg
 - `DELETE /api/v1/workspaces/{id}/members/{memberId}`
 - `POST /api/v1/invitations/accept`
 
-### Billing
-- `GET  /api/v1/workspaces/{id}/billing/overview`
-- `POST /api/v1/workspaces/{id}/billing/checkout`
-- `POST /api/v1/workspaces/{id}/billing/portal`
-- `GET  /api/v1/workspaces/{id}/billing/usage`
-- `GET  /api/v1/workspaces/{id}/billing/entitlements`
-- `POST /api/v1/webhooks/stripe`
-
 ### Legal et securite
 - `GET  /api/v1/legal/consents`
 - `POST /api/v1/legal/consent`
@@ -154,8 +145,7 @@ Pour les principals humains, `principal_id` et `user_id` sont alignes sauf deleg
 - Le login web canonique est un flux challenge: identifier -> password -> MFA optionnel. Il n'existe pas de route `POST /api/v1/auth/login` exposee par le routeur.
 - Les sessions web sont portees par cookie HTTP-only `session` ou `__Host-session`; les clients service peuvent aussi fournir `Authorization: Bearer`.
 - `POST /api/v1/auth/mfa/webauthn/register/start` accepte `kind = "passkey" | "security_key"` et le conserve dans `mfa_factors.factor_data.kind`.
-- `POST /api/v1/workspaces/{id}/billing/checkout` attend `plan_code`, `success_url?`, `cancel_url?`.
-- `POST /api/v1/workspaces/{id}/billing/portal` attend un objet JSON, meme vide (`{}`), avec `return_url?`.
+- Les surfaces Billing publiques sont portees par `billing-api`; Identity fournit l'introspection et l'autorisation.
 - `GET /api/v1/legal/consents` retourne directement un tableau de consentements actifs; la revocation prend `consent_type` et `document_version`.
 
 ## Configuration
@@ -164,8 +154,6 @@ Variables d'environnement (dans `.env`) :
 ```
 DATABASE_URL=postgresql://user:pass@localhost/nvbes_identity
 JWT_SECRET=your-secret-key
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 ## Migration

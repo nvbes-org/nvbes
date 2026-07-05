@@ -6,6 +6,10 @@ const policyPath = 'scripts/oss-provider-baseline.json';
 const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
 const knownProviderFiles = new Set(policy.knownProviderFiles);
 const policyFiles = new Set([policyPath, 'scripts/check-oss-provider-boundaries.mjs']);
+const forbiddenIdentityBillingBaselinePatterns = [
+  /^apps\/identity-api\/src\/identity\.domains\.billing(?:\.|$)/,
+  /^apps\/identity-api\/migrations\/(?:0016_billing_platform_core|0017_regional_price_mappings|0020_internal_admin_entitlement_actions|0022_internal_admin_usage_actions|0027_internal_admin_risk_actions|0028_internal_admin_operations_actions|0029_internal_admin_revenue_actions|0030_internal_admin_billing_platform_actions)\.sql$/,
+];
 const blockedTerms = [
   'stripe',
   'sentry',
@@ -129,6 +133,12 @@ function scan(path, results) {
 const findings = new Map();
 for (const source of manifest.include ?? []) {
   scan(source, findings);
+}
+
+for (const path of knownProviderFiles) {
+  if (forbiddenIdentityBillingBaselinePatterns.some((pattern) => pattern.test(path))) {
+    errors.push(`${path}: Identity Billing runtime cannot remain an OSS provider baseline exception`);
+  }
 }
 
 for (const [path, terms] of findings.entries()) {

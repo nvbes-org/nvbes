@@ -1,8 +1,7 @@
-import { identityClient } from '@nvbes/identity-client';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { billingClient } from '@/billing.client';
 import { useAccountContext } from '@/hooks/useAccountContext';
-import { trackEvent } from '../identity.analytics';
 import {
   BillingPageIntro,
   BillingPlansList,
@@ -33,7 +32,14 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
 
   const { data: overview } = useSuspenseQuery({
     queryKey: ['billing', 'overview', workspaceId],
-    queryFn: () => identityClient.getBillingOverview(workspaceId),
+    queryFn: () => billingClient.getOverview(workspaceId),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const { data: portalView } = useSuspenseQuery({
+    queryKey: ['billing', 'portal-view', workspaceId],
+    queryFn: () => billingClient.getPortalView(workspaceId),
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -43,15 +49,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setCheckoutLoading(planCode);
     try {
-      const checkout = await identityClient.createBillingCheckoutSession(workspaceId, planCode);
-      trackEvent('billing.checkout_started', {
-        plan_code: planCode,
-        provider: checkout.provider,
-        provider_customer_id: checkout.provider_customer_id,
-        provider_product_id: checkout.provider_product_id,
-        provider_price_id: checkout.provider_price_id,
-        workspace_id: workspaceId,
-      });
+      const checkout = await billingClient.createCheckoutSession(workspaceId, planCode);
       window.location.href = checkout.url;
     } finally {
       setCheckoutLoading(null);
@@ -62,12 +60,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setPortalLoading(true);
     try {
-      const portal = await identityClient.createBillingPortalSession(workspaceId);
-      trackEvent('billing.portal_started', {
-        provider: portal.provider,
-        provider_customer_id: portal.provider_customer_id,
-        workspace_id: workspaceId,
-      });
+      const portal = await billingClient.createPortalSession(workspaceId);
       window.location.href = portal.url;
     } finally {
       setPortalLoading(false);
@@ -83,6 +76,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
       <CurrentPlanCard overview={overview} />
 
       <BillingPortalCard
+        paymentMethodUpdateFlow={portalView.payment_method_update_flow}
         provider={overview.subscription.billing_provider}
         portalLoading={portalLoading}
         onPortal={() => void handlePortal()}

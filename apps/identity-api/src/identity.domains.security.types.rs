@@ -114,16 +114,6 @@ pub struct RiskEventView {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct BillingWebhookEventView {
-    pub provider_event_id: String,
-    pub provider: String,
-    pub status: String,
-    pub signature_valid: bool,
-    pub received_at: DateTime<Utc>,
-    pub processed_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
 pub struct RecoveryReviewView {
     pub request_id: Uuid,
     pub principal_id: Uuid,

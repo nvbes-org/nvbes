@@ -5,7 +5,7 @@ use super::validation::{
     validate_grafana_export_path, validate_ip_intelligence, validate_jwt_secret,
     validate_observability_internal_token, validate_positive_integer, validate_product_analytics,
     validate_profiling, validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
-    validate_webauthn_rp_id,
+    validate_sentry, validate_webauthn_rp_id,
 };
 
 #[test]
@@ -87,6 +87,18 @@ fn validate_profiling_requires_endpoint_when_enabled() {
         validate_profiling(&config).expect_err("enabled profiling must require an endpoint");
 
     assert!(error.contains("NVBES_PROFILING_ENDPOINT"));
+}
+
+#[test]
+fn validate_sentry_rejects_invalid_trace_sample_rate() {
+    let config = AppConfig {
+        sentry_traces_sample_rate: 1.5,
+        ..AppConfig::default()
+    };
+
+    let error = validate_sentry(&config).expect_err("sample rate above 1 must be rejected");
+
+    assert!(error.contains("SENTRY_TRACES_SAMPLE_RATE"));
 }
 
 #[test]

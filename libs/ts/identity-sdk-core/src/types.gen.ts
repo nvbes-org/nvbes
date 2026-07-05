@@ -292,6 +292,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/me/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_emails_get"];
+        put?: never;
+        post: operations["me_emails_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/emails/{emailId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["me_email_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/emails/{emailId}/promote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_email_promote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/emails/{emailId}/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["me_email_resend_verification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me/export": {
         parameters: {
             query?: never;
@@ -718,22 +782,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["decide"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/billing/portal/capabilities": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["portal_capabilities"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1636,38 +1684,6 @@ export interface paths {
         patch: operations["update_scim_connector"];
         trace?: never;
     };
-    "/webhooks/mollie": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["handle_mollie_webhook"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/webhooks/stripe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["handle_stripe_webhook"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/workspaces": {
         parameters: {
             query?: never;
@@ -1698,102 +1714,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_workspace"];
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/checkout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["create_checkout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/entitlements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_entitlements"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_billing_overview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/portal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["create_portal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/portal/view": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_portal_view"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/workspaces/{workspaceId}/billing/usage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_billing_usage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/workspaces/{workspaceId}/members": {
@@ -2180,6 +2100,14 @@ export interface components {
         };
         /** @enum {string} */
         AccountChooserSessionStatus: "active" | "expired";
+        AddSecondaryEmailInput: {
+            email: string;
+        };
+        AddSecondaryEmailResult: {
+            email: components["schemas"]["EmailAddressView"];
+            /** Format: date-time */
+            verification_resend_available_at: string;
+        };
         ApproveRecoveryRequest: {
             email: string;
         };
@@ -2191,79 +2119,6 @@ export interface components {
         };
         AttachOAuthClientInput: {
             client_id: string;
-        };
-        BillingAccountView: {
-            billing_email?: string | null;
-            country?: string | null;
-            customer_type: string;
-            provider_customer_id?: string | null;
-            stripe_customer_id?: string | null;
-            tax_exempt_status?: string | null;
-            vat_number?: string | null;
-        };
-        BillingOverviewResponse: {
-            billing_account: components["schemas"]["BillingAccountView"];
-            entitlements: components["schemas"]["ProductEntitlementsView"];
-            invoice_estimate: components["schemas"]["InvoiceEstimateView"];
-            plan: components["schemas"]["PlanView"];
-            subscription: components["schemas"]["SubscriptionView"];
-            /** Format: uuid */
-            workspace_id: string;
-        };
-        BillingPortalCapabilities: {
-            automatically_updates_payment_method_references: boolean;
-            exposes_provider_secret_ids: boolean;
-            payment_method_changes_delegated_to_provider: boolean;
-            payment_method_update_flow: string;
-            shows_canonical_invoices: boolean;
-            shows_credits: boolean;
-        };
-        BillingPortalCreditView: {
-            /** Format: int64 */
-            amount_minor: number;
-            currency: string;
-        };
-        BillingPortalInvoiceView: {
-            currency: string;
-            /** Format: date-time */
-            due_at?: string | null;
-            /** Format: uuid */
-            invoice_id: string;
-            invoice_number?: string | null;
-            /** Format: date-time */
-            issued_at?: string | null;
-            /** Format: date-time */
-            paid_at?: string | null;
-            status: string;
-            /** Format: int64 */
-            total_minor: number;
-        };
-        BillingPortalView: {
-            automatically_updates_payment_method_references: boolean;
-            credits: components["schemas"]["BillingPortalCreditView"][];
-            exposes_provider_secret_ids: boolean;
-            invoices: components["schemas"]["BillingPortalInvoiceView"][];
-            payment_method_changes_delegated_to_provider: boolean;
-            payment_method_update_flow: string;
-            plan_code: string;
-            provider: string;
-        };
-        BillingUsageResponse: {
-            /** Format: int64 */
-            bandwidth_out_bytes_month: number;
-            /** Format: date */
-            period_end: string;
-            /** Format: date */
-            period_start: string;
-            seats: components["schemas"]["UsageLineView"];
-            storage: components["schemas"]["UsageLineView"];
-            /** Format: uuid */
-            workspace_id: string;
-        };
-        BillingWebhookResponse: {
-            provider: string;
-            provider_event_id: string;
-            status: string;
         };
         /**
          * @description Client-side metadata attached to form submissions for enhanced
@@ -2480,18 +2335,6 @@ export interface components {
             current_email?: string | null;
             email: string;
         };
-        CheckoutSessionResponse: {
-            checkout_id: string;
-            payment_id?: string | null;
-            provider: string;
-            provider_customer_id: string;
-            provider_price_id?: string | null;
-            provider_product_id?: string | null;
-            session_id: string;
-            stripe_customer_id?: string | null;
-            stripe_price_id?: string | null;
-            url: string;
-        };
         CloseAccessReviewCampaignInput: {
             note?: string | null;
         };
@@ -2514,11 +2357,6 @@ export interface components {
             /** Format: int32 */
             recurrence_days: number;
             scope: components["schemas"]["AccessReviewCampaignScopeInput"];
-        };
-        CreateCheckoutRequest: {
-            cancel_url?: string | null;
-            plan_code: string;
-            success_url?: string | null;
         };
         CreateDeveloperAppRequest: {
             allowed_audiences?: string[];
@@ -2593,9 +2431,6 @@ export interface components {
             client_secret: string;
             policy: components["schemas"]["OAuthClientPolicyView"];
         };
-        CreatePortalRequest: {
-            return_url?: string | null;
-        };
         CreateScimProvisioningConnectorRequest: {
             base_url?: string | null;
             provider: string;
@@ -2649,6 +2484,9 @@ export interface components {
             success: boolean;
         };
         DeleteOAuthClientPolicyResult: {
+            success: boolean;
+        };
+        DeleteSecondaryEmailResult: {
             success: boolean;
         };
         DeveloperAppView: {
@@ -2736,6 +2574,22 @@ export interface components {
             scope: string[];
             /** Format: uuid */
             tenant_id: string;
+        };
+        EmailAddressView: {
+            /** Format: date-time */
+            created_at: string;
+            email: string;
+            /** Format: uuid */
+            id: string;
+            is_primary: boolean;
+            verified: boolean;
+            /** Format: date-time */
+            verified_at?: string | null;
+        };
+        EmailAddressesResult: {
+            emails: components["schemas"]["EmailAddressView"][];
+            /** Format: int32 */
+            primary_min_age_hours: number;
         };
         EnterpriseAccessUpdateResponse: {
             user: components["schemas"]["EnterpriseUser"];
@@ -3047,23 +2901,6 @@ export interface components {
         InviteMemberResponse: {
             invitation: components["schemas"]["InvitationView"];
         };
-        InvoiceEstimateView: {
-            /** Format: int64 */
-            base_amount_cents: number;
-            /** Format: date */
-            billing_period_end: string;
-            /** Format: date */
-            billing_period_start: string;
-            currency: string;
-            /** Format: int64 */
-            estimated_amount_cents: number;
-            /** Format: int64 */
-            seat_overage_amount_cents: number;
-            /** Format: int64 */
-            storage_overage_amount_cents: number;
-            /** Format: uuid */
-            workspace_id: string;
-        };
         JitProvisioningRequest: {
             email: string;
             email_verified?: boolean | null;
@@ -3175,6 +3012,7 @@ export interface components {
         /** @enum {string} */
         MfaPolicySetting: "optional" | "required_admins" | "required_all";
         MfaRequest: {
+            email_code?: string | null;
             recovery_code?: string | null;
             /** Format: uuid */
             state_token: string;
@@ -3290,49 +3128,14 @@ export interface components {
             enroll: string;
             manage: string;
         };
-        PlanView: {
-            audit_level: string;
-            code: string;
-            currency: string;
-            /** Format: int32 */
-            included_storage_gb: number;
-            /** Format: int32 */
-            included_users: number;
-            /** Format: int32 */
-            max_share_link_ttl_days: number;
-            /** Format: int32 */
-            max_share_links: number;
-            /** Format: int64 */
-            monthly_price_cents: number;
-            /** Format: int32 */
-            retention_days: number;
-        };
-        PortalSessionResponse: {
-            provider: string;
-            provider_customer_id: string;
-            stripe_customer_id?: string | null;
-            url: string;
-        };
         PowChallenge: {
             /** Format: int32 */
             difficulty: number;
             nonce: string;
         };
-        ProductEntitlementsView: {
-            /** Format: int32 */
-            api_key_limit: number;
-            audit_level: string;
-            billing_locked: boolean;
-            can_create_share_links: boolean;
-            can_upload: boolean;
-            /** Format: int64 */
-            included_storage_bytes: number;
-            /** Format: int32 */
-            included_users: number;
-            /** Format: int32 */
-            max_share_link_ttl_days: number;
-            /** Format: int32 */
-            max_share_links: number;
+        PromoteSecondaryEmailResult: {
+            email: components["schemas"]["EmailAddressView"];
+            user: components["schemas"]["UserView"];
         };
         PwdRequest: {
             password: string;
@@ -3377,6 +3180,8 @@ export interface components {
             email: string;
             firstname: string;
             lastname: string;
+            legal_documents_accepted?: boolean;
+            marketing_emails_accepted?: boolean;
             password: string;
             pow_nonce: string;
             pow_solution: string;
@@ -3394,6 +3199,11 @@ export interface components {
             /** Format: uuid */
             removed_user_id: string;
             sessions_revoked: boolean;
+        };
+        ResendSecondaryEmailVerificationResult: {
+            email: components["schemas"]["EmailAddressView"];
+            /** Format: date-time */
+            verification_resend_available_at: string;
         };
         ResendVerificationRequest: {
             email: string;
@@ -3565,18 +3375,6 @@ export interface components {
             success: boolean;
             /** Format: date-time */
             valid_until: string;
-        };
-        SubscriptionView: {
-            billing_customer_id?: string | null;
-            billing_provider: string;
-            billing_subscription_id?: string | null;
-            /** Format: date-time */
-            current_period_end?: string | null;
-            /** Format: date-time */
-            current_period_start?: string | null;
-            status: string;
-            /** Format: date-time */
-            trial_ends_at?: string | null;
         };
         SupportedRegionResponse: {
             country_code: string;
@@ -3785,15 +3583,6 @@ export interface components {
         UpdateWorkspaceRequest: {
             name: string;
         };
-        UsageLineView: {
-            /** Format: int64 */
-            billable_quantity: number;
-            /** Format: int64 */
-            included_quantity: number;
-            unit: string;
-            /** Format: int64 */
-            used_quantity: number;
-        };
         UserConsent: {
             consent_type: string;
             document_version: string;
@@ -3810,6 +3599,7 @@ export interface components {
         UserNotifications: {
             email?: boolean;
             in_app?: boolean;
+            marketing_email?: boolean;
             push?: boolean;
         };
         UserPreferences: {
@@ -4281,6 +4071,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
+            /** @description Password is compromised */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
         };
     };
     challenge_webauthn_discoverable_finish: {
@@ -4465,6 +4264,233 @@ export interface operations {
             };
             /** @description Rate limited */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_emails_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User email addresses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailAddressesResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_emails_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddSecondaryEmailInput"];
+            };
+        };
+        responses: {
+            /** @description Secondary email added */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddSecondaryEmailResult"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Email already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_email_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secondary email deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteSecondaryEmailResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Primary email cannot be deleted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Email not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_email_promote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secondary email promoted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromoteSecondaryEmailResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Policy violation */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Email not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    me_email_resend_verification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emailId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secondary email verification resent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResendSecondaryEmailVerificationResult"];
+                };
+            };
+            /** @description Email cannot be verified through this flow */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Email not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5603,35 +5629,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    portal_capabilities: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Billing portal capabilities */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingPortalCapabilities"];
                 };
             };
             /** @description Internal server error */
@@ -9295,110 +9292,6 @@ export interface operations {
             };
         };
     };
-    handle_mollie_webhook: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Raw Mollie webhook payload */
-        requestBody: {
-            content: {
-                "application/x-www-form-urlencoded": string;
-            };
-        };
-        responses: {
-            /** @description Webhook accepted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingWebhookResponse"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    handle_stripe_webhook: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Raw Stripe webhook payload */
-        requestBody: {
-            content: {
-                "application/json": string;
-            };
-        };
-        responses: {
-            /** @description Webhook processed */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingWebhookResponse"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     list_workspaces: {
         parameters: {
             query?: never;
@@ -9583,287 +9476,6 @@ export interface operations {
             };
             /** @description Not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    create_checkout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCheckoutRequest"];
-            };
-        };
-        responses: {
-            /** @description Checkout session created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CheckoutSessionResponse"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_entitlements: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Product entitlements */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProductEntitlementsView"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_billing_overview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Billing overview */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingOverviewResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    create_portal: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePortalRequest"];
-            };
-        };
-        responses: {
-            /** @description Portal session created */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalSessionResponse"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_portal_view: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Billing portal view */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingPortalView"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Internal server error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    get_billing_usage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Workspace ID */
-                workspaceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Billing usage */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillingUsageResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10803,7 +10415,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Worker queue status */
+            /** @description Identity email worker queue status */
             200: {
                 headers: {
                     [name: string]: unknown;

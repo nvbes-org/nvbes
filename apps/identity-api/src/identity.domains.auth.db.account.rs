@@ -4,7 +4,6 @@ use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::domains::auth::{email_verification, password, types::derive_display_name};
-use crate::domains::billing;
 use crate::http::error::AppError;
 
 const CURRENT_LEGAL_DOCUMENT_VERSION: &str = "2026-06-26";
@@ -56,7 +55,6 @@ pub async fn create_user_account(
     );
 
     let mut tx = db.begin().await?;
-    billing::db::ensure_plan_seeded(&mut tx).await?;
 
     sqlx::query(
         r#"

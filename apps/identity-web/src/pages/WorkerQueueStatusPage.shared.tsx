@@ -24,9 +24,9 @@ export function WorkerQueueStatusPageContent({
           <p className="mb-3 text-sm uppercase tracking-[0.24em] text-cyan-300">
             Admin worker queue
           </p>
-          <h1 className="text-4xl font-semibold tracking-tight">Supervision du worker billing</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Supervision du worker Identity</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Saisis un workspace pour voir l’état synthétique de la file de paiement: profondeur,
+            Saisis un workspace pour voir l’état synthétique de la file email: profondeur,
             ancienneté du plus vieux job et pression des retries.
           </p>
 

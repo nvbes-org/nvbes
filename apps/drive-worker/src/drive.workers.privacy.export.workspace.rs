@@ -61,43 +61,6 @@ pub async fn build(database: &Database, workspace_id: Uuid) -> anyhow::Result<Js
             FROM api_request_logs
             WHERE workspace_id = $1
           ), '[]'::jsonb),
-          'billing', jsonb_build_object(
-            'subscription', (
-              SELECT to_jsonb(subscriptions)
-              FROM subscriptions
-              WHERE workspace_id = $1
-            ),
-            'account', (
-              SELECT to_jsonb(billing_accounts)
-              FROM billing_accounts
-              WHERE workspace_id = $1
-            ),
-            'adjustments', COALESCE((
-              SELECT jsonb_agg(to_jsonb(billing_adjustments) ORDER BY created_at DESC)
-              FROM billing_adjustments
-              WHERE workspace_id = $1
-            ), '[]'::jsonb),
-            'usage_events', COALESCE((
-              SELECT jsonb_agg(to_jsonb(usage_events) ORDER BY occurred_at DESC)
-              FROM usage_events
-              WHERE workspace_id = $1
-            ), '[]'::jsonb),
-            'usage_snapshots', COALESCE((
-              SELECT jsonb_agg(to_jsonb(usage_snapshots) ORDER BY billing_period_start DESC)
-              FROM usage_snapshots
-              WHERE workspace_id = $1
-            ), '[]'::jsonb),
-            'invoice_estimates', COALESCE((
-              SELECT jsonb_agg(to_jsonb(invoice_estimates) ORDER BY billing_period_start DESC)
-              FROM invoice_estimates
-              WHERE workspace_id = $1
-            ), '[]'::jsonb),
-            'webhook_events', COALESCE((
-              SELECT jsonb_agg((to_jsonb(billing_webhook_events) - 'payload') ORDER BY received_at DESC)
-              FROM billing_webhook_events
-              WHERE workspace_id = $1
-            ), '[]'::jsonb)
-          ),
           'quota_usage', (
             SELECT to_jsonb(quota_usage)
             FROM quota_usage

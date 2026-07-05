@@ -2,12 +2,14 @@
 
 ## V1
 
-Objectif: livrer un drive europeen securise vendable pour petites equipes.
+Objectif: livrer Identity puis nvbes Cloud comme fondation B2B pour tous: utilisable en solo via workspace personnel, pret pour workspaces de groupe, sans activer Business en production initiale.
 
 Fondations produit:
 
 - Auth.
 - Fondations identity enterprise: `user global`, `tenant`, `organization` optionnelle, memberships multi-scope.
+- Creation automatique d'un workspace personnel dedie pour chaque nouveau user.
+- Separation stricte entre workspace personnel et workspaces de groupe.
 - Sessions hybrides Redis: JWT courts + introspection/decision centrale.
 - MFA, step-up et scaffold WebAuthn.
 - Workspace.
@@ -19,7 +21,7 @@ Fondations produit:
 - Expiration et revocation des liens.
 - Membres et roles.
 - Quotas.
-- Billing.
+- Billing personnel puis groupe, avec plans groupe prepares mais lancement progressif.
 - Audit basique.
 - Export et suppression RGPD.
 - API publique V1 limitee aux integrations fichiers.
@@ -45,7 +47,8 @@ Fondations design/UX:
 
 Fondations marketing/growth:
 
-- ICP prioritaire V1: agences et studios de 2 a 10 personnes.
+- Positionnement V1: B2B pour tous, avec usage solo professionnel comme entree de gamme et groupes prepares.
+- ICP initial: independants professionnels, agences, studios et petites structures manipulant des fichiers clients.
 - Messaging V1 et landing page.
 - Pricing page orientee conversion.
 - Funnel de conversion documente.
@@ -70,6 +73,17 @@ Fondations business/FinOps:
 - Validation marge brute avant lancement payant.
 - Validation externe obligatoire avant activation multi-pays payante: TVA, e-invoicing, revenue recognition audit et retention des pieces comptables.
 
+Sequence production initiale:
+
+- Identity seul sur Scaleway, optimise France et cout minimal.
+- Cloud/Drive full feature sur la meme architecture minimum cost.
+- Developer Hub avec APIs publiques.
+- DevOps production elargie pour extension EU.
+- Ingestion data, transformation, vectorisation et entrainement LLM.
+- Docs, Sheets, Slides puis Forms.
+- Plans Team et Workspace.
+- Business prepare mais non active en production.
+
 Fondations infra/DevOps:
 
 - Infrastructure as Code pour les composants critiques.
@@ -86,7 +100,7 @@ Fondations infra/DevOps:
 
 ## V1.5
 
-Objectif: ameliorer l'usage quotidien et le controle equipe.
+Objectif: ameliorer l'usage quotidien, les workspaces personnels et le controle equipe.
 
 - Preview de fichiers.
 - Recherche amelioree.
@@ -104,7 +118,7 @@ Objectif: ameliorer l'usage quotidien et le controle equipe.
 
 ## V2
 
-Objectif: servir des equipes plus sensibles a la securite.
+Objectif: servir des workspaces plus sensibles a la securite sans lancer Business trop tot.
 
 - Versioning.
 - Politiques de retention avancees.
@@ -113,7 +127,7 @@ Objectif: servir des equipes plus sensibles a la securite.
 - Audit logs avances.
 - Revue des sessions admin.
 - Permissions plus granulaires.
-- Plan Business.
+- Preparation Business: contrats, policies, audit avance, SSO/SCIM et SLA, sans activation commerciale tant que le support et la marge ne sont pas valides.
 
 ## V3
 
@@ -126,11 +140,14 @@ Objectif: augmenter la valeur plateforme.
 - Integrations.
 - Archivage long terme.
 - Reutilisation du module storage dans les autres produits nvbes.
+- Docs, Sheets, Slides et Forms si Cloud est stable.
+- Photo Editor et Video Editor comme produits separes apres validation cout/media.
 
 ## Explorations Produits
 
 Ces idees ne sont pas dans le scope Drive V1/V2. Elles documentent des pistes futures a revisiter avec une decision produit separee.
 
+- Strategie produit nvbes: positionnement B2B pour tous, workspaces personnels, offres personnelles, add-ons, sequence production et politique donnees. Voir [Strategie Produit nvbes](product/nvbes-product-strategy.md).
 - Privacy-preserving KYC verification: verifier document et visage sans stocker les artefacts bruts, puis emettre un credential reutilisable avec consentement. Voir [Privacy-Preserving KYC Verification](product/privacy-preserving-kyc.md).
 - Plateforme globale zero-stack: architecture cible multi-cloud, cellulaire et hyperscale pour les futurs produits nvbes. Voir [Plan Plateforme Globale - Stack Zero](blueprint/nvbes-global-platform-zero-stack.plan.md).
 - Trajectoire low budget vers plateforme globale: plan starter economique avec chemin d'upgrade progressif vers l'architecture zero-stack. Voir [Plan Starter Low Budget vers Plateforme Globale](blueprint/nvbes-low-budget-to-global-platform.plan.md).

@@ -2,19 +2,41 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+remote_write:
+  - url: http://mimir:9009/api/v1/push
+    send_exemplars: true
+
 scrape_configs:
   - job_name: 'identity-api'
     static_configs:
       - targets: ['host.docker.internal:4000']
+        labels:
+          service: 'identity-api'
 
   - job_name: 'drive-api'
     static_configs:
-      - targets: ['host.docker.internal:4001'] # Assuming we set drive-api to 4001
+      - targets: ['host.docker.internal:4001']
+        labels:
+          service: 'drive-api'
 
   - job_name: 'drive-worker'
     static_configs:
       - targets: ['host.docker.internal:4101']
+        labels:
+          service: 'drive-worker'
 
   - job_name: 'identity-worker'
     static_configs:
       - targets: ['host.docker.internal:4102']
+        labels:
+          service: 'identity-worker'
+
+  - job_name: 'grafana-stack'
+    static_configs:
+      - targets:
+          - 'alloy:12345'
+          - 'prometheus:9090'
+          - 'mimir:9009'
+          - 'tempo:3200'
+          - 'loki:3100'
+          - 'pyroscope:4040'

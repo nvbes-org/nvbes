@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 25
+- entries: 30
 - pending: 0
 - keep: 10
-- rebuild: 14
+- rebuild: 19
 - remove: 0
 - replace: 1
 
@@ -30,11 +30,16 @@
 | event_topic | drive.file.created | keep | Platform lead | `contracts/events/drive.file.created.v1.schema.json` |
 | event_topic | identity.user.created | keep | Platform lead | `contracts/events/identity.user.created.v1.schema.json` |
 | event_topic | workspace.membership.created | keep | Platform lead | `contracts/events/workspace.membership.created.v1.schema.json` |
-| queue | billing.stripe.webhook.process | rebuild | Infra lead | `apps/workers#billing-usage-billing-stripe-webhook-process` |
+| queue | billing.email.send | rebuild | Infra lead | `apps/workers#billing-email-send` |
+| queue | billing.mollie.webhook.process | rebuild | Infra lead | `apps/workers#billing-mollie-webhook-process` |
+| queue | billing.stripe.webhook.process | rebuild | Infra lead | `apps/workers#billing-stripe-webhook-process` |
 | queue | data.export | rebuild | Infra lead | `apps/workers#audit-privacy-data-export` |
 | queue | email.send | rebuild | Infra lead | `apps/workers#email-email-send` |
 | queue | email.webhook.process | rebuild | Infra lead | `apps/workers#email-email-webhook-process` |
 | queue | geo.lookup_maintenance | rebuild | Infra lead | `apps/workers#geo-lookup-maintenance` |
+| queue | geo.loyalsoldier_import | rebuild | Infra lead | `apps/workers#geo-loyalsoldier-import` |
+| queue | geo.maxmind_geolite_import | rebuild | Infra lead | `apps/workers#geo-maxmind-geolite-import` |
+| queue | geo.v2fly_import | rebuild | Infra lead | `apps/workers#geo-v2fly-import` |
 | queue | privacy.account_delete | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-account-delete` |
 | queue | privacy.account_export | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-account-export` |
 | queue | privacy.workspace_delete | rebuild | Infra lead | `apps/workers#audit-privacy-privacy-workspace-delete` |

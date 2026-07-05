@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "generation": {
+    "command": "tools/migration/billing-multi-psp-continuity.mjs --write",
+    "sources": [
+      "libs/rust/billing/src/provider.rs",
+      "libs/rust/billing/src/provider_tests.rs",
+      "libs/rust/billing/src/cb.rs",
+      "libs/rust/billing/src/db.provider_subscriptions.rs",
+      "libs/rust/billing/src/stripe_webhook_workspace_effects.rs",
+      "libs/rust/billing/src/portal_views.subscriptions.rs",
+      "apps/billing-api/migrations/0002_billing_platform_core.sql",
+      "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "apps/billing-api/migrations/0009_billing_provider_cb.sql",
+      "libs/ts/billing-client/src/billing.provider.ts",
+      "contracts/graphql/schema.graphql"
+    ],
+    "targeted_tests": [
+      "cargo test -p nvbes-billing provider_subscription --locked",
+      "cargo test -p nvbes-billing workspace_effects_apply_only_to_primary_provider_subscription --locked",
+      "cargo test -p nvbes-billing provider_code --locked",
+      "cargo test -p nvbes-billing cb_ --locked"
+    ]
+  },
+  "summary": {
+    "checks": 20,
+    "passed": 20,
+    "failed": 0,
+    "status": "passed"
+  },
+  "checks": [
+    {
+      "id": "provider-public-codes",
+      "description": "Billing provider model exposes Stripe, Mollie and CB",
+      "path": "libs/rust/billing/src/provider.rs",
+      "status": "passed",
+      "pattern": "PROVIDER_CODES: &[&str] = &[\"stripe\", \"mollie\", \"cb\"]"
+    },
+    {
+      "id": "provider-code-test",
+      "description": "Provider code tests cover CB",
+      "path": "libs/rust/billing/src/provider_tests.rs",
+      "status": "passed",
+      "pattern": "provider_code(\"cb\")"
+    },
+    {
+      "id": "cb-services",
+      "description": "CB adapter models Safe'R, Updat'R and Fast'R services",
+      "path": "libs/rust/billing/src/cb.rs",
+      "status": "passed",
+      "pattern": "[\"safe_r\", \"updat_r\", \"fast_r\"]"
+    },
+    {
+      "id": "cb-safe-r",
+      "description": "CB Safe'R excludes recurring payments",
+      "path": "libs/rust/billing/src/cb.rs",
+      "status": "passed",
+      "pattern": "safe_r_excludes_recurring"
+    },
+    {
+      "id": "cb-updat-r",
+      "description": "CB Updat'R requires stored credential context",
+      "path": "libs/rust/billing/src/cb.rs",
+      "status": "passed",
+      "pattern": "stored_credential_required"
+    },
+    {
+      "id": "cb-fast-r",
+      "description": "CB Fast'R requires customer initiated ecommerce context",
+      "path": "libs/rust/billing/src/cb.rs",
+      "status": "passed",
+      "pattern": "customer_initiated_required"
+    },
+    {
+      "id": "cb-acquirer-pat-port",
+      "description": "CB integration remains behind acquirer or PAT port",
+      "path": "libs/rust/billing/src/cb.rs",
+      "status": "passed",
+      "pattern": "cb_acquirer_or_pat_required"
+    },
+    {
+      "id": "provider-customer-boundary",
+      "description": "Provider customer lookup does not reuse unrelated provider IDs",
+      "path": "libs/rust/billing/src/provider_tests.rs",
+      "status": "passed",
+      "pattern": "provider_customer_id_for_does_not_reuse_other_provider_customer"
+    },
+    {
+      "id": "provider-subscription-primary-column",
+      "description": "Provider subscriptions store primary provider ownership",
+      "path": "apps/billing-api/migrations/0002_billing_platform_core.sql",
+      "status": "passed",
+      "pattern": "primary_for_subscription BOOLEAN NOT NULL DEFAULT FALSE"
+    },
+    {
+      "id": "provider-subscription-fallback-column",
+      "description": "Provider subscriptions store fallback eligibility",
+      "path": "apps/billing-api/migrations/0002_billing_platform_core.sql",
+      "status": "passed",
+      "pattern": "fallback_eligible BOOLEAN NOT NULL DEFAULT FALSE"
+    },
+    {
+      "id": "provider-subscription-one-primary-index",
+      "description": "Database enforces one primary provider subscription",
+      "path": "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "status": "passed",
+      "pattern": "idx_billing_provider_subscriptions_one_primary"
+    },
+    {
+      "id": "provider-subscription-demotion",
+      "description": "New primary provider subscription demotes previous providers",
+      "path": "libs/rust/billing/src/db.provider_subscriptions.rs",
+      "status": "passed",
+      "pattern": "demoted_primary"
+    },
+    {
+      "id": "provider-subscription-active-fallback",
+      "description": "Active non-primary provider subscriptions remain fallback eligible",
+      "path": "libs/rust/billing/src/db.provider_subscriptions.rs",
+      "status": "passed",
+      "pattern": "active_non_primary_provider_subscription_remains_fallback_eligible"
+    },
+    {
+      "id": "provider-subscription-primary-not-fallback",
+      "description": "Primary provider subscriptions are not fallback candidates",
+      "path": "libs/rust/billing/src/db.provider_subscriptions.rs",
+      "status": "passed",
+      "pattern": "primary_provider_subscription_is_never_marked_as_fallback"
+    },
+    {
+      "id": "provider-subscription-inactive-not-fallback",
+      "description": "Inactive provider subscriptions are not fallback candidates",
+      "path": "libs/rust/billing/src/db.provider_subscriptions.rs",
+      "status": "passed",
+      "pattern": "inactive_non_primary_provider_subscription_is_not_fallback_eligible"
+    },
+    {
+      "id": "workspace-effects-primary-only",
+      "description": "Webhook workspace effects apply only to primary provider subscription",
+      "path": "libs/rust/billing/src/stripe_webhook_workspace_effects.rs",
+      "status": "passed",
+      "pattern": "workspace_effects_apply_only_to_primary_provider_subscription"
+    },
+    {
+      "id": "portal-provider-list",
+      "description": "Portal subscriptions expose provider-neutral primary and fallback state",
+      "path": "libs/rust/billing/src/portal_views.subscriptions.rs",
+      "status": "passed",
+      "pattern": "fallback_eligible"
+    },
+    {
+      "id": "cb-migration",
+      "description": "Billing database enum supports CB provider",
+      "path": "apps/billing-api/migrations/0009_billing_provider_cb.sql",
+      "status": "passed",
+      "pattern": "ADD VALUE IF NOT EXISTS 'cb'"
+    },
+    {
+      "id": "billing-client-cb",
+      "description": "Billing TypeScript client supports CB provider",
+      "path": "libs/ts/billing-client/src/billing.provider.ts",
+      "status": "passed",
+      "pattern": "['stripe', 'mollie', 'cb']"
+    },
+    {
+      "id": "graphql-cb",
+      "description": "GraphQL Billing provider enum supports CB",
+      "path": "contracts/graphql/schema.graphql",
+      "status": "passed",
+      "pattern": "CB"
+    }
+  ]
+}

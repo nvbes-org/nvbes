@@ -1,0 +1,210 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+otelcol.receiver.otlp "nvbes" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.attributes.redact.input]
+  }
+}
+
+otelcol.processor.attributes "redact" {
+  action {
+    key    = "client.address"
+    action = "delete"
+  }
+
+  action {
+    key    = "client.ip"
+    action = "delete"
+  }
+
+  action {
+    key    = "http.user_agent"
+    action = "delete"
+  }
+
+  action {
+    key    = "user_agent"
+    action = "delete"
+  }
+
+  action {
+    key    = "enduser.id"
+    action = "delete"
+  }
+
+  action {
+    key    = "user.id"
+    action = "delete"
+  }
+
+  action {
+    key    = "email"
+    action = "delete"
+  }
+
+  action {
+    key    = "file.name"
+    action = "delete"
+  }
+
+  action {
+    key    = "object_key"
+    action = "delete"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.traces.input]
+  }
+}
+
+otelcol.processor.batch "traces" {
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+pyroscope.receive_http "nvbes" {
+  http {
+    listen_address = "0.0.0.0"
+    listen_port    = 4040
+  }
+
+  forward_to = [pyroscope.write.local.receiver]
+}
+
+pyroscope.write "local" {
+  endpoint {
+    url = "http://pyroscope:4040"
+  }
+
+  external_labels = {
+    environment = "development",
+    platform    = "nvbes",
+  }
+}
+
+faro.receiver "identity_web" {
+  extra_log_labels = {
+    environment = "development",
+    job         = "identity-web",
+    service     = "identity-web",
+  }
+
+  log_format = "json"
+
+  server {
+    listen_address = "0.0.0.0"
+    listen_port    = 12347
+
+    cors_allowed_origins = [
+      "http://localhost:3001",
+      "http://127.0.0.1:3001",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ]
+
+    max_allowed_payload_size = "2MiB"
+
+    rate_limiting {
+      enabled    = true
+      strategy   = "per_app"
+      rate       = 20
+      burst_size = 40
+    }
+  }
+
+  sourcemaps {
+    download = false
+  }
+
+  output {
+    logs   = [loki.process.privacy.receiver]
+    traces = [otelcol.processor.attributes.redact.input]
+  }
+}
+
+local.file_match "nvbes_logs" {
+  path_targets = [
+    {
+      "__path__" = "/var/log/nvbes/*.jsonl",
+      "job"      = "nvbes-app",
+    },
+  ]
+}
+
+loki.source.file "nvbes" {
+  targets    = local.file_match.nvbes_logs.targets
+  forward_to = [loki.process.privacy.receiver]
+}
+
+loki.process "privacy" {
+  stage.replace {
+    expression = "(?i)(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\\s]+)"
+    replace    = "[FilteredSecret]"
+  }
+
+  stage.replace {
+    expression = "(?i)(Bearer|Basic)\\s+[A-Za-z0-9._~+/=-]+"
+    replace    = "[FilteredAuthorization]"
+  }
+
+  stage.replace {
+    expression = "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}"
+    replace    = "[FilteredEmail]"
+  }
+
+  stage.replace {
+    expression = "\"(client_ip|user_agent|object_key|payload|file_name|filename)\":\"[^\"]*\""
+    replace    = "\"filtered\":\"[Filtered]\""
+  }
+
+  stage.replace {
+    expression = "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b"
+    replace    = "[FilteredIp]"
+  }
+
+  stage.drop {
+    longer_than         = "16KB"
+    drop_counter_reason = "oversized_log_line"
+  }
+
+  stage.static_labels {
+    values = {
+      environment = "development",
+      platform    = "nvbes",
+    }
+  }
+
+  stage.label_keep {
+    values = ["job", "environment", "platform", "service"]
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

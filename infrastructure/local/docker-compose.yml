@@ -38,12 +38,24 @@ services:
     profiles: [infra, full]
 
   # ── Profile: observability ────────────────────────────────────────────────
+  mimir:
+    image: grafana/mimir:latest
+    container_name: nvbes-mimir
+    profiles: [observability, full]
+    command: ["-config.file=/etc/mimir.yaml"]
+    volumes:
+      - ./observability/mimir.yaml:/etc/mimir.yaml:ro
+      - nvbes_mimir_data:/data
+    ports:
+      - "9009:9009"
+
   prometheus:
     image: prom/prometheus:latest
     container_name: nvbes-prometheus
     profiles: [observability, full]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - nvbes_prometheus_data:/prometheus
     ports:
       - "9090:9090"
     command:
@@ -51,6 +63,11 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/console_templates"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mimir:
+        condition: service_started
 
   tempo:
     image: grafana/tempo:latest
@@ -61,8 +78,9 @@ services:
       - ./observability/tempo.yaml:/etc/tempo.yaml:ro
     ports:
       - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
+    depends_on:
+      mimir:
+        condition: service_started
 
   loki:
     image: grafana/loki:latest
@@ -78,7 +96,39 @@ services:
     profiles: [observability, full]
     command: ["server"]
     ports:
+      - "4041:4040"
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: nvbes-alloy
+    profiles: [observability, full]
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=public-preview
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./observability/alloy.local.alloy:/etc/alloy/config.alloy:ro
+      - ./observability/app-logs:/var/log/nvbes:ro
+      - nvbes_alloy_data:/var/lib/alloy
+    ports:
+      - "12345:12345"
+      - "12347:12347"
+      - "14317:4317"
+      - "14318:4318"
       - "4040:4040"
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+      pyroscope:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:12345/-/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   grafana:
     image: grafana/grafana:latest
@@ -95,6 +145,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
+      mimir:
+        condition: service_started
       prometheus:
         condition: service_started
       tempo:
@@ -103,7 +155,47 @@ services:
         condition: service_started
       pyroscope:
         condition: service_started
+      alloy:
+        condition: service_started
+
+  k6-identity-smoke:
+    image: grafana/k6:latest
+    container_name: nvbes-k6-identity-smoke
+    profiles: [loadtest]
+    command: ["run", "-o", "experimental-prometheus-rw", "/scripts/identity-smoke.js"]
+    environment:
+      K6_PROMETHEUS_RW_SERVER_URL: http://mimir:9009/api/v1/push
+      K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),min,max
+      IDENTITY_API_BASE_URL: ${IDENTITY_API_BASE_URL:-http://host.docker.internal:4000}
+    volumes:
+      - ./observability/k6:/scripts:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mimir:
+        condition: service_started
+
+  alloy-beyla:
+    image: grafana/alloy:latest
+    container_name: nvbes-alloy-beyla
+    profiles: [beyla]
+    privileged: true
+    pid: host
+    network_mode: host
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12346
+      - --stability.level=experimental
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./observability/alloy.beyla.alloy:/etc/alloy/config.alloy:ro
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+      - /sys/fs/bpf:/sys/fs/bpf
+      - /proc:/host/proc:ro
 
 volumes:
+  nvbes_alloy_data:
+  nvbes_mimir_data:
   nvbes_pgdata:
+  nvbes_prometheus_data:
   nvbes_redis_data:

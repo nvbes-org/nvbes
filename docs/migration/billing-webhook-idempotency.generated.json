@@ -4,127 +4,352 @@
     "command": "tools/migration/billing-webhook-idempotency.mjs --write",
     "sources": [
       "apps/identity-api/openapi.json",
-      "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
-      "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
-      "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
-      "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
-      "apps/identity-api/src/identity.domains.billing.jobs.rs",
-      "apps/identity-api/migrations/0001_initial_schema.sql",
-      "apps/identity-api/src/identity.http.openapi.rs"
+      "apps/identity-api/src/identity.domains.mod.rs",
+      "apps/billing-api/src/billing.domains.webhooks.rs",
+      "libs/rust/billing/src/stripe_webhook_intake.rs",
+      "libs/rust/billing/src/jobs.rs",
+      "apps/billing-worker/src/billing.worker.jobs.rs",
+      "apps/billing-worker/src/billing.worker.jobs.stripe.rs",
+      "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "apps/billing-worker/src/billing.worker.workspace_updates.rs",
+      "apps/billing-worker/src/billing.worker.email.rs",
+      "apps/billing-worker/src/billing.worker.email.delivery.rs",
+      "apps/billing-worker/src/billing.worker.loop.rs",
+      "libs/rust/billing/src/dunning_db.rs",
+      "libs/rust/billing/src/dunning_jobs.rs",
+      "libs/rust/billing/src/db.provider_events.rs",
+      "apps/billing-api/migrations/0002_billing_platform_core.sql"
     ],
-    "targeted_test": "cargo test -p nvbes-identity-api classify_webhook_retry --locked"
+    "targeted_test": "cargo test -p nvbes-billing classify_webhook_retry --locked"
   },
   "summary": {
-    "checks": 15,
-    "passed": 15,
+    "checks": 46,
+    "passed": 46,
     "failed": 0,
     "status": "passed"
   },
   "checks": [
     {
-      "id": "openapi-stripe-webhook-path",
-      "description": "OpenAPI exposes POST /webhooks/stripe",
+      "id": "identity-openapi-no-psp-webhook",
+      "description": "Identity OpenAPI no longer exposes PSP webhook routes",
       "path": "apps/identity-api/openapi.json",
       "status": "passed",
-      "pattern": "paths['/webhooks/stripe'].post"
+      "pattern": "/webhooks/stripe"
     },
     {
-      "id": "openapi-export-route",
-      "description": "OpenAPI export includes Stripe webhook handler",
-      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "id": "identity-router-no-billing-merge",
+      "description": "Identity router no longer merges billing routes",
+      "path": "apps/identity-api/src/identity.domains.mod.rs",
       "status": "passed",
-      "pattern": "crate::domains::billing::routes::webhooks::handle_stripe_webhook"
+      "pattern": "billing::routes::router"
     },
     {
-      "id": "route-handler",
-      "description": "Axum route accepts Stripe webhooks",
-      "path": "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "id": "billing-api-stripe-route",
+      "description": "Billing API accepts Stripe webhooks",
+      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "route(\"/webhooks/stripe\", post(handle_stripe_webhook))"
     },
     {
-      "id": "rate-limit",
-      "description": "Webhook route enforces rate limiting before processing",
-      "path": "apps/identity-api/src/identity.domains.billing.routes.webhooks.rs",
+      "id": "billing-api-mollie-route",
+      "description": "Billing API accepts Mollie webhooks",
+      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "status": "passed",
+      "pattern": "route(\"/webhooks/mollie\", post(handle_mollie_webhook))"
+    },
+    {
+      "id": "billing-api-stripe-rate-limit",
+      "description": "Stripe webhook intake is rate limited in billing-api",
+      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "enforce_stripe_webhook_rate_limit"
     },
     {
-      "id": "provider-event-lock",
-      "description": "Handler locks existing provider event rows",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "id": "billing-api-mollie-rate-limit",
+      "description": "Mollie webhook intake is rate limited in billing-api",
+      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "status": "passed",
+      "pattern": "enforce_mollie_webhook_rate_limit"
+    },
+    {
+      "id": "stripe-intake-signature",
+      "description": "Stripe intake verifies signatures before enqueueing",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
+      "status": "passed",
+      "pattern": "verify_stripe_signature(webhook_secret, signature_header, payload)"
+    },
+    {
+      "id": "stripe-provider-event-lock",
+      "description": "Stripe intake locks existing provider event rows",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
       "pattern": "WHERE provider_event_id = $1\n        FOR UPDATE"
     },
     {
-      "id": "duplicate-decision",
-      "description": "Processed webhooks are treated as duplicates",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+      "id": "stripe-duplicate-decision",
+      "description": "Processed Stripe webhooks are treated as duplicates",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
       "pattern": "Some(\"processed\") => WebhookRetryDecision::Duplicate"
     },
     {
-      "id": "replay-failed-decision",
-      "description": "Failed or received webhooks are replayable",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
+      "id": "stripe-replay-decision",
+      "description": "Failed or received Stripe webhooks are replayable",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
       "pattern": "Some(\"failed\" | \"received\") => WebhookRetryDecision::ReplayFailed"
     },
     {
-      "id": "conflict-idempotency",
-      "description": "Insert path is idempotent on provider_event_id",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
+      "id": "stripe-duplicate-test",
+      "description": "Unit test covers processed duplicate classification",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
-      "pattern": "ON CONFLICT (provider_event_id) DO NOTHING"
+      "pattern": "classify_webhook_retry_treats_processed_as_duplicate"
     },
     {
-      "id": "duplicate-response",
-      "description": "Duplicate path returns duplicate without enqueueing",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
-      "status": "passed",
-      "pattern": "status: \"duplicate\".to_string()"
-    },
-    {
-      "id": "replay-update",
-      "description": "Replay path resets failed or received events",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.handlers.rs",
-      "status": "passed",
-      "pattern": "status = 'received'"
-    },
-    {
-      "id": "queue-idempotency-key",
-      "description": "Queued webhook job uses provider_event_id as idempotency key",
-      "path": "apps/identity-api/src/identity.domains.billing.jobs.rs",
-      "status": "passed",
-      "pattern": "idempotency_key: Some(provider_event_id.to_string())"
-    },
-    {
-      "id": "event-id-unique",
-      "description": "Database constrains provider_event_id uniqueness",
-      "path": "apps/identity-api/migrations/0001_initial_schema.sql",
-      "status": "passed",
-      "pattern": "provider_event_id TEXT NOT NULL UNIQUE"
-    },
-    {
-      "id": "failed-replay-test",
+      "id": "stripe-failed-replay-test",
       "description": "Unit test covers failed replay classification",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
       "pattern": "classify_webhook_retry_treats_failed_as_replayable"
     },
     {
-      "id": "received-replay-test",
+      "id": "stripe-received-replay-test",
       "description": "Unit test covers received replay classification",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
       "pattern": "classify_webhook_retry_treats_received_as_replayable"
     },
     {
-      "id": "duplicate-test",
-      "description": "Unit test covers processed duplicate classification",
-      "path": "apps/identity-api/src/identity.domains.billing.webhooks.tests.logic.rs",
+      "id": "stripe-replay-update",
+      "description": "Stripe replay path resets failed or received events",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
       "status": "passed",
-      "pattern": "classify_webhook_retry_treats_processed_as_duplicate"
+      "pattern": "WHEN billing_webhook_events.status IN ('failed', 'received') THEN 'received'::billing_webhook_status"
+    },
+    {
+      "id": "stripe-enqueue",
+      "description": "Stripe intake enqueues async processing",
+      "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
+      "status": "passed",
+      "pattern": "enqueue_stripe_webhook_job(redis, payload_json, &event.id)"
+    },
+    {
+      "id": "stripe-job-type",
+      "description": "Stripe webhook processing has a dedicated queue",
+      "path": "libs/rust/billing/src/jobs.rs",
+      "status": "passed",
+      "pattern": "JOB_STRIPE_WEBHOOK_PROCESS: &str = \"billing.stripe.webhook.process\""
+    },
+    {
+      "id": "mollie-job-type",
+      "description": "Mollie webhook processing has a dedicated queue",
+      "path": "libs/rust/billing/src/jobs.rs",
+      "status": "passed",
+      "pattern": "JOB_MOLLIE_WEBHOOK_PROCESS: &str = \"billing.mollie.webhook.process\""
+    },
+    {
+      "id": "billing-email-job-type",
+      "description": "Billing email delivery has a dedicated queue",
+      "path": "libs/rust/billing/src/jobs.rs",
+      "status": "passed",
+      "pattern": "JOB_BILLING_EMAIL_SEND: &str = \"billing.email.send\""
+    },
+    {
+      "id": "queue-idempotency-key",
+      "description": "Queued webhook jobs use provider_event_id as idempotency key",
+      "path": "libs/rust/billing/src/jobs.rs",
+      "status": "passed",
+      "pattern": "idempotency_key: Some(provider_event_id.to_string())"
+    },
+    {
+      "id": "worker-claims-runtime-queues",
+      "description": "Billing worker claims Stripe, Mollie, and billing email queues",
+      "path": "apps/billing-worker/src/billing.worker.jobs.rs",
+      "status": "passed",
+      "pattern": "const BILLING_QUEUES: [&str; 3]"
+    },
+    {
+      "id": "worker-dispatches-stripe",
+      "description": "Billing worker dispatches Stripe webhook jobs",
+      "path": "apps/billing-worker/src/billing.worker.jobs.rs",
+      "status": "passed",
+      "pattern": "stripe::process_stripe_webhook_job(state, job).await"
+    },
+    {
+      "id": "worker-dispatches-mollie",
+      "description": "Billing worker dispatches Mollie webhook jobs",
+      "path": "apps/billing-worker/src/billing.worker.jobs.rs",
+      "status": "passed",
+      "pattern": "mollie::process_mollie_webhook_job(state, job).await"
+    },
+    {
+      "id": "worker-dispatches-billing-email",
+      "description": "Billing worker dispatches billing email jobs",
+      "path": "apps/billing-worker/src/billing.worker.jobs.rs",
+      "status": "passed",
+      "pattern": "process_billing_email_job(state, job).await"
+    },
+    {
+      "id": "stripe-worker-processes-domain",
+      "description": "Stripe worker calls billing-domain processing",
+      "path": "apps/billing-worker/src/billing.worker.jobs.stripe.rs",
+      "status": "passed",
+      "pattern": "nvbes_billing::stripe_webhook_processing::process_stripe_event"
+    },
+    {
+      "id": "stripe-worker-publishes-workspace-update",
+      "description": "Stripe worker publishes Billing workspace updates",
+      "path": "apps/billing-worker/src/billing.worker.jobs.stripe.rs",
+      "status": "passed",
+      "pattern": "publish_workspace_billing_updates(state, workspace_id).await"
+    },
+    {
+      "id": "stripe-worker-emails",
+      "description": "Stripe worker enqueues billing emails after processing",
+      "path": "apps/billing-worker/src/billing.worker.jobs.stripe.rs",
+      "status": "passed",
+      "pattern": "enqueue_billing_email_for_stripe_event"
+    },
+    {
+      "id": "billing-email-domain-queue",
+      "description": "Billing email enqueue uses the Billing queue",
+      "path": "apps/billing-worker/src/billing.worker.email.rs",
+      "status": "passed",
+      "pattern": "queue: nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND.to_string()"
+    },
+    {
+      "id": "billing-email-no-identity-queue",
+      "description": "Billing email enqueue does not use Identity email.send queue",
+      "path": "apps/billing-worker/src/billing.worker.email.rs",
+      "status": "passed",
+      "pattern": "\"email.send\""
+    },
+    {
+      "id": "billing-email-local-delivery",
+      "description": "Billing worker sends billing emails locally",
+      "path": "apps/billing-worker/src/billing.worker.email.delivery.rs",
+      "status": "passed",
+      "pattern": "send_message(&message)"
+    },
+    {
+      "id": "billing-email-domain-header",
+      "description": "Billing email delivery is tagged as Billing domain",
+      "path": "apps/billing-worker/src/billing.worker.email.delivery.rs",
+      "status": "passed",
+      "pattern": "\"X-Nvbes-Email-Domain\""
+    },
+    {
+      "id": "mollie-worker-processes-domain",
+      "description": "Mollie worker calls billing-domain processing",
+      "path": "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "status": "passed",
+      "pattern": "process_mollie_payment_update_tx"
+    },
+    {
+      "id": "mollie-worker-publishes-workspace-update",
+      "description": "Mollie worker publishes Billing workspace updates",
+      "path": "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "status": "passed",
+      "pattern": "publish_workspace_billing_updates(state, workspace_id).await"
+    },
+    {
+      "id": "mollie-worker-emails",
+      "description": "Mollie worker enqueues billing emails after processing",
+      "path": "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "status": "passed",
+      "pattern": "enqueue_billing_email_for_provider_payment"
+    },
+    {
+      "id": "mollie-worker-marks-failed",
+      "description": "Mollie worker records failed provider events",
+      "path": "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "status": "passed",
+      "pattern": "mark_provider_event_failed"
+    },
+    {
+      "id": "mollie-worker-marks-processed",
+      "description": "Mollie worker records processed provider events",
+      "path": "apps/billing-worker/src/billing.worker.jobs.mollie.rs",
+      "status": "passed",
+      "pattern": "mark_provider_event_processed"
+    },
+    {
+      "id": "billing-worker-pubsub-workspace-updated",
+      "description": "Billing worker publishes workspace:updated pubsub events",
+      "path": "apps/billing-worker/src/billing.worker.workspace_updates.rs",
+      "status": "passed",
+      "pattern": "publish_workspace_updated"
+    },
+    {
+      "id": "billing-worker-pubsub-plan-updated",
+      "description": "Billing worker publishes workspace:plan_updated pubsub events",
+      "path": "apps/billing-worker/src/billing.worker.workspace_updates.rs",
+      "status": "passed",
+      "pattern": "publish_workspace_plan_updated"
+    },
+    {
+      "id": "billing-email-provider-neutral-payment",
+      "description": "Billing email enqueue accepts provider-neutral payment events",
+      "path": "apps/billing-worker/src/billing.worker.email.rs",
+      "status": "passed",
+      "pattern": "enqueue_billing_email_for_provider_payment"
+    },
+    {
+      "id": "stripe-webhook-records-dunning-failure",
+      "description": "Billing domain opens dunning cases after provider payment failures",
+      "path": "libs/rust/billing/src/dunning_db.rs",
+      "status": "passed",
+      "pattern": "record_payment_failure_tx"
+    },
+    {
+      "id": "stripe-webhook-records-dunning-success",
+      "description": "Billing domain closes dunning cases after provider payment success",
+      "path": "libs/rust/billing/src/dunning_db.rs",
+      "status": "passed",
+      "pattern": "record_payment_success_tx"
+    },
+    {
+      "id": "billing-worker-runs-dunning",
+      "description": "Billing worker schedules dunning processing",
+      "path": "apps/billing-worker/src/billing.worker.loop.rs",
+      "status": "passed",
+      "pattern": "run_billing_dunning_if_due"
+    },
+    {
+      "id": "billing-worker-dunning-observability",
+      "description": "Billing worker records dunning processing metrics",
+      "path": "apps/billing-worker/src/billing.worker.loop.rs",
+      "status": "passed",
+      "pattern": "record_billing_operation(\"dunning\""
+    },
+    {
+      "id": "billing-dunning-job-skip-locked",
+      "description": "Dunning processing claims due attempts safely",
+      "path": "libs/rust/billing/src/dunning_jobs.rs",
+      "status": "passed",
+      "pattern": "FOR UPDATE OF attempt SKIP LOCKED"
+    },
+    {
+      "id": "billing-dunning-job-validates-batch-size",
+      "description": "Dunning processing validates batch size",
+      "path": "libs/rust/billing/src/dunning_jobs.rs",
+      "status": "passed",
+      "pattern": "DunningProcessingError::InvalidBatchSize"
+    },
+    {
+      "id": "provider-event-upsert",
+      "description": "Provider event intake is idempotent per provider event",
+      "path": "libs/rust/billing/src/db.provider_events.rs",
+      "status": "passed",
+      "pattern": "ON CONFLICT (provider, provider_event_id) DO UPDATE"
+    },
+    {
+      "id": "provider-event-unique",
+      "description": "Database constrains provider event uniqueness per provider",
+      "path": "apps/billing-api/migrations/0002_billing_platform_core.sql",
+      "status": "passed",
+      "pattern": "UNIQUE (provider, provider_event_id)"
     }
   ]
 }

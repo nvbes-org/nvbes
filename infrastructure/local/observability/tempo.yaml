@@ -1,3 +1,5 @@
+target: all
+
 server:
   http_listen_port: 3200
 
@@ -8,12 +10,8 @@ distributor:
         grpc:
         http:
 
-ingester:
-  max_block_duration: 5m               # cut the headblock every 5 minutes
-
-compactor:
-  compaction:
-    block_retention: 1h                # overall retention
+live_store:
+  max_block_duration: 5m # cut the headblock every 5 minutes
 
 metrics_generator:
   registry:
@@ -22,11 +20,11 @@ metrics_generator:
   storage:
     path: /tmp/tempo/generator/wal
     remote_write:
-      - url: http://prometheus:9090/api/v1/write
+      - url: http://mimir:9009/api/v1/push
         send_exemplars: true
 
 storage:
   trace:
-    backend: local                     # backend configuration to use
+    backend: local # backend configuration to use
     local:
       path: /tmp/tempo/blocks

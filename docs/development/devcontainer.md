@@ -31,19 +31,31 @@ The Dev Container Docker Compose stack starts:
 - Redis Stack on host port `localhost:16379`
 - RedisInsight on host port `localhost:18001`
 - Prometheus on host port `localhost:19090`
+- Mimir on host port `localhost:19009`
 - Tempo on host port `localhost:13200`
-- Tempo OTLP gRPC on host port `localhost:14317`
-- Tempo OTLP HTTP on host port `localhost:14318`
+- Alloy on host port `localhost:12345`
+- Alloy OTLP gRPC on host port `localhost:14317`
+- Alloy OTLP HTTP on host port `localhost:14318`
+- Alloy Faro receiver on host port `localhost:12347`
+- Alloy Pyroscope ingest on host port `localhost:14040`
 - Loki on host port `localhost:13100`
-- Pyroscope on host port `localhost:14040`
+- Pyroscope UI/API on host port `localhost:14041`
 - Grafana on host port `localhost:13000`
 
-Sentry and PostHog are intentionally not started with the Dev Container. They
-are available as manual opt-in vendor stacks because each one pulls a large
-self-hosted deployment with its own databases, queues, workers, and upgrade
-process.
+Sentry and PostHog are not started by the Dev Container. Configure external
+Sentry/PostHog endpoints in `.env` only when application capture is needed.
+The local Grafana stack is available without external credentials. Use Alloy
+for OTLP, Faro and profile ingestion:
 
-PostgreSQL initializes both local databases:
+```bash
+NVBES_OTLP_ENDPOINT=http://127.0.0.1:14317
+NVBES_PROFILING_ENABLED=true
+NVBES_PROFILING_ENDPOINT=http://127.0.0.1:14040
+VITE_FARO_URL=http://localhost:12347/collect
+VITE_FARO_TRACING_ORIGINS=http://localhost:4000,http://localhost:3001
+```
+
+PostgreSQL initializes the local application databases:
 
 - `nvbes`
 - `nvbes_drive`
@@ -67,55 +79,28 @@ Application URLs:
 - Drive API: `http://localhost:4002`
 - Grafana: `http://localhost:13000`
 
-## Manual Sentry and PostHog
+## Sentry and PostHog
 
-The Dev Container installs Docker outside-of-Docker support, so the workspace
-shell can control optional local vendor stacks through the host Docker daemon.
-The cloned upstream stacks are kept under `.devcontainer/.vendor/`, which is
-gitignored.
-
-Sentry local:
-
-```bash
-pnpm dev:obs:sentry:install
-pnpm dev:obs:sentry:up
-pnpm dev:obs:sentry:create-user
-```
-
-Sentry is bound to `http://127.0.0.1:19000` by default. Override with
-`NVBES_SENTRY_BIND=127.0.0.1:<port>` before install if needed.
-
-PostHog local uses PostHog's upstream hobby installer and remains more
-intrusive than the Sentry wrapper: it expects a domain, may bind HTTP/HTTPS
-ports, and runs the vendor-maintained deployment script. It is therefore gated
-behind an explicit opt-in:
-
-```bash
-export NVBES_POSTHOG_LOCAL_DOMAIN=posthog.dev.example.test
-export NVBES_ACCEPT_POSTHOG_HOBBY_INSTALLER=1
-pnpm dev:obs:posthog:install
-pnpm dev:obs:posthog:up
-```
-
-Point application env vars at the local instances only after creating local
-projects/tokens in their UIs:
+The Dev Container does not provide local Sentry or PostHog services. Keep these
+values empty in `.env` to disable application capture, or point them at external
+Sentry/PostHog deployments:
 
 ```bash
 VITE_SENTRY_DSN=
+VITE_SENTRY_TRACES_SAMPLE_RATE=0
 SENTRY_DSN=
+SENTRY_TRACES_SAMPLE_RATE=0
 VITE_POSTHOG_KEY=
 VITE_POSTHOG_HOST=
-NVBES_POSTHOG_ENABLED=true
+NVBES_POSTHOG_ENABLED=false
 NVBES_POSTHOG_HOST=
 NVBES_POSTHOG_PROJECT_TOKEN=
+NVBES_ANALYTICS_ID_SALT=
 ```
 
-Stop the optional stacks without touching the core Dev Container services:
-
-```bash
-pnpm dev:obs:sentry:down
-pnpm dev:obs:posthog:down
-```
+Server-side Sentry is enabled when `SENTRY_DSN` is set. Server-side PostHog is
+enabled when `NVBES_POSTHOG_ENABLED=true`, `NVBES_POSTHOG_PROJECT_TOKEN` is set,
+and `NVBES_ANALYTICS_ID_SALT` is set.
 
 ## Environment File
 

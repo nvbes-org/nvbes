@@ -1,4 +1,5 @@
 use crate::app::AppState;
+use crate::domains::auth::exposed_credentials;
 use crate::domains::auth::password;
 use crate::domains::auth::types::ChangePasswordInput;
 use crate::domains::auth::verification::require_recent_step_up;
@@ -64,10 +65,12 @@ pub(crate) struct ApproveRecoveryRequest {
 )]
 pub(crate) async fn change_password(
     State(state): State<AppState>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<ChangePasswordInput>,
 ) -> Result<Json<crate::domains::auth::types::ChangePasswordResult>, AppError> {
+    exposed_credentials::check_new_password(&headers)?;
+
     crate::domains::auth::check_rate_limit(
         &state.redis,
         "auth_change_password",
@@ -150,6 +153,8 @@ pub(crate) async fn reset_password(
     headers: HeaderMap,
     Json(request): Json<ResetPasswordRequest>,
 ) -> Result<Json<crate::domains::auth::types::ResetPasswordResult>, AppError> {
+    exposed_credentials::check_new_password(&headers)?;
+
     nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,

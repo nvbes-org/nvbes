@@ -1,8 +1,4 @@
-export const essentialVendors = [
-  'nvbes Identity',
-  'Stripe (Paiements et Fraude)',
-  'Cloudflare (WAF/CDN)',
-];
+export const essentialVendors = ['nvbes Identity', 'nvbes Billing', 'Cloudflare (WAF/CDN)'];
 
 export const analyticsVendors = [
   {

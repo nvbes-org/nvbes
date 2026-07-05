@@ -146,14 +146,6 @@ impl AuditEventRow {
 }
 
 #[derive(Debug, FromRow)]
-pub struct BillingSummaryRow {
-    pub code: String,
-    pub name: String,
-    pub status: String,
-    pub billing_email: Option<String>,
-}
-
-#[derive(Debug, FromRow)]
 pub struct DeveloperCredentialRow {
     pub id: Uuid,
     pub client_id: String,
@@ -230,25 +222,4 @@ pub struct SecuritySummaryRow {
     pub verified_domain_count: i64,
     pub sso_provider_count: i64,
     pub stale_secret_count: i64,
-}
-
-#[derive(Debug, FromRow)]
-pub struct InvoiceRow {
-    pub id: Uuid,
-    pub status: String,
-    pub amount_due_cents: i64,
-    pub issued_at: DateTime<Utc>,
-}
-
-impl InvoiceRow {
-    pub fn into_view(self) -> EnterpriseInvoice {
-        EnterpriseInvoice {
-            id: self.id.to_string(),
-            status: self.status,
-            amount_due_cents: self.amount_due_cents,
-            currency: "usd".to_string(),
-            issued_at: self.issued_at,
-            hosted_invoice_url: None,
-        }
-    }
 }

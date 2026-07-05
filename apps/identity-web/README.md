@@ -9,7 +9,7 @@ Portail React/TypeScript pour nvbes Identity.
 - Inscription avec detection/selection de region supportee.
 - Verification email, renvoi et changement d'adresse.
 - Gestion compte, sessions, MFA TOTP, passkeys, cles de securite et codes de recuperation.
-- Workspaces, billing Stripe, consentements legaux et vues operationnelles securite.
+- Workspaces, billing via service dedie, consentements legaux et vues operationnelles securite.
 - Activation OAuth Device Flow via `/oauth/device/*`.
 
 ## Runtime
@@ -63,8 +63,8 @@ src/
   - `POST /api/v1/auth/mfa/webauthn/register/start`
   - `POST /api/v1/auth/mfa/webauthn/register/finish`
 - Billing:
-  - `POST /api/v1/workspaces/{workspaceId}/billing/checkout` avec `plan_code`
-  - `POST /api/v1/workspaces/{workspaceId}/billing/portal` avec `{}`
+  - les vues Billing peuvent rester dans Identity Web;
+  - les lectures/actions Billing doivent passer par `billing-api` ou le gateway, pas par l'API Identity locale.
 - OAuth Device Flow:
   - `POST /oauth/device/verify`
   - `POST /oauth/device/approve`

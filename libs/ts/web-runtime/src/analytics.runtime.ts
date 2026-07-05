@@ -159,7 +159,11 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
   }
 
   private async disableCapture(): Promise<void> {
-    await this.options.transport?.stopPrivacySafeReplay?.();
+    if (this.options.transport?.disableCapture) {
+      await this.options.transport.disableCapture();
+    } else {
+      await this.options.transport?.stopPrivacySafeReplay?.();
+    }
     clearAnalyticsStorage();
   }
 

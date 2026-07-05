@@ -49,9 +49,14 @@ Selon votre usage du service, nvbes peut traiter les categories suivantes:
 - donnees d'usage produit: quotas, evenements produit limites, estimations de facture;
 - donnees de support et echanges: messages, tickets, demandes;
 - donnees de conformite: demandes RGPD, decisions de suppression, journaux d'incident;
+- donnees transmises aux fonctionnalites IA, lorsque l'utilisateur ou
+  l'administrateur active explicitement une fonctionnalite qui analyse un
+  contenu ou une instruction;
 - contenus et metadata de fichiers heberges par les clients dans le cadre du service.
 
 nvbes n'utilise pas les contenus client heberges pour des finalites marketing.
+nvbes n'utilise pas les contenus client heberges pour entrainer, reentrainer ou
+ameliorer des modeles d'IA generatifs tiers.
 
 ## 4. Finalites et bases legales
 
@@ -64,6 +69,7 @@ nvbes traite les donnees personnelles pour les finalites suivantes:
 | Securite, prevention des abus, journalisation et detection d'incident | Interet legitime et, le cas echeant, obligation legale |
 | Gestion de la facturation, des paiements et des taxes                 | Execution du contrat et obligations legales            |
 | Support client et gestion des demandes                                | Execution du contrat ou interet legitime               |
+| Fonctionnalites IA activees par l'utilisateur ou l'administrateur      | Execution du contrat ou consentement selon le cas d'usage |
 | Gestion des droits RGPD et de la conformite                           | Obligation legale                                      |
 | Communication commerciale B2B limitee                                 | Interet legitime, sauf opposition                      |
 | Cookies/traceurs non essentiels                                       | Consentement                                           |
@@ -82,6 +88,8 @@ Les donnees sont accessibles, selon le besoin d'en connaitre, a:
 - les sous-traitants techniques necessaires au fonctionnement du service;
 - les prestataires de paiement et de facturation;
 - les prestataires de support, securite, hebergement, email transactionnel et observabilite;
+- les prestataires d'inference IA lorsque l'utilisateur ou l'administrateur
+  active une fonctionnalite IA documentee;
 - les autorites competentes lorsque la loi l'exige.
 
 La liste a jour des sous-traitants figure dans [subprocessors.md](./subprocessors.md).
@@ -107,6 +115,9 @@ Principes:
 - les donnees de compte sont conservees pendant la relation contractuelle puis archivees ou supprimees selon les obligations applicables;
 - les logs de securite, de facturation et d'audit sont conserves selon les besoins de securite, preuve et conformite;
 - les donnees de facturation sont conservees selon les obligations comptables et fiscales;
+- les metadata techniques liees aux fonctionnalites IA suivent les durees de
+  conservation du sous-traitant et les regles documentees dans la politique de
+  retention;
 - les contenus et metadata client suivent les regles de suppression du workspace, de la corbeille et des backups.
 
 ## 9. Vos droits

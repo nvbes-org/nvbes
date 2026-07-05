@@ -110,10 +110,11 @@
       "evidence": [
         "docs/migration/billing-entitlements.generated.json",
         "docs/migration/billing-webhook-idempotency.generated.json",
+        "docs/migration/billing-multi-psp-continuity.generated.json",
         "libs/rust/billing/src/views.rs"
       ],
       "decision": "go",
-      "proof": "pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency"
+      "proof": "pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency && pnpm check:migration-billing-multi-psp-continuity"
     },
     {
       "phase": "P08",
@@ -161,7 +162,7 @@
         "scripts/migrate-staging.sh"
       ],
       "decision": "go",
-      "proof": "pnpm check:migration-infra-deploy && pnpm check:supply-chain && pnpm check:migration-backup-restore && pnpm check:migration-observability"
+      "proof": "pnpm check:migration-infra-deploy && tofu -chdir=infrastructure/environments/development validate && tofu -chdir=infrastructure/environments/staging validate && pnpm check:supply-chain && pnpm check:migration-backup-restore && pnpm check:migration-observability"
     },
     {
       "phase": "P11",

@@ -161,6 +161,16 @@ export const evidenceArtifacts = [
 		]
 	},
 	{
+		"path": "docs/migration/billing-multi-psp-continuity.md",
+		"headings": ["# Billing Multi-PSP Continuity Evidence", "## Status", "## Evidence", "## Decision"]
+	},
+	{
+		"path": "docs/migration/billing-multi-psp-continuity.generated.json",
+		"headings": ["\"schema_version\":", "\"checks\":", "\"failed\":"]
+	},
+	{ "path": "docs/migration/billing-multi-psp-e2e.md", "headings": ["# Billing Multi-PSP E2E Evidence", "## Status", "## Evidence", "## Decision"] },
+	{ "path": "docs/migration/billing-multi-psp-e2e.generated.json", "headings": ["\"schema_version\":", "\"checks\":", "\"failed\":"] },
+	{
 		"path": "docs/migration/developer-oauth-tokens.md",
 		"headings": [
 			"# Developer OAuth and Token Evidence",

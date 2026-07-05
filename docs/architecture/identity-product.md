@@ -19,6 +19,8 @@ Le systeme cible doit supporter:
 - `tenant` est obligatoire techniquement pour toute isolation et gouvernance securite.
 - `organization` est optionnelle et sert de couche intermediaire business/admin.
 - `workspace` est le contexte produit et le scope operationnel des actions Drive.
+- tout `user` nouvellement cree recoit un workspace personnel dedie.
+- le workspace personnel est separe des workspaces de groupe et ne doit pas devenir implicitement un espace d'equipe.
 - `tenant_membership`, `organization_membership` et `workspace_membership` sont les sources de verite d'appartenance.
 - `user_identities` porte les differents mecanismes de connexion d'un meme utilisateur.
 - l'email n'est jamais l'identifiant fort du systeme.
@@ -59,6 +61,8 @@ Il peut:
 - avoir plusieurs identites de connexion;
 - etre actif dans plusieurs tenants;
 - etre suspendu dans un tenant sans etre supprime globalement.
+
+A la creation du user, Identity doit provisionner un workspace personnel dedie et une membership owner. Ce workspace personnel porte ses propres quotas, billing, policies et consentements produit. Il ne doit pas etre fusionne avec les workspaces de groupe.
 
 ### User identities
 

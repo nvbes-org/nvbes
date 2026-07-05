@@ -87,13 +87,15 @@ function mergeExisting(generated, existing) {
 	return generated.map((entry) => {
 		const current = byId.get(entry.id);
 		if (!current) return entry;
+		const hasEvidenceOverride = Boolean(riskEvidence[entry.id]);
 		return {
 			...entry,
 			owner: current.owner?.endsWith(" required") ? entry.owner : (current.owner ?? entry.owner),
 			severity: current.severity ?? entry.severity,
 			status: current.status === "pending" ? entry.status : (current.status ?? entry.status),
-			evidence: current.evidence === "pending" ? entry.evidence : (current.evidence ?? entry.evidence),
+			evidence: hasEvidenceOverride || current.evidence === "pending" ? entry.evidence : (current.evidence ?? entry.evidence),
 			cutover_impact:
+				hasEvidenceOverride ||
 				current.cutover_impact === "no-go until mitigated, accepted by owner, or removed from scope"
 					? entry.cutover_impact
 					: (current.cutover_impact ?? entry.cutover_impact),

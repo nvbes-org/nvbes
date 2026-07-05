@@ -19,9 +19,9 @@ export const riskEvidence = {
 		owner: "Billing lead",
 		status: "mitigated",
 		evidence:
-			"docs/migration/data-migration-pipeline.generated.json; docs/migration/billing-entitlements.generated.json; docs/migration/billing-webhook-idempotency.generated.json; docs/migration/release-freeze-manifest.md",
+			"docs/migration/data-migration-pipeline.generated.json; docs/migration/billing-entitlements.generated.json; docs/migration/billing-webhook-idempotency.generated.json; docs/migration/billing-multi-psp-continuity.generated.json; docs/migration/release-freeze-manifest.md",
 		cutover_impact:
-			"allowed for repository gates: ledger-balance reconciliation is required and billing mutation freeze is documented; production still needs accepted ledger reconciliation",
+			"allowed for repository gates: ledger-balance reconciliation, multi-PSP continuity and billing mutation freeze are documented; production still needs accepted ledger reconciliation",
 	},
 	"sessions-incompatibles": {
 		owner: "Product lead",

@@ -1,4 +1,8 @@
-import { type BillingOverview } from '@nvbes/identity-client';
+import {
+  type BillingOverview,
+  type BillingProviderCode,
+  type PaymentMethodUpdateFlow,
+} from '@nvbes/billing-client';
 import { Check, CreditCard, Package } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -72,14 +76,18 @@ export function CurrentPlanCard({ overview }: { overview: BillingOverview }) {
 }
 
 export function BillingPortalCard({
+  paymentMethodUpdateFlow,
   provider,
   portalLoading,
   onPortal,
 }: {
-  provider: string;
+  paymentMethodUpdateFlow: PaymentMethodUpdateFlow;
+  provider: BillingProviderCode;
   portalLoading: boolean;
   onPortal: () => void;
 }) {
+  const canOpenProviderPortal = paymentMethodUpdateFlow === 'nvbes_provider_redirect';
+
   return (
     <Card>
       <CardHeader>
@@ -93,9 +101,13 @@ export function BillingPortalCard({
           variant="outline"
           className="w-full justify-between"
           onClick={onPortal}
-          disabled={portalLoading}
+          disabled={portalLoading || !canOpenProviderPortal}
         >
-          {portalLoading ? 'Chargement...' : 'Ouvrir le portail de facturation'}
+          {portalLoading
+            ? 'Chargement...'
+            : canOpenProviderPortal
+              ? 'Ouvrir le portail de facturation'
+              : 'Portail prestataire indisponible'}
           <CreditCard data-icon="inline-end" />
         </Button>
       </CardFooter>

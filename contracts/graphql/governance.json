@@ -1,0 +1,27 @@
+{
+  "schema": "contracts/graphql/schema.graphql",
+  "owners": ["billing", "identity"],
+  "entrypoints": ["gateway-graphql"],
+  "rules": [
+    {
+      "id": "billing-owned-by-billing-service",
+      "severity": "block",
+      "description": "Billing resolvers must call billing-api or billing gRPC contracts, not identity-api billing routes."
+    },
+    {
+      "id": "no-provider-secret-identifiers",
+      "severity": "block",
+      "description": "GraphQL billing types expose stable local IDs and provider codes only; PSP customer, card, invoice and subscription IDs stay server-side."
+    },
+    {
+      "id": "user-auth-at-gateway-service-auth-internal",
+      "severity": "block",
+      "description": "Gateway resolvers enforce user authorization before calling billing; internal service calls use RequestContext and service credentials."
+    },
+    {
+      "id": "backward-compatible-fields",
+      "severity": "block",
+      "description": "Removing or changing non-null GraphQL billing fields requires a major schema version."
+    }
+  ]
+}

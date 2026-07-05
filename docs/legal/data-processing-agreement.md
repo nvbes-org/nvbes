@@ -28,6 +28,9 @@ Nature des operations:
 
 - hebergement de fichiers et metadata;
 - mise a disposition des fonctions de partage et telechargement;
+- inference IA optionnelle lorsque le client, un administrateur ou un utilisateur
+  active explicitement une fonctionnalite documentee qui transmet un contenu ou
+  une instruction a un prestataire d'inference;
 - gestion des comptes, roles, quotas, audit et API;
 - sauvegarde, securite, journalisation et support.
 
@@ -42,6 +45,8 @@ Les categories de donnees peuvent inclure:
 - donnees d'identification et de contact des utilisateurs du client;
 - metadata des workspaces, roles, permissions et facturation;
 - logs de securite et d'audit;
+- contenus, instructions et metadata transmis volontairement aux fonctionnalites
+  IA activees;
 - contenus et metadata de fichiers stockes par le client.
 
 Personnes concernees:

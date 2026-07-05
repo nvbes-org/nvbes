@@ -113,7 +113,7 @@ Ne peut pas:
 
 ## Policies Workspace V1
 
-- `member_can_create_share_links`: desactivee par defaut sur Team et Team Plus.
+- `member_can_create_share_links`: desactivee par defaut sur Team et Workspace.
 - `default_share_link_ttl_days`: 7 jours.
 - `max_share_link_ttl_days`: defini par plan.
 - `require_admin_approval_for_member_share`: activee par defaut si le partage membre est autorise.

@@ -5,6 +5,8 @@
   "sourceRoot": "tools/rust-workspace",
   "tags": ["scope:oss", "type:workspace", "domain:shared", "layer:tooling"],
   "implicitDependencies": [
+    "billing-api",
+    "billing-worker",
     "drive-api",
     "drive-worker",
     "identity-api",

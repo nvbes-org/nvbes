@@ -1,5 +1,8 @@
 #[path = "config.billing.rs"]
 mod billing;
+#[cfg(test)]
+#[path = "config.tests.billing.rs"]
+mod billing_tests;
 #[path = "config.env.rs"]
 mod env;
 #[path = "config.from_env.rs"]
@@ -27,6 +30,8 @@ pub struct AppConfig {
     pub additional_cors_origins: Vec<String>,
     #[serde(skip_serializing)]
     pub database_url: String,
+    #[serde(skip_serializing)]
+    pub billing_database_url: String,
     pub database_max_connections: u32,
     pub auth_session_ttl_hours: i64,
     pub auth_refresh_token_ttl_hours: i64,
@@ -54,6 +59,11 @@ pub struct AppConfig {
     pub billing_mollie_routing_status: String,
     pub billing_external_provider_fallback_enabled: bool,
     pub billing_external_provider_routing_status: String,
+    pub billing_fraud_enforcement_enabled: bool,
+    pub billing_fraud_step_up_threshold: u8,
+    pub billing_fraud_manual_review_threshold: u8,
+    pub billing_fraud_block_threshold: u8,
+    pub billing_fraud_policy_overrides_json: Option<String>,
     pub billing_default_success_url: String,
     pub billing_default_cancel_url: String,
     pub billing_default_portal_return_url: String,
@@ -61,12 +71,16 @@ pub struct AppConfig {
     pub webauthn_rp_origin: String,
     pub webauthn_related_origins: Vec<String>,
     #[serde(skip_serializing)]
+    pub sentry_dsn: Option<String>,
+    pub sentry_traces_sample_rate: f32,
+    #[serde(skip_serializing)]
     pub otlp_endpoint: Option<String>,
     #[serde(skip_serializing)]
     pub otlp_authorization_header: Option<String>,
     pub product_analytics_enabled: bool,
     #[serde(skip_serializing)]
     pub product_analytics_token: Option<String>,
+    pub posthog_host: String,
     #[serde(skip_serializing)]
     pub analytics_id_salt: Option<String>,
     pub profiling_enabled: bool,
@@ -120,6 +134,17 @@ pub struct AppConfig {
     pub ip_intelligence_provider_specs: Vec<String>,
     pub ip_intelligence_timeout_secs: u64,
     pub ip_intelligence_cache_ttl_hours: i64,
+    pub maxmind_geolite_database_enabled: bool,
+    pub maxmind_geolite_web_enabled: bool,
+    pub maxmind_geolite_eula_accepted: bool,
+    #[serde(skip_serializing)]
+    pub maxmind_account_id: Option<String>,
+    #[serde(skip_serializing)]
+    pub maxmind_license_key: Option<String>,
+    pub maxmind_web_timeout_secs: u64,
+    pub maxmind_web_cache_ttl_hours: i64,
+    pub loyalsoldier_geoip_enabled: bool,
+    pub loyalsoldier_geoip_license_accepted: bool,
     pub mtls_enabled: bool,
     pub mtls_port: u16,
     #[serde(skip_serializing)]
@@ -144,4 +169,21 @@ pub struct AppConfig {
     pub redis_password: Option<String>,
     pub redis_max_connections: u32,
     pub security_contact_email: Option<String>,
+}
+
+impl AppConfig {
+    pub fn billing_api_base_url(&self) -> String {
+        std::env::var("NVBES_BILLING_API_BASE_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| self.api_base_url.clone())
+    }
+
+    pub fn billing_database_url(&self) -> &str {
+        if self.billing_database_url.trim().is_empty() {
+            &self.database_url
+        } else {
+            &self.billing_database_url
+        }
+    }
 }

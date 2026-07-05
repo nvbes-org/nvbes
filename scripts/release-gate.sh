@@ -38,9 +38,10 @@ if [ "$target" = "staging" ]; then
   require_env NVBES_STAGING_WEB_BASE_URL
   require_env NVBES_STAGING_API_BASE_URL
   require_env NVBES_STAGING_DATABASE_URL
+  require_env NVBES_STAGING_BILLING_DATABASE_URL
 
   log_step "staging stripe mapping preflight"
-  NVBES_DATABASE_URL="$NVBES_STAGING_DATABASE_URL" \
+  NVBES_BILLING_DATABASE_URL="$NVBES_STAGING_BILLING_DATABASE_URL" \
     NVBES_ENV=staging \
     pnpm check:stripe-mappings
 

@@ -23,7 +23,7 @@
       "properties": {
         "tenant_id": { "type": "string", "format": "uuid" },
         "payment_id": { "type": "string", "format": "uuid" },
-        "provider": { "type": "string", "enum": ["stripe", "mollie"] },
+        "provider": { "type": "string", "enum": ["stripe", "mollie", "cb"] },
         "status": {
           "type": "string",
           "enum": [

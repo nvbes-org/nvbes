@@ -70,7 +70,14 @@ pub fn pool_options(settings: PostgresPoolSettings) -> PgPoolOptions {
 
 pub async fn connect_pool(config: &AppConfig) -> Result<PgPool, sqlx::Error> {
     let settings = PostgresPoolSettings::from_app_config(config);
-    pool_options(settings).connect(&config.database_url).await
+    connect_pool_with_url(settings, &config.database_url).await
+}
+
+pub async fn connect_pool_with_url(
+    settings: PostgresPoolSettings,
+    database_url: &str,
+) -> Result<PgPool, sqlx::Error> {
+    pool_options(settings).connect(database_url).await
 }
 
 pub async fn health_check(pool: &PgPool) -> Result<(), sqlx::Error> {

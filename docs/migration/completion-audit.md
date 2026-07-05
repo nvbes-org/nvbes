@@ -6,7 +6,7 @@
 - requirements: 24
 - incomplete: 13
 - readiness: no-go
-- readiness_blocking_items: 21
+- readiness_blocking_items: 23
 - runtimes_go: 4/4
 - domains_go: 8/8
 - domain_dod_go: 64/64

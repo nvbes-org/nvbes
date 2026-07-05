@@ -186,7 +186,7 @@ pub(crate) async fn list_recovery_reviews(
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
     ),
     responses(
-        (status = 200, description = "Worker queue status", body = WorkerQueueStatusResponse),
+        (status = 200, description = "Identity email worker queue status", body = WorkerQueueStatusResponse),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),

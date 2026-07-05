@@ -53,6 +53,14 @@ pub(crate) fn validate_profiling(config: &AppConfig) -> Result<(), String> {
     }
 }
 
+pub(crate) fn validate_sentry(config: &AppConfig) -> Result<(), String> {
+    if !(0.0..=1.0).contains(&config.sentry_traces_sample_rate) {
+        return Err("SENTRY_TRACES_SAMPLE_RATE must be between 0 and 1".to_string());
+    }
+
+    Ok(())
+}
+
 pub(crate) fn validate_grafana_export_path(
     config: &AppConfig,
     strict_mode: bool,
@@ -93,7 +101,7 @@ pub(crate) fn validate_product_analytics(
         .is_empty()
     {
         return Err(
-            "NVBES_PRODUCT_ANALYTICS_TOKEN is required when NVBES_PRODUCT_ANALYTICS_ENABLED is true"
+            "NVBES_POSTHOG_PROJECT_TOKEN/NVBES_PRODUCT_ANALYTICS_TOKEN is required when NVBES_POSTHOG_ENABLED is true"
                 .to_string(),
         );
     }
@@ -110,6 +118,13 @@ pub(crate) fn validate_product_analytics(
                 .to_string(),
         );
     }
+
+    urls::validate_public_url(
+        "NVBES_POSTHOG_HOST",
+        &config.posthog_host,
+        strict_mode,
+        true,
+    )?;
 
     Ok(())
 }

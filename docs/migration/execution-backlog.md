@@ -2,8 +2,8 @@
 
 ## Status
 
-- open_tasks: 25
-- blocking_items: 58
+- open_tasks: 26
+- blocking_items: 60
 - readiness: no-go
 - completion: incomplete
 - live_evidence: no-go
@@ -45,6 +45,7 @@
 | complete-post-audit-approved | Migration lead | runbook:Validation finale | post-migration-audit.md approuve par Migration lead, Security lead et owners produit | blocked | 1 | `post-migration-audit.md approuve par Migration lead, Security lead et owners produit` | `pnpm check:migration-post-migration-audit -- --strict` |
 | complete-risk-closure | Migration lead | blueprint:Criteres de Reussite | chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope | blocked | 1 | `chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope` | `tools/migration/risk-register.mjs --strict` |
 | complete-runbook-explicit | Migration lead | blueprint:Criteres de Reussite | le runbook de cutover peut etre execute sans decision implicite | blocked | 1 | `le runbook de cutover peut etre execute sans decision implicite` | `pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json` |
+| resolve-developer_oauth_tokens | Migration lead | docs/migration/developer-oauth-tokens.generated.json | resolve and sign developer_oauth_tokens decisions | blocked | 2 | `developer_oauth_tokens unresolved item 1/2`<br>`developer_oauth_tokens unresolved item 2/2` | `pnpm check:migration-precutover` |
 | resolve-gate_decisions | Migration lead | docs/migration/gate-evidence.generated.json | resolve and sign gate_decisions decisions | blocked | 5 | `gate_decisions unresolved item 1/5`<br>`gate_decisions unresolved item 2/5`<br>`gate_decisions unresolved item 3/5`<br>`gate_decisions unresolved item 4/5`<br>`gate_decisions unresolved item 5/5` | `tools/migration/gate-evidence.mjs --strict` |
 | resolve-gates | Migration lead | docs/migration/gate-evidence.generated.json | resolve and sign gates decisions | blocked | 5 | `gates unresolved item 1/5`<br>`gates unresolved item 2/5`<br>`gates unresolved item 3/5`<br>`gates unresolved item 4/5`<br>`gates unresolved item 5/5` | `tools/migration/gate-evidence.mjs --strict` |
 | resolve-live_evidence | Migration lead | docs/migration/live-evidence-instances.generated.json | resolve and sign live_evidence decisions | blocked | 6 | `live_evidence unresolved item 1/6`<br>`live_evidence unresolved item 2/6`<br>`live_evidence unresolved item 3/6`<br>`live_evidence unresolved item 4/6`<br>`live_evidence unresolved item 5/6`<br>`live_evidence unresolved item 6/6` | `tools/migration/live-evidence-instances.mjs --strict` |

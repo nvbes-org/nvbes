@@ -1,3 +1,4 @@
+import { clientErrorMessage } from '@nvbes/web-runtime';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { type ChangePasswordInput, changePassword } from '../identity.password.api';
@@ -19,8 +20,13 @@ export function useAccountPasswordPage() {
       setConfirmPassword('');
       void queryClient.invalidateQueries({ queryKey: ['identity', 'account'] });
     },
-    onError: () => {
-      setError('Le mot de passe actuel est incorrect ou le nouveau mot de passe est invalide.');
+    onError: (error) => {
+      setError(
+        clientErrorMessage(
+          error,
+          'Le mot de passe actuel est incorrect ou le nouveau mot de passe est invalide.',
+        ),
+      );
     },
   });
 

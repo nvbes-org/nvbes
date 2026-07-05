@@ -83,8 +83,6 @@ pub fn subscription_view(record: &BillingStateRecord) -> SubscriptionView {
     SubscriptionView {
         status: record.subscription_status.clone(),
         billing_provider: record.billing_provider.clone(),
-        billing_customer_id: record.billing_customer_id.clone(),
-        billing_subscription_id: record.billing_subscription_id.clone(),
         current_period_start: record.current_period_start,
         current_period_end: record.current_period_end,
         trial_ends_at: record.trial_ends_at,
@@ -93,8 +91,6 @@ pub fn subscription_view(record: &BillingStateRecord) -> SubscriptionView {
 
 pub fn billing_account_view(record: &BillingStateRecord) -> BillingAccountView {
     BillingAccountView {
-        provider_customer_id: record.provider_customer_id.clone(),
-        stripe_customer_id: record.stripe_customer_id.clone(),
         billing_email: record.billing_email.clone(),
         country: record.country.clone(),
         customer_type: record.customer_type.clone(),

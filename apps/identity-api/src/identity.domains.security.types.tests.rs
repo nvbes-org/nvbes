@@ -138,7 +138,7 @@ fn worker_queue_status_response_serializes_expected_contract() {
         .expect("valid timestamp");
     let response = WorkerQueueStatusResponse {
         workspace_id: Uuid::from_u128(99),
-        queue_name: "billing.stripe.webhook.process".to_string(),
+        queue_name: "email.send".to_string(),
         snapshot_at,
         statuses: vec![WorkerQueueStatusView {
             status: "pending".to_string(),
@@ -149,7 +149,7 @@ fn worker_queue_status_response_serializes_expected_contract() {
 
     let payload = serde_json::to_value(response).expect("serializes");
 
-    assert_eq!(payload["queue_name"], "billing.stripe.webhook.process");
+    assert_eq!(payload["queue_name"], "email.send");
     assert_eq!(payload["workspace_id"], Uuid::from_u128(99).to_string());
     assert_eq!(payload["snapshot_at"], "2026-05-12T10:00:00Z");
     assert_eq!(payload["statuses"][0]["status"], "pending");

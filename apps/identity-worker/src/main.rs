@@ -1,7 +1,7 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
-    capture_error_reporting_smoke, init_error_reporting, init_tracing, install_safe_panic_hook,
-    start_continuous_profiling,
+    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing,
+    install_safe_panic_hook, start_continuous_profiling,
 };
 
 #[path = "identity.worker.rs"]
@@ -17,7 +17,7 @@ const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
 
-    let _error_reporting_guard = init_error_reporting(&config);
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "identity-worker");
     install_safe_panic_hook();
     init_tracing(&config);
 
@@ -25,8 +25,12 @@ async fn main() -> anyhow::Result<()> {
         std::env::args().nth(1).as_deref(),
         Some("error-reporting-smoke")
     ) {
-        let result =
-            capture_error_reporting_smoke("identity-worker", &config.environment, "worker", false);
+        let result = capture_error_reporting_smoke(
+            "identity-worker",
+            &config.environment,
+            "worker",
+            config.sentry_dsn.is_some(),
+        );
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
@@ -50,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(
         app = %config.app_name,
         environment = %config.environment,
-        "starting nvbes Identity billing worker"
+        "starting nvbes Identity worker"
     );
 
     worker::run_loop_until_shutdown(state, async {

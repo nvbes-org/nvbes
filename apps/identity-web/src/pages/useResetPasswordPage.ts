@@ -1,3 +1,4 @@
+import { clientErrorMessage } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -18,7 +19,10 @@ export function useResetPasswordPage() {
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
     onSuccess: () => setSuccess(true),
-    onError: () => setError('Le lien est invalide ou a expire. Veuillez recommencer.'),
+    onError: (error) =>
+      setError(
+        clientErrorMessage(error, 'Le lien est invalide ou a expire. Veuillez recommencer.'),
+      ),
   });
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {

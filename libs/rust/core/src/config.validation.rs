@@ -1,5 +1,7 @@
 #[path = "config.validation.basics.rs"]
 mod basics;
+#[path = "config.validation.billing.rs"]
+mod billing;
 #[path = "config.validation.geo.rs"]
 mod geo;
 #[path = "config.validation.observability.rs"]
@@ -18,7 +20,7 @@ pub(crate) use geo::validate_ip_intelligence;
 #[cfg(test)]
 pub(crate) use observability::{
     validate_grafana_export_path, validate_observability_internal_token,
-    validate_product_analytics, validate_profiling,
+    validate_product_analytics, validate_profiling, validate_sentry,
 };
 #[cfg(test)]
 pub(crate) use request_e2ee::validate_request_e2ee;
@@ -142,12 +144,32 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
             "NVBES_MOLLIE_API_KEY is required when NVBES_MOLLIE_ENABLED is true".to_string(),
         );
     }
+    if config.billing_external_provider_fallback_enabled && config.stripe_secret_key.is_none() {
+        return Err(
+            "NVBES_STRIPE_SECRET_KEY is required when NVBES_BILLING_EXTERNAL_PROVIDER_FALLBACK_ENABLED is true"
+                .to_string(),
+        );
+    }
+    if config.billing_fraud_step_up_threshold > config.billing_fraud_manual_review_threshold
+        || config.billing_fraud_manual_review_threshold > config.billing_fraud_block_threshold
+        || config.billing_fraud_block_threshold > 100
+    {
+        return Err(
+            "NVBES_BILLING_FRAUD thresholds must satisfy step_up <= manual_review <= block <= 100"
+                .to_string(),
+        );
+    }
+    billing::validate_billing_fraud_policy_overrides(config)?;
     urls::validate_database_url(&config.database_url, strict_mode)?;
+    urls::validate_database_url(config.billing_database_url(), strict_mode)?;
     urls::validate_jwt_secret(&config.jwt_secret, strict_mode)?;
     observability::validate_grafana_export_path(config, strict_mode)?;
     observability::validate_product_analytics(config, strict_mode)?;
+    observability::validate_sentry(config)?;
     observability::validate_profiling(config)?;
     observability::validate_observability_internal_token(config, strict_mode)?;
+    geo::validate_maxmind_geolite(config)?;
+    geo::validate_loyalsoldier_geoip(config)?;
     basics::validate_positive_integer(
         "NVBES_AUTH_VERIFICATION_RESEND_COOLDOWN_SECONDS",
         config.auth_verification_resend_cooldown_seconds,

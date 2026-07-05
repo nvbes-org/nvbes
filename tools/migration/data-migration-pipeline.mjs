@@ -18,6 +18,7 @@ const sources = {
 	driveShareRevoke: "docs/migration/drive-share-revoke.generated.json",
 	billingEntitlements: "docs/migration/billing-entitlements.generated.json",
 	billingWebhookIdempotency: "docs/migration/billing-webhook-idempotency.generated.json",
+	billingMultiPspContinuity: "docs/migration/billing-multi-psp-continuity.generated.json",
 	releaseFreeze: "docs/migration/release-freeze-manifest.md",
 	snapshots: "docs/migration/snapshot-manifest.md",
 };
@@ -109,8 +110,7 @@ function buildChecks(dataMap, domains) {
 		checkText("billing-freeze", sources.releaseFreeze, "Release freeze includes billing mutation freeze", "| billing mutation freeze |"),
 		checkText("drive-object-invariant", sources.driveUploadDownload, "Drive upload/download evidence covers object storage invariants", "object"),
 		checkText("drive-share-invariant", sources.driveShareRevoke, "Drive share/revoke evidence covers share-link invariants", "share"),
-		checkText("billing-ledger-evidence", sources.billingEntitlements, "Billing entitlement evidence is present", "\"status\": \"passed\""),
-		checkText("billing-webhook-idempotency", sources.billingWebhookIdempotency, "Billing webhook idempotency evidence is present", "\"status\": \"passed\""),
+		checkText("billing-ledger-evidence", sources.billingEntitlements, "Billing entitlement evidence is present", "\"status\": \"passed\""), checkText("billing-webhook-idempotency", sources.billingWebhookIdempotency, "Billing webhook idempotency evidence is present", "\"status\": \"passed\""), checkText("billing-multi-psp-continuity", sources.billingMultiPspContinuity, "Billing multi-PSP continuity evidence is present", "\"status\": \"passed\""),
 	];
 	for (const domain of domains) {
 		const summary = domainSummary(dataMap, domain);

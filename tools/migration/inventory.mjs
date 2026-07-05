@@ -62,7 +62,7 @@ function tableInventory() {
 }
 
 function jobInventory() {
-	return files(/^apps\/.*\/src\/.*(worker|job).*\.rs$|^libs\/rust\/redis\/src\/.*worker_queue.*\.rs$/)
+	return files(/^apps\/.*\/src\/.*(worker|job).*\.rs$|^libs\/rust\/.*\/src\/.*(worker|job).*\.rs$/)
 		.map((file) => {
 			const content = read(file);
 			const constants = unique(

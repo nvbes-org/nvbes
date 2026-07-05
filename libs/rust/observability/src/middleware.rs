@@ -126,6 +126,17 @@ pub async fn observe_request(
             status = status.as_u16(),
             duration_ms,
         );
+        crate::error_reporting::capture_http_server_error(
+            &crate::error_reporting::HttpServerErrorContext {
+                method: method.as_str(),
+                path_template: &path_template,
+                status: status.as_u16(),
+                request_id: &request_id,
+                trace_id,
+                span_id,
+                duration_ms,
+            },
+        );
     } else if status.is_client_error() {
         tracing::warn!(
             target: "nvbes::technical_log",

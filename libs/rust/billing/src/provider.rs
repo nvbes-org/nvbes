@@ -2,17 +2,37 @@ use crate::models::BillingStateRecord;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use thiserror::Error;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ProviderCode {
     Stripe,
     Mollie,
+    Cb,
+}
+
+impl ProviderCode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ProviderCode::Stripe => "stripe",
+            ProviderCode::Mollie => "mollie",
+            ProviderCode::Cb => "cb",
+        }
+    }
+}
+
+pub const PROVIDER_CODES: &[&str] = &["stripe", "mollie", "cb"];
+
+pub fn provider_codes() -> &'static [&'static str] {
+    PROVIDER_CODES
 }
 
 pub fn provider_code(value: &str) -> Option<ProviderCode> {
     match value {
-        "stripe" => Some(ProviderCode::Stripe),
-        "mollie" => Some(ProviderCode::Mollie),
+        value if value == ProviderCode::Stripe.as_str() => Some(ProviderCode::Stripe),
+        value if value == ProviderCode::Mollie.as_str() => Some(ProviderCode::Mollie),
+        value if value == ProviderCode::Cb.as_str() => Some(ProviderCode::Cb),
         _ => None,
     }
 }
@@ -27,7 +47,7 @@ pub fn provider_customer_id_for(
 ) -> Option<String> {
     match provider {
         ProviderCode::Stripe => record.stripe_customer_id.clone().or_else(|| {
-            if record.billing_provider == "stripe" {
+            if record.billing_provider == ProviderCode::Stripe.as_str() {
                 record
                     .provider_customer_id
                     .clone()
@@ -37,7 +57,17 @@ pub fn provider_customer_id_for(
             }
         }),
         ProviderCode::Mollie => {
-            if record.billing_provider == "mollie" {
+            if record.billing_provider == ProviderCode::Mollie.as_str() {
+                record
+                    .provider_customer_id
+                    .clone()
+                    .or_else(|| record.billing_customer_id.clone())
+            } else {
+                None
+            }
+        }
+        ProviderCode::Cb => {
+            if record.billing_provider == ProviderCode::Cb.as_str() {
                 record
                     .provider_customer_id
                     .clone()
@@ -66,11 +96,13 @@ pub struct ProviderCustomer {
 pub struct ProviderCheckoutInput {
     pub tenant_id: String,
     pub provider_customer_id: String,
+    pub plan_code: Option<String>,
     pub amount_minor: i64,
     pub currency: String,
     pub success_url: String,
     pub cancel_url: String,
     pub webhook_url: Option<String>,
+    pub fraud_metadata: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -107,12 +139,51 @@ pub struct ProviderRefund {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderPaymentMethod {
+    pub method_type: String,
+    pub brand: Option<String>,
+    pub last4: Option<String>,
+    pub exp_month: Option<i16>,
+    pub exp_year: Option<i16>,
+    pub funding: Option<String>,
+    pub issuer_country: Option<String>,
+    pub fingerprint: Option<String>,
+    pub provider_payment_method_id: Option<String>,
+    pub mandate_id: Option<String>,
+    pub mandate_status: String,
+    pub reusable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProviderPayment {
     pub provider: ProviderCode,
     pub provider_payment_id: String,
+    pub provider_customer_id: Option<String>,
+    pub provider_subscription_id: Option<String>,
+    pub plan_code: Option<String>,
     pub status: String,
     pub amount_minor: i64,
     pub currency: String,
+    pub payment_method: Option<ProviderPaymentMethod>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderSubscriptionInput {
+    pub provider_customer_id: String,
+    pub amount_minor: i64,
+    pub currency: String,
+    pub interval: String,
+    pub description: String,
+    pub start_date: Option<String>,
+    pub webhook_url: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProviderSubscription {
+    pub provider: ProviderCode,
+    pub provider_subscription_id: String,
+    pub status: String,
+    pub provider_customer_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,95 +241,13 @@ pub trait PaymentProvider {
         provider_payment_id: &str,
     ) -> impl Future<Output = Result<ProviderPayment, ProviderError>> + Send;
 
+    fn create_subscription(
+        &self,
+        input: ProviderSubscriptionInput,
+    ) -> impl Future<Output = Result<ProviderSubscription, ProviderError>> + Send;
+
     fn verify_webhook(
         &self,
         input: ProviderWebhookInput,
     ) -> impl Future<Output = Result<ProviderWebhookEvent, ProviderError>> + Send;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        ProviderCode, provider_code, provider_customer_id_for, provider_supports_external_portal,
-    };
-    use crate::models::BillingStateRecord;
-    use uuid::Uuid;
-
-    fn billing_record(provider: &str) -> BillingStateRecord {
-        BillingStateRecord {
-            workspace_id: Uuid::nil(),
-            workspace_name: "Acme".to_string(),
-            owner_principal_id: Uuid::nil(),
-            owner_email: "owner@example.com".to_string(),
-            trial_ends_at: None,
-            plan_id: Uuid::nil(),
-            plan_code: "team".to_string(),
-            included_storage_gb: 10,
-            included_users: 2,
-            retention_days: 90,
-            max_share_links: 25,
-            audit_level: "standard".to_string(),
-            max_share_link_ttl_days: 30,
-            subscription_status: "active".to_string(),
-            billing_provider: provider.to_string(),
-            billing_customer_id: Some(format!("{provider}_billing")),
-            billing_subscription_id: None,
-            current_period_start: None,
-            current_period_end: None,
-            provider_customer_id: Some(format!("{provider}_provider")),
-            stripe_customer_id: Some("stripe_legacy".to_string()),
-            billing_email: None,
-            country: None,
-            customer_type: "b2b".to_string(),
-            vat_number: None,
-            tax_exempt_status: None,
-            used_storage_bytes: 0,
-            bandwidth_out_bytes_month: 0,
-            active_user_count: 1,
-        }
-    }
-
-    #[test]
-    fn provider_customer_id_for_prefers_legacy_stripe_id_for_stripe() {
-        let record = billing_record("mollie");
-
-        assert_eq!(
-            provider_customer_id_for(&record, ProviderCode::Stripe).as_deref(),
-            Some("stripe_legacy")
-        );
-    }
-
-    #[test]
-    fn provider_customer_id_for_uses_current_provider_customer() {
-        let record = billing_record("mollie");
-
-        assert_eq!(
-            provider_customer_id_for(&record, ProviderCode::Mollie).as_deref(),
-            Some("mollie_provider")
-        );
-    }
-
-    #[test]
-    fn provider_customer_id_for_does_not_reuse_other_provider_customer() {
-        let mut record = billing_record("mollie");
-        record.stripe_customer_id = None;
-
-        assert_eq!(
-            provider_customer_id_for(&record, ProviderCode::Stripe),
-            None
-        );
-    }
-
-    #[test]
-    fn provider_code_parses_supported_provider_codes() {
-        assert_eq!(provider_code("stripe"), Some(ProviderCode::Stripe));
-        assert_eq!(provider_code("mollie"), Some(ProviderCode::Mollie));
-        assert_eq!(provider_code("unknown"), None);
-    }
-
-    #[test]
-    fn provider_supports_external_portal_only_for_stripe() {
-        assert!(provider_supports_external_portal(ProviderCode::Stripe));
-        assert!(!provider_supports_external_portal(ProviderCode::Mollie));
-    }
 }

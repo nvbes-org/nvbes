@@ -28,6 +28,7 @@
     "libs/rust/storage",
     "libs/rust/tenancy",
     "libs/ts/email-templates",
+    "libs/ts/billing-client",
     "libs/ts/http-client",
     "libs/ts/identity-client",
     "libs/ts/identity-sdk",

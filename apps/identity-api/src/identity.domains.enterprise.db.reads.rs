@@ -195,13 +195,12 @@ pub async fn list_workspaces(
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
-                  COALESCE(qu.used_storage_bytes, 0)::bigint AS storage_used_bytes,
+                  0::bigint AS storage_used_bytes,
                   w.created_at
                 FROM workspaces w
                 LEFT JOIN workspace_memberships wm ON wm.workspace_id = w.id
-                LEFT JOIN quota_usage qu ON qu.workspace_id = w.id
                 WHERE w.tenant_id = $1
-                GROUP BY w.id, qu.used_storage_bytes
+                GROUP BY w.id
                 ORDER BY w.created_at DESC
                 "#,
         )
@@ -213,13 +212,12 @@ pub async fn list_workspaces(
                 SELECT w.id, w.name, w.workspace_type::text AS workspace_type,
                   NULL::text AS data_region,
                   COUNT(wm.principal_id) FILTER (WHERE wm.status = 'active') AS member_count,
-                  COALESCE(qu.used_storage_bytes, 0)::bigint AS storage_used_bytes,
+                  0::bigint AS storage_used_bytes,
                   w.created_at
                 FROM workspaces w
                 LEFT JOIN workspace_memberships wm ON wm.workspace_id = w.id
-                LEFT JOIN quota_usage qu ON qu.workspace_id = w.id
                 WHERE w.tenant_id = $1 AND w.organization_id = $2
-                GROUP BY w.id, qu.used_storage_bytes
+                GROUP BY w.id
                 ORDER BY w.created_at DESC
                 "#,
         )
@@ -240,10 +238,9 @@ pub async fn usage_metrics(
             Ok(sqlx::query_as::<_, (i64, i64, i64)>(
                 r#"
                 SELECT COUNT(DISTINCT w.id)::bigint, COUNT(DISTINCT wm.principal_id)::bigint,
-                  COALESCE(SUM(qu.used_storage_bytes), 0)::bigint
+                  0::bigint
                 FROM workspaces w
                 LEFT JOIN workspace_memberships wm ON wm.workspace_id = w.id AND wm.status = 'active'
-                LEFT JOIN quota_usage qu ON qu.workspace_id = w.id
                 WHERE w.tenant_id = $1
                 "#,
             )
@@ -255,10 +252,9 @@ pub async fn usage_metrics(
             Ok(sqlx::query_as::<_, (i64, i64, i64)>(
                 r#"
                 SELECT COUNT(DISTINCT w.id)::bigint, COUNT(DISTINCT wm.principal_id)::bigint,
-                  COALESCE(SUM(qu.used_storage_bytes), 0)::bigint
+                  0::bigint
                 FROM workspaces w
                 LEFT JOIN workspace_memberships wm ON wm.workspace_id = w.id AND wm.status = 'active'
-                LEFT JOIN quota_usage qu ON qu.workspace_id = w.id
                 WHERE w.tenant_id = $1 AND w.organization_id = $2
                 "#,
             )

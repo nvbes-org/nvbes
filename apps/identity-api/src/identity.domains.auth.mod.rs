@@ -22,6 +22,8 @@ pub mod email_addresses;
 pub mod email_verification;
 #[path = "identity.domains.auth.email_verification.change.rs"]
 pub mod email_verification_change;
+#[path = "identity.domains.auth.exposed_credentials.rs"]
+pub mod exposed_credentials;
 #[path = "identity.domains.auth.fingerprint.rs"]
 pub mod fingerprint;
 #[path = "identity.domains.auth.geo_intelligence.rs"]

@@ -119,14 +119,14 @@ pub fn canonical_geo_risk_label(value: &str) -> Option<&'static str> {
     match normalized.as_str() {
         "tor" | "tor_exit" => Some("tor"),
         "vpn" | "anonymous_vpn" | "commercial_vpn" => Some("vpn"),
-        "proxy" | "socks" | "socks_proxy" | "web_proxy" => Some("proxy"),
-        "datacenter" | "data_center" | "hosting" | "hosted" | "cloud" | "server" => {
-            Some("datacenter")
+        "proxy" | "socks" | "socks_proxy" | "web_proxy" | "residential_proxy" => Some("proxy"),
+        "datacenter" | "data_center" | "hosting" | "hosted" | "cloud" | "cloud_provider"
+        | "server" | "cdn" => Some("datacenter"),
+        "mobile" | "cellular" | "wireless" | "lte" | "4g" | "5g" | "mobile_carrier" => {
+            Some("mobile")
         }
-        "mobile" | "cellular" | "wireless" | "lte" | "4g" | "5g" => Some("mobile"),
-        "residential" | "consumer" | "broadband" | "fiber" | "fibre" | "cable" | "dsl" => {
-            Some("residential")
-        }
+        "residential" | "consumer" | "consumer_isp" | "broadband" | "fiber" | "fibre" | "cable"
+        | "dsl" => Some("residential"),
         "unknown" | "unclassified" => Some("unknown"),
         _ => None,
     }
@@ -135,7 +135,8 @@ pub fn canonical_geo_risk_label(value: &str) -> Option<&'static str> {
 pub fn canonicalize_geo_risk_labels(labels: impl IntoIterator<Item = String>) -> Vec<String> {
     let mut canonical = Vec::new();
     for label in labels {
-        if label.starts_with("source:") {
+        let label = label.trim().replace([' ', '-'], "_").to_ascii_lowercase();
+        if preserves_network_label_namespace(&label) {
             push_unique_label(&mut canonical, label);
             continue;
         }
@@ -144,6 +145,13 @@ pub fn canonicalize_geo_risk_labels(labels: impl IntoIterator<Item = String>) ->
         }
     }
     canonical
+}
+
+fn preserves_network_label_namespace(label: &str) -> bool {
+    matches!(
+        label.split_once(':').map(|(namespace, _)| namespace),
+        Some("source" | "provider" | "asn" | "category" | "mismatch" | "velocity" | "payment")
+    )
 }
 
 pub fn push_unique_label(labels: &mut Vec<String>, label: impl Into<String>) {

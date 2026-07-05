@@ -129,23 +129,6 @@ export const EnterpriseAuditEventSchema = z.object({
   created_at: z.string(),
 });
 
-const EnterpriseBillingPlanSchema = z.object({
-  code: z.string(),
-  name: z.string(),
-  status: z.string(),
-  currency: z.string(),
-  monthly_price_cents: z.number(),
-});
-
-const EnterpriseInvoiceSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  amount_due_cents: z.number(),
-  currency: z.string(),
-  issued_at: z.string(),
-  hosted_invoice_url: NullableStringSchema.optional(),
-});
-
 const EnterpriseUsageMetricSchema = z.object({
   key: z.string(),
   label: z.string(),
@@ -294,12 +277,6 @@ export const EnterpriseAuditEventsResponseSchema = z.object({
   page: EnterprisePageSchema,
 });
 
-export const EnterpriseBillingResponseSchema = z.object({
-  plan: EnterpriseBillingPlanSchema,
-  invoices: z.array(EnterpriseInvoiceSchema),
-  billing_email: NullableStringSchema.optional(),
-});
-
 export const EnterpriseUsageResponseSchema = z.object({
   metrics: z.array(EnterpriseUsageMetricSchema),
 });
@@ -374,7 +351,6 @@ export type EnterpriseSecurityPostureControl = z.infer<
 export type EnterpriseSecurityPostureScore = z.infer<typeof EnterpriseSecurityPostureScoreSchema>;
 export type EnterpriseSecurityResponse = z.infer<typeof EnterpriseSecurityResponseSchema>;
 export type EnterpriseAuditEventsResponse = z.infer<typeof EnterpriseAuditEventsResponseSchema>;
-export type EnterpriseBillingResponse = z.infer<typeof EnterpriseBillingResponseSchema>;
 export type EnterpriseUsageResponse = z.infer<typeof EnterpriseUsageResponseSchema>;
 export type EnterpriseInvitationInput = z.infer<typeof EnterpriseInvitationInputSchema>;
 export type EnterpriseAccessUpdateInput = z.infer<typeof EnterpriseAccessUpdateInputSchema>;

@@ -87,39 +87,18 @@ pub async fn ensure_owner_workspace(
         return Ok(());
     }
 
-    nvbes_identity_api::domains::billing::db::ensure_plan_seeded(tx)
-        .await
-        .map_err(|err| {
-            anyhow::anyhow!(
-                "Failed to seed billing plans for beta owner workspace: {}",
-                err.message
-            )
-        })?;
-
-    let plan_id: Uuid = sqlx::query_scalar(
-        r#"
-        SELECT id
-        FROM plans
-        WHERE code = 'solo_pro'
-        LIMIT 1
-        "#,
-    )
-    .fetch_one(&mut **tx)
-    .await
-    .context("Failed to load solo_pro plan for beta owner workspace.")?;
-
     let workspace_id = Uuid::new_v4();
 
     sqlx::query(
         r#"
         INSERT INTO workspaces (
           id, tenant_id, organization_id, name, workspace_type, plan_code,
-          trial_ends_at, data_region, jurisdiction, owner_user_id, plan_id,
+          trial_ends_at, data_region, jurisdiction, owner_user_id,
           created_at, updated_at
         )
         VALUES (
           $1, $2, NULL, $3, 'personal', 'solo_pro',
-          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4, $5,
+          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4,
           NOW(), NOW()
         )
         "#,
@@ -128,7 +107,6 @@ pub async fn ensure_owner_workspace(
     .bind(tenant_id)
     .bind(workspace_name)
     .bind(principal_id)
-    .bind(plan_id)
     .execute(&mut **tx)
     .await
     .context("Failed to create beta owner workspace.")?;
@@ -150,21 +128,6 @@ pub async fn ensure_owner_workspace(
     .execute(&mut **tx)
     .await
     .context("Failed to create beta owner workspace policy.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO subscriptions (
-          workspace_id, plan_id, status, billing_provider,
-          current_period_start, current_period_end
-        )
-        VALUES ($1, $2, 'trialing', 'stripe', NOW(), NOW() + INTERVAL '14 days')
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(plan_id)
-    .execute(&mut **tx)
-    .await
-    .context("Failed to create beta owner subscription.")?;
 
     sqlx::query(
         r#"

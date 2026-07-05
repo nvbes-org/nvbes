@@ -67,11 +67,6 @@ pub async fn build(database: &Database, subject_user_id: Uuid) -> anyhow::Result
               SELECT id FROM api_keys WHERE created_by = $1
             )
           ), '[]'::jsonb),
-          'billing_adjustments_created', COALESCE((
-            SELECT jsonb_agg(to_jsonb(billing_adjustments) ORDER BY created_at DESC)
-            FROM billing_adjustments
-            WHERE created_by = $1
-          ), '[]'::jsonb),
           'audit_events', COALESCE((
             SELECT jsonb_agg(to_jsonb(audit_events) ORDER BY created_at DESC)
             FROM audit_events

@@ -9,6 +9,13 @@ datasources:
     isDefault: true
     editable: true
 
+  - name: Mimir
+    uid: Mimir
+    type: prometheus
+    access: proxy
+    url: http://mimir:9009/prometheus
+    editable: true
+
   - name: Tempo
     uid: Tempo
     type: tempo
@@ -18,7 +25,7 @@ datasources:
     jsonData:
       httpMethod: GET
       serviceMap:
-        datasourceUid: 'Prometheus'
+        datasourceUid: 'Mimir'
       nodeGraph:
         enabled: true
       search:
@@ -35,7 +42,7 @@ datasources:
         tags: [ { key: 'service.name', value: 'service_name' } ]
         profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
       tracesToMetrics:
-        datasourceUid: 'Prometheus'
+        datasourceUid: 'Mimir'
         spanAttributes: [ 'service.name', 'http.method', 'http.status_code' ]
         tags: [ 'job', 'instance' ]
         queries:

@@ -361,6 +361,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a billing provider routing rule */
+        post: operations["createBillingRoutingRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Simulate billing provider routing rule matching */
+        get: operations["simulateBillingRoutingRule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/disable": {
         parameters: {
             query?: never;
@@ -1057,6 +1091,20 @@ export interface components {
             object_id: string;
             status: string;
         };
+        CreateRoutingRuleRequest: {
+            confirm_code: string;
+            country: string | null;
+            currency: string | null;
+            customer_type: string | null;
+            fallback_enabled: boolean;
+            max_amount_minor: number | null;
+            min_amount_minor: number | null;
+            payment_method: string | null;
+            priority: number;
+            /** @enum {string} */
+            provider: "stripe" | "mollie" | "cb";
+            reason: string;
+        };
         CriticalActionRequest: {
             confirm_code: string;
             reason: string;
@@ -1125,6 +1173,14 @@ export interface components {
             scheduled_start_at: string;
             title: string;
         };
+        MatchedRoutingRule: {
+            fallback_enabled: boolean;
+            /** Format: uuid */
+            id: string;
+            priority: number;
+            /** @enum {string} */
+            provider: "stripe" | "mollie" | "cb";
+        };
         OperationsActionResult: {
             action_kind: string;
             audit_action: string;
@@ -1173,6 +1229,18 @@ export interface components {
             audit_action: string;
             object_id: string;
             status: string;
+        };
+        RoutingRuleSimulationResult: {
+            input: {
+                amount_minor: number;
+                country: string | null;
+                currency: string;
+                customer_type: string;
+                payment_method: string;
+            };
+            matched_rule: components["schemas"]["MatchedRoutingRule"] | null;
+            /** @enum {string} */
+            outcome: "matched" | "no_matching_rule";
         };
         SecurityActionResult: {
             audit_action: string;
@@ -2004,6 +2072,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    createBillingRoutingRule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoutingRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    simulateBillingRoutingRule: {
+        parameters: {
+            query?: {
+                country?: string;
+                currency?: string;
+                payment_method?: string;
+                customer_type?: string;
+                amount_minor?: number;
+            };
+            header: {
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutingRuleSimulationResult"];
                 };
             };
             400: components["responses"]["BadRequest"];

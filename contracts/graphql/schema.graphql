@@ -1,0 +1,129 @@
+scalar DateTime
+scalar URL
+scalar UUID
+
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  billingOverview(workspaceId: UUID!): BillingOverview!
+  billingPortal(workspaceId: UUID!): BillingPortal!
+  billingEntitlements(workspaceId: UUID!): ProductEntitlements!
+}
+
+type Mutation {
+  createBillingCheckout(input: CreateBillingCheckoutInput!): CheckoutSession!
+  createBillingPortalSession(input: CreateBillingPortalSessionInput!): PortalSession!
+}
+
+input CreateBillingCheckoutInput {
+  workspaceId: UUID!
+  planCode: String!
+  successUrl: URL
+  cancelUrl: URL
+}
+
+input CreateBillingPortalSessionInput {
+  workspaceId: UUID!
+  returnUrl: URL
+}
+
+type CheckoutSession {
+  checkoutUrl: URL!
+  provider: BillingProvider!
+  expiresAt: DateTime
+}
+
+type PortalSession {
+  portalUrl: URL!
+  provider: BillingProvider!
+}
+
+type BillingOverview {
+  workspaceId: UUID!
+  planCode: String!
+  subscriptionStatus: BillingSubscriptionStatus!
+  billingProvider: BillingProvider!
+  currentPeriodStart: DateTime
+  currentPeriodEnd: DateTime
+  entitlements: ProductEntitlements!
+}
+
+type BillingPortal {
+  workspaceId: UUID!
+  invoices: [BillingInvoice!]!
+  paymentMethods: [BillingPaymentMethod!]!
+  subscriptions: [BillingSubscription!]!
+}
+
+type BillingInvoice {
+  invoiceId: UUID!
+  invoiceNumber: String!
+  status: BillingInvoiceStatus!
+  totalMinor: Int!
+  currency: String!
+  issuedAt: DateTime
+  pdfPath: String
+  providers: [BillingProviderReference!]!
+}
+
+type BillingPaymentMethod {
+  paymentMethodId: UUID!
+  brand: String!
+  last4: String!
+  expMonth: Int!
+  expYear: Int!
+  providers: [BillingProviderReference!]!
+}
+
+type BillingSubscription {
+  subscriptionId: UUID!
+  planCode: String!
+  status: BillingSubscriptionStatus!
+  providers: [BillingProviderReference!]!
+}
+
+type BillingProviderReference {
+  provider: BillingProvider!
+  status: BillingProviderReferenceStatus!
+  primary: Boolean!
+  fallbackEligible: Boolean!
+}
+
+type ProductEntitlements {
+  includedStorageGb: Int!
+  includedUsers: Int!
+  retentionDays: Int!
+  maxShareLinks: Int!
+  auditLevel: String!
+}
+
+enum BillingProvider {
+  STRIPE
+  MOLLIE
+  CB
+}
+
+enum BillingSubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum BillingInvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum BillingProviderReferenceStatus {
+  ACTIVE
+  INACTIVE
+  FAILED
+}

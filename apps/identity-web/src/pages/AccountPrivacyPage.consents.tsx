@@ -10,7 +10,7 @@ export const consentLabels: Record<string, string> = {
   cookie_consent_essentials: 'Cookies essentiels',
   cookie_consent_analytics: 'Cookies analytiques',
   cookie_consent_performance: 'Cookies de performance',
-  cookie_consent_vendor_stripe: 'Cookie Stripe',
+  cookie_consent_vendor_stripe: 'Cookie nvbes Billing',
   cookie_consent_vendor_identity: 'Cookie nvbes Identity',
   cookie_consent_vendor_cloudflare: 'Cookie Cloudflare',
   cookie_consent_vendor_posthog: 'Cookie PostHog',

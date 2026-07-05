@@ -1,5 +1,4 @@
 use chrono::{Duration, Utc};
-use sqlx::Row;
 use uuid::Uuid;
 
 use super::db::{self, WorkspaceRecord};
@@ -26,7 +25,7 @@ pub async fn list_workspaces(
           w.data_region::text AS data_region,
           w.jurisdiction::text AS jurisdiction,
           wm.role::text AS role,
-          p.code AS plan_code,
+          w.plan_code,
           w.trial_ends_at,
           wp.member_can_create_share_links,
           wp.require_admin_approval_for_member_share,
@@ -37,7 +36,6 @@ pub async fn list_workspaces(
           w.updated_at
         FROM workspace_memberships wm
         INNER JOIN workspaces w ON w.id = wm.workspace_id
-        INNER JOIN plans p ON p.code = w.plan_code
         INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
         WHERE wm.principal_id = $1
           AND wm.status = 'active'
@@ -74,13 +72,8 @@ pub async fn create_workspace(
 
     let mut tx = db.begin().await?;
 
-    let plan =
-        sqlx::query("SELECT id, max_share_link_ttl_days FROM plans WHERE code = 'trial' LIMIT 1")
-            .fetch_one(&mut *tx)
-            .await?;
-    let plan_id: Uuid = plan.get("id");
     let plan_code = "trial".to_string();
-    let max_share_link_ttl_days: i32 = plan.get("max_share_link_ttl_days");
+    let max_share_link_ttl_days = 7;
 
     let workspace_id: Uuid = sqlx::query_scalar(
         r#"
@@ -130,26 +123,6 @@ pub async fn create_workspace(
     )
     .bind(workspace_id)
     .bind(auth.user_id)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO subscriptions (
-          workspace_id,
-          plan_id,
-          status,
-          billing_provider,
-          current_period_start,
-          current_period_end
-        )
-        VALUES ($1, $2, 'trialing', 'stripe', $3, $4)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(plan_id)
-    .bind(now)
-    .bind(trial_ends_at)
     .execute(&mut *tx)
     .await?;
 

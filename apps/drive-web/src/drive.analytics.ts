@@ -1,5 +1,6 @@
 import {
   captureAnalyticsException,
+  createBrowserAnalyticsTransport,
   getFeatureFlag,
   getFeatureFlagPayload,
   identifyProductUser,
@@ -41,6 +42,14 @@ export function initAnalytics() {
       event_source: 'browser',
     }),
     blockedRoutePatterns,
+    transport: createBrowserAnalyticsTransport({
+      appName: 'drive-web',
+      environment: import.meta.env.MODE,
+      sentryDsn: import.meta.env.VITE_SENTRY_DSN,
+      sentryTracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || 0),
+      posthogKey: import.meta.env.VITE_POSTHOG_KEY,
+      posthogHost: import.meta.env.VITE_POSTHOG_HOST,
+    }),
   });
 
   captureCurrentPageView();

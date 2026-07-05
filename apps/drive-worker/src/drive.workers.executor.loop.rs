@@ -1,3 +1,4 @@
+use nvbes_core::config::AppConfig;
 use nvbes_observability::metrics::HttpMetrics;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -8,13 +9,16 @@ use nvbes_observability::{
     worker_monitor_slug,
 };
 
-const WORKER_QUEUES: [&str; 10] = [
+const WORKER_QUEUES: [&str; 13] = [
     super::super::maintenance::JOB_UPLOADS_PURGE_EXPIRED,
     super::super::maintenance::JOB_QUOTAS_RECALCULATE,
     super::super::maintenance::JOB_TRASH_PURGE,
     super::super::maintenance::JOB_STORAGE_PURGE_DELETED,
     super::super::maintenance::JOB_STORAGE_PURGE_QUARANTINED,
     super::super::maintenance::JOB_GEO_LOOKUP_MAINTENANCE,
+    super::super::maintenance::JOB_GEO_V2FLY_IMPORT,
+    super::super::maintenance::JOB_GEO_MAXMIND_GEOLITE_IMPORT,
+    super::super::maintenance::JOB_GEO_LOYALSOLDIER_IMPORT,
     super::super::privacy::delete::JOB_PRIVACY_ACCOUNT_DELETE,
     super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE,
     super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT,
@@ -29,6 +33,7 @@ const WORKER_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
 };
 
 pub async fn run_once(
+    config: &AppConfig,
     database: &Database,
     redis: &nvbes_redis::RedisPool,
     storage: Arc<dyn nvbes_storage::ObjectStore>,
@@ -49,7 +54,7 @@ pub async fn run_once(
         database.num_idle(),
     );
 
-    let result = super::dispatch::execute_job(&job, database, storage.as_ref()).await;
+    let result = super::dispatch::execute_job(&job, config, database, storage.as_ref()).await;
 
     match result {
         Ok(value) => {
@@ -78,6 +83,7 @@ pub async fn run_once(
 }
 
 pub async fn run_loop(
+    config: &AppConfig,
     database: &Database,
     redis: &nvbes_redis::RedisPool,
     storage: Arc<dyn nvbes_storage::ObjectStore>,
@@ -105,14 +111,15 @@ pub async fn run_loop(
     loop {
         capture_worker_heartbeat_if_due(&environment, &mut worker_heartbeat_last_run);
 
-        let processed = match run_once(database, redis, storage.clone(), observability).await {
-            Ok(processed) => processed,
-            Err(error) => {
-                tracing::warn!(%error, "drive worker loop failed; retrying after backoff");
-                tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
-                continue;
-            }
-        };
+        let processed =
+            match run_once(config, database, redis, storage.clone(), observability).await {
+                Ok(processed) => processed,
+                Err(error) => {
+                    tracing::warn!(%error, "drive worker loop failed; retrying after backoff");
+                    tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                    continue;
+                }
+            };
 
         if !processed {
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;

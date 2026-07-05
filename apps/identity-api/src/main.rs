@@ -1,7 +1,8 @@
 use nvbes_core::config::AppConfig;
 use nvbes_core::http::keep_alive;
 use nvbes_observability::{
-    init_error_reporting, init_tracing, install_safe_panic_hook, start_continuous_profiling,
+    init_error_reporting_for_service, init_tracing, install_safe_panic_hook,
+    start_continuous_profiling,
 };
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -32,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    let _error_reporting_guard = init_error_reporting(&config);
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "identity-api");
     install_safe_panic_hook();
     init_tracing(&config);
     let _profiling_guard =

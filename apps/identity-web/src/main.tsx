@@ -12,20 +12,22 @@ import {
   initErrorReporting,
   syncErrorReportingConsent,
 } from './identity.error.reporting';
+import { captureFaroException, initFaro, syncFaroConsent } from './identity.faro';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
-const errorReportingInitialized = initErrorReporting();
+initErrorReporting();
+initFaro();
 initAnalytics();
 window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
   void syncErrorReportingConsent();
+  syncFaroConsent();
 });
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {
-    if (errorReportingInitialized) {
-      captureErrorReportingException(error, context);
-    }
+    captureErrorReportingException(error, context);
+    captureFaroException(error, context);
 
     void captureAnalyticsException(error, {
       event_source: context.tags.source,

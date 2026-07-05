@@ -1,6 +1,7 @@
 import {
   EMPTY_ANALYTICS_CONSENT,
   captureAnalyticsException,
+  createBrowserAnalyticsTransport,
   getFeatureFlag,
   getFeatureFlagPayload,
   identifyProductUser,
@@ -112,6 +113,12 @@ export function initAnalytics() {
     getCommonProperties: () => ({
       app_name: 'identity-web',
       event_source: 'browser',
+    }),
+    transport: createBrowserAnalyticsTransport({
+      appName: 'identity-web',
+      environment: import.meta.env.MODE,
+      posthogKey: import.meta.env.VITE_POSTHOG_KEY,
+      posthogHost: import.meta.env.VITE_POSTHOG_HOST,
     }),
   });
 

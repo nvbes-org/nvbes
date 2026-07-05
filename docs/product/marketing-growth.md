@@ -13,25 +13,30 @@ Les travaux marketing non techniques sont suivis dans:
 
 ## ICP de Lancement
 
+Positionnement V1:
+
+- B2B pour tous.
+- Workspace personnel dedie a la creation de chaque compte.
+- Workspaces de groupe separes pour equipes et organisations.
+- Offre personnelle comme entree de gamme, avec upsell vers plans plus rentables.
+
 ICP prioritaire V1:
 
+- Independants professionnels avec fichiers clients ou livrables sensibles.
 - Agences et studios de 2 a 10 personnes.
-- Travaillent avec des clients externes.
-- Partagent regulierement des fichiers sensibles ou livrables.
-- Ont besoin de liens de partage controlables.
-- Veulent une solution simple, europeenne et plus professionnelle qu'un drive personnel.
+- Cabinets de conseil.
 
 Segments secondaires:
 
-- Cabinets de conseil.
-- Independants premium avec clients recurrents.
 - Associations structurees manipulant des documents sensibles.
+- Petites equipes internes qui veulent un cloud europeen controle.
 
 Segments non prioritaires V1:
 
 - Grand public B2C.
 - Grandes entreprises avec besoins SSO/SAML.
 - Equipes qui cherchent une suite bureautique collaborative.
+- Business enterprise en production initiale.
 
 ## Pains Prioritaires
 
@@ -40,7 +45,8 @@ Segments non prioritaires V1:
 - L'equipe ne sait pas quels fichiers sont exposes.
 - Les outils americains posent une question de confiance ou de souverainete.
 - La facturation et les quotas sont peu lisibles.
-- Les petites equipes veulent du controle sans complexite enterprise.
+- Les utilisateurs solo veulent un outil professionnel sans basculer dans une suite enterprise.
+- Les equipes veulent du controle sans complexite enterprise.
 
 ## Alternatives
 
@@ -65,7 +71,7 @@ Segments non prioritaires V1:
 Message principal:
 
 ```text
-Le drive europeen securise pour les petites equipes qui partagent des fichiers clients.
+Le cloud europeen securise pour travailler seul ou en groupe avec des fichiers professionnels.
 ```
 
 Sous-message:
@@ -309,7 +315,7 @@ Regles:
 Hero:
 
 ```text
-Le drive europeen securise pour les petites equipes qui partagent des fichiers clients.
+Le cloud europeen securise pour travailler seul ou en groupe avec des fichiers professionnels.
 ```
 
 Sous-titre:
@@ -333,10 +339,10 @@ Voir les offres
 Sections:
 
 - Probleme: fichiers disperses, liens oublies, manque de controle.
-- Solution: espace equipe, liens expires, vue des liens actifs.
+- Solution: workspace personnel, espaces groupe, liens expires, vue des liens actifs.
 - Securite: hebergement europeen, chiffrement au repos, audit basique.
 - API: automatiser uploads, liens de partage et workflows fichiers.
-- Pricing: Solo Pro, Team, Team Plus.
+- Pricing: Personal Essential, Personal Plus, Personal Pro, Personal Secure, Team, Workspace.
 - FAQ objections.
 - CTA final.
 

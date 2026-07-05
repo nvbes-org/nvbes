@@ -120,26 +120,6 @@ pub async fn create_workspace(
         .execute(&mut *tx)
         .await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO subscriptions (
-          workspace_id,
-          plan_id,
-          status,
-          billing_provider,
-          current_period_start,
-          current_period_end
-        )
-        VALUES ($1, $2, 'trialing', 'stripe', $3, $4)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(plan_id)
-    .bind(now)
-    .bind(trial_ends_at)
-    .execute(&mut *tx)
-    .await?;
-
     insert_audit_event(
         &mut tx,
         AuditEventInput {

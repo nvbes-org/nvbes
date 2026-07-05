@@ -1,5 +1,5 @@
 use anyhow::Context;
-use sqlx::{Postgres, Row, Transaction};
+use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 pub async fn ensure_non_admin_workspace(
@@ -54,38 +54,15 @@ pub async fn ensure_non_admin_workspace(
     .await
     .context("Failed to create beta e2e owner tenant membership.")?;
 
-    nvbes_identity_api::domains::billing::db::ensure_plan_seeded(tx)
-        .await
-        .map_err(|err| {
-            anyhow::anyhow!(
-                "Failed to seed billing plans for beta e2e workspace: {}",
-                err.message
-            )
-        })?;
-
-    let plan = sqlx::query(
-        r#"
-        SELECT id, max_share_link_ttl_days
-        FROM plans
-        WHERE code = 'trial'
-        LIMIT 1
-        "#,
-    )
-    .fetch_one(&mut **tx)
-    .await
-    .context("Failed to load trial plan for beta e2e workspace.")?;
-    let plan_id: Uuid = plan.get("id");
-    let max_share_link_ttl_days: i32 = plan.get("max_share_link_ttl_days");
-
     sqlx::query(
         r#"
         INSERT INTO workspaces (
           id, tenant_id, organization_id, workspace_type, name, plan_code,
-          trial_ends_at, data_region, jurisdiction, owner_user_id, plan_id
+          trial_ends_at, data_region, jurisdiction, owner_user_id
         )
         VALUES (
           $1, $2, NULL, 'team', $3, 'trial',
-          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4, $5
+          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4
         )
         "#,
     )
@@ -93,7 +70,6 @@ pub async fn ensure_non_admin_workspace(
     .bind(tenant_id)
     .bind(workspace_name)
     .bind(owner_principal_id)
-    .bind(plan_id)
     .execute(&mut **tx)
     .await
     .context("Failed to create beta e2e non-admin workspace.")?;
@@ -111,25 +87,10 @@ pub async fn ensure_non_admin_workspace(
         "#,
     )
     .bind(workspace_id)
-    .bind(max_share_link_ttl_days)
+    .bind(7_i32)
     .execute(&mut **tx)
     .await
     .context("Failed to create beta e2e workspace policy.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO subscriptions (
-          workspace_id, plan_id, status, billing_provider,
-          current_period_start, current_period_end
-        )
-        VALUES ($1, $2, 'trialing', 'stripe', NOW(), NOW() + INTERVAL '14 days')
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(plan_id)
-    .execute(&mut **tx)
-    .await
-    .context("Failed to create beta e2e subscription.")?;
 
     sqlx::query(
         r#"

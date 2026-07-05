@@ -12,6 +12,7 @@ use ipnet::IpNet;
 use crate::config::AppConfig;
 
 pub const TRUSTED_CLIENT_IP_HEADER: &str = "x-nvbes-client-ip";
+pub const TRUSTED_PROXY_HEADER: &str = "x-nvbes-trusted-proxy";
 
 pub async fn trusted_client_ip_middleware(
     State(config): State<AppConfig>,
@@ -41,6 +42,13 @@ pub fn client_ip(headers: &HeaderMap) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
+pub fn from_trusted_proxy(headers: &HeaderMap) -> bool {
+    headers
+        .get(TRUSTED_PROXY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.trim() == "1")
+}
+
 pub fn set_trusted_client_ip(
     headers: &mut HeaderMap,
     peer_addr: Option<SocketAddr>,
@@ -53,6 +61,7 @@ pub fn set_trusted_client_ip(
     headers.remove("x-real-ip");
     headers.remove("cf-connecting-ip");
     headers.remove(TRUSTED_CLIENT_IP_HEADER);
+    headers.remove(TRUSTED_PROXY_HEADER);
 
     let peer_ip = peer_addr.map(|addr| addr.ip());
     let proxy_is_trusted = peer_ip
@@ -74,6 +83,9 @@ pub fn set_trusted_client_ip(
         && let Ok(value) = HeaderValue::from_str(ip)
     {
         headers.insert(TRUSTED_CLIENT_IP_HEADER, value);
+    }
+    if proxy_is_trusted {
+        headers.insert(TRUSTED_PROXY_HEADER, HeaderValue::from_static("1"));
     }
 
     selected
@@ -120,6 +132,7 @@ mod tests {
         assert_eq!(selected.as_deref(), Some("198.51.100.7"));
         assert_eq!(client_ip(&headers).as_deref(), Some("198.51.100.7"));
         assert!(!headers.contains_key("x-forwarded-for"));
+        assert!(!from_trusted_proxy(&headers));
     }
 
     #[test]
@@ -135,5 +148,20 @@ mod tests {
 
         assert_eq!(selected.as_deref(), Some("203.0.113.10"));
         assert_eq!(client_ip(&headers).as_deref(), Some("203.0.113.10"));
+        assert!(from_trusted_proxy(&headers));
+    }
+
+    #[test]
+    fn strips_spoofed_internal_trusted_proxy_marker() {
+        let mut headers = HeaderMap::new();
+        headers.insert(TRUSTED_PROXY_HEADER, "1".parse().unwrap());
+
+        set_trusted_client_ip(
+            &mut headers,
+            Some("198.51.100.7:443".parse().unwrap()),
+            &["10.0.0.0/8".to_string()],
+        );
+
+        assert!(!from_trusted_proxy(&headers));
     }
 }

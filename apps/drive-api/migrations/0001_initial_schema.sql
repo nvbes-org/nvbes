@@ -13,22 +13,10 @@ CREATE TYPE workspace_type AS ENUM ('personal', 'team');
 CREATE TYPE workspace_member_role AS ENUM ('owner', 'admin', 'member', 'viewer');
 CREATE TYPE workspace_member_status AS ENUM ('active', 'invited', 'suspended', 'removed');
 CREATE TYPE api_key_status AS ENUM ('active', 'revoked', 'expired');
-CREATE TYPE billing_provider AS ENUM ('stripe');
-CREATE TYPE subscription_status AS ENUM (
-  'trialing',
-  'active',
-  'past_due',
-  'canceled',
-  'incomplete',
-  'suspended'
-);
-CREATE TYPE customer_type AS ENUM ('b2b', 'b2c');
 CREATE TYPE storage_object_type AS ENUM ('file', 'folder');
 CREATE TYPE storage_object_status AS ENUM ('pending', 'active', 'trashed', 'deleted');
 CREATE TYPE upload_session_status AS ENUM ('pending', 'completed', 'cancelled', 'expired');
 CREATE TYPE share_link_permission AS ENUM ('download');
-CREATE TYPE billing_adjustment_type AS ENUM ('credit', 'refund', 'manual_adjustment');
-CREATE TYPE billing_webhook_status AS ENUM ('received', 'processed', 'rejected', 'failed');
 
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -136,34 +124,6 @@ CREATE TABLE api_request_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL UNIQUE REFERENCES workspaces (id) ON DELETE CASCADE,
-  plan_id UUID NOT NULL REFERENCES plans (id),
-  status subscription_status NOT NULL DEFAULT 'trialing',
-  billing_provider billing_provider NOT NULL DEFAULT 'stripe',
-  billing_customer_id TEXT,
-  billing_subscription_id TEXT,
-  current_period_start TIMESTAMPTZ,
-  current_period_end TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE billing_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL UNIQUE REFERENCES workspaces (id) ON DELETE CASCADE,
-  provider billing_provider NOT NULL DEFAULT 'stripe',
-  stripe_customer_id TEXT,
-  billing_email TEXT,
-  country CHAR(2),
-  customer_type customer_type NOT NULL DEFAULT 'b2b',
-  vat_number TEXT,
-  tax_exempt_status TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE TABLE usage_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
@@ -173,39 +133,6 @@ CREATE TABLE usage_events (
   occurred_at TIMESTAMPTZ NOT NULL,
   source TEXT NOT NULL,
   idempotency_key TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE usage_snapshots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
-  billing_period_start DATE NOT NULL,
-  billing_period_end DATE NOT NULL,
-  meter TEXT NOT NULL,
-  quantity BIGINT NOT NULL,
-  unit TEXT NOT NULL,
-  billable_quantity BIGINT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE invoice_estimates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
-  billing_period_start DATE NOT NULL,
-  billing_period_end DATE NOT NULL,
-  estimated_amount_cents BIGINT NOT NULL CHECK (estimated_amount_cents >= 0),
-  currency CHAR(3) NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE billing_adjustments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id UUID NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
-  adjustment_type billing_adjustment_type NOT NULL,
-  amount_cents BIGINT NOT NULL,
-  currency CHAR(3) NOT NULL,
-  reason TEXT NOT NULL,
-  created_by UUID NOT NULL REFERENCES users (id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -293,18 +220,6 @@ CREATE TABLE audit_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE billing_webhook_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider billing_provider NOT NULL DEFAULT 'stripe',
-  provider_event_id TEXT NOT NULL UNIQUE,
-  workspace_id UUID REFERENCES workspaces (id) ON DELETE CASCADE,
-  status billing_webhook_status NOT NULL DEFAULT 'received',
-  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  signature_valid BOOLEAN NOT NULL DEFAULT FALSE,
-  payload JSONB NOT NULL DEFAULT '{}'::JSONB
-);
-
 CREATE INDEX idx_sessions_user_id ON sessions (user_id);
 CREATE INDEX idx_sessions_expires_at ON sessions (expires_at);
 CREATE INDEX idx_mfa_factors_user_id ON mfa_factors (user_id);
@@ -313,15 +228,11 @@ CREATE INDEX idx_workspace_members_user_id ON workspace_members (user_id);
 CREATE INDEX idx_api_keys_workspace_id ON api_keys (workspace_id);
 CREATE INDEX idx_api_request_logs_workspace_id_created_at
   ON api_request_logs (workspace_id, created_at DESC);
-CREATE INDEX idx_subscriptions_plan_id ON subscriptions (plan_id);
 CREATE INDEX idx_usage_events_workspace_meter_occurred_at
   ON usage_events (workspace_id, meter, occurred_at DESC);
 CREATE UNIQUE INDEX idx_usage_events_idempotency_key
   ON usage_events (workspace_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
-CREATE INDEX idx_usage_snapshots_workspace_id ON usage_snapshots (workspace_id);
-CREATE INDEX idx_invoice_estimates_workspace_id ON invoice_estimates (workspace_id);
-CREATE INDEX idx_billing_adjustments_workspace_id ON billing_adjustments (workspace_id);
 CREATE INDEX idx_storage_objects_workspace_parent_name
   ON storage_objects (workspace_id, parent_id, name);
 CREATE INDEX idx_storage_objects_workspace_status
@@ -414,18 +325,6 @@ WHERE workspaces.trial_ends_at IS NOT NULL
   AND workspaces.trial_ends_at > NOW()
   AND workspaces.plan_id <> trial_plan.id;
 
-WITH trial_plan AS (
-  SELECT id
-  FROM plans
-  WHERE code = 'trial'
-  LIMIT 1
-)
-UPDATE subscriptions
-SET plan_id = trial_plan.id,
-    updated_at = NOW()
-FROM trial_plan
-WHERE subscriptions.status = 'trialing'
-  AND subscriptions.plan_id <> trial_plan.id;
 CREATE TYPE workspace_invitation_status AS ENUM ('pending', 'accepted', 'revoked', 'expired');
 
 CREATE TABLE workspace_invitations (
@@ -448,34 +347,6 @@ CREATE INDEX idx_workspace_invitations_workspace_id
   ON workspace_invitations (workspace_id, created_at DESC);
 CREATE INDEX idx_workspace_invitations_email_status
   ON workspace_invitations (email, status, expires_at DESC);
-CREATE TABLE stripe_price_mappings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  plan_id UUID NOT NULL REFERENCES plans (id) ON DELETE CASCADE,
-  meter TEXT NOT NULL DEFAULT 'subscription',
-  stripe_product_id TEXT NOT NULL,
-  stripe_price_id TEXT NOT NULL UNIQUE,
-  country_code CHAR(2),
-  pricing_region TEXT,
-  currency CHAR(3) NOT NULL DEFAULT 'EUR',
-  amount_minor BIGINT CHECK (amount_minor IS NULL OR amount_minor >= 0),
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-  valid_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  valid_until TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (country_code IS NULL OR country_code = upper(country_code)),
-  CHECK (country_code IS NULL OR pricing_region IS NULL),
-  CHECK (valid_until IS NULL OR valid_until > valid_from)
-);
-
-CREATE INDEX idx_stripe_price_mappings_plan_meter_status
-  ON stripe_price_mappings (plan_id, meter, status);
-
-CREATE INDEX idx_stripe_price_mappings_plan_market
-  ON stripe_price_mappings (plan_id, meter, status, country_code, pricing_region, valid_from DESC);
-
-CREATE INDEX idx_stripe_price_mappings_price_status
-  ON stripe_price_mappings (stripe_price_id, status);
 ALTER TABLE audit_events
   ADD COLUMN previous_event_hash TEXT,
   ADD COLUMN event_hash TEXT;
@@ -880,16 +751,6 @@ CREATE POLICY workspace_invitation_isolation ON workspace_invitations
     FOR ALL
     USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
 
-ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY subscription_isolation ON subscriptions
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
-ALTER TABLE billing_accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY billing_account_isolation ON billing_accounts
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
 ALTER TABLE quota_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY quota_usage_isolation ON quota_usage
     FOR ALL
@@ -897,26 +758,6 @@ CREATE POLICY quota_usage_isolation ON quota_usage
 
 ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY usage_event_isolation ON usage_events
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
-ALTER TABLE usage_snapshots ENABLE ROW LEVEL SECURITY;
-CREATE POLICY usage_snapshot_isolation ON usage_snapshots
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
-ALTER TABLE invoice_estimates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY invoice_estimate_isolation ON invoice_estimates
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
-ALTER TABLE billing_adjustments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY billing_adjustment_isolation ON billing_adjustments
-    FOR ALL
-    USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
-
-ALTER TABLE billing_webhook_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY billing_webhook_event_isolation ON billing_webhook_events
     FOR ALL
     USING (workspace_id = current_setting('nvbes.workspace_id')::uuid);
 
@@ -977,7 +818,6 @@ CREATE POLICY audit_read ON audit_events
 -- email_verification_tokens (user-scoped)
 -- password_reset_tokens (user-scoped)
 -- plans
--- stripe_price_mappings
 -- oauth_scope_metadata (not present in drive-api)
 -- Migration: data_classification_v1
 -- Description: Add data classification framework columns
@@ -1149,32 +989,19 @@ CREATE INDEX IF NOT EXISTS idx_upload_sessions_created_by_principal_id
 CREATE INDEX IF NOT EXISTS idx_share_links_created_by_principal_id
   ON share_links (workspace_id, created_by_principal_id);
 
--- Migration: 0006_api_keys_and_billing_adjustment_principals.sql
+-- Migration: 0006_api_keys_principals.sql
 ALTER TABLE api_keys
-  ADD COLUMN IF NOT EXISTS created_by_principal_id UUID;
-
-ALTER TABLE billing_adjustments
   ADD COLUMN IF NOT EXISTS created_by_principal_id UUID;
 
 UPDATE api_keys
 SET created_by_principal_id = COALESCE(created_by_principal_id, created_by)
 WHERE created_by_principal_id IS NULL;
 
-UPDATE billing_adjustments
-SET created_by_principal_id = COALESCE(created_by_principal_id, created_by)
-WHERE created_by_principal_id IS NULL;
-
 ALTER TABLE api_keys
-  ALTER COLUMN created_by_principal_id SET NOT NULL;
-
-ALTER TABLE billing_adjustments
   ALTER COLUMN created_by_principal_id SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_created_by_principal_id
   ON api_keys (workspace_id, created_by_principal_id);
-
-CREATE INDEX IF NOT EXISTS idx_billing_adjustments_created_by_principal_id
-  ON billing_adjustments (workspace_id, created_by_principal_id);
 
 -- Migration: 0007_workspace_owner_principal_id.sql
 ALTER TABLE workspaces

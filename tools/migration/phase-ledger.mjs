@@ -72,12 +72,13 @@ function mergeExisting(generated, existing) {
 			...phase,
 			owner: current.owner?.endsWith(" required") ? phase.owner : (current.owner ?? phase.owner),
 			status: current.status === "pending" ? phase.status : (current.status ?? phase.status),
-			evidence: current.evidence?.length === 0 ? phase.evidence : (current.evidence ?? phase.evidence),
+			evidence: phase.evidence?.length > 0 || current.evidence?.length === 0
+				? phase.evidence
+				: (current.evidence ?? phase.evidence),
 			decision: current.decision === "no-go" ? phase.decision : (current.decision ?? phase.decision),
-			proof:
-				current.proof === "pending phase implementation evidence"
-					? phase.proof
-					: (current.proof ?? phase.proof),
+			proof: phase.evidence?.length > 0 || current.proof === "pending phase implementation evidence"
+				? phase.proof
+				: (current.proof ?? phase.proof),
 		};
 	});
 }

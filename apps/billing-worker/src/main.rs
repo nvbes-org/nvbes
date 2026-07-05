@@ -1,0 +1,119 @@
+use nvbes_core::config::AppConfig;
+use nvbes_observability::{
+    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing,
+    install_safe_panic_hook, start_continuous_profiling,
+};
+use tracing::info;
+
+#[path = "billing.worker.rs"]
+mod worker;
+
+const BILLING_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_BILLING_WORKER_METRICS_BIND_ADDR";
+const DEFAULT_BILLING_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4104";
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-worker");
+    install_safe_panic_hook();
+    init_tracing(&config);
+
+    if matches!(
+        std::env::args().nth(1).as_deref(),
+        Some("error-reporting-smoke")
+    ) {
+        let result = capture_error_reporting_smoke(
+            "billing-worker",
+            &config.environment,
+            "worker",
+            config.sentry_dsn.is_some(),
+        );
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+
+    let _profiling_guard =
+        start_continuous_profiling(&config, "billing-worker").map_err(anyhow::Error::msg)?;
+
+    let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
+    let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
+    let email = build_email_sender(&config)?;
+    let product_analytics = build_product_analytics(&config)?;
+    let state = worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
+    let metrics_bind_addr = billing_worker_metrics_bind_addr();
+    let _metrics_server = nvbes_observability::start_metrics_server(
+        &config,
+        state.observability.clone(),
+        &metrics_bind_addr,
+    )
+    .await?;
+
+    tracing::info!(
+        app = %config.app_name,
+        environment = %config.environment,
+        "starting nvbes Billing worker"
+    );
+
+    worker::run_loop_until_shutdown(state, async {
+        let _ = tokio::signal::ctrl_c().await;
+    })
+    .await
+}
+
+fn billing_worker_metrics_bind_addr() -> String {
+    std::env::var(BILLING_WORKER_METRICS_BIND_ADDR_ENV)
+        .unwrap_or_else(|_| DEFAULT_BILLING_WORKER_METRICS_BIND_ADDR.to_string())
+}
+
+fn build_product_analytics(
+    config: &AppConfig,
+) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
+    let analytics_config = nvbes_product_analytics::ProductAnalyticsConfig {
+        enabled: config.product_analytics_enabled,
+        analytics_id_salt: config.analytics_id_salt.clone(),
+    };
+    Ok(nvbes_product_analytics::ProductAnalytics::new(
+        analytics_config,
+    )?)
+}
+
+fn build_email_sender(
+    config: &AppConfig,
+) -> anyhow::Result<std::sync::Arc<dyn nvbes_email::EmailSender>> {
+    match config.email_provider.as_str() {
+        "smtp" => {
+            let host = config.smtp_host.clone().ok_or_else(|| {
+                anyhow::anyhow!("NVBES_SMTP_HOST is required when NVBES_EMAIL_PROVIDER=smtp")
+            })?;
+            if config.environment != "development" && config.email_from_email.is_none() {
+                anyhow::bail!(
+                    "NVBES_EMAIL_FROM_EMAIL is required outside development when SMTP email is enabled"
+                );
+            }
+            info!(
+                "Billing email sender: SMTP (host={host}, port={})",
+                config.smtp_port
+            );
+            Ok(std::sync::Arc::new(nvbes_email::SmtpEmailSender::new(
+                nvbes_email::SmtpEmailConfig {
+                    host,
+                    port: config.smtp_port,
+                    username: config.smtp_username.clone(),
+                    password: config.smtp_password.clone(),
+                    starttls: config.smtp_starttls,
+                },
+            )?))
+        }
+        "mock" => {
+            if config.environment != "development" {
+                anyhow::bail!(
+                    "Mock email sender is forbidden outside development. Configure NVBES_EMAIL_PROVIDER=smtp."
+                );
+            }
+            info!("Billing email sender: Mock (development mode)");
+            Ok(std::sync::Arc::new(nvbes_email::MockEmailSender::new()))
+        }
+        provider => anyhow::bail!("Unsupported NVBES_EMAIL_PROVIDER={provider}"),
+    }
+}

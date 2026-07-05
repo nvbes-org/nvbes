@@ -24,6 +24,7 @@ export interface AnalyticsTransport {
   captureException?: (error: unknown, properties: AnalyticsProperties) => Promise<void> | void;
   startPrivacySafeReplay?: () => Promise<void> | void;
   stopPrivacySafeReplay?: () => Promise<void> | void;
+  disableCapture?: () => Promise<void> | void;
 }
 
 export interface AnalyticsRuntimeOptions {

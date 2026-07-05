@@ -2,30 +2,9 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::records::{
-    BillingSummaryRow, DeveloperCredentialRow, InvoiceRow, MfaPolicyRow, PolicySummaryRow,
-    SecuritySummaryRow, SessionPolicyRow,
+    DeveloperCredentialRow, MfaPolicyRow, PolicySummaryRow, SecuritySummaryRow, SessionPolicyRow,
 };
 use crate::http::error::AppError;
-
-pub async fn billing_summary(
-    db: &PgPool,
-    tenant_id: Uuid,
-) -> Result<Option<BillingSummaryRow>, AppError> {
-    Ok(sqlx::query_as::<_, BillingSummaryRow>(r#"
-        SELECT COALESCE(p.code, w.plan_code) AS code, COALESCE(p.name, w.plan_code) AS name,
-          COALESCE(s.status::text, 'inactive') AS status, NULL::text AS billing_email
-        FROM workspaces w
-        LEFT JOIN subscriptions s ON s.workspace_id = w.id
-        LEFT JOIN plans p ON p.code = w.plan_code OR p.id = s.plan_id
-        LEFT JOIN billing_accounts ba ON ba.workspace_id = w.id
-        WHERE w.tenant_id = $1
-        ORDER BY CASE COALESCE(s.status::text, 'inactive') WHEN 'active' THEN 0 ELSE 1 END, w.created_at DESC
-        LIMIT 1
-        "#)
-    .bind(tenant_id)
-    .fetch_optional(db)
-    .await?)
-}
 
 pub async fn list_developers(
     db: &PgPool,
@@ -203,23 +182,5 @@ pub async fn security_summary(
     )
     .bind(tenant_id)
     .fetch_one(db)
-    .await?)
-}
-
-pub async fn list_invoices(db: &PgPool, tenant_id: Uuid) -> Result<Vec<InvoiceRow>, AppError> {
-    Ok(sqlx::query_as::<_, InvoiceRow>(
-        r#"
-        SELECT ie.id, 'estimated'::text AS status,
-          ie.estimated_amount_cents AS amount_due_cents,
-          ie.created_at AS issued_at
-        FROM invoice_estimates ie
-        INNER JOIN workspaces w ON w.id = ie.workspace_id
-        WHERE w.tenant_id = $1
-        ORDER BY ie.created_at DESC
-        LIMIT 12
-        "#,
-    )
-    .bind(tenant_id)
-    .fetch_all(db)
     .await?)
 }

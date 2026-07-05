@@ -1,7 +1,6 @@
 use crate::domains::enterprise::service::{
-    create_invitations, get_billing, get_security, grant_admin_elevation, list_audit_events,
-    list_users, list_workspaces, suspend_user, update_mfa_policy, update_session_policy,
-    update_user_access,
+    create_invitations, get_security, grant_admin_elevation, list_audit_events, list_users,
+    list_workspaces, suspend_user, update_mfa_policy, update_session_policy, update_user_access,
 };
 use crate::domains::enterprise::types::{
     EnterpriseAccessUpdateInput, EnterpriseAdminElevationInput, EnterpriseInvitationInput,
@@ -70,11 +69,6 @@ async fn test_delegated_administration_scoping_and_blocking() {
             assert_eq!(ws_id, workspace_a_id.to_string());
         }
     }
-
-    let billing_err = get_billing(&pool, &org_a_admin_auth, tenant_id)
-        .await
-        .unwrap_err();
-    assert_eq!(billing_err.code, "tenant_scope_required");
 
     let security_err = get_security(&pool, &org_a_admin_auth, tenant_id, 12)
         .await

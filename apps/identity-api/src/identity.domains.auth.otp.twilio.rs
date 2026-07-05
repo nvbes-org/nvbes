@@ -2,7 +2,6 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 
 use crate::http::error::AppError;
-use nvbes_billing::shared::form_encode;
 
 use super::otp_types::{
     OtpChallengeStatus, OtpCheckRequest, OtpCheckResult, OtpStartRequest, OtpStartResult,
@@ -155,4 +154,16 @@ fn twilio_error(status: StatusCode, body: &str) -> AppError {
         }
         _ => AppError::conflict("otp_provider_rejected", &message),
     }
+}
+
+fn form_encode(fields: Vec<(String, String)>) -> String {
+    fields
+        .into_iter()
+        .map(|(key, value)| format!("{}={}", percent_encode(&key), percent_encode(&value)))
+        .collect::<Vec<_>>()
+        .join("&")
+}
+
+fn percent_encode(value: &str) -> String {
+    urlencoding::encode(value).into_owned()
 }

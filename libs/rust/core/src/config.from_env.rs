@@ -1,6 +1,8 @@
 use super::AppConfig;
 use super::billing::billing_provider_env;
-use super::env::{env_bool, env_or_default, optional_env, parse_csv};
+use super::env::{
+    env_bool, env_bool_any, env_or_default, optional_env, optional_env_any, parse_csv,
+};
 use super::geo::ip_intelligence_env;
 use super::validation::validate_config_urls_and_secrets;
 
@@ -52,6 +54,12 @@ impl AppConfig {
                 "NVBES_DATABASE_URL",
                 std::env::var("NVBES_DATABASE_URL").ok(),
                 "postgres://postgres:postgres@localhost:5432/nvbes",
+                strict_mode,
+            )?,
+            billing_database_url: env_or_default(
+                "NVBES_BILLING_DATABASE_URL",
+                std::env::var("NVBES_BILLING_DATABASE_URL").ok(),
+                "postgres://postgres:postgres@localhost:5432/nvbes_billing",
                 strict_mode,
             )?,
             database_max_connections: std::env::var("NVBES_DATABASE_MAX_CONNECTIONS")
@@ -120,6 +128,14 @@ impl AppConfig {
                 .billing_external_provider_fallback_enabled,
             billing_external_provider_routing_status: billing_provider_env
                 .billing_external_provider_routing_status,
+            billing_fraud_enforcement_enabled: billing_provider_env
+                .billing_fraud_enforcement_enabled,
+            billing_fraud_step_up_threshold: billing_provider_env.billing_fraud_step_up_threshold,
+            billing_fraud_manual_review_threshold: billing_provider_env
+                .billing_fraud_manual_review_threshold,
+            billing_fraud_block_threshold: billing_provider_env.billing_fraud_block_threshold,
+            billing_fraud_policy_overrides_json: billing_provider_env
+                .billing_fraud_policy_overrides_json,
             billing_default_success_url: env_or_default(
                 "NVBES_BILLING_SUCCESS_URL",
                 std::env::var("NVBES_BILLING_SUCCESS_URL").ok(),
@@ -159,10 +175,28 @@ impl AppConfig {
             webauthn_related_origins: optional_env("NVBES_WEBAUTHN_RELATED_ORIGINS")
                 .map(|v| parse_csv(&v))
                 .unwrap_or_default(),
+            sentry_dsn: optional_env_any(&["SENTRY_DSN", "NVBES_SENTRY_DSN"]),
+            sentry_traces_sample_rate: std::env::var("SENTRY_TRACES_SAMPLE_RATE")
+                .or_else(|_| std::env::var("NVBES_SENTRY_TRACES_SAMPLE_RATE"))
+                .ok()
+                .and_then(|value| value.parse::<f32>().ok())
+                .unwrap_or(0.0),
             otlp_endpoint: optional_env("NVBES_OTLP_ENDPOINT"),
             otlp_authorization_header: optional_env("NVBES_OTLP_AUTHORIZATION_HEADER"),
-            product_analytics_enabled: env_bool("NVBES_PRODUCT_ANALYTICS_ENABLED", false),
-            product_analytics_token: optional_env("NVBES_PRODUCT_ANALYTICS_TOKEN"),
+            product_analytics_enabled: env_bool_any(
+                &["NVBES_POSTHOG_ENABLED", "NVBES_PRODUCT_ANALYTICS_ENABLED"],
+                false,
+            ),
+            product_analytics_token: optional_env_any(&[
+                "NVBES_POSTHOG_PROJECT_TOKEN",
+                "NVBES_PRODUCT_ANALYTICS_TOKEN",
+            ]),
+            posthog_host: env_or_default(
+                "NVBES_POSTHOG_HOST",
+                optional_env("NVBES_POSTHOG_HOST"),
+                "https://eu.i.posthog.com",
+                false,
+            )?,
             analytics_id_salt: optional_env("NVBES_ANALYTICS_ID_SALT"),
             profiling_enabled: env_bool("NVBES_PROFILING_ENABLED", false),
             profiling_endpoint: optional_env("NVBES_PROFILING_ENDPOINT"),
@@ -284,6 +318,27 @@ impl AppConfig {
             ip_intelligence_provider_specs: ip_intelligence_env.provider_specs,
             ip_intelligence_timeout_secs: ip_intelligence_env.timeout_secs,
             ip_intelligence_cache_ttl_hours: ip_intelligence_env.cache_ttl_hours,
+            maxmind_geolite_database_enabled: env_bool(
+                "NVBES_MAXMIND_GEOLITE_DATABASE_ENABLED",
+                false,
+            ),
+            maxmind_geolite_web_enabled: env_bool("NVBES_MAXMIND_GEOLITE_WEB_ENABLED", false),
+            maxmind_geolite_eula_accepted: env_bool("NVBES_MAXMIND_GEOLITE_EULA_ACCEPTED", false),
+            maxmind_account_id: optional_env("NVBES_MAXMIND_ACCOUNT_ID"),
+            maxmind_license_key: optional_env("NVBES_MAXMIND_LICENSE_KEY"),
+            maxmind_web_timeout_secs: std::env::var("NVBES_MAXMIND_WEB_TIMEOUT_SECS")
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(2),
+            maxmind_web_cache_ttl_hours: std::env::var("NVBES_MAXMIND_WEB_CACHE_TTL_HOURS")
+                .ok()
+                .and_then(|value| value.parse::<i64>().ok())
+                .unwrap_or(24 * 7),
+            loyalsoldier_geoip_enabled: env_bool("NVBES_LOYALSOLDIER_GEOIP_ENABLED", false),
+            loyalsoldier_geoip_license_accepted: env_bool(
+                "NVBES_LOYALSOLDIER_GEOIP_LICENSE_ACCEPTED",
+                false,
+            ),
             mtls_enabled: env_bool("NVBES_MTLS_ENABLED", false),
             mtls_port: std::env::var("NVBES_MTLS_PORT")
                 .ok()

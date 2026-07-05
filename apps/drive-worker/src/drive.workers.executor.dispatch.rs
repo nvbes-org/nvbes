@@ -1,9 +1,11 @@
+use nvbes_core::config::AppConfig;
 use nvbes_redis::worker_queue::QueuedJob;
 
 use crate::db::Database;
 
 pub(super) async fn execute_job(
     job: &QueuedJob,
+    config: &AppConfig,
     database: &Database,
     storage: &dyn nvbes_storage::ObjectStore,
 ) -> anyhow::Result<serde_json::Value> {
@@ -30,6 +32,15 @@ pub(super) async fn execute_job(
         super::super::maintenance::JOB_GEO_LOOKUP_MAINTENANCE => {
             super::super::maintenance::run_geo_lookup_maintenance(database).await
         }
+        super::super::maintenance::JOB_GEO_V2FLY_IMPORT => {
+            super::super::maintenance::import_v2fly_geoip(database).await
+        }
+        super::super::maintenance::JOB_GEO_MAXMIND_GEOLITE_IMPORT => {
+            super::super::maintenance::import_maxmind_geolite(config, database).await
+        }
+        super::super::maintenance::JOB_GEO_LOYALSOLDIER_IMPORT => {
+            super::super::maintenance::import_loyalsoldier_geoip(config, database).await
+        }
         super::super::privacy::delete::JOB_PRIVACY_ACCOUNT_DELETE => {
             super::super::privacy::delete::delete_account_data(job, database).await
         }
@@ -55,6 +66,9 @@ pub(super) fn is_known_job_type(job_type: &str) -> bool {
             | super::super::maintenance::JOB_STORAGE_PURGE_DELETED
             | super::super::maintenance::JOB_STORAGE_PURGE_QUARANTINED
             | super::super::maintenance::JOB_GEO_LOOKUP_MAINTENANCE
+            | super::super::maintenance::JOB_GEO_V2FLY_IMPORT
+            | super::super::maintenance::JOB_GEO_MAXMIND_GEOLITE_IMPORT
+            | super::super::maintenance::JOB_GEO_LOYALSOLDIER_IMPORT
             | super::super::privacy::delete::JOB_PRIVACY_ACCOUNT_DELETE
             | super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE
             | super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT

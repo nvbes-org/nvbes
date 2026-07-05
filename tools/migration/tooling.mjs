@@ -78,6 +78,8 @@ const requiredMigrationScripts = [
 	"check:migration-privacy-export-delete",
 	"check:migration-billing-entitlements",
 	"check:migration-billing-webhook-idempotency",
+	"check:migration-billing-multi-psp-continuity",
+	"check:migration-billing-multi-psp-e2e",
 	"check:migration-developer-oauth-tokens",
 	"check:migration-developer-signed-webhooks",
 	"check:migration-cloud-provisioning",

@@ -228,6 +228,9 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   mfa_factor_not_found: 'Cette méthode de vérification est introuvable.',
   challenge_locked: 'Trop de tentatives. Réessayez dans quelques minutes.',
   password_expired: 'Votre mot de passe a expiré. Réinitialisez-le pour continuer.',
+  password_exposed: 'Ce mot de passe est apparu dans une fuite de données. Choisissez-en un autre.',
+  password_compromised:
+    'Ce mot de passe est apparu dans une fuite de données. Réinitialisez-le avant de vous connecter.',
   risk_policy_blocked: 'Connexion temporairement bloquée pour protéger votre compte.',
   email_already_exists: 'Cet email est déjà utilisé.',
   primary_email_cannot_be_deleted: "L'email principal ne peut pas être supprimé.",

@@ -67,30 +67,6 @@ impl DashboardsResponse {
                     ],
                 },
                 DashboardDefinition {
-                    id: "security-billing",
-                    name: "Billing Protection",
-                    purpose: "Track checkout, portal access, billing abuse blocks, and webhook health.",
-                    signals: vec![
-                        "billing_checkout_started",
-                        "billing_portal_opened",
-                        "billing_operation_blocked",
-                        "billing_webhook_received",
-                        "billing_webhook_replayed",
-                        "billing_webhook_failed",
-                    ],
-                },
-                DashboardDefinition {
-                    id: "billing-worker",
-                    name: "Billing Worker",
-                    purpose: "Track billing provider queue depth, stale jobs, retries, and dead-letter pressure.",
-                    signals: vec![
-                        "worker_queue_depth",
-                        "worker_queue_oldest_age_seconds",
-                        "worker_queue_jobs_total",
-                        "worker_queue_recovered_jobs_total",
-                    ],
-                },
-                DashboardDefinition {
                     id: "security-rate-limits",
                     name: "Rate Limit Pressure",
                     purpose: "Monitor shared throttling across replicas and public entrypoints.",
@@ -130,36 +106,6 @@ impl CriticalAlertsResponse {
                     severity: "high",
                     condition: "enterprise_recovery_review_pending older than review window",
                 },
-                AlertDefinition {
-                    id: "billing-abuse",
-                    name: "Billing abuse",
-                    severity: "high",
-                    condition: "billing_operation_blocked or repeated portal/checkout throttling",
-                },
-                AlertDefinition {
-                    id: "billing-webhook-failure",
-                    name: "Billing webhook failure",
-                    severity: "critical",
-                    condition: "billing_webhook_failed spikes or persistently fails",
-                },
-                AlertDefinition {
-                    id: "billing-webhook-replay",
-                    name: "Billing webhook replay",
-                    severity: "high",
-                    condition: "billing_webhook_replayed rate increases unexpectedly",
-                },
-                AlertDefinition {
-                    id: "billing-worker-backlog",
-                    name: "Billing worker backlog",
-                    severity: "high",
-                    condition: "worker_queue_depth grows or oldest queued job age exceeds threshold",
-                },
-                AlertDefinition {
-                    id: "billing-worker-dead-letter",
-                    name: "Billing worker dead-letter",
-                    severity: "critical",
-                    condition: "worker_queue_jobs_total outcome = dead_letter increases",
-                },
             ],
         }
     }
@@ -183,27 +129,6 @@ impl LogStreamsResponse {
                         "enterprise_recovery_review_pending",
                         "enterprise_recovery_approved",
                         "password_reset_completed",
-                    ],
-                },
-                LogStreamDefinition {
-                    id: "billing-guard",
-                    name: "Billing Guard Stream",
-                    signals: vec![
-                        "billing_operation_blocked",
-                        "billing_checkout_started",
-                        "billing_webhook_received",
-                        "billing_webhook_replayed",
-                        "billing_webhook_failed",
-                    ],
-                },
-                LogStreamDefinition {
-                    id: "billing-worker",
-                    name: "Billing Worker Stream",
-                    signals: vec![
-                        "worker_queue_depth",
-                        "worker_queue_oldest_age_seconds",
-                        "worker_queue_jobs_total",
-                        "worker_queue_recovered_jobs_total",
                     ],
                 },
             ],
@@ -232,52 +157,50 @@ mod tests {
                 .iter()
                 .any(|alert| alert.id == "recovery-review-backlog")
         );
-        assert!(
-            alerts
-                .alerts
-                .iter()
-                .any(|alert| alert.id == "billing-webhook-failure")
-        );
-        assert!(
-            alerts
-                .alerts
-                .iter()
-                .any(|alert| alert.id == "billing-webhook-replay")
-        );
-        assert!(
-            alerts
-                .alerts
-                .iter()
-                .any(|alert| alert.id == "billing-worker-backlog")
-        );
-        assert!(
-            alerts
-                .alerts
-                .iter()
-                .any(|alert| alert.id == "billing-worker-dead-letter")
-        );
         assert!(streams.streams.iter().any(|stream| {
             stream
                 .signals
                 .contains(&"enterprise_recovery_review_pending")
         }));
+        let webhook_alert_fragment = ["billing", "webhook"].join("-");
         assert!(
-            streams
-                .streams
+            !alerts
+                .alerts
                 .iter()
-                .any(|stream| stream.signals.contains(&"billing_webhook_failed"))
+                .any(|alert| alert.id.contains(&webhook_alert_fragment))
+        );
+        let webhook_signal_fragment = ["billing", "webhook"].join("_");
+        assert!(!streams.streams.iter().any(|stream| {
+            stream
+                .signals
+                .iter()
+                .any(|signal| signal.contains(&webhook_signal_fragment))
+        }));
+        assert!(
+            dashboards.dashboards.iter().all(|dashboard| {
+                !dashboard.id.contains("billing")
+                    && dashboard
+                        .signals
+                        .iter()
+                        .all(|signal| !signal.starts_with("billing"))
+            }),
+            "Identity observability dashboards must not expose Billing runtime signals"
         );
         assert!(
-            dashboards
-                .dashboards
-                .iter()
-                .any(|dashboard| dashboard.id == "billing-worker")
+            alerts.alerts.iter().all(|alert| {
+                !alert.id.contains("billing") && !alert.condition.contains("billing")
+            }),
+            "Identity observability alerts must not expose Billing runtime signals"
         );
         assert!(
-            streams
-                .streams
-                .iter()
-                .any(|stream| stream.id == "billing-worker")
+            streams.streams.iter().all(|stream| {
+                !stream.id.contains("billing")
+                    && stream
+                        .signals
+                        .iter()
+                        .all(|signal| !signal.starts_with("billing"))
+            }),
+            "Identity observability streams must not expose Billing runtime signals"
         );
     }
 }

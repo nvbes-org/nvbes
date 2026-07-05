@@ -1,7 +1,10 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use crate::provider::ProviderCode;
 
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct CreateCheckoutInput {
@@ -31,24 +34,16 @@ pub struct BillingOverviewResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CheckoutSessionResponse {
+    #[schema(value_type = ProviderCode)]
     pub provider: String,
-    pub session_id: String,
-    pub checkout_id: String,
     pub url: String,
-    pub provider_customer_id: String,
-    pub provider_product_id: Option<String>,
-    pub provider_price_id: Option<String>,
-    pub payment_id: Option<String>,
-    pub stripe_customer_id: Option<String>,
-    pub stripe_price_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct PortalSessionResponse {
+    #[schema(value_type = ProviderCode)]
     pub provider: String,
     pub url: String,
-    pub provider_customer_id: String,
-    pub stripe_customer_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -68,9 +63,22 @@ pub struct InvoiceEstimateResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct BillingWebhookResponse {
+    #[schema(value_type = ProviderCode)]
     pub provider: String,
     pub provider_event_id: String,
     pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProviderEventRecord {
+    pub id: Uuid,
+    pub tenant_id: Option<Uuid>,
+    pub provider: String,
+    pub provider_event_id: String,
+    pub event_type: String,
+    pub status: String,
+    pub signature_valid: bool,
+    pub payload_summary: serde_json::Value,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
@@ -89,9 +97,8 @@ pub struct PlanView {
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct SubscriptionView {
     pub status: String,
+    #[schema(value_type = ProviderCode)]
     pub billing_provider: String,
-    pub billing_customer_id: Option<String>,
-    pub billing_subscription_id: Option<String>,
     pub current_period_start: Option<DateTime<Utc>>,
     pub current_period_end: Option<DateTime<Utc>>,
     pub trial_ends_at: Option<DateTime<Utc>>,
@@ -99,8 +106,6 @@ pub struct SubscriptionView {
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct BillingAccountView {
-    pub provider_customer_id: Option<String>,
-    pub stripe_customer_id: Option<String>,
     pub billing_email: Option<String>,
     pub country: Option<String>,
     pub customer_type: String,

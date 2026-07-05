@@ -6,6 +6,13 @@ use uuid::Uuid;
 use crate::invoices::{InvoiceLine, InvoiceTotals, calculate_invoice_totals};
 use crate::pricing::Money;
 
+#[path = "usage.ingest.rs"]
+mod usage_ingest;
+
+pub use usage_ingest::{
+    BillingUsageIngestError, BillingUsageIngestResponse, ingest_usage_event, validate_usage_event,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UsageEvent {
     pub tenant_id: Uuid,

@@ -3,8 +3,8 @@
 ## Status
 
 - status: passed
-- checks: 35
-- passed: 35
+- checks: 36
+- passed: 36
 - failed: 0
 
 ## Rules
@@ -33,18 +33,19 @@
 | Invoice overage calculation is covered by unit test | passed | `libs/rust/billing/src/views.rs` |
 | Invoice estimate charges storage and seat overages | passed | `libs/rust/billing/src/views.rs` |
 | Billing policy helper locks degraded subscription statuses | passed | `libs/rust/billing/src/shared.rs` |
-| Identity billing overview returns entitlements | passed | `apps/identity-api/src/identity.domains.billing.service.overview.rs` |
-| Identity usage response exposes billable storage and seats | passed | `apps/identity-api/src/identity.domains.billing.service.overview.rs` |
-| Identity exposes billing entitlements endpoint | passed | `apps/identity-api/src/identity.domains.billing.routes.manage.rs` |
-| Identity entitlement endpoint requires billing authorization | passed | `apps/identity-api/src/identity.domains.billing.routes.manage.rs` |
-| Identity service returns workspace entitlements | passed | `apps/identity-api/src/identity.domains.billing.entitlements.rs` |
-| Identity service re-exports shared entitlement type | passed | `apps/identity-api/src/identity.domains.billing.service.types.rs` |
-| Identity billing operations enforce lock policy | passed | `apps/identity-api/src/identity.domains.billing.policy.rs` |
-| Drive billing overview returns shared entitlements | passed | `apps/drive-api/src/drive.domains.billing.manage.core.rs` |
-| Drive usage response exposes billable storage and seats | passed | `apps/drive-api/src/drive.domains.billing.manage.core.rs` |
-| Drive persists invoice estimates for reconciliation | passed | `apps/drive-api/src/drive.domains.billing.manage.core.rs` |
-| Drive invoice estimate persistence stores amount and period | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
-| Drive service re-exports shared billing response types | passed | `apps/drive-api/src/drive.domains.billing.types.rs` |
+| Billing service overview returns entitlements | passed | `libs/rust/billing/src/workspace_views.rs` |
+| Billing service usage response exposes billable storage and seats | passed | `libs/rust/billing/src/workspace_views.rs` |
+| Billing API exposes public entitlements endpoint | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
+| Billing entitlements endpoint requires Billing read authorization | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
+| Billing service returns workspace entitlements | passed | `libs/rust/billing/src/workspace_views.rs` |
+| Billing API returns shared entitlement response type | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
+| Billing API exposes internal entitlements endpoint | passed | `apps/billing-api/src/billing.domains.workspace.rs` |
+| Billing API authorizes requests through Identity introspection | passed | `apps/billing-api/src/billing.auth.rs` |
+| Billing checkout enforces lock policy | passed | `libs/rust/billing/src/checkout_sessions.rs` |
+| Billing portal operations enforce lock policy | passed | `libs/rust/billing/src/portal_actions.rs` |
+| Drive projects Billing entitlement events locally | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
+| Drive stores only entitlement projections from Billing | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
+| Drive no longer stores Billing invoice estimates | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
 | Entitlement changed event schema is versioned | passed | `contracts/events/billing.entitlement.changed.v1.schema.json` |
 | Entitlement event payload requires workspace and status | passed | `contracts/events/billing.entitlement.changed.v1.schema.json` |
 | Event manifest includes billing entitlement changes | passed | `contracts/events/manifest.json` |

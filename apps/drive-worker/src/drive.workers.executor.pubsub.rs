@@ -1,4 +1,6 @@
 use crate::db::Database;
+use sqlx::{Postgres, Transaction};
+use uuid::Uuid;
 
 pub(super) async fn run_pubsub_listener(
     database: Database,
@@ -85,34 +87,25 @@ async fn handle_workspace_plan_updated(database: &Database, payload: &str) {
         let plan_code_owned = plan_code.to_owned();
         tokio::spawn(async move {
             match database_clone.begin().await {
-                Ok(mut tx) => {
-                    match nvbes_drive_api::domains::billing::db::plan_id_by_code_tx(
-                        &mut tx,
-                        &plan_code_owned,
-                    )
-                    .await
-                    {
-                        Ok(plan_id) => {
-                            if let Err(error) =
-                                nvbes_drive_api::domains::billing::db::project_workspace_plan_tx(
-                                    &mut tx,
-                                    workspace_id,
-                                    plan_id,
-                                )
-                                .await
-                            {
-                                tracing::error!("Failed to project workspace plan: {:?}", error);
-                            } else if let Err(error) = tx.commit().await {
-                                tracing::error!("Failed to commit transaction: {:?}", error);
-                            } else {
-                                tracing::info!(workspace_id = %workspace_id, plan_code = %plan_code_owned, "Workspace plan successfully projected locally");
-                            }
-                        }
-                        Err(error) => {
-                            tracing::error!("Failed to fetch plan id by code: {:?}", error);
+                Ok(mut tx) => match plan_id_by_code_tx(&mut tx, &plan_code_owned).await {
+                    Ok(Some(plan_id)) => {
+                        if let Err(error) =
+                            project_workspace_plan_tx(&mut tx, workspace_id, plan_id).await
+                        {
+                            tracing::error!("Failed to project workspace plan: {:?}", error);
+                        } else if let Err(error) = tx.commit().await {
+                            tracing::error!("Failed to commit transaction: {:?}", error);
+                        } else {
+                            tracing::info!(workspace_id = %workspace_id, plan_code = %plan_code_owned, "Workspace plan successfully projected locally");
                         }
                     }
-                }
+                    Ok(None) => {
+                        tracing::error!(plan_code = %plan_code_owned, "Plan code is not known locally");
+                    }
+                    Err(error) => {
+                        tracing::error!("Failed to fetch plan id by code: {:?}", error);
+                    }
+                },
                 Err(error) => {
                     tracing::error!("Failed to start transaction: {:?}", error);
                 }
@@ -133,6 +126,53 @@ async fn handle_user_suspended(database: &Database, payload: &str) {
             tracing::error!("Failed to suspend user in DB: {:?}", error);
         }
     }
+}
+
+async fn plan_id_by_code_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    code: &str,
+) -> sqlx::Result<Option<Uuid>> {
+    sqlx::query_scalar::<_, Uuid>("SELECT id FROM plans WHERE code = $1")
+        .bind(code)
+        .fetch_optional(&mut **tx)
+        .await
+}
+
+async fn project_workspace_plan_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: Uuid,
+    plan_id: Uuid,
+) -> sqlx::Result<()> {
+    sqlx::query(
+        r#"
+        UPDATE workspaces
+        SET plan_id = $2,
+            updated_at = NOW()
+        WHERE id = $1
+        "#,
+    )
+    .bind(workspace_id)
+    .bind(plan_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE workspace_policies wp
+        SET max_share_link_ttl_days = p.max_share_link_ttl_days,
+            default_share_link_ttl_days = LEAST(wp.default_share_link_ttl_days, p.max_share_link_ttl_days),
+            updated_at = NOW()
+        FROM plans p
+        WHERE wp.workspace_id = $1
+          AND p.id = $2
+        "#,
+    )
+    .bind(workspace_id)
+    .bind(plan_id)
+    .execute(&mut **tx)
+    .await?;
+
+    Ok(())
 }
 
 async fn handle_session_revoked(database: &Database, payload: &str) {

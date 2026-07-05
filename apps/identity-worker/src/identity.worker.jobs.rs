@@ -1,7 +1,6 @@
 use serde_json::Value;
 
 use crate::app::AppState;
-use crate::domains::billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS;
 use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
 
 use nvbes_redis::worker_queue::QueuedJob;
@@ -49,7 +48,7 @@ pub(crate) async fn mark_job_succeeded(
 pub(crate) fn should_retry_job(job_type: &str, _error: &anyhow::Error) -> bool {
     matches!(
         job_type,
-        JOB_EMAIL_SEND | JOB_EMAIL_WEBHOOK_PROCESS | JOB_STRIPE_WEBHOOK_PROCESS | JOB_DATA_EXPORT
+        JOB_EMAIL_SEND | JOB_EMAIL_WEBHOOK_PROCESS | JOB_DATA_EXPORT
     )
 }
 
@@ -86,4 +85,33 @@ pub(super) fn email_from_address(
                 .unwrap_or_else(|| "nvbes".to_string()),
         ),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_retry_job;
+    use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+
+    #[test]
+    fn identity_worker_retries_only_identity_jobs() {
+        let error = anyhow::anyhow!("transient");
+
+        for job_type in [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS, JOB_DATA_EXPORT] {
+            assert!(
+                should_retry_job(job_type, &error),
+                "identity-worker should retry owned job {job_type}"
+            );
+        }
+
+        for job_type in [
+            concat!("billing.", "stripe.webhook.process"),
+            concat!("billing.", "mollie.webhook.process"),
+            concat!("billing.", "email.send"),
+        ] {
+            assert!(
+                !should_retry_job(job_type, &error),
+                "identity-worker must not retry Billing job {job_type}"
+            );
+        }
+    }
 }

@@ -88,11 +88,12 @@ export const completedPhaseEvidence = {
 		evidence: [
 			"docs/migration/billing-entitlements.generated.json",
 			"docs/migration/billing-webhook-idempotency.generated.json",
+			"docs/migration/billing-multi-psp-continuity.generated.json",
 			"libs/rust/billing/src/views.rs",
 		],
 		decision: "go",
 		proof:
-			"pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency",
+			"pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency && pnpm check:migration-billing-multi-psp-continuity",
 	},
 	P08: {
 		owner: "Developer Platform lead",

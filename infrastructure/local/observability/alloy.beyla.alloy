@@ -1,0 +1,75 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+prometheus.remote_write "mimir" {
+  endpoint {
+    url = "http://127.0.0.1:9009/api/v1/push"
+  }
+
+  external_labels = {
+    environment = "development",
+    platform    = "nvbes",
+    source      = "beyla",
+  }
+}
+
+beyla.ebpf "identity" {
+  discovery {
+    instrument {
+      name       = "identity-api"
+      open_ports = "4000"
+      exports    = ["metrics", "traces"]
+    }
+
+    instrument {
+      name       = "identity-worker"
+      open_ports = "4102"
+      exports    = ["metrics", "traces"]
+    }
+  }
+
+  metrics {
+    features = ["application"]
+  }
+
+  routes {
+    unmatched = "wildcard"
+  }
+
+  traces {
+    instrumentations = ["http", "grpc", "sql", "redis"]
+
+    sampler {
+      name = "traceidratio"
+      arg  = "0.2"
+    }
+  }
+
+  output {
+    traces = [otelcol.processor.batch.traces.input]
+  }
+}
+
+prometheus.scrape "beyla" {
+  targets      = beyla.ebpf.identity.targets
+  honor_labels = true
+  forward_to   = [prometheus.remote_write.mimir.receiver]
+}
+
+otelcol.processor.batch "traces" {
+  output {
+    traces = [otelcol.exporter.otlp.alloy.input]
+  }
+}
+
+otelcol.exporter.otlp "alloy" {
+  client {
+    endpoint = "127.0.0.1:14317"
+
+    tls {
+      insecure = true
+    }
+  }
+}

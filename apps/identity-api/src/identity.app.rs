@@ -147,11 +147,32 @@ fn build_otp_provider(
 fn build_product_analytics(
     config: &AppConfig,
 ) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
-    Ok(nvbes_product_analytics::ProductAnalytics::new(
-        nvbes_product_analytics::ProductAnalyticsConfig {
-            enabled: config.product_analytics_enabled,
-            analytics_id_salt: config.analytics_id_salt.clone(),
+    let analytics_config = nvbes_product_analytics::ProductAnalyticsConfig {
+        enabled: config.product_analytics_enabled,
+        analytics_id_salt: config.analytics_id_salt.clone(),
+    };
+
+    if !config.product_analytics_enabled {
+        info!("PostHog product analytics disabled");
+        return Ok(nvbes_product_analytics::ProductAnalytics::new(
+            analytics_config,
+        )?);
+    }
+
+    let project_token = config.product_analytics_token.clone().ok_or_else(|| {
+        anyhow::anyhow!("NVBES_POSTHOG_PROJECT_TOKEN is required when PostHog is enabled")
+    })?;
+    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
+        nvbes_analytics_posthog::PostHogAnalyticsConfig {
+            host: config.posthog_host.clone(),
+            project_token,
         },
+    )?;
+    info!(host = %config.posthog_host, "PostHog product analytics enabled");
+
+    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
+        analytics_config,
+        std::sync::Arc::new(sink),
     )?)
 }
 

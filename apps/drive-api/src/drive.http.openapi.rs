@@ -23,7 +23,6 @@ use crate::app::AppState;
         (name = "share-links", description = "Share link management"),
         (name = "public-shares", description = "Public share access"),
         (name = "quotas", description = "Storage quotas"),
-        (name = "billing", description = "Billing & subscriptions"),
         (name = "audit", description = "Audit events"),
         (name = "privacy", description = "Data privacy & export"),
         (name = "api-keys", description = "Legacy API key management (list/revoke only)"),
@@ -47,12 +46,6 @@ use crate::app::AppState;
         crate::domains::public_api::v1_handlers::revoke_share_link,
         crate::domains::public_api::v1_handlers::get_quota,
         crate::domains::public_api::v1_handlers::list_audit_events,
-        crate::domains::billing::routes::manage::get_billing,
-        crate::domains::billing::routes::manage::create_checkout_session,
-        crate::domains::billing::routes::manage::create_portal_session,
-        crate::domains::billing::routes::manage::get_usage,
-        crate::domains::billing::routes::manage::get_invoice_estimate,
-        crate::domains::billing::routes::webhooks::handle_webhook,
     ),
 )]
 pub struct DriveApiDoc;
@@ -85,7 +78,7 @@ mod tests {
     }
 
     #[test]
-    fn openapi_includes_provider_neutral_billing_contracts() {
+    fn openapi_does_not_expose_billing_runtime_contracts() {
         let openapi = serde_json::from_str::<serde_json::Value>(
             &DriveApiDoc::openapi()
                 .to_json()
@@ -94,69 +87,13 @@ mod tests {
         .expect("OpenAPI document should be valid JSON");
 
         let paths = &openapi["paths"];
-        assert!(paths.get("/workspaces/{workspaceId}/billing").is_some());
         assert!(
             paths
-                .get("/workspaces/{workspaceId}/billing/checkout")
-                .is_some()
-        );
-        assert!(
-            paths
-                .get("/workspaces/{workspaceId}/billing/portal")
-                .is_some()
-        );
-
-        let schemas = &openapi["components"]["schemas"];
-        let checkout_properties = &schemas["CheckoutSessionResponse"]["properties"];
-        assert!(checkout_properties.get("provider").is_some());
-        assert!(checkout_properties.get("provider_customer_id").is_some());
-        assert!(checkout_properties.get("provider_product_id").is_some());
-        assert!(checkout_properties.get("provider_price_id").is_some());
-        assert!(checkout_properties.get("stripe_customer_id").is_some());
-        let checkout_required = schemas["CheckoutSessionResponse"]["required"]
-            .as_array()
-            .expect("CheckoutSessionResponse should declare required fields");
-        for legacy_field in ["stripe_customer_id", "stripe_price_id"] {
-            assert!(
-                !checkout_required
-                    .iter()
-                    .any(|field| field.as_str() == Some(legacy_field)),
-                "legacy field must stay optional: {legacy_field}"
-            );
-        }
-
-        let portal_properties = &schemas["PortalSessionResponse"]["properties"];
-        assert!(portal_properties.get("provider").is_some());
-        assert!(portal_properties.get("provider_customer_id").is_some());
-        assert!(portal_properties.get("stripe_customer_id").is_some());
-        let portal_required = schemas["PortalSessionResponse"]["required"]
-            .as_array()
-            .expect("PortalSessionResponse should declare required fields");
-        assert!(
-            !portal_required
-                .iter()
-                .any(|field| field.as_str() == Some("stripe_customer_id")),
-            "legacy portal stripe_customer_id must stay optional"
-        );
-
-        let webhook_response_properties = &schemas["BillingWebhookResponse"]["properties"];
-        assert!(webhook_response_properties.get("provider").is_some());
-        assert!(
-            webhook_response_properties
-                .get("provider_event_id")
-                .is_some()
-        );
-
-        let billing_account_properties = &schemas["BillingAccountView"]["properties"];
-        assert!(
-            billing_account_properties
-                .get("provider_customer_id")
-                .is_some()
-        );
-        assert!(
-            billing_account_properties
-                .get("stripe_customer_id")
-                .is_some()
+                .as_object()
+                .expect("OpenAPI paths should be an object")
+                .keys()
+                .all(|path| !path.contains("/billing")),
+            "Drive OpenAPI must not expose Billing runtime paths"
         );
     }
 }

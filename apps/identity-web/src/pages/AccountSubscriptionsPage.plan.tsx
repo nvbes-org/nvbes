@@ -1,4 +1,4 @@
-import type { BillingOverview } from '@nvbes/identity-client';
+import type { BillingOverview } from '@nvbes/billing-client';
 import { CreditCard, Package, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

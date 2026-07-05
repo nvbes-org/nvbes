@@ -10,6 +10,11 @@ pub struct BillingProviderEnv {
     pub billing_mollie_routing_status: String,
     pub billing_external_provider_fallback_enabled: bool,
     pub billing_external_provider_routing_status: String,
+    pub billing_fraud_enforcement_enabled: bool,
+    pub billing_fraud_step_up_threshold: u8,
+    pub billing_fraud_manual_review_threshold: u8,
+    pub billing_fraud_block_threshold: u8,
+    pub billing_fraud_policy_overrides_json: Option<String>,
 }
 
 pub fn billing_provider_env() -> Result<BillingProviderEnv, String> {
@@ -46,5 +51,26 @@ pub fn billing_provider_env() -> Result<BillingProviderEnv, String> {
             "available",
             false,
         )?,
+        billing_fraud_enforcement_enabled: env_bool(
+            "NVBES_BILLING_FRAUD_ENFORCEMENT_ENABLED",
+            false,
+        ),
+        billing_fraud_step_up_threshold: std::env::var("NVBES_BILLING_FRAUD_STEP_UP_THRESHOLD")
+            .ok()
+            .and_then(|value| value.parse::<u8>().ok())
+            .unwrap_or(60),
+        billing_fraud_manual_review_threshold: std::env::var(
+            "NVBES_BILLING_FRAUD_MANUAL_REVIEW_THRESHOLD",
+        )
+        .ok()
+        .and_then(|value| value.parse::<u8>().ok())
+        .unwrap_or(75),
+        billing_fraud_block_threshold: std::env::var("NVBES_BILLING_FRAUD_BLOCK_THRESHOLD")
+            .ok()
+            .and_then(|value| value.parse::<u8>().ok())
+            .unwrap_or(90),
+        billing_fraud_policy_overrides_json: optional_env(
+            "NVBES_BILLING_FRAUD_POLICY_OVERRIDES_JSON",
+        ),
     })
 }

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::geo::types::{
     GeoNetworkKind, GeoNetworkRelation, GeoRiskSignal, canonicalize_geo_risk_labels,
+    push_unique_label,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,15 +32,41 @@ impl GeoReputation {
 
 pub fn score_relation(relation: &GeoNetworkRelation) -> GeoReputation {
     if let (Some(kind), Some(score)) = (relation.network_kind, relation.risk_score) {
-        return GeoReputation {
+        let explicit = GeoReputation {
             network_kind: kind,
             risk_score: score,
             risk_labels: canonical_labels_or_kind(&relation.risk_labels, kind),
         };
+        if explicit.network_kind != GeoNetworkKind::Unknown || has_meaningful_label(&explicit) {
+            return explicit;
+        }
+
+        let inferred = classify_text(&relation_text(relation));
+        if inferred.network_kind != GeoNetworkKind::Unknown && inferred.risk_score > score {
+            return merge_source_labels(inferred, &explicit.risk_labels);
+        }
+
+        return explicit;
     }
 
     let haystack = relation_text(relation);
     classify_text(&haystack)
+}
+
+fn has_meaningful_label(reputation: &GeoReputation) -> bool {
+    reputation
+        .risk_labels
+        .iter()
+        .any(|label| label != "unknown" && !label.starts_with("source:"))
+}
+
+fn merge_source_labels(mut reputation: GeoReputation, explicit_labels: &[String]) -> GeoReputation {
+    for label in explicit_labels {
+        if label.starts_with("source:") {
+            push_unique_label(&mut reputation.risk_labels, label.clone());
+        }
+    }
+    reputation
 }
 
 fn classify_text(value: &str) -> GeoReputation {
@@ -202,55 +229,5 @@ fn canonical_labels_or_kind(labels: &[String], kind: GeoNetworkKind) -> Vec<Stri
 }
 
 #[cfg(test)]
-mod tests {
-    use super::score_relation;
-    use crate::geo::types::{GeoNetworkKind, GeoNetworkRelation};
-
-    fn relation(organization: &str) -> GeoNetworkRelation {
-        GeoNetworkRelation {
-            source_code: "arin".to_string(),
-            registry: Some("arin".to_string()),
-            network: Some("203.0.113.0/24".to_string()),
-            start_ip: None,
-            end_ip: None,
-            asn: Some(64500),
-            organization: Some(organization.to_string()),
-            source_reference: None,
-            network_kind: None,
-            risk_score: None,
-            risk_labels: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn scores_datacenter_and_vpn_higher_than_residential() {
-        assert_eq!(
-            score_relation(&relation("Amazon Web Services")).network_kind,
-            GeoNetworkKind::Datacenter
-        );
-        assert_eq!(
-            score_relation(&relation("Mullvad VPN")).network_kind,
-            GeoNetworkKind::Vpn
-        );
-        assert!(
-            score_relation(&relation("Mullvad VPN")).risk_score
-                > score_relation(&relation("Example Broadband Telecom")).risk_score
-        );
-    }
-
-    #[test]
-    fn explicit_relation_labels_are_canonicalized() {
-        let mut relation = relation("Example Provider");
-        relation.network_kind = Some(GeoNetworkKind::Vpn);
-        relation.risk_score = Some(90);
-        relation.risk_labels = vec![
-            "commercial_vpn".to_string(),
-            "is_vpn".to_string(),
-            "hosting".to_string(),
-        ];
-
-        let reputation = score_relation(&relation);
-
-        assert_eq!(reputation.risk_labels, vec!["vpn", "datacenter"]);
-    }
-}
+#[path = "region.geo.reputation.tests.rs"]
+mod tests;

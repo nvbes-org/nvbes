@@ -63,7 +63,9 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
   && rustup component add rustfmt clippy \
   && chmod -R a+w "${RUSTUP_HOME}" "${CARGO_HOME}"
 
-RUN cargo install sqlx-cli --locked --no-default-features --features postgres
+RUN cargo install sqlx-cli --locked --no-default-features --features postgres \
+  && cargo install cargo-watch --locked \
+  && chmod -R a+w "${CARGO_HOME}"
 
 RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh \
   && chmod +x /tmp/install-opentofu.sh \

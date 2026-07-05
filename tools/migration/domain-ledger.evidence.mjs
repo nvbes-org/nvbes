@@ -61,16 +61,19 @@ export const completedDomainEvidence = {
 		implementation_evidence: [
 			"libs/rust/billing/src/views.rs",
 			"libs/rust/billing/src/types.rs",
-			"apps/identity-api/src/identity.domains.billing.webhooks.logic.rs",
-			"apps/drive-api/src/drive.domains.billing.manage.checkout.rs",
+			"apps/billing-api/src/billing.domains.public_workspace.rs",
+			"apps/billing-api/src/billing.domains.webhooks.rs",
+			"apps/billing-worker/src/billing.worker.jobs.rs",
 		],
 		migration_evidence: [
 			"docs/migration/billing-entitlements.generated.json",
 			"docs/migration/billing-webhook-idempotency.generated.json",
+			"docs/migration/billing-multi-psp-continuity.generated.json",
+			"docs/migration/billing-multi-psp-e2e.generated.json",
 		],
 		decision: "go",
 		proof:
-			"pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency",
+			"pnpm check:migration-billing-entitlements && pnpm check:migration-billing-webhook-idempotency && pnpm check:migration-billing-multi-psp-continuity && pnpm check:migration-billing-multi-psp-e2e",
 	},
 	Audit: {
 		owner: "Audit lead",

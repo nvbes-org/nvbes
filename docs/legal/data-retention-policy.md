@@ -25,6 +25,8 @@ Document de reference a tenir a jour avant publication.
 | Logs techniques redigés             | 30 à 90 jours                                           | Diagnostic incident et sécurité opérationnelle     |
 | Traces distribuées redigées         | 7 à 30 jours                                            | Diagnostic performance et erreurs                  |
 | Profils CPU continus                | 7 à 30 jours                                            | Optimisation performance sans contenu utilisateur  |
+| Metadata Scaleway Generative APIs   | Jusqu'à 6 mois, sous forme agregee ou anonymisee        | Performance, fiabilite et amelioration du service d'inference |
+| Contenu de requete Scaleway Generative APIs | Jusqu'à 2 semaines uniquement en cas d'incident, abus, erreur anormale ou investigation securite | Reproduction, investigation et correction d'incident |
 | Workspaces résiliés / impayés       | 30 jours (Accès lecture) + 7 jours (Purge technique)    | Récupération des données et minimisation           |
 | Fichiers en corbeille               | 30 jours (par défaut)                                   | Droit à l'erreur et minimisation                   |
 | Données supprimées (Tombstones)     | 30 jours avant purge physique                           | Cohérence des backups et intégrité technique       |
@@ -39,6 +41,11 @@ Document de reference a tenir a jour avant publication.
   Grafana Alloy uniquement. Alloy applique redaction, sampling, labels
   techniques et routage avant export. Les durées effectives doivent être
   configurées dans Grafana Cloud pour rester dans les bornes ci-dessus.
+- **Scaleway Generative APIs**: les prompts, sorties et contenus transmis aux
+  fonctionnalites IA ne sont pas conserves par defaut par le sous-traitant. Une
+  conservation temporaire du contenu complet de requete peut avoir lieu cote
+  Scaleway uniquement pour diagnostiquer une erreur anormale, un abus, une
+  degradation du service ou une investigation securite.
 
 ## 4. Exercice des Droits
 

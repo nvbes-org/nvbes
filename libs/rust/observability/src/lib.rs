@@ -9,7 +9,11 @@ pub mod trace_context;
 pub mod tracing;
 pub mod worker_error_reporting;
 
-pub use error_reporting::{ErrorReportingGuard, init_error_reporting, install_safe_panic_hook};
+pub use error_reporting::{
+    ErrorReportingGuard, HttpServerErrorContext, capture_http_server_error, flush_error_reporting,
+    init_error_reporting, init_error_reporting_for_service, install_safe_panic_hook,
+    is_error_reporting_configured,
+};
 pub use http_client::{
     propagate_headers_trace_context, propagate_trace_context, register_trace_context,
 };
@@ -26,7 +30,7 @@ pub use trace_context::{
 };
 pub use tracing::init_tracing;
 pub use worker_error_reporting::{
-    ErrorReportingSmokeResult, WorkerJobContext, WorkerMonitorSchedule,
+    ErrorReportingSmokeResult, WorkerJobContext, WorkerMonitorSchedule, WorkerOperationContext,
     capture_error_reporting_smoke, capture_worker_heartbeat, capture_worker_job_error,
-    start_worker_monitor_check_in, worker_monitor_slug,
+    capture_worker_operation_error, start_worker_monitor_check_in, worker_monitor_slug,
 };

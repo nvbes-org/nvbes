@@ -20,7 +20,7 @@
       "properties": {
         "reconciliation_run_id": { "type": "string", "format": "uuid" },
         "tenant_id": { "type": "string", "format": "uuid" },
-        "provider": { "type": "string", "enum": ["stripe", "mollie"] },
+        "provider": { "type": "string", "enum": ["stripe", "mollie", "cb"] },
         "provider_reference": { "type": "string" },
         "difference_type": {
           "type": "string",

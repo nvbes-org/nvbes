@@ -12,6 +12,7 @@ mod risk_events;
 #[path = "identity.domains.security.service.summary.rs"]
 mod summary;
 
+use crate::email::jobs::JOB_EMAIL_SEND;
 use risk_events::{SecurityEventFilters, fetch_risk_events};
 use summary::security_events_summary;
 
@@ -67,14 +68,12 @@ pub async fn export_events(
         &SecurityEventFilters::default(),
     )
     .await?;
-    let billing_webhook_events =
-        fetch_billing_webhook_events(db, access.workspace_id, DEFAULT_LIMIT).await?;
 
     Ok(SecurityExportResponse {
         workspace_id: access.workspace_id,
         filename: format!("nvbes-security-{}.csv", access.workspace_id),
         content_type: "text/csv; charset=utf-8",
-        body: render_csv(&risk_events, &billing_webhook_events),
+        body: render_csv(&risk_events),
     })
 }
 
@@ -153,7 +152,7 @@ pub async fn worker_queue_status(
     redis: &nvbes_redis::RedisPool,
     workspace_id: Uuid,
 ) -> Result<WorkerQueueStatusResponse, AppError> {
-    let statuses = nvbes_redis::worker_queue::queue_status(redis, "billing.stripe.webhook.process")
+    let statuses = nvbes_redis::worker_queue::queue_status(redis, JOB_EMAIL_SEND)
         .await
         .map_err(|err| AppError::internal("redis_worker_queue_status_failed", err.to_string()))?
         .into_iter()
@@ -166,55 +165,13 @@ pub async fn worker_queue_status(
 
     Ok(WorkerQueueStatusResponse {
         workspace_id,
-        queue_name: "billing.stripe.webhook.process".to_string(),
+        queue_name: JOB_EMAIL_SEND.to_string(),
         snapshot_at: chrono::Utc::now(),
         statuses,
     })
 }
 
-async fn fetch_billing_webhook_events(
-    db: &PgPool,
-    workspace_id: Uuid,
-    limit: i64,
-) -> Result<Vec<BillingWebhookEventView>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT
-          bwe.provider_event_id,
-          bwe.provider,
-          bwe.status,
-          bwe.signature_valid,
-          bwe.received_at,
-          bwe.processed_at
-        FROM billing_webhook_events bwe
-        WHERE bwe.workspace_id = $1
-        ORDER BY bwe.received_at DESC, bwe.provider_event_id DESC
-        LIMIT $2
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(limit)
-    .fetch_all(db)
-    .await?;
-
-    rows.into_iter()
-        .map(|row| {
-            Ok(BillingWebhookEventView {
-                provider_event_id: row.get("provider_event_id"),
-                provider: row.get("provider"),
-                status: row.get("status"),
-                signature_valid: row.get("signature_valid"),
-                received_at: row.get("received_at"),
-                processed_at: row.get("processed_at"),
-            })
-        })
-        .collect()
-}
-
-fn render_csv(
-    risk_events: &[RiskEventView],
-    billing_webhook_events: &[BillingWebhookEventView],
-) -> String {
+fn render_csv(risk_events: &[RiskEventView]) -> String {
     let mut out = String::from(
         "kind,id,event_type,status,risk_score,geo_network_kind,geo_risk_score,geo_risk_labels,created_at\n",
     );
@@ -232,17 +189,6 @@ fn render_csv(
                 .unwrap_or_default(),
             csv_cell(&event.geo_risk_labels.join("|")),
             event.created_at
-        ));
-    }
-    for event in billing_webhook_events {
-        out.push_str(&format!(
-            "billing_webhook,{},{},{},{},,,{},{}\n",
-            event.provider_event_id,
-            csv_cell(&event.provider),
-            csv_cell(&event.status),
-            event.signature_valid,
-            "",
-            event.received_at
         ));
     }
     out

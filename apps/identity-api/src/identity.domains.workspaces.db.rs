@@ -71,7 +71,7 @@ pub async fn get_workspace_by_id(
           w.data_region::text AS data_region,
           w.jurisdiction::text AS jurisdiction,
           $2::text AS role,
-          p.code AS plan_code,
+          w.plan_code,
           w.trial_ends_at,
           COALESCE(wp.member_can_create_share_links, op.member_can_create_share_links, tp.member_can_create_share_links, sp.member_can_create_share_links) AS member_can_create_share_links,
           COALESCE(wp.require_admin_approval_for_member_share, op.require_admin_approval_for_member_share, tp.require_admin_approval_for_member_share, sp.require_admin_approval_for_member_share) AS require_admin_approval_for_member_share,
@@ -81,7 +81,6 @@ pub async fn get_workspace_by_id(
           w.created_at,
           w.updated_at
         FROM workspaces w
-        INNER JOIN plans p ON p.code = w.plan_code
         INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
         INNER JOIN system_policies sp ON sp.id = TRUE
         LEFT JOIN tenant_policies tp ON tp.tenant_id = w.tenant_id
@@ -124,14 +123,13 @@ pub async fn fetch_workspace_for_update(
             (SELECT principal_id FROM workspace_memberships WHERE workspace_id = w.id AND role = 'admin' LIMIT 1),
             '00000000-0000-0000-0000-000000000000'::uuid
           ) AS owner_principal_id,
-          p.max_share_link_ttl_days AS plan_max_share_link_ttl_days,
+          COALESCE(wp.max_share_link_ttl_days, 30) AS plan_max_share_link_ttl_days,
           wp.member_can_create_share_links,
           wp.require_admin_approval_for_member_share,
           wp.default_share_link_ttl_days,
           wp.max_share_link_ttl_days,
           wp.mfa_policy
         FROM workspaces w
-        INNER JOIN plans p ON p.code = w.plan_code
         INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
         WHERE w.id = $1
         FOR UPDATE OF w, wp

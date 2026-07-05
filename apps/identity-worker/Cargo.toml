@@ -8,7 +8,6 @@ version.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 nvbes-email = { path = "../../libs/rust/email" }
-nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-redis = { path = "../../libs/rust/redis" }
 nvbes-identity-api = { path = "../identity-api" }

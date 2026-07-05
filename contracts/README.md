@@ -7,6 +7,7 @@ protobuf contracts and durable event schemas.
 
 - `openapi/`: manifest for REST OpenAPI documents.
 - `protobuf/`: internal gRPC protobuf contracts.
+- `graphql/`: gateway/BFF schema and governance rules.
 - `events/`: versioned durable event schemas.
 
 Generated SDKs and service code must derive from these contracts or from the

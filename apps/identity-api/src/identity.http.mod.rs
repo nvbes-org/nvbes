@@ -25,3 +25,7 @@ pub mod well_known;
 pub mod routes;
 
 pub use routes::router;
+
+#[cfg(test)]
+#[path = "identity.http.openapi.billing_boundary.tests.rs"]
+mod openapi_billing_boundary_tests;

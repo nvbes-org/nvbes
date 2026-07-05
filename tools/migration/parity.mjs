@@ -17,17 +17,13 @@ const driveQuotasEvidencePath = "docs/migration/drive-quotas.generated.json";
 const privacyExportDeleteEvidencePath = "docs/migration/privacy-export-delete.generated.json";
 const billingEntitlementsEvidencePath = "docs/migration/billing-entitlements.generated.json";
 const billingWebhookEvidencePath = "docs/migration/billing-webhook-idempotency.generated.json";
+const billingMultiPspContinuityEvidencePath = "docs/migration/billing-multi-psp-continuity.generated.json";
+const billingMultiPspE2eEvidencePath = "docs/migration/billing-multi-psp-e2e.generated.json";
 const developerOauthTokenEvidencePath = "docs/migration/developer-oauth-tokens.generated.json";
 const developerSignedWebhookEvidencePath = "docs/migration/developer-signed-webhooks.generated.json";
 const cloudProvisioningEvidencePath = "docs/migration/cloud-provisioning.generated.json";
 
-const requiredHeadings = [
-	"# Functional Parity Matrix",
-	"## Status",
-	"## Gate",
-	"## Matrix",
-	"## Review Rules",
-];
+const requiredHeadings = ["# Functional Parity Matrix", "## Status", "## Gate", "## Matrix", "## Review Rules"];
 
 const requiredCapabilities = [
 	"Identity | register",
@@ -40,6 +36,7 @@ const requiredCapabilities = [
 	"Drive | quotas",
 	"Billing/Usage | entitlements",
 	"Billing/Usage | webhooks",
+	"Billing/Usage | multi-PSP continuity",
 	"Audit/Privacy | audit append-only",
 	"Audit/Privacy | export/delete requests",
 	"Developer Platform | OAuth apps/tokens",
@@ -167,6 +164,14 @@ const billingEntitlementsCovered = content
 	.some((line) => line.startsWith("| Billing/Usage | entitlements |") && /\| covered \|$/.test(line));
 if (billingEntitlementsCovered) {
 	requirePassedEvidence(billingEntitlementsEvidencePath, "covered billing entitlements parity");
+}
+
+const billingMultiPspContinuityCovered = content
+	.split("\n")
+	.some((line) => line.startsWith("| Billing/Usage | multi-PSP continuity |") && /\| covered \|$/.test(line));
+if (billingMultiPspContinuityCovered) {
+	requirePassedEvidence(billingMultiPspContinuityEvidencePath, "covered billing multi-PSP continuity parity");
+	requirePassedEvidence(billingMultiPspE2eEvidencePath, "covered billing multi-PSP E2E parity");
 }
 
 const developerOauthTokensCovered = content

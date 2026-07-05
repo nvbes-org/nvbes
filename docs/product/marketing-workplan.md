@@ -7,7 +7,7 @@ Valider le marche de nvbes Drive avant d'elargir l'effort produit et acquisition
 Le travail marketing V1 doit prouver ou invalider l'hypothese suivante:
 
 ```text
-Les petites equipes qui partagent des fichiers clients paient pour mieux controler les liens exposes, dans un cadre europeen simple et lisible.
+Les professionnels seuls et petites equipes paient pour mieux controler les fichiers et liens exposes, dans un cadre europeen simple, lisible et transparent.
 ```
 
 ## Hors Scope
@@ -23,15 +23,15 @@ Ce plan ne couvre pas:
 
 ## Hypotheses a Tester
 
-Hypothese 1: les agences, studios et cabinets de conseil ont une douleur recurrente autour des liens clients oublies ou mal controles.
+Hypothese 1: les independants professionnels, agences, studios et cabinets de conseil ont une douleur recurrente autour des liens clients oublies ou mal controles.
 
 Hypothese 2: la promesse "partager sans perdre le controle" resonne plus que "stockage europeen".
 
 Hypothese 3: l'hebergement europeen rassure, mais ne declenche pas seul l'achat.
 
-Hypothese 4: le prix doit etre vendu comme un outil professionnel d'equipe, pas comme un prix au Go.
+Hypothese 4: le prix doit etre vendu comme un outil professionnel, pas comme un prix au Go.
 
-Hypothese 5: les petites equipes acceptent une solution plus etroite que Google Drive si elle resout mieux le partage client controle.
+Hypothese 5: les utilisateurs solo et petites equipes acceptent une solution plus etroite que Google Drive si elle resout mieux le partage client controle.
 
 ## Travaux Semaine 1 - Cadrage et Recherche
 
@@ -149,7 +149,7 @@ Tous vos liens clients visibles, expirables et revocables.
 Angle europe:
 
 ```text
-Le drive europeen securise pour petites equipes.
+Le cloud europeen securise pour travailler seul ou en groupe.
 ```
 
 Angle professionnel:
@@ -185,5 +185,6 @@ No-go ou pivot si:
 ## Documents Lies
 
 - [Marketing, Conversion et Product Analytics](marketing-growth.md)
+- [Strategie Produit nvbes](nvbes-product-strategy.md)
 - [Analyse Concurrentielle](competitive-analysis.md)
 - [Pricing](pricing.md)

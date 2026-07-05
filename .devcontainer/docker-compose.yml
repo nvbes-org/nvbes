@@ -38,6 +38,9 @@ services:
       NVBES_DRIVE_API_BASE_URL: http://localhost:4002
       VITE_IDENTITY_API_BASE_URL: http://localhost:4000
       VITE_DRIVE_API_BASE_URL: /api
+      NVBES_DRIVE_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4101
+      NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4102
+      NVBES_BILLING_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4104
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -86,6 +89,18 @@ services:
     networks:
       - nvbes_dev
 
+  mimir:
+    image: grafana/mimir:latest
+    container_name: nvbes-devcontainer-mimir
+    command: ["-config.file=/etc/mimir.yaml"]
+    ports:
+      - "127.0.0.1:${NVBES_DEVCONTAINER_MIMIR_PORT:-19009}:9009"
+    volumes:
+      - ../infrastructure/local/observability/mimir.yaml:/etc/mimir.yaml:ro
+      - nvbes_mimir_data:/data
+    networks:
+      - nvbes_dev
+
   prometheus:
     image: prom/prometheus:latest
     container_name: nvbes-devcontainer-prometheus
@@ -95,8 +110,10 @@ services:
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_PROMETHEUS_PORT:-19090}:9090"
     volumes:
-      - ../infrastructure/local/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../infrastructure/local/observability/prometheus.devcontainer.yml:/etc/prometheus/prometheus.yml:ro
       - nvbes_prometheus_data:/prometheus
+    depends_on:
+      - mimir
     networks:
       - nvbes_dev
 
@@ -106,10 +123,10 @@ services:
     command: ["-config.file=/etc/tempo.yaml"]
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_PORT:-13200}:3200"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_GRPC_PORT:-14317}:4317"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_HTTP_PORT:-14318}:4318"
     volumes:
       - ../infrastructure/local/observability/tempo.yaml:/etc/tempo.yaml:ro
+    depends_on:
+      - mimir
     networks:
       - nvbes_dev
 
@@ -127,7 +144,32 @@ services:
     container_name: nvbes-devcontainer-pyroscope
     command: ["server"]
     ports:
+      - "127.0.0.1:${NVBES_DEVCONTAINER_PYROSCOPE_UI_PORT:-14041}:4040"
+    networks:
+      - nvbes_dev
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: nvbes-devcontainer-alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --stability.level=public-preview
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:${NVBES_DEVCONTAINER_ALLOY_PORT:-12345}:12345"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_FARO_PORT:-12347}:12347"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_GRPC_PORT:-14317}:4317"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_HTTP_PORT:-14318}:4318"
       - "127.0.0.1:${NVBES_DEVCONTAINER_PYROSCOPE_PORT:-14040}:4040"
+    volumes:
+      - ../infrastructure/local/observability/alloy.local.alloy:/etc/alloy/config.alloy:ro
+      - ../infrastructure/local/observability/app-logs:/var/log/nvbes:ro
+      - nvbes_alloy_data:/var/lib/alloy
+    depends_on:
+      - tempo
+      - loki
+      - pyroscope
     networks:
       - nvbes_dev
 
@@ -145,22 +187,28 @@ services:
       - ../infrastructure/local/observability/grafana-provisioning/alerting:/etc/grafana/provisioning/alerting:ro
       - ../infrastructure/local/observability/grafana-dashboards:/var/lib/grafana/dashboards/nvbes:ro
     depends_on:
+      - mimir
       - prometheus
       - tempo
       - loki
       - pyroscope
+      - alloy
     networks:
       - nvbes_dev
 
 volumes:
+  nvbes_alloy_data:
   nvbes_cargo_registry:
   nvbes_cargo_git:
   nvbes_home_cache:
   nvbes_home_codex:
+    external: true
+    name: nvbes_devcontainer_nvbes_home_codex
   nvbes_home_config:
   nvbes_home_gnupg:
   nvbes_home_local_share:
   nvbes_home_ssh:
+  nvbes_mimir_data:
   nvbes_node_modules:
   nvbes_pgdata:
   nvbes_pnpm_store:

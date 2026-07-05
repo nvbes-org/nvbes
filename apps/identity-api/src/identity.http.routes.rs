@@ -154,7 +154,7 @@ async fn error_reporting_smoke(
         &state.config.app_name,
         &state.config.environment,
         "api",
-        false,
+        state.config.sentry_dsn.is_some(),
     ))
 }
 

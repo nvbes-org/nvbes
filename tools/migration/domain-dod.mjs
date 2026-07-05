@@ -96,7 +96,10 @@ function mergeExisting(generated, existing) {
 			...entry,
 			owner: current.owner?.endsWith(" required") ? entry.owner : (current.owner ?? entry.owner),
 			status: current.status === "pending" ? entry.status : (current.status ?? entry.status),
-			evidence: current.evidence?.length === 0 ? entry.evidence : (current.evidence ?? entry.evidence),
+			evidence:
+				entry.evidence?.length > 0 || current.evidence?.length === 0
+					? entry.evidence
+					: (current.evidence ?? entry.evidence),
 			decision: current.decision === "no-go" ? entry.decision : (current.decision ?? entry.decision),
 			proof:
 				current.proof === "pending domain definition-of-done evidence"

@@ -1,4 +1,4 @@
-import type { BillingOverview } from '@nvbes/identity-client';
+import type { BillingOverview } from '@nvbes/billing-client';
 import { Package, Receipt, Zap } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';

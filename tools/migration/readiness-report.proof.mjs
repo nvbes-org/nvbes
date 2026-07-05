@@ -3,6 +3,7 @@ import { validateProofCommand } from "./execution-backlog.proof.mjs";
 const readinessProofs = {
 	audit_append_only: "pnpm check:migration-audit-append-only",
 	billing_entitlements: "pnpm check:migration-billing-entitlements",
+	billing_multi_psp_continuity: "pnpm check:migration-billing-multi-psp-continuity",
 	billing_webhook_idempotency: "pnpm check:migration-billing-webhook-idempotency",
 	cloud_provisioning: "pnpm check:migration-cloud-provisioning",
 	codegen: "pnpm check:migration-codegen",

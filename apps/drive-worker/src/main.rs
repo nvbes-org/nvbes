@@ -79,10 +79,11 @@ async fn main() -> anyhow::Result<()> {
         }
         Some("run-loop") => {
             tracing::info!("starting worker loop");
-            workers::run_loop(&database, &redis, storage, &observability).await?;
+            workers::run_loop(&config, &database, &redis, storage, &observability).await?;
         }
         None | Some("run-once") => {
-            let processed = workers::run_once(&database, &redis, storage, &observability).await?;
+            let processed =
+                workers::run_once(&config, &database, &redis, storage, &observability).await?;
             tracing::info!(processed, "worker run complete");
         }
         Some(other) => {

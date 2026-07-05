@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/test-env.sh"
 
 require_cmd cargo
-require_env NVBES_DATABASE_URL
+require_env NVBES_BILLING_DATABASE_URL
 
 NVBES_ENV="${NVBES_ENV:-staging}" \
-NVBES_DATABASE_URL="$NVBES_DATABASE_URL" \
-cargo run -q -p nvbes-identity-api -- --check-stripe-mappings
+NVBES_BILLING_DATABASE_URL="$NVBES_BILLING_DATABASE_URL" \
+cargo run -q -p nvbes-billing-api -- --check-stripe-mappings

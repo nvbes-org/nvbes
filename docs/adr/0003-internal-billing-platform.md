@@ -33,7 +33,8 @@ Les providers ne decident pas:
 
 - Les nouveaux modeles metier ne portent pas de colonne `stripe_*`; les identifiants externes passent par des mappings provider-neutral.
 - Les APIs publiques exposent `provider`, `checkout_id`, `payment_id` et `status`. Les IDs provider bruts restent limites aux endpoints admin explicites.
-- Drive produit des usages et lit des entitlement snapshots projetes; Identity reste le control plane billing canonique.
+- Drive produit des usages et lit des entitlement snapshots projetes.
+- Billing est le control plane billing canonique; Identity reste le control plane utilisateur, session, workspace membership et autorisation.
 - Le ledger interne est append-only. Les refunds, credit notes, write-offs et overrides produisent des ecritures explicites et des audit events.
 - Les payloads provider sensibles sont minimises: resume non sensible par defaut, retention brute chiffree ou classee selon politique.
 
@@ -45,7 +46,14 @@ Le calcul fiscal, l'e-invoicing, la retention des factures et la revenue recogni
 
 ## Consequences
 
-- Le schema billing canonique vit cote Identity.
+- Le schema billing canonique vit cote Billing. Tant que le schema physique reste partage en V0, seules les crates `nvbes-billing`, `billing-api` et `billing-worker` peuvent porter les nouvelles responsabilites metier billing.
 - Stripe V1 reste supporte via mappings et vues de compatibilite.
 - Mollie peut etre reference sans dupliquer le domaine financier.
 - Les exports finance et BI doivent provenir du modele nvbes, pas uniquement des pipelines provider.
+
+## Runtime cible V0
+
+- `apps/billing-api`: API serverless-compatible pour endpoints billing internes et futurs resolvers GraphQL.
+- `apps/billing-worker`: worker separe pour reconciliation, processing PSP et jobs finance.
+- `contracts/protobuf/nvbes/billing/v1/billing.proto`: contrat gRPC interne.
+- `contracts/graphql/schema.graphql`: contrat gateway/BFF, gouverne par `contracts/graphql/governance.json`.

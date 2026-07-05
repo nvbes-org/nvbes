@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::db::Database;
 
+#[path = "drive.workers.maintenance.geo.rs"]
+pub mod geo;
 #[path = "drive.workers.maintenance.storage.rs"]
 pub mod storage;
 
@@ -12,7 +14,11 @@ pub const JOB_QUOTAS_RECALCULATE: &str = "quotas.recalculate";
 pub const JOB_TRASH_PURGE: &str = "trash.purge";
 pub const JOB_STORAGE_PURGE_DELETED: &str = "storage.purge_deleted";
 pub const JOB_STORAGE_PURGE_QUARANTINED: &str = "storage.purge_quarantined";
-pub const JOB_GEO_LOOKUP_MAINTENANCE: &str = "geo.lookup_maintenance";
+pub use geo::{
+    JOB_GEO_LOOKUP_MAINTENANCE, JOB_GEO_LOYALSOLDIER_IMPORT, JOB_GEO_MAXMIND_GEOLITE_IMPORT,
+    JOB_GEO_V2FLY_IMPORT, import_loyalsoldier_geoip, import_maxmind_geolite, import_v2fly_geoip,
+    run_geo_lookup_maintenance,
+};
 const RECALCULATE_QUOTAS_SQL: &str = r#"
         UPDATE quota_usage qu
         SET used_storage_bytes = COALESCE((
@@ -61,6 +67,48 @@ pub async fn enqueue_maintenance_jobs(redis: &nvbes_redis::RedisPool) -> anyhow:
             job_type: JOB_GEO_LOOKUP_MAINTENANCE.to_string(),
             payload: serde_json::json!({}),
             idempotency_key: Some("geo.lookup_maintenance.daily".to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await?;
+
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_GEO_V2FLY_IMPORT.to_string(),
+            job_type: JOB_GEO_V2FLY_IMPORT.to_string(),
+            payload: serde_json::json!({}),
+            idempotency_key: Some("geo.v2fly_import.daily".to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await?;
+
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_GEO_MAXMIND_GEOLITE_IMPORT.to_string(),
+            job_type: JOB_GEO_MAXMIND_GEOLITE_IMPORT.to_string(),
+            payload: serde_json::json!({}),
+            idempotency_key: Some("geo.maxmind_geolite_import.daily".to_string()),
+            max_attempts: 3,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await?;
+
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: JOB_GEO_LOYALSOLDIER_IMPORT.to_string(),
+            job_type: JOB_GEO_LOYALSOLDIER_IMPORT.to_string(),
+            payload: serde_json::json!({}),
+            idempotency_key: Some("geo.loyalsoldier_import.daily".to_string()),
             max_attempts: 3,
             overwrite_terminal: false,
             job_id: None,
@@ -209,15 +257,6 @@ pub async fn purge_trash(database: &Database) -> anyhow::Result<JsonValue> {
 
     Ok(serde_json::json!({
         "deleted_objects": result.rows_affected()
-    }))
-}
-
-pub async fn run_geo_lookup_maintenance(database: &Database) -> anyhow::Result<JsonValue> {
-    let report = nvbes_region::geo::run_geo_maintenance(database).await?;
-
-    Ok(serde_json::json!({
-        "expired_personal_ranges_disabled": report.expired_personal_ranges_disabled,
-        "expired_unreferenced_relations_deleted": report.expired_unreferenced_relations_deleted
     }))
 }
 

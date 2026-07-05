@@ -1,6 +1,10 @@
 use crate::app::AppState;
 use crate::domains::auth::{
-    mfa, sessions,
+    audit::{AuthAuditInput, record_auth_event},
+    exposed_credentials::{self, ExposedCredentialCheck},
+    mfa,
+    risk::{self, RiskDecision, RiskEventInput},
+    sessions,
     state::{create_state, delete_state, fetch_state},
 };
 use crate::http::error::AppError;
@@ -27,6 +31,7 @@ pub fn router() -> Router<AppState> {
     responses(
         (status = 200, description = "Login successful", body = crate::domains::auth::types::LoginResult),
         (status = 202, description = "Password accepted, MFA challenge required", body = IdentifierResult),
+        (status = 403, description = "Password is compromised", body = ErrorEnvelope),
         (status = 401, description = "Invalid credentials or state", body = ErrorEnvelope),
     ),
 )]
@@ -62,6 +67,14 @@ pub(crate) async fn challenge_pwd(
     let verified =
         sessions::verify_primary_credentials(&state.db, &state.redis, &state.config, &login_input)
             .await?;
+    if let Some(check) =
+        ExposedCredentialCheck::from_headers(&headers).filter(|check| check.password_leaked())
+    {
+        record_exposed_login_password(&state, verified.principal_id, &meta, check).await;
+        delete_state(&state.redis, request.state_token).await?;
+        return Err(exposed_credentials::login_rejected_error());
+    }
+
     if let Some(available_methods) = super::identifier_flow::resolve_post_password_challenge(
         &state.db,
         verified.principal_id,
@@ -124,4 +137,51 @@ pub(crate) async fn challenge_pwd(
     let response = super::login_response(result, authuser, secure_cookie, session_expires_in)?;
     delete_state(&state.redis, request.state_token).await?;
     Ok(response)
+}
+
+async fn record_exposed_login_password(
+    state: &AppState,
+    principal_id: uuid::Uuid,
+    meta: &super::LoginRequestMeta,
+    check: ExposedCredentialCheck,
+) {
+    let labels = check.labels();
+    let ip = meta.ip();
+    let user_agent = meta.user_agent();
+    let _ = risk::record_event(
+        &state.db,
+        RiskEventInput {
+            principal_id,
+            session_id: None,
+            device_id: None,
+            event_type: "login_compromised_password".to_string(),
+            ip_address: ip.clone(),
+            user_agent: user_agent.clone(),
+            risk_score: 65.0,
+            risk_factors: serde_json::json!({
+                "leaked_credentials": labels.clone(),
+            }),
+            decision: RiskDecision::Deny,
+            metadata: serde_json::json!({
+                "source": "cloudflare_exposed_credential_check",
+            }),
+        },
+    )
+    .await;
+    let _ = record_auth_event(
+        &state.db,
+        AuthAuditInput {
+            principal_id,
+            action: "auth.login_compromised_password",
+            target_type: "principal",
+            target_id: Some(principal_id),
+            ip: ip.as_deref(),
+            user_agent: user_agent.as_deref(),
+            metadata: serde_json::json!({
+                "source": "cloudflare_exposed_credential_check",
+                "leaked_credentials": labels,
+            }),
+        },
+    )
+    .await;
 }

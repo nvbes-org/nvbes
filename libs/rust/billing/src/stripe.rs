@@ -2,10 +2,24 @@ use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 use uuid::Uuid;
 
 use super::shared::{STRIPE_WEBHOOK_TOLERANCE_SECONDS, to_workspace_id};
 use crate::hex_encode;
+
+#[path = "stripe.customer.rs"]
+mod customer;
+#[path = "stripe.http.rs"]
+mod http;
+#[path = "stripe.sessions.rs"]
+mod sessions;
+
+pub use customer::{build_customer_fields, create_stripe_customer};
+pub use http::stripe_post_form;
+pub use sessions::{
+    build_checkout_session_fields, create_stripe_checkout_session, create_stripe_portal_session,
+};
 
 pub struct StripeSession {
     pub id: String,
@@ -14,6 +28,48 @@ pub struct StripeSession {
 
 pub struct StripeCustomer {
     pub id: String,
+}
+
+#[derive(Debug, Error)]
+pub enum StripeProviderError {
+    #[error("stripe_not_configured")]
+    NotConfigured,
+    #[error("stripe_request_failed: {0}")]
+    RequestFailed(String),
+    #[error("stripe_response_failed: {0}")]
+    ResponseFailed(String),
+    #[error("stripe_response_invalid: {0}")]
+    ResponseInvalid(String),
+    #[error("stripe_request_rejected: {message}")]
+    RequestRejected { status: u16, message: String },
+}
+
+impl StripeProviderError {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::NotConfigured => "stripe_not_configured",
+            Self::RequestFailed(_) => "stripe_request_failed",
+            Self::ResponseFailed(_) => "stripe_response_failed",
+            Self::ResponseInvalid(_) => "stripe_response_invalid",
+            Self::RequestRejected { .. } => "stripe_request_rejected",
+        }
+    }
+
+    pub fn message(&self) -> String {
+        match self {
+            Self::NotConfigured => {
+                "NVBES_STRIPE_SECRET_KEY must be configured before billing actions.".to_string()
+            }
+            Self::RequestFailed(message)
+            | Self::ResponseFailed(message)
+            | Self::ResponseInvalid(message)
+            | Self::RequestRejected { message, .. } => message.clone(),
+        }
+    }
+
+    pub fn is_bad_request(&self) -> bool {
+        matches!(self, Self::RequestRejected { status: 400, .. })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

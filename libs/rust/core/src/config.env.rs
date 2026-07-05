@@ -24,9 +24,21 @@ pub(super) fn optional_env(name: &str) -> Option<String> {
     })
 }
 
+pub(super) fn optional_env_any(names: &[&str]) -> Option<String> {
+    names.iter().find_map(|name| optional_env(name))
+}
+
 pub(super) fn env_bool(name: &str, default: bool) -> bool {
     std::env::var(name)
         .ok()
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(default)
+}
+
+pub(super) fn env_bool_any(names: &[&str], default: bool) -> bool {
+    names
+        .iter()
+        .find_map(|name| std::env::var(name).ok())
         .map(|v| v == "true" || v == "1")
         .unwrap_or(default)
 }

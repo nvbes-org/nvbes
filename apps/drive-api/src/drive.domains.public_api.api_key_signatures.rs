@@ -1,5 +1,6 @@
 use axum::http::{HeaderMap, Method, Uri};
 use chrono::{TimeZone, Utc};
+use data_encoding::HEXLOWER;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
@@ -63,7 +64,7 @@ fn signature(
     let mut mac = HmacSha256::new_from_slice(api_key.as_bytes())
         .map_err(|_| PublicApiErrorKind::ApiKeySignatureInvalid.app_error())?;
     mac.update(message.as_bytes());
-    Ok(nvbes_billing::hex_encode(&mac.finalize().into_bytes()))
+    Ok(HEXLOWER.encode(&mac.finalize().into_bytes()))
 }
 
 fn parse_timestamp(value: &str) -> Result<chrono::DateTime<Utc>, AppError> {

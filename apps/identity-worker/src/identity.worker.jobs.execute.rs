@@ -2,14 +2,9 @@ use anyhow::Context;
 use serde_json::Value;
 
 use crate::app::AppState;
-use crate::domains::billing::jobs::{
-    JOB_STRIPE_WEBHOOK_PROCESS, enqueue_billing_email_for_stripe_event,
-};
-use crate::domains::billing::webhooks::process_stripe_event;
 use crate::email::jobs::{
     EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
 };
-use crate::worker::analytics::capture_billing_webhook_analytics;
 
 use nvbes_redis::worker_queue::QueuedJob;
 
@@ -27,7 +22,6 @@ pub(super) async fn execute_job(state: &AppState, job: &QueuedJob) -> anyhow::Re
                 .map_err(|e| anyhow::anyhow!(format!("Email event processing failed: {e:?}")))?;
             Ok(serde_json::json!({"status": "processed"}))
         }
-        JOB_STRIPE_WEBHOOK_PROCESS => process_stripe_webhook_job(state, job).await,
         JOB_DATA_EXPORT => {
             process_data_export(state, &job.payload)
                 .await
@@ -91,45 +85,4 @@ async fn send_email_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Val
     tx.commit().await?;
 
     Ok(serde_json::json!({"status": "sent", "provider_email_id": result.provider_email_id}))
-}
-
-async fn process_stripe_webhook_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Value> {
-    let job_payload: nvbes_billing::StripeWebhookEvent =
-        serde_json::from_value(job.payload.clone())
-            .context("Invalid Stripe webhook job payload")?;
-    let mut tx = state.db.begin().await?;
-    let workspace_id = process_stripe_event(&mut tx, &job_payload)
-        .await
-        .map_err(|e| anyhow::anyhow!(format!("Stripe webhook processing failed: {e:?}")))?;
-    tx.commit().await?;
-
-    if let Some(workspace_id) = workspace_id {
-        let _ =
-            nvbes_redis::pubsub::publish_workspace_updated(&state.redis, &workspace_id.to_string())
-                .await;
-
-        let plan_code: Option<String> = sqlx::query_scalar(
-            "SELECT p.code FROM workspaces w JOIN plans p ON p.id = w.plan_id WHERE w.id = $1",
-        )
-        .bind(workspace_id)
-        .fetch_optional(&state.db)
-        .await
-        .unwrap_or(None);
-
-        if let Some(code) = plan_code.as_deref() {
-            let _ = nvbes_redis::pubsub::publish_workspace_plan_updated(
-                &state.redis,
-                &workspace_id.to_string(),
-                code,
-            )
-            .await;
-        }
-
-        capture_billing_webhook_analytics(state, workspace_id, &job_payload, plan_code.as_deref());
-        enqueue_billing_email_for_stripe_event(&state.db, &state.redis, workspace_id, &job_payload)
-            .await
-            .map_err(|e| anyhow::anyhow!(format!("Billing email enqueue failed: {e:?}")))?;
-    }
-
-    Ok(serde_json::json!({"status": "processed"}))
 }

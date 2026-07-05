@@ -26,6 +26,8 @@ const generators = [
 	["privacy export/delete", "tools/migration/privacy-export-delete.mjs", ["--write"]],
 	["billing entitlements", "tools/migration/billing-entitlements.mjs", ["--write"]],
 	["billing webhook idempotency", "tools/migration/billing-webhook-idempotency.mjs", ["--write"]],
+	["billing multi-PSP continuity", "tools/migration/billing-multi-psp-continuity.mjs", ["--write"]],
+	["billing multi-PSP E2E", "tools/migration/billing-multi-psp-e2e.mjs", ["--write"]],
 	["developer OAuth tokens", "tools/migration/developer-oauth-tokens.mjs", ["--write"]],
 	["developer signed webhooks", "tools/migration/developer-signed-webhooks.mjs", ["--write"]],
 	["cloud provisioning", "tools/migration/cloud-provisioning.mjs", ["--write"]],

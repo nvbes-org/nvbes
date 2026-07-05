@@ -17,6 +17,9 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist": "^5.2.9",
+    "@grafana/faro-web-sdk": "^2.8.2",
+    "@grafana/faro-web-tracing": "^2.8.2",
+    "@nvbes/billing-client": "workspace:*",
     "@nvbes/http-client": "workspace:*",
     "@nvbes/identity-client": "workspace:*",
     "@nvbes/identity-sdk-web": "workspace:*",
@@ -34,6 +37,7 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
+    "@sentry/browser": "^10.63.0",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-query-devtools": "catalog:",
     "@tanstack/react-router": "catalog:",
@@ -58,6 +62,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
+    "@sentry/vite-plugin": "^5.3.0",
     "@tailwindcss/vite": "catalog:",
     "@types/culori": "^4.0.1",
     "@types/qrcode": "^1.5.6",

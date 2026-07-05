@@ -15,28 +15,28 @@
     {
       "id": "data",
       "source": "docs/migration/data-map.generated.json",
-      "total": 194,
+      "total": 203,
       "pending": 0,
       "proof": "pnpm check:migration-data-map"
     },
     {
       "id": "secrets",
       "source": "docs/migration/secret-map.generated.json",
-      "total": 80,
+      "total": 132,
       "pending": 0,
       "proof": "pnpm check:migration-secret-map"
     },
     {
       "id": "jobs",
       "source": "docs/migration/job-map.generated.json",
-      "total": 14,
+      "total": 19,
       "pending": 0,
       "proof": "pnpm check:migration-job-map"
     },
     {
       "id": "resources",
       "source": "docs/migration/resource-map.generated.json",
-      "total": 25,
+      "total": 30,
       "pending": 0,
       "proof": "pnpm check:migration-resource-map"
     },
@@ -148,16 +148,23 @@
     {
       "id": "billing_entitlements",
       "source": "docs/migration/billing-entitlements.generated.json",
-      "total": 35,
+      "total": 36,
       "pending": 0,
       "proof": "pnpm check:migration-billing-entitlements"
     },
     {
       "id": "billing_webhook_idempotency",
       "source": "docs/migration/billing-webhook-idempotency.generated.json",
-      "total": 15,
+      "total": 46,
       "pending": 0,
       "proof": "pnpm check:migration-billing-webhook-idempotency"
+    },
+    {
+      "id": "billing_multi_psp_continuity",
+      "source": "docs/migration/billing-multi-psp-continuity.generated.json",
+      "total": 20,
+      "pending": 0,
+      "proof": "pnpm check:migration-billing-multi-psp-continuity"
     },
     {
       "id": "developer_oauth_tokens",

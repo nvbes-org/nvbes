@@ -4,11 +4,10 @@ use crate::domains::enterprise::service;
 use crate::domains::enterprise::trust::{self, types::EnterpriseTrustCenterResponse};
 use crate::domains::enterprise::types::{
     EnterpriseAccessUpdateInput, EnterpriseAccessUpdateResponse, EnterpriseAdminElevationInput,
-    EnterpriseAdminElevationResponse, EnterpriseAuditEventsResponse, EnterpriseBillingResponse,
-    EnterpriseContextResponse, EnterpriseInvitationInput, EnterpriseInvitationsResponse,
-    EnterpriseOverviewResponse, EnterpriseReactivateInput, EnterpriseSecurityResponse,
-    EnterpriseSuspendInput, EnterpriseUsageResponse, EnterpriseUsersResponse,
-    EnterpriseWorkspacesResponse,
+    EnterpriseAdminElevationResponse, EnterpriseAuditEventsResponse, EnterpriseContextResponse,
+    EnterpriseInvitationInput, EnterpriseInvitationsResponse, EnterpriseOverviewResponse,
+    EnterpriseReactivateInput, EnterpriseSecurityResponse, EnterpriseSuspendInput,
+    EnterpriseUsageResponse, EnterpriseUsersResponse, EnterpriseWorkspacesResponse,
 };
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
@@ -73,7 +72,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route("/enterprise/security", get(get_security))
         .route("/enterprise/trust-center", get(get_trust_center))
         .route("/enterprise/audit-events", get(list_audit_events))
-        .route("/enterprise/billing", get(get_billing))
         .route("/enterprise/usage", get(get_usage))
         .merge(access_reviews::routes::router())
         .route_layer(axum::middleware::from_fn_with_state(
@@ -215,16 +213,6 @@ async fn list_audit_events(
     let tenant_id = require_tenant(&auth)?;
     Ok(Json(
         service::list_audit_events(&state.db, &auth, tenant_id).await?,
-    ))
-}
-
-async fn get_billing(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<EnterpriseBillingResponse>, AppError> {
-    let tenant_id = require_tenant(&auth)?;
-    Ok(Json(
-        service::get_billing(&state.db, &auth, tenant_id).await?,
     ))
 }
 

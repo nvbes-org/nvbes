@@ -1,0 +1,7 @@
+{
+  "name": "billing-client",
+  "projectType": "library",
+  "root": "libs/ts/billing-client",
+  "sourceRoot": "libs/ts/billing-client/src",
+  "tags": ["scope:oss", "type:lib", "domain:billing", "layer:client"]
+}

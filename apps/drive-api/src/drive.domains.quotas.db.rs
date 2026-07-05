@@ -117,16 +117,18 @@ pub async fn lock_usage_snapshot(
     })
 }
 
-pub async fn lock_subscription_status(
+pub async fn fetch_entitlement_status(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     workspace_id: Uuid,
 ) -> Result<Option<String>, AppError> {
     let row = sqlx::query(
         r#"
         SELECT status::text AS status
-        FROM subscriptions
+        FROM billing_entitlement_snapshots
         WHERE workspace_id = $1
-        FOR UPDATE
+          AND effective_at <= NOW()
+        ORDER BY effective_at DESC, created_at DESC
+        LIMIT 1
         "#,
     )
     .bind(workspace_id)

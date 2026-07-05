@@ -1,4 +1,4 @@
-use crate::domains::auth::onboarding;
+use crate::domains::auth::{exposed_credentials, onboarding};
 use crate::{app::AppState, http::error::AppError};
 use axum::{
     Json, Router,
@@ -222,6 +222,7 @@ async fn register_inner(
             "Legal documents must be accepted to create an account.",
         ));
     }
+    exposed_credentials::check_new_password(&headers)?;
     info!("auth_register_input_validated");
 
     let result = onboarding::register(

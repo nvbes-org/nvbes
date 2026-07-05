@@ -5,8 +5,8 @@
     "strict_completion_command": "tools/migration/execution-backlog.mjs --strict"
   },
   "status": {
-    "open_tasks": 25,
-    "blocking_items": 58,
+    "open_tasks": 26,
+    "blocking_items": 60,
     "readiness": "no-go",
     "completion": "incomplete",
     "live_evidence": "no-go",
@@ -287,6 +287,19 @@
       ],
       "next_action": "le runbook de cutover peut etre execute sans decision implicite",
       "proof": "pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-developer_oauth_tokens",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/developer-oauth-tokens.generated.json",
+      "blocking_items": 2,
+      "blocking_details": [
+        "developer_oauth_tokens unresolved item 1/2",
+        "developer_oauth_tokens unresolved item 2/2"
+      ],
+      "next_action": "resolve and sign developer_oauth_tokens decisions",
+      "proof": "pnpm check:migration-precutover",
       "status": "blocked"
     },
     {

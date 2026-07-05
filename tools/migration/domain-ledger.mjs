@@ -80,18 +80,17 @@ function mergeExisting(generated, existing) {
 			owner: current.owner?.endsWith(" required") ? domain.owner : (current.owner ?? domain.owner),
 			status: current.status === "pending" ? domain.status : (current.status ?? domain.status),
 			implementation_evidence:
-				current.implementation_evidence?.length === 0
+				domain.implementation_evidence?.length > 0 || current.implementation_evidence?.length === 0
 					? domain.implementation_evidence
 					: (current.implementation_evidence ?? domain.implementation_evidence),
 			migration_evidence:
-				current.migration_evidence?.length === 0
+				domain.migration_evidence?.length > 0 || current.migration_evidence?.length === 0
 					? domain.migration_evidence
 					: (current.migration_evidence ?? domain.migration_evidence),
 			decision: current.decision === "no-go" ? domain.decision : (current.decision ?? domain.decision),
-			proof:
-				current.proof === "pending domain implementation and migration evidence"
-					? domain.proof
-					: (current.proof ?? domain.proof),
+			proof: domain.migration_evidence?.length > 0 || current.proof === "pending domain implementation and migration evidence"
+				? domain.proof
+				: (current.proof ?? domain.proof),
 		};
 	});
 }

@@ -35,6 +35,7 @@ const sourceFiles = [
 	["privacy_export_delete", "docs/migration/privacy-export-delete.generated.json", "summary", "failed"],
 	["billing_entitlements", "docs/migration/billing-entitlements.generated.json", "summary", "failed"],
 	["billing_webhook_idempotency", "docs/migration/billing-webhook-idempotency.generated.json", "summary", "failed"],
+	["billing_multi_psp_continuity", "docs/migration/billing-multi-psp-continuity.generated.json", "summary", "failed"],
 	["developer_oauth_tokens", "docs/migration/developer-oauth-tokens.generated.json", "summary", "failed"],
 	["developer_signed_webhooks", "docs/migration/developer-signed-webhooks.generated.json", "summary", "failed"],
 	["cloud_provisioning", "docs/migration/cloud-provisioning.generated.json", "summary", "failed"],

@@ -224,45 +224,6 @@ pub async fn list_audit_events(
     })
 }
 
-pub async fn get_billing(
-    db: &Database,
-    auth: &AuthContext,
-    tenant_id: Uuid,
-) -> Result<EnterpriseBillingResponse, AppError> {
-    let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
-    if !matches!(scope, AdminScope::Tenant) {
-        return Err(AppError::forbidden(
-            "tenant_scope_required",
-            "This action requires tenant-wide administrative privileges.",
-        ));
-    }
-    let row = db::billing_summary(db, tenant_id).await?;
-    Ok(EnterpriseBillingResponse {
-        plan: EnterpriseBillingPlan {
-            code: row
-                .as_ref()
-                .map(|row| row.code.clone())
-                .unwrap_or_else(|| "none".to_string()),
-            name: row
-                .as_ref()
-                .map(|row| row.name.clone())
-                .unwrap_or_else(|| "No plan".to_string()),
-            status: row
-                .as_ref()
-                .map(|row| row.status.clone())
-                .unwrap_or_else(|| "inactive".to_string()),
-            currency: "usd".to_string(),
-            monthly_price_cents: 0,
-        },
-        invoices: db::list_invoices(db, tenant_id)
-            .await?
-            .into_iter()
-            .map(db::InvoiceRow::into_view)
-            .collect(),
-        billing_email: row.and_then(|row| row.billing_email),
-    })
-}
-
 pub async fn get_usage(
     db: &Database,
     auth: &AuthContext,

@@ -42,10 +42,12 @@ Variables attendues par les gates:
 
 - `NVBES_STAGING_WEB_BASE_URL`
 - `NVBES_STAGING_API_BASE_URL`
-- `NVBES_STAGING_DATABASE_URL` pour `smoke-staging.sh`, `release-gate.sh`, les E2E critiques et le preflight Stripe staging
+- `NVBES_STAGING_DATABASE_URL` pour `smoke-staging.sh`, `release-gate.sh` et les E2E critiques
+- `NVBES_STAGING_BILLING_DATABASE_URL` pour le preflight Stripe du release gate staging
+- `NVBES_BILLING_DATABASE_URL` pour `check-stripe-mappings.sh` hors release gate
 - `RELEASE_APPROVED=production` pour le gate production
 - `NVBES_PRODUCTION_WEB_BASE_URL` et `NVBES_PRODUCTION_API_BASE_URL` pour le smoke production post-deploiement
 - `NVBES_STAGING_DATABASE_URL` et `NVBES_ALLOW_STAGING_MIGRATION=yes` pour `db:migrate:staging`
-- `NVBES_DATABASE_URL` pour `test-e2e-critical.sh`, `beta:seed:staging` et `check-stripe-mappings.sh`
+- `NVBES_DATABASE_URL` pour `test-e2e-critical.sh` et `beta:seed:staging`
 - `NVBES_IDENTITY_API_BASE_URL` et `NVBES_DRIVE_API_BASE_URL` pour `beta:seed:staging` quand Identity et Drive ne sont pas agreges derriere `NVBES_API_BASE_URL`
 - `NVBES_BETA_SEED_EMAIL`, `NVBES_BETA_SEED_PASSWORD`, `NVBES_BETA_SEED_WORKSPACE` pour `beta:seed:staging`

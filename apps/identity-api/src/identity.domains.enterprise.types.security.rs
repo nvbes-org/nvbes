@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use utoipa::ToSchema;
@@ -14,27 +13,6 @@ pub struct EnterpriseSecuritySignal {
     pub severity: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<BTreeMap<String, serde_json::Value>>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseBillingPlan {
-    pub code: String,
-    pub name: String,
-    pub status: String,
-    pub currency: String,
-    pub monthly_price_cents: i64,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseInvoice {
-    pub id: String,
-    pub status: String,
-    pub amount_due_cents: i64,
-    pub currency: String,
-    pub issued_at: DateTime<Utc>,
-    pub hosted_invoice_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -98,14 +76,6 @@ pub struct EnterpriseSecurityPostureControl {
 pub struct EnterpriseAuditEventsResponse {
     pub events: Vec<EnterpriseAuditEvent>,
     pub page: EnterprisePage,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct EnterpriseBillingResponse {
-    pub plan: EnterpriseBillingPlan,
-    pub invoices: Vec<EnterpriseInvoice>,
-    pub billing_email: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

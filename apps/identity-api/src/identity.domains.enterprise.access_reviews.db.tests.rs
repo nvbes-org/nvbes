@@ -92,11 +92,6 @@ async fn seed_access_review_fixture(pool: &PgPool) -> AccessReviewDbFixture {
     let service_name = format!("Access Review Service {}", service_principal_id.simple());
     let client_id = format!("ar_{}", client_uuid.simple());
 
-    let plan_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM plans LIMIT 1")
-        .fetch_one(pool)
-        .await
-        .expect("plan should exist");
-
     sqlx::query(
         r#"
         INSERT INTO tenants (id, kind, name, slug, status, security_tier, created_at, updated_at)
@@ -123,15 +118,14 @@ async fn seed_access_review_fixture(pool: &PgPool) -> AccessReviewDbFixture {
     sqlx::query(
         r#"
         INSERT INTO workspaces (
-          id, tenant_id, name, workspace_type, owner_user_id, plan_id, plan_code, created_at, updated_at
+          id, tenant_id, name, workspace_type, owner_user_id, plan_code, created_at, updated_at
         )
-        VALUES ($1, $2, 'Access Review Workspace', 'team', $3, $4, 'team', $5, $5)
+        VALUES ($1, $2, 'Access Review Workspace', 'team', $3, 'team', $4, $4)
         "#,
     )
     .bind(workspace_id)
     .bind(tenant_id)
     .bind(admin_principal_id)
-    .bind(plan_id)
     .bind(now)
     .execute(pool)
     .await

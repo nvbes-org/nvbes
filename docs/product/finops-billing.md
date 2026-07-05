@@ -114,7 +114,7 @@ Regles:
 - Usage envoye a Stripe seulement apres validation interne.
 - Estimation de facture visible dans le produit.
 - Alerte a 80% et 100% de quota.
-- Cap de depense configurable plus tard pour Team Plus/Business.
+- Cap de depense configurable plus tard pour Workspace/Business.
 
 ## Trial et Anti-Abus Economique
 
@@ -165,7 +165,7 @@ Targets initiales a valider:
 - Conversion trial to paid: 10% minimum au lancement, cible 20%.
 - Marge brute: 50% minimum au lancement, cible 70%.
 - Churn mensuel logo: cible sous 5% apres les premiers clients.
-- ARPA cible: au moins 39 EUR/mois.
+- ARPA personnel et groupe suivis separement.
 - Cout infra par workspace actif: suivi hebdomadaire.
 - Cout par To stocke: suivi mensuel.
 - MRR cible premiere validation: 1 000 EUR.

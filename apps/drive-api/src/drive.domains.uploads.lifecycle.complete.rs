@@ -98,7 +98,7 @@ pub async fn complete_upload(
         ));
     }
 
-    let computed_checksum = nvbes_billing::hex_encode(&Sha256::digest(&file_data));
+    let computed_checksum = data_encoding::HEXLOWER.encode(&Sha256::digest(&file_data));
 
     if let Some(expected_checksum) = &upload.expected_checksum
         && computed_checksum != *expected_checksum

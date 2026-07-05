@@ -30,17 +30,19 @@ function keyFor(entry) {
 
 function inferDomain(file, table) {
 	const name = table.toLowerCase();
+	if (file.startsWith("apps/billing-api/migrations/")) return "Billing/Usage";
+	if (name.includes("developer") || name.includes("oauth_client") || name.includes("webhook")) return "Developer Platform";
 	if (name.includes("billing") || name.includes("invoice") || name.includes("subscription") || name.includes("usage") || name.includes("plan") || name.includes("stripe")) return "Billing/Usage";
 	if (name.includes("audit") || name.includes("privacy") || name.includes("consent")) return "Audit/Privacy";
 	if (name.includes("storage") || name.includes("upload") || name.includes("share") || name.includes("quota")) return "Drive";
 	if (name.includes("workspace") || name.includes("organization") || name.includes("tenant") || name.includes("member") || name.includes("invitation")) return "Workspace/Authz";
-	if (name.includes("developer") || name.includes("oauth_client") || name.includes("webhook")) return "Developer Platform";
 	if (file.includes("drive-api/")) return "Drive";
 	return "Identity";
 }
 
 function inferClassification(table) {
 	const name = table.toLowerCase();
+	if (name.includes("developer") || name.includes("webhook")) return "operational data";
 	if (name.includes("billing") || name.includes("invoice") || name.includes("subscription") || name.includes("usage")) return "financial data";
 	if (name.includes("password") || name.includes("mfa") || name.includes("session") || name.includes("token") || name.includes("key") || name.includes("secret")) return "sensitive personal data";
 	if (name.includes("audit") || name.includes("risk")) return "audit data";
@@ -54,7 +56,7 @@ function defaultReconciliation(table) {
 	if (!name.includes("token") && !name.includes("secret")) checks.push("checksum");
 	if (name.includes("member") || name.includes("workspace") || name.includes("tenant") || name.includes("user")) checks.push("orphan_check");
 	if (name.includes("storage") || name.includes("upload") || name.includes("share")) checks.push("object_or_link_invariant");
-	if (name.includes("billing") || name.includes("invoice") || name.includes("usage") || name.includes("subscription")) checks.push("ledger_balance");
+	if (!name.includes("developer") && !name.includes("webhook") && (name.includes("billing") || name.includes("invoice") || name.includes("usage") || name.includes("subscription"))) checks.push("ledger_balance");
 	return checks;
 }
 
@@ -121,6 +123,25 @@ function mergeExisting(generated, existing) {
 	return generated.map((entry) => {
 		const current = byKey.get(keyFor(entry));
 		if (!current) return entry;
+		if (current.domain && current.domain !== entry.domain) {
+			return {
+				...entry,
+				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
+			};
+		}
+		const expectedTargetPrefix = `target-postgres:${slug(entry.domain)}.`;
+		if (current.target?.startsWith("target-postgres:") && !current.target.startsWith(expectedTargetPrefix)) {
+			return {
+				...entry,
+				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
+			};
+		}
+		if (entry.source.file.startsWith("apps/billing-api/migrations/")) {
+			return {
+				...entry,
+				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
+			};
+		}
 		return {
 			...entry,
 			decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
@@ -235,9 +256,7 @@ function validate(map, expectedEntries) {
 			if (entry.target.startsWith("pending:")) errors.push(`${key}: target must be resolved`);
 		}
 	}
-	for (const key of expectedKeys) {
-		if (!seen.has(key)) errors.push(`${outputPath}: missing entry ${key}`);
-	}
+	for (const key of expectedKeys) if (!seen.has(key)) errors.push(`${outputPath}: missing entry ${key}`);
 }
 
 const inventory = readJson(inventoryPath);
@@ -254,9 +273,7 @@ const dataMap = {
 	entries: mergeExisting(generatedEntries, existing),
 };
 
-for (const entry of dataMap.entries) {
-	dataMap.summary[entry.decision] += 1;
-}
+for (const entry of dataMap.entries) dataMap.summary[entry.decision] += 1;
 
 if (write) {
 	mkdirSync(dirname(outputPath), { recursive: true });
@@ -268,17 +285,10 @@ if (write) {
 
 validate(dataMap, generatedEntries);
 
-if (!existsSync(outputPath)) {
-	errors.push(`${outputPath}: missing; run tools/migration/data-map.mjs --write`);
-} else if (readFileSync(outputPath, "utf8") !== serialize(dataMap)) {
-	errors.push(`${outputPath}: stale; run tools/migration/data-map.mjs --write`);
-}
-
-if (!existsSync(markdownPath)) {
-	errors.push(`${markdownPath}: missing; run tools/migration/data-map.mjs --write`);
-} else if (readFileSync(markdownPath, "utf8") !== serializeMarkdown(dataMap)) {
-	errors.push(`${markdownPath}: stale; run tools/migration/data-map.mjs --write`);
-}
+if (!existsSync(outputPath)) errors.push(`${outputPath}: missing; run tools/migration/data-map.mjs --write`);
+else if (readFileSync(outputPath, "utf8") !== serialize(dataMap)) errors.push(`${outputPath}: stale; run tools/migration/data-map.mjs --write`);
+if (!existsSync(markdownPath)) errors.push(`${markdownPath}: missing; run tools/migration/data-map.mjs --write`);
+else if (readFileSync(markdownPath, "utf8") !== serializeMarkdown(dataMap)) errors.push(`${markdownPath}: stale; run tools/migration/data-map.mjs --write`);
 
 if (errors.length > 0) {
 	console.error("Migration data-map checks failed:");

@@ -43,7 +43,7 @@ pub async fn ensure_upload_allowed_tx(
     workspace_id: Uuid,
     requested_size_bytes: i64,
 ) -> Result<(), AppError> {
-    if let Some(status) = db::lock_subscription_status(tx, workspace_id).await?
+    if let Some(status) = db::fetch_entitlement_status(tx, workspace_id).await?
         && billing_status_blocks_upload(&status)
     {
         return Err(AppError::forbidden(

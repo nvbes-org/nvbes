@@ -2,14 +2,14 @@
 
 ## Resume
 
-nvbes Drive est un drive cloud europeen securise pour petites equipes.
+nvbes Drive, renomme fonctionnellement nvbes Cloud dans le positionnement produit, est un cloud europeen securise B2B pour tous.
 
-Le produit permet a une equipe de stocker, organiser, partager et controler ses fichiers dans un environnement EU-first, simple et fiable.
+Le produit permet a une personne seule ou a un groupe de stocker, organiser, partager et controler ses fichiers dans un environnement EU-first, simple et fiable.
 
 ## Positionnement
 
 ```text
-Le drive europeen securise pour les petites equipes.
+Le cloud europeen securise pour travailler seul ou en groupe avec des fichiers professionnels.
 ```
 
 ## Direction Experience
@@ -20,14 +20,16 @@ Les decisions de direction artistique, UI, UX, design system, accessibilite et c
 
 ## Cibles
 
-ICP prioritaire V1:
+Positionnement V1:
 
+- B2B pour tous, avec workspace personnel cree automatiquement pour chaque utilisateur.
+- Workspaces de groupe separes pour equipes, organisations et futurs plans Workspace.
+
+Segments prioritaires:
+
+- Independants professionnels.
 - Agences et studios de 2 a 10 personnes qui partagent des fichiers clients.
-
-Segments secondaires:
-
 - Cabinets de conseil.
-- Independants premium avec clients recurrents.
 - Associations structurees qui manipulent des documents sensibles.
 
 Les details marketing, ICP, funnel, KPIs et analytics sont definis dans [Marketing, Conversion et Product Analytics](../product/marketing-growth.md).
@@ -35,12 +37,13 @@ Les details marketing, ICP, funnel, KPIs et analytics sont definis dans [Marketi
 ## Promesse
 
 ```text
-Stockez, organisez et partagez les fichiers de votre equipe dans un cloud europeen simple et securise.
+Stockez, organisez et partagez vos fichiers professionnels dans un cloud europeen simple et securise.
 ```
 
 ## Objectifs
 
-- Permettre a une equipe de 2 a 10 personnes de gerer ses fichiers.
+- Permettre a chaque user de demarrer dans un workspace personnel dedie.
+- Permettre a une equipe de gerer ses fichiers dans un workspace de groupe separe.
 - Rendre le partage externe simple et controlable.
 - Donner une visibilite claire sur l'usage, les liens actifs et la facturation.
 - Poser les modules reutilisables de la plateforme nvbes pour les futurs micro-SaaS.
@@ -58,11 +61,13 @@ Stockez, organisez et partagez les fichiers de votre equipe dans un cloud europe
 - Proposer de l'OCR ou de la recherche IA.
 - Gerer des modeles de permissions enterprise complexes.
 - Supporter SSO/SAML en V1.
+- Lancer Business en production initiale.
 
 ## Scope V1
 
 - Authentification.
-- Workspaces personnels et equipe.
+- Creation automatique du workspace personnel.
+- Workspaces de groupe separes.
 - Upload et download de fichiers.
 - Dossiers.
 - Recherche simple.
@@ -92,7 +97,10 @@ Stockez, organisez et partagez les fichiers de votre equipe dans un cloud europe
 - OCR.
 - Recherche IA.
 - SSO enterprise.
-- Plan Business.
+- Plan Business en production.
+- Docs, Sheets, Slides, Forms.
+- Photo Editor et Video Editor.
+- Ingestion data, vectorisation et entrainement LLM.
 
 ## Metriques de Succes
 
@@ -103,7 +111,7 @@ Nombre de workspaces actifs qui partagent au moins un fichier avec controle de l
 ```
 
 - Activation: pourcentage des nouveaux utilisateurs qui uploadent un fichier en moins de 10 minutes.
-- Collaboration: pourcentage des workspaces actifs avec au moins 2 membres.
+- Adoption groupe: pourcentage des comptes actifs qui creent ou rejoignent un workspace de groupe.
 - Partage: nombre de liens de partage crees par workspace actif.
 - Conversion: pourcentage des essais qui deviennent payants.
 - Usage: stockage moyen utilise par workspace actif.
@@ -116,7 +124,7 @@ Targets V1:
 - Activation: 60% des nouveaux workspaces uploadent un fichier en moins de 10 minutes.
 - Conversion trial to paid: 10% minimum au lancement, cible 20%.
 - Marge brute: 50% minimum au lancement, cible 70%.
-- ARPA cible: au moins 39 EUR/mois.
+- ARPA personnel et groupe suivis separement.
 - Churn mensuel logo: cible sous 5% apres les premiers clients.
 - MRR premiere validation: 1 000 EUR.
 - Cout infra par workspace actif: suivi hebdomadaire.
@@ -133,4 +141,5 @@ Cadence:
 - Derive de scope vers un remplacement complet de Google Drive.
 - Support couteux si l'upload/download n'est pas parfaitement fiable.
 - Confiance difficile a gagner sans preuves visibles de securite et de confidentialite.
-- B2C pur moins rentable que le B2B petites equipes.
+- Offre personnelle trop peu margee si les quotas et l'egress ne sont pas controles.
+- Business active trop tot avant support, SLA, SSO/SCIM, audit avance et legal pack.

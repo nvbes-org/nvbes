@@ -34,8 +34,6 @@ import {
   EnterpriseAuditEventsResponseSchema,
   type EnterpriseAuditReasonInput,
   EnterpriseAuditReasonInputSchema,
-  type EnterpriseBillingResponse,
-  EnterpriseBillingResponseSchema,
   type EnterpriseBreakGlassInput,
   EnterpriseBreakGlassInputSchema,
   type EnterpriseContextResponse,
@@ -528,13 +526,6 @@ export function verifyTenantDomain(
     VerifyTenantDomainInputSchema.parse(input),
     options,
   );
-}
-
-export function getEnterpriseBilling(
-  http: HttpClient,
-  options?: EnterpriseRequestOptions,
-): Promise<EnterpriseBillingResponse> {
-  return http.get(`${EnterpriseApiBasePath}/billing`, EnterpriseBillingResponseSchema, options);
 }
 
 export function getEnterpriseUsage(
