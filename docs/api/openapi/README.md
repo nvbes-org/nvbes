@@ -18,5 +18,5 @@ Regles:
 
 Etat actuel:
 
-- `apps/drive-api/openapi.json` est l'export technique courant;
+- `apps/cloud-service/openapi.json` est l'export technique courant;
 - la spec publique versionnee V1 n'est pas encore publiee dans ce dossier.

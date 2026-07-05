@@ -17,14 +17,14 @@ pub fn openapi_document() -> Value {
     json!({
         "openapi": "3.1.0",
         "info": {
-            "title": "nvbes Internal Admin API",
+            "title": "nvbes Backoffice API",
             "version": "0.1.0",
             "description": "Private back-office API for enterprise operations. All private routes require internal authentication and operator context headers.",
             "contact": {"name": "nvbes", "url": "https://nvbes.fr"},
             "license": {"name": "UNLICENSED"}
         },
         "servers": [
-            {"url": "https://internal-admin.nvbes.fr", "description": "Production"},
+            {"url": "https://backoffice-service.nvbes.fr", "description": "Production"},
             {"url": "http://localhost:8080", "description": "Development"}
         ],
         "tags": [

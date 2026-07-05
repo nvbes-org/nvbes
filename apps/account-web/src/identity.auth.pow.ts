@@ -5,8 +5,8 @@ export type PowChallengeProof = {
   powSolution: string;
 };
 
-export async function resolvePowChallenge(identityApiBaseUrl: string): Promise<PowChallengeProof> {
-  const challenge = await fetchPowChallenge(identityApiBaseUrl);
+export async function resolvePowChallenge(accountServiceBaseUrl: string): Promise<PowChallengeProof> {
+  const challenge = await fetchPowChallenge(accountServiceBaseUrl);
   if (!challenge.nonce || challenge.difficulty <= 0) {
     throw new Error('PoW challenge is required.');
   }

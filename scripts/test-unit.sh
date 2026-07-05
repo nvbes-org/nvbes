@@ -8,8 +8,8 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 cd "$ROOT_DIR"
 
 log_step "web typecheck"
-pnpm --dir apps/drive-web typecheck
-pnpm --dir apps/identity-web typecheck
+pnpm --dir apps/cloud-web typecheck
+pnpm --dir apps/account-web typecheck
 pnpm --dir libs/ts/identity-sdk-web test
 
 log_step "rust unit tests"

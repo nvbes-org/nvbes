@@ -329,7 +329,7 @@ async fn main() -> anyhow::Result<()> {
     install_safe_panic_hook();
     init_tracing(&config);
     let _profiling_guard =
-        start_continuous_profiling(&config, "internal-admin").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "backoffice-service").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
     let app = app::build_router(app::AppState::new(config.clone(), db));
@@ -340,7 +340,7 @@ async fn main() -> anyhow::Result<()> {
         app = %config.app_name,
         environment = %config.environment,
         address = %http_address,
-        "starting nvbes Internal Admin"
+        "starting nvbes Backoffice"
     );
 
     axum::serve(

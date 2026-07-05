@@ -5,7 +5,7 @@ import { identityHttpClient } from './identity.http';
 const LogoutResponseSchema = z.undefined();
 
 export function buildDeveloperLoginUrl(returnTo: string = window.location.href): string {
-  const url = new URL('/login', identityWebBaseUrl());
+  const url = new URL('/login', accountWebBaseUrl());
   url.searchParams.set('return_to', returnTo);
   return url.toString();
 }
@@ -24,8 +24,8 @@ export function isDeveloperAuthError(error: unknown): boolean {
   return error instanceof HttpError && (error.status === 401 || error.status === 403);
 }
 
-function identityWebBaseUrl(): string {
-  return (import.meta.env.VITE_IDENTITY_WEB_BASE_URL || 'http://localhost:3001').replace(
+function accountWebBaseUrl(): string {
+  return (import.meta.env.VITE_ACCOUNT_WEB_BASE_URL || 'http://localhost:3001').replace(
     /\/+$/u,
     '',
   );

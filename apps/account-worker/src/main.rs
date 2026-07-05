@@ -7,9 +7,9 @@ use nvbes_observability::{
 #[path = "identity.worker.rs"]
 mod worker;
 
-pub use nvbes_identity_api::{app, domains, email, http};
+pub use nvbes_account_service::{app, domains, email, http};
 
-const IDENTITY_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR";
+const IDENTITY_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR";
 const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
 const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
 
@@ -17,7 +17,7 @@ const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
 
-    let _error_reporting_guard = init_error_reporting_for_service(&config, "identity-worker");
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "account-worker");
     install_safe_panic_hook();
     init_tracing(&config);
 
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         Some("error-reporting-smoke")
     ) {
         let result = capture_error_reporting_smoke(
-            "identity-worker",
+            "account-worker",
             &config.environment,
             "worker",
             config.sentry_dsn.is_some(),
@@ -36,13 +36,13 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let _profiling_guard =
-        start_continuous_profiling(&config, "identity-worker").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "account-worker").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
 
-    nvbes_identity_api::database::run_migrations(&db).await?;
+    nvbes_account_service::database::run_migrations(&db).await?;
 
-    let state = nvbes_identity_api::app::AppState::bootstrap(&config, db).await?;
+    let state = nvbes_account_service::app::AppState::bootstrap(&config, db).await?;
     let metrics_bind_addr = identity_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(
         app = %config.app_name,
         environment = %config.environment,
-        "starting nvbes Identity worker"
+        "starting nvbes Account worker"
     );
 
     worker::run_loop_until_shutdown(state, async {

@@ -27,22 +27,22 @@ function walk(dir, results = []) {
 }
 
 function checkIdentityWorkerQueues(errors) {
-	const loopPath = "apps/identity-worker/src/identity.worker.loop.rs";
+	const loopPath = "apps/account-worker/src/identity.worker.loop.rs";
 	if (!existsSync(loopPath)) {
-		errors.push(`${loopPath}: Identity worker queue declaration is required`);
+		errors.push(`${loopPath}: Account worker queue declaration is required`);
 		return;
 	}
 	const content = readFileSync(loopPath, "utf8");
 	for (const expected of ["JOB_EMAIL_SEND", "JOB_EMAIL_WEBHOOK_PROCESS", "JOB_DATA_EXPORT"]) {
 		if (!content.includes(expected)) {
-			errors.push(`${loopPath}: Identity worker must keep owning identity queue ${expected}`);
+			errors.push(`${loopPath}: Account worker must keep owning identity queue ${expected}`);
 		}
 	}
 	if (!content.includes("const WORKER_QUEUES: [&str; 3]")) {
-		errors.push(`${loopPath}: Identity worker queues must stay explicit and bounded`);
+		errors.push(`${loopPath}: Account worker queues must stay explicit and bounded`);
 	}
 	if (!content.includes("identity_worker_queues_exclude_billing_runtime")) {
-		errors.push(`${loopPath}: Identity worker queue boundary test is required`);
+		errors.push(`${loopPath}: Account worker queue boundary test is required`);
 	}
 	for (const forbidden of [
 		"JOB_STRIPE_WEBHOOK_PROCESS",
@@ -53,10 +53,10 @@ function checkIdentityWorkerQueues(errors) {
 		"billing.email.send",
 	]) {
 		if (content.includes(forbidden)) {
-			errors.push(`${loopPath}: Identity worker must not claim Billing queue ${forbidden}`);
+			errors.push(`${loopPath}: Account worker must not claim Billing queue ${forbidden}`);
 		}
 	}
-	for (const file of walk("apps/identity-worker/src")) {
+	for (const file of walk("apps/account-worker/src")) {
 		const content = readFileSync(file, "utf8");
 		for (const forbidden of [
 			"JOB_STRIPE_WEBHOOK_PROCESS",
@@ -72,18 +72,18 @@ function checkIdentityWorkerQueues(errors) {
 			"billing.email.send",
 		]) {
 			if (content.includes(forbidden)) {
-				errors.push(`${file}: Identity worker must not process Billing runtime ${forbidden}`);
+				errors.push(`${file}: Account worker must not process Billing runtime ${forbidden}`);
 			}
 		}
 	}
-	const jobsPath = "apps/identity-worker/src/identity.worker.jobs.rs";
+	const jobsPath = "apps/account-worker/src/identity.worker.jobs.rs";
 	if (existsSync(jobsPath) && !readFileSync(jobsPath, "utf8").includes("identity_worker_retries_only_identity_jobs")) {
-		errors.push(`${jobsPath}: Identity worker retry boundary test is required`);
+		errors.push(`${jobsPath}: Account worker retry boundary test is required`);
 	}
 }
 
 function checkIdentityQueueStatusSurface(errors) {
-	const servicePath = "apps/identity-api/src/identity.domains.security.service.rs";
+	const servicePath = "apps/account-service/src/identity.domains.security.service.rs";
 	if (!existsSync(servicePath)) {
 		errors.push(`${servicePath}: Identity queue status service is required`);
 		return;
@@ -100,7 +100,7 @@ function checkIdentityQueueStatusSurface(errors) {
 		}
 	}
 
-	const routesPath = "apps/identity-api/src/identity.domains.security.routes.rs";
+	const routesPath = "apps/account-service/src/identity.domains.security.routes.rs";
 	if (existsSync(routesPath) && !readFileSync(routesPath, "utf8").includes("Identity email worker queue status")) {
 		errors.push(`${routesPath}: Identity queue status OpenAPI description must identify the email queue boundary`);
 	}

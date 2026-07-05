@@ -32,18 +32,18 @@ export function initAnalytics() {
   installPageTracking();
 
   initAnalyticsRuntime({
-    appName: 'drive-web',
+    appName: 'cloud-web',
     analyticsSalt: import.meta.env.VITE_ANALYTICS_ID_SALT,
     getConsent: getAnalyticsConsent,
     onConsentChange: subscribeToConsent,
     getRoutePath: currentPath,
     getCommonProperties: () => ({
-      app_name: 'drive-web',
+      app_name: 'cloud-web',
       event_source: 'browser',
     }),
     blockedRoutePatterns,
     transport: createBrowserAnalyticsTransport({
-      appName: 'drive-web',
+      appName: 'cloud-web',
       environment: import.meta.env.MODE,
       sentryDsn: import.meta.env.VITE_SENTRY_DSN,
       sentryTracesSampleRate: Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || 0),

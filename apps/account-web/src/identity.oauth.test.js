@@ -50,7 +50,7 @@ describe('authorizeIdentitySession', () => {
     });
 
     await authorizeIdentitySession('stale-session-token', {
-      clientId: 'drive-web',
+      clientId: 'cloud-web',
       redirectUri: 'http://localhost:5173/callback',
       scope: 'openid profile email offline_access drive:read drive:write',
       state: 'oauth-state',

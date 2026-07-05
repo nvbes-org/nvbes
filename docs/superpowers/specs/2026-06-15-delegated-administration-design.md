@@ -11,7 +11,7 @@ Add a new `AdminScope` enum to represent the administration boundary:
 - `AdminScope::Organization(Uuid)`: Administrative access restricted to a specific organization.
 
 ```rust
-// apps/identity-api/src/identity.domains.authz.types.rs
+// apps/account-service/src/identity.domains.authz.types.rs
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminScope {
     Tenant,
@@ -21,7 +21,7 @@ pub enum AdminScope {
 
 Implement a scope resolution function in the authorization domain:
 ```rust
-// apps/identity-api/src/identity.domains.authz.service.rs
+// apps/account-service/src/identity.domains.authz.service.rs
 pub async fn resolve_admin_scope(
     db: &PgPool,
     auth: &impl TenantManagementAuth,

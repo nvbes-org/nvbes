@@ -66,7 +66,7 @@ pub async fn run_once(
             capture_worker_job_error(
                 err.as_ref(),
                 &WorkerJobContext {
-                    app_name: "drive-worker",
+                    app_name: "cloud-worker",
                     environment: &environment,
                     queue: &job.queue,
                     job_type: &job.job_type,
@@ -115,7 +115,7 @@ pub async fn run_loop(
             match run_once(config, database, redis, storage.clone(), observability).await {
                 Ok(processed) => processed,
                 Err(error) => {
-                    tracing::warn!(%error, "drive worker loop failed; retrying after backoff");
+                    tracing::warn!(%error, "cloud worker loop failed; retrying after backoff");
                     tokio::time::sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
                     continue;
                 }
@@ -134,7 +134,7 @@ fn capture_worker_heartbeat_if_due(environment: &str, last_run: &mut Instant) {
 
     capture_worker_heartbeat(
         environment,
-        &worker_monitor_slug("drive-worker", "loop-heartbeat"),
+        &worker_monitor_slug("cloud-worker", "loop-heartbeat"),
         WORKER_HEARTBEAT_SCHEDULE,
     );
     *last_run = Instant::now();

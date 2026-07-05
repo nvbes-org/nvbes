@@ -40,7 +40,8 @@ async fn main() -> anyhow::Result<()> {
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
     let email = build_email_sender(&config)?;
     let product_analytics = build_product_analytics(&config)?;
-    let state = worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
+    let state =
+        worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
     let metrics_bind_addr = billing_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,

@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 const webBaseURL = process.env.NVBES_WEB_BASE_URL;
 if (!webBaseURL) {
-  throw new Error('NVBES_WEB_BASE_URL is required for identity-web browser tests.');
+  throw new Error('NVBES_WEB_BASE_URL is required for account-web browser tests.');
 }
 
 export default defineConfig({

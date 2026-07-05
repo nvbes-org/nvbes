@@ -25,7 +25,7 @@ async fn test_config(pool: &PgPool) -> AppState {
             .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string()),
         environment: "development".to_string(),
-        app_name: "identity-api-test".to_string(),
+        app_name: "account-service-test".to_string(),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_password: std::env::var("NVBES_REDIS_PASSWORD")

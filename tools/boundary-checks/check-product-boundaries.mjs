@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 import { checkBillingMigrationBoundaries } from "./check-product-boundaries.billing-migrations.mjs";
 import { checkBillingWorkerQueueBoundaries } from "./check-product-boundaries.billing-worker-queues.mjs";
 import { checkIdentityBillingRuntimeBoundary } from "./check-product-boundaries.identity-billing-runtime.mjs";
-import { checkIdentityWebBillingClientBoundary } from "./check-product-boundaries.identity-web-billing.mjs";
+import { checkIdentityWebBillingClientBoundary } from "./check-product-boundaries.account-web-billing.mjs";
 
 const errors = [];
 const textExtensions = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".sql"]);
@@ -150,40 +150,40 @@ function checkDriveBillingBoundary() {
 		/drive\.domains\.billing\.usage_events\.rs$/,
 	];
 
-	for (const file of walk("apps/drive-api/src")) {
+	for (const file of walk("apps/cloud-service/src")) {
 		const content = readFileSync(file, "utf8");
 		for (const pattern of forbiddenDriveBillingFiles) {
 			if (pattern.test(file)) {
-				errors.push(`${file}: Drive API must not own Billing runtime, PSP, or public Billing route files`);
+				errors.push(`${file}: Cloud Service must not own Billing runtime, PSP, or public Billing route files`);
 			}
 		}
 		if (content.includes("nvbes_billing")) {
-			errors.push(`${file}: Drive API must not import nvbes_billing; use Billing service boundaries instead`);
+			errors.push(`${file}: Cloud Service must not import nvbes_billing; use Billing service boundaries instead`);
 		}
 		if (/["']\/workspaces\/[^"']*\/billing(?:\/|\{|["'])/.test(content)) {
-			errors.push(`${file}: Drive API must not expose workspace Billing routes`);
+			errors.push(`${file}: Cloud Service must not expose workspace Billing routes`);
 		}
 		if (/["']\/billing\/webhooks["']/.test(content)) {
-			errors.push(`${file}: Drive API must not expose PSP Billing webhook routes`);
+			errors.push(`${file}: Cloud Service must not expose PSP Billing webhook routes`);
 		}
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+(?:subscriptions|billing_accounts|billing_adjustments|billing_webhook_events|invoice_estimates|usage_snapshots|stripe_price_mappings|billing_provider_customers|billing_provider_price_mappings)\b/i.test(content)) {
-			errors.push(`${file}: Drive API runtime must not access Billing-owned SQL tables`);
+			errors.push(`${file}: Cloud Service runtime must not access Billing-owned SQL tables`);
 		}
 	}
 
-	for (const file of walk("apps/drive-worker/src")) {
+	for (const file of walk("apps/cloud-worker/src")) {
 		const content = readFileSync(file, "utf8");
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+(?:subscriptions|billing_accounts|billing_adjustments|billing_webhook_events|invoice_estimates|usage_snapshots|stripe_price_mappings|billing_provider_customers|billing_provider_price_mappings)\b/i.test(content)) {
-			errors.push(`${file}: Drive worker runtime must not access Billing-owned SQL tables`);
+			errors.push(`${file}: Cloud worker runtime must not access Billing-owned SQL tables`);
 		}
 	}
 
-	const driveManifest = "apps/drive-api/Cargo.toml";
+	const driveManifest = "apps/cloud-service/Cargo.toml";
 	if (existsSync(driveManifest) && readFileSync(driveManifest, "utf8").includes("nvbes-billing")) {
-		errors.push(`${driveManifest}: Drive API must not depend on nvbes-billing`);
+		errors.push(`${driveManifest}: Cloud Service must not depend on nvbes-billing`);
 	}
 
-	const driveOpenapi = "apps/drive-api/openapi.json";
+	const driveOpenapi = "apps/cloud-service/openapi.json";
 	if (existsSync(driveOpenapi)) {
 		const content = readFileSync(driveOpenapi, "utf8");
 		if (/["']\/[^"']*\/billing(?:\/|\{|["'])/.test(content)) {
@@ -218,7 +218,7 @@ function checkDriveBillingMigrationBoundary() {
 		/\bbilling_fraud_assessments\b/i,
 	];
 
-	for (const file of walk("apps/drive-api/migrations")) {
+	for (const file of walk("apps/cloud-service/migrations")) {
 		const content = readFileSync(file, "utf8");
 		for (const pattern of forbiddenMigrationPatterns) {
 			if (pattern.test(content)) {
@@ -232,33 +232,33 @@ function checkDriveBillingMigrationBoundary() {
 }
 
 function checkInternalAdminBillingBoundary() {
-	const commandCenter = "apps/internal-admin/src/internal_admin.command_center.rs";
+	const commandCenter = "apps/backoffice-service/src/internal_admin.command_center.rs";
 	if (existsSync(commandCenter)) {
 		const content = readFileSync(commandCenter, "utf8");
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${commandCenter}: command center Billing metrics must come from billing-api/gRPC`);
+			errors.push(`${commandCenter}: command center Billing metrics must come from billing-service/gRPC`);
 		}
 		if (!content.includes("get_admin_command_center_billing_metrics")) {
 			errors.push(`${commandCenter}: command center must use Billing gRPC metrics`);
 		}
 	}
 
-	const operationsCenter = "apps/internal-admin/src/internal_admin.operations_center.rs";
+	const operationsCenter = "apps/backoffice-service/src/internal_admin.operations_center.rs";
 	if (existsSync(operationsCenter)) {
 		const content = readFileSync(operationsCenter, "utf8");
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${operationsCenter}: operations center Billing snapshot must come from billing-api/gRPC`);
+			errors.push(`${operationsCenter}: operations center Billing snapshot must come from billing-service/gRPC`);
 		}
 		if (!content.includes("get_admin_operations_center")) {
 			errors.push(`${operationsCenter}: operations center must use Billing gRPC snapshot`);
 		}
 	}
 
-	const operationsMutations = "apps/internal-admin/src/internal_admin.operations_center.mutations.rs";
+	const operationsMutations = "apps/backoffice-service/src/internal_admin.operations_center.mutations.rs";
 	if (existsSync(operationsMutations)) {
 		const content = readFileSync(operationsMutations, "utf8");
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${operationsMutations}: operations center Billing mutations must call billing-api/gRPC`);
+			errors.push(`${operationsMutations}: operations center Billing mutations must call billing-service/gRPC`);
 		}
 		if (!content.includes("run_admin_operations_action")) {
 			errors.push(`${operationsMutations}: operations center Billing mutations must use Billing gRPC actions`);
@@ -266,14 +266,14 @@ function checkInternalAdminBillingBoundary() {
 	}
 
 	for (const file of [
-		"apps/internal-admin/src/internal_admin.billing_platform_center.mutations.rs",
-		"apps/internal-admin/src/internal_admin.billing_platform_center.routing_mutations.rs",
-		"apps/internal-admin/src/internal_admin.billing_fraud_review.actions.rs",
+		"apps/backoffice-service/src/internal_admin.billing_platform_center.mutations.rs",
+		"apps/backoffice-service/src/internal_admin.billing_platform_center.routing_mutations.rs",
+		"apps/backoffice-service/src/internal_admin.billing_fraud_review.actions.rs",
 	]) {
 		if (!existsSync(file)) continue;
 		const content = readFileSync(file, "utf8");
 		if (/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${file}: Billing Platform mutations must call billing-api/gRPC`);
+			errors.push(`${file}: Billing Platform mutations must call billing-service/gRPC`);
 		}
 		if (!content.includes("run_billing_platform_action")) {
 			errors.push(`${file}: Billing Platform mutations must use Billing gRPC actions`);
@@ -281,29 +281,29 @@ function checkInternalAdminBillingBoundary() {
 	}
 
 	for (const file of [
-		"apps/internal-admin/src/internal_admin.billing.admin.mutations.rs",
-		"apps/internal-admin/src/internal_admin.billing.admin.financial_actions.rs",
+		"apps/backoffice-service/src/internal_admin.billing.admin.mutations.rs",
+		"apps/backoffice-service/src/internal_admin.billing.admin.financial_actions.rs",
 	]) {
 		if (!existsSync(file)) continue;
 		const content = readFileSync(file, "utf8");
 		if (/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+billing_(?:credit_notes|write_offs|refunds|ledger_entries|adjustments)\b/i.test(content)) {
-			errors.push(`${file}: Billing financial admin writes must call billing-api/gRPC`);
+			errors.push(`${file}: Billing financial admin writes must call billing-service/gRPC`);
 		}
 	}
 
-	const billingAdminMutations = "apps/internal-admin/src/internal_admin.billing.admin.mutations.rs";
+	const billingAdminMutations = "apps/backoffice-service/src/internal_admin.billing.admin.mutations.rs";
 	if (existsSync(billingAdminMutations)) {
 		const content = readFileSync(billingAdminMutations, "utf8");
 		if (/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${billingAdminMutations}: Billing admin mutations must call billing-api/gRPC`);
+			errors.push(`${billingAdminMutations}: Billing admin mutations must call billing-service/gRPC`);
 		}
 	}
 
-	const revenueMutations = "apps/internal-admin/src/internal_admin.revenue_center.mutations.rs";
+	const revenueMutations = "apps/backoffice-service/src/internal_admin.revenue_center.mutations.rs";
 	if (existsSync(revenueMutations)) {
 		const content = readFileSync(revenueMutations, "utf8");
 		if (/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+billing_[a-z0-9_]+\b/i.test(content)) {
-			errors.push(`${revenueMutations}: Revenue center Billing mutations must call billing-api/gRPC`);
+			errors.push(`${revenueMutations}: Revenue center Billing mutations must call billing-service/gRPC`);
 		}
 		if (!content.includes("run_revenue_grpc_action")) {
 			errors.push(`${revenueMutations}: Revenue center mutations must use Billing gRPC actions`);
@@ -315,9 +315,9 @@ function checkBillingProviderNeutralSurface() {
 	const requiredProviderFiles = [
 		["libs/rust/billing/src/provider.rs", 'PROVIDER_CODES: &[&str] = &["stripe", "mollie", "cb"]'],
 		["libs/ts/billing-client/src/billing.provider.ts", "['stripe', 'mollie', 'cb']"],
-		["apps/gateway-graphql/src/gateway.schema.enums.rs", "Cb"],
+		["apps/gateway-cloud/src/gateway.schema.enums.rs", "Cb"],
 		["contracts/graphql/schema.graphql", "CB"],
-		["apps/billing-api/migrations/0009_billing_provider_cb.sql", "ADD VALUE IF NOT EXISTS 'cb'"],
+		["apps/billing-service/migrations/0009_billing_provider_cb.sql", "ADD VALUE IF NOT EXISTS 'cb'"],
 	];
 	for (const [file, expected] of requiredProviderFiles) {
 		if (!existsSync(file)) {

@@ -7,7 +7,7 @@ import {
   type MutationPost,
 } from './action-confirmation.mock-api';
 
-test.describe('internal-admin pending approvals @mocked', () => {
+test.describe('backoffice-service pending approvals @mocked', () => {
   test.beforeEach(async ({ page }) => {
     await installCredentials(page);
     await installMockApi(page);

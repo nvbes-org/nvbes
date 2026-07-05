@@ -217,7 +217,7 @@ pub(super) async fn seed_exchange_context(
           'workspace',
           $2,
           ARRAY['drive.files.read', 'drive.workspace.read'],
-          ARRAY['nvbes-drive-api'],
+          ARRAY['nvbes-cloud-service'],
           ARRAY['drive'],
           'aal1',
           'active',

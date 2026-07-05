@@ -14,17 +14,17 @@ require_env NVBES_BETA_SEED_EMAIL
 require_env NVBES_BETA_SEED_PASSWORD
 
 if [ -z "${NVBES_API_BASE_URL:-}" ] \
-  && [ -z "${NVBES_IDENTITY_API_BASE_URL:-${NVBES_STAGING_IDENTITY_API_BASE_URL:-}}" ]; then
-  fail "missing required environment variable: NVBES_API_BASE_URL or NVBES_IDENTITY_API_BASE_URL"
+  && [ -z "${NVBES_ACCOUNT_SERVICE_BASE_URL:-${NVBES_STAGING_ACCOUNT_SERVICE_BASE_URL:-}}" ]; then
+  fail "missing required environment variable: NVBES_API_BASE_URL or NVBES_ACCOUNT_SERVICE_BASE_URL"
 fi
 if [ -z "${NVBES_API_BASE_URL:-}" ] \
-  && [ -z "${NVBES_DRIVE_API_BASE_URL:-${NVBES_STAGING_DRIVE_API_BASE_URL:-}}" ]; then
-  fail "missing required environment variable: NVBES_API_BASE_URL or NVBES_DRIVE_API_BASE_URL"
+  && [ -z "${NVBES_CLOUD_SERVICE_BASE_URL:-${NVBES_STAGING_CLOUD_SERVICE_BASE_URL:-}}" ]; then
+  fail "missing required environment variable: NVBES_API_BASE_URL or NVBES_CLOUD_SERVICE_BASE_URL"
 fi
 
-IDENTITY_API_BASE_URL="$(normalize_url "${NVBES_IDENTITY_API_BASE_URL:-${NVBES_STAGING_IDENTITY_API_BASE_URL:-$NVBES_API_BASE_URL}}")"
-DRIVE_API_BASE_URL="$(normalize_url "${NVBES_DRIVE_API_BASE_URL:-${NVBES_STAGING_DRIVE_API_BASE_URL:-$NVBES_API_BASE_URL}}")"
-IDENTITY_API_ORIGIN="${IDENTITY_API_BASE_URL}"
+ACCOUNT_SERVICE_BASE_URL="$(normalize_url "${NVBES_ACCOUNT_SERVICE_BASE_URL:-${NVBES_STAGING_ACCOUNT_SERVICE_BASE_URL:-$NVBES_API_BASE_URL}}")"
+CLOUD_SERVICE_BASE_URL="$(normalize_url "${NVBES_CLOUD_SERVICE_BASE_URL:-${NVBES_STAGING_CLOUD_SERVICE_BASE_URL:-$NVBES_API_BASE_URL}}")"
+IDENTITY_API_ORIGIN="${ACCOUNT_SERVICE_BASE_URL}"
 SEED_WORKSPACE="${NVBES_BETA_SEED_WORKSPACE:-Beta Staging Workspace}"
 SEED_FIRSTNAME="${NVBES_BETA_SEED_FIRSTNAME:-Beta}"
 SEED_LASTNAME="${NVBES_BETA_SEED_LASTNAME:-Owner}"
@@ -42,13 +42,13 @@ json_post() {
       --header "content-type: application/json" \
       --header "authorization: Bearer $token" \
       --data "$body" \
-      "$DRIVE_API_BASE_URL$path"
+      "$CLOUD_SERVICE_BASE_URL$path"
   else
     curl --fail --silent --show-error --location --max-time 20 \
       --header "content-type: application/json" \
       --header "origin: $IDENTITY_API_ORIGIN" \
       --data "$body" \
-      "$IDENTITY_API_BASE_URL$path"
+      "$ACCOUNT_SERVICE_BASE_URL$path"
   fi
 }
 
@@ -60,7 +60,7 @@ pow_body() {
 
   if ! challenge="$(curl --fail --silent --show-error --location --max-time 20 \
     --header "accept: application/json" \
-    "$IDENTITY_API_BASE_URL/auth/challenge/pow" 2>/tmp/nvbes-beta-pow.err)"; then
+    "$ACCOUNT_SERVICE_BASE_URL/auth/challenge/pow" 2>/tmp/nvbes-beta-pow.err)"; then
     printf '{}'
     return 0
   fi
@@ -142,7 +142,7 @@ fi
 log_step "prepare beta browser account"
 NVBES_ENV=staging \
   NVBES_DATABASE_URL="$NVBES_DATABASE_URL" \
-  cargo run -q -p nvbes-identity-api -- --prepare-beta-e2e-account \
+  cargo run -q -p nvbes-account-service -- --prepare-beta-e2e-account \
     --email "$NVBES_BETA_SEED_EMAIL" \
     --password "$NVBES_BETA_SEED_PASSWORD" \
     --workspace-name "$SEED_WORKSPACE"
@@ -174,7 +174,7 @@ if [ "$email_verified" != "true" ]; then
   log_step "extract verification token from queued email"
   verification_token="$(NVBES_ENV=staging \
     NVBES_DATABASE_URL="$NVBES_DATABASE_URL" \
-    cargo run -q -p nvbes-identity-api -- --extract-email-token \
+    cargo run -q -p nvbes-account-service -- --extract-email-token \
       --email "$NVBES_BETA_SEED_EMAIL" \
       --business-type verification)"
 
@@ -186,12 +186,12 @@ fi
 log_step "resolve beta workspace"
 me_response="$(curl --fail --silent --show-error --location --max-time 20 \
   --header "authorization: Bearer $session_token" \
-  "$IDENTITY_API_BASE_URL/auth/me")"
+  "$ACCOUNT_SERVICE_BASE_URL/auth/me")"
 workspace_id="$(printf '%s' "$me_response" | jq -r '.current_workspace_id // empty')"
 if [ -z "$workspace_id" ]; then
   workspace_response="$(curl --fail --silent --show-error --location --max-time 20 \
     --header "authorization: Bearer $session_token" \
-    "$IDENTITY_API_BASE_URL/workspaces")"
+    "$ACCOUNT_SERVICE_BASE_URL/workspaces")"
   workspace_id="$(printf '%s' "$workspace_response" | jq -r '.workspaces[0].id // .items[0].id // empty')"
 fi
 if [ -z "$workspace_id" ]; then
@@ -226,7 +226,7 @@ api_key_status="$(curl --silent --show-error --location --max-time 20 \
   --header "content-type: application/json" \
   --header "authorization: Bearer $session_token" \
   --data "$api_key_body" \
-  "$DRIVE_API_BASE_URL/workspaces/$workspace_id/api-keys")"
+  "$CLOUD_SERVICE_BASE_URL/workspaces/$workspace_id/api-keys")"
 if [ "$api_key_status" != "410" ]; then
   cat /tmp/nvbes-beta-api-key-create.json >&2
   fail "expected legacy API key creation to return HTTP 410, got $api_key_status"

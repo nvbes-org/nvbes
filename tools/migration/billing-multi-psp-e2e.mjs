@@ -9,7 +9,7 @@ const outputPath = "docs/migration/billing-multi-psp-e2e.generated.json";
 const markdownPath = "docs/migration/billing-multi-psp-e2e.md";
 
 const sources = {
-	billingApiWebhooks: "apps/billing-api/src/billing.domains.webhooks.rs",
+	billingServiceWebhooks: "apps/billing-service/src/billing.domains.webhooks.rs",
 	stripeIntake: "libs/rust/billing/src/stripe_webhook_intake.rs",
 	mollieWebhooks: "libs/rust/billing/src/mollie.webhooks.rs",
 	jobs: "libs/rust/billing/src/jobs.rs",
@@ -82,7 +82,7 @@ function identityBoundaryCheck() {
 		"handle_stripe_webhook_intake",
 	];
 	const matches = [];
-	for (const path of rustFiles("apps/identity-api/src").concat(rustFiles("apps/identity-worker/src"))) {
+	for (const path of rustFiles("apps/account-service/src").concat(rustFiles("apps/account-worker/src"))) {
 		const content = read(path);
 		for (const pattern of forbidden) {
 			if (content.includes(pattern)) matches.push(`${path}: ${pattern}`);
@@ -90,8 +90,8 @@ function identityBoundaryCheck() {
 	}
 	return {
 		id: "identity-no-psp-webhook-runtime",
-		description: "Identity API and worker do not own PSP webhook runtime",
-		path: "apps/identity-api/src + apps/identity-worker/src",
+		description: "Account Service and worker do not own PSP webhook runtime",
+		path: "apps/account-service/src + apps/account-worker/src",
 		status: matches.length === 0 ? "passed" : "failed",
 		pattern: `forbidden:${forbidden.join(",")}`,
 		matches,
@@ -110,12 +110,12 @@ function rustFiles(root) {
 
 function buildChecks() {
 	return [
-		textCheck("billing-api-stripe-route", sources.billingApiWebhooks, "Billing API exposes Stripe webhook intake", '"/webhooks/stripe"'),
-		textCheck("billing-api-mollie-route", sources.billingApiWebhooks, "Billing API exposes Mollie webhook intake", '"/webhooks/mollie"'),
+		textCheck("billing-service-stripe-route", sources.billingServiceWebhooks, "Billing API exposes Stripe webhook intake", '"/webhooks/stripe"'),
+		textCheck("billing-service-mollie-route", sources.billingServiceWebhooks, "Billing API exposes Mollie webhook intake", '"/webhooks/mollie"'),
 		textCheck("stripe-signature-intake", sources.stripeIntake, "Stripe intake verifies raw webhook signature", "verify_stripe_signature"),
 		textCheck("stripe-async-queue", sources.stripeIntake, "Stripe intake enqueues asynchronous processing", "enqueue_stripe_webhook_job"),
 		textCheck("mollie-id-only-intake", sources.mollieWebhooks, "Mollie classic webhook intake parses id-only callback", "mollie_classic_webhook_is_id_only_and_fetch_required"),
-		textCheck("mollie-async-queue", sources.billingApiWebhooks, "Mollie intake enqueues asynchronous processing", "enqueue_mollie_webhook_job"),
+		textCheck("mollie-async-queue", sources.billingServiceWebhooks, "Mollie intake enqueues asynchronous processing", "enqueue_mollie_webhook_job"),
 		textCheck("queue-stripe", sources.jobs, "Stripe webhook queue name is provider-scoped", 'JOB_STRIPE_WEBHOOK_PROCESS: &str = "billing.stripe.webhook.process"'),
 		textCheck("queue-mollie", sources.jobs, "Mollie webhook queue name is provider-scoped", 'JOB_MOLLIE_WEBHOOK_PROCESS: &str = "billing.mollie.webhook.process"'),
 		textCheck("worker-stripe-dispatch", sources.workerJobs, "Billing worker dispatches Stripe webhook jobs", "stripe::process_stripe_webhook_job"),

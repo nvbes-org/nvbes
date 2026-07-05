@@ -7,29 +7,29 @@ remote_write:
     send_exemplars: true
 
 scrape_configs:
-  - job_name: 'identity-api'
+  - job_name: 'account-service'
     static_configs:
       - targets: ['host.docker.internal:4000']
         labels:
-          service: 'identity-api'
+          service: 'account-service'
 
-  - job_name: 'drive-api'
+  - job_name: 'cloud-service'
     static_configs:
-      - targets: ['host.docker.internal:4001']
+      - targets: ['host.docker.internal:4002']
         labels:
-          service: 'drive-api'
+          service: 'cloud-service'
 
-  - job_name: 'drive-worker'
+  - job_name: 'cloud-worker'
     static_configs:
       - targets: ['host.docker.internal:4101']
         labels:
-          service: 'drive-worker'
+          service: 'cloud-worker'
 
-  - job_name: 'identity-worker'
+  - job_name: 'account-worker'
     static_configs:
       - targets: ['host.docker.internal:4102']
         labels:
-          service: 'identity-worker'
+          service: 'account-worker'
 
   - job_name: 'grafana-stack'
     static_configs:

@@ -2,20 +2,20 @@
 
 ## Goal
 
-Build a dedicated `apps/developer-web` product for nvbes Identity developers.
+Build a dedicated `apps/console-web` product for nvbes Identity developers.
 
 The V0 must be complete enough for a tenant developer admin to manage OAuth integrations from one console: OAuth clients, marketplace approval state, consent screen configuration, scope registry, service accounts, secret rotation, webhook replay, sandbox tenant visibility, token debugging, integration logs, and health checks.
 
 ## Product Boundary
 
-`developer-web` is a first-class app, not a route inside `identity-web`.
+`console-web` is a first-class app, not a route inside `account-web`.
 
 Product responsibilities:
 
-- `identity-web`: personal account, login, MFA, sessions, and identity settings.
-- `developer-web`: developer docs and integration operations for OAuth clients, service accounts, scopes, secrets, webhooks, logs, sandbox, and diagnostics.
+- `account-web`: personal account, login, MFA, sessions, and identity settings.
+- `console-web`: developer docs and integration operations for OAuth clients, service accounts, scopes, secrets, webhooks, logs, sandbox, and diagnostics.
 - `enterprise-web`: tenant-wide administration when that product exists.
-- `identity-api`: security boundary for developer permissions, OAuth data, service accounts, token diagnostics, webhook operations, and audit.
+- `account-service`: security boundary for developer permissions, OAuth data, service accounts, token diagnostics, webhook operations, and audit.
 
 The V0 ships as a dedicated developer product because developer workflows mix public docs, tenant-scoped operational tooling, and security-sensitive integration actions. Folding this into personal account UX would blur responsibilities and create avoidable redesign pressure.
 
@@ -23,7 +23,7 @@ The V0 ships as a dedicated developer product because developer workflows mix pu
 
 In scope for V0:
 
-- new `apps/developer-web` React/Vite app;
+- new `apps/console-web` React/Vite app;
 - authenticated developer console shell;
 - public landing/docs shell only where needed to enter the console;
 - developer RBAC with predefined roles;
@@ -55,14 +55,14 @@ Out of scope for V0:
 
 Frontend:
 
-- `apps/developer-web` uses React, Vite, TanStack Router, TanStack Query, `@nvbes/web-runtime`, `@nvbes/web-ui`, Zod, and lucide-react.
+- `apps/console-web` uses React, Vite, TanStack Router, TanStack Query, `@nvbes/web-runtime`, `@nvbes/web-ui`, Zod, and lucide-react.
 - The app has a dense console shell with a stable sidebar, top tenant/workspace context, and detail panes.
 - API calls live in focused files: schemas, typed API functions, route loaders/hooks, and page components.
 - Deterministic fixture data is allowed only for public docs copy and empty-state examples. Authenticated console data must come from API contracts.
 
 Backend:
 
-- `apps/identity-api/src/identity.domains.developer.*` is a facade domain.
+- `apps/account-service/src/identity.domains.developer.*` is a facade domain.
 - The facade enforces developer permissions before delegating to existing OAuth, service-account, security, federation, billing-webhook, and audit primitives.
 - New persistence is limited to developer-specific product state: role assignments, scope metadata, marketplace records, consent screen config, secret rotation records, webhook endpoint/delivery metadata, sandbox bindings, health check results, and token debugger audit events.
 - Existing tables remain the source of truth for OAuth clients, principals, tenants, workspaces, sessions, and issued token semantics.
@@ -238,14 +238,14 @@ Backend tests:
 
 Validation after implementation:
 
-- targeted frontend typecheck, lint, and tests for `developer-web`;
+- targeted frontend typecheck, lint, and tests for `console-web`;
 - `cargo check --workspace` after Rust changes;
 - targeted Rust tests for developer domain;
 - root affected checks when shared libraries or package scripts change.
 
 ## Rollout Slices
 
-1. Scaffold `developer-web` and developer API facade with RBAC tests.
+1. Scaffold `console-web` and developer API facade with RBAC tests.
 2. Add developer context, navigation, and overview.
 3. Add OAuth client, marketplace, consent screen, and scope registry contracts.
 4. Add service account and secret rotation workflows.
@@ -253,4 +253,4 @@ Validation after implementation:
 6. Add route guards, audit coverage, and error states.
 7. Add targeted tests and validation.
 
-The V0 is complete when a developer admin can create and govern an OAuth integration, rotate its secret, inspect an access token, replay a failed webhook, verify integration health, and see the relevant logs from `developer-web` without leaving the console.
+The V0 is complete when a developer admin can create and govern an OAuth integration, rotate its secret, inspect an access token, replay a failed webhook, verify integration health, and see the relevant logs from `console-web` without leaving the console.

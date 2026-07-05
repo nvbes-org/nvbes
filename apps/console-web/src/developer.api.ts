@@ -1,6 +1,6 @@
 import { createHttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
-import { identityApiBaseUrl, identityHttpClient, identityVerifiedFetch } from './identity.http';
+import { accountServiceBaseUrl, identityHttpClient, identityVerifiedFetch } from './identity.http';
 import {
   CreateDeveloperAppResponseSchema,
   CreateDeveloperWebhookEndpointResponseSchema,
@@ -56,7 +56,7 @@ import type { SecretRotationForm } from './pages/SecretsPage.helpers';
 import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
 
 const developerHttpClient = createHttpClient({
-  baseUrl: identityApiBaseUrl,
+  baseUrl: accountServiceBaseUrl,
   credentials: 'include',
   fetchImpl: identityVerifiedFetch,
 });

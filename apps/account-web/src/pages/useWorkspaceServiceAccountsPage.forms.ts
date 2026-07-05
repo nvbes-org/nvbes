@@ -12,7 +12,7 @@ export function useWorkspaceServiceAccountsPageForms() {
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientName, setClientName] = useState('');
   const [clientScopes, setClientScopes] = useState(driveScopesPreset);
-  const [clientAudiences, setClientAudiences] = useState('nvbes-drive-api');
+  const [clientAudiences, setClientAudiences] = useState('nvbes-cloud-service');
   const [clientResources, setClientResources] = useState('');
   const [clientRequiredAcr, setClientRequiredAcr] = useState('');
   const [clientAssertionRequired, setClientAssertionRequired] = useState(false);
@@ -43,7 +43,7 @@ export function useWorkspaceServiceAccountsPageForms() {
   const clearClient = () => {
     setClientName('');
     setClientScopes(driveScopesPreset);
-    setClientAudiences('nvbes-drive-api');
+    setClientAudiences('nvbes-cloud-service');
     setClientResources('');
     setClientRequiredAcr('');
     setClientAssertionRequired(false);

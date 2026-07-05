@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
-import { BillingOperationsPage } from './internal-admin.billing.page';
-import { InternalAdminErrorBoundary } from './internal-admin.error-boundary';
+import { BillingOperationsPage } from './backoffice-service.billing.page';
+import { BackofficeServiceErrorBoundary } from './backoffice-service.error-boundary';
 
 export function App() {
   const [queryClient] = useState(
@@ -15,10 +15,10 @@ export function App() {
   );
 
   return (
-    <InternalAdminErrorBoundary>
+    <BackofficeServiceErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BillingOperationsPage />
       </QueryClientProvider>
-    </InternalAdminErrorBoundary>
+    </BackofficeServiceErrorBoundary>
   );
 }

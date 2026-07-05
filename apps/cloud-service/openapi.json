@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "nvbes Drive API",
+    "title": "nvbes Cloud Service",
     "description": "File storage, sharing, and collaboration API",
     "contact": {
       "name": "nvbes",

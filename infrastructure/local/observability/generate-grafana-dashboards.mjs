@@ -17,7 +17,7 @@ const dashboards = [
     title: "nvbes Platform Overview",
     tags: ["nvbes", "p0", "overview"],
     panels: [
-      stat("Service scrape health", 'min by (job) (up{job=~"identity-api|drive-api|internal-admin|identity-worker|drive-worker"})'),
+      stat("Service scrape health", 'min by (job) (up{job=~"account-service|cloud-service|backoffice-service|account-worker|cloud-worker"})'),
       graph("HTTP request rate by job/status", "sum by (job, status) (rate(http_requests_total[5m]))"),
       stat("5xx ratio", 'sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1) * 100', "percent"),
       graph("HTTP latency p95/p99", "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m]))) or histogram_quantile(0.99, sum by (le, job) (rate(http_request_duration_seconds_bucket[5m])))", "s"),
@@ -32,10 +32,10 @@ const dashboards = [
     title: "nvbes API Health",
     tags: ["nvbes", "p0", "api"],
     panels: [
-      graph("Request rate by service", 'sum by (job, method) (rate(http_requests_total{job=~"identity-api|drive-api|internal-admin"}[5m]))'),
-      graph("Status mix", 'sum by (job, status) (rate(http_requests_total{job=~"identity-api|drive-api|internal-admin"}[5m]))'),
-      graph("Latency p95 by service", 'histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~"identity-api|drive-api|internal-admin"}[5m])))', "s"),
-      graph("Latency p99 by service", 'histogram_quantile(0.99, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~"identity-api|drive-api|internal-admin"}[5m])))', "s"),
+      graph("Request rate by service", 'sum by (job, method) (rate(http_requests_total{job=~"account-service|cloud-service|backoffice-service"}[5m]))'),
+      graph("Status mix", 'sum by (job, status) (rate(http_requests_total{job=~"account-service|cloud-service|backoffice-service"}[5m]))'),
+      graph("Latency p95 by service", 'histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~"account-service|cloud-service|backoffice-service"}[5m])))', "s"),
+      graph("Latency p99 by service", 'histogram_quantile(0.99, sum by (le, job) (rate(http_request_duration_seconds_bucket{job=~"account-service|cloud-service|backoffice-service"}[5m])))', "s"),
       stat("Active requests", "sum(http_active_requests)"),
       stat("5xx error budget burn", 'sum(rate(http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(http_requests_total[5m])), 1) * 100', "percent"),
     ],
@@ -187,7 +187,7 @@ const dashboards = [
     stat("Suppressed emails", "sum(email_suppressed_total)"),
     graph("Provider webhook outcomes", "sum by (provider, outcome) (rate(email_provider_webhooks_total[5m]))"),
   ]),
-  simple("nvbes-internal-admin-operator-safety.json", "nvbes Internal Admin Operator Safety", "p1", [
+  simple("nvbes-backoffice-service-operator-safety.json", "nvbes Backoffice Operator Safety", "p1", [
     graph("Admin action requests", "sum by (policy, outcome) (rate(internal_admin_action_requests_total[5m]))"),
     graph("Admin action p95", "histogram_quantile(0.95, sum by (le, policy) (rate(internal_admin_action_request_duration_seconds_bucket[5m])))", "s"),
     graph("Guard rejections", "sum by (guard, reason) (rate(internal_admin_guard_rejections_total[5m]))"),

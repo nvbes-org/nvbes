@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { type FormEvent } from 'react';
 import { identityAuthMutationKeys, submitRegisterMutationFn } from '../identity.auth.queries';
 import { resolvePowChallenge } from '../identity.auth.pow';
-import { identityApiBaseUrl } from '../identity.http';
+import { accountServiceBaseUrl } from '../identity.http';
 import { savePendingOAuthAuthorizeRequest } from '../identity.oauth';
 import { trackEvent } from '../identity.analytics';
 
@@ -74,7 +74,7 @@ export function useRegisterPageSubmit({
           legal_documents_accepted: legalDocumentsAccepted,
           marketing_emails_accepted: marketingEmailsAccepted,
         },
-        ...(await resolvePowChallenge(identityApiBaseUrl)),
+        ...(await resolvePowChallenge(accountServiceBaseUrl)),
       });
 
       trackEvent('auth.signup_completed', {

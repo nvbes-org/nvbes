@@ -7,7 +7,7 @@ import {
   type MutationPost,
 } from './action-confirmation.mock-api';
 
-test.describe('internal-admin RBAC mutation failures @mocked', () => {
+test.describe('backoffice-service RBAC mutation failures @mocked', () => {
   test.beforeEach(async ({ page }) => {
     await installMockApi(page);
   });

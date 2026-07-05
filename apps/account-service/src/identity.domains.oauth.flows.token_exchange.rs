@@ -18,11 +18,11 @@ pub async fn token_exchange(
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .unwrap_or("nvbes-drive-api");
-    if audience != "nvbes-drive-api" {
+        .unwrap_or("nvbes-cloud-service");
+    if audience != "nvbes-cloud-service" {
         return Err(AppError::bad_request(
             "invalid_audience",
-            "Drive delegated tokens must target the nvbes-drive-api audience.",
+            "Drive delegated tokens must target the nvbes-cloud-service audience.",
         ));
     }
     let client_row = sqlx::query(

@@ -9,7 +9,7 @@ import {
 } from '@nvbes/web-runtime';
 import { isCategoryAccepted, isVendorAccepted } from './tracking-consent';
 
-const APP_NAME = 'identity-web';
+const APP_NAME = 'account-web';
 const CLOSE_TIMEOUT_MS = 2_000;
 
 let initialized = false;

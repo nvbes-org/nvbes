@@ -659,7 +659,7 @@ CREATE INDEX IF NOT EXISTS idx_mfa_factors_user_status
     ON mfa_factors (user_id, status);
 
 -- =============================================================================
--- Row Level Security - Multi-Tenant Isolation v1 (Drive API)
+-- Row Level Security - Multi-Tenant Isolation v1 (Cloud Service)
 -- =============================================================================
 
 -- Helper function to set GUC variables for RLS context
@@ -818,7 +818,7 @@ CREATE POLICY audit_read ON audit_events
 -- email_verification_tokens (user-scoped)
 -- password_reset_tokens (user-scoped)
 -- plans
--- oauth_scope_metadata (not present in drive-api)
+-- oauth_scope_metadata (not present in cloud-service)
 -- Migration: data_classification_v1
 -- Description: Add data classification framework columns
 -- Date: 2026-05-12

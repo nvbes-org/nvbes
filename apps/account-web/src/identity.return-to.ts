@@ -36,8 +36,8 @@ export function normalizeLoginReturnTo(
 function configuredReturnOrigins(currentOrigin: string): ReadonlySet<string> {
   const origins = new Set<string>([currentOrigin]);
   const configuredValues = [
-    import.meta.env.VITE_DEVELOPER_WEB_BASE_URL,
-    import.meta.env.VITE_IDENTITY_ALLOWED_RETURN_ORIGINS,
+    import.meta.env.VITE_CONSOLE_WEB_BASE_URL,
+    import.meta.env.VITE_ACCOUNT_ALLOWED_RETURN_ORIGINS,
   ];
 
   for (const value of configuredValues) {

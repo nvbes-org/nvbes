@@ -2,22 +2,22 @@ global:
   imageRegistry: ghcr.io/nvbes
   imageTag: "0.1.0"
 
-identityApi:
+accountService:
   enabled: true
   image:
-    repository: nvbes-identity-api
+    repository: nvbes-account-service
 
-driveApi:
+cloudService:
   enabled: true
   image:
-    repository: nvbes-drive-api
+    repository: nvbes-cloud-service
 
-identityWeb:
+accountWeb:
   enabled: true
   image:
-    repository: nvbes-identity-web
+    repository: nvbes-account-web
 
-driveWeb:
+cloudWeb:
   enabled: true
   image:
-    repository: nvbes-drive-web
+    repository: nvbes-cloud-web

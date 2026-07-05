@@ -31,7 +31,7 @@ const trackingConsentApi = createTrackingConsentApi({
       identityClient.revokeConsent(consentType, documentVersion),
     isAuthenticated: () => identityClient.isAuthenticated(),
   } satisfies TrackingConsentClient,
-  defaultSource: 'drive-web',
+  defaultSource: 'cloud-web',
 });
 
 export {

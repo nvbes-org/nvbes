@@ -24,9 +24,15 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-    async fn billing_overview(&self, ctx: &Context<'_>, workspace_id: String) -> Result<BillingOverview> {
+    async fn billing_overview(
+        &self,
+        ctx: &Context<'_>,
+        workspace_id: String,
+    ) -> Result<BillingOverview> {
         let state = ctx.data::<GatewayState>()?;
-        let request_context = ctx.data::<GatewayRequestContext>()?.for_workspace(&workspace_id);
+        let request_context = ctx
+            .data::<GatewayRequestContext>()?
+            .for_workspace(&workspace_id);
         let mut client = billing_client(&state.billing_grpc_endpoint).await?;
         let response = client
             .get_billing_overview(GetBillingOverviewRequest {
@@ -38,9 +44,15 @@ impl QueryRoot {
         BillingOverview::from_grpc(response)
     }
 
-    async fn billing_portal(&self, ctx: &Context<'_>, workspace_id: String) -> Result<BillingPortal> {
+    async fn billing_portal(
+        &self,
+        ctx: &Context<'_>,
+        workspace_id: String,
+    ) -> Result<BillingPortal> {
         let state = ctx.data::<GatewayState>()?;
-        let request_context = ctx.data::<GatewayRequestContext>()?.for_workspace(&workspace_id);
+        let request_context = ctx
+            .data::<GatewayRequestContext>()?
+            .for_workspace(&workspace_id);
         let mut client = billing_client(&state.billing_grpc_endpoint).await?;
         let response = client
             .get_billing_portal(GetBillingPortalRequest {
@@ -52,7 +64,11 @@ impl QueryRoot {
         BillingPortal::from_grpc(response)
     }
 
-    async fn billing_entitlements(&self, ctx: &Context<'_>, workspace_id: String) -> Result<ProductEntitlements> {
+    async fn billing_entitlements(
+        &self,
+        ctx: &Context<'_>,
+        workspace_id: String,
+    ) -> Result<ProductEntitlements> {
         let overview = self.billing_overview(ctx, workspace_id).await?;
         Ok(overview.entitlements)
     }
@@ -348,7 +364,9 @@ impl BillingSubscriptionStatus {
             "past_due" => Ok(Self::PastDue),
             "canceled" => Ok(Self::Canceled),
             "incomplete" => Ok(Self::Incomplete),
-            _ => Err(Error::new(format!("unsupported subscription status: {value}"))),
+            _ => Err(Error::new(format!(
+                "unsupported subscription status: {value}"
+            ))),
         }
     }
 }
@@ -388,7 +406,9 @@ impl BillingProviderReferenceStatus {
             "active" => Ok(Self::Active),
             "inactive" | "" => Ok(Self::Inactive),
             "failed" => Ok(Self::Failed),
-            _ => Err(Error::new(format!("unsupported provider reference status: {value}"))),
+            _ => Err(Error::new(format!(
+                "unsupported provider reference status: {value}"
+            ))),
         }
     }
 }
@@ -406,5 +426,9 @@ fn checked_i32(value: i64, field: &str) -> Result<i32> {
 }
 
 fn i64_to_i32_saturating(value: i64) -> i32 {
-    i32::try_from(value).unwrap_or(if value.is_negative() { i32::MIN } else { i32::MAX })
+    i32::try_from(value).unwrap_or(if value.is_negative() {
+        i32::MIN
+    } else {
+        i32::MAX
+    })
 }

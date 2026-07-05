@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const webBaseURL = process.env.NVBES_INTERNAL_ADMIN_WEB_BASE_URL ?? 'http://127.0.0.1:5178';
+const webBaseURL = process.env.NVBES_BACKOFFICE_WEB_BASE_URL ?? 'http://127.0.0.1:5178';
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      'pnpm --dir apps/internal-admin-web exec vite --host 127.0.0.1 --port 5178 --strictPort',
+      'pnpm --dir apps/backoffice-web exec vite --host 127.0.0.1 --port 5178 --strictPort',
     cwd: '../..',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

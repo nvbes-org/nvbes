@@ -153,7 +153,7 @@ fn expired_token(state: &AppState, tenant_id: Uuid, subject_id: Uuid) -> String 
         client_id: Some("developer-console-test".to_string()),
         auth_time: Some((now - Duration::minutes(30)).timestamp()),
         iss: "nvbes-identity".to_string(),
-        aud: "nvbes-identity-api".to_string(),
+        aud: "nvbes-account-service".to_string(),
         exp: (now - Duration::minutes(1)).timestamp(),
         iat: (now - Duration::minutes(30)).timestamp(),
         nbf: (now - Duration::minutes(30)).timestamp(),

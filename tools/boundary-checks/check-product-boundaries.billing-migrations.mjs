@@ -25,17 +25,17 @@ function walk(dir, results = []) {
 
 function checkIdentityMigrationsDoNotOwnBillingRuntime(errors) {
 	for (const legacyBillingMigration of [
-		"apps/identity-api/migrations/0016_billing_platform_core.sql",
-		"apps/identity-api/migrations/0017_regional_price_mappings.sql",
-		"apps/identity-api/migrations/0020_internal_admin_entitlement_actions.sql",
-		"apps/identity-api/migrations/0022_internal_admin_usage_actions.sql",
-		"apps/identity-api/migrations/0027_internal_admin_risk_actions.sql",
-		"apps/identity-api/migrations/0028_internal_admin_operations_actions.sql",
-		"apps/identity-api/migrations/0029_internal_admin_revenue_actions.sql",
-		"apps/identity-api/migrations/0030_internal_admin_billing_platform_actions.sql",
+		"apps/account-service/migrations/0016_billing_platform_core.sql",
+		"apps/account-service/migrations/0017_regional_price_mappings.sql",
+		"apps/account-service/migrations/0020_internal_admin_entitlement_actions.sql",
+		"apps/account-service/migrations/0022_internal_admin_usage_actions.sql",
+		"apps/account-service/migrations/0027_internal_admin_risk_actions.sql",
+		"apps/account-service/migrations/0028_internal_admin_operations_actions.sql",
+		"apps/account-service/migrations/0029_internal_admin_revenue_actions.sql",
+		"apps/account-service/migrations/0030_internal_admin_billing_platform_actions.sql",
 	]) {
 		if (existsSync(legacyBillingMigration)) {
-			errors.push(`${legacyBillingMigration}: legacy Billing migration must move to apps/billing-api/migrations`);
+			errors.push(`${legacyBillingMigration}: legacy Billing migration must move to apps/billing-service/migrations`);
 		}
 	}
 	const billingMigrationPatterns = [
@@ -54,10 +54,10 @@ function checkIdentityMigrationsDoNotOwnBillingRuntime(errors) {
 		/\binternal_admin_usage_actions\b/i,
 		/\binternal_admin_entitlement_actions\b/i,
 	];
-	for (const file of walk("apps/identity-api/migrations").filter((path) => path.endsWith(".sql"))) {
+	for (const file of walk("apps/account-service/migrations").filter((path) => path.endsWith(".sql"))) {
 		const content = readFileSync(file, "utf8").replace(/\bbilling_admin\b/g, "identity_billing_role");
 		if (billingMigrationPatterns.some((pattern) => pattern.test(content))) {
-			errors.push(`${file}: Billing runtime migrations must live in apps/billing-api/migrations, not Identity`);
+			errors.push(`${file}: Billing runtime migrations must live in apps/billing-service/migrations, not Identity`);
 		}
 	}
 }
@@ -76,18 +76,18 @@ function checkBillingMigrationPipeline(errors) {
 		return;
 	}
 	const content = readFileSync(billingMigrateScript, "utf8");
-	for (const expected of ["NVBES_BILLING_DATABASE_URL", "cargo run -p nvbes-billing-api -- migrate"]) {
+	for (const expected of ["NVBES_BILLING_DATABASE_URL", "cargo run -p nvbes-billing-service -- migrate"]) {
 		if (!content.includes(expected)) {
-			errors.push(`${billingMigrateScript}: Billing migrations must run through billing-api with ${expected}`);
+			errors.push(`${billingMigrateScript}: Billing migrations must run through billing-service with ${expected}`);
 		}
 	}
 }
 
 function checkIdentityMigrationScriptsDoNotTargetBilling(errors) {
-	for (const script of ["scripts/db-migrate.sh", "scripts/dev-identity-db-reset.sh"]) {
+	for (const script of ["scripts/db-migrate.sh", "scripts/dev-account-db-reset.sh"]) {
 		if (!existsSync(script)) continue;
 		const content = readFileSync(script, "utf8");
-		for (const forbidden of ["NVBES_BILLING_DATABASE_URL", "nvbes-billing-api", "apps/billing-api/migrations"]) {
+		for (const forbidden of ["NVBES_BILLING_DATABASE_URL", "nvbes-billing-service", "apps/billing-service/migrations"]) {
 			if (content.includes(forbidden)) {
 				errors.push(`${script}: Identity/default migration script must not own Billing migrations (${forbidden})`);
 			}

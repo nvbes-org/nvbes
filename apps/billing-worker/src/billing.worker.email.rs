@@ -24,7 +24,8 @@ pub(crate) async fn enqueue_billing_email_for_stripe_event(
         return Ok(());
     };
 
-    let idempotency_key = payloads::billing_email_idempotency_key(&event.id, &payload.business_type);
+    let idempotency_key =
+        payloads::billing_email_idempotency_key(&event.id, &payload.business_type);
     enqueue_email_job(db_pool, redis, payload, &idempotency_key).await
 }
 

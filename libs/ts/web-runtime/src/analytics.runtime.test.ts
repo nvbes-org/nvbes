@@ -8,7 +8,7 @@ describe('RuntimeAnalytics consent lifecycle', () => {
     let replayStops = 0;
 
     const runtime = new RuntimeAnalytics({
-      appName: 'identity-web',
+      appName: 'account-web',
       getConsent: () => EMPTY_ANALYTICS_CONSENT,
       transport: {
         disableCapture: () => {
@@ -30,7 +30,7 @@ describe('RuntimeAnalytics consent lifecycle', () => {
     let replayStops = 0;
 
     const runtime = new RuntimeAnalytics({
-      appName: 'identity-web',
+      appName: 'account-web',
       getConsent: () => EMPTY_ANALYTICS_CONSENT,
       transport: {
         stopPrivacySafeReplay: () => {

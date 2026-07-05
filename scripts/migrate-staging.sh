@@ -22,6 +22,6 @@ NVBES_ENV=staging \
 log_step "apply staging database migrations"
 NVBES_ENV=staging \
   NVBES_DATABASE_URL="$NVBES_STAGING_DATABASE_URL" \
-  cargo run -p nvbes-drive-api -- migrate
+  cargo run -p nvbes-cloud-service -- migrate
 
 log_step "staging migration complete"

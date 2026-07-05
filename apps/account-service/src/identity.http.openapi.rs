@@ -4,7 +4,7 @@ use utoipa_swagger_ui::SwaggerUi;
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "nvbes Identity API",
+        title = "nvbes Account Service",
         version = "0.1.0",
         description = "Authentication, authorization, and identity management API",
         contact(name = "nvbes", url = "https://nvbes.fr"),

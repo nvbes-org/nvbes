@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
-    "@nvbes/internal-admin-sdk-core": "workspace:*",
+    "@nvbes/backoffice-service-sdk-core": "workspace:*",
     "@nvbes/web-runtime": "workspace:*",
     "@nvbes/web-ui": "workspace:*",
     "@tanstack/react-query": "catalog:",

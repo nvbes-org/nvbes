@@ -28,7 +28,7 @@ const ALWAYS_SKIP_OPERATIONS = new Set([
 
 const stdout = execFileSync(
 	"cargo",
-	["run", "-p", "nvbes-identity-api", "--", "--export-openapi"],
+	["run", "-p", "nvbes-account-service", "--", "--export-openapi"],
 	{
 		cwd: ROOT_DIR,
 		encoding: "utf8",

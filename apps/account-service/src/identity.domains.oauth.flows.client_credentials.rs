@@ -22,11 +22,11 @@ pub async fn client_credentials_grant(
     let audience = audience
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .unwrap_or("nvbes-drive-api");
-    if audience != "nvbes-drive-api" {
+        .unwrap_or("nvbes-cloud-service");
+    if audience != "nvbes-cloud-service" {
         return Err(AppError::bad_request(
             "invalid_audience",
-            "Drive machine tokens must target the nvbes-drive-api audience.",
+            "Drive machine tokens must target the nvbes-cloud-service audience.",
         ));
     }
     let client = sqlx::query(

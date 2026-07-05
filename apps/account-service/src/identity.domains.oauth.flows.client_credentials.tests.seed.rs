@@ -141,7 +141,7 @@ pub(super) async fn seed_service_client(pool: &PgPool) -> (Uuid, String, String,
           created_at,
           updated_at
         )
-        VALUES ($1, $2, $3, 'Drive API client', ARRAY['https://example.com/callback'], $4, 'workspace', $5, 'service', NULL, $6, $6)
+        VALUES ($1, $2, $3, 'Cloud Service client', ARRAY['https://example.com/callback'], $4, 'workspace', $5, 'service', NULL, $6, $6)
         "#,
     )
     .bind(client_uuid)
@@ -172,7 +172,7 @@ pub(super) async fn seed_service_client(pool: &PgPool) -> (Uuid, String, String,
           'workspace',
           $2,
           ARRAY['drive.files.read', 'drive.workspace.read'],
-          ARRAY['nvbes-drive-api'],
+          ARRAY['nvbes-cloud-service'],
           ARRAY['drive'],
           'aal1',
           'active',

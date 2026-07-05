@@ -1,12 +1,12 @@
 {
   "schema": "contracts/graphql/schema.graphql",
   "owners": ["billing", "identity"],
-  "entrypoints": ["gateway-graphql"],
+  "entrypoints": ["gateway-cloud"],
   "rules": [
     {
       "id": "billing-owned-by-billing-service",
       "severity": "block",
-      "description": "Billing resolvers must call billing-api or billing gRPC contracts, not identity-api billing routes."
+      "description": "Billing resolvers must call billing-service or billing gRPC contracts, not account-service billing routes."
     },
     {
       "id": "no-provider-secret-identifiers",

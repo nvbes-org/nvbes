@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild `apps/drive-web` into a credible full Drive V1 frontend with Identity-aligned theme, two-level navigation, a polished Files workspace, secondary V1 views, and realistic local interactions where APIs are missing.
+**Goal:** Rebuild `apps/cloud-web` into a credible full Drive V1 frontend with Identity-aligned theme, two-level navigation, a polished Files workspace, secondary V1 views, and realistic local interactions where APIs are missing.
 
-**Architecture:** Keep the work inside `apps/drive-web` and preserve the existing auth/session gate. Introduce a typed local Drive workspace model, then replace the current temporary shell with focused app layout, view, state, and action components. Use existing shadcn components and local hooks; do not introduce new dependencies.
+**Architecture:** Keep the work inside `apps/cloud-web` and preserve the existing auth/session gate. Introduce a typed local Drive workspace model, then replace the current temporary shell with focused app layout, view, state, and action components. Use existing shadcn components and local hooks; do not introduce new dependencies.
 
 **Tech Stack:** React 19, Vite, TanStack Router, TanStack Query, TypeScript, Tailwind CSS, shadcn/ui local components, lucide-react.
 
@@ -22,45 +22,45 @@
 
 Create these files:
 
-- `apps/drive-web/src/drive.workspace.types.ts`: typed frontend model for files, links, members, security events, billing, API keys, quota, navigation, and details selection.
-- `apps/drive-web/src/drive.workspace.mock.ts`: realistic initial workspace data.
-- `apps/drive-web/src/drive.workspace.store.ts`: reducer-style operations for local interactions.
-- `apps/drive-web/src/drive.workspace.store.test.ts`: behavioral tests for search, selection, share revocation, trash restore, member invitation, role update, and API key revocation.
-- `apps/drive-web/src/DriveAppLayout.tsx`: top-level app layout with rail, section nav, header, content, and optional details panel slot.
-- `apps/drive-web/src/DriveModuleRail.tsx`: compact first-level navigation.
-- `apps/drive-web/src/DriveSectionNav.tsx`: second-level navigation for active module.
-- `apps/drive-web/src/DriveCommandHeader.tsx`: breadcrumb, search, quota, status, account menu.
-- `apps/drive-web/src/DriveViewState.tsx`: shared loading, empty, error, and denied states.
-- `apps/drive-web/src/DriveActionConfirm.tsx`: lightweight confirmation panel/dialog pattern for destructive actions.
-- `apps/drive-web/src/DriveFilesView.tsx`: Files view orchestration.
-- `apps/drive-web/src/DriveFilesTable.tsx`: dense table representation.
-- `apps/drive-web/src/DriveFilesGrid.tsx`: grid representation.
-- `apps/drive-web/src/DriveFilesToolbar.tsx`: files actions, filters, sort, view toggle, selected actions.
-- `apps/drive-web/src/DriveDetailsPanel.tsx`: contextual details panel for file, link, member, billing, key, and event selections.
-- `apps/drive-web/src/DriveSharedLinksView.tsx`: shared links control view.
-- `apps/drive-web/src/DriveTrashView.tsx`: trash view.
-- `apps/drive-web/src/DriveMembersView.tsx`: members view.
-- `apps/drive-web/src/DriveSecurityView.tsx`: security view.
-- `apps/drive-web/src/DriveBillingView.tsx`: billing view.
-- `apps/drive-web/src/DriveApiKeysView.tsx`: API keys view.
-- `apps/drive-web/src/DriveAccountView.tsx`: account handoff view.
+- `apps/cloud-web/src/drive.workspace.types.ts`: typed frontend model for files, links, members, security events, billing, API keys, quota, navigation, and details selection.
+- `apps/cloud-web/src/drive.workspace.mock.ts`: realistic initial workspace data.
+- `apps/cloud-web/src/drive.workspace.store.ts`: reducer-style operations for local interactions.
+- `apps/cloud-web/src/drive.workspace.store.test.ts`: behavioral tests for search, selection, share revocation, trash restore, member invitation, role update, and API key revocation.
+- `apps/cloud-web/src/DriveAppLayout.tsx`: top-level app layout with rail, section nav, header, content, and optional details panel slot.
+- `apps/cloud-web/src/DriveModuleRail.tsx`: compact first-level navigation.
+- `apps/cloud-web/src/DriveSectionNav.tsx`: second-level navigation for active module.
+- `apps/cloud-web/src/DriveCommandHeader.tsx`: breadcrumb, search, quota, status, account menu.
+- `apps/cloud-web/src/DriveViewState.tsx`: shared loading, empty, error, and denied states.
+- `apps/cloud-web/src/DriveActionConfirm.tsx`: lightweight confirmation panel/dialog pattern for destructive actions.
+- `apps/cloud-web/src/DriveFilesView.tsx`: Files view orchestration.
+- `apps/cloud-web/src/DriveFilesTable.tsx`: dense table representation.
+- `apps/cloud-web/src/DriveFilesGrid.tsx`: grid representation.
+- `apps/cloud-web/src/DriveFilesToolbar.tsx`: files actions, filters, sort, view toggle, selected actions.
+- `apps/cloud-web/src/DriveDetailsPanel.tsx`: contextual details panel for file, link, member, billing, key, and event selections.
+- `apps/cloud-web/src/DriveSharedLinksView.tsx`: shared links control view.
+- `apps/cloud-web/src/DriveTrashView.tsx`: trash view.
+- `apps/cloud-web/src/DriveMembersView.tsx`: members view.
+- `apps/cloud-web/src/DriveSecurityView.tsx`: security view.
+- `apps/cloud-web/src/DriveBillingView.tsx`: billing view.
+- `apps/cloud-web/src/DriveApiKeysView.tsx`: API keys view.
+- `apps/cloud-web/src/DriveAccountView.tsx`: account handoff view.
 
 Modify these files:
 
-- `apps/drive-web/src/DriveShell.tsx`: replace temporary file cards with the new workspace app.
-- `apps/drive-web/src/styles.css`: copy any missing motion utilities from `identity-web` only if required by the new components.
+- `apps/cloud-web/src/DriveShell.tsx`: replace temporary file cards with the new workspace app.
+- `apps/cloud-web/src/styles.css`: copy any missing motion utilities from `account-web` only if required by the new components.
 
 Remove these files after replacement if they become unused:
 
-- `apps/drive-web/src/DriveFileList.tsx`
-- `apps/drive-web/src/DriveShell.header.tsx`
-- `apps/drive-web/src/DriveShell.session.tsx`
-- `apps/drive-web/src/DriveShell.shared.tsx`
-- `apps/drive-web/src/DriveShell.toolbar.tsx`
-- `apps/drive-web/src/DriveWorkspaceSidebar.data.ts`
-- `apps/drive-web/src/DriveWorkspaceSidebar.footer.tsx`
-- `apps/drive-web/src/DriveWorkspaceSidebar.nav.tsx`
-- `apps/drive-web/src/DriveWorkspaceSidebar.tsx`
+- `apps/cloud-web/src/DriveFileList.tsx`
+- `apps/cloud-web/src/DriveShell.header.tsx`
+- `apps/cloud-web/src/DriveShell.session.tsx`
+- `apps/cloud-web/src/DriveShell.shared.tsx`
+- `apps/cloud-web/src/DriveShell.toolbar.tsx`
+- `apps/cloud-web/src/DriveWorkspaceSidebar.data.ts`
+- `apps/cloud-web/src/DriveWorkspaceSidebar.footer.tsx`
+- `apps/cloud-web/src/DriveWorkspaceSidebar.nav.tsx`
+- `apps/cloud-web/src/DriveWorkspaceSidebar.tsx`
 
 Only delete a file after `rg "FileName"` confirms no imports remain.
 
@@ -69,14 +69,14 @@ Only delete a file after `rg "FileName"` confirms no imports remain.
 ### Task 1: Workspace Model And Store
 
 **Files:**
-- Create: `apps/drive-web/src/drive.workspace.types.ts`
-- Create: `apps/drive-web/src/drive.workspace.mock.ts`
-- Create: `apps/drive-web/src/drive.workspace.store.ts`
-- Create: `apps/drive-web/src/drive.workspace.store.test.ts`
+- Create: `apps/cloud-web/src/drive.workspace.types.ts`
+- Create: `apps/cloud-web/src/drive.workspace.mock.ts`
+- Create: `apps/cloud-web/src/drive.workspace.store.ts`
+- Create: `apps/cloud-web/src/drive.workspace.store.test.ts`
 
 - [ ] **Step 1: Write the failing store tests**
 
-Create `apps/drive-web/src/drive.workspace.store.test.ts`:
+Create `apps/cloud-web/src/drive.workspace.store.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -166,14 +166,14 @@ describe('drive workspace store', () => {
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web exec vitest run src/drive.workspace.store.test.ts
+pnpm --filter nvbes-cloud-web exec vitest run src/drive.workspace.store.test.ts
 ```
 
-Expected: FAIL because `vitest` may not be available for `drive-web`, or because the new modules do not exist yet. If the command reports `Command "vitest" not found`, install no new dependency; continue and use `pnpm --filter nvbes-drive-web check` as the validation command for this task.
+Expected: FAIL because `vitest` may not be available for `cloud-web`, or because the new modules do not exist yet. If the command reports `Command "vitest" not found`, install no new dependency; continue and use `pnpm --filter nvbes-cloud-web check` as the validation command for this task.
 
 - [ ] **Step 3: Add typed workspace model**
 
-Create `apps/drive-web/src/drive.workspace.types.ts`:
+Create `apps/cloud-web/src/drive.workspace.types.ts`:
 
 ```ts
 export type DriveModuleId = 'drive' | 'sharing' | 'admin' | 'account';
@@ -297,7 +297,7 @@ export type DriveWorkspaceState = {
 
 - [ ] **Step 4: Add realistic mock data**
 
-Create `apps/drive-web/src/drive.workspace.mock.ts`:
+Create `apps/cloud-web/src/drive.workspace.mock.ts`:
 
 ```ts
 import type { DriveWorkspaceState } from './drive.workspace.types';
@@ -445,7 +445,7 @@ export function createInitialDriveWorkspace(): DriveWorkspaceState {
 
 - [ ] **Step 5: Add store operations**
 
-Create `apps/drive-web/src/drive.workspace.store.ts`:
+Create `apps/cloud-web/src/drive.workspace.store.ts`:
 
 ```ts
 import type {
@@ -587,7 +587,7 @@ export function revokeApiKey(state: DriveWorkspaceState, keyId: string): DriveWo
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -595,7 +595,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/drive-web/src/drive.workspace.types.ts apps/drive-web/src/drive.workspace.mock.ts apps/drive-web/src/drive.workspace.store.ts apps/drive-web/src/drive.workspace.store.test.ts
+git add apps/cloud-web/src/drive.workspace.types.ts apps/cloud-web/src/drive.workspace.mock.ts apps/cloud-web/src/drive.workspace.store.ts apps/cloud-web/src/drive.workspace.store.test.ts
 git commit -m "feat: add drive workspace model"
 ```
 
@@ -604,16 +604,16 @@ git commit -m "feat: add drive workspace model"
 ### Task 2: App Layout And Navigation
 
 **Files:**
-- Create: `apps/drive-web/src/DriveAppLayout.tsx`
-- Create: `apps/drive-web/src/DriveModuleRail.tsx`
-- Create: `apps/drive-web/src/DriveSectionNav.tsx`
-- Create: `apps/drive-web/src/DriveCommandHeader.tsx`
-- Create: `apps/drive-web/src/DriveViewState.tsx`
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Create: `apps/cloud-web/src/DriveAppLayout.tsx`
+- Create: `apps/cloud-web/src/DriveModuleRail.tsx`
+- Create: `apps/cloud-web/src/DriveSectionNav.tsx`
+- Create: `apps/cloud-web/src/DriveCommandHeader.tsx`
+- Create: `apps/cloud-web/src/DriveViewState.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Create shared view states**
 
-Create `apps/drive-web/src/DriveViewState.tsx`:
+Create `apps/cloud-web/src/DriveViewState.tsx`:
 
 ```tsx
 import type { ReactNode } from 'react';
@@ -667,7 +667,7 @@ export function DriveLoadingState({ label = 'Chargement...' }: { label?: string 
 
 - [ ] **Step 2: Create module rail**
 
-Create `apps/drive-web/src/DriveModuleRail.tsx`:
+Create `apps/cloud-web/src/DriveModuleRail.tsx`:
 
 ```tsx
 import { Building2, FolderOpen, ShieldCheck, UserCircle } from 'lucide-react';
@@ -717,7 +717,7 @@ export function DriveModuleRail({
 
 - [ ] **Step 3: Create section navigation**
 
-Create `apps/drive-web/src/DriveSectionNav.tsx`:
+Create `apps/cloud-web/src/DriveSectionNav.tsx`:
 
 ```tsx
 import { CreditCard, FileKey2, Files, Link2, Shield, Trash2, UserRoundCog, Users } from 'lucide-react';
@@ -786,7 +786,7 @@ function moduleTitle(moduleId: DriveModuleId) {
 
 - [ ] **Step 4: Create command header**
 
-Create `apps/drive-web/src/DriveCommandHeader.tsx`:
+Create `apps/cloud-web/src/DriveCommandHeader.tsx`:
 
 ```tsx
 import { Search, UploadCloud } from 'lucide-react';
@@ -850,7 +850,7 @@ export function DriveCommandHeader({
 
 - [ ] **Step 5: Create app layout**
 
-Create `apps/drive-web/src/DriveAppLayout.tsx`:
+Create `apps/cloud-web/src/DriveAppLayout.tsx`:
 
 ```tsx
 import type { ReactNode } from 'react';
@@ -920,7 +920,7 @@ export function DriveAppLayout({
 
 - [ ] **Step 6: Wire layout into DriveShell with an interim empty state**
 
-Replace `apps/drive-web/src/DriveShell.tsx` with:
+Replace `apps/cloud-web/src/DriveShell.tsx` with:
 
 ```tsx
 import { useState } from 'react';
@@ -979,7 +979,7 @@ export function DriveShell({ me }: { accessToken: string; me: DriveMeResponse })
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -987,7 +987,7 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/drive-web/src/DriveAppLayout.tsx apps/drive-web/src/DriveModuleRail.tsx apps/drive-web/src/DriveSectionNav.tsx apps/drive-web/src/DriveCommandHeader.tsx apps/drive-web/src/DriveViewState.tsx apps/drive-web/src/DriveShell.tsx
+git add apps/cloud-web/src/DriveAppLayout.tsx apps/cloud-web/src/DriveModuleRail.tsx apps/cloud-web/src/DriveSectionNav.tsx apps/cloud-web/src/DriveCommandHeader.tsx apps/cloud-web/src/DriveViewState.tsx apps/cloud-web/src/DriveShell.tsx
 git commit -m "feat: add drive app layout"
 ```
 
@@ -996,15 +996,15 @@ git commit -m "feat: add drive app layout"
 ### Task 3: Files View
 
 **Files:**
-- Create: `apps/drive-web/src/DriveFilesView.tsx`
-- Create: `apps/drive-web/src/DriveFilesTable.tsx`
-- Create: `apps/drive-web/src/DriveFilesGrid.tsx`
-- Create: `apps/drive-web/src/DriveFilesToolbar.tsx`
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Create: `apps/cloud-web/src/DriveFilesView.tsx`
+- Create: `apps/cloud-web/src/DriveFilesTable.tsx`
+- Create: `apps/cloud-web/src/DriveFilesGrid.tsx`
+- Create: `apps/cloud-web/src/DriveFilesToolbar.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Create files toolbar**
 
-Create `apps/drive-web/src/DriveFilesToolbar.tsx`:
+Create `apps/cloud-web/src/DriveFilesToolbar.tsx`:
 
 ```tsx
 import { FolderPlus, Grid2X2, List, UploadCloud } from 'lucide-react';
@@ -1075,7 +1075,7 @@ export function DriveFilesToolbar({
 
 - [ ] **Step 2: Create dense files table**
 
-Create `apps/drive-web/src/DriveFilesTable.tsx`:
+Create `apps/cloud-web/src/DriveFilesTable.tsx`:
 
 ```tsx
 import { FileArchive, FileCode2, FileText, Folder, Image, ShieldCheck } from 'lucide-react';
@@ -1171,7 +1171,7 @@ function formatDate(value: string) {
 
 - [ ] **Step 3: Create files grid**
 
-Create `apps/drive-web/src/DriveFilesGrid.tsx`:
+Create `apps/cloud-web/src/DriveFilesGrid.tsx`:
 
 ```tsx
 import { FileText, Folder } from 'lucide-react';
@@ -1221,7 +1221,7 @@ export function DriveFilesGrid({
 
 - [ ] **Step 4: Create files view orchestration**
 
-Create `apps/drive-web/src/DriveFilesView.tsx`:
+Create `apps/cloud-web/src/DriveFilesView.tsx`:
 
 ```tsx
 import { Button } from '@/components/ui/button';
@@ -1286,7 +1286,7 @@ export function DriveFilesView({
 
 - [ ] **Step 5: Render files view in DriveShell**
 
-In `apps/drive-web/src/DriveShell.tsx`, import `DriveFilesView` and replace the interim empty-state child:
+In `apps/cloud-web/src/DriveShell.tsx`, import `DriveFilesView` and replace the interim empty-state child:
 
 ```tsx
 <DriveFilesView state={workspace} onStateChange={setWorkspace} />
@@ -1299,7 +1299,7 @@ Only render it when `workspace.activeSection === 'files'`; keep `DriveEmptyState
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -1307,7 +1307,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/drive-web/src/DriveFilesView.tsx apps/drive-web/src/DriveFilesTable.tsx apps/drive-web/src/DriveFilesGrid.tsx apps/drive-web/src/DriveFilesToolbar.tsx apps/drive-web/src/DriveShell.tsx
+git add apps/cloud-web/src/DriveFilesView.tsx apps/cloud-web/src/DriveFilesTable.tsx apps/cloud-web/src/DriveFilesGrid.tsx apps/cloud-web/src/DriveFilesToolbar.tsx apps/cloud-web/src/DriveShell.tsx
 git commit -m "feat: build drive files view"
 ```
 
@@ -1316,12 +1316,12 @@ git commit -m "feat: build drive files view"
 ### Task 4: Details Panel
 
 **Files:**
-- Create: `apps/drive-web/src/DriveDetailsPanel.tsx`
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Create: `apps/cloud-web/src/DriveDetailsPanel.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Create details panel**
 
-Create `apps/drive-web/src/DriveDetailsPanel.tsx`:
+Create `apps/cloud-web/src/DriveDetailsPanel.tsx`:
 
 ```tsx
 import { X } from 'lucide-react';
@@ -1397,7 +1397,7 @@ function getTitle(state: DriveWorkspaceState, selection: NonNullable<DriveWorksp
 
 - [ ] **Step 2: Wire details panel**
 
-In `apps/drive-web/src/DriveShell.tsx`, import `DriveDetailsPanel` and pass:
+In `apps/cloud-web/src/DriveShell.tsx`, import `DriveDetailsPanel` and pass:
 
 ```tsx
 details={
@@ -1413,7 +1413,7 @@ details={
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -1421,7 +1421,7 @@ Expected: PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add apps/drive-web/src/DriveDetailsPanel.tsx apps/drive-web/src/DriveShell.tsx
+git add apps/cloud-web/src/DriveDetailsPanel.tsx apps/cloud-web/src/DriveShell.tsx
 git commit -m "feat: add drive details panel"
 ```
 
@@ -1430,13 +1430,13 @@ git commit -m "feat: add drive details panel"
 ### Task 5: Sharing And Trash Views
 
 **Files:**
-- Create: `apps/drive-web/src/DriveSharedLinksView.tsx`
-- Create: `apps/drive-web/src/DriveTrashView.tsx`
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Create: `apps/cloud-web/src/DriveSharedLinksView.tsx`
+- Create: `apps/cloud-web/src/DriveTrashView.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Create shared links view**
 
-Create `apps/drive-web/src/DriveSharedLinksView.tsx`:
+Create `apps/cloud-web/src/DriveSharedLinksView.tsx`:
 
 ```tsx
 import { Copy, Link2, ShieldX } from 'lucide-react';
@@ -1490,7 +1490,7 @@ export function DriveSharedLinksView({
 
 - [ ] **Step 2: Create trash view**
 
-Create `apps/drive-web/src/DriveTrashView.tsx`:
+Create `apps/cloud-web/src/DriveTrashView.tsx`:
 
 ```tsx
 import { RotateCcw } from 'lucide-react';
@@ -1533,7 +1533,7 @@ export function DriveTrashView({
 
 - [ ] **Step 3: Wire views in DriveShell**
 
-In `apps/drive-web/src/DriveShell.tsx`, render:
+In `apps/cloud-web/src/DriveShell.tsx`, render:
 
 ```tsx
 {workspace.activeSection === 'shared-links' ? (
@@ -1549,7 +1549,7 @@ Keep the existing Files view for `files`.
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -1557,7 +1557,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/drive-web/src/DriveSharedLinksView.tsx apps/drive-web/src/DriveTrashView.tsx apps/drive-web/src/DriveShell.tsx
+git add apps/cloud-web/src/DriveSharedLinksView.tsx apps/cloud-web/src/DriveTrashView.tsx apps/cloud-web/src/DriveShell.tsx
 git commit -m "feat: add sharing and trash views"
 ```
 
@@ -1566,16 +1566,16 @@ git commit -m "feat: add sharing and trash views"
 ### Task 6: Administration Views
 
 **Files:**
-- Create: `apps/drive-web/src/DriveMembersView.tsx`
-- Create: `apps/drive-web/src/DriveSecurityView.tsx`
-- Create: `apps/drive-web/src/DriveBillingView.tsx`
-- Create: `apps/drive-web/src/DriveApiKeysView.tsx`
-- Create: `apps/drive-web/src/DriveAccountView.tsx`
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Create: `apps/cloud-web/src/DriveMembersView.tsx`
+- Create: `apps/cloud-web/src/DriveSecurityView.tsx`
+- Create: `apps/cloud-web/src/DriveBillingView.tsx`
+- Create: `apps/cloud-web/src/DriveApiKeysView.tsx`
+- Create: `apps/cloud-web/src/DriveAccountView.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Create members view**
 
-Create `apps/drive-web/src/DriveMembersView.tsx`:
+Create `apps/cloud-web/src/DriveMembersView.tsx`:
 
 ```tsx
 import { UserPlus } from 'lucide-react';
@@ -1620,7 +1620,7 @@ export function DriveMembersView({ state, onStateChange }: { state: DriveWorkspa
 
 - [ ] **Step 2: Create security view**
 
-Create `apps/drive-web/src/DriveSecurityView.tsx`:
+Create `apps/cloud-web/src/DriveSecurityView.tsx`:
 
 ```tsx
 import { ShieldAlert } from 'lucide-react';
@@ -1655,7 +1655,7 @@ export function DriveSecurityView({ state }: { state: DriveWorkspaceState }) {
 
 - [ ] **Step 3: Create billing view**
 
-Create `apps/drive-web/src/DriveBillingView.tsx`:
+Create `apps/cloud-web/src/DriveBillingView.tsx`:
 
 ```tsx
 import { CreditCard } from 'lucide-react';
@@ -1693,7 +1693,7 @@ export function DriveBillingView({ state }: { state: DriveWorkspaceState }) {
 
 - [ ] **Step 4: Create API keys view**
 
-Create `apps/drive-web/src/DriveApiKeysView.tsx`:
+Create `apps/cloud-web/src/DriveApiKeysView.tsx`:
 
 ```tsx
 import { KeyRound, ShieldX } from 'lucide-react';
@@ -1729,7 +1729,7 @@ export function DriveApiKeysView({ state, onStateChange }: { state: DriveWorkspa
 
 - [ ] **Step 5: Create account view**
 
-Create `apps/drive-web/src/DriveAccountView.tsx`:
+Create `apps/cloud-web/src/DriveAccountView.tsx`:
 
 ```tsx
 import { ExternalLink } from 'lucide-react';
@@ -1762,7 +1762,7 @@ Render the new views according to `workspace.activeSection`. Each view receives 
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -1770,7 +1770,7 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/drive-web/src/DriveMembersView.tsx apps/drive-web/src/DriveSecurityView.tsx apps/drive-web/src/DriveBillingView.tsx apps/drive-web/src/DriveApiKeysView.tsx apps/drive-web/src/DriveAccountView.tsx apps/drive-web/src/DriveShell.tsx
+git add apps/cloud-web/src/DriveMembersView.tsx apps/cloud-web/src/DriveSecurityView.tsx apps/cloud-web/src/DriveBillingView.tsx apps/cloud-web/src/DriveApiKeysView.tsx apps/cloud-web/src/DriveAccountView.tsx apps/cloud-web/src/DriveShell.tsx
 git commit -m "feat: add drive administration views"
 ```
 
@@ -1779,8 +1779,8 @@ git commit -m "feat: add drive administration views"
 ### Task 7: Polish, Cleanup, And Validation
 
 **Files:**
-- Modify: `apps/drive-web/src/DriveShell.tsx`
-- Modify: `apps/drive-web/src/styles.css`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
+- Modify: `apps/cloud-web/src/styles.css`
 - Delete: unused legacy Drive shell/sidebar files only if imports are gone.
 
 - [ ] **Step 1: Confirm unused legacy files**
@@ -1788,14 +1788,14 @@ git commit -m "feat: add drive administration views"
 Run:
 
 ```bash
-rg "DriveFileList|DriveShellHeader|DriveSessionContextCard|DriveShellToolbar|DriveWorkspaceSidebar" apps/drive-web/src
+rg "DriveFileList|DriveShellHeader|DriveSessionContextCard|DriveShellToolbar|DriveWorkspaceSidebar" apps/cloud-web/src
 ```
 
 Expected: no results except inside files planned for deletion. If a result appears from `DriveShell.tsx`, remove that import before deleting.
 
 - [ ] **Step 2: Add reduced-motion-safe utility if needed**
 
-If new components use `animate-fade-slide-up`, copy only this utility into `apps/drive-web/src/styles.css`:
+If new components use `animate-fade-slide-up`, copy only this utility into `apps/cloud-web/src/styles.css`:
 
 ```css
 @keyframes fade-slide-up {
@@ -1826,9 +1826,9 @@ If new components use `animate-fade-slide-up`, copy only this utility into `apps
 Run `git rm` only for files with no imports:
 
 ```bash
-git rm apps/drive-web/src/DriveFileList.tsx
-git rm apps/drive-web/src/DriveShell.header.tsx apps/drive-web/src/DriveShell.session.tsx apps/drive-web/src/DriveShell.shared.tsx apps/drive-web/src/DriveShell.toolbar.tsx
-git rm apps/drive-web/src/DriveWorkspaceSidebar.data.ts apps/drive-web/src/DriveWorkspaceSidebar.footer.tsx apps/drive-web/src/DriveWorkspaceSidebar.nav.tsx apps/drive-web/src/DriveWorkspaceSidebar.tsx
+git rm apps/cloud-web/src/DriveFileList.tsx
+git rm apps/cloud-web/src/DriveShell.header.tsx apps/cloud-web/src/DriveShell.session.tsx apps/cloud-web/src/DriveShell.shared.tsx apps/cloud-web/src/DriveShell.toolbar.tsx
+git rm apps/cloud-web/src/DriveWorkspaceSidebar.data.ts apps/cloud-web/src/DriveWorkspaceSidebar.footer.tsx apps/cloud-web/src/DriveWorkspaceSidebar.nav.tsx apps/cloud-web/src/DriveWorkspaceSidebar.tsx
 ```
 
 - [ ] **Step 4: Run typecheck**
@@ -1836,7 +1836,7 @@ git rm apps/drive-web/src/DriveWorkspaceSidebar.data.ts apps/drive-web/src/Drive
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web check
+pnpm --filter nvbes-cloud-web check
 ```
 
 Expected: PASS.
@@ -1846,7 +1846,7 @@ Expected: PASS.
 Run:
 
 ```bash
-pnpm --filter nvbes-drive-web lint
+pnpm --filter nvbes-cloud-web lint
 ```
 
 Expected: PASS.
@@ -1864,7 +1864,7 @@ Expected: PASS. If this script is unavailable, record the exact error in the fin
 - [ ] **Step 7: Commit**
 
 ```bash
-git add apps/drive-web/src apps/drive-web/src/styles.css
+git add apps/cloud-web/src apps/cloud-web/src/styles.css
 git commit -m "chore: clean up drive web redesign"
 ```
 

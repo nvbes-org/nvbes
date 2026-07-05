@@ -83,19 +83,19 @@ async fn introspect_identity_token(
     headers: &HeaderMap,
     token: &str,
 ) -> Result<BillingAuthContext, AppError> {
-    let client_id = std::env::var("NVBES_IDENTITY_CLIENT_ID").map_err(|_| {
+    let client_id = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_ID").map_err(|_| {
         AppError::internal(
             "identity_client_id_missing",
-            "NVBES_IDENTITY_CLIENT_ID is required to authorize Billing requests.",
+            "NVBES_ACCOUNT_SERVICE_CLIENT_ID is required to authorize Billing requests.",
         )
     })?;
-    let client_secret = std::env::var("NVBES_IDENTITY_CLIENT_SECRET").map_err(|_| {
+    let client_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET").map_err(|_| {
         AppError::internal(
             "identity_client_secret_missing",
-            "NVBES_IDENTITY_CLIENT_SECRET is required to authorize Billing requests.",
+            "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET is required to authorize Billing requests.",
         )
     })?;
-    let base_url = std::env::var("NVBES_IDENTITY_BASE_URL")
+    let base_url = std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
         .unwrap_or_else(|_| "http://localhost:8080".to_string());
 
     let mut outgoing = HeaderMap::new();

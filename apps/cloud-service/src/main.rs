@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
 
     database.migrate().await?;
     let _profiling_guard =
-        start_continuous_profiling(&config, "drive-api").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "cloud-service").map_err(anyhow::Error::msg)?;
 
     let app = build_app(config.clone(), database).await?;
 

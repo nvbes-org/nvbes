@@ -9,8 +9,10 @@ const ACTOR_PRINCIPAL_ID: &str = "x-nvbes-actor-principal-id";
 const TENANT_ID: &str = "x-nvbes-tenant-id";
 
 pub fn request_context(headers: &HeaderMap) -> Result<GatewayRequestContext, StatusCode> {
-    let request_id = optional_header(headers, REQUEST_ID).unwrap_or_else(|| Uuid::new_v4().to_string());
-    let correlation_id = optional_header(headers, CORRELATION_ID).unwrap_or_else(|| request_id.clone());
+    let request_id =
+        optional_header(headers, REQUEST_ID).unwrap_or_else(|| Uuid::new_v4().to_string());
+    let correlation_id =
+        optional_header(headers, CORRELATION_ID).unwrap_or_else(|| request_id.clone());
     let actor_principal_id = required_uuid_header(headers, ACTOR_PRINCIPAL_ID)?;
     let tenant_id = required_uuid_header(headers, TENANT_ID)?;
 

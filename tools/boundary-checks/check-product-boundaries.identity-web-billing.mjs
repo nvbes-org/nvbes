@@ -40,7 +40,7 @@ export function checkIdentityWebBillingClientBoundary(errors) {
 }
 
 function checkDedicatedBillingClient(errors) {
-	const billingClientPath = "apps/identity-web/src/billing.client.ts";
+	const billingClientPath = "apps/account-web/src/billing.client.ts";
 	if (!existsSync(billingClientPath)) {
 		errors.push(`${billingClientPath}: Identity Web must centralize Billing transport through a dedicated Billing client`);
 		return;
@@ -50,17 +50,17 @@ function checkDedicatedBillingClient(errors) {
 	if (!content.includes("@nvbes/billing-client")) {
 		errors.push(`${billingClientPath}: Identity Web Billing transport must use @nvbes/billing-client`);
 	}
-	if (!content.includes("VITE_BILLING_API_BASE_URL")) {
-		errors.push(`${billingClientPath}: Identity Web Billing transport must be configured by VITE_BILLING_API_BASE_URL`);
+	if (!content.includes("VITE_BILLING_SERVICE_BASE_URL")) {
+		errors.push(`${billingClientPath}: Identity Web Billing transport must be configured by VITE_BILLING_SERVICE_BASE_URL`);
 	}
 	if (!content.includes("resolveBillingApiBaseUrl") || !content.includes("import.meta.env.DEV")) {
 		errors.push(`${billingClientPath}: Identity Web Billing transport must fail closed outside local development`);
 	}
-	if (/VITE_BILLING_API_BASE_URL\s*\|\|/.test(content)) {
+	if (/VITE_BILLING_SERVICE_BASE_URL\s*\|\|/.test(content)) {
 		errors.push(`${billingClientPath}: Billing API base URL must not use an implicit fallback`);
 	}
-	if (/VITE_IDENTITY_API_BASE_URL/.test(content) || /@nvbes\/identity-client/.test(content)) {
-		errors.push(`${billingClientPath}: Billing transport must not fall back to Identity API/client`);
+	if (/VITE_ACCOUNT_SERVICE_BASE_URL/.test(content) || /@nvbes\/identity-client/.test(content)) {
+		errors.push(`${billingClientPath}: Billing transport must not fall back to Account Service/client`);
 	}
 }
 
@@ -78,7 +78,7 @@ function checkIdentityWebSourceDoesNotUseIdentityBilling(errors) {
 		"billing_subscription_id",
 	];
 
-	for (const file of walk("apps/identity-web/src")) {
+	for (const file of walk("apps/account-web/src")) {
 		const content = readFileSync(file, "utf8");
 		if (/\bidentityClient\.(?:getBilling|createBilling)[A-Za-z0-9_]*/.test(content)) {
 			errors.push(`${file}: Identity Web must use the Billing client for Billing calls`);
@@ -93,7 +93,7 @@ function checkIdentityWebSourceDoesNotUseIdentityBilling(errors) {
 
 function checkIdentityWebDoesNotExposeBillingRuntime(errors) {
 	const forbiddenRuntimeCopy = [/worker billing/i, /billing worker/i, /file de paiement/i];
-	for (const file of walk("apps/identity-web/src")) {
+	for (const file of walk("apps/account-web/src")) {
 		const content = readFileSync(file, "utf8");
 		for (const forbidden of forbiddenRuntimeCopy) {
 			if (forbidden.test(content)) {
@@ -104,7 +104,7 @@ function checkIdentityWebDoesNotExposeBillingRuntime(errors) {
 }
 
 function checkIdentityWebDoesNotEmitBillingAnalytics(errors) {
-	for (const file of walk("apps/identity-web/src")) {
+	for (const file of walk("apps/account-web/src")) {
 		const content = readFileSync(file, "utf8");
 		if (/trackEvent\(\s*["']billing\./.test(content)) {
 			errors.push(`${file}: Identity Web must not emit Billing analytics events; Billing runtime owns Billing telemetry`);
@@ -114,11 +114,11 @@ function checkIdentityWebDoesNotEmitBillingAnalytics(errors) {
 
 function checkIdentityWebDoesNotLoadPspVendors(errors) {
 	const files = [
-		...walk("apps/identity-web/src"),
-		"apps/identity-web/README.md",
-		"apps/identity-web/index.html",
-		"apps/identity-web/vite.config.ts",
-		"apps/identity-web/identity.vite.csp.ts",
+		...walk("apps/account-web/src"),
+		"apps/account-web/README.md",
+		"apps/account-web/index.html",
+		"apps/account-web/vite.config.ts",
+		"apps/account-web/identity.vite.csp.ts",
 	];
 	const forbiddenValues = [
 		"VITE_STRIPE_",

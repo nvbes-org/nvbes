@@ -23,11 +23,8 @@ pub async fn create_mollie_subscription(
             .context("Mollie subscription request invalid")?,
     )
     .await?;
-    nvbes_billing::mollie::subscription_from_mollie_response(
-        &input.provider_customer_id,
-        response,
-    )
-    .context("Mollie subscription response invalid")
+    nvbes_billing::mollie::subscription_from_mollie_response(&input.provider_customer_id, response)
+        .context("Mollie subscription response invalid")
 }
 
 async fn mollie_post_json(

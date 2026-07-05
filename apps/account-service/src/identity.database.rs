@@ -24,7 +24,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
-    // 2. Seed drive-web (public client)
+    // 2. Seed cloud-web (public client)
     let drive_web_secret_hash =
         hash_client_secret("").map_err(|e| anyhow::anyhow!("{}", e.message))?;
     let drive_web_redirect_uris = vec![
@@ -38,7 +38,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
             client_id, client_secret_hash, name, redirect_uris, tenant_id,
             owner_scope_type, owner_scope_id, client_type
         )
-        VALUES ('drive-web', $1, 'Drive Web', $2, $3, 'tenant', $3, 'public')
+        VALUES ('cloud-web', $1, 'Drive Web', $2, $3, 'tenant', $3, 'public')
         ON CONFLICT (client_id) DO UPDATE
         SET client_secret_hash = EXCLUDED.client_secret_hash,
             redirect_uris = EXCLUDED.redirect_uris
@@ -50,7 +50,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
-    // 3. Seed developer-web (public client)
+    // 3. Seed console-web (public client)
     let developer_web_secret_hash =
         hash_client_secret("").map_err(|e| anyhow::anyhow!("{}", e.message))?;
     let developer_web_redirect_uris = vec![
@@ -63,7 +63,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
             client_id, client_secret_hash, name, redirect_uris, tenant_id,
             owner_scope_type, owner_scope_id, client_type
         )
-        VALUES ('developer-web', $1, 'Developer Web', $2, $3, 'tenant', $3, 'public')
+        VALUES ('console-web', $1, 'Console Web', $2, $3, 'tenant', $3, 'public')
         ON CONFLICT (client_id) DO UPDATE
         SET client_secret_hash = EXCLUDED.client_secret_hash,
             redirect_uris = EXCLUDED.redirect_uris
@@ -75,9 +75,9 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
-    // 4. Seed drive-worker (confidential client)
-    let worker_secret = std::env::var("NVBES_IDENTITY_CLIENT_SECRET")
-        .unwrap_or_else(|_| "drive-worker-secret-key-12345".to_string());
+    // 4. Seed cloud-worker (confidential client)
+    let worker_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET")
+        .unwrap_or_else(|_| "cloud-worker-secret-key-12345".to_string());
     let drive_worker_secret_hash =
         hash_client_secret(&worker_secret).map_err(|e| anyhow::anyhow!("{}", e.message))?;
     let drive_worker_redirect_uris: Vec<String> = vec![];
@@ -87,7 +87,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
             client_id, client_secret_hash, name, redirect_uris, tenant_id,
             owner_scope_type, owner_scope_id, client_type
         )
-        VALUES ('drive-worker', $1, 'Drive Worker', $2, $3, 'tenant', $3, 'confidential')
+        VALUES ('cloud-worker', $1, 'Drive Worker', $2, $3, 'tenant', $3, 'confidential')
         ON CONFLICT (client_id) DO UPDATE
         SET client_secret_hash = EXCLUDED.client_secret_hash
         "#,

@@ -57,10 +57,10 @@ function buildChecks() {
 	return [
 		textCheck("helm-chart", sources.helmChart, "Helm chart is declared as an application chart", "type: application"),
 		textCheck("helm-oci-registry", sources.helmValues, "Helm values pin the OCI image registry", "imageRegistry: ghcr.io/nvbes"),
-		textCheck("helm-identity-api-image", sources.helmValues, "Helm values include Identity API image", "repository: nvbes-identity-api"),
-		textCheck("helm-drive-api-image", sources.helmValues, "Helm values include Drive API image", "repository: nvbes-drive-api"),
+		textCheck("helm-account-service-image", sources.helmValues, "Helm values include Account Service image", "repository: nvbes-account-service"),
+		textCheck("helm-cloud-service-image", sources.helmValues, "Helm values include Cloud Service image", "repository: nvbes-cloud-service"),
 		textCheck("kustomize-helm", sources.kustomize, "Kustomize references the Helm chart", "../helm/nvbes"),
-		textCheck("compose-images", sources.compose, "Compose stack uses released OCI images", "ghcr.io/nvbes/nvbes-identity-api"),
+		textCheck("compose-images", sources.compose, "Compose stack uses released OCI images", "ghcr.io/nvbes/nvbes-account-service"),
 		textCheck("opentofu-boundary", sources.opentofuReadme, "OSS OpenTofu boundary is documented", "Cloud-specific managed deployment modules belong in `deploy/cloud`"),
 		textCheck("staging-overlay", sources.stagingMain, "Staging OpenTofu overlay declares staging environment", 'environment = "staging"'),
 		textCheck("staging-backup-retention", sources.stagingMain, "Staging overlay configures PostgreSQL backup retention", "postgres_backup_retention_days = 7"),

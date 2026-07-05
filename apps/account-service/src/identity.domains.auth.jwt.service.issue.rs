@@ -4,7 +4,7 @@ use uuid::Uuid;
 use super::types::{JwtService, TokenClaims, TokenPair};
 use crate::http::error::AppError;
 
-const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-drive-api";
+const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
 
 impl JwtService {
     #[cfg(test)]

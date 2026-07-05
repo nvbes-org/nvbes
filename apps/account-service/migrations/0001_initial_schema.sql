@@ -1,6 +1,6 @@
 -- Migration: 001_initial_schema.sql
 -- =============================================================================
--- Identity API - clean principals-based schema
+-- Account Service - clean principals-based schema
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -398,7 +398,7 @@ CREATE INDEX idx_enterprise_password_recovery_requests_email
 
 -- Migration: 20260511200000_audit_hash_chain_v1.sql
 -- =============================================================================
--- Identity API - Audit Immutability (Hash Chain)
+-- Account Service - Audit Immutability (Hash Chain)
 -- =============================================================================
 
 -- Ensure pgcrypto for digest()

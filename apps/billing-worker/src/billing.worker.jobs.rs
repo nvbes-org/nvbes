@@ -20,7 +20,7 @@ pub(crate) async fn recover_stale_jobs(
     observability: &nvbes_observability::metrics::HttpMetrics,
 ) -> anyhow::Result<()> {
     for queue in BILLING_QUEUES {
-        for (job_type, outcome) =
+        for (job_type, outcome) in
             nvbes_redis::worker_queue::recover_stale_jobs(redis, queue, STALE_AFTER, RETRY_DELAY)
                 .await?
         {
@@ -48,7 +48,10 @@ pub(crate) async fn execute_job(
             mollie::process_mollie_webhook_job(state, job).await
         }
         nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND => process_billing_email_job(state, job).await,
-        _ => Err(anyhow::anyhow!("Unknown billing job type: {}", job.job_type)),
+        _ => Err(anyhow::anyhow!(
+            "Unknown billing job type: {}",
+            job.job_type
+        )),
     }
 }
 

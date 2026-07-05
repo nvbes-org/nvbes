@@ -8,8 +8,8 @@ use tokio::sync::RwLock;
 use crate::http::error::AppError;
 
 const IDENTITY_ISSUER: &str = "nvbes-identity";
-const DRIVE_AUDIENCE: &str = "nvbes-drive-api";
-const IDENTITY_API_AUDIENCE: &str = "nvbes-identity-api";
+const DRIVE_AUDIENCE: &str = "nvbes-cloud-service";
+const IDENTITY_API_AUDIENCE: &str = "nvbes-account-service";
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(300);
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -62,7 +62,7 @@ fn cache() -> &'static RwLock<CachedJwks> {
 }
 
 fn identity_base_url() -> String {
-    std::env::var("NVBES_IDENTITY_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
+    std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
 }
 
 pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClaims, AppError> {
@@ -114,7 +114,7 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     {
         return Err(AppError::unauthorized(
             "invalid_token",
-            "Machine and delegated tokens must target the nvbes-drive-api audience.",
+            "Machine and delegated tokens must target the nvbes-cloud-service audience.",
         ));
     }
 

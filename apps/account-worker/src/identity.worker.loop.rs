@@ -58,7 +58,7 @@ where
             result = super::housekeeping::run_if_due(&state, &mut housekeeping_last_run) => {
                 if let Err(error) = result {
                     capture_loop_error(&state, "housekeeping", error.as_ref());
-                    tracing::warn!(%error, "identity worker housekeeping failed; retrying after backoff");
+                    tracing::warn!(%error, "account worker housekeeping failed; retrying after backoff");
                     sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
                     continue;
                 }
@@ -71,7 +71,7 @@ where
                     Ok(ran) => ran,
                     Err(error) => {
                         capture_loop_error(&state, "worker_loop", error.as_ref());
-                        tracing::warn!(%error, "identity worker loop failed; retrying after backoff");
+                        tracing::warn!(%error, "account worker loop failed; retrying after backoff");
                         sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
                         continue;
                     }
@@ -160,7 +160,7 @@ pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::
             capture_worker_job_error(
                 error.as_ref(),
                 &WorkerJobContext {
-                    app_name: "identity-worker",
+                    app_name: "account-worker",
                     environment: &state.config.environment,
                     queue: &job.queue,
                     job_type: &job_type,
@@ -185,7 +185,7 @@ fn capture_loop_error(
     capture_worker_operation_error(
         error,
         &WorkerOperationContext {
-            app_name: "identity-worker",
+            app_name: "account-worker",
             environment: &state.config.environment,
             operation,
         },
@@ -199,7 +199,7 @@ fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
 
     capture_worker_heartbeat(
         &state.config.environment,
-        &worker_monitor_slug("identity-worker", "loop-heartbeat"),
+        &worker_monitor_slug("account-worker", "loop-heartbeat"),
         WORKER_HEARTBEAT_SCHEDULE,
     );
     *last_run = Instant::now();
@@ -219,7 +219,7 @@ mod tests {
         for queue in WORKER_QUEUES {
             assert!(
                 !queue.starts_with("billing."),
-                "identity-worker must not claim Billing queue {queue}"
+                "account-worker must not claim Billing queue {queue}"
             );
         }
     }

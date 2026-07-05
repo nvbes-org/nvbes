@@ -22,7 +22,10 @@ const WORKER_HEARTBEAT_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedule {
     max_runtime_minutes: 2,
 };
 
-pub async fn run_loop_until_shutdown<S>(state: BillingWorkerState, shutdown: S) -> anyhow::Result<()>
+pub async fn run_loop_until_shutdown<S>(
+    state: BillingWorkerState,
+    shutdown: S,
+) -> anyhow::Result<()>
 where
     S: std::future::Future<Output = ()> + Send,
 {
@@ -128,9 +131,11 @@ async fn run_billing_dunning_if_due(
         return Ok(());
     }
     let started_at = Instant::now();
-    let run =
-        nvbes_billing::dunning_jobs::process_due_dunning_attempts(&state.db, BILLING_DUNNING_BATCH_SIZE)
-            .await?;
+    let run = nvbes_billing::dunning_jobs::process_due_dunning_attempts(
+        &state.db,
+        BILLING_DUNNING_BATCH_SIZE,
+    )
+    .await?;
     state
         .observability
         .record_billing_operation("dunning", "success", started_at.elapsed());
@@ -151,11 +156,9 @@ async fn run_billing_reconciliation_if_due(
     if last_run.elapsed() < BILLING_RECONCILIATION_INTERVAL {
         return Ok(());
     }
-    let run = nvbes_billing::reconciliation_db::run_ledger_reconciliation(
-        &state.db,
-        chrono::Utc::now(),
-    )
-    .await?;
+    let run =
+        nvbes_billing::reconciliation_db::run_ledger_reconciliation(&state.db, chrono::Utc::now())
+            .await?;
     if run.differences_created > 0 {
         tracing::warn!(
             run_id = %run.run_id,
@@ -181,7 +184,11 @@ fn capture_worker_heartbeat_if_due(state: &BillingWorkerState, last_run: &mut In
     *last_run = Instant::now();
 }
 
-fn capture_loop_error(state: &BillingWorkerState, operation: &str, error: &(dyn Error + 'static)) {
+fn capture_loop_error(
+    state: &BillingWorkerState,
+    operation: &str,
+    error: &(dyn Error + Send + Sync + 'static),
+) {
     capture_worker_operation_error(
         error,
         &WorkerOperationContext {
@@ -192,5 +199,5 @@ fn capture_loop_error(state: &BillingWorkerState, operation: &str, error: &(dyn 
     );
     state
         .observability
-        .record_worker_operation(operation, "failure");
+        .record_billing_operation(operation, "failure", Duration::ZERO);
 }

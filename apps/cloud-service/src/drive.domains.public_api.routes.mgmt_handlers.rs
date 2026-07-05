@@ -51,7 +51,7 @@ pub async fn create_api_key() -> Result<(), AppError> {
     Err(AppError::new(
         axum::http::StatusCode::GONE,
         "api_key_creation_disabled",
-        "New Drive API keys are disabled. Create a workspace service account in Identity and attach an OAuth client instead.",
+        "New Cloud Service keys are disabled. Create a workspace service account in Identity and attach an OAuth client instead.",
     ))
 }
 

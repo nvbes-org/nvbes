@@ -6,7 +6,7 @@ Statut: contract freeze documentaire, non publie public.
 
 La publication publique est bloquee tant que:
 
-- `apps/drive-api/openapi.json` ne contient pas les routes `/v1` listees ci-dessous;
+- `apps/cloud-service/openapi.json` ne contient pas les routes `/v1` listees ci-dessous;
 - la spec OpenAPI publique n'est pas archivee comme artefact versionne de release;
 - les guides operateurs et developpeurs ci-dessous ne sont pas relus avec les contrats backend reels;
 - les smoke tests API publique couvrent auth, scopes, upload, download, erreurs, rate limits et idempotence.
@@ -22,7 +22,7 @@ Guides de reference:
 
 Artefacts attendus avant lancement public:
 
-- OpenAPI canonique generee: `apps/drive-api/openapi.json`
+- OpenAPI canonique generee: `apps/cloud-service/openapi.json`
 - OpenAPI publique versionnee: `docs/api/openapi/drive-public-v1.openapi.json`
 - Changelog public: [public-api-v1-changelog.md](public-api-v1-changelog.md)
 

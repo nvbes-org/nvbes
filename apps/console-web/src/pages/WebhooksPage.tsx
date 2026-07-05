@@ -22,7 +22,7 @@ import { canReplayWebhookDelivery } from './WebhooksPage.helpers';
 
 export function WebhooksPage() {
   const webhooksQuery = useQuery({
-    queryKey: ['developer-webhooks'],
+    queryKey: ['console-webhooks'],
     queryFn: ({ signal }) => listDeveloperConsoleWebhooks(signal),
     staleTime: 30_000,
   });
@@ -113,7 +113,7 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
   const liveInterval = useVisibilityAwareInterval(2_000, false);
 
   const deliveriesQuery = useQuery({
-    queryKey: ['developer-webhook-deliveries', endpointId],
+    queryKey: ['console-webhook-deliveries', endpointId],
     queryFn: ({ signal }) => listDeveloperConsoleWebhookDeliveries(endpointId, signal),
     staleTime: 5_000,
     refetchInterval: (query) => {
@@ -126,10 +126,10 @@ function WebhookDeliveriesList({ endpointId }: { endpointId: string }) {
     mutationFn: replayDeveloperConsoleWebhookDelivery,
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: ['developer-webhook-deliveries', endpointId],
+        queryKey: ['console-webhook-deliveries', endpointId],
       });
       void queryClient.invalidateQueries({
-        queryKey: ['developer-webhooks'],
+        queryKey: ['console-webhooks'],
       });
     },
   });

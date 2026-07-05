@@ -33,8 +33,8 @@ export type DriveUserView = z.infer<typeof DriveUserViewSchema>;
 export type DriveWorkspaceView = z.infer<typeof DriveWorkspaceViewSchema>;
 export type DriveMeResponse = z.infer<typeof DriveMeResponseSchema>;
 
-function driveApiBaseUrl(): string {
-  const configuredBaseUrl = import.meta.env.VITE_DRIVE_API_BASE_URL || '/api';
+function cloudServiceBaseUrl(): string {
+  const configuredBaseUrl = import.meta.env.VITE_CLOUD_SERVICE_BASE_URL || '/api';
   if (configuredBaseUrl.startsWith('/')) {
     return `${window.location.origin}${configuredBaseUrl}`;
   }
@@ -46,7 +46,7 @@ import { getValidAccessToken } from './drive.session';
 
 export async function driveClient(accessToken?: string) {
   const token = accessToken || (await getValidAccessToken());
-  const baseUrl = driveApiBaseUrl();
+  const baseUrl = cloudServiceBaseUrl();
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

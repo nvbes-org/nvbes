@@ -84,7 +84,7 @@ pub(super) async fn assert_machine_token_fails(
             client_assertion_verified: false,
         },
         Some("drive.files.read drive.workspace.read"),
-        Some("nvbes-drive-api"),
+        Some("nvbes-cloud-service"),
     )
     .await
     .expect_err("machine token should be rejected");

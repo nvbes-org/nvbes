@@ -36,7 +36,7 @@ export type TrackingConsentClient = {
   isAuthenticated?: () => boolean | Promise<boolean>;
 };
 
-const BACKEND_SYNC_SOURCE = 'identity-web:sync:backend';
+const BACKEND_SYNC_SOURCE = 'account-web:sync:backend';
 
 function activeVersionsByConsentType(consents: BackendConsent[]): Map<string, Set<string>> {
   const active = new Map<string, Set<string>>();

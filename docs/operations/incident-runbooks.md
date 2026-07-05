@@ -206,7 +206,7 @@ Actions:
 
 Validation:
 
-- `cargo run -p nvbes-drive-api -- migrate` termine;
+- `cargo run -p nvbes-cloud-service -- migrate` termine;
 - API demarre;
 - smoke staging vert.
 

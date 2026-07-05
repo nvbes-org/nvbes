@@ -17,8 +17,8 @@ const SwitchWorkspaceResultSchema = z.object({
   }),
 });
 
-function identityApiBaseUrl(): string {
-  return (import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:8080').replace(
+function accountServiceBaseUrl(): string {
+  return (import.meta.env.VITE_ACCOUNT_SERVICE_BASE_URL || 'http://localhost:8080').replace(
     /\/+$/u,
     '',
   );
@@ -28,7 +28,7 @@ export async function switchDriveWorkspace(
   accessToken: string,
   workspaceId: string,
 ): Promise<void> {
-  const baseUrl = identityApiBaseUrl();
+  const baseUrl = accountServiceBaseUrl();
   const response = await verifiedFetch(`${baseUrl}/auth/workspaces/${workspaceId}/switch`, {
     allowedOrigins: [baseUrl],
     method: 'POST',

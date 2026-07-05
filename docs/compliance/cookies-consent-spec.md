@@ -43,7 +43,7 @@ Definir une implementation compatible CNIL pour les cookies et autres traceurs d
 - perimetre de finalites;
 - preuve technique de configuration.
 - identifiant pseudonyme ou compte authentifie lorsque disponible;
-- source du choix (`identity-web`, `drive-web`, service worker sync).
+- source du choix (`account-web`, `cloud-web`, service worker sync).
 
 ## Regles Sentry
 

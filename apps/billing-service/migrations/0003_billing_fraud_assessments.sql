@@ -1,4 +1,4 @@
--- Billing fraud assessments are owned by billing-api and feed PSP routing decisions.
+-- Billing fraud assessments are owned by billing-service and feed PSP routing decisions.
 
 CREATE TABLE IF NOT EXISTS billing_fraud_assessments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

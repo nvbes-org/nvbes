@@ -31,7 +31,7 @@ describe('developer schemas', () => {
           risk: 'medium',
           owner_team: 'drive',
           lifecycle: 'active',
-          allowed_audiences: ['drive-api'],
+          allowed_audiences: ['cloud-service'],
         },
       ],
     });

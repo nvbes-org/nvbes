@@ -16,13 +16,13 @@ pub(crate) fn test_lock() -> &'static Mutex<()> {
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
-pub(crate) async fn spawn_identity_server(state: nvbes_identity_api::app::AppState) -> String {
+pub(crate) async fn spawn_identity_server(state: nvbes_account_service::app::AppState) -> String {
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("test server should bind");
     let addr = listener.local_addr().expect("listener addr");
     let base_url = format!("http://{addr}");
-    let router: Router = nvbes_identity_api::app::build_router(state);
+    let router: Router = nvbes_account_service::app::build_router(state);
     tokio::spawn(async move {
         axum::serve(listener, router)
             .await
@@ -31,7 +31,7 @@ pub(crate) async fn spawn_identity_server(state: nvbes_identity_api::app::AppSta
     base_url
 }
 
-pub(crate) async fn identity_state(pool: &PgPool) -> nvbes_identity_api::app::AppState {
+pub(crate) async fn identity_state(pool: &PgPool) -> nvbes_account_service::app::AppState {
     unsafe {
         std::env::set_var("NVBES_ENV", "development");
         std::env::set_var(
@@ -43,14 +43,14 @@ pub(crate) async fn identity_state(pool: &PgPool) -> nvbes_identity_api::app::Ap
         );
     }
 
-    let config = nvbes_identity_api::app::AppConfig {
+    let config = nvbes_account_service::app::AppConfig {
         database_url: test_database_url(),
         environment: "development".to_string(),
         app_name: "drive-auth-e2e-identity-test".to_string(),
         ..Default::default()
     };
 
-    nvbes_identity_api::app::AppState::bootstrap(&config, pool.clone())
+    nvbes_account_service::app::AppState::bootstrap(&config, pool.clone())
         .await
         .expect("identity app state bootstrap should succeed")
 }

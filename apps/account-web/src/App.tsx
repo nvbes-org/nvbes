@@ -10,7 +10,7 @@ import { ApiConnectionOverlay } from './components/ApiConnectionOverlay';
 import { ToastProvider } from './components/ui/toast';
 
 const IDENTITY_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
-const IDENTITY_HEALTH_URL = `${import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:4000'}/health`;
+const IDENTITY_HEALTH_URL = `${import.meta.env.VITE_ACCOUNT_SERVICE_BASE_URL || 'http://localhost:4000'}/health`;
 const REACT_QUERY_DEVTOOLS_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS_ENABLED !== 'false';
 const TANSTACK_ROUTER_DEVTOOLS_ENABLED =
@@ -47,12 +47,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           {import.meta.env.DEV ? (
-            <Profiler id="identity-web" onRender={handleRenderProfiler}>
+            <Profiler id="account-web" onRender={handleRenderProfiler}>
               <RouterProvider router={router} />
               <TrackingConsentBanner />
               <ApiConnectionOverlay />
               <VersionMismatchBanner
-                appName="identity-web"
+                appName="account-web"
                 frontendBuildId={IDENTITY_WEB_BUILD_ID}
                 healthUrl={IDENTITY_HEALTH_URL}
               />
@@ -67,7 +67,7 @@ function App() {
               <TrackingConsentBanner />
               <ApiConnectionOverlay />
               <VersionMismatchBanner
-                appName="identity-web"
+                appName="account-web"
                 frontendBuildId={IDENTITY_WEB_BUILD_ID}
                 healthUrl={IDENTITY_HEALTH_URL}
               />

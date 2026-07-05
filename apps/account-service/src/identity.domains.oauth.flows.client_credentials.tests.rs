@@ -18,14 +18,14 @@ fn machine_token_audit_metadata_records_grant_client_scope_audience_and_jti() {
         "gxoc_machine",
         "access-jti-1",
         "drive.files.read drive.workspace.read",
-        "nvbes-drive-api",
+        "nvbes-cloud-service",
     );
 
     assert_eq!(metadata["grant_type"], "client_credentials");
     assert_eq!(metadata["client_id"], "gxoc_machine");
     assert_eq!(metadata["jti"], "access-jti-1");
     assert_eq!(metadata["scope"], "drive.files.read drive.workspace.read");
-    assert_eq!(metadata["audience"], "nvbes-drive-api");
+    assert_eq!(metadata["audience"], "nvbes-cloud-service");
 }
 
 #[tokio::test]
@@ -224,7 +224,7 @@ async fn http_client_credentials_and_introspection_expose_service_account_contex
             code_verifier: None,
             device_code: None,
             scope: Some("drive.files.read drive.workspace.read".to_string()),
-            audience: Some("nvbes-drive-api".to_string()),
+            audience: Some("nvbes-cloud-service".to_string()),
             subject_token: None,
             subject_token_type: None,
             actor_token: None,

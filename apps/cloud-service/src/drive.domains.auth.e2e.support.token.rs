@@ -15,7 +15,7 @@ pub(crate) async fn issue_machine_token(
         .json(&serde_json::json!({
             "grant_type": "client_credentials",
             "scope": "drive.files.read drive.workspace.read",
-            "audience": "nvbes-drive-api",
+            "audience": "nvbes-cloud-service",
         }));
     let token_response = nvbes_core::trace_context::with_fresh_trace_headers(request)
         .send()

@@ -4,7 +4,7 @@ Date: 2026-06-08
 
 ## Goal
 
-Refondre entierement `apps/drive-web` pour obtenir une V1 front credible de nvbes Drive: une vraie application de travail pour petites equipes, pas une page de demonstration.
+Refondre entierement `apps/cloud-web` pour obtenir une V1 front credible de nvbes Drive: une vraie application de travail pour petites equipes, pas une page de demonstration.
 
 La refonte couvre l'ensemble du front Drive V1 visible: fichiers, liens partages, corbeille, membres, securite, facturation, API et compte. Elle reste une refonte frontend: les endpoints existants sont utilises quand ils sont disponibles, et les domaines manquants sont representes par des donnees locales realistes avec interactions front completes.
 
@@ -22,7 +22,7 @@ La barre de qualite demandee est `prototype produit credible`. L'application doi
 
 ## Visual Direction
 
-Drive reprend le theme de `identity-web`:
+Drive reprend le theme de `account-web`:
 
 - typographie `Geist`;
 - surfaces claires;
@@ -209,7 +209,7 @@ Le copy de securite doit rester direct: les cles API donnent acces aux fichiers 
 
 ### Account
 
-La vue `Compte` doit rester coherente avec `identity-web`. Elle peut renvoyer vers Identity quand une fonctionnalite appartient deja a l'identite globale, au lieu de dupliquer une interface incomplete dans Drive.
+La vue `Compte` doit rester coherente avec `account-web`. Elle peut renvoyer vers Identity quand une fonctionnalite appartient deja a l'identite globale, au lieu de dupliquer une interface incomplete dans Drive.
 
 ## Data Strategy
 
@@ -233,7 +233,7 @@ Les donnees front doivent etre typees explicitement. Le type `any` est interdit.
 
 ## Component Architecture
 
-La refonte reste dans `apps/drive-web` et suit les conventions du repo:
+La refonte reste dans `apps/cloud-web` et suit les conventions du repo:
 
 - fichiers courts;
 - noms explicites;
@@ -347,7 +347,7 @@ Les tests cibles doivent couvrir prioritairement:
 
 La validation attendue apres implementation frontend est:
 
-- check cible `drive-web` si disponible;
+- check cible `cloud-web` si disponible;
 - sinon `pnpm check:web`;
 - lint web si le scope touche beaucoup de fichiers.
 
@@ -355,8 +355,8 @@ La validation attendue apres implementation frontend est:
 
 Inclus:
 
-- refonte frontend complete de `apps/drive-web`;
-- theme aligne sur `identity-web`;
+- refonte frontend complete de `apps/cloud-web`;
+- theme aligne sur `account-web`;
 - vues V1 front;
 - donnees hybrides;
 - interactions locales realistes;

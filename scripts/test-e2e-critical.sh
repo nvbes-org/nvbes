@@ -12,4 +12,4 @@ require_env NVBES_API_BASE_URL
 require_env NVBES_DATABASE_URL
 
 log_step "critical browser journeys"
-pnpm --dir apps/identity-web test:e2e:critical
+pnpm --dir apps/account-web test:e2e:critical

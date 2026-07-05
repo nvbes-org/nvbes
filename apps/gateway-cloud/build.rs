@@ -4,13 +4,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::set_var("PROTOC", protoc);
     }
 
-    tonic_prost_build::configure().compile_protos(
-        &[
-            "../../contracts/protobuf/nvbes/platform/v1/common.proto",
-            "../../contracts/protobuf/nvbes/billing/v1/billing.proto",
-        ],
-        &["../../contracts/protobuf"],
-    )?;
+    tonic_prost_build::configure()
+        .type_attribute(".", "#[allow(dead_code)]")
+        .compile_protos(
+            &[
+                "../../contracts/protobuf/nvbes/platform/v1/common.proto",
+                "../../contracts/protobuf/nvbes/billing/v1/billing.proto",
+            ],
+            &["../../contracts/protobuf"],
+        )?;
 
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/platform/v1/common.proto");
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/billing/v1/billing.proto");

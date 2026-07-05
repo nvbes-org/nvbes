@@ -6,13 +6,13 @@ use nvbes_observability::{
 };
 use std::net::SocketAddr;
 
-const BILLING_API_PORT_ENV: &str = "NVBES_BILLING_API_PORT";
+const BILLING_API_PORT_ENV: &str = "NVBES_BILLING_SERVICE_PORT";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
 
-    let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-api");
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-service");
     install_safe_panic_hook();
     init_tracing(&config);
 
@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
         Some("error-reporting-smoke")
     ) {
         let result = capture_error_reporting_smoke(
-            "billing-api",
+            "billing-service",
             &config.environment,
             "api",
             config.sentry_dsn.is_some(),
@@ -31,11 +31,11 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let _profiling_guard =
-        start_continuous_profiling(&config, "billing-api").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "billing-service").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
-    let state = nvbes_billing_api::app::BillingAppState::bootstrap(&config, db).await?;
-    let app = nvbes_billing_api::app::build_router(state);
+    let state = nvbes_billing_service::app::BillingAppState::bootstrap(&config, db).await?;
+    let app = nvbes_billing_service::app::build_router(state);
 
     let port = billing_api_port(config.api_port)?;
     let http_addr: SocketAddr = format!("0.0.0.0:{port}").parse()?;

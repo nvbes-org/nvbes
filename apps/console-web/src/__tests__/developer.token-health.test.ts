@@ -39,7 +39,7 @@ describe('developer token debugger and health checks', () => {
         workspace_id: null,
         client_id: 'client-1',
         scopes: ['openid', 'profile'],
-        audience: 'nvbes-identity-api',
+        audience: 'nvbes-account-service',
         issuer: 'nvbes-identity',
         expires_at: '2026-06-14T10:00:00Z',
         issued_at: '2026-06-14T09:00:00Z',

@@ -32,7 +32,7 @@ La beta ne doit pas demarrer tant que les points `Go/No-Go` ne sont pas verts ou
 
 - [ ] Staging deploye avec API, worker, web, PostgreSQL et bucket separes.
 - [ ] Migrations appliquees via `pnpm db:migrate:staging`.
-- [ ] Workers Identity et Drive lances via `pnpm dev:identity-worker` / `pnpm dev:drive-worker` ou leurs unites de deploiement.
+- [ ] Workers Identity et Drive lances via `pnpm dev:account-worker` / `pnpm dev:cloud-worker` ou leurs unites de deploiement.
 - [ ] Donnees de test creees via `pnpm beta:seed:staging`.
 - [ ] `pnpm release:gate:staging` vert avec URLs staging.
 - [ ] `pnpm test:smoke:staging` vert apres deploiement.
@@ -99,8 +99,8 @@ Voir aussi `.env.example`.
 | --------------------------------- | ----------- | ---------------------------------------------------------------------- |
 | `NVBES_WEB_BASE_URL`            | Oui         | `pnpm test:smoke`, `pnpm test:e2e:critical`.                           |
 | `NVBES_API_BASE_URL`            | Oui         | `pnpm test:smoke`, `pnpm test:e2e:critical`, fallback `pnpm beta:seed:staging`. |
-| `NVBES_IDENTITY_API_BASE_URL`   | Non         | API Identity explicite pour `pnpm beta:seed:staging` si separee de Drive. |
-| `NVBES_DRIVE_API_BASE_URL`      | Non         | API Drive explicite pour `pnpm beta:seed:staging` si separee d'Identity. |
+| `NVBES_ACCOUNT_SERVICE_BASE_URL` | Non        | Account Service explicite pour `pnpm beta:seed:staging` si separe de Cloud. |
+| `NVBES_CLOUD_SERVICE_BASE_URL`   | Non        | Cloud Service explicite pour `pnpm beta:seed:staging` si separe d'Account. |
 | `NVBES_SMOKE_WEB_MARKER`        | Non         | Marqueur HTML attendu par `pnpm test:smoke`, defaut `nvbes`. |
 | `NVBES_DATABASE_URL`            | Oui         | `pnpm beta:seed:staging`, `pnpm test:e2e:critical`, preflight Stripe.   |
 | `NVBES_STAGING_WEB_BASE_URL`    | Oui         | `pnpm test:smoke:staging`, `pnpm release:gate:staging`.                |
@@ -118,8 +118,8 @@ Script:
 ```bash
 NVBES_DATABASE_URL="$NVBES_STAGING_DATABASE_URL" \
 NVBES_API_BASE_URL="$NVBES_STAGING_API_BASE_URL" \
-NVBES_IDENTITY_API_BASE_URL="$NVBES_STAGING_IDENTITY_API_BASE_URL" \
-NVBES_DRIVE_API_BASE_URL="$NVBES_STAGING_DRIVE_API_BASE_URL" \
+NVBES_ACCOUNT_SERVICE_BASE_URL="$NVBES_STAGING_ACCOUNT_SERVICE_BASE_URL" \
+NVBES_CLOUD_SERVICE_BASE_URL="$NVBES_STAGING_CLOUD_SERVICE_BASE_URL" \
 NVBES_BETA_SEED_EMAIL="beta-owner+staging@example.com" \
 NVBES_BETA_SEED_PASSWORD="ReplaceMe123!" \
 NVBES_BETA_SEED_WORKSPACE="Beta Staging Workspace" \
@@ -230,11 +230,11 @@ Go uniquement si:
 
 - Email transactionnel reel a valider en staging: verification, reset password et invitations doivent bien partir via le provider, avec token lisible uniquement via un helper interne non public.
 - Stripe mappings staging a finaliser: `stripe_price_mappings` doit contenir de vrais IDs test/staging pour `solo_pro`, `team` et `team_plus`, avec preflight explicite avant checkout beta.
-- E2E critiques a elargir si l'on veut couvrir plus que le noyau actuel: le parcours navigateur Playwright sur `identity-web` couvre les flux critiques, mais les autres parcours beta restent a ajouter pour une couverture plus large.
+- E2E critiques a elargir si l'on veut couvrir plus que le noyau actuel: le parcours navigateur Playwright sur `account-web` couvre les flux critiques, mais les autres parcours beta restent a ajouter pour une couverture plus large.
 
 ### Branches deja reliees au flux de release
 
-- OpenAPI versionnee generee dans `apps/identity-api/openapi.json` puis republiee vers `libs/ts/identity-sdk-core/openapi.json` via `pnpm generate:openapi`, et incluse dans `pnpm release:gate:staging` via le build.
+- OpenAPI versionnee generee dans `apps/account-service/openapi.json` puis republiee vers `libs/ts/identity-sdk-core/openapi.json` via `pnpm generate:openapi`, et incluse dans `pnpm release:gate:staging` via le build.
 
 ### Risques acceptables pour beta interne fermee
 

@@ -22,12 +22,12 @@ Refactor nvbes into an Nx-oriented monorepo with explicit project boundaries, sm
 ```text
 nvbes/
 ├── apps/
-│   ├── identity-api/
-│   ├── drive-api/
-│   ├── identity-web/
-│   ├── drive-web/
-│   ├── identity-worker/
-│   └── drive-worker/
+│   ├── account-service/
+│   ├── cloud-service/
+│   ├── account-web/
+│   ├── cloud-web/
+│   ├── account-worker/
+│   └── cloud-worker/
 ├── libs/
 │   ├── rust/
 │   │   ├── core/

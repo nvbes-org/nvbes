@@ -4,14 +4,14 @@ Date: 2026-06-08
 
 ## Goal
 
-Ajouter un sélecteur de workspace dans le header de drive-web, permettant de changer de workspace (et implicitement de tenant) sans se déconnecter.
+Ajouter un sélecteur de workspace dans le header de cloud-web, permettant de changer de workspace (et implicitement de tenant) sans se déconnecter.
 
 ## Contexte
 
 - `DriveMeResponse` contient déjà `workspaces: DriveWorkspaceView[]` et `current_workspace_id`
 - `switchDriveWorkspace()` existe dans `drive.workspace.switch.ts` mais n'est jamais appelé
-- L'endpoint `POST /auth/workspaces/{workspaceId}/switch` existe dans identity-api
-- L'API identity met à jour la session Redis, le drive API la lit partagée
+- L'endpoint `POST /auth/workspaces/{workspaceId}/switch` existe dans account-service
+- L'API Account met à jour la session Redis, le Cloud API la lit partagée
 
 ## UI
 

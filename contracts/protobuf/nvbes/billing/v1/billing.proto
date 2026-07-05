@@ -47,6 +47,7 @@ message CheckoutSession {
   string checkout_url = 1;
   string provider = 2;
   string expires_at = 3;
+  string checkout_session_id = 4;
 }
 
 message PortalSession {

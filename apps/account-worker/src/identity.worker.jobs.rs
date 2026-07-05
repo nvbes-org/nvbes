@@ -99,7 +99,7 @@ mod tests {
         for job_type in [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS, JOB_DATA_EXPORT] {
             assert!(
                 should_retry_job(job_type, &error),
-                "identity-worker should retry owned job {job_type}"
+                "account-worker should retry owned job {job_type}"
             );
         }
 
@@ -110,7 +110,7 @@ mod tests {
         ] {
             assert!(
                 !should_retry_job(job_type, &error),
-                "identity-worker must not retry Billing job {job_type}"
+                "account-worker must not retry Billing job {job_type}"
             );
         }
     }

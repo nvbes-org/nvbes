@@ -8,10 +8,10 @@ const write = args.includes("--write");
 const outputPath = "docs/migration/workspace-last-owner.generated.json";
 const markdownPath = "docs/migration/workspace-last-owner.md";
 const sources = {
-	dbOwners: "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
-	userMutations: "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
-	accessRevocations: "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
-	accessRevocationTests: "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
+	dbOwners: "apps/account-service/src/identity.domains.enterprise.db.owners.rs",
+	userMutations: "apps/account-service/src/identity.domains.enterprise.service.user_mutations.rs",
+	accessRevocations: "apps/account-service/src/identity.domains.enterprise.access_reviews.revocations.rs",
+	accessRevocationTests: "apps/account-service/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
 	corePolicyTests: "libs/rust/core/src/authz.policy.tests.rs",
 };
 
@@ -96,7 +96,7 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match workspace last-owner source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api last_owner_guard --locked",
+		"cargo test -p nvbes-account-service last_owner_guard --locked",
 		"cargo test -p nvbes-core owner_cannot_invite_or_remove_another_owner --locked",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -164,7 +164,7 @@ const report = {
 		command: "tools/migration/workspace-last-owner.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api last_owner_guard --locked",
+			"cargo test -p nvbes-account-service last_owner_guard --locked",
 			"cargo test -p nvbes-core owner_cannot_invite_or_remove_another_owner --locked",
 		],
 	},

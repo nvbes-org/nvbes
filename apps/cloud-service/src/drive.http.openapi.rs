@@ -7,7 +7,7 @@ use crate::app::AppState;
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "nvbes Drive API",
+        title = "nvbes Cloud Service",
         version = "0.1.0",
         description = "File storage, sharing, and collaboration API",
         contact(name = "nvbes", url = "https://nvbes.fr"),

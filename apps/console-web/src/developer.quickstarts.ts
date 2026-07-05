@@ -5,7 +5,7 @@ export const quickstarts = {
     code: `import { createIdentityClient } from '@nvbes/identity-sdk-web';
 
 export const identity = createIdentityClient({
-  issuer: import.meta.env.VITE_NVBES_IDENTITY_ISSUER,
+  issuer: import.meta.env.VITE_NVBES_ACCOUNT_ISSUER,
   clientId: import.meta.env.VITE_NVBES_CLIENT_ID,
   redirectUri: window.location.origin + '/auth/callback',
 });`,
@@ -29,7 +29,7 @@ pub fn router() -> Router {
     code: `import { createIdentityClient } from '@nvbes/identity-sdk';
 
 const identity = createIdentityClient({
-  baseUrl: process.env.NVBES_IDENTITY_API_URL,
+  baseUrl: process.env.NVBES_ACCOUNT_SERVICE_URL,
 });`,
   },
   curl: {

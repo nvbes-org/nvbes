@@ -14,13 +14,13 @@ const required = [
 	{
 		runtime: "Rust",
 		scope: "backend core and product/platform crates",
-		required_paths: ["Cargo.toml", "libs/rust", "apps/identity-api", "apps/drive-api"],
+		required_paths: ["Cargo.toml", "libs/rust", "apps/account-service", "apps/cloud-service"],
 		required_commands: ["pnpm check:api"],
 	},
 	{
 		runtime: "TypeScript",
 		scope: "frontends, SDKs, web runtime, and tooling",
-		required_paths: ["pnpm-workspace.yaml", "libs/ts", "apps/identity-web", "apps/drive-web", "apps/developer-web"],
+		required_paths: ["pnpm-workspace.yaml", "libs/ts", "apps/account-web", "apps/cloud-web", "apps/console-web"],
 		required_commands: ["pnpm check:web"],
 	},
 	{

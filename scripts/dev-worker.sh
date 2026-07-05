@@ -7,4 +7,4 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 
 cd "$ROOT_DIR"
 
-cargo run -p nvbes-identity-worker
+cargo run -p nvbes-account-worker

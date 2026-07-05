@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "nvbes Identity API",
+    "title": "nvbes Account Service",
     "description": "Authentication, authorization, and identity management API",
     "contact": {
       "name": "nvbes",

@@ -27,14 +27,14 @@ export function CookieConsentSettings() {
   const toggleCategory = (category: keyof CookieConsentState['categories']) => {
     persistConsent(
       toggleConsentCategory(cookieConsent, category),
-      `identity-web:account-privacy:${category}`,
+      `account-web:account-privacy:${category}`,
     );
   };
 
   const toggleVendor = (vendor: keyof CookieConsentState['vendors']) => {
     persistConsent(
       toggleConsentVendor(cookieConsent, vendor, getConsentVendorCategory(vendor)),
-      `identity-web:account-privacy:${vendor}`,
+      `account-web:account-privacy:${vendor}`,
     );
   };
 

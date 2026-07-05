@@ -40,7 +40,7 @@ const trackingConsentApi = createTrackingConsentApi({
     revokeConsent: (consentType: string, documentVersion: string) => Promise<unknown>;
     isAuthenticated: () => boolean | Promise<boolean>;
   },
-  defaultSource: 'identity-web',
+  defaultSource: 'account-web',
 });
 
 export {

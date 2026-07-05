@@ -52,14 +52,14 @@ prometheus.remote_write "grafana_cloud" {
 prometheus.scrape "nvbes_apis" {
   targets = [
     {
-      "__address__" = sys.env("NVBES_IDENTITY_API_METRICS_TARGET"),
-      "job"         = "identity-api",
-      "service"     = "identity-api",
+      "__address__" = sys.env("NVBES_ACCOUNT_SERVICE_METRICS_TARGET"),
+      "job"         = "account-service",
+      "service"     = "account-service",
     },
     {
-      "__address__" = sys.env("NVBES_DRIVE_API_METRICS_TARGET"),
-      "job"         = "drive-api",
-      "service"     = "drive-api",
+      "__address__" = sys.env("NVBES_CLOUD_SERVICE_METRICS_TARGET"),
+      "job"         = "cloud-service",
+      "service"     = "cloud-service",
     },
   ]
 
@@ -76,14 +76,14 @@ prometheus.scrape "nvbes_apis" {
 prometheus.scrape "nvbes_workers" {
   targets = [
     {
-      "__address__" = sys.env("NVBES_DRIVE_WORKER_METRICS_TARGET"),
-      "job"         = "drive-worker",
-      "service"     = "drive-worker",
+      "__address__" = sys.env("NVBES_CLOUD_WORKER_METRICS_TARGET"),
+      "job"         = "cloud-worker",
+      "service"     = "cloud-worker",
     },
     {
-      "__address__" = sys.env("NVBES_IDENTITY_WORKER_METRICS_TARGET"),
-      "job"         = "identity-worker",
-      "service"     = "identity-worker",
+      "__address__" = sys.env("NVBES_ACCOUNT_WORKER_METRICS_TARGET"),
+      "job"         = "account-worker",
+      "service"     = "account-worker",
     },
   ]
 

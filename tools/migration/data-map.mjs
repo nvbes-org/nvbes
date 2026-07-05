@@ -30,13 +30,13 @@ function keyFor(entry) {
 
 function inferDomain(file, table) {
 	const name = table.toLowerCase();
-	if (file.startsWith("apps/billing-api/migrations/")) return "Billing/Usage";
+	if (file.startsWith("apps/billing-service/migrations/")) return "Billing/Usage";
 	if (name.includes("developer") || name.includes("oauth_client") || name.includes("webhook")) return "Developer Platform";
 	if (name.includes("billing") || name.includes("invoice") || name.includes("subscription") || name.includes("usage") || name.includes("plan") || name.includes("stripe")) return "Billing/Usage";
 	if (name.includes("audit") || name.includes("privacy") || name.includes("consent")) return "Audit/Privacy";
 	if (name.includes("storage") || name.includes("upload") || name.includes("share") || name.includes("quota")) return "Drive";
 	if (name.includes("workspace") || name.includes("organization") || name.includes("tenant") || name.includes("member") || name.includes("invitation")) return "Workspace/Authz";
-	if (file.includes("drive-api/")) return "Drive";
+	if (file.includes("cloud-service/")) return "Drive";
 	return "Identity";
 }
 
@@ -136,7 +136,7 @@ function mergeExisting(generated, existing) {
 				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
 			};
 		}
-		if (entry.source.file.startsWith("apps/billing-api/migrations/")) {
+		if (entry.source.file.startsWith("apps/billing-service/migrations/")) {
 			return {
 				...entry,
 				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,

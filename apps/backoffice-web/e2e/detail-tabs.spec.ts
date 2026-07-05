@@ -5,7 +5,7 @@ import {
   openDetailFromGlobalSearch,
 } from './action-confirmation.mock-api';
 
-test.describe('internal-admin entity detail tabs @mocked', () => {
+test.describe('backoffice-service entity detail tabs @mocked', () => {
   test.beforeEach(async ({ page }) => {
     await installCredentials(page);
     await installMockApi(page);

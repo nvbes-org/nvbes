@@ -2,8 +2,8 @@ import { createHttpClient } from '@nvbes/http-client';
 import { verifiedFetch } from '@nvbes/web-runtime';
 import { getDeveloperAccessToken } from './developer.session.storage';
 
-export const identityApiBaseUrl =
-  import.meta.env.VITE_IDENTITY_API_BASE_URL ||
+export const accountServiceBaseUrl =
+  import.meta.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
   globalThis.location?.origin ||
   'http://localhost:4000';
 
@@ -16,14 +16,14 @@ export const identityVerifiedFetch: typeof fetch = (input, init) => {
 
   return verifiedFetch(input, {
     ...init,
-    allowedOrigins: [identityApiBaseUrl],
+    allowedOrigins: [accountServiceBaseUrl],
     credentials: init?.credentials ?? 'include',
     headers,
   });
 };
 
 export const identityHttpClient = createHttpClient({
-  baseUrl: identityApiBaseUrl,
+  baseUrl: accountServiceBaseUrl,
   credentials: 'include',
   fetchImpl: identityVerifiedFetch,
 });

@@ -27,7 +27,7 @@ export const riskEvidence = {
 		owner: "Product lead",
 		status: "mitigated",
 		evidence:
-			"apps/identity-web/src/identity.return-to.ts; apps/identity-web/src/identity.return-to.test.js; apps/developer-web/src/developer.session.ts; apps/developer-web/src/__tests__/developer.session.test.ts",
+			"apps/account-web/src/identity.return-to.ts; apps/account-web/src/identity.return-to.test.js; apps/console-web/src/developer.session.ts; apps/console-web/src/__tests__/developer.session.test.ts",
 		cutover_impact:
 			"allowed: incompatible sessions are handled by explicit logout/session clearing and a validated login return flow",
 	},

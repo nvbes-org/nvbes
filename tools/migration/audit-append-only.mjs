@@ -11,12 +11,12 @@ const auditCratePath = "libs/rust/audit/src/lib.rs";
 const migrationTargets = [
 	{
 		product: "identity",
-		path: "apps/identity-api/migrations/0001_initial_schema.sql",
+		path: "apps/account-service/migrations/0001_initial_schema.sql",
 		partition: "tenant_id = NEW.tenant_id",
 	},
 	{
 		product: "drive",
-		path: "apps/drive-api/migrations/0001_initial_schema.sql",
+		path: "apps/cloud-service/migrations/0001_initial_schema.sql",
 		partition: "workspace_id = NEW.workspace_id",
 	},
 ];

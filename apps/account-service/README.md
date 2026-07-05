@@ -1,4 +1,4 @@
-# nvbes Identity API
+# nvbes Account Service
 
 API Rust (Axum) servant de fondation IdP / Authorization Server multi-tenant pour les produits nvbes.
 
@@ -16,7 +16,7 @@ Le service porte:
 - **Framework** : Axum + Tokio
 - **Base de données** : PostgreSQL (sqlx)
 - **Auth** : OAuth 2.1 / OIDC, JWT courts, refresh tokens opaques rotatifs stockes dans Redis
-- **Billing** : service separe `billing-api`; Identity fournit l'authz et les vues web peuvent consommer Billing
+- **Billing** : service separe `billing-service`; Identity fournit l'authz et les vues web peuvent consommer Billing
 - **Structure** : fichiers Rust plats en dot-notation, modules exposes via `#[path]`
 
 ## Structure du code
@@ -145,7 +145,7 @@ Pour les principals humains, `principal_id` et `user_id` sont alignes sauf deleg
 - Le login web canonique est un flux challenge: identifier -> password -> MFA optionnel. Il n'existe pas de route `POST /api/v1/auth/login` exposee par le routeur.
 - Les sessions web sont portees par cookie HTTP-only `session` ou `__Host-session`; les clients service peuvent aussi fournir `Authorization: Bearer`.
 - `POST /api/v1/auth/mfa/webauthn/register/start` accepte `kind = "passkey" | "security_key"` et le conserve dans `mfa_factors.factor_data.kind`.
-- Les surfaces Billing publiques sont portees par `billing-api`; Identity fournit l'introspection et l'autorisation.
+- Les surfaces Billing publiques sont portees par `billing-service`; Identity fournit l'introspection et l'autorisation.
 - `GET /api/v1/legal/consents` retourne directement un tableau de consentements actifs; la revocation prend `consent_type` et `document_version`.
 
 ## Configuration
@@ -169,7 +169,7 @@ sqlx migrate run --database-url postgresql://user:pass@localhost/nvbes_identity
 ## Lancement
 
 ```bash
-cargo run -p nvbes-identity-api
+cargo run -p nvbes-account-service
 ```
 
 ## Intégration avec les autres produits

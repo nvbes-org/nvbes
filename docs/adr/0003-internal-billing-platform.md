@@ -46,14 +46,14 @@ Le calcul fiscal, l'e-invoicing, la retention des factures et la revenue recogni
 
 ## Consequences
 
-- Le schema billing canonique vit cote Billing. Tant que le schema physique reste partage en V0, seules les crates `nvbes-billing`, `billing-api` et `billing-worker` peuvent porter les nouvelles responsabilites metier billing.
+- Le schema billing canonique vit cote Billing. Tant que le schema physique reste partage en V0, seules les crates `nvbes-billing`, `billing-service` et `billing-worker` peuvent porter les nouvelles responsabilites metier billing.
 - Stripe V1 reste supporte via mappings et vues de compatibilite.
 - Mollie peut etre reference sans dupliquer le domaine financier.
 - Les exports finance et BI doivent provenir du modele nvbes, pas uniquement des pipelines provider.
 
 ## Runtime cible V0
 
-- `apps/billing-api`: API serverless-compatible pour endpoints billing internes et futurs resolvers GraphQL.
+- `apps/billing-service`: API serverless-compatible pour endpoints billing internes et futurs resolvers GraphQL.
 - `apps/billing-worker`: worker separe pour reconciliation, processing PSP et jobs finance.
 - `contracts/protobuf/nvbes/billing/v1/billing.proto`: contrat gRPC interne.
 - `contracts/graphql/schema.graphql`: contrat gateway/BFF, gouverne par `contracts/graphql/governance.json`.

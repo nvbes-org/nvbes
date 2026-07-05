@@ -57,7 +57,7 @@ impl IdentityAuthClient {
     pub fn from_env() -> Result<Self, AppError> {
         let mtls_enabled = env_bool("NVBES_MTLS_ENABLED", false);
         let base_url = if mtls_enabled {
-            std::env::var("NVBES_IDENTITY_MTLS_BASE_URL").unwrap_or_else(|_| {
+            std::env::var("NVBES_ACCOUNT_SERVICE_MTLS_BASE_URL").unwrap_or_else(|_| {
                 let port = std::env::var("NVBES_MTLS_PORT")
                     .ok()
                     .and_then(|v| v.parse::<u16>().ok())
@@ -65,19 +65,19 @@ impl IdentityAuthClient {
                 format!("https://localhost:{port}")
             })
         } else {
-            std::env::var("NVBES_IDENTITY_BASE_URL")
+            std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8080".to_string())
         };
-        let client_id = std::env::var("NVBES_IDENTITY_CLIENT_ID").map_err(|_| {
+        let client_id = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_ID").map_err(|_| {
             AppError::internal(
                 "identity_client_id_missing",
-                "NVBES_IDENTITY_CLIENT_ID is required to validate Identity tokens.",
+                "NVBES_ACCOUNT_SERVICE_CLIENT_ID is required to validate Identity tokens.",
             )
         })?;
-        let client_secret = std::env::var("NVBES_IDENTITY_CLIENT_SECRET").map_err(|_| {
+        let client_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET").map_err(|_| {
             AppError::internal(
                 "identity_client_secret_missing",
-                "NVBES_IDENTITY_CLIENT_SECRET is required to validate Identity tokens.",
+                "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET is required to validate Identity tokens.",
             )
         })?;
 

@@ -11,10 +11,10 @@ const sources = {
 	corePolicy: "libs/rust/core/src/authz.policy.rs",
 	corePolicyTests: "libs/rust/core/src/authz.policy.tests.rs",
 	coreRole: "libs/rust/core/src/authz.role.rs",
-	authzDb: "apps/identity-api/src/identity.domains.authz.db.rs",
-	authzService: "apps/identity-api/src/identity.domains.authz.service.rs",
-	authzRoutes: "apps/identity-api/src/identity.domains.authz.routes.rs",
-	openapi: "apps/identity-api/openapi.json",
+	authzDb: "apps/account-service/src/identity.domains.authz.db.rs",
+	authzService: "apps/account-service/src/identity.domains.authz.service.rs",
+	authzRoutes: "apps/account-service/src/identity.domains.authz.routes.rs",
+	openapi: "apps/account-service/openapi.json",
 };
 
 const errors = [];
@@ -59,7 +59,7 @@ function buildChecks() {
 		textCheck("security-admin-test", sources.corePolicyTests, "Core test limits security admin to audit/security views", "security_admin_can_view_audit_but_cannot_invite_members"),
 		textCheck("billing-admin-test", sources.corePolicyTests, "Core test limits billing admin away from audit", "billing_admin_can_manage_billing_but_cannot_view_audit"),
 		textCheck("viewer-readonly-test", sources.corePolicyTests, "Core test keeps viewer read-only", "viewer_is_read_only"),
-		textCheck("service-policy-call", sources.authzService, "Identity API authorization calls the shared role policy", "is_allowed(access.role, action, effective_resource)"),
+		textCheck("service-policy-call", sources.authzService, "Account Service authorization calls the shared role policy", "is_allowed(access.role, action, effective_resource)"),
 		textCheck("denied-audit-call", sources.authzService, "Denied workspace actions are audited before returning an error", "record_permission_denied(db, &access, action, effective_resource, headers).await?"),
 		textCheck("audit-insert", sources.authzDb, "Permission denied decisions insert an audit event", "record_event_tx"),
 		textCheck("audit-action", sources.authzDb, "Permission denied audit uses stable action literal", 'action: "permission.denied"'),
@@ -107,7 +107,7 @@ function validateReport(report) {
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
 		"cargo test -p nvbes-core workspace_membership_roles_cover_expected_permission_boundaries --locked",
-		"cargo test -p nvbes-identity-api permission_denied_metadata_captures_role_action_and_target_role --locked",
+		"cargo test -p nvbes-account-service permission_denied_metadata_captures_role_action_and_target_role --locked",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
@@ -175,7 +175,7 @@ const report = {
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-core workspace_membership_roles_cover_expected_permission_boundaries --locked",
-			"cargo test -p nvbes-identity-api permission_denied_metadata_captures_role_action_and_target_role --locked",
+			"cargo test -p nvbes-account-service permission_denied_metadata_captures_role_action_and_target_role --locked",
 		],
 	},
 	summary,

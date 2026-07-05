@@ -92,8 +92,8 @@ NVBES_PROFILING_SAMPLE_RATE_HZ=100
 NVBES_PROFILING_BASIC_AUTH_USER=
 NVBES_PROFILING_BASIC_AUTH_PASSWORD=
 NVBES_OBSERVABILITY_INTERNAL_TOKEN=<meme secret que le fichier Alloy>
-NVBES_DRIVE_WORKER_METRICS_BIND_ADDR=127.0.0.1:4101
-NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
+NVBES_CLOUD_WORKER_METRICS_BIND_ADDR=127.0.0.1:4101
+NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
 ```
 
 Garder les binds workers sur `127.0.0.1` quand Alloy tourne en sidecar ou sur
@@ -143,21 +143,21 @@ uniquement dans Alloy.
 ```bash
 curl -fsS http://127.0.0.1:12345/-/ready
 curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
-  "$NVBES_IDENTITY_API_METRICS_TARGET/metrics" | head
+  "$NVBES_ACCOUNT_SERVICE_METRICS_TARGET/metrics" | head
 curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
-  "$NVBES_DRIVE_WORKER_METRICS_TARGET/metrics" | head
+  "$NVBES_CLOUD_WORKER_METRICS_TARGET/metrics" | head
 ```
 
 Dans Grafana Cloud:
 
 - Metrics APIs: `http_requests_total{environment="production"}`
 - Metrics workers: `worker_queue_jobs_total{environment="production"}`
-- Traces: service `nvbes-identity-api` ou `nvbes-drive-api`
+- Traces: service `nvbes-account-service` ou `nvbes-cloud-service`
 - PostHog Traces: evenement trace visible dans PostHog uniquement apres
   redaction et tail sampling Alloy.
 - PostHog Logs: lignes JSON redacted, sans email/IP/token/object key.
-- Profiles: applications `identity-api`, `drive-api`, `identity-worker`,
-  `drive-worker`
+- Profiles: applications `account-service`, `cloud-service`, `account-worker`,
+  `cloud-worker`
 - Logs: `{platform="nvbes", environment="production"}`
 
 ## Traces to profiles

@@ -41,7 +41,9 @@ pub fn build_router(state: BillingAppState) -> axum::Router {
             state.clone(),
             nvbes_observability::middleware::observe_request,
         ))
-        .layer(axum::middleware::from_fn(nvbes_core::security::security_headers))
+        .layer(axum::middleware::from_fn(
+            nvbes_core::security::security_headers,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             state.config.clone(),
             nvbes_core::http::client_ip::trusted_client_ip_middleware,

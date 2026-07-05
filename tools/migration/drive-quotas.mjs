@@ -9,23 +9,23 @@ const outputPath = "docs/migration/drive-quotas.generated.json";
 const markdownPath = "docs/migration/drive-quotas.md";
 
 const sources = {
-	quotaLogic: "apps/drive-api/src/drive.domains.quotas.logic.rs",
-	quotaService: "apps/drive-api/src/drive.domains.quotas.service.rs",
-	quotaDb: "apps/drive-api/src/drive.domains.quotas.db.rs",
-	quotaRoutes: "apps/drive-api/src/drive.domains.quotas.routes.rs",
-	quotaTypes: "apps/drive-api/src/drive.domains.quotas.types.rs",
-	quotaObservability: "apps/drive-api/src/drive.domains.quotas.observability.rs",
-	uploadCore: "apps/drive-api/src/drive.domains.uploads.core.rs",
-	uploadComplete: "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
-	uploadAppend: "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
-	downloadStream: "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
-	downloadUrl: "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
-	sharePublic: "apps/drive-api/src/drive.domains.share_links.public.rs",
-	publicApiQuota: "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
-	workerMaintenance: "apps/drive-worker/src/drive.workers.maintenance.rs",
-	workerDispatch: "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
-	openapiSource: "apps/drive-api/src/drive.http.openapi.rs",
-	openapiJson: "apps/drive-api/openapi.json",
+	quotaLogic: "apps/cloud-service/src/drive.domains.quotas.logic.rs",
+	quotaService: "apps/cloud-service/src/drive.domains.quotas.service.rs",
+	quotaDb: "apps/cloud-service/src/drive.domains.quotas.db.rs",
+	quotaRoutes: "apps/cloud-service/src/drive.domains.quotas.routes.rs",
+	quotaTypes: "apps/cloud-service/src/drive.domains.quotas.types.rs",
+	quotaObservability: "apps/cloud-service/src/drive.domains.quotas.observability.rs",
+	uploadCore: "apps/cloud-service/src/drive.domains.uploads.core.rs",
+	uploadComplete: "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
+	uploadAppend: "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
+	downloadStream: "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
+	downloadUrl: "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
+	sharePublic: "apps/cloud-service/src/drive.domains.share_links.public.rs",
+	publicApiQuota: "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
+	workerMaintenance: "apps/cloud-worker/src/drive.workers.maintenance.rs",
+	workerDispatch: "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
+	openapiSource: "apps/cloud-service/src/drive.http.openapi.rs",
+	openapiJson: "apps/cloud-service/openapi.json",
 	dataMap: "docs/migration/data-map.md",
 	jobMap: "docs/migration/job-map.md",
 };
@@ -130,8 +130,8 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match drive quotas source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-drive-api quota --locked",
-		"cargo test -p nvbes-drive-worker recalculate_quotas_updates_used_storage_bytes --locked",
+		"cargo test -p nvbes-cloud-service quota --locked",
+		"cargo test -p nvbes-cloud-worker recalculate_quotas_updates_used_storage_bytes --locked",
 		"pnpm check:migration-reconciliation-report",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -199,8 +199,8 @@ const report = {
 		command: "tools/migration/drive-quotas.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-drive-api quota --locked",
-			"cargo test -p nvbes-drive-worker recalculate_quotas_updates_used_storage_bytes --locked",
+			"cargo test -p nvbes-cloud-service quota --locked",
+			"cargo test -p nvbes-cloud-worker recalculate_quotas_updates_used_storage_bytes --locked",
 			"pnpm check:migration-reconciliation-report",
 		],
 	},

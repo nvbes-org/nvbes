@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::State,
-    http::{Request, StatusCode},
+    http::Request,
     middleware::Next,
     routing::{get, post},
 };
@@ -31,12 +31,11 @@ pub fn router(state: &BillingAppState) -> Router<BillingAppState> {
             nvbes_core::http::internal_observability::internal_observability_guard,
         ));
 
-    let internal_billing_routes = crate::domains::usage::router().layer(
-        axum::middleware::from_fn_with_state(
+    let internal_billing_routes =
+        crate::domains::usage::router().layer(axum::middleware::from_fn_with_state(
             state.config.clone(),
             nvbes_core::http::internal_observability::internal_observability_guard,
-        ),
-    );
+        ));
 
     Router::new()
         .route("/health", get(health))
@@ -69,13 +68,9 @@ async fn error_reporting_smoke(
     State(state): State<BillingAppState>,
 ) -> Json<nvbes_observability::ErrorReportingSmokeResult> {
     Json(nvbes_observability::capture_error_reporting_smoke(
-        "billing-api",
+        "billing-service",
         &state.config.environment,
         "api",
         state.config.sentry_dsn.is_some(),
     ))
-}
-
-async fn no_content() -> StatusCode {
-    StatusCode::NO_CONTENT
 }

@@ -24,10 +24,10 @@ export default defineConfig(({ mode }) => {
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
   const envSources = [process.env, localEnv, rootEnv];
 
-  const identityApiBaseUrl =
-    process.env.VITE_IDENTITY_API_BASE_URL ||
-    localEnv.VITE_IDENTITY_API_BASE_URL ||
-    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+  const accountServiceBaseUrl =
+    process.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    localEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    rootEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
     'http://localhost:4000';
 
   const sentryDsn =
@@ -158,27 +158,27 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/auth': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/oauth': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/csp-report': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/workspaces': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/legal': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
       },

@@ -46,7 +46,7 @@ export async function installCredentials(page: Page, backofficeRole = 'platform_
   await page.addInitScript(
     ({ actorIdValue, backofficeRoleValue, secondApproverPrincipalIdValue, tenantWorkspaceId }) => {
       window.localStorage.setItem(
-        'nvbes.internal-admin.credentials',
+        'nvbes.backoffice-service.credentials',
         JSON.stringify({
           workspaceId: tenantWorkspaceId,
           internalToken: 'test-internal-token',

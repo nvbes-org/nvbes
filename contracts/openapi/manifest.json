@@ -1,11 +1,11 @@
 {
   "apis": [
     {
-      "name": "identity-api",
+      "name": "account-service",
       "surface": "identity-product",
       "version": "0.1.0",
-      "document": "apps/identity-api/openapi.json",
-      "routeSource": "apps/identity-api/src",
+      "document": "apps/account-service/openapi.json",
+      "routeSource": "apps/account-service/src",
       "routeCoverage": "utoipa-paths"
     },
     {
@@ -14,7 +14,7 @@
       "version": "0.1.0",
       "versionPrefix": "/v1",
       "document": "docs/api/openapi/drive-public-v1.openapi.json",
-      "routeSource": "apps/drive-api/src",
+      "routeSource": "apps/cloud-service/src",
       "routeCoverage": "utoipa-paths"
     }
   ]

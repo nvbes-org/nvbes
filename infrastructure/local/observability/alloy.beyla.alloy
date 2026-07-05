@@ -18,13 +18,13 @@ prometheus.remote_write "mimir" {
 beyla.ebpf "identity" {
   discovery {
     instrument {
-      name       = "identity-api"
+      name       = "account-service"
       open_ports = "4000"
       exports    = ["metrics", "traces"]
     }
 
     instrument {
-      name       = "identity-worker"
+      name       = "account-worker"
       open_ports = "4102"
       exports    = ["metrics", "traces"]
     }

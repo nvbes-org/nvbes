@@ -17,5 +17,5 @@ and Enterprise through internal contracts or read models. It must not become the
 source of truth for customer domains, and `scope:internal` code must not be
 imported by OSS or Cloud projects.
 
-The old `internal-admin` and `internal-admin-web` names are allowed only in
+The old `backoffice-service` and `backoffice-web` names are allowed only in
 migration evidence until the old-name deletion gate.

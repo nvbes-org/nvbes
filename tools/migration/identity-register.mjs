@@ -8,13 +8,13 @@ const write = args.includes("--write");
 const outputPath = "docs/migration/identity-register.generated.json";
 const markdownPath = "docs/migration/identity-register.md";
 const sources = {
-	registerRoute: "apps/identity-api/src/identity.domains.auth.routes.register.rs",
-	registerRouteTests: "apps/identity-api/src/identity.domains.auth.routes.register.tests.rs",
-	onboarding: "apps/identity-api/src/identity.domains.auth.onboarding.rs",
-	accountDb: "apps/identity-api/src/identity.domains.auth.db.account.rs",
-	authRoutes: "apps/identity-api/src/identity.domains.auth.routes.rs",
-	openapiSource: "apps/identity-api/src/identity.http.openapi.rs",
-	openapiJson: "apps/identity-api/openapi.json",
+	registerRoute: "apps/account-service/src/identity.domains.auth.routes.register.rs",
+	registerRouteTests: "apps/account-service/src/identity.domains.auth.routes.register.tests.rs",
+	onboarding: "apps/account-service/src/identity.domains.auth.onboarding.rs",
+	accountDb: "apps/account-service/src/identity.domains.auth.db.account.rs",
+	authRoutes: "apps/account-service/src/identity.domains.auth.routes.rs",
+	openapiSource: "apps/account-service/src/identity.http.openapi.rs",
+	openapiJson: "apps/account-service/openapi.json",
 	contractSmoke: "scripts/test-openapi-contract.mjs",
 };
 
@@ -110,7 +110,7 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match identity register source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api register_input_from_request --locked",
+		"cargo test -p nvbes-account-service register_input_from_request --locked",
 		"bash scripts/test-openapi-contract-seeded-auth.sh",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -178,7 +178,7 @@ const report = {
 		command: "tools/migration/identity-register.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api register_input_from_request --locked",
+			"cargo test -p nvbes-account-service register_input_from_request --locked",
 			"bash scripts/test-openapi-contract-seeded-auth.sh",
 		],
 	},

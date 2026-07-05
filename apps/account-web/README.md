@@ -64,7 +64,7 @@ src/
   - `POST /api/v1/auth/mfa/webauthn/register/finish`
 - Billing:
   - les vues Billing peuvent rester dans Identity Web;
-  - les lectures/actions Billing doivent passer par `billing-api` ou le gateway, pas par l'API Identity locale.
+  - les lectures/actions Billing doivent passer par `billing-service` ou le gateway, pas par l'API Identity locale.
 - OAuth Device Flow:
   - `POST /oauth/device/verify`
   - `POST /oauth/device/approve`
@@ -73,7 +73,7 @@ src/
 ## Demarrage
 
 ```bash
-pnpm --dir apps/identity-web dev
+pnpm --dir apps/account-web dev
 ```
 
-Le proxy Vite redirige `/api` et `/oauth` vers l'Identity API.
+Le proxy Vite redirige `/api` et `/oauth` vers l'Account Service.

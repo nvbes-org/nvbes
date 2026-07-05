@@ -8,7 +8,7 @@ import { NvbesIdentity } from './index';
 
 function identity() {
   return new NvbesIdentity({
-    clientId: 'drive-web',
+    clientId: 'cloud-web',
     redirectUri: 'https://drive.example/callback',
     authorizationUrl: 'https://identity.example/oauth/authorize',
     tokenUrl: 'https://identity.example/oauth/token',
@@ -25,7 +25,7 @@ describe('NvbesIdentity', () => {
     const url = new URL(identity().getAuthorizationUrl('openid email', 'state-1', 'challenge-1'));
 
     expect(url.searchParams.get('response_type')).toBe('code');
-    expect(url.searchParams.get('client_id')).toBe('drive-web');
+    expect(url.searchParams.get('client_id')).toBe('cloud-web');
     expect(url.searchParams.get('redirect_uri')).toBe('https://drive.example/callback');
     expect(url.searchParams.get('code_challenge')).toBe('challenge-1');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');

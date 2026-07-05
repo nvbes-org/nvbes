@@ -84,7 +84,7 @@ export function buildAccountPrivacyConsentActions({
       ) {
         setTrackingConsent(
           consentAfterCookieRevocation(consent.consent_type),
-          'identity-web:account-privacy:revoke',
+          'account-web:account-privacy:revoke',
         );
         setCookieConsentRevision((revision) => revision + 1);
       }

@@ -9,22 +9,22 @@ const outputPath = "docs/migration/developer-oauth-tokens.generated.json";
 const markdownPath = "docs/migration/developer-oauth-tokens.md";
 
 const sources = {
-	openapi: "apps/identity-api/openapi.json",
-	openapiExport: "apps/identity-api/src/identity.http.openapi.rs",
-	oauthRoutes: "apps/identity-api/src/identity.domains.oauth.routes.clients.rs",
-	oauthCreate: "apps/identity-api/src/identity.domains.oauth.clients.create.rs",
-	oauthRevoke: "apps/identity-api/src/identity.domains.oauth.clients.revoke.rs",
-	clientCredentialsTests: "apps/identity-api/src/identity.domains.oauth.flows.client_credentials.tests.rs",
-	tokenInspectRoutes: "apps/identity-api/src/identity.domains.developer.tokens.routes.rs",
-	tokenDebugRoutes: "apps/identity-api/src/identity.domains.developer.routes.tokens.rs",
-	tokenDebugTests: "apps/identity-api/src/identity.domains.developer.routes.tokens.tests.rs",
-	developerOAuthRoutes: "apps/identity-api/src/identity.domains.developer.routes.oauth.clients.rs",
+	openapi: "apps/account-service/openapi.json",
+	openapiExport: "apps/account-service/src/identity.http.openapi.rs",
+	oauthRoutes: "apps/account-service/src/identity.domains.oauth.routes.clients.rs",
+	oauthCreate: "apps/account-service/src/identity.domains.oauth.clients.create.rs",
+	oauthRevoke: "apps/account-service/src/identity.domains.oauth.clients.revoke.rs",
+	clientCredentialsTests: "apps/account-service/src/identity.domains.oauth.flows.client_credentials.tests.rs",
+	tokenInspectRoutes: "apps/account-service/src/identity.domains.developer.tokens.routes.rs",
+	tokenDebugRoutes: "apps/account-service/src/identity.domains.developer.routes.tokens.rs",
+	tokenDebugTests: "apps/account-service/src/identity.domains.developer.routes.tokens.tests.rs",
+	developerOAuthRoutes: "apps/account-service/src/identity.domains.developer.routes.oauth.clients.rs",
 	sdkCore: "libs/ts/identity-sdk-core/src/types.gen.ts",
 	identityClient: "libs/ts/identity-client/src/index.ts",
-	developerApi: "apps/developer-web/src/developer.api.ts",
-	developerSchemas: "apps/developer-web/src/developer.schemas.ts",
-	developerSchemaTests: "apps/developer-web/src/__tests__/developer.schemas.test.ts",
-	developerTokenTests: "apps/developer-web/src/__tests__/developer.token-health.test.ts",
+	developerApi: "apps/console-web/src/developer.api.ts",
+	developerSchemas: "apps/console-web/src/developer.schemas.ts",
+	developerSchemaTests: "apps/console-web/src/__tests__/developer.schemas.test.ts",
+	developerTokenTests: "apps/console-web/src/__tests__/developer.token-health.test.ts",
 };
 
 const errors = [];
@@ -99,12 +99,12 @@ function buildChecks() {
 		textCheck("sdk-token-inspect-types", sources.sdkCore, "Generated SDK core includes token inspection result types", "InspectDeveloperTokenResponse"),
 		textCheck("identity-client-oauth-list", sources.identityClient, "Handwritten identity client lists OAuth clients", "listOAuthClients"),
 		textCheck("identity-client-oauth-revoke", sources.identityClient, "Handwritten identity client revokes OAuth clients", "revokeOAuthClient"),
-		textCheck("developer-web-oauth-list", sources.developerApi, "Developer web consumes OAuth client list API", "listDeveloperOAuthClients"),
-		textCheck("developer-web-token-debug", sources.developerApi, "Developer web consumes token debug API", "debugDeveloperToken"),
-		textCheck("developer-web-oauth-schema", sources.developerSchemas, "Developer web validates OAuth client summaries", "DeveloperOAuthClientsSchema"),
-		textCheck("developer-web-token-schema", sources.developerSchemas, "Developer web validates debug token responses", "DebugDeveloperTokenSchema"),
-		textCheck("developer-web-oauth-schema-test", sources.developerSchemaTests, "Developer web schema test parses OAuth client summaries", "parses OAuth client summaries"),
-		textCheck("developer-web-token-schema-test", sources.developerTokenTests, "Developer web token test rejects raw token material in parsed debug response", "parses token debug responses without raw token material"),
+		textCheck("console-web-oauth-list", sources.developerApi, "Developer web consumes OAuth client list API", "listDeveloperOAuthClients"),
+		textCheck("console-web-token-debug", sources.developerApi, "Developer web consumes token debug API", "debugDeveloperToken"),
+		textCheck("console-web-oauth-schema", sources.developerSchemas, "Developer web validates OAuth client summaries", "DeveloperOAuthClientsSchema"),
+		textCheck("console-web-token-schema", sources.developerSchemas, "Developer web validates debug token responses", "DebugDeveloperTokenSchema"),
+		textCheck("console-web-oauth-schema-test", sources.developerSchemaTests, "Developer web schema test parses OAuth client summaries", "parses OAuth client summaries"),
+		textCheck("console-web-token-schema-test", sources.developerTokenTests, "Developer web token test rejects raw token material in parsed debug response", "parses token debug responses without raw token material"),
 	];
 }
 
@@ -144,9 +144,9 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match developer OAuth/token source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api token_access_decision --locked",
-		"cargo test -p nvbes-identity-api machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
-		"pnpm --dir apps/developer-web test -- --run developer.schemas.test.ts developer.token-health.test.ts",
+		"cargo test -p nvbes-account-service token_access_decision --locked",
+		"cargo test -p nvbes-account-service machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
+		"pnpm --dir apps/console-web test -- --run developer.schemas.test.ts developer.token-health.test.ts",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
@@ -213,9 +213,9 @@ const report = {
 		command: "tools/migration/developer-oauth-tokens.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api token_access_decision --locked",
-			"cargo test -p nvbes-identity-api machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
-			"pnpm --dir apps/developer-web test -- --run developer.schemas.test.ts developer.token-health.test.ts",
+			"cargo test -p nvbes-account-service token_access_decision --locked",
+			"cargo test -p nvbes-account-service machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
+			"pnpm --dir apps/console-web test -- --run developer.schemas.test.ts developer.token-health.test.ts",
 		],
 	},
 	summary,

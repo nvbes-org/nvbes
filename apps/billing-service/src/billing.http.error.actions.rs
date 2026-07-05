@@ -32,6 +32,12 @@ impl From<nvbes_billing::checkout_provider::CheckoutProviderError> for AppError 
             nvbes_billing::checkout_provider::CheckoutProviderError::Database(err) => err.into(),
             nvbes_billing::checkout_provider::CheckoutProviderError::Stripe(err) => err.into(),
             nvbes_billing::checkout_provider::CheckoutProviderError::Mollie(err) => err.into(),
+            nvbes_billing::checkout_provider::CheckoutProviderError::ProviderNotImplemented => {
+                Self::conflict(
+                    "provider_not_implemented",
+                    "Billing provider is not implemented for checkout.",
+                )
+            }
         }
     }
 }
@@ -175,6 +181,21 @@ impl From<nvbes_billing::stripe::StripeProviderError> for AppError {
             nvbes_billing::stripe::StripeProviderError::ResponseInvalid(message) => {
                 Self::internal("stripe_response_invalid", message)
             }
+        }
+    }
+}
+
+impl From<nvbes_billing::mollie::MollieProviderError> for AppError {
+    fn from(err: nvbes_billing::mollie::MollieProviderError) -> Self {
+        if err.is_bad_request() {
+            Self::bad_request(err.code(), err.message())
+        } else if matches!(
+            err,
+            nvbes_billing::mollie::MollieProviderError::NotConfigured
+        ) {
+            Self::conflict(err.code(), err.message())
+        } else {
+            Self::internal(err.code(), err.message())
         }
     }
 }

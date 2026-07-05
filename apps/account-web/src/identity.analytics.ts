@@ -58,7 +58,7 @@ function captureCurrentPageView(): void {
   lastTrackedPath = routePath;
   void trackProductEvent('marketing.page_viewed', {
     event_source: 'router',
-    source: 'identity-web',
+    source: 'account-web',
   });
 }
 
@@ -105,17 +105,17 @@ export function initAnalytics() {
   installPageTracking();
 
   initAnalyticsRuntime({
-    appName: 'identity-web',
+    appName: 'account-web',
     analyticsSalt: import.meta.env.VITE_ANALYTICS_ID_SALT,
     getConsent: getAnalyticsConsent,
     onConsentChange: subscribeToConsent,
     getRoutePath: currentPath,
     getCommonProperties: () => ({
-      app_name: 'identity-web',
+      app_name: 'account-web',
       event_source: 'browser',
     }),
     transport: createBrowserAnalyticsTransport({
-      appName: 'identity-web',
+      appName: 'account-web',
       environment: import.meta.env.MODE,
       posthogKey: import.meta.env.VITE_POSTHOG_KEY,
       posthogHost: import.meta.env.VITE_POSTHOG_HOST,

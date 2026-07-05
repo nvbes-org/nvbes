@@ -26,7 +26,7 @@ export function captureCurrentPageView(): void {
   lastTrackedPath = routePath;
   void trackProductEvent('marketing.page_viewed', {
     event_source: 'router',
-    source: 'drive-web',
+    source: 'cloud-web',
   });
 }
 

@@ -3,11 +3,11 @@ export const completedDomainEvidence = {
 		owner: "Identity lead",
 		status: "passed",
 		implementation_evidence: [
-			"apps/identity-api/src/identity.domains.auth.routes.register.rs",
-			"apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
-			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
-			"apps/identity-api/src/identity.domains.auth.routes.login.mfa_flow.rs",
-			"apps/identity-api/openapi.json",
+			"apps/account-service/src/identity.domains.auth.routes.register.rs",
+			"apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
+			"apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
+			"apps/account-service/openapi.json",
 		],
 		migration_evidence: [
 			"docs/migration/identity-register.generated.json",
@@ -24,8 +24,8 @@ export const completedDomainEvidence = {
 		implementation_evidence: [
 			"libs/rust/core/src/authz.policy.rs",
 			"libs/rust/core/src/authz.policy.tests.rs",
-			"apps/identity-api/src/identity.domains.authz.service.rs",
-			"apps/identity-api/src/identity.domains.authz.db.rs",
+			"apps/account-service/src/identity.domains.authz.service.rs",
+			"apps/account-service/src/identity.domains.authz.db.rs",
 		],
 		migration_evidence: [
 			"docs/migration/workspace-membership-roles.generated.json",
@@ -39,12 +39,12 @@ export const completedDomainEvidence = {
 		owner: "Drive lead",
 		status: "passed",
 		implementation_evidence: [
-			"apps/drive-api/src/drive.domains.uploads.core.rs",
-			"apps/drive-api/src/drive.domains.files.transfer.range.rs",
-			"apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
-			"apps/drive-api/src/drive.domains.quotas.logic.rs",
-			"apps/drive-worker/src/drive.workers.maintenance.rs",
-			"apps/drive-api/openapi.json",
+			"apps/cloud-service/src/drive.domains.uploads.core.rs",
+			"apps/cloud-service/src/drive.domains.files.transfer.range.rs",
+			"apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
+			"apps/cloud-service/src/drive.domains.quotas.logic.rs",
+			"apps/cloud-worker/src/drive.workers.maintenance.rs",
+			"apps/cloud-service/openapi.json",
 		],
 		migration_evidence: [
 			"docs/migration/drive-upload-download.generated.json",
@@ -61,8 +61,8 @@ export const completedDomainEvidence = {
 		implementation_evidence: [
 			"libs/rust/billing/src/views.rs",
 			"libs/rust/billing/src/types.rs",
-			"apps/billing-api/src/billing.domains.public_workspace.rs",
-			"apps/billing-api/src/billing.domains.webhooks.rs",
+			"apps/billing-service/src/billing.domains.public_workspace.rs",
+			"apps/billing-service/src/billing.domains.webhooks.rs",
 			"apps/billing-worker/src/billing.worker.jobs.rs",
 		],
 		migration_evidence: [
@@ -80,8 +80,8 @@ export const completedDomainEvidence = {
 		status: "passed",
 		implementation_evidence: [
 			"libs/rust/audit/src/lib.rs",
-			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
-			"apps/drive-api/src/drive.domains.share_links.observability.rs",
+			"apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/cloud-service/src/drive.domains.share_links.observability.rs",
 		],
 		migration_evidence: ["docs/migration/audit-append-only.generated.json"],
 		decision: "go",
@@ -91,9 +91,9 @@ export const completedDomainEvidence = {
 		owner: "Privacy lead",
 		status: "passed",
 		implementation_evidence: [
-			"apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
-			"apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
-			"apps/identity-api/src/identity.email.jobs.rs",
+			"apps/account-worker/src/identity.worker.jobs.process_data_export.rs",
+			"apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
+			"apps/account-service/src/identity.email.jobs.rs",
 		],
 		migration_evidence: ["docs/migration/privacy-export-delete.generated.json"],
 		decision: "go",
@@ -103,10 +103,10 @@ export const completedDomainEvidence = {
 		owner: "Developer Platform lead",
 		status: "passed",
 		implementation_evidence: [
-			"apps/identity-api/src/identity.domains.developer.routes.oauth.rs",
-			"apps/identity-api/src/identity.domains.developer.routes.tokens.rs",
-			"apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
-			"apps/developer-web/src/developer.router.tsx",
+			"apps/account-service/src/identity.domains.developer.routes.oauth.rs",
+			"apps/account-service/src/identity.domains.developer.routes.tokens.rs",
+			"apps/account-service/src/identity.domains.developer.routes.webhooks.rs",
+			"apps/console-web/src/developer.router.tsx",
 			"libs/ts/identity-sdk-core/openapi.json",
 		],
 		migration_evidence: [

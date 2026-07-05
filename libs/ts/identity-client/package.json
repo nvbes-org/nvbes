@@ -1,7 +1,7 @@
 {
   "name": "@nvbes/identity-client",
   "version": "0.1.0",
-  "description": "Typed browser client for nvbes Identity API",
+  "description": "Typed browser client for nvbes Account Service",
   "license": "AGPL-3.0-only",
   "files": [
     "dist"

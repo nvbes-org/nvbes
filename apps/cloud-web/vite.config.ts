@@ -121,19 +121,19 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_STRIPE_API_URL ||
     (stripeEnabled ? 'https://api.stripe.com' : '');
 
-  const configuredDriveApiBaseUrl =
-    process.env.VITE_DRIVE_API_BASE_URL ||
-    localEnv.VITE_DRIVE_API_BASE_URL ||
-    rootEnv.VITE_DRIVE_API_BASE_URL ||
+  const configuredCloudServiceBaseUrl =
+    process.env.VITE_CLOUD_SERVICE_BASE_URL ||
+    localEnv.VITE_CLOUD_SERVICE_BASE_URL ||
+    rootEnv.VITE_CLOUD_SERVICE_BASE_URL ||
     '';
-  const driveApiProxyTarget =
-    process.env.VITE_DRIVE_API_PROXY_TARGET ||
-    localEnv.VITE_DRIVE_API_PROXY_TARGET ||
-    rootEnv.VITE_DRIVE_API_PROXY_TARGET ||
-    process.env.NVBES_DRIVE_API_BASE_URL ||
-    localEnv.NVBES_DRIVE_API_BASE_URL ||
-    rootEnv.NVBES_DRIVE_API_BASE_URL ||
-    (configuredDriveApiBaseUrl.startsWith('http') ? configuredDriveApiBaseUrl : '') ||
+  const cloudServiceProxyTarget =
+    process.env.VITE_CLOUD_SERVICE_PROXY_TARGET ||
+    localEnv.VITE_CLOUD_SERVICE_PROXY_TARGET ||
+    rootEnv.VITE_CLOUD_SERVICE_PROXY_TARGET ||
+    process.env.NVBES_CLOUD_SERVICE_BASE_URL ||
+    localEnv.NVBES_CLOUD_SERVICE_BASE_URL ||
+    rootEnv.NVBES_CLOUD_SERVICE_BASE_URL ||
+    (configuredCloudServiceBaseUrl.startsWith('http') ? configuredCloudServiceBaseUrl : '') ||
     'http://localhost:4002';
 
   const cspHeader = getCsp(mode, stripeJsUrl, stripeApiUrl);
@@ -240,7 +240,7 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: driveApiProxyTarget,
+          target: cloudServiceProxyTarget,
           changeOrigin: true,
           rewrite: (requestPath: string) => requestPath.replace(/^\/api/u, ''),
         },

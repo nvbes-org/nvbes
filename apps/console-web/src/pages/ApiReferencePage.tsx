@@ -32,7 +32,7 @@ export function ApiReferencePage() {
     <section className="mx-auto grid max-w-5xl gap-6 px-6 py-10">
       <header>
         <h1 className="text-3xl font-semibold md:text-5xl">
-          {openApiQuery.data?.info?.title ?? 'Identity API reference'}
+          {openApiQuery.data?.info?.title ?? 'Account Service reference'}
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">
           Version {openApiQuery.data?.info?.version ?? '-'} · {paths.length} paths
@@ -45,8 +45,8 @@ export function ApiReferencePage() {
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4">
           <h2 className="text-sm font-semibold text-destructive">API connection error</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            OpenAPI metadata could not be loaded from the Identity API. Start the API service or
-            configure the developer-web proxy target, then reload this page.
+            OpenAPI metadata could not be loaded from the Account Service. Start the API service or
+            configure the console-web proxy target, then reload this page.
           </p>
         </div>
       ) : null}

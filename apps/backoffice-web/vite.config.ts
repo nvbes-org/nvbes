@@ -17,7 +17,7 @@ function cspFor(mode: string): string {
 
 function cspPlugin(mode: string): Plugin {
   return {
-    name: 'internal-admin-csp',
+    name: 'backoffice-service-csp',
     transformIndexHtml(html: string) {
       const csp = cspFor(mode).replace("; frame-ancestors 'none'", '');
       return html.replace(
@@ -31,10 +31,10 @@ function cspPlugin(mode: string): Plugin {
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
-  const internalAdminApiBaseUrl =
-    process.env.VITE_INTERNAL_ADMIN_API_BASE_URL ||
-    localEnv.VITE_INTERNAL_ADMIN_API_BASE_URL ||
-    rootEnv.VITE_INTERNAL_ADMIN_API_BASE_URL ||
+  const backofficeServiceBaseUrl =
+    process.env.VITE_BACKOFFICE_SERVICE_BASE_URL ||
+    localEnv.VITE_BACKOFFICE_SERVICE_BASE_URL ||
+    rootEnv.VITE_BACKOFFICE_SERVICE_BASE_URL ||
     'http://localhost:4000';
   const cspHeader = cspFor(mode);
 
@@ -69,8 +69,8 @@ export default defineConfig(({ mode }) => {
         'Permissions-Policy': permissionsPolicy,
       },
       proxy: {
-        '/admin': { target: internalAdminApiBaseUrl, changeOrigin: true },
-        '/workspaces': { target: internalAdminApiBaseUrl, changeOrigin: true },
+        '/admin': { target: backofficeServiceBaseUrl, changeOrigin: true },
+        '/workspaces': { target: backofficeServiceBaseUrl, changeOrigin: true },
       },
     },
     preview: {

@@ -9,15 +9,15 @@ const outputPath = "docs/migration/privacy-export-delete.generated.json";
 const markdownPath = "docs/migration/privacy-export-delete.md";
 
 const sources = {
-	openapi: "apps/identity-api/openapi.json",
-	openapiExport: "apps/identity-api/src/identity.http.openapi.rs",
-	exportRoutes: "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.export.rs",
-	deleteRoute: "apps/identity-api/src/identity.domains.auth.routes.session_mgmt.profile.rs",
-	dataExport: "apps/identity-api/src/identity.domains.auth.data_export.rs",
-	accountDeletion: "apps/identity-api/src/identity.domains.auth.account_deletion.rs",
-	emailJobs: "apps/identity-api/src/identity.email.jobs.rs",
-	workerJobs: "apps/identity-worker/src/identity.worker.jobs.execute.rs",
-	workerExport: "apps/identity-worker/src/identity.worker.jobs.process_data_export.rs",
+	openapi: "apps/account-service/openapi.json",
+	openapiExport: "apps/account-service/src/identity.http.openapi.rs",
+	exportRoutes: "apps/account-service/src/identity.domains.auth.routes.session_mgmt.export.rs",
+	deleteRoute: "apps/account-service/src/identity.domains.auth.routes.session_mgmt.profile.rs",
+	dataExport: "apps/account-service/src/identity.domains.auth.data_export.rs",
+	accountDeletion: "apps/account-service/src/identity.domains.auth.account_deletion.rs",
+	emailJobs: "apps/account-service/src/identity.email.jobs.rs",
+	workerJobs: "apps/account-worker/src/identity.worker.jobs.execute.rs",
+	workerExport: "apps/account-worker/src/identity.worker.jobs.process_data_export.rs",
 };
 
 const errors = [];
@@ -136,8 +136,8 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match privacy export/delete source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-worker data_export_worker_payload --locked",
-		"cargo test -p nvbes-identity-api account_export --locked",
+		"cargo test -p nvbes-account-worker data_export_worker_payload --locked",
+		"cargo test -p nvbes-account-service account_export --locked",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
@@ -204,8 +204,8 @@ const report = {
 		command: "tools/migration/privacy-export-delete.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-worker data_export_worker_payload --locked",
-			"cargo test -p nvbes-identity-api account_export --locked",
+			"cargo test -p nvbes-account-worker data_export_worker_payload --locked",
+			"cargo test -p nvbes-account-service account_export --locked",
 		],
 	},
 	summary,

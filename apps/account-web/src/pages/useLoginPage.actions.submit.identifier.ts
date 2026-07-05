@@ -1,5 +1,5 @@
 import { resolvePowChallenge } from '../identity.auth.pow';
-import { identityApiBaseUrl } from '../identity.http';
+import { accountServiceBaseUrl } from '../identity.http';
 import { submitIdentifierStep } from './useLoginPage.steps';
 import type { LoginFormHandler, SubmitActionOptions } from './useLoginPage.actions.submit.shared';
 
@@ -23,7 +23,7 @@ export function buildIdentifierSubmitAction({
       await submitIdentifierStep({
         email,
         decoyLinkClicked: decoyRef.current?.wasClicked() ?? false,
-        powChallenge: await resolvePowChallenge(identityApiBaseUrl),
+        powChallenge: await resolvePowChallenge(accountServiceBaseUrl),
         submitIdentifier: mutations.loginIdentifierMutation.mutateAsync,
         resetMfaState,
         setLoginStateToken,

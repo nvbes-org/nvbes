@@ -35,7 +35,7 @@ Document de reference a tenir a jour avant publication.
 ## 3. Modalités Techniques de Suppression
 
 - **Suppression Logique (Soft Delete)**: La donnée est marquée comme supprimée et n'est plus accessible via les interfaces standard. Elle reste présente en base pour assurer l'intégrité référentielle et permettre une restauration rapide en cas d'erreur.
-- **Purge Physique (Hard Delete)**: Un worker de maintenance (`drive-worker-maintenance`) parcourt périodiquement les données marquées pour suppression dont le délai de rétention est expiré et procède à leur destruction irréversible sur le stockage objet (Scaleway S3).
+- **Purge Physique (Hard Delete)**: Un worker de maintenance (`cloud-worker-maintenance`) parcourt périodiquement les données marquées pour suppression dont le délai de rétention est expiré et procède à leur destruction irréversible sur le stockage objet (Scaleway S3).
 - **Backups**: Les données supprimées physiquement disparaissent des sauvegardes au fur et à mesure de la rotation des cycles de backup (30 jours).
 - **Observabilité Grafana Cloud**: les signaux quittent l'application via
   Grafana Alloy uniquement. Alloy applique redaction, sampling, labels

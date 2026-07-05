@@ -26,19 +26,19 @@ function walk(dir, results = []) {
 }
 
 function checkIdentityRuntimeDoesNotOwnBilling(errors) {
-	for (const file of [...walk("apps/identity-api/src"), ...walk("apps/identity-worker/src")]) {
+	for (const file of [...walk("apps/account-service/src"), ...walk("apps/account-worker/src")]) {
 		const content = readFileSync(file, "utf8");
 		if (file.includes("identity.domains.billing")) {
-			errors.push(`${file}: Identity API must not contain Billing domain runtime files`);
+			errors.push(`${file}: Account Service must not contain Billing domain runtime files`);
 		}
 		if (content.includes("nvbes_billing")) {
-			errors.push(`${file}: Identity API must not import nvbes_billing; use Billing API boundaries instead`);
+			errors.push(`${file}: Account Service must not import nvbes_billing; use Billing API boundaries instead`);
 		}
 		if (
 			file.endsWith("identity.domains.mod.rs") &&
 			(content.includes('identity.domains.billing.mod.rs') || /\bpub\s+mod\s+billing\b/.test(content))
 		) {
-			errors.push(`${file}: Identity API must not compile crate::domains::billing`);
+			errors.push(`${file}: Account Service must not compile crate::domains::billing`);
 		}
 		for (const pattern of [
 			/\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+billing_[a-z0-9_]+\b/i,
@@ -57,7 +57,7 @@ function checkIdentityRuntimeDoesNotOwnBilling(errors) {
 			if (pattern.test(content)) errors.push(`${file}: Identity runtime must not own Billing surface ${pattern}`);
 		}
 	}
-	for (const manifest of ["apps/identity-api/Cargo.toml", "apps/identity-worker/Cargo.toml"]) {
+	for (const manifest of ["apps/account-service/Cargo.toml", "apps/account-worker/Cargo.toml"]) {
 		if (existsSync(manifest) && readFileSync(manifest, "utf8").includes("nvbes-billing")) {
 			errors.push(`${manifest}: Identity runtime must not depend on nvbes-billing`);
 		}
@@ -67,7 +67,7 @@ function checkIdentityRuntimeDoesNotOwnBilling(errors) {
 }
 
 function checkIdentityBetaToolsDoNotOwnBilling(errors) {
-	for (const file of walk("apps/identity-api/src").filter((path) => path.includes("identity.tools.beta"))) {
+	for (const file of walk("apps/account-service/src").filter((path) => path.includes("identity.tools.beta"))) {
 		const content = readFileSync(file, "utf8");
 		for (const pattern of [
 			/\b(?:stripe|mollie|safe'?r|updat'?r|fast'?r)\b/i,
@@ -86,7 +86,7 @@ function checkIdentityBetaToolsDoNotOwnBilling(errors) {
 }
 
 function checkIdentityOpenapiAndClients(errors) {
-	const identityOpenapi = "apps/identity-api/openapi.json";
+	const identityOpenapi = "apps/account-service/openapi.json";
 	if (existsSync(identityOpenapi)) {
 		const content = readFileSync(identityOpenapi, "utf8");
 		if (/["']\/[^"']*\/billing(?:\/|\{|["'])/.test(content)) errors.push(`${identityOpenapi}: Identity OpenAPI must not expose Billing routes`);
@@ -120,8 +120,8 @@ function checkIdentityOpenapiAndClients(errors) {
 		"/workspaces/{workspaceId}/billing/portal/invoices/{invoiceId}/pdf",
 	];
 	for (const file of [
-		...walk("apps/identity-api/src"),
-		"apps/identity-api/openapi.json",
+		...walk("apps/account-service/src"),
+		"apps/account-service/openapi.json",
 		...walk("libs/ts/identity-client/src"),
 		...walk("libs/ts/identity-sdk-core/src"),
 	]) {
@@ -138,7 +138,7 @@ function checkIdentityOpenapiAndClients(errors) {
 }
 
 function checkBillingRuntimeOwnsWebhookPipeline(errors) {
-	checkRequiredEvidence(errors, "apps/billing-api/src/billing.domains.public_workspace.rs", [
+	checkRequiredEvidence(errors, "apps/billing-service/src/billing.domains.public_workspace.rs", [
 		["/workspaces/{workspaceId}/billing/overview", "overview route"],
 		["/workspaces/{workspaceId}/billing/usage", "usage route"],
 		["/workspaces/{workspaceId}/billing/entitlements", "entitlements route"],
@@ -148,7 +148,7 @@ function checkBillingRuntimeOwnsWebhookPipeline(errors) {
 		["/workspaces/{workspaceId}/billing/cards", "cards route"],
 		["/workspaces/{workspaceId}/billing/subscriptions", "subscriptions route"],
 	]);
-	checkRequiredEvidence(errors, "apps/billing-api/src/billing.domains.webhooks.rs", [
+	checkRequiredEvidence(errors, "apps/billing-service/src/billing.domains.webhooks.rs", [
 		["/webhooks/stripe", "Stripe webhook route"],
 		["/webhooks/mollie", "Mollie webhook route"],
 		["body: Bytes", "raw webhook body extraction"],

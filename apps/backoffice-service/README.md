@@ -1,9 +1,9 @@
-# Internal Admin
+# Backoffice
 
 Dedicated private back-office API.
 
 This app owns operator-only endpoints and must stay isolated from public product APIs such as
-`identity-api` and `drive-api`.
+`account-service` and `cloud-service`.
 
 ## Boundary
 

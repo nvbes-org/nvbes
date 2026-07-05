@@ -8,7 +8,7 @@ import { TracingInstrumentation } from '@grafana/faro-web-tracing';
 import type { ClientErrorReportContext } from '@nvbes/web-runtime';
 import { isCategoryAccepted, isVendorAccepted } from './tracking-consent';
 
-const APP_NAME = 'identity-web';
+const APP_NAME = 'account-web';
 
 let faroInstance: Faro | null = null;
 let enabled = false;

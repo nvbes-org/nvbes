@@ -6,24 +6,24 @@ function driveOrigin() {
   return window.location.origin;
 }
 
-function identityWebBaseUrl() {
-  return (import.meta.env.VITE_IDENTITY_WEB_BASE_URL || 'http://localhost:3001').replace(
+function accountWebBaseUrl() {
+  return (import.meta.env.VITE_ACCOUNT_WEB_BASE_URL || 'http://localhost:3001').replace(
     /\/+$/u,
     '',
   );
 }
 
-function identityApiBaseUrl() {
-  return (import.meta.env.VITE_IDENTITY_API_BASE_URL || 'http://localhost:8080').replace(
+function accountServiceBaseUrl() {
+  return (import.meta.env.VITE_ACCOUNT_SERVICE_BASE_URL || 'http://localhost:8080').replace(
     /\/+$/u,
     '',
   );
 }
 
 function identityClientId() {
-  const clientId = import.meta.env.VITE_IDENTITY_CLIENT_ID;
+  const clientId = import.meta.env.VITE_ACCOUNT_CLIENT_ID;
   if (!clientId) {
-    throw new Error('VITE_IDENTITY_CLIENT_ID is required.');
+    throw new Error('VITE_ACCOUNT_CLIENT_ID is required.');
   }
   return clientId;
 }
@@ -31,9 +31,9 @@ function identityClientId() {
 export const identityClient = new NvbesIdentity({
   clientId: identityClientId(),
   redirectUri: `${driveOrigin()}/callback`,
-  authorizationUrl: `${identityWebBaseUrl()}/login`,
-  tokenUrl: `${identityApiBaseUrl()}/oauth/token`,
-  userInfoUrl: `${identityApiBaseUrl()}/oauth/userinfo`,
+  authorizationUrl: `${accountWebBaseUrl()}/login`,
+  tokenUrl: `${accountServiceBaseUrl()}/oauth/token`,
+  userInfoUrl: `${accountServiceBaseUrl()}/oauth/userinfo`,
 });
 
 export const identityRuntimeClient = identityClient as unknown as IdentityRuntimeClient;

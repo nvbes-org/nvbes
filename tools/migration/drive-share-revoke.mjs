@@ -9,18 +9,18 @@ const outputPath = "docs/migration/drive-share-revoke.generated.json";
 const markdownPath = "docs/migration/drive-share-revoke.md";
 
 const sources = {
-	logic: "apps/drive-api/src/drive.domains.share_links.logic.rs",
-	logicTests: "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
-	manage: "apps/drive-api/src/drive.domains.share_links.manage.rs",
-	publicShare: "apps/drive-api/src/drive.domains.share_links.public.rs",
-	db: "apps/drive-api/src/drive.domains.share_links.db.rs",
-	queries: "apps/drive-api/src/drive.domains.share_links.db.queries.rs",
-	manageRoutes: "apps/drive-api/src/drive.domains.share_links.routes.manage.rs",
-	publicRoutes: "apps/drive-api/src/drive.domains.share_links.routes.public.rs",
-	publicApi: "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
-	authz: "apps/drive-api/src/drive.domains.authz.service.rs",
-	openapiSource: "apps/drive-api/src/drive.http.openapi.rs",
-	openapiJson: "apps/drive-api/openapi.json",
+	logic: "apps/cloud-service/src/drive.domains.share_links.logic.rs",
+	logicTests: "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
+	manage: "apps/cloud-service/src/drive.domains.share_links.manage.rs",
+	publicShare: "apps/cloud-service/src/drive.domains.share_links.public.rs",
+	db: "apps/cloud-service/src/drive.domains.share_links.db.rs",
+	queries: "apps/cloud-service/src/drive.domains.share_links.db.queries.rs",
+	manageRoutes: "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
+	publicRoutes: "apps/cloud-service/src/drive.domains.share_links.routes.public.rs",
+	publicApi: "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+	authz: "apps/cloud-service/src/drive.domains.authz.service.rs",
+	openapiSource: "apps/cloud-service/src/drive.http.openapi.rs",
+	openapiJson: "apps/cloud-service/openapi.json",
 	dataMap: "docs/migration/data-map.md",
 };
 
@@ -119,7 +119,7 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match drive share/revoke source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-drive-api share_link --locked",
+		"cargo test -p nvbes-cloud-service share_link --locked",
 		"pnpm check:migration-reconciliation-report",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -187,7 +187,7 @@ const report = {
 		command: "tools/migration/drive-share-revoke.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-drive-api share_link --locked",
+			"cargo test -p nvbes-cloud-service share_link --locked",
 			"pnpm check:migration-reconciliation-report",
 		],
 	},

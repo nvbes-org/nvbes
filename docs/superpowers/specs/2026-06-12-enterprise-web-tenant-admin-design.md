@@ -8,8 +8,8 @@ The core product distinction is mandatory:
 
 - `Enterprise / Tenant` is the root administration scope.
 - `Workspace` is a managed resource inside the tenant.
-- `identity-web` stays focused on personal account, login, MFA, sessions, and identity settings.
-- `drive-web` stays focused on Drive product usage.
+- `account-web` stays focused on personal account, login, MFA, sessions, and identity settings.
+- `cloud-web` stays focused on Drive product usage.
 - `enterprise-web` owns users, workspaces, developers, policies, security, billing, usage, audit, and tenant settings.
 
 The first complete V0 workflow is `Users`: invite people, assign tenant roles, grant module access, assign workspaces, suspend or reactivate memberships, and show policy warnings before risky changes.
@@ -34,20 +34,20 @@ Out of scope for this V0:
 - full compliance export workflows;
 - fine-grained ACLs below workspace and module scope;
 - white-label theming beyond tenant identity display;
-- replacing existing `identity-web` or `drive-web` flows.
+- replacing existing `account-web` or `cloud-web` flows.
 
 ## Architecture
 
-`enterprise-web` is a first-class app, not a route inside `identity-web`.
+`enterprise-web` is a first-class app, not a route inside `account-web`.
 
 Product responsibilities:
 
-- `identity-web`: personal identity and authentication UX.
+- `account-web`: personal identity and authentication UX.
 - `enterprise-web`: tenant administration UX.
-- `drive-web`: Drive product UX.
-- `identity-api`: security boundary for authn, authz, tenant, workspace, billing, developer, and policy data.
+- `cloud-web`: Drive product UX.
+- `account-service`: security boundary for authn, authz, tenant, workspace, billing, developer, and policy data.
 
-Frontend foundations should match the current web stack: React, Vite, TanStack Router, TanStack Query, `@nvbes/web-runtime`, existing UI patterns, and typed identity API clients.
+Frontend foundations should match the current web stack: React, Vite, TanStack Router, TanStack Query, `@nvbes/web-runtime`, existing UI patterns, and typed Account service clients.
 
 Every `enterprise-web` route starts from tenant context. Workspace context is optional and only appears when editing workspace-scoped data.
 
@@ -189,7 +189,7 @@ Required contract shape:
 - `GET /api/v1/enterprise/billing`: billing overview and portal availability.
 - `GET /api/v1/enterprise/usage`: usage summaries.
 
-Final route names may follow existing `identity-api` conventions, but the boundary must remain tenant-first.
+Final route names may follow existing `account-service` conventions, but the boundary must remain tenant-first.
 
 ## Error Handling
 

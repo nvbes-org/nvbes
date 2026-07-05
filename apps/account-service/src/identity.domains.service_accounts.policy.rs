@@ -9,7 +9,7 @@ use crate::{
     http::error::AppError,
 };
 
-pub const DRIVE_AUDIENCE: &str = "nvbes-drive-api";
+pub const DRIVE_AUDIENCE: &str = "nvbes-cloud-service";
 
 pub fn require_name(value: &str) -> Result<String, AppError> {
     let value = value.trim();

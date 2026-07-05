@@ -18,18 +18,18 @@ The V1 must be production-connected. Surfaces that create, inspect, or mutate Id
 
 The developer experience will be a new frontend app:
 
-- Project: `apps/developer-web`
-- Package name: `nvbes-developer-web`
+- Project: `apps/console-web`
+- Package name: `nvbes-console-web`
 - Nx tags: `type:app`, `domain:identity`, `layer:app`
 - Runtime: React, Vite, TanStack Router, TanStack Query, TypeScript, shared `@nvbes/web-ui` and `@nvbes/web-runtime`
 
-The portal will not be implemented as a section under `apps/identity-web`. It needs a wider, workflow-oriented layout and a dedicated information architecture.
+The portal will not be implemented as a section under `apps/account-web`. It needs a wider, workflow-oriented layout and a dedicated information architecture.
 
-The backend remains in `apps/identity-api`. A new `developer` domain will act as a product facade over OAuth, sessions, logs, webhooks, OpenAPI metadata, and SDK information. This avoids leaking internal OAuth or tenant details directly into the frontend.
+The backend remains in `apps/account-service`. A new `developer` domain will act as a product facade over OAuth, sessions, logs, webhooks, OpenAPI metadata, and SDK information. This avoids leaking internal OAuth or tenant details directly into the frontend.
 
 ## Routing
 
-Public routes in `developer-web`:
+Public routes in `console-web`:
 
 - `/`
 - `/quickstarts/react`
@@ -93,7 +93,7 @@ Tenant `owner`, `admin`, and `security_admin` roles can bootstrap developer role
 
 ## Backend Design
 
-Add a new flat Rust domain under `apps/identity-api/src`:
+Add a new flat Rust domain under `apps/account-service/src`:
 
 - `identity.domains.developer.mod.rs`
 - `identity.domains.developer.rbac.rs`
@@ -239,24 +239,24 @@ Rust validation:
 
 Frontend validation:
 
-- `pnpm exec nx run developer-web:typecheck`
-- `pnpm exec nx run developer-web:lint`
+- `pnpm exec nx run console-web:typecheck`
+- `pnpm exec nx run console-web:lint`
 - Targeted tests for permission gating, client ID copy, token inspector parsing, and webhook form validation.
 - Browser verification for desktop and mobile layouts.
 
 Repository validation:
 
 - Run `cargo check --workspace` after Rust changes.
-- Run targeted frontend checks for `developer-web`.
+- Run targeted frontend checks for `console-web`.
 - Run `pnpm generate:openapi` after OpenAPI changes.
 
 ## Implementation Boundaries
 
 In scope for V1:
 
-- New `developer-web` app.
+- New `console-web` app.
 - Developer RBAC predefined roles and explicit permissions.
-- Developer backend facade in `identity-api`.
+- Developer backend facade in `account-service`.
 - OAuth app dashboard with redirects and client ID copy.
 - OpenAPI and SDK generation updates.
 - Quickstarts for React, Rust Axum, Node, and curl.

@@ -6,7 +6,7 @@ export function TrackingConsentBanner() {
     <SharedTrackingConsentBanner
       getTrackingConsent={getTrackingConsent}
       setTrackingConsent={setTrackingConsent}
-      sourcePrefix="drive-web"
+      sourcePrefix="cloud-web"
       sessionReplayDescription="Relecture masquée, bloquée sur auth, billing et fichiers."
     />
   );

@@ -244,7 +244,7 @@ pub(super) async fn seed_admin_workspace(
           status,
           created_at
         )
-        VALUES ($1, 'workspace', $2, ARRAY['drive.files.read', 'drive.workspace.read'], ARRAY['nvbes-drive-api'], ARRAY['drive'], 'aal1', 'active', $3)
+        VALUES ($1, 'workspace', $2, ARRAY['drive.files.read', 'drive.workspace.read'], ARRAY['nvbes-cloud-service'], ARRAY['drive'], 'aal1', 'active', $3)
         "#,
     )
     .bind(client_uuid)

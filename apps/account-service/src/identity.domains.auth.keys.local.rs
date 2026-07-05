@@ -88,7 +88,7 @@ fn local_signing_key_path() -> Result<PathBuf, AppError> {
                 .map_err(|e| AppError::internal("workspace_root_unavailable", e.to_string()))?,
         );
 
-    Ok(root.join(".temp/identity-api/jwt/private_key.pem"))
+    Ok(root.join(".temp/account-service/jwt/private_key.pem"))
 }
 
 fn persist_local_signing_key(path: &Path, private_key_pem: &str) -> Result<(), AppError> {

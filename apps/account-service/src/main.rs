@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.iter().any(|a| a == "--export-openapi") {
-        let doc = nvbes_identity_api::http::openapi::IdentityApiDoc::openapi();
+        let doc = nvbes_account_service::http::openapi::IdentityApiDoc::openapi();
         println!("{}", doc.to_json()?);
         return Ok(());
     }
@@ -33,18 +33,18 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    let _error_reporting_guard = init_error_reporting_for_service(&config, "identity-api");
+    let _error_reporting_guard = init_error_reporting_for_service(&config, "account-service");
     install_safe_panic_hook();
     init_tracing(&config);
     let _profiling_guard =
-        start_continuous_profiling(&config, "identity-api").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "account-service").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
 
     sqlx::migrate!("./migrations").run(&db).await?;
 
-    let state = nvbes_identity_api::app::AppState::bootstrap(&config, db).await?;
-    let app = nvbes_identity_api::app::build_router(state);
+    let state = nvbes_account_service::app::AppState::bootstrap(&config, db).await?;
+    let app = nvbes_account_service::app::build_router(state);
 
     let http_addr: SocketAddr = format!("0.0.0.0:{}", config.api_port).parse()?;
     let http_listener = keep_alive::bind_listener_with_keepalive(http_addr, 4096)?;
@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
 
         mtls_handle.graceful_shutdown(Some(Duration::from_secs(30)));
     } else {
-        tracing::info!(%http_addr, "Starting nvbes Identity API");
+        tracing::info!(%http_addr, "Starting nvbes Account Service");
         axum::serve(
             http_listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),

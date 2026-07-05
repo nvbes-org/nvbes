@@ -14,19 +14,19 @@
 
 | File | Action | Responsibility |
 |------|--------|---------------|
-| `apps/drive-web/src/DriveWorkspaceSwitcher.tsx` | Create | Dropdown component listing workspaces, handles switch action |
-| `apps/drive-web/src/DriveCommandHeader.tsx` | Modify | Accept optional `workspaceSwitcher` prop, render instead of plain text |
-| `apps/drive-web/src/DriveShell.tsx` | Modify | Instantiate `DriveWorkspaceSwitcher`, pass to header |
+| `apps/cloud-web/src/DriveWorkspaceSwitcher.tsx` | Create | Dropdown component listing workspaces, handles switch action |
+| `apps/cloud-web/src/DriveCommandHeader.tsx` | Modify | Accept optional `workspaceSwitcher` prop, render instead of plain text |
+| `apps/cloud-web/src/DriveShell.tsx` | Modify | Instantiate `DriveWorkspaceSwitcher`, pass to header |
 
 ---
 
 ### Task 1: Create DriveWorkspaceSwitcher component
 
 **Files:**
-- Create: `apps/drive-web/src/DriveWorkspaceSwitcher.tsx`
-- Uses: `apps/drive-web/src/drive.workspace.switch.ts`
-- Uses: `apps/drive-web/src/drive.queries.ts`
-- Uses: `apps/drive-web/src/drive.api.ts`
+- Create: `apps/cloud-web/src/DriveWorkspaceSwitcher.tsx`
+- Uses: `apps/cloud-web/src/drive.workspace.switch.ts`
+- Uses: `apps/cloud-web/src/drive.queries.ts`
+- Uses: `apps/cloud-web/src/drive.api.ts`
 
 - [ ] **Step 1: Write DriveWorkspaceSwitcher.tsx**
 
@@ -141,7 +141,7 @@ export function DriveWorkspaceSwitcher({
 ### Task 2: Modify DriveCommandHeader to accept workspaceSwitcher prop
 
 **Files:**
-- Modify: `apps/drive-web/src/DriveCommandHeader.tsx`
+- Modify: `apps/cloud-web/src/DriveCommandHeader.tsx`
 
 - [ ] **Step 1: Update props and rendering**
 
@@ -204,7 +204,7 @@ export function DriveCommandHeader({
 ### Task 3: Modify DriveShell to instantiate and pass the switcher
 
 **Files:**
-- Modify: `apps/drive-web/src/DriveShell.tsx`
+- Modify: `apps/cloud-web/src/DriveShell.tsx`
 
 - [ ] **Step 1: Add DriveWorkspaceSwitcher import and instantiation**
 
@@ -328,7 +328,7 @@ export function DriveAppLayout({
 
 - [ ] **Step 3: Verify compilation**
 
-Run: `pnpm check:web` or at minimum check `apps/drive-web` for TypeScript errors
+Run: `pnpm check:web` or at minimum check `apps/cloud-web` for TypeScript errors
 
 ---
 

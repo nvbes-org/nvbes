@@ -20,15 +20,12 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
 
     let account_check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug(
-            "identity-worker",
-            "housekeeping-expired-unverified-accounts",
-        ),
+        &worker_monitor_slug("account-worker", "housekeeping-expired-unverified-accounts"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 
     let result =
-        nvbes_identity_api::domains::auth::email_verification::cleanup_expired_unverified_accounts(
+        nvbes_account_service::domains::auth::email_verification::cleanup_expired_unverified_accounts(
             &state.db,
             state.config.auth_unverified_account_ttl_days,
         )
@@ -66,7 +63,7 @@ async fn run_maxmind_geolite_import_if_due(state: &AppState) -> anyhow::Result<(
 
     let check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug("identity-worker", "housekeeping-maxmind-geolite-import"),
+        &worker_monitor_slug("account-worker", "housekeeping-maxmind-geolite-import"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 
@@ -124,7 +121,7 @@ async fn run_loyalsoldier_geoip_import_if_due(state: &AppState) -> anyhow::Resul
 
     let check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug("identity-worker", "housekeeping-loyalsoldier-geoip-import"),
+        &worker_monitor_slug("account-worker", "housekeeping-loyalsoldier-geoip-import"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 
@@ -157,7 +154,7 @@ async fn run_loyalsoldier_geoip_import_if_due(state: &AppState) -> anyhow::Resul
 async fn run_geo_housekeeping(state: &AppState) -> anyhow::Result<()> {
     let check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug("identity-worker", "housekeeping-geo-lookup-cache"),
+        &worker_monitor_slug("account-worker", "housekeeping-geo-lookup-cache"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 
@@ -193,7 +190,7 @@ async fn run_geo_housekeeping(state: &AppState) -> anyhow::Result<()> {
 async fn run_v2fly_geoip_import_if_due(state: &AppState) -> anyhow::Result<()> {
     let check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug("identity-worker", "housekeeping-v2fly-geoip-import"),
+        &worker_monitor_slug("account-worker", "housekeeping-v2fly-geoip-import"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 

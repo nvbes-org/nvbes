@@ -44,7 +44,11 @@ async fn graphql(
     let request_context = request_context(&headers)?;
     Ok(state
         .schema
-        .execute(request.into_inner().data::<GatewayRequestContext>(request_context))
+        .execute(
+            request
+                .into_inner()
+                .data::<GatewayRequestContext>(request_context),
+        )
         .await
         .into())
 }

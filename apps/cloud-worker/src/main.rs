@@ -8,7 +8,7 @@ use nvbes_observability::{
 #[path = "drive.workers.mod.rs"]
 pub mod workers;
 
-pub use nvbes_drive_api::db;
+pub use nvbes_cloud_service::db;
 
 use db::Database;
 
@@ -17,7 +17,7 @@ const MAINTENANCE_ENQUEUE_MONITOR_SCHEDULE: WorkerMonitorSchedule = WorkerMonito
     checkin_margin_minutes: 60,
     max_runtime_minutes: 30,
 };
-const DRIVE_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_DRIVE_WORKER_METRICS_BIND_ADDR";
+const DRIVE_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_CLOUD_WORKER_METRICS_BIND_ADDR";
 const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
 const DEFAULT_DRIVE_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4101";
 
@@ -33,18 +33,18 @@ async fn main() -> anyhow::Result<()> {
         Some("error-reporting-smoke")
     ) {
         let result =
-            capture_error_reporting_smoke("drive-worker", &config.environment, "worker", false);
+            capture_error_reporting_smoke("cloud-worker", &config.environment, "worker", false);
         println!("{}", serde_json::to_string(&result)?);
         return Ok(());
     }
 
     let _profiling_guard =
-        start_continuous_profiling(&config, "drive-worker").map_err(anyhow::Error::msg)?;
+        start_continuous_profiling(&config, "cloud-worker").map_err(anyhow::Error::msg)?;
 
     let database = Database::connect(&config).await?;
     database.migrate().await?;
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
-    let storage = nvbes_drive_api::app::build_storage(&config).await;
+    let storage = nvbes_cloud_service::app::build_storage(&config).await;
 
     let observability = nvbes_observability::metrics::HttpMetrics::default();
     let metrics_bind_addr = drive_worker_metrics_bind_addr();
@@ -65,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
         Some("enqueue-maintenance") => {
             let check_in = start_worker_monitor_check_in(
                 &config.environment,
-                &worker_monitor_slug("drive-worker", "enqueue-maintenance"),
+                &worker_monitor_slug("cloud-worker", "enqueue-maintenance"),
                 MAINTENANCE_ENQUEUE_MONITOR_SCHEDULE,
             );
 

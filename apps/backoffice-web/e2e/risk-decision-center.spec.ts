@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { installCredentials, installMockApi } from './action-confirmation.mock-api';
 
-test.describe('internal-admin risk decision center @mocked', () => {
+test.describe('backoffice-service risk decision center @mocked', () => {
   test.beforeEach(async ({ page }) => {
     await installCredentials(page);
     await installMockApi(page);

@@ -32,7 +32,7 @@ impl AppState {
     pub async fn bootstrap(config: &AppConfig, db: PgPool) -> anyhow::Result<Self> {
         if config.kms_enabled {
             anyhow::bail!(
-                "NVBES_KMS_ENABLED requires a Cloud KMS adapter. OSS identity-api uses local JWT signing keys."
+                "NVBES_KMS_ENABLED requires a Cloud KMS adapter. OSS account-service uses local JWT signing keys."
             );
         }
 
@@ -55,7 +55,7 @@ impl AppState {
             &local_key.private_key_pem,
             public_keys,
             "nvbes-identity",
-            "nvbes-identity-api",
+            "nvbes-account-service",
             chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
         );
 

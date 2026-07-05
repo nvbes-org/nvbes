@@ -7,13 +7,13 @@ import { defineConfig, loadEnv } from 'vite-plus';
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
-  const identityApiProxyTarget =
-    process.env.VITE_IDENTITY_API_PROXY_TARGET ||
-    localEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    rootEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    process.env.VITE_IDENTITY_API_BASE_URL ||
-    localEnv.VITE_IDENTITY_API_BASE_URL ||
-    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+  const accountServiceProxyTarget =
+    process.env.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    localEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    rootEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    process.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    localEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    rootEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
     'http://localhost:4000';
 
   return {
@@ -54,11 +54,11 @@ export default defineConfig(({ mode }) => {
       port: 5175,
       strictPort: true,
       proxy: {
-        '/auth': identityApiProxyTarget,
-        '/api': identityApiProxyTarget,
-        '/developer': identityApiProxyTarget,
-        '/oauth': identityApiProxyTarget,
-        '/.well-known': identityApiProxyTarget,
+        '/auth': accountServiceProxyTarget,
+        '/api': accountServiceProxyTarget,
+        '/developer': accountServiceProxyTarget,
+        '/oauth': accountServiceProxyTarget,
+        '/.well-known': accountServiceProxyTarget,
       },
     },
   };

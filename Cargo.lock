@@ -3437,6 +3437,80 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-account-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "async-trait",
+ "axum",
+ "axum-server",
+ "base64 0.22.1",
+ "chrono",
+ "flate2",
+ "hex",
+ "hmac 0.12.1",
+ "ipnet",
+ "jsonwebtoken",
+ "libxml",
+ "metrics",
+ "nvbes-analytics-posthog",
+ "nvbes-audit",
+ "nvbes-core",
+ "nvbes-dpop",
+ "nvbes-email",
+ "nvbes-observability",
+ "nvbes-product-analytics",
+ "nvbes-redis",
+ "nvbes-region",
+ "nvbes-tenancy",
+ "oauth2",
+ "openssl",
+ "password-hash",
+ "rand 0.9.4",
+ "rand_core 0.6.4",
+ "reqwest 0.12.28",
+ "roxmltree",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid",
+ "webauthn-rs",
+ "webauthn-rs-core",
+ "xmlsec",
+]
+
+[[package]]
+name = "nvbes-account-worker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "nvbes-account-service",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-observability",
+ "nvbes-product-analytics",
+ "nvbes-redis",
+ "nvbes-region",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "nvbes-analytics-posthog"
 version = "0.1.0"
 dependencies = [
@@ -3455,6 +3529,28 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "uuid",
+]
+
+[[package]]
+name = "nvbes-backoffice-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "metrics",
+ "nvbes-billing",
+ "nvbes-core",
+ "nvbes-observability",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 
@@ -3481,7 +3577,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvbes-billing-api"
+name = "nvbes-billing-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3491,10 +3587,12 @@ dependencies = [
  "nvbes-core",
  "nvbes-observability",
  "nvbes-redis",
+ "protoc-bin-vendored",
  "serde",
  "serde_json",
  "sqlx",
  "tokio",
+ "tonic-prost-build",
  "tower",
  "tower-http",
  "tracing",
@@ -3507,14 +3605,86 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "hex",
  "nvbes-billing",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-observability",
+ "nvbes-product-analytics",
+ "nvbes-redis",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "nvbes-cloud-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aws-config",
+ "aws-sdk-s3",
+ "axum",
+ "axum-server",
+ "base64 0.22.1",
+ "chrono",
+ "data-encoding",
+ "ed25519-dalek",
+ "hmac 0.12.1",
+ "jsonwebtoken",
+ "metrics",
+ "nvbes-account-service",
+ "nvbes-analytics-posthog",
+ "nvbes-audit",
+ "nvbes-core",
+ "nvbes-observability",
+ "nvbes-product-analytics",
+ "nvbes-redis",
+ "nvbes-region",
+ "nvbes-scan",
+ "nvbes-storage",
+ "nvbes-tenancy",
+ "rand 0.9.4",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-swagger-ui",
+ "uuid",
+]
+
+[[package]]
+name = "nvbes-cloud-worker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "futures-util",
+ "nvbes-cloud-service",
  "nvbes-core",
  "nvbes-observability",
  "nvbes-redis",
+ "nvbes-region",
+ "nvbes-storage",
+ "redis",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -3574,71 +3744,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvbes-drive-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "aws-config",
- "aws-sdk-s3",
- "axum",
- "axum-server",
- "base64 0.22.1",
- "chrono",
- "data-encoding",
- "ed25519-dalek",
- "hmac 0.12.1",
- "jsonwebtoken",
- "metrics",
- "nvbes-analytics-posthog",
- "nvbes-audit",
- "nvbes-core",
- "nvbes-identity-api",
- "nvbes-observability",
- "nvbes-product-analytics",
- "nvbes-redis",
- "nvbes-region",
- "nvbes-scan",
- "nvbes-storage",
- "nvbes-tenancy",
- "rand 0.9.4",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sqlx",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "utoipa",
- "utoipa-swagger-ui",
- "uuid",
-]
-
-[[package]]
-name = "nvbes-drive-worker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "futures-util",
- "nvbes-core",
- "nvbes-drive-api",
- "nvbes-observability",
- "nvbes-redis",
- "nvbes-region",
- "nvbes-storage",
- "redis",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
 name = "nvbes-email"
 version = "0.1.0"
 dependencies = [
@@ -3667,7 +3772,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvbes-gateway-graphql"
+name = "nvbes-gateway-cloud"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3688,60 +3793,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nvbes-identity-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "async-trait",
- "axum",
- "axum-server",
- "base64 0.22.1",
- "chrono",
- "flate2",
- "hex",
- "hmac 0.12.1",
- "ipnet",
- "jsonwebtoken",
- "libxml",
- "metrics",
- "nvbes-analytics-posthog",
- "nvbes-audit",
- "nvbes-core",
- "nvbes-dpop",
- "nvbes-email",
- "nvbes-observability",
- "nvbes-product-analytics",
- "nvbes-redis",
- "nvbes-region",
- "nvbes-tenancy",
- "oauth2",
- "openssl",
- "password-hash",
- "rand 0.9.4",
- "rand_core 0.6.4",
- "reqwest 0.12.28",
- "roxmltree",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sqlx",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "url",
- "urlencoding",
- "utoipa",
- "utoipa-swagger-ui",
- "uuid",
- "webauthn-rs",
- "webauthn-rs-core",
- "xmlsec",
-]
-
-[[package]]
 name = "nvbes-identity-sdk"
 version = "0.1.0"
 dependencies = [
@@ -3754,48 +3805,6 @@ dependencies = [
  "thiserror 2.0.18",
  "url",
  "urlencoding",
-]
-
-[[package]]
-name = "nvbes-identity-worker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "nvbes-core",
- "nvbes-email",
- "nvbes-identity-api",
- "nvbes-observability",
- "nvbes-product-analytics",
- "nvbes-redis",
- "nvbes-region",
- "serde_json",
- "sqlx",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "nvbes-internal-admin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "metrics",
- "nvbes-billing",
- "nvbes-core",
- "nvbes-observability",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

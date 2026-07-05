@@ -3,14 +3,15 @@ use nvbes_redis::worker_queue::QueuedJob;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+use super::payloads::EmailSendPayload;
 use crate::worker::BillingWorkerState;
 
 pub(crate) async fn process_billing_email_job(
     state: &BillingWorkerState,
     job: &QueuedJob,
 ) -> anyhow::Result<Value> {
-    let payload: super::EmailSendPayload = serde_json::from_value(job.payload.clone())
-        .context("Invalid billing email job payload")?;
+    let payload: EmailSendPayload =
+        serde_json::from_value(job.payload.clone()).context("Invalid billing email job payload")?;
     let to_email = payload.to_email.clone();
     let subject = payload.subject.clone();
     let reply_to = state
@@ -103,7 +104,9 @@ async fn record_email_sent_event_tx(
     .bind(format!("sent:{provider_email_id}"))
     .bind(provider_email_id)
     .bind(email)
-    .bind(sqlx::types::Json(serde_json::json!({"subject": subject, "domain": "billing"})))
+    .bind(sqlx::types::Json(
+        serde_json::json!({"subject": subject, "domain": "billing"}),
+    ))
     .execute(tx.as_mut())
     .await
     .context("failed to record billing email sent event")?;
