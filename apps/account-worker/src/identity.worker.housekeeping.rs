@@ -25,7 +25,7 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
     );
 
     let result =
-        nvbes_account_service::domains::auth::email_verification::cleanup_expired_unverified_accounts(
+        nvbes_product_account::auth::email_verification::cleanup_expired_unverified_accounts(
             &state.db,
             state.config.auth_unverified_account_ttl_days,
         )

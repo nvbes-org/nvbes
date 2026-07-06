@@ -1,7 +1,9 @@
 use serde_json::Value;
 
 use crate::app::AppState;
-use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+use nvbes_product_account::email::jobs::{
+    JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
+};
 
 use nvbes_redis::worker_queue::QueuedJob;
 
@@ -90,7 +92,9 @@ pub(super) fn email_from_address(
 #[cfg(test)]
 mod tests {
     use super::should_retry_job;
-    use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+    use nvbes_product_account::email::jobs::{
+        JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
+    };
 
     #[test]
     fn identity_worker_retries_only_identity_jobs() {

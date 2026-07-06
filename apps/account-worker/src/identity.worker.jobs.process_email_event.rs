@@ -1,14 +1,19 @@
+use nvbes_product_account::{
+    AccountError,
+    email::db::{
+        mark_email_event_processed_tx, suppress_email_tx,
+        update_email_message_status_by_provider_id_tx,
+    },
+};
 use serde_json::Value;
 use sqlx::PgPool;
 
-use crate::http::error::AppError;
-
-pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<(), AppError> {
+pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<(), AccountError> {
     let provider_event_id = payload
         .get("provider_event_id")
         .and_then(Value::as_str)
         .ok_or_else(|| {
-            AppError::bad_request("invalid_event_payload", "Missing provider_event_id")
+            AccountError::bad_request("invalid_event_payload", "Missing provider_event_id")
         })?;
     let provider_email_id = payload
         .get("provider_email_id")
@@ -17,11 +22,11 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
     let email = payload
         .get("email")
         .and_then(Value::as_str)
-        .ok_or_else(|| AppError::bad_request("invalid_event_payload", "Missing email"))?;
+        .ok_or_else(|| AccountError::bad_request("invalid_event_payload", "Missing email"))?;
     let event_type = payload
         .get("event_type")
         .and_then(Value::as_str)
-        .ok_or_else(|| AppError::bad_request("invalid_event_payload", "Missing event_type"))?;
+        .ok_or_else(|| AccountError::bad_request("invalid_event_payload", "Missing event_type"))?;
 
     let msg_status = match event_type {
         "email_delivered" => Some("delivered"),
@@ -37,17 +42,12 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
     if let Some(status) = msg_status
         && !provider_email_id.is_empty()
     {
-        crate::email::db::update_email_message_status_by_provider_id_tx(
-            &mut tx,
-            provider_email_id,
-            status,
-        )
-        .await?;
+        update_email_message_status_by_provider_id_tx(&mut tx, provider_email_id, status).await?;
     }
 
     match event_type {
         "email_mailbox_not_found" => {
-            crate::email::db::suppress_email_tx(
+            suppress_email_tx(
                 &mut tx,
                 email,
                 "hard_bounce",
@@ -56,7 +56,7 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
             .await?;
         }
         "email_spam" | "email_bounced" | "email_blacklisted" => {
-            crate::email::db::suppress_email_tx(
+            suppress_email_tx(
                 &mut tx,
                 email,
                 if event_type == "email_spam" {
@@ -69,7 +69,7 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
             .await?;
         }
         "email_unsubscribed" => {
-            crate::email::db::suppress_email_tx(
+            suppress_email_tx(
                 &mut tx,
                 email,
                 "unsubscribed",
@@ -78,7 +78,7 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
             .await?;
         }
         "email_dropped" => {
-            crate::email::db::suppress_email_tx(
+            suppress_email_tx(
                 &mut tx,
                 email,
                 "dropped",
@@ -89,7 +89,7 @@ pub(super) async fn process_email_event(db: &PgPool, payload: &Value) -> Result<
         _ => {}
     }
 
-    crate::email::db::mark_email_event_processed_tx(&mut tx, provider_event_id).await?;
+    mark_email_event_processed_tx(&mut tx, provider_event_id).await?;
     tx.commit().await?;
 
     Ok(())

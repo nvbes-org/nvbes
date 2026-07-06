@@ -37,35 +37,13 @@ impl OAuthManagementAuth for crate::domains::auth::types::AuthContext {
     }
 }
 
-pub fn hash_client_secret(secret: &str) -> Result<String, AppError> {
-    use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version, password_hash::SaltString};
-    use password_hash::rand_core::OsRng;
-    let salt = SaltString::generate(&mut OsRng);
-    let params = Params::new(65536, 3, 4, None)
-        .map_err(|e| AppError::internal("client_secret_hash_failed", format!("{}", e)))?;
-    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    argon2
-        .hash_password(secret.as_bytes(), &salt)
-        .map(|hash| hash.to_string())
-        .map_err(|e| AppError::internal("client_secret_hash_failed", format!("{}", e)))
-}
-
-pub fn verify_client_secret(secret: &str, hash_value: &str) -> Result<(), AppError> {
-    use argon2::{Argon2, PasswordVerifier, password_hash::PasswordHash};
-    let parsed_hash = PasswordHash::new(hash_value)
-        .map_err(|e| AppError::internal("client_secret_hash_invalid", format!("{}", e)))?;
-    Argon2::default()
-        .verify_password(secret.as_bytes(), &parsed_hash)
-        .map_err(|_| AppError::unauthorized("invalid_client", "The client secret is invalid."))
-}
-
 pub async fn verify_client_secret_with_overlap(
     db: &sqlx::PgPool,
     client_id: &str,
     secret: &str,
     main_hash: &str,
 ) -> Result<(), AppError> {
-    if verify_client_secret(secret, main_hash).is_ok() {
+    if nvbes_product_account::oauth::verify_client_secret(secret, main_hash).is_ok() {
         return Ok(());
     }
 
@@ -87,7 +65,9 @@ pub async fn verify_client_secret_with_overlap(
     .map_err(AppError::from)?;
 
     for hash in valid_hashes {
-        if hash != main_hash && verify_client_secret(secret, &hash).is_ok() {
+        if hash != main_hash
+            && nvbes_product_account::oauth::verify_client_secret(secret, &hash).is_ok()
+        {
             return Ok(());
         }
     }
@@ -264,14 +244,16 @@ mod tests {
     #[test]
     fn test_client_secret_hashing_owasp_params() {
         let secret = "client-secret-key-12345-extremely-secure";
-        let hash = hash_client_secret(secret).expect("hashing should succeed");
+        let hash = nvbes_product_account::oauth::hash_client_secret(secret)
+            .expect("hashing should succeed");
 
         assert!(hash.contains("$argon2id$"));
         assert!(hash.contains("m=65536,t=3,p=4"));
 
-        verify_client_secret(secret, &hash).expect("verification should run");
+        nvbes_product_account::oauth::verify_client_secret(secret, &hash)
+            .expect("verification should run");
 
-        let not_ok = verify_client_secret("wrong-secret", &hash);
+        let not_ok = nvbes_product_account::oauth::verify_client_secret("wrong-secret", &hash);
         assert!(not_ok.is_err());
     }
 }

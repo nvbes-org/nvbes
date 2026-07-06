@@ -1,25 +1,20 @@
-use chrono::{DateTime, Utc};
-use sqlx::{FromRow, PgPool};
-use uuid::Uuid;
+use sqlx::PgPool;
 
-use crate::app::AppConfig;
-use crate::email::jobs::{EmailSendPayload, enqueue_email_job_tx};
-use crate::email::templates::html_escape;
-use crate::http::error::AppError;
+use super::scheduler_types::{AccessReviewReminderCandidate, AccessReviewReminderRun};
+use crate::email::{
+    jobs::{EmailSendPayload, enqueue_email_job_tx},
+    templates::html_escape,
+};
+use crate::{AccountError, AccountResult};
 
 const REMINDER_WINDOW_DAYS: i64 = 2;
 
-#[derive(Debug, Default)]
-pub struct AccessReviewReminderRun {
-    pub reminders_enqueued: u64,
-}
-
-pub async fn enqueue_due_campaign_reminders(
+pub(crate) async fn enqueue_due_campaign_reminders(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
-    config: &AppConfig,
+    config: &nvbes_core::config::AppConfig,
     limit: i64,
-) -> Result<AccessReviewReminderRun, AppError> {
+) -> AccountResult<AccessReviewReminderRun> {
     let candidates = reminder_candidates(db, limit).await?;
     let mut run = AccessReviewReminderRun::default();
 
@@ -46,7 +41,7 @@ pub async fn enqueue_due_campaign_reminders(
 async fn reminder_candidates(
     db: &PgPool,
     limit: i64,
-) -> Result<Vec<AccessReviewReminderCandidate>, AppError> {
+) -> AccountResult<Vec<AccessReviewReminderCandidate>> {
     Ok(sqlx::query_as::<_, AccessReviewReminderCandidate>(
         r#"
         WITH active_campaigns AS (
@@ -90,13 +85,14 @@ async fn reminder_candidates(
     .bind(REMINDER_WINDOW_DAYS as i32)
     .bind(limit)
     .fetch_all(db)
-    .await?)
+    .await
+    .map_err(AccountError::from)?)
 }
 
 async fn record_reminder_sent(
     db: &PgPool,
     candidate: &AccessReviewReminderCandidate,
-) -> Result<bool, AppError> {
+) -> AccountResult<bool> {
     Ok(sqlx::query(
         r#"
         INSERT INTO access_review_reminders (
@@ -111,13 +107,14 @@ async fn record_reminder_sent(
     .bind(candidate.recipient_principal_id)
     .bind(&candidate.reminder_kind)
     .execute(db)
-    .await?
+    .await
+    .map_err(AccountError::from)?
     .rows_affected()
         > 0)
 }
 
 fn reminder_email_payload(
-    config: &AppConfig,
+    config: &nvbes_core::config::AppConfig,
     candidate: &AccessReviewReminderCandidate,
 ) -> EmailSendPayload {
     let link = format!(
@@ -152,29 +149,18 @@ fn reminder_email_payload(
     }
 }
 
-#[derive(Debug, FromRow)]
-struct AccessReviewReminderCandidate {
-    tenant_id: Uuid,
-    campaign_id: Uuid,
-    campaign_name: String,
-    tenant_name: String,
-    due_at: DateTime<Utc>,
-    pending_items: i64,
-    recipient_principal_id: Uuid,
-    recipient_email: String,
-    recipient_name: String,
-    reminder_kind: String,
-}
-
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+    use uuid::Uuid;
+
     use super::*;
 
     #[test]
     fn reminder_email_escapes_campaign_fields() {
-        let config = AppConfig {
+        let config = nvbes_core::config::AppConfig {
             web_base_url: "https://identity.example.test".to_string(),
-            ..AppConfig::default()
+            ..nvbes_core::config::AppConfig::default()
         };
         let candidate = AccessReviewReminderCandidate {
             tenant_id: Uuid::new_v4(),

@@ -2,11 +2,11 @@ use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{AccountError, AccountResult};
 
 use super::DATA_EXPORT_TTL_SECONDS;
 
-pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> Result<JsonValue, AppError> {
+pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> AccountResult<JsonValue> {
     let export = sqlx::query_scalar::<_, JsonValue>(
         r#"
         SELECT jsonb_build_object(
@@ -144,7 +144,8 @@ pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> Result<Jso
     .bind(principal_id)
     .bind(i64::try_from(DATA_EXPORT_TTL_SECONDS).unwrap_or(86_400))
     .fetch_one(db)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(export)
 }

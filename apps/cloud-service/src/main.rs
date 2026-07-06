@@ -1,7 +1,6 @@
 #[path = "drive.app.rs"]
 mod app;
-#[path = "drive.db.mod.rs"]
-mod db;
+pub use nvbes_product_cloud::db;
 #[path = "drive.domains.mod.rs"]
 mod domains;
 #[path = "drive.http.mod.rs"]
@@ -39,12 +38,12 @@ async fn main() -> anyhow::Result<()> {
     let database = Database::connect(&config).await?;
 
     if matches!(command.as_deref(), Some("migrate")) {
-        database.migrate().await?;
+        run_migrations(&database).await?;
         tracing::info!("database migrations applied");
         return Ok(());
     }
 
-    database.migrate().await?;
+    run_migrations(&database).await?;
     let _profiling_guard =
         start_continuous_profiling(&config, "cloud-service").map_err(anyhow::Error::msg)?;
 
@@ -112,5 +111,10 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     }
 
+    Ok(())
+}
+
+async fn run_migrations(database: &Database) -> anyhow::Result<()> {
+    sqlx::migrate!("./migrations").run(&**database).await?;
     Ok(())
 }

@@ -1,10 +1,11 @@
 use anyhow::Context;
+use nvbes_product_account::email::{
+    db::{record_email_message_tx, record_email_sent_event_tx},
+    jobs::{EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS},
+};
 use serde_json::Value;
 
 use crate::app::AppState;
-use crate::email::jobs::{
-    EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
-};
 
 use nvbes_redis::worker_queue::QueuedJob;
 
@@ -65,15 +66,10 @@ async fn send_email_job(state: &AppState, job: &QueuedJob) -> anyhow::Result<Val
 
     let mut tx = state.db.begin().await?;
     let business_type = &payload.business_type;
-    crate::email::db::record_email_sent_event_tx(
-        &mut tx,
-        &to_email,
-        &result.provider_email_id,
-        &subject,
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!(format!("Failed to record sent event: {e:?}")))?;
-    crate::email::db::record_email_message_tx(
+    record_email_sent_event_tx(&mut tx, &to_email, &result.provider_email_id, &subject)
+        .await
+        .map_err(|e| anyhow::anyhow!(format!("Failed to record sent event: {e:?}")))?;
+    record_email_message_tx(
         &mut tx,
         job.id,
         business_type,

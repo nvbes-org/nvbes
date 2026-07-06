@@ -8,7 +8,7 @@ use nvbes_observability::{
 #[path = "drive.workers.mod.rs"]
 pub mod workers;
 
-pub use nvbes_cloud_service::db;
+pub use nvbes_product_cloud::db;
 
 use db::Database;
 
@@ -42,9 +42,9 @@ async fn main() -> anyhow::Result<()> {
         start_continuous_profiling(&config, "cloud-worker").map_err(anyhow::Error::msg)?;
 
     let database = Database::connect(&config).await?;
-    database.migrate().await?;
+    run_migrations(&database).await?;
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
-    let storage = nvbes_cloud_service::app::build_storage(&config).await;
+    let storage = nvbes_product_cloud::storage::build_storage(&config).await;
 
     let observability = nvbes_observability::metrics::HttpMetrics::default();
     let metrics_bind_addr = drive_worker_metrics_bind_addr();
@@ -91,6 +91,13 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    Ok(())
+}
+
+async fn run_migrations(database: &Database) -> anyhow::Result<()> {
+    sqlx::migrate!("../cloud-service/migrations")
+        .run(&**database)
+        .await?;
     Ok(())
 }
 

@@ -1,4 +1,11 @@
 use anyhow::Context;
+use nvbes_product_account::{
+    auth::{
+        data_export::{build_account_export, store_account_export},
+        users::fetch_user_record,
+    },
+    email::db::record_email_sent_event_tx,
+};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -14,15 +21,14 @@ struct DataExportJobPayload {
 pub(super) async fn process_data_export(state: &AppState, payload: &Value) -> anyhow::Result<()> {
     let payload = parse_data_export_payload(payload)?;
 
-    let user = crate::domains::auth::db::fetch_user_record(&state.db, payload.user_id)
+    let user = fetch_user_record(&state.db, payload.user_id)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to fetch user: {e:?}"))?;
 
-    let export =
-        crate::domains::auth::data_export::build_account_export(&state.db, payload.user_id)
-            .await
-            .map_err(|e| anyhow::anyhow!("Failed to build data export: {e:?}"))?;
-    crate::domains::auth::data_export::store_account_export(&state.redis, payload.user_id, &export)
+    let export = build_account_export(&state.db, payload.user_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to build data export: {e:?}"))?;
+    store_account_export(&state.redis, payload.user_id, &export)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to store data export: {e:?}"))?;
 
@@ -53,7 +59,7 @@ pub(super) async fn process_data_export(state: &AppState, payload: &Value) -> an
         .context("Failed to send export email")?;
 
     let mut tx = state.db.begin().await?;
-    crate::email::db::record_email_sent_event_tx(
+    record_email_sent_event_tx(
         &mut tx,
         &payload.email,
         &result.provider_email_id,

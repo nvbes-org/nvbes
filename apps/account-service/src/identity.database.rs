@@ -8,7 +8,6 @@ pub async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
 }
 
 pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Result<()> {
-    use crate::domains::oauth::logic::hash_client_secret;
     use uuid::Uuid;
 
     // 1. Ensure system tenant exists
@@ -26,7 +25,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
 
     // 2. Seed cloud-web (public client)
     let drive_web_secret_hash =
-        hash_client_secret("").map_err(|e| anyhow::anyhow!("{}", e.message))?;
+        nvbes_product_account::oauth::hash_client_secret("").map_err(anyhow::Error::from)?;
     let drive_web_redirect_uris = vec![
         "http://localhost:5173/callback".to_string(),
         "http://localhost:3001/callback".to_string(),
@@ -52,7 +51,7 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
 
     // 3. Seed console-web (public client)
     let developer_web_secret_hash =
-        hash_client_secret("").map_err(|e| anyhow::anyhow!("{}", e.message))?;
+        nvbes_product_account::oauth::hash_client_secret("").map_err(anyhow::Error::from)?;
     let developer_web_redirect_uris = vec![
         "http://localhost:5175/callback".to_string(),
         "https://developers.staging.nvbes.example/callback".to_string(),
@@ -78,8 +77,8 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     // 4. Seed cloud-worker (confidential client)
     let worker_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET")
         .unwrap_or_else(|_| "cloud-worker-secret-key-12345".to_string());
-    let drive_worker_secret_hash =
-        hash_client_secret(&worker_secret).map_err(|e| anyhow::anyhow!("{}", e.message))?;
+    let drive_worker_secret_hash = nvbes_product_account::oauth::hash_client_secret(&worker_secret)
+        .map_err(anyhow::Error::from)?;
     let drive_worker_redirect_uris: Vec<String> = vec![];
     sqlx::query(
         r#"

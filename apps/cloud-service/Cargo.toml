@@ -22,6 +22,7 @@ nvbes-storage = { path = "../../libs/rust/storage" }
 nvbes-tenancy = { path = "../../libs/rust/tenancy" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
+nvbes-product-cloud = { path = "../../libs/rust/products/cloud" }
 nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
 nvbes-region = { path = "../../libs/rust/region" }
 metrics.workspace = true
@@ -43,4 +44,5 @@ aws-config = { version = "1.8.16", default-features = false, features = ["rt-tok
 aws-sdk-s3 = { version = "1.132.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 
 [dev-dependencies]
+nvbes-product-account = { path = "../../libs/rust/products/account" }
 nvbes-account-service = { path = "../account-service" }

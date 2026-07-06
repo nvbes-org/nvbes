@@ -200,6 +200,7 @@ async fn enqueue_secondary_verification_email(
         &format!("secondary-verify:{}:{}", email, token_hash(token)),
     )
     .await
+    .map_err(AppError::from)
 }
 
 async fn notify_email_added(

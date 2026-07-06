@@ -77,7 +77,7 @@ impl AppState {
             jwt,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             product_analytics: build_product_analytics(config)?,
-            email: build_email_sender(config)?,
+            email: nvbes_product_account::email::delivery::build_email_sender(config)?,
             otp_provider: build_otp_provider(config)?,
             dpop_nonce,
             redis,
@@ -174,46 +174,6 @@ fn build_product_analytics(
         analytics_config,
         std::sync::Arc::new(sink),
     )?)
-}
-
-fn build_email_sender(
-    config: &AppConfig,
-) -> anyhow::Result<std::sync::Arc<dyn nvbes_email::EmailSender>> {
-    match config.email_provider.as_str() {
-        "smtp" => {
-            let host = config.smtp_host.clone().ok_or_else(|| {
-                anyhow::anyhow!("NVBES_SMTP_HOST is required when NVBES_EMAIL_PROVIDER=smtp")
-            })?;
-            if config.environment != "development" && config.email_from_email.is_none() {
-                anyhow::bail!(
-                    "NVBES_EMAIL_FROM_EMAIL is required outside development when SMTP email is enabled"
-                );
-            }
-            info!(
-                "Email sender: SMTP (host={host}, port={})",
-                config.smtp_port
-            );
-            Ok(std::sync::Arc::new(nvbes_email::SmtpEmailSender::new(
-                nvbes_email::SmtpEmailConfig {
-                    host,
-                    port: config.smtp_port,
-                    username: config.smtp_username.clone(),
-                    password: config.smtp_password.clone(),
-                    starttls: config.smtp_starttls,
-                },
-            )?))
-        }
-        "mock" => {
-            if config.environment != "development" {
-                anyhow::bail!(
-                    "Mock email sender is forbidden outside development. Configure NVBES_EMAIL_PROVIDER=smtp."
-                );
-            }
-            info!("Email sender: Mock (development mode)");
-            Ok(std::sync::Arc::new(nvbes_email::MockEmailSender::new()))
-        }
-        provider => anyhow::bail!("Unsupported NVBES_EMAIL_PROVIDER={provider}"),
-    }
 }
 
 pub fn build_router(state: AppState) -> axum::Router {

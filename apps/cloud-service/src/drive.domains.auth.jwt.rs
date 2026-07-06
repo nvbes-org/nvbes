@@ -62,7 +62,8 @@ fn cache() -> &'static RwLock<CachedJwks> {
 }
 
 fn identity_base_url() -> String {
-    std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
+    std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:8080".to_string())
 }
 
 pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClaims, AppError> {

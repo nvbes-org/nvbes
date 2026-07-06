@@ -12,9 +12,8 @@ pub(crate) async fn seed_machine_workspace_context(
     let client_uuid = Uuid::new_v4();
     let client_id = format!("gxoc_drive_e2e_{}", Uuid::new_v4().simple());
     let client_secret = format!("gxo_drive_e2e_{}", Uuid::new_v4().simple());
-    let client_secret_hash =
-        nvbes_account_service::domains::oauth::hash_client_secret(&client_secret)
-            .expect("secret should hash");
+    let client_secret_hash = nvbes_product_account::oauth::hash_client_secret(&client_secret)
+        .expect("secret should hash");
     let owner_email = format!("drive-auth-e2e-{}@example.com", Uuid::new_v4());
     let now = Utc::now();
 

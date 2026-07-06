@@ -1,0 +1,12 @@
+[package]
+name = "nvbes-product-cloud"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+nvbes-core = { path = "../../core" }
+nvbes-storage = { path = "../../storage" }
+sqlx.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

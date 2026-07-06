@@ -1,12 +1,12 @@
 use serde_json::Value;
 
 use super::webhooks::EmailProviderEvent;
-use crate::http::error::AppError;
+use crate::{AccountError, AccountResult};
 
 pub async fn record_email_event_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     event: &EmailProviderEvent,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     let details = build_event_details(event);
 
     sqlx::query(
@@ -30,7 +30,8 @@ pub async fn record_email_event_tx(
     .bind(&event.timestamp)
     .bind(sqlx::types::Json(details))
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
@@ -40,7 +41,7 @@ pub async fn record_email_sent_event_tx(
     email: &str,
     provider_email_id: &str,
     subject: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     sqlx::query(
         r#"
         INSERT INTO email_events (
@@ -60,7 +61,8 @@ pub async fn record_email_sent_event_tx(
     .bind(email)
     .bind(sqlx::types::Json(serde_json::json!({"subject": subject})))
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
@@ -68,7 +70,7 @@ pub async fn record_email_sent_event_tx(
 pub async fn mark_email_event_processed_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     provider_event_id: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     sqlx::query(
         r#"
         UPDATE email_events
@@ -78,7 +80,8 @@ pub async fn mark_email_event_processed_tx(
     )
     .bind(provider_event_id)
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
@@ -88,7 +91,7 @@ pub async fn suppress_email_tx(
     email: &str,
     reason: &str,
     details: Value,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     sqlx::query(
         r#"
         INSERT INTO suppressed_emails (email, reason, details)
@@ -112,12 +115,13 @@ pub async fn suppress_email_tx(
     .bind(reason)
     .bind(sqlx::types::Json(details))
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
 
-pub async fn is_email_suppressed(db: &sqlx::PgPool, email: &str) -> Result<bool, AppError> {
+pub async fn is_email_suppressed(db: &sqlx::PgPool, email: &str) -> AccountResult<bool> {
     let exists = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
@@ -127,7 +131,8 @@ pub async fn is_email_suppressed(db: &sqlx::PgPool, email: &str) -> Result<bool,
     )
     .bind(email)
     .fetch_one(db)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(exists)
 }
@@ -138,7 +143,7 @@ pub async fn record_email_message_tx(
     business_type: &str,
     recipient_email: &str,
     provider_email_id: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     use sha2::{Digest, Sha256};
 
     let recipient_hash = hex::encode(Sha256::digest(recipient_email.as_bytes()));
@@ -162,7 +167,8 @@ pub async fn record_email_message_tx(
     .bind(recipient_hash)
     .bind(provider_email_id)
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
@@ -171,7 +177,7 @@ pub async fn update_email_message_status_by_provider_id_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     provider_email_id: &str,
     status: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     sqlx::query(
         r#"
         UPDATE email_messages
@@ -183,7 +189,8 @@ pub async fn update_email_message_status_by_provider_id_tx(
     .bind(provider_email_id)
     .bind(status)
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }
@@ -192,7 +199,7 @@ pub async fn update_email_message_status_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     job_id: uuid::Uuid,
     status: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     sqlx::query(
         r#"
         UPDATE email_messages
@@ -204,7 +211,8 @@ pub async fn update_email_message_status_tx(
     .bind(job_id)
     .bind(status)
     .execute(&mut **tx)
-    .await?;
+    .await
+    .map_err(AccountError::from)?;
 
     Ok(())
 }

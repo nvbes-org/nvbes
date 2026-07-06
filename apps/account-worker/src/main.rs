@@ -4,10 +4,10 @@ use nvbes_observability::{
     install_safe_panic_hook, start_continuous_profiling,
 };
 
+#[path = "identity.worker.state.rs"]
+mod app;
 #[path = "identity.worker.rs"]
 mod worker;
-
-pub use nvbes_account_service::{app, domains, email, http};
 
 const IDENTITY_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR";
 const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
@@ -40,9 +40,9 @@ async fn main() -> anyhow::Result<()> {
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
 
-    nvbes_account_service::database::run_migrations(&db).await?;
+    run_migrations(&db).await?;
 
-    let state = nvbes_account_service::app::AppState::bootstrap(&config, db).await?;
+    let state = app::AppState::bootstrap(&config, db).await?;
     let metrics_bind_addr = identity_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,
@@ -61,6 +61,13 @@ async fn main() -> anyhow::Result<()> {
         let _ = tokio::signal::ctrl_c().await;
     })
     .await
+}
+
+async fn run_migrations(db: &sqlx::PgPool) -> anyhow::Result<()> {
+    sqlx::migrate!("../account-service/migrations")
+        .run(db)
+        .await?;
+    Ok(())
 }
 
 fn identity_worker_metrics_bind_addr() -> String {

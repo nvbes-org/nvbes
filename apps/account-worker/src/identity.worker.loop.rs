@@ -11,7 +11,9 @@ use nvbes_observability::{
 use tokio::time::{Duration as TokioDuration, sleep};
 
 use crate::app::AppState;
-use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+use nvbes_product_account::email::jobs::{
+    JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
+};
 
 use super::jobs::{
     claim_next_job, execute_job, mark_job_failed, mark_job_succeeded, recover_stale_jobs,
@@ -97,7 +99,7 @@ async fn run_access_review_reminders_if_due(
     if last_run.elapsed() < ACCESS_REVIEW_REMINDER_INTERVAL {
         return Ok(());
     }
-    let run = crate::domains::enterprise::access_reviews::service::enqueue_due_campaign_reminders(
+    let run = nvbes_product_account::enterprise::access_reviews::scheduler::enqueue_due_campaign_reminders(
         &state.db,
         &state.redis,
         &state.config,
@@ -122,9 +124,11 @@ async fn run_access_review_schedules_if_due(
         return Ok(());
     }
     let run =
-        crate::domains::enterprise::access_reviews::service::materialize_due_schedules(&state.db)
-            .await
-            .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+        nvbes_product_account::enterprise::access_reviews::scheduler::materialize_due_schedules(
+            &state.db,
+        )
+        .await
+        .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
     if run.campaigns_created > 0 || run.empty_schedules > 0 {
         tracing::info!(
             campaigns_created = run.campaigns_created,
@@ -208,7 +212,9 @@ fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
 #[cfg(test)]
 mod tests {
     use super::WORKER_QUEUES;
-    use crate::email::jobs::{JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+    use nvbes_product_account::email::jobs::{
+        JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
+    };
 
     #[test]
     fn identity_worker_queues_exclude_billing_runtime() {

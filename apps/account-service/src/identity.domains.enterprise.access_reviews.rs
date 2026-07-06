@@ -4,16 +4,12 @@ pub mod changes;
 pub mod db;
 #[path = "identity.domains.enterprise.access_reviews.decisions.rs"]
 pub mod decisions;
-#[path = "identity.domains.enterprise.access_reviews.reminders.rs"]
-pub mod reminders;
 #[path = "identity.domains.enterprise.access_reviews.revocations.rs"]
 pub mod revocations;
 #[path = "identity.domains.enterprise.access_reviews.routes.rs"]
 pub mod routes;
 #[path = "identity.domains.enterprise.access_reviews.runtime.rs"]
 pub mod runtime;
-#[path = "identity.domains.enterprise.access_reviews.schedule_mutations.rs"]
-pub mod schedule_mutations;
 #[path = "identity.domains.enterprise.access_reviews.schedule_state.rs"]
 pub mod schedule_state;
 #[path = "identity.domains.enterprise.access_reviews.schedules.rs"]

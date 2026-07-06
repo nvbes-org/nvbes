@@ -4,7 +4,7 @@ use tracing::warn;
 
 use super::db::is_email_suppressed;
 use super::webhooks::EmailProviderEvent;
-use crate::http::error::AppError;
+use crate::{AccountError, AccountResult};
 
 pub const JOB_EMAIL_SEND: &str = "email.send";
 pub const JOB_EMAIL_WEBHOOK_PROCESS: &str = "email.webhook.process";
@@ -25,7 +25,7 @@ pub async fn enqueue_email_job_tx(
     redis: &nvbes_redis::RedisPool,
     payload: EmailSendPayload,
     idempotency_key: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     let essential_transactional_email = is_essential_transactional_email(&payload.business_type);
 
     if !essential_transactional_email && is_email_suppressed(pool, &payload.to_email).await? {
@@ -50,7 +50,7 @@ pub async fn enqueue_email_job_tx(
         },
     )
     .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
+    .map_err(|err| AccountError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
 
     Ok(())
 }
@@ -65,7 +65,7 @@ pub fn is_essential_transactional_email(business_type: &str) -> bool {
 pub async fn enqueue_email_event_job_tx(
     redis: &nvbes_redis::RedisPool,
     event: &EmailProviderEvent,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     let payload = serde_json::json!({
         "provider_event_id": event.id,
         "provider_email_id": event.email_id,
@@ -86,7 +86,7 @@ pub async fn enqueue_email_event_job_tx(
         },
     )
     .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
+    .map_err(|err| AccountError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
 
     Ok(())
 }
@@ -95,7 +95,7 @@ pub async fn enqueue_data_export_job_tx(
     redis: &nvbes_redis::RedisPool,
     user_id: uuid::Uuid,
     email: &str,
-) -> Result<(), AppError> {
+) -> AccountResult<()> {
     let payload = serde_json::json!({
         "user_id": user_id,
         "email": email,
@@ -114,7 +114,7 @@ pub async fn enqueue_data_export_job_tx(
         },
     )
     .await
-    .map_err(|err| AppError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
+    .map_err(|err| AccountError::internal("redis_worker_queue_enqueue_failed", err.to_string()))?;
 
     Ok(())
 }

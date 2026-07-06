@@ -1,7 +1,4 @@
-#[path = "identity.email.db.rs"]
-pub mod db;
-#[path = "identity.email.jobs.rs"]
-pub mod jobs;
+pub use nvbes_product_account::email::{db, jobs};
 #[path = "identity.email.routes.rs"]
 pub mod routes;
 #[path = "identity.email.templates.rs"]

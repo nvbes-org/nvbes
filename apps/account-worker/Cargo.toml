@@ -10,8 +10,8 @@ chrono.workspace = true
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-redis = { path = "../../libs/rust/redis" }
-nvbes-account-service = { path = "../account-service" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-product-account = { path = "../../libs/rust/products/account" }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 nvbes-region = { path = "../../libs/rust/region" }
 serde_json.workspace = true
