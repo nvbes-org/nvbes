@@ -95,10 +95,12 @@ async fn simulate_routing_rule_route(
     Query(query): Query<SimulateRoutingRuleQuery>,
 ) -> Result<Json<RoutingRuleSimulationResult>, AppError> {
     require_billing_platform_simulation_authorization(&headers)?;
-    let _access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         simulate_routing_rule(
-            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
             RoutingRuleSimulationInput {
                 country: query.country,
                 currency: query.currency,

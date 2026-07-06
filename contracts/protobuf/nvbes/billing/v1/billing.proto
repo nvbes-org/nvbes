@@ -19,10 +19,22 @@ service BillingService {
   rpc ReconcileProviderWebhook(ReconcileProviderWebhookRequest) returns (ProviderWebhookEvent);
   rpc GetAdminCommandCenterBillingMetrics(GetAdminCommandCenterBillingMetricsRequest) returns (AdminCommandCenterBillingMetrics);
   rpc GetAdminOperationsCenter(GetAdminOperationsCenterRequest) returns (AdminOperationsCenterSnapshot);
+  rpc GetAdminBillingOverview(GetAdminBillingOverviewRequest) returns (AdminBillingOverview);
+  rpc ListAdminProviderEventFailures(ListAdminProviderEventFailuresRequest) returns (AdminProviderEventFailures);
+  rpc SearchAdminBilling(SearchAdminBillingRequest) returns (AdminBillingSearchResults);
+  rpc BuildAdminFinanceExport(BuildAdminFinanceExportRequest) returns (AdminFinanceExport);
+  rpc GetAdminUsageCenter(GetAdminUsageCenterRequest) returns (AdminUsageCenterSnapshot);
+  rpc RunAdminUsageAction(AdminUsageActionRequest) returns (AdminUsageActionResult);
+  rpc GetAdminEntitlementsCenter(GetAdminEntitlementsCenterRequest) returns (AdminEntitlementsCenterSnapshot);
   rpc RunAdminOperationsAction(AdminOperationsActionRequest) returns (AdminOperationsActionResult);
+  rpc GetAdminBillingPlatformCenter(GetAdminBillingPlatformCenterRequest) returns (AdminBillingPlatformCenterSnapshot);
+  rpc SimulateAdminBillingRouting(SimulateAdminBillingRoutingRequest) returns (AdminBillingRoutingSimulationResult);
   rpc RunAdminBillingPlatformAction(AdminBillingPlatformActionRequest) returns (AdminBillingPlatformActionResult);
   rpc RunAdminBillingAction(AdminBillingActionRequest) returns (AdminBillingActionResult);
+  rpc GetAdminRevenueCenter(GetAdminRevenueCenterRequest) returns (AdminRevenueCenterSnapshot);
   rpc RunAdminRevenueAction(AdminRevenueActionRequest) returns (AdminRevenueActionResult);
+  rpc GetAdminRiskDecisionCenter(GetAdminRiskDecisionCenterRequest) returns (AdminRiskDecisionCenterSnapshot);
+  rpc RunAdminRiskAction(AdminRiskActionRequest) returns (AdminRiskActionResult);
   rpc IngestUsage(UsageEvent) returns (UsageIngestResponse);
   rpc RunReconciliation(RunReconciliationRequest) returns (ReconciliationRun);
 }
@@ -139,6 +151,218 @@ message GetAdminOperationsCenterRequest {
   nvbes.platform.v1.RequestContext context = 1;
 }
 
+message GetAdminBillingOverviewRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message AdminBillingOverview {
+  int64 open_invoice_count = 1;
+  int64 overdue_invoice_count = 2;
+  int64 open_invoice_total_minor = 3;
+  int64 failed_provider_event_count = 4;
+  int64 pending_refund_count = 5;
+  int64 active_subscription_count = 6;
+  int64 captured_payment_total_minor_30d = 7;
+  string last_billing_audit_at = 8;
+}
+
+message ListAdminProviderEventFailuresRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  int32 limit = 3;
+}
+
+message AdminProviderEventFailures {
+  repeated AdminProviderEventFailure failures = 1;
+}
+
+message AdminProviderEventFailure {
+  string id = 1;
+  string provider = 2;
+  string provider_event_id = 3;
+  string event_type = 4;
+  string status = 5;
+  bool signature_valid = 6;
+  string payload_summary_json = 7;
+  string received_at = 8;
+  string processed_at = 9;
+}
+
+message SearchAdminBillingRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string query = 3;
+  int32 limit = 4;
+}
+
+message AdminBillingSearchResults {
+  repeated AdminBillingSearchResult results = 1;
+}
+
+message AdminBillingSearchResult {
+  string kind = 1;
+  string id = 2;
+  string label = 3;
+  string status = 4;
+}
+
+message BuildAdminFinanceExportRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string export_type = 3;
+}
+
+message AdminFinanceExport {
+  string export_run_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  bytes body = 4;
+  uint64 row_count = 5;
+}
+
+message GetAdminUsageCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message AdminUsageCenterSnapshot {
+  int64 active_meter_count = 1;
+  int64 usage_event_count_24h = 2;
+  int64 usage_quantity_24h = 3;
+  int64 correction_count_30d = 4;
+  int64 rollup_count_current_period = 5;
+  int64 distinct_tenant_count_24h = 6;
+  repeated AdminMeterUsage meter_usage_24h = 7;
+  repeated AdminTenantUsage tenant_usage_24h = 8;
+  repeated AdminUsageRollup recent_rollups = 9;
+  repeated AdminUsageCorrection recent_corrections = 10;
+}
+
+message AdminMeterUsage {
+  string meter_code = 1;
+  string unit = 2;
+  int64 event_count = 3;
+  int64 quantity = 4;
+}
+
+message AdminTenantUsage {
+  string tenant_id = 1;
+  string tenant_name = 2;
+  int64 event_count = 3;
+  int64 quantity = 4;
+}
+
+message AdminUsageRollup {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string workspace_id = 4;
+  string workspace_name = 5;
+  string meter_code = 6;
+  int64 quantity = 7;
+  string unit = 8;
+  string period_start = 9;
+  string period_end = 10;
+}
+
+message AdminUsageCorrection {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string meter_code = 4;
+  int64 quantity_delta = 5;
+  string reason = 6;
+  string created_by_principal_id = 7;
+  string created_at = 8;
+}
+
+message AdminUsageActionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  AdminUsageActionKind action_kind = 3;
+  string usage_event_id = 4;
+  string meter_code = 5;
+  int64 quantity_delta = 6;
+  string target_id = 7;
+  string reason = 8;
+}
+
+enum AdminUsageActionKind {
+  ADMIN_USAGE_ACTION_KIND_UNSPECIFIED = 0;
+  ADMIN_USAGE_ACTION_KIND_CORRECT_USAGE = 1;
+  ADMIN_USAGE_ACTION_KIND_FREEZE_METER = 2;
+  ADMIN_USAGE_ACTION_KIND_REPLAY_ROLLUP = 3;
+}
+
+message AdminUsageActionResult {
+  string object_id = 1;
+  string action_kind = 2;
+  string status = 3;
+  string audit_action = 4;
+  string target_type = 5;
+  string meter_code = 6;
+  int64 quantity_delta = 7;
+  string metadata_json = 8;
+  string description = 9;
+}
+
+message GetAdminEntitlementsCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message AdminEntitlementsCenterSnapshot {
+  int64 active_plan_count = 1;
+  int64 active_feature_count = 2;
+  int64 quota_definition_count = 3;
+  int64 active_entitlement_count = 4;
+  int64 over_quota_balance_count = 5;
+  int64 unpublished_change_count = 6;
+  int64 active_trial_grant_count = 7;
+  repeated AdminEntitlementPlan active_plans = 8;
+  repeated AdminOverQuotaBalance over_quota_balances = 9;
+  repeated AdminExpiringEntitlement expiring_entitlements = 10;
+  repeated AdminUnpublishedEntitlementChange unpublished_changes = 11;
+}
+
+message AdminEntitlementPlan {
+  string plan_id = 1;
+  string product_name = 2;
+  string plan_code = 3;
+  string plan_name = 4;
+  int64 active_version_count = 5;
+  int64 feature_count = 6;
+}
+
+message AdminOverQuotaBalance {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string workspace_id = 4;
+  string workspace_name = 5;
+  string quota_code = 6;
+  int64 included_quantity = 7;
+  int64 used_quantity = 8;
+  string period_end = 9;
+}
+
+message AdminExpiringEntitlement {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string workspace_id = 4;
+  string workspace_name = 5;
+  string status = 6;
+  string effective_to = 7;
+}
+
+message AdminUnpublishedEntitlementChange {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string event_id = 4;
+  string created_at = 5;
+}
+
 message AdminOperationsCenterSnapshot {
   int64 provider_event_failure_count = 1;
   int64 provider_event_backlog_count = 2;
@@ -242,6 +466,125 @@ message CreateBillingRoutingRuleInput {
   int32 priority = 11;
 }
 
+message GetAdminBillingPlatformCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message AdminBillingPlatformCenterSnapshot {
+  int64 active_provider_count = 1;
+  int64 active_provider_account_count = 2;
+  int64 active_routing_rule_count = 3;
+  int64 fallback_routing_rule_count = 4;
+  int64 planned_migration_count = 5;
+  int64 pending_kyc_profile_count = 6;
+  int64 region_policy_count = 7;
+  int64 active_einvoicing_profile_count = 8;
+  repeated BillingProviderSummary providers = 9;
+  repeated BillingProviderRoutingRule routing_rules = 10;
+  repeated ProviderMigrationRun provider_migrations = 11;
+  repeated KycProfile kyc_profiles = 12;
+  repeated RegionPolicy region_policies = 13;
+  repeated EinvoicingProfile einvoicing_profiles = 14;
+}
+
+message BillingProviderSummary {
+  string provider = 1;
+  string status = 2;
+  int64 account_count = 3;
+  string updated_at = 4;
+}
+
+message BillingProviderRoutingRule {
+  string id = 1;
+  int32 priority = 2;
+  string provider = 3;
+  string country = 4;
+  string currency = 5;
+  string payment_method = 6;
+  string customer_type = 7;
+  int64 min_amount_minor = 8;
+  int64 max_amount_minor = 9;
+  bool has_min_amount_minor = 10;
+  bool has_max_amount_minor = 11;
+  bool fallback_enabled = 12;
+  string status = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message ProviderMigrationRun {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string from_provider = 4;
+  string to_provider = 5;
+  string status = 6;
+  string started_at = 7;
+  string updated_at = 8;
+}
+
+message KycProfile {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string company_name = 4;
+  string company_domain = 5;
+  string vat_id = 6;
+  string proof_reference = 7;
+  string review_status = 8;
+  string updated_at = 9;
+}
+
+message RegionPolicy {
+  string id = 1;
+  string country = 2;
+  string currency = 3;
+  repeated string allowed_payment_methods = 4;
+  int32 invoice_retention_years = 5;
+  bool tax_evidence_required = 6;
+  string einvoicing_profile_code = 7;
+}
+
+message EinvoicingProfile {
+  string id = 1;
+  string code = 2;
+  string country = 3;
+  string format = 4;
+  string status = 5;
+  string updated_at = 6;
+}
+
+message SimulateAdminBillingRoutingRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string country = 3;
+  string currency = 4;
+  string payment_method = 5;
+  string customer_type = 6;
+  int64 amount_minor = 7;
+}
+
+message AdminBillingRoutingSimulationResult {
+  AdminBillingRoutingSimulationInput input = 1;
+  AdminBillingRoutingMatchedRule matched_rule = 2;
+  string outcome = 3;
+}
+
+message AdminBillingRoutingSimulationInput {
+  string country = 1;
+  string currency = 2;
+  string payment_method = 3;
+  string customer_type = 4;
+  int64 amount_minor = 5;
+}
+
+message AdminBillingRoutingMatchedRule {
+  string id = 1;
+  int32 priority = 2;
+  string provider = 3;
+  bool fallback_enabled = 4;
+}
+
 message AdminBillingPlatformActionResult {
   string object_id = 1;
   string action_kind = 2;
@@ -291,6 +634,72 @@ message AdminBillingActionResult {
   string status = 7;
 }
 
+message GetAdminRevenueCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message AdminRevenueCenterSnapshot {
+  repeated AdminMoneyTotal captured_payments_30d = 1;
+  repeated AdminMoneyTotal open_invoices = 2;
+  repeated AdminMoneyTotal overdue_invoices = 3;
+  repeated AdminMoneyTotal refunds_30d = 4;
+  repeated AdminMoneyTotal disputes_30d = 5;
+  int64 active_subscription_count = 6;
+  int64 trialing_subscription_count = 7;
+  int64 open_dunning_case_count = 8;
+  int64 unresolved_reconciliation_difference_count = 9;
+  repeated AdminRecentDunningCase recent_dunning_cases = 10;
+  repeated AdminRecentDispute recent_disputes = 11;
+  repeated AdminRecentOverdueInvoice recent_overdue_invoices = 12;
+  repeated AdminRecentCapturedPayment recent_captured_payments = 13;
+}
+
+message AdminMoneyTotal {
+  string currency = 1;
+  int64 amount_minor = 2;
+  int64 object_count = 3;
+}
+
+message AdminRecentDunningCase {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string status = 4;
+  string policy_state = 5;
+  string opened_at = 6;
+}
+
+message AdminRecentDispute {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string status = 4;
+  string currency = 5;
+  int64 amount_minor = 6;
+  string created_at = 7;
+}
+
+message AdminRecentOverdueInvoice {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string invoice_number = 4;
+  string status = 5;
+  string currency = 6;
+  int64 total_minor = 7;
+  string due_at = 8;
+}
+
+message AdminRecentCapturedPayment {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string status = 4;
+  string currency = 5;
+  int64 amount_minor = 6;
+  string created_at = 7;
+}
+
 message AdminRevenueActionRequest {
   nvbes.platform.v1.RequestContext context = 1;
   string workspace_id = 2;
@@ -310,6 +719,74 @@ enum AdminRevenueActionKind {
 }
 
 message AdminRevenueActionResult {
+  string object_id = 1;
+  string action_kind = 2;
+  string status = 3;
+  string audit_action = 4;
+  string target_type = 5;
+  string previous_state = 6;
+  string metadata_json = 7;
+}
+
+message GetAdminRiskDecisionCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message AdminRiskDecisionCenterSnapshot {
+  int64 billing_risk_signal_count_24h = 1;
+  int64 high_billing_risk_score_count = 2;
+  int64 active_access_policy_count = 3;
+  int64 access_policy_count_24h = 4;
+  repeated AdminBillingRiskScore billing_risk_scores = 5;
+  repeated AdminBillingRiskSignal billing_risk_signals = 6;
+  repeated AdminAccessPolicySnapshot active_access_policies = 7;
+}
+
+message AdminBillingRiskScore {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  double score = 4;
+  string decision = 5;
+  string created_at = 6;
+}
+
+message AdminBillingRiskSignal {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string signal_type = 4;
+  string occurred_at = 5;
+}
+
+message AdminAccessPolicySnapshot {
+  string id = 1;
+  string tenant_id = 2;
+  string tenant_name = 3;
+  string workspace_id = 4;
+  string workspace_name = 5;
+  string policy_state = 6;
+  string reason = 7;
+  string effective_from = 8;
+  string effective_to = 9;
+}
+
+message AdminRiskActionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  AdminRiskActionKind action_kind = 3;
+  string target_id = 4;
+  string reason = 5;
+}
+
+enum AdminRiskActionKind {
+  ADMIN_RISK_ACTION_KIND_UNSPECIFIED = 0;
+  ADMIN_RISK_ACTION_KIND_APPROVE_POLICY = 1;
+  ADMIN_RISK_ACTION_KIND_BLOCK_POLICY = 2;
+  ADMIN_RISK_ACTION_KIND_RESOLVE_RISK_SIGNAL = 3;
+}
+
+message AdminRiskActionResult {
   string object_id = 1;
   string action_kind = 2;
   string status = 3;

@@ -74,6 +74,7 @@ async fn correct_usage_route(
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         correct_usage(
+            &state.billing_grpc_endpoint,
             &state.db,
             access,
             workspace_id,
@@ -105,6 +106,7 @@ async fn freeze_meter_route(
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
         freeze_meter(
+            &state.billing_grpc_endpoint,
             &state.db,
             access,
             workspace_id,
@@ -131,7 +133,15 @@ async fn replay_rollup_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        replay_rollup(&state.db, access, workspace_id, rollup_id, request.reason).await?,
+        replay_rollup(
+            &state.billing_grpc_endpoint,
+            &state.db,
+            access,
+            workspace_id,
+            rollup_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 

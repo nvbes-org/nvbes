@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::grpc::pb::nvbes::billing::v1::{AdminBillingActionRequest, AdminBillingActionResult};
 use crate::grpc::service_admin_billing::result;
-use crate::grpc::service_admin_billing_ledger::{validate_admin_mutation, validate_provider_code};
+use crate::grpc::service_admin_billing::{validate_admin_mutation, validate_provider_code};
 
 pub async fn replay_provider_event(
     db: &sqlx::PgPool,

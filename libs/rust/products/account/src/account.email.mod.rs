@@ -1,0 +1,10 @@
+#[path = "account.email.db.rs"]
+pub mod db;
+#[path = "account.email.delivery.rs"]
+pub mod delivery;
+#[path = "account.email.jobs.rs"]
+pub mod jobs;
+#[path = "account.email.templates.rs"]
+pub mod templates;
+#[path = "account.email.webhooks.rs"]
+pub mod webhooks;

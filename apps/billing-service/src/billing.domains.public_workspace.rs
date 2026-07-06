@@ -16,6 +16,9 @@ use crate::{
     http::error::AppError,
 };
 
+#[path = "billing.domains.public_workspace.portal_lists.rs"]
+mod portal_lists;
+
 pub fn router() -> Router<BillingAppState> {
     Router::new()
         .route("/billing/portal/capabilities", get(get_portal_capabilities))
@@ -30,6 +33,18 @@ pub fn router() -> Router<BillingAppState> {
         .route(
             "/workspaces/{workspaceId}/billing/entitlements",
             get(get_entitlements),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/invoices",
+            get(portal_lists::get_billing_invoices),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/cards",
+            get(portal_lists::get_billing_cards),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/subscriptions",
+            get(portal_lists::get_billing_subscriptions),
         )
         .route(
             "/workspaces/{workspaceId}/billing/checkout",

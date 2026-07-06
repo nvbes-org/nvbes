@@ -1,17 +1,20 @@
 use serde::Serialize;
 use serde_json::{Value, json};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1::{
+    AdminUsageActionKind, AdminUsageActionRequest, AdminUsageActionResult,
+};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct UsageActionResult {
     pub(crate) object_id: Uuid,
-    pub(crate) action_kind: &'static str,
-    pub(crate) status: &'static str,
-    pub(crate) audit_action: &'static str,
+    pub(crate) action_kind: String,
+    pub(crate) status: String,
+    pub(crate) audit_action: String,
 }
 
 pub(crate) struct UsageCorrectionInput {
@@ -22,6 +25,7 @@ pub(crate) struct UsageCorrectionInput {
 }
 
 pub(crate) async fn correct_usage(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
@@ -36,46 +40,54 @@ pub(crate) async fn correct_usage(
         ));
     }
 
-    let mut tx = db.begin().await?;
-    let correction_id = sqlx::query_scalar::<_, Uuid>(
-        "INSERT INTO billing_usage_corrections (
-           tenant_id, usage_event_id, meter_code, quantity_delta, reason, created_by_principal_id
-         ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+    let result = crate::billing_grpc::run_usage_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        AdminUsageActionRequest {
+            context: None,
+            workspace_id: String::new(),
+            action_kind: AdminUsageActionKind::CorrectUsage as i32,
+            usage_event_id: input
+                .usage_event_id
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+            meter_code: input.meter_code,
+            quantity_delta: input.quantity_delta,
+            target_id: String::new(),
+            reason: input.reason,
+        },
     )
-    .bind(access.tenant_id)
-    .bind(input.usage_event_id)
-    .bind(&input.meter_code)
-    .bind(input.quantity_delta)
-    .bind(&input.reason)
-    .bind(access.actor_principal_id)
-    .fetch_one(tx.as_mut())
     .await?;
+    let object_id = parse_uuid(&result.object_id)?;
+    let metadata = parse_metadata_json(&result)?;
+    let mut tx = db.begin().await?;
     insert_usage_action(
         &mut tx,
         access,
         workspace_id,
         UsageActionInput {
-            action_kind: "correct_usage",
-            meter_code: input.meter_code,
-            target_id: Some(correction_id),
-            quantity_delta: Some(input.quantity_delta),
-            status: "applied",
-            reason: input.reason,
-            metadata: json!({ "usage_event_id": input.usage_event_id }),
+            action_kind: result.action_kind.clone(),
+            meter_code: result.meter_code.clone(),
+            target_id: Some(object_id),
+            quantity_delta: Some(result.quantity_delta),
+            status: result.status.clone(),
+            reason: result.description.clone(),
+            metadata: metadata.clone(),
         },
     )
     .await?;
     insert_usage_audit(
         &mut tx,
         access,
-        "usage.correction.created",
-        "billing_usage_correction",
-        correction_id,
-        "Usage correction applied.",
+        &result.audit_action,
+        &result.target_type,
+        object_id,
+        &result.description,
         json!({
             "object_links": {
-                "usage_correction_id": correction_id,
-                "usage_event_id": input.usage_event_id,
+                "usage_correction_id": object_id,
+                "usage_event_id": metadata.get("usage_event_id").cloned().unwrap_or(Value::Null),
                 "workspace_id": workspace_id,
             },
             "changes": [
@@ -87,22 +99,18 @@ pub(crate) async fn correct_usage(
                 {
                     "field": "quantity_delta",
                     "before": 0,
-                    "after": input.quantity_delta,
+                    "after": result.quantity_delta,
                 }
             ],
         }),
     )
     .await?;
     tx.commit().await?;
-    Ok(result(
-        correction_id,
-        "correct_usage",
-        "applied",
-        "usage.correction.created",
-    ))
+    Ok(result_from_grpc(object_id, result))
 }
 
 pub(crate) async fn freeze_meter(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
@@ -111,41 +119,47 @@ pub(crate) async fn freeze_meter(
 ) -> Result<UsageActionResult, AppError> {
     validate_meter_code(&meter_code)?;
     validate_reason(&reason)?;
-    let mut tx = db.begin().await?;
-    let meter_id = sqlx::query_scalar::<_, Uuid>(
-        "UPDATE billing_meter_definitions
-         SET status = 'frozen', updated_at = NOW()
-         WHERE code = $1 AND status <> 'frozen'
-         RETURNING id",
+    let result = crate::billing_grpc::run_usage_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        AdminUsageActionRequest {
+            context: None,
+            workspace_id: String::new(),
+            action_kind: AdminUsageActionKind::FreezeMeter as i32,
+            usage_event_id: String::new(),
+            meter_code,
+            quantity_delta: 0,
+            target_id: String::new(),
+            reason,
+        },
     )
-    .bind(&meter_code)
-    .fetch_optional(tx.as_mut())
-    .await?
-    .ok_or_else(|| {
-        AppError::conflict("meter_not_freezable", "Meter is missing or already frozen.")
-    })?;
+    .await?;
+    let meter_id = parse_uuid(&result.object_id)?;
+    let metadata = parse_metadata_json(&result)?;
+    let mut tx = db.begin().await?;
     let action_id = insert_usage_action(
         &mut tx,
         access,
         workspace_id,
         UsageActionInput {
-            action_kind: "freeze_meter",
-            meter_code,
+            action_kind: result.action_kind.clone(),
+            meter_code: result.meter_code.clone(),
             target_id: Some(meter_id),
             quantity_delta: None,
-            status: "applied",
-            reason,
-            metadata: json!({ "meter_id": meter_id }),
+            status: result.status.clone(),
+            reason: result.description.clone(),
+            metadata,
         },
     )
     .await?;
     insert_usage_audit(
         &mut tx,
         access,
-        "usage.meter.frozen",
+        &result.audit_action,
         "internal_admin_usage_action",
         action_id,
-        "Meter frozen by back-office.",
+        &result.description,
         json!({
             "object_links": {
                 "meter_id": meter_id,
@@ -162,15 +176,11 @@ pub(crate) async fn freeze_meter(
     )
     .await?;
     tx.commit().await?;
-    Ok(result(
-        action_id,
-        "freeze_meter",
-        "applied",
-        "usage.meter.frozen",
-    ))
+    Ok(result_from_grpc(action_id, result))
 }
 
 pub(crate) async fn replay_rollup(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
@@ -178,41 +188,46 @@ pub(crate) async fn replay_rollup(
     reason: String,
 ) -> Result<UsageActionResult, AppError> {
     validate_reason(&reason)?;
-    let mut tx = db.begin().await?;
-    let row = sqlx::query(
-        "UPDATE billing_usage_rollups
-         SET updated_at = NOW()
-         WHERE id = $1 AND tenant_id = $2
-         RETURNING id, meter_code",
+    let result = crate::billing_grpc::run_usage_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        AdminUsageActionRequest {
+            context: None,
+            workspace_id: String::new(),
+            action_kind: AdminUsageActionKind::ReplayRollup as i32,
+            usage_event_id: String::new(),
+            meter_code: String::new(),
+            quantity_delta: 0,
+            target_id: rollup_id.to_string(),
+            reason,
+        },
     )
-    .bind(rollup_id)
-    .bind(access.tenant_id)
-    .fetch_optional(tx.as_mut())
-    .await?
-    .ok_or_else(|| AppError::not_found("usage_rollup_not_found", "Usage rollup not found."))?;
-    let meter_code: String = row.get("meter_code");
+    .await?;
+    let metadata = parse_metadata_json(&result)?;
+    let mut tx = db.begin().await?;
     let action_id = insert_usage_action(
         &mut tx,
         access,
         workspace_id,
         UsageActionInput {
-            action_kind: "replay_rollup",
-            meter_code,
+            action_kind: result.action_kind.clone(),
+            meter_code: result.meter_code.clone(),
             target_id: Some(rollup_id),
             quantity_delta: None,
-            status: "replayed",
-            reason,
-            metadata: json!({ "rollup_id": rollup_id }),
+            status: result.status.clone(),
+            reason: result.description.clone(),
+            metadata,
         },
     )
     .await?;
     insert_usage_audit(
         &mut tx,
         access,
-        "usage.rollup.replayed",
-        "billing_usage_rollup",
+        &result.audit_action,
+        &result.target_type,
         rollup_id,
-        "Usage rollup replay requested.",
+        &result.description,
         json!({
             "object_links": {
                 "rollup_id": rollup_id,
@@ -229,20 +244,15 @@ pub(crate) async fn replay_rollup(
     )
     .await?;
     tx.commit().await?;
-    Ok(result(
-        action_id,
-        "replay_rollup",
-        "replayed",
-        "usage.rollup.replayed",
-    ))
+    Ok(result_from_grpc(action_id, result))
 }
 
 struct UsageActionInput {
-    action_kind: &'static str,
+    action_kind: String,
     meter_code: String,
     target_id: Option<Uuid>,
     quantity_delta: Option<i64>,
-    status: &'static str,
+    status: String,
     reason: String,
     metadata: Value,
 }
@@ -278,10 +288,10 @@ async fn insert_usage_action(
 async fn insert_usage_audit(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     access: BackofficeAccess,
-    action: &'static str,
-    target_type: &'static str,
+    action: &str,
+    target_type: &str,
     target_id: Uuid,
-    description: &'static str,
+    description: &str,
     metadata: Value,
 ) -> Result<(), AppError> {
     sqlx::query(
@@ -305,18 +315,22 @@ async fn insert_usage_audit(
     Ok(())
 }
 
-fn result(
-    object_id: Uuid,
-    action_kind: &'static str,
-    status: &'static str,
-    audit_action: &'static str,
-) -> UsageActionResult {
+fn result_from_grpc(object_id: Uuid, result: AdminUsageActionResult) -> UsageActionResult {
     UsageActionResult {
         object_id,
-        action_kind,
-        status,
-        audit_action,
+        action_kind: result.action_kind,
+        status: result.status,
+        audit_action: result.audit_action,
     }
+}
+
+fn parse_uuid(value: &str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|_| AppError::internal("billing_grpc_decode", "invalid uuid"))
+}
+
+fn parse_metadata_json(result: &AdminUsageActionResult) -> Result<Value, AppError> {
+    serde_json::from_str(&result.metadata_json)
+        .map_err(|error| AppError::internal("billing_grpc_decode", error.to_string()))
 }
 
 pub(crate) fn validate_meter_code(value: &str) -> Result<(), AppError> {

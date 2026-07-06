@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::billing_grpc::{
     BackofficeBillingOperationsSnapshot, BackofficeRecentExportRun,
     BackofficeRecentProviderFailure, BackofficeRecentReconciliationDifference,
@@ -85,7 +86,14 @@ async fn load_operations_center(
     billing_grpc_endpoint: &str,
     actor_id: Uuid,
 ) -> Result<OperationsCenterSnapshot, AppError> {
-    let billing = get_admin_operations_center(billing_grpc_endpoint, actor_id).await?;
+    let billing = get_admin_operations_center(
+        billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id: Uuid::nil(),
+            actor_principal_id: actor_id,
+        },
+    )
+    .await?;
     let metrics = sqlx::query(
         r#"
         SELECT

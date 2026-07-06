@@ -83,8 +83,6 @@ mod billing_platform_center_routing_rule_simulation;
 mod billing_platform_center_routing_rule_simulation_tests;
 #[path = "internal_admin.billing_platform_center.routing_rule_validation.rs"]
 mod billing_platform_center_routing_rule_validation;
-#[path = "internal_admin.billing_platform_center.routing_rules.rs"]
-mod billing_platform_center_routing_rules;
 #[cfg(test)]
 #[path = "internal_admin.billing_platform_center.routing_simulation.tests.rs"]
 mod billing_platform_center_routing_simulation_tests;
@@ -266,8 +264,6 @@ mod revenue_center_actions_test_support;
 mod revenue_center_actions_tests;
 #[path = "internal_admin.revenue_center.mutations.rs"]
 mod revenue_center_mutations;
-#[path = "internal_admin.revenue_center.recent.rs"]
-mod revenue_center_recent;
 #[path = "internal_admin.revenue_center.types.rs"]
 mod revenue_center_types;
 #[path = "internal_admin.revenue_center.validation.rs"]

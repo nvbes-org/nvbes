@@ -43,10 +43,7 @@ async fn mollie_post_json(
     mollie_send(request).await
 }
 
-async fn mollie_get_json(
-    config: &AppConfig,
-    path: &str,
-) -> Result<serde_json::Value, AppError> {
+async fn mollie_get_json(config: &AppConfig, path: &str) -> Result<serde_json::Value, AppError> {
     let api_key = mollie_api_key(config)?;
     let request = nvbes_core::security::pinned_http_client()
         .get(mollie_url(config, path))

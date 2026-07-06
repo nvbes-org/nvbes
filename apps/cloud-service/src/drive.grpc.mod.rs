@@ -1,0 +1,16 @@
+#[path = "drive.grpc.pb.rs"]
+pub mod pb;
+#[path = "drive.grpc.service.rs"]
+pub mod service;
+#[path = "drive.grpc.status.rs"]
+pub mod service_status;
+#[path = "drive.grpc.workspace.rs"]
+pub mod service_workspace;
+#[path = "drive.grpc.workspace.invitations.rs"]
+pub mod service_workspace_invitations;
+#[path = "drive.grpc.workspace.persistence.rs"]
+pub mod service_workspace_persistence;
+#[path = "drive.grpc.workspace.principals.rs"]
+pub mod service_workspace_principals;
+#[path = "drive.grpc.workspace.rows.rs"]
+pub mod service_workspace_rows;

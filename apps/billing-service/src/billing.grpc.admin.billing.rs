@@ -12,18 +12,21 @@ pub async fn run_billing_admin_action(
     action_kind: AdminBillingActionKind,
     request: AdminBillingActionRequest,
 ) -> Result<AdminBillingActionResult, Status> {
-    validate_admin_mutation(request.amount_minor, &request.reason)?;
     match action_kind {
         AdminBillingActionKind::CreateCreditNote => {
+            validate_admin_mutation(request.amount_minor, &request.reason)?;
             create_credit_note(db, tenant_id, request).await
         }
         AdminBillingActionKind::CreateWriteOff => {
+            validate_admin_mutation(request.amount_minor, &request.reason)?;
             create_write_off(db, tenant_id, actor_principal_id, request).await
         }
         AdminBillingActionKind::CreateRefundIntent => {
+            validate_admin_mutation(request.amount_minor, &request.reason)?;
             create_refund_intent(db, tenant_id, request).await
         }
         AdminBillingActionKind::CreateManualCompensation => {
+            validate_admin_mutation(request.amount_minor, &request.reason)?;
             create_manual_compensation(db, tenant_id, actor_principal_id, request).await
         }
         AdminBillingActionKind::ReplayProviderEvent => {
@@ -42,7 +45,7 @@ pub async fn run_billing_admin_action(
             .await
         }
         AdminBillingActionKind::OverrideGracePeriod => {
-            let workspace_id = crate::grpc::service_status::workspace_id(&request.workspace_id)?;
+            let workspace_id = parse_required_uuid(&request.workspace_id, "workspace_id")?;
             crate::grpc::service_admin_billing_workflow::override_grace_period(
                 db,
                 tenant_id,
@@ -300,7 +303,7 @@ pub(crate) fn result(
     }
 }
 
-fn validate_admin_mutation(amount_minor: i64, reason: &str) -> Result<(), Status> {
+pub(crate) fn validate_admin_mutation(amount_minor: i64, reason: &str) -> Result<(), Status> {
     if amount_minor <= 0 {
         return Err(Status::invalid_argument(
             "invalid_amount: Billing admin amount must be greater than zero.",
@@ -314,7 +317,7 @@ fn validate_admin_mutation(amount_minor: i64, reason: &str) -> Result<(), Status
     Ok(())
 }
 
-fn validate_provider_code(provider: &str) -> Result<(), Status> {
+pub(crate) fn validate_provider_code(provider: &str) -> Result<(), Status> {
     if nvbes_billing::provider_code(provider).is_some() {
         return Ok(());
     }

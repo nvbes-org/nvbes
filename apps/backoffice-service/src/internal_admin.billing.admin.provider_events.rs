@@ -2,7 +2,6 @@ use axum::{Json, Router, extract::Path, extract::State, http::HeaderMap, routing
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::Value;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
@@ -35,41 +34,64 @@ async fn list_provider_event_failures_route(
     Path(workspace_id): Path<Uuid>,
 ) -> Result<Json<Vec<ProviderEventFailure>>, AppError> {
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    Ok(Json(
-        list_provider_event_failures(&state.db, access.tenant_id).await?,
-    ))
+    let failures = crate::billing_grpc::list_admin_provider_event_failures(
+        &state.billing_grpc_endpoint,
+        access,
+        workspace_id,
+        50,
+    )
+    .await?;
+    Ok(Json(provider_event_failures_from_grpc(failures)?))
 }
 
-async fn list_provider_event_failures(
-    db: &PgPool,
-    tenant_id: Uuid,
+fn provider_event_failures_from_grpc(
+    value: crate::grpc_pb::nvbes::billing::v1::AdminProviderEventFailures,
 ) -> Result<Vec<ProviderEventFailure>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT id, provider::text, provider_event_id, event_type, status::text,
-          signature_valid, payload_summary, received_at, processed_at
-        FROM billing_provider_events
-        WHERE tenant_id = $1 AND status::text IN ('failed', 'rejected')
-        ORDER BY received_at DESC, id DESC
-        LIMIT 50
-        "#,
-    )
-    .bind(tenant_id)
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
+    value
+        .failures
         .into_iter()
-        .map(|row| ProviderEventFailure {
-            id: row.get(0),
-            provider: row.get(1),
-            provider_event_id: row.get(2),
-            event_type: row.get(3),
-            status: row.get(4),
-            signature_valid: row.get(5),
-            payload_summary: row.get(6),
-            received_at: row.get(7),
-            processed_at: row.get(8),
-        })
-        .collect())
+        .map(provider_event_failure_from_grpc)
+        .collect()
+}
+
+fn provider_event_failure_from_grpc(
+    value: crate::grpc_pb::nvbes::billing::v1::AdminProviderEventFailure,
+) -> Result<ProviderEventFailure, AppError> {
+    Ok(ProviderEventFailure {
+        id: parse_uuid(&value.id, "provider event id")?,
+        provider: value.provider,
+        provider_event_id: value.provider_event_id,
+        event_type: value.event_type,
+        status: value.status,
+        signature_valid: value.signature_valid,
+        payload_summary: parse_json(&value.payload_summary_json)?,
+        received_at: parse_datetime(&value.received_at, "provider event received_at")?,
+        processed_at: parse_optional_datetime(&value.processed_at, "provider event processed_at")?,
+    })
+}
+
+fn parse_uuid(value: &str, field: &'static str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_json(value: &str) -> Result<Value, AppError> {
+    serde_json::from_str(value)
+        .map_err(|_| AppError::internal("billing_grpc_decode", "payload_summary"))
+}
+
+fn parse_datetime(value: &str, field: &'static str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&Utc))
+        .map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_optional_datetime(
+    value: &str,
+    field: &'static str,
+) -> Result<Option<DateTime<Utc>>, AppError> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        parse_datetime(value, field).map(Some)
+    }
 }

@@ -186,7 +186,7 @@ fn capture_worker_heartbeat_if_due(state: &BillingWorkerState, last_run: &mut In
 
 fn capture_loop_error(
     state: &BillingWorkerState,
-    operation: &str,
+    operation: &'static str,
     error: &(dyn Error + Send + Sync + 'static),
 ) {
     capture_worker_operation_error(

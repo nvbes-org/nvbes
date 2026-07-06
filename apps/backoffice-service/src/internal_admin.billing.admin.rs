@@ -14,7 +14,7 @@ use crate::backoffice_authorization::{
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
-use crate::billing_admin_exports::{build_finance_export, parse_finance_export_type};
+use crate::billing_admin_exports::build_finance_export;
 use crate::billing_admin_mutations::{
     create_credit_note, create_manual_compensation, create_provider_migration,
     create_refund_intent, create_write_off, override_grace_period, replay_provider_event,
@@ -75,7 +75,7 @@ async fn search_route(
 ) -> Result<Json<Vec<SearchResult>>, AppError> {
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        search_billing_admin(&state.db, access.tenant_id, &query.q).await?,
+        search_billing_admin(&state.billing_grpc_endpoint, access, workspace_id, query.q).await?,
     ))
 }
 
@@ -276,8 +276,13 @@ async fn finance_export_route(
 ) -> Result<impl IntoResponse, AppError> {
     require_idempotency_key(&headers)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    let export_type = parse_finance_export_type(&export_type)?;
-    let export = build_finance_export(&state.db, access.tenant_id, export_type).await?;
+    let export = build_finance_export(
+        &state.billing_grpc_endpoint,
+        access,
+        workspace_id,
+        export_type,
+    )
+    .await?;
     Ok((
         [
             (header::CONTENT_TYPE, export.content_type.to_string()),

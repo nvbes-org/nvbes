@@ -1,13 +1,13 @@
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::get};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
-use crate::billing_platform_center_routing_rules::{ProviderRoutingRule, load_routing_rules};
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1 as billing_pb;
 
 #[derive(Debug, Serialize)]
 struct BillingPlatformSnapshot {
@@ -32,6 +32,23 @@ struct BillingProviderSummary {
     provider: String,
     status: String,
     account_count: i64,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+struct ProviderRoutingRule {
+    id: Uuid,
+    priority: i32,
+    provider: String,
+    country: Option<String>,
+    currency: Option<String>,
+    payment_method: Option<String>,
+    customer_type: Option<String>,
+    min_amount_minor: Option<i64>,
+    max_amount_minor: Option<i64>,
+    fallback_enabled: bool,
+    status: String,
+    created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
 
@@ -92,196 +109,173 @@ async fn billing_platform_center_route(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<BillingPlatformSnapshot>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_billing_platform(&state.db).await?))
+    let actor_principal_id = actor_principal_id(&headers)?;
+    let snapshot = crate::billing_grpc::get_admin_billing_platform_center(
+        &state.billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id: Uuid::nil(),
+            actor_principal_id,
+        },
+    )
+    .await?;
+    Ok(Json(billing_platform_snapshot_from_grpc(snapshot)?))
 }
 
-async fn load_billing_platform(db: &PgPool) -> Result<BillingPlatformSnapshot, AppError> {
-    let metrics = sqlx::query(
-        r#"
-        SELECT
-          (SELECT COUNT(*) FROM billing_providers WHERE status = 'active') AS active_provider_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_accounts
-            WHERE status = 'active'
-          ) AS active_provider_account_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_routing_rules
-            WHERE status = 'active'
-          ) AS active_routing_rule_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_routing_rules
-            WHERE status = 'active' AND fallback_enabled = TRUE
-          ) AS fallback_routing_rule_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_migration_runs
-            WHERE status IN ('planned', 'running')
-          ) AS planned_migration_count,
-          (
-            SELECT COUNT(*) FROM billing_kyc_profiles
-            WHERE proof_reference IS NULL
-          ) AS pending_kyc_profile_count,
-          (SELECT COUNT(*) FROM billing_region_policies) AS region_policy_count,
-          (
-            SELECT COUNT(*) FROM billing_einvoicing_profiles
-            WHERE status = 'active'
-          ) AS active_einvoicing_profile_count
-        "#,
-    )
-    .fetch_one(db)
-    .await?;
-
+fn billing_platform_snapshot_from_grpc(
+    value: billing_pb::AdminBillingPlatformCenterSnapshot,
+) -> Result<BillingPlatformSnapshot, AppError> {
     Ok(BillingPlatformSnapshot {
-        active_provider_count: metrics.get("active_provider_count"),
-        active_provider_account_count: metrics.get("active_provider_account_count"),
-        active_routing_rule_count: metrics.get("active_routing_rule_count"),
-        fallback_routing_rule_count: metrics.get("fallback_routing_rule_count"),
-        planned_migration_count: metrics.get("planned_migration_count"),
-        pending_kyc_profile_count: metrics.get("pending_kyc_profile_count"),
-        region_policy_count: metrics.get("region_policy_count"),
-        active_einvoicing_profile_count: metrics.get("active_einvoicing_profile_count"),
-        providers: load_providers(db).await?,
-        routing_rules: load_routing_rules(db).await?,
-        provider_migrations: load_provider_migrations(db).await?,
-        kyc_profiles: load_kyc_profiles(db).await?,
-        region_policies: load_region_policies(db).await?,
-        einvoicing_profiles: load_einvoicing_profiles(db).await?,
+        active_provider_count: value.active_provider_count,
+        active_provider_account_count: value.active_provider_account_count,
+        active_routing_rule_count: value.active_routing_rule_count,
+        fallback_routing_rule_count: value.fallback_routing_rule_count,
+        planned_migration_count: value.planned_migration_count,
+        pending_kyc_profile_count: value.pending_kyc_profile_count,
+        region_policy_count: value.region_policy_count,
+        active_einvoicing_profile_count: value.active_einvoicing_profile_count,
+        providers: value
+            .providers
+            .into_iter()
+            .map(provider_summary_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        routing_rules: value
+            .routing_rules
+            .into_iter()
+            .map(routing_rule_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        provider_migrations: value
+            .provider_migrations
+            .into_iter()
+            .map(provider_migration_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        kyc_profiles: value
+            .kyc_profiles
+            .into_iter()
+            .map(kyc_profile_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        region_policies: value
+            .region_policies
+            .into_iter()
+            .map(region_policy_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        einvoicing_profiles: value
+            .einvoicing_profiles
+            .into_iter()
+            .map(einvoicing_profile_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
     })
 }
 
-async fn load_providers(db: &PgPool) -> Result<Vec<BillingProviderSummary>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT bp.provider::text AS provider, bp.status, COUNT(bpa.id) AS account_count,
-          bp.updated_at
-        FROM billing_providers bp
-        LEFT JOIN billing_provider_accounts bpa ON bpa.provider = bp.provider
-        GROUP BY bp.provider, bp.status, bp.updated_at
-        ORDER BY bp.provider ASC
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| BillingProviderSummary {
-            provider: row.get("provider"),
-            status: row.get("status"),
-            account_count: row.get("account_count"),
-            updated_at: row.get("updated_at"),
-        })
-        .collect())
+fn provider_summary_from_grpc(
+    value: billing_pb::BillingProviderSummary,
+) -> Result<BillingProviderSummary, AppError> {
+    Ok(BillingProviderSummary {
+        provider: value.provider,
+        status: value.status,
+        account_count: value.account_count,
+        updated_at: parse_datetime(&value.updated_at, "provider updated_at")?,
+    })
 }
 
-async fn load_provider_migrations(db: &PgPool) -> Result<Vec<ProviderMigrationRun>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT pm.id, pm.tenant_id, t.name AS tenant_name, pm.from_provider::text AS from_provider,
-          pm.to_provider::text AS to_provider, pm.status, pm.started_at, pm.updated_at
-        FROM billing_provider_migration_runs pm
-        JOIN tenants t ON t.id = pm.tenant_id
-        ORDER BY pm.updated_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| ProviderMigrationRun {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            from_provider: row.get("from_provider"),
-            to_provider: row.get("to_provider"),
-            status: row.get("status"),
-            started_at: row.get("started_at"),
-            updated_at: row.get("updated_at"),
-        })
-        .collect())
+fn routing_rule_from_grpc(
+    value: billing_pb::BillingProviderRoutingRule,
+) -> Result<ProviderRoutingRule, AppError> {
+    Ok(ProviderRoutingRule {
+        id: parse_uuid(&value.id, "routing rule id")?,
+        priority: value.priority,
+        provider: value.provider,
+        country: empty_to_none(value.country),
+        currency: empty_to_none(value.currency),
+        payment_method: empty_to_none(value.payment_method),
+        customer_type: empty_to_none(value.customer_type),
+        min_amount_minor: value.has_min_amount_minor.then_some(value.min_amount_minor),
+        max_amount_minor: value.has_max_amount_minor.then_some(value.max_amount_minor),
+        fallback_enabled: value.fallback_enabled,
+        status: value.status,
+        created_at: parse_datetime(&value.created_at, "routing rule created_at")?,
+        updated_at: parse_datetime(&value.updated_at, "routing rule updated_at")?,
+    })
 }
 
-async fn load_kyc_profiles(db: &PgPool) -> Result<Vec<KycProfile>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT kyc.id, kyc.tenant_id, t.name AS tenant_name, kyc.company_name,
-          kyc.company_domain, kyc.vat_id, kyc.proof_reference,
-          kyc.review_status, kyc.updated_at
-        FROM billing_kyc_profiles kyc
-        JOIN tenants t ON t.id = kyc.tenant_id
-        ORDER BY (kyc.review_status = 'pending') DESC, kyc.updated_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| KycProfile {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            company_name: row.get("company_name"),
-            company_domain: row.get("company_domain"),
-            vat_id: row.get("vat_id"),
-            proof_reference: row.get("proof_reference"),
-            review_status: row.get("review_status"),
-            updated_at: row.get("updated_at"),
-        })
-        .collect())
+fn provider_migration_from_grpc(
+    value: billing_pb::ProviderMigrationRun,
+) -> Result<ProviderMigrationRun, AppError> {
+    Ok(ProviderMigrationRun {
+        id: parse_uuid(&value.id, "provider migration id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "provider migration tenant_id")?,
+        tenant_name: value.tenant_name,
+        from_provider: value.from_provider,
+        to_provider: value.to_provider,
+        status: value.status,
+        started_at: parse_optional_datetime(&value.started_at, "provider migration started_at")?,
+        updated_at: parse_datetime(&value.updated_at, "provider migration updated_at")?,
+    })
 }
 
-async fn load_region_policies(db: &PgPool) -> Result<Vec<RegionPolicy>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT id, country::text AS country, currency::text AS currency, allowed_payment_methods,
-          invoice_retention_years, tax_evidence_required, einvoicing_profile_code
-        FROM billing_region_policies
-        ORDER BY country ASC, currency ASC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| RegionPolicy {
-            id: row.get("id"),
-            country: row.get("country"),
-            currency: row.get("currency"),
-            allowed_payment_methods: row.get("allowed_payment_methods"),
-            invoice_retention_years: row.get("invoice_retention_years"),
-            tax_evidence_required: row.get("tax_evidence_required"),
-            einvoicing_profile_code: row.get("einvoicing_profile_code"),
-        })
-        .collect())
+fn kyc_profile_from_grpc(value: billing_pb::KycProfile) -> Result<KycProfile, AppError> {
+    Ok(KycProfile {
+        id: parse_uuid(&value.id, "kyc profile id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "kyc profile tenant_id")?,
+        tenant_name: value.tenant_name,
+        company_name: empty_to_none(value.company_name),
+        company_domain: empty_to_none(value.company_domain),
+        vat_id: empty_to_none(value.vat_id),
+        proof_reference: empty_to_none(value.proof_reference),
+        review_status: value.review_status,
+        updated_at: parse_datetime(&value.updated_at, "kyc profile updated_at")?,
+    })
 }
 
-async fn load_einvoicing_profiles(db: &PgPool) -> Result<Vec<EinvoicingProfile>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT id, code, country::text AS country, format, status, updated_at
-        FROM billing_einvoicing_profiles
-        ORDER BY updated_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
+fn region_policy_from_grpc(value: billing_pb::RegionPolicy) -> Result<RegionPolicy, AppError> {
+    Ok(RegionPolicy {
+        id: parse_uuid(&value.id, "region policy id")?,
+        country: value.country,
+        currency: value.currency,
+        allowed_payment_methods: value.allowed_payment_methods,
+        invoice_retention_years: value.invoice_retention_years,
+        tax_evidence_required: value.tax_evidence_required,
+        einvoicing_profile_code: empty_to_none(value.einvoicing_profile_code),
+    })
+}
 
-    Ok(rows
-        .into_iter()
-        .map(|row| EinvoicingProfile {
-            id: row.get("id"),
-            code: row.get("code"),
-            country: row.get("country"),
-            format: row.get("format"),
-            status: row.get("status"),
-            updated_at: row.get("updated_at"),
-        })
-        .collect())
+fn einvoicing_profile_from_grpc(
+    value: billing_pb::EinvoicingProfile,
+) -> Result<EinvoicingProfile, AppError> {
+    Ok(EinvoicingProfile {
+        id: parse_uuid(&value.id, "einvoicing profile id")?,
+        code: value.code,
+        country: empty_to_none(value.country),
+        format: value.format,
+        status: value.status,
+        updated_at: parse_datetime(&value.updated_at, "einvoicing profile updated_at")?,
+    })
+}
+
+fn parse_uuid(value: &str, field: &'static str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_datetime(value: &str, field: &'static str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&Utc))
+        .map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_optional_datetime(
+    value: &str,
+    field: &'static str,
+) -> Result<Option<DateTime<Utc>>, AppError> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        parse_datetime(value, field).map(Some)
+    }
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

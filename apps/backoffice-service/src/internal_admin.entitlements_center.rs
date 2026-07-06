@@ -1,12 +1,13 @@
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::get};
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1 as billing_pb;
 
 #[derive(Debug, Serialize)]
 struct EntitlementsSnapshot {
@@ -74,173 +75,138 @@ async fn entitlements_center_route(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<EntitlementsSnapshot>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_entitlements(&state.db).await?))
+    let actor_principal_id = actor_principal_id(&headers)?;
+    let snapshot = crate::billing_grpc::get_admin_entitlements_center(
+        &state.billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id: Uuid::nil(),
+            actor_principal_id,
+        },
+    )
+    .await?;
+    Ok(Json(entitlements_from_grpc(snapshot)?))
 }
 
-async fn load_entitlements(db: &PgPool) -> Result<EntitlementsSnapshot, AppError> {
-    let metrics = sqlx::query(
-        r#"
-        SELECT
-          (SELECT COUNT(*) FROM billing_plans WHERE status = 'active') AS active_plan_count,
-          (SELECT COUNT(*) FROM billing_features) AS active_feature_count,
-          (SELECT COUNT(*) FROM billing_quota_definitions) AS quota_definition_count,
-          (
-            SELECT COUNT(*) FROM billing_entitlement_snapshots
-            WHERE status = 'active' AND (effective_to IS NULL OR effective_to > NOW())
-          ) AS active_entitlement_count,
-          (
-            SELECT COUNT(*) FROM billing_quota_balances
-            WHERE used_quantity > included_quantity
-          ) AS over_quota_balance_count,
-          (
-            SELECT COUNT(*) FROM billing_entitlement_changes
-            WHERE published_at IS NULL
-          ) AS unpublished_change_count,
-          (
-            SELECT COUNT(*) FROM billing_trial_grants
-            WHERE starts_at <= NOW() AND ends_at > NOW()
-          ) AS active_trial_grant_count
-        "#,
-    )
-    .fetch_one(db)
-    .await?;
-
+fn entitlements_from_grpc(
+    value: billing_pb::AdminEntitlementsCenterSnapshot,
+) -> Result<EntitlementsSnapshot, AppError> {
     Ok(EntitlementsSnapshot {
-        active_plan_count: metrics.get("active_plan_count"),
-        active_feature_count: metrics.get("active_feature_count"),
-        quota_definition_count: metrics.get("quota_definition_count"),
-        active_entitlement_count: metrics.get("active_entitlement_count"),
-        over_quota_balance_count: metrics.get("over_quota_balance_count"),
-        unpublished_change_count: metrics.get("unpublished_change_count"),
-        active_trial_grant_count: metrics.get("active_trial_grant_count"),
-        active_plans: load_active_plans(db).await?,
-        over_quota_balances: load_over_quota_balances(db).await?,
-        expiring_entitlements: load_expiring_entitlements(db).await?,
-        unpublished_changes: load_unpublished_changes(db).await?,
+        active_plan_count: value.active_plan_count,
+        active_feature_count: value.active_feature_count,
+        quota_definition_count: value.quota_definition_count,
+        active_entitlement_count: value.active_entitlement_count,
+        over_quota_balance_count: value.over_quota_balance_count,
+        unpublished_change_count: value.unpublished_change_count,
+        active_trial_grant_count: value.active_trial_grant_count,
+        active_plans: value
+            .active_plans
+            .into_iter()
+            .map(plan_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        over_quota_balances: value
+            .over_quota_balances
+            .into_iter()
+            .map(over_quota_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        expiring_entitlements: value
+            .expiring_entitlements
+            .into_iter()
+            .map(expiring_entitlement_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        unpublished_changes: value
+            .unpublished_changes
+            .into_iter()
+            .map(unpublished_change_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
     })
 }
 
-async fn load_active_plans(db: &PgPool) -> Result<Vec<EntitlementPlan>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT bp.id AS plan_id, pr.name AS product_name, bp.code AS plan_code,
-          bp.name AS plan_name, COUNT(DISTINCT bpv.id) AS active_version_count,
-          COUNT(DISTINCT bpf.feature_id) AS feature_count
-        FROM billing_plans bp
-        JOIN billing_products pr ON pr.id = bp.product_id
-        LEFT JOIN billing_plan_versions bpv ON bpv.plan_id = bp.id AND bpv.status = 'active'
-        LEFT JOIN billing_plan_features bpf ON bpf.plan_version_id = bpv.id AND bpf.enabled = TRUE
-        WHERE bp.status = 'active'
-        GROUP BY bp.id, pr.name, bp.code, bp.name
-        ORDER BY pr.name ASC, bp.name ASC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| EntitlementPlan {
-            plan_id: row.get("plan_id"),
-            product_name: row.get("product_name"),
-            plan_code: row.get("plan_code"),
-            plan_name: row.get("plan_name"),
-            active_version_count: row.get("active_version_count"),
-            feature_count: row.get("feature_count"),
-        })
-        .collect())
+fn plan_from_grpc(value: billing_pb::AdminEntitlementPlan) -> Result<EntitlementPlan, AppError> {
+    Ok(EntitlementPlan {
+        plan_id: parse_uuid(&value.plan_id, "entitlement plan_id")?,
+        product_name: value.product_name,
+        plan_code: value.plan_code,
+        plan_name: value.plan_name,
+        active_version_count: value.active_version_count,
+        feature_count: value.feature_count,
+    })
 }
 
-async fn load_over_quota_balances(db: &PgPool) -> Result<Vec<OverQuotaBalance>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT qb.id, qb.tenant_id, t.name AS tenant_name, qb.workspace_id, w.name AS workspace_name,
-          qb.quota_code, qb.included_quantity, qb.used_quantity, qb.period_end
-        FROM billing_quota_balances qb
-        JOIN tenants t ON t.id = qb.tenant_id
-        LEFT JOIN workspaces w ON w.id = qb.workspace_id
-        WHERE qb.used_quantity > qb.included_quantity
-        ORDER BY (qb.used_quantity - qb.included_quantity) DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| OverQuotaBalance {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            workspace_id: row.get("workspace_id"),
-            workspace_name: row.get("workspace_name"),
-            quota_code: row.get("quota_code"),
-            included_quantity: row.get("included_quantity"),
-            used_quantity: row.get("used_quantity"),
-            period_end: row.get("period_end"),
-        })
-        .collect())
+fn over_quota_from_grpc(
+    value: billing_pb::AdminOverQuotaBalance,
+) -> Result<OverQuotaBalance, AppError> {
+    Ok(OverQuotaBalance {
+        id: parse_uuid(&value.id, "over quota balance id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "over quota balance tenant_id")?,
+        tenant_name: value.tenant_name,
+        workspace_id: parse_optional_uuid(&value.workspace_id, "over quota balance workspace_id")?,
+        workspace_name: empty_to_none(value.workspace_name),
+        quota_code: value.quota_code,
+        included_quantity: value.included_quantity,
+        used_quantity: value.used_quantity,
+        period_end: parse_date(&value.period_end, "over quota balance period_end")?,
+    })
 }
 
-async fn load_expiring_entitlements(db: &PgPool) -> Result<Vec<ExpiringEntitlement>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT es.id, es.tenant_id, t.name AS tenant_name, es.workspace_id, w.name AS workspace_name,
-          es.status, es.effective_to
-        FROM billing_entitlement_snapshots es
-        JOIN tenants t ON t.id = es.tenant_id
-        LEFT JOIN workspaces w ON w.id = es.workspace_id
-        WHERE es.effective_to IS NOT NULL
-          AND es.effective_to > NOW()
-          AND es.effective_to <= NOW() + INTERVAL '14 days'
-        ORDER BY es.effective_to ASC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| ExpiringEntitlement {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            workspace_id: row.get("workspace_id"),
-            workspace_name: row.get("workspace_name"),
-            status: row.get("status"),
-            effective_to: row.get("effective_to"),
-        })
-        .collect())
+fn expiring_entitlement_from_grpc(
+    value: billing_pb::AdminExpiringEntitlement,
+) -> Result<ExpiringEntitlement, AppError> {
+    Ok(ExpiringEntitlement {
+        id: parse_uuid(&value.id, "expiring entitlement id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "expiring entitlement tenant_id")?,
+        tenant_name: value.tenant_name,
+        workspace_id: parse_optional_uuid(
+            &value.workspace_id,
+            "expiring entitlement workspace_id",
+        )?,
+        workspace_name: empty_to_none(value.workspace_name),
+        status: value.status,
+        effective_to: parse_datetime(&value.effective_to, "expiring entitlement effective_to")?,
+    })
 }
 
-async fn load_unpublished_changes(
-    db: &PgPool,
-) -> Result<Vec<UnpublishedEntitlementChange>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT ec.id, ec.tenant_id, t.name AS tenant_name, ec.event_id, ec.created_at
-        FROM billing_entitlement_changes ec
-        JOIN tenants t ON t.id = ec.tenant_id
-        WHERE ec.published_at IS NULL
-        ORDER BY ec.created_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
+fn unpublished_change_from_grpc(
+    value: billing_pb::AdminUnpublishedEntitlementChange,
+) -> Result<UnpublishedEntitlementChange, AppError> {
+    Ok(UnpublishedEntitlementChange {
+        id: parse_uuid(&value.id, "unpublished entitlement change id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "unpublished entitlement change tenant_id")?,
+        tenant_name: value.tenant_name,
+        event_id: value.event_id,
+        created_at: parse_datetime(
+            &value.created_at,
+            "unpublished entitlement change created_at",
+        )?,
+    })
+}
 
-    Ok(rows
-        .into_iter()
-        .map(|row| UnpublishedEntitlementChange {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            event_id: row.get("event_id"),
-            created_at: row.get("created_at"),
-        })
-        .collect())
+fn parse_uuid(value: &str, field: &'static str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_optional_uuid(value: &str, field: &'static str) -> Result<Option<Uuid>, AppError> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        parse_uuid(value, field).map(Some)
+    }
+}
+
+fn parse_date(value: &str, field: &'static str) -> Result<NaiveDate, AppError> {
+    NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_datetime(value: &str, field: &'static str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&Utc))
+        .map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

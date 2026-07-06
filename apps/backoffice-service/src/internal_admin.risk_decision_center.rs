@@ -6,7 +6,9 @@ use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1 as billing_pb;
 
 #[derive(Debug, Serialize)]
 struct RiskDecisionSnapshot {
@@ -78,11 +80,26 @@ async fn risk_decision_center_route(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<RiskDecisionSnapshot>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_risk_decision(&state.db).await?))
+    let actor_principal_id = actor_principal_id(&headers)?;
+    let identity = load_identity_risk_decision(&state.db).await?;
+    let billing = crate::billing_grpc::get_admin_risk_decision_center(
+        &state.billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id: Uuid::nil(),
+            actor_principal_id,
+        },
+    )
+    .await?;
+    Ok(Json(risk_decision_from_parts(identity, billing)?))
 }
 
-async fn load_risk_decision(db: &PgPool) -> Result<RiskDecisionSnapshot, AppError> {
+struct IdentityRiskSnapshot {
+    identity_risk_event_count_24h: i64,
+    high_identity_risk_event_count_24h: i64,
+    recent_identity_risks: Vec<IdentityRiskDecision>,
+}
+
+async fn load_identity_risk_decision(db: &PgPool) -> Result<IdentityRiskSnapshot, AppError> {
     let metrics = sqlx::query(
         r#"
         SELECT
@@ -91,37 +108,16 @@ async fn load_risk_decision(db: &PgPool) -> Result<RiskDecisionSnapshot, AppErro
           (
             SELECT COUNT(*) FROM risk_events
             WHERE created_at >= NOW() - INTERVAL '24 hours' AND risk_score >= 0.7
-          ) AS high_identity_risk_event_count_24h,
-          (
-            SELECT COUNT(*) FROM billing_risk_signals
-            WHERE occurred_at >= NOW() - INTERVAL '24 hours'
-          ) AS billing_risk_signal_count_24h,
-          (SELECT COUNT(*) FROM billing_risk_scores WHERE score >= 70)
-            AS high_billing_risk_score_count,
-          (
-            SELECT COUNT(*) FROM billing_access_policy_snapshots
-            WHERE effective_from <= NOW() AND (effective_to IS NULL OR effective_to > NOW())
-          ) AS active_access_policy_count,
-          (
-            SELECT COUNT(*) FROM billing_access_policy_snapshots
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-          ) AS access_policy_count_24h
+          ) AS high_identity_risk_event_count_24h
         "#,
     )
     .fetch_one(db)
     .await?;
 
-    Ok(RiskDecisionSnapshot {
+    Ok(IdentityRiskSnapshot {
         identity_risk_event_count_24h: metrics.get("identity_risk_event_count_24h"),
         high_identity_risk_event_count_24h: metrics.get("high_identity_risk_event_count_24h"),
-        billing_risk_signal_count_24h: metrics.get("billing_risk_signal_count_24h"),
-        high_billing_risk_score_count: metrics.get("high_billing_risk_score_count"),
-        active_access_policy_count: metrics.get("active_access_policy_count"),
-        access_policy_count_24h: metrics.get("access_policy_count_24h"),
         recent_identity_risks: load_identity_risks(db).await?,
-        billing_risk_scores: load_billing_risk_scores(db).await?,
-        billing_risk_signals: load_billing_risk_signals(db).await?,
-        active_access_policies: load_access_policies(db).await?,
     })
 }
 
@@ -157,87 +153,110 @@ async fn load_identity_risks(db: &PgPool) -> Result<Vec<IdentityRiskDecision>, A
         .collect())
 }
 
-async fn load_billing_risk_scores(db: &PgPool) -> Result<Vec<BillingRiskScore>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT brs.id, brs.tenant_id, t.name AS tenant_name, brs.score::float8 AS score,
-          brs.decision, brs.created_at
-        FROM billing_risk_scores brs
-        JOIN tenants t ON t.id = brs.tenant_id
-        ORDER BY brs.created_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| BillingRiskScore {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            score: row.get("score"),
-            decision: row.get("decision"),
-            created_at: row.get("created_at"),
-        })
-        .collect())
+fn risk_decision_from_parts(
+    identity: IdentityRiskSnapshot,
+    billing: billing_pb::AdminRiskDecisionCenterSnapshot,
+) -> Result<RiskDecisionSnapshot, AppError> {
+    Ok(RiskDecisionSnapshot {
+        identity_risk_event_count_24h: identity.identity_risk_event_count_24h,
+        high_identity_risk_event_count_24h: identity.high_identity_risk_event_count_24h,
+        billing_risk_signal_count_24h: billing.billing_risk_signal_count_24h,
+        high_billing_risk_score_count: billing.high_billing_risk_score_count,
+        active_access_policy_count: billing.active_access_policy_count,
+        access_policy_count_24h: billing.access_policy_count_24h,
+        recent_identity_risks: identity.recent_identity_risks,
+        billing_risk_scores: billing
+            .billing_risk_scores
+            .into_iter()
+            .map(billing_risk_score_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        billing_risk_signals: billing
+            .billing_risk_signals
+            .into_iter()
+            .map(billing_risk_signal_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+        active_access_policies: billing
+            .active_access_policies
+            .into_iter()
+            .map(access_policy_from_grpc)
+            .collect::<Result<Vec<_>, _>>()?,
+    })
 }
 
-async fn load_billing_risk_signals(db: &PgPool) -> Result<Vec<BillingRiskSignal>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT brs.id, brs.tenant_id, t.name AS tenant_name, brs.signal_type, brs.occurred_at
-        FROM billing_risk_signals brs
-        LEFT JOIN tenants t ON t.id = brs.tenant_id
-        ORDER BY brs.occurred_at DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
-
-    Ok(rows
-        .into_iter()
-        .map(|row| BillingRiskSignal {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            signal_type: row.get("signal_type"),
-            occurred_at: row.get("occurred_at"),
-        })
-        .collect())
+fn billing_risk_score_from_grpc(
+    value: billing_pb::AdminBillingRiskScore,
+) -> Result<BillingRiskScore, AppError> {
+    Ok(BillingRiskScore {
+        id: parse_uuid(&value.id, "billing risk score id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "billing risk score tenant_id")?,
+        tenant_name: value.tenant_name,
+        score: value.score,
+        decision: value.decision,
+        created_at: parse_datetime(&value.created_at, "billing risk score created_at")?,
+    })
 }
 
-async fn load_access_policies(db: &PgPool) -> Result<Vec<AccessPolicySnapshot>, AppError> {
-    let rows = sqlx::query(
-        r#"
-        SELECT aps.id, aps.tenant_id, t.name AS tenant_name, aps.workspace_id,
-          w.name AS workspace_name, aps.policy_state, aps.reason,
-          aps.effective_from, aps.effective_to
-        FROM billing_access_policy_snapshots aps
-        JOIN tenants t ON t.id = aps.tenant_id
-        LEFT JOIN workspaces w ON w.id = aps.workspace_id
-        WHERE aps.effective_from <= NOW() AND (aps.effective_to IS NULL OR aps.effective_to > NOW())
-        ORDER BY aps.effective_from DESC
-        LIMIT 8
-        "#,
-    )
-    .fetch_all(db)
-    .await?;
+fn billing_risk_signal_from_grpc(
+    value: billing_pb::AdminBillingRiskSignal,
+) -> Result<BillingRiskSignal, AppError> {
+    Ok(BillingRiskSignal {
+        id: parse_uuid(&value.id, "billing risk signal id")?,
+        tenant_id: parse_optional_uuid(&value.tenant_id, "billing risk signal tenant_id")?,
+        tenant_name: empty_to_none(value.tenant_name),
+        signal_type: value.signal_type,
+        occurred_at: parse_datetime(&value.occurred_at, "billing risk signal occurred_at")?,
+    })
+}
 
-    Ok(rows
-        .into_iter()
-        .map(|row| AccessPolicySnapshot {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            tenant_name: row.get("tenant_name"),
-            workspace_id: row.get("workspace_id"),
-            workspace_name: row.get("workspace_name"),
-            policy_state: row.get("policy_state"),
-            reason: row.get("reason"),
-            effective_from: row.get("effective_from"),
-            effective_to: row.get("effective_to"),
-        })
-        .collect())
+fn access_policy_from_grpc(
+    value: billing_pb::AdminAccessPolicySnapshot,
+) -> Result<AccessPolicySnapshot, AppError> {
+    Ok(AccessPolicySnapshot {
+        id: parse_uuid(&value.id, "access policy id")?,
+        tenant_id: parse_uuid(&value.tenant_id, "access policy tenant_id")?,
+        tenant_name: value.tenant_name,
+        workspace_id: parse_optional_uuid(&value.workspace_id, "access policy workspace_id")?,
+        workspace_name: empty_to_none(value.workspace_name),
+        policy_state: value.policy_state,
+        reason: value.reason,
+        effective_from: parse_datetime(&value.effective_from, "access policy effective_from")?,
+        effective_to: parse_optional_datetime(&value.effective_to, "access policy effective_to")?,
+    })
+}
+
+fn parse_uuid(value: &str, field: &'static str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_optional_uuid(value: &str, field: &'static str) -> Result<Option<Uuid>, AppError> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        parse_uuid(value, field).map(Some)
+    }
+}
+
+fn parse_datetime(value: &str, field: &'static str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&Utc))
+        .map_err(|_| AppError::internal("billing_grpc_decode", field))
+}
+
+fn parse_optional_datetime(
+    value: &str,
+    field: &'static str,
+) -> Result<Option<DateTime<Utc>>, AppError> {
+    if value.trim().is_empty() {
+        Ok(None)
+    } else {
+        parse_datetime(value, field).map(Some)
+    }
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

@@ -13,7 +13,6 @@ use crate::{
 
 #[derive(SimpleObject)]
 pub struct CheckoutSession {
-    pub checkout_session_id: String,
     pub checkout_url: String,
     pub provider: BillingProvider,
     pub expires_at: Option<String>,
@@ -22,7 +21,6 @@ pub struct CheckoutSession {
 impl CheckoutSession {
     pub fn from_grpc(value: GrpcCheckoutSession) -> Result<Self> {
         Ok(Self {
-            checkout_session_id: value.checkout_session_id,
             checkout_url: value.checkout_url,
             provider: BillingProvider::parse(&value.provider)?,
             expires_at: empty_to_none(value.expires_at),

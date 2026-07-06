@@ -11,7 +11,6 @@ pub async fn run_platform_action(
     db: &sqlx::PgPool,
     kind: AdminBillingPlatformActionKind,
     tenant_id: Uuid,
-    workspace_id: Uuid,
     actor_principal_id: Uuid,
     target_id: Option<Uuid>,
     reason: String,
@@ -22,7 +21,7 @@ pub async fn run_platform_action(
         AdminBillingPlatformActionKind::ApproveKycProfile => {
             transition_kyc_profile(
                 db,
-                workspace_id,
+                tenant_id,
                 actor_principal_id,
                 required_target_id(target_id)?,
                 "approved",
@@ -33,7 +32,7 @@ pub async fn run_platform_action(
         AdminBillingPlatformActionKind::RejectKycProfile => {
             transition_kyc_profile(
                 db,
-                workspace_id,
+                tenant_id,
                 actor_principal_id,
                 required_target_id(target_id)?,
                 "rejected",
@@ -78,7 +77,7 @@ pub async fn run_platform_action(
         AdminBillingPlatformActionKind::TrustFraudAssessment => {
             crate::grpc::service_admin_platform_fraud::review_fraud_assessment(
                 db,
-                workspace_id,
+                tenant_id,
                 actor_principal_id,
                 required_target_id(target_id)?,
                 "trusted",
@@ -93,7 +92,7 @@ pub async fn run_platform_action(
 }
 
 fn required_target_id(target_id: Option<Uuid>) -> Result<Uuid, Status> {
-    target_id.ok_or_else(|| Status::invalid_argument("target_id is required for this action"))
+    target_id.ok_or_else(|| Status::invalid_argument("target_id is required"))
 }
 
 async fn transition_kyc_profile(
@@ -280,7 +279,7 @@ async fn transition_routing_rule(
         .await
         .map_err(crate::grpc::service_status::sql_status)?;
     if next_state == "active" {
-        reject_active_routing_rule_overlap_for_rule(&mut tx, rule_id).await?;
+        reject_active_routing_rule_overlap_for_rule(tx.as_mut(), rule_id).await?;
     }
     let row = sqlx::query_as::<_, (String, String)>(
         r#"
@@ -368,7 +367,7 @@ async fn reject_active_routing_rule_overlap(
 }
 
 async fn reject_active_routing_rule_overlap_for_rule(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    executor: &mut sqlx::PgConnection,
     rule_id: Uuid,
 ) -> Result<(), Status> {
     let row = sqlx::query(
@@ -380,7 +379,7 @@ async fn reject_active_routing_rule_overlap_for_rule(
         "#,
     )
     .bind(rule_id)
-    .fetch_optional(&mut **tx)
+    .fetch_optional(&mut *executor)
     .await
     .map_err(crate::grpc::service_status::sql_status)?;
 
@@ -389,7 +388,7 @@ async fn reject_active_routing_rule_overlap_for_rule(
     };
 
     reject_active_routing_rule_overlap(
-        &mut **tx,
+        executor,
         Some(rule_id),
         row.get::<Option<String>, _>("country").as_deref(),
         row.get::<Option<String>, _>("currency").as_deref(),

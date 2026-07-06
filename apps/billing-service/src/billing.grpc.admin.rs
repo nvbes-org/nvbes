@@ -1,8 +1,11 @@
 use tonic::Status;
+use uuid::Uuid;
 
 use crate::grpc::pb::nvbes::billing::v1::{
-    AdminCommandCenterBillingMetrics, AdminOperationsCenterSnapshot, RecentExportRun,
-    RecentProviderFailure, RecentReconciliationDifference,
+    AdminBillingOverview, AdminBillingSearchResult, AdminBillingSearchResults,
+    AdminCommandCenterBillingMetrics, AdminOperationsCenterSnapshot, AdminProviderEventFailure,
+    AdminProviderEventFailures, RecentExportRun, RecentProviderFailure,
+    RecentReconciliationDifference,
 };
 
 pub async fn command_center_metrics(
@@ -89,6 +92,177 @@ pub async fn operations_center_snapshot(
         recent_provider_failures: recent_provider_failures(db).await?,
         recent_export_runs: recent_export_runs(db).await?,
         recent_reconciliation_differences: recent_reconciliation_differences(db).await?,
+    })
+}
+
+pub async fn billing_overview(
+    db: &sqlx::PgPool,
+    tenant_id: Uuid,
+) -> Result<AdminBillingOverview, Status> {
+    let row = sqlx::query_as::<
+        _,
+        (
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            i64,
+            Option<chrono::DateTime<chrono::Utc>>,
+        ),
+    >(
+        r#"
+        SELECT
+          (
+            SELECT COUNT(*) FROM billing_invoices
+            WHERE tenant_id = $1 AND status::text IN ('issued', 'pro_forma')
+          ) AS open_invoice_count,
+          (
+            SELECT COUNT(*) FROM billing_invoices
+            WHERE tenant_id = $1 AND due_at < NOW() AND status::text IN ('issued', 'pro_forma')
+          ) AS overdue_invoice_count,
+          (
+            SELECT COALESCE(SUM(total_minor), 0) FROM billing_invoices
+            WHERE tenant_id = $1 AND status::text IN ('issued', 'pro_forma')
+          ) AS open_invoice_total_minor,
+          (
+            SELECT COUNT(*) FROM billing_provider_events
+            WHERE tenant_id = $1 AND status::text IN ('failed', 'rejected')
+          ) AS failed_provider_event_count,
+          (
+            SELECT COUNT(*) FROM billing_refunds
+            WHERE tenant_id = $1 AND status = 'pending'
+          ) AS pending_refund_count,
+          (
+            SELECT COUNT(*) FROM billing_subscriptions
+            WHERE tenant_id = $1 AND status IN ('active', 'trialing')
+          ) AS active_subscription_count,
+          (
+            SELECT COALESCE(SUM(amount_minor), 0) FROM billing_payments
+            WHERE tenant_id = $1 AND status::text = 'captured'
+              AND created_at >= NOW() - INTERVAL '30 days'
+          ) AS captured_payment_total_minor_30d,
+          (
+            SELECT MAX(created_at) FROM audit_events
+            WHERE tenant_id = $1 AND action LIKE 'billing.%'
+          ) AS last_billing_audit_at
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_one(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?;
+
+    Ok(AdminBillingOverview {
+        open_invoice_count: row.0,
+        overdue_invoice_count: row.1,
+        open_invoice_total_minor: row.2,
+        failed_provider_event_count: row.3,
+        pending_refund_count: row.4,
+        active_subscription_count: row.5,
+        captured_payment_total_minor_30d: row.6,
+        last_billing_audit_at: row.7.map(|value| value.to_rfc3339()).unwrap_or_default(),
+    })
+}
+
+pub async fn provider_event_failures(
+    db: &sqlx::PgPool,
+    tenant_id: Uuid,
+    limit: i64,
+) -> Result<AdminProviderEventFailures, Status> {
+    let limit = limit.clamp(1, 100);
+    let rows = sqlx::query_as::<
+        _,
+        (
+            uuid::Uuid,
+            String,
+            String,
+            String,
+            String,
+            bool,
+            serde_json::Value,
+            chrono::DateTime<chrono::Utc>,
+            Option<chrono::DateTime<chrono::Utc>>,
+        ),
+    >(
+        r#"
+        SELECT id, provider::text, provider_event_id, event_type, status::text,
+          signature_valid, payload_summary, received_at, processed_at
+        FROM billing_provider_events
+        WHERE tenant_id = $1 AND status::text IN ('failed', 'rejected')
+        ORDER BY received_at DESC, id DESC
+        LIMIT $2
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(limit)
+    .fetch_all(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?;
+
+    Ok(AdminProviderEventFailures {
+        failures: rows
+            .into_iter()
+            .map(|row| AdminProviderEventFailure {
+                id: row.0.to_string(),
+                provider: row.1,
+                provider_event_id: row.2,
+                event_type: row.3,
+                status: row.4,
+                signature_valid: row.5,
+                payload_summary_json: row.6.to_string(),
+                received_at: row.7.to_rfc3339(),
+                processed_at: row.8.map(|value| value.to_rfc3339()).unwrap_or_default(),
+            })
+            .collect(),
+    })
+}
+
+pub async fn search_billing(
+    db: &sqlx::PgPool,
+    tenant_id: Uuid,
+    query: &str,
+    limit: i64,
+) -> Result<AdminBillingSearchResults, Status> {
+    let query = query.trim();
+    if query.len() < 2 {
+        return Err(Status::invalid_argument(
+            "invalid_search_query: Billing admin search requires at least two characters.",
+        ));
+    }
+    let limit = limit.clamp(1, 50);
+    let pattern = format!("%{query}%");
+    let rows = sqlx::query_as::<_, (String, uuid::Uuid, String, String)>(
+        r#"
+        SELECT 'invoice', id, COALESCE(invoice_number, id::text), status::text
+        FROM billing_invoices
+        WHERE tenant_id = $1 AND (invoice_number ILIKE $2 OR id::text ILIKE $2)
+        UNION ALL
+        SELECT 'payment', id, provider::text || ':' || id::text, status::text
+        FROM billing_payments
+        WHERE tenant_id = $1 AND id::text ILIKE $2
+        ORDER BY 1, 3
+        LIMIT $3
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(pattern)
+    .bind(limit)
+    .fetch_all(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?;
+
+    Ok(AdminBillingSearchResults {
+        results: rows
+            .into_iter()
+            .map(|row| AdminBillingSearchResult {
+                kind: row.0,
+                id: row.1.to_string(),
+                label: row.2,
+                status: row.3,
+            })
+            .collect(),
     })
 }
 

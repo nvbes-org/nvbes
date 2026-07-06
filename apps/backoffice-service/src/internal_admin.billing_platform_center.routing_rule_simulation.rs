@@ -1,8 +1,9 @@
 use serde::Serialize;
-use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1::SimulateAdminBillingRoutingRequest;
 
 #[derive(Debug, Clone)]
 pub(crate) struct RoutingRuleSimulationInput {
@@ -17,7 +18,7 @@ pub(crate) struct RoutingRuleSimulationInput {
 pub(crate) struct RoutingRuleSimulationResult {
     pub(crate) input: NormalizedRoutingRuleSimulationInput,
     pub(crate) matched_rule: Option<MatchedRoutingRule>,
-    pub(crate) outcome: &'static str,
+    pub(crate) outcome: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -38,67 +39,61 @@ pub(crate) struct MatchedRoutingRule {
 }
 
 pub(crate) async fn simulate_routing_rule(
-    db: &PgPool,
+    billing_grpc_endpoint: &str,
+    access: BackofficeAccess,
+    workspace_id: Uuid,
     input: RoutingRuleSimulationInput,
 ) -> Result<RoutingRuleSimulationResult, AppError> {
-    if input.amount_minor < 0 {
-        return Err(AppError::bad_request(
-            "invalid_routing_amount",
-            "Routing simulation amount must be non-negative.",
-        ));
-    }
-    let normalized = NormalizedRoutingRuleSimulationInput {
-        country: input.country.as_deref().map(str::to_ascii_uppercase),
-        currency: input.currency.to_ascii_uppercase(),
-        payment_method: input.payment_method.to_ascii_lowercase(),
-        customer_type: input.customer_type.to_ascii_lowercase(),
-        amount_minor: input.amount_minor,
-    };
-    let row = sqlx::query(
-        r#"
-        SELECT id, priority, provider::text AS provider, fallback_enabled
-        FROM billing_provider_routing_rules
-        WHERE status = 'active'
-          AND (country IS NULL OR country = $1)
-          AND (currency IS NULL OR currency = $2)
-          AND (payment_method IS NULL OR lower(payment_method) = lower($3))
-          AND (customer_type IS NULL OR lower(customer_type) = lower($4))
-          AND (min_amount_minor IS NULL OR min_amount_minor <= $5)
-          AND (max_amount_minor IS NULL OR max_amount_minor >= $5)
-        ORDER BY
-          priority ASC,
-          country NULLS LAST,
-          currency NULLS LAST,
-          payment_method NULLS LAST,
-          customer_type NULLS LAST,
-          min_amount_minor DESC NULLS LAST,
-          max_amount_minor ASC NULLS LAST,
-          created_at ASC
-        LIMIT 1
-        "#,
+    let result = crate::billing_grpc::simulate_admin_billing_routing(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        SimulateAdminBillingRoutingRequest {
+            context: None,
+            workspace_id: String::new(),
+            country: input.country.unwrap_or_default(),
+            currency: input.currency,
+            payment_method: input.payment_method,
+            customer_type: input.customer_type,
+            amount_minor: input.amount_minor,
+        },
     )
-    .bind(normalized.country.as_deref())
-    .bind(normalized.currency.as_str())
-    .bind(normalized.payment_method.as_str())
-    .bind(normalized.customer_type.as_str())
-    .bind(normalized.amount_minor)
-    .fetch_optional(db)
     .await?;
-
-    let matched_rule = row.map(|row| MatchedRoutingRule {
-        id: row.get("id"),
-        priority: row.get("priority"),
-        provider: row.get("provider"),
-        fallback_enabled: row.get("fallback_enabled"),
-    });
-    let outcome = if matched_rule.is_some() {
-        "matched"
-    } else {
-        "no_matching_rule"
-    };
+    let normalized = result
+        .input
+        .ok_or_else(|| AppError::internal("billing_grpc_decode", "missing routing input"))?;
     Ok(RoutingRuleSimulationResult {
-        input: normalized,
-        matched_rule,
-        outcome,
+        input: NormalizedRoutingRuleSimulationInput {
+            country: empty_to_none(normalized.country),
+            currency: normalized.currency,
+            payment_method: normalized.payment_method,
+            customer_type: normalized.customer_type,
+            amount_minor: normalized.amount_minor,
+        },
+        matched_rule: result
+            .matched_rule
+            .map(matched_rule_from_grpc)
+            .transpose()?,
+        outcome: result.outcome,
     })
+}
+
+fn matched_rule_from_grpc(
+    value: crate::grpc_pb::nvbes::billing::v1::AdminBillingRoutingMatchedRule,
+) -> Result<MatchedRoutingRule, AppError> {
+    Ok(MatchedRoutingRule {
+        id: Uuid::parse_str(&value.id)
+            .map_err(|_| AppError::internal("billing_grpc_decode", "matched routing rule id"))?,
+        priority: value.priority,
+        provider: value.provider,
+        fallback_enabled: value.fallback_enabled,
+    })
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

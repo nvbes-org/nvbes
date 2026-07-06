@@ -121,7 +121,7 @@ async fn record_email_message_tx(
     recipient_email: &str,
     provider_email_id: &str,
 ) -> anyhow::Result<()> {
-    let recipient_hash = hex::encode(Sha256::digest(recipient_email.as_bytes()));
+    let recipient_hash = nvbes_billing::hex_encode(&Sha256::digest(recipient_email.as_bytes()));
 
     sqlx::query(
         r#"

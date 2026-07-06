@@ -1,33 +1,55 @@
 use serde_json::{Value, json};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1::{AdminRiskActionKind, AdminRiskActionResult};
 use crate::risk_decision_center_types::{RiskActionResult, action_result};
 use crate::risk_decision_center_validation::validate_reason;
 
 pub(crate) async fn approve_policy(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
     policy_id: Uuid,
     reason: String,
 ) -> Result<RiskActionResult, AppError> {
-    decide_policy(db, access, workspace_id, policy_id, "approved", reason).await
+    decide_policy(
+        billing_grpc_endpoint,
+        db,
+        access,
+        workspace_id,
+        policy_id,
+        AdminRiskActionKind::ApprovePolicy,
+        reason,
+    )
+    .await
 }
 
 pub(crate) async fn block_policy(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
     policy_id: Uuid,
     reason: String,
 ) -> Result<RiskActionResult, AppError> {
-    decide_policy(db, access, workspace_id, policy_id, "blocked", reason).await
+    decide_policy(
+        billing_grpc_endpoint,
+        db,
+        access,
+        workspace_id,
+        policy_id,
+        AdminRiskActionKind::BlockPolicy,
+        reason,
+    )
+    .await
 }
 
 pub(crate) async fn resolve_risk_signal(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
@@ -35,43 +57,28 @@ pub(crate) async fn resolve_risk_signal(
     reason: String,
 ) -> Result<RiskActionResult, AppError> {
     validate_reason(&reason)?;
-    let mut tx = db.begin().await?;
-    let row = sqlx::query(
-        "UPDATE billing_risk_signals
-         SET signal_value = signal_value || jsonb_build_object(
-           'resolution_status', 'resolved',
-           'resolution_reason', $1,
-           'resolved_by', $2::text,
-           'resolved_at', NOW()
-         )
-         WHERE id = $3 AND (tenant_id = $4 OR tenant_id IS NULL)
-           AND COALESCE(signal_value->>'resolution_status', '') <> 'resolved'
-         RETURNING id, tenant_id, signal_value",
+    let result = crate::billing_grpc::run_risk_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        AdminRiskActionKind::ResolveRiskSignal,
+        signal_id,
+        reason,
     )
-    .bind(&reason)
-    .bind(access.actor_principal_id)
-    .bind(signal_id)
-    .bind(access.tenant_id)
-    .fetch_optional(tx.as_mut())
-    .await?
-    .ok_or_else(|| {
-        AppError::conflict(
-            "risk_signal_not_resolvable",
-            "Risk signal is missing, belongs to another tenant, or is already resolved.",
-        )
-    })?;
-    let metadata: Value = row.get("signal_value");
+    .await?;
+    let metadata = parse_metadata_json(&result)?;
+    let mut tx = db.begin().await?;
     let action_id = insert_action(
         &mut tx,
         access,
         workspace_id,
         RiskActionInput {
-            action_kind: "resolve_risk_signal",
+            action_kind: result.action_kind.clone(),
             policy_snapshot_id: None,
             risk_signal_id: Some(signal_id),
             previous_state: None,
-            next_state: "resolved",
-            reason,
+            next_state: result.status.clone(),
+            reason: metadata_reason(&metadata),
             metadata,
         },
     )
@@ -80,8 +87,8 @@ pub(crate) async fn resolve_risk_signal(
         &mut tx,
         access,
         workspace_id,
-        "risk.signal.resolved",
-        "billing_risk_signal",
+        &result.audit_action,
+        &result.target_type,
         signal_id,
         action_id,
         json!({
@@ -112,76 +119,44 @@ pub(crate) async fn resolve_risk_signal(
     tx.commit().await?;
     Ok(action_result(
         action_id,
-        "resolve_risk_signal",
-        "resolved",
-        "risk.signal.resolved",
+        result.action_kind,
+        result.status,
+        result.audit_action,
     ))
 }
 
 async fn decide_policy(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
     policy_id: Uuid,
-    next_state: &'static str,
+    action_kind: AdminRiskActionKind,
     reason: String,
 ) -> Result<RiskActionResult, AppError> {
     validate_reason(&reason)?;
-    let mut tx = db.begin().await?;
-    let row = sqlx::query(
-        "WITH previous AS (
-           SELECT id, policy_state AS previous_state
-           FROM billing_access_policy_snapshots
-           WHERE id = $3 AND tenant_id = $4
-             AND (workspace_id = $5 OR workspace_id IS NULL)
-             AND policy_state <> $1
-         ),
-         updated AS (
-           UPDATE billing_access_policy_snapshots aps
-           SET policy_state = $1, reason = $2
-           FROM previous
-           WHERE aps.id = previous.id
-           RETURNING aps.policy_state AS next_state
-         )
-         SELECT previous.previous_state, updated.next_state
-         FROM previous
-         JOIN updated ON TRUE",
+    let result = crate::billing_grpc::run_risk_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        action_kind,
+        policy_id,
+        reason.clone(),
     )
-    .bind(next_state)
-    .bind(&reason)
-    .bind(policy_id)
-    .bind(access.tenant_id)
-    .bind(workspace_id)
-    .fetch_optional(tx.as_mut())
-    .await?
-    .ok_or_else(|| {
-        AppError::conflict(
-            "risk_policy_not_decidable",
-            "Risk policy is missing, belongs to another tenant, or is already in the requested state.",
-        )
-    })?;
-    let action_kind = if next_state == "approved" {
-        "approve_risk_policy"
-    } else {
-        "block_risk_policy"
-    };
-    let audit_action = if next_state == "approved" {
-        "risk.policy.approved"
-    } else {
-        "risk.policy.blocked"
-    };
+    .await?;
+    let mut tx = db.begin().await?;
     let action_id = insert_action(
         &mut tx,
         access,
         workspace_id,
         RiskActionInput {
-            action_kind,
+            action_kind: result.action_kind.clone(),
             policy_snapshot_id: Some(policy_id),
             risk_signal_id: None,
-            previous_state: Some(row.get("previous_state")),
-            next_state,
+            previous_state: empty_to_none(result.previous_state.clone()),
+            next_state: result.status.clone(),
             reason,
-            metadata: json!({ "policy_snapshot_id": policy_id }),
+            metadata: parse_metadata_json(&result)?,
         },
     )
     .await?;
@@ -189,8 +164,8 @@ async fn decide_policy(
         &mut tx,
         access,
         workspace_id,
-        audit_action,
-        "billing_access_policy_snapshot",
+        &result.audit_action,
+        &result.target_type,
         policy_id,
         action_id,
         json!({
@@ -201,8 +176,8 @@ async fn decide_policy(
             "changes": [
                 {
                     "field": "policy_state",
-                    "before": row.get::<String, _>("previous_state"),
-                    "after": next_state,
+                    "before": empty_to_none(result.previous_state.clone()),
+                    "after": result.status.clone(),
                 },
                 {
                     "field": "reason",
@@ -216,18 +191,18 @@ async fn decide_policy(
     tx.commit().await?;
     Ok(action_result(
         action_id,
-        action_kind,
-        next_state,
-        audit_action,
+        result.action_kind,
+        result.status,
+        result.audit_action,
     ))
 }
 
 struct RiskActionInput {
-    action_kind: &'static str,
+    action_kind: String,
     policy_snapshot_id: Option<Uuid>,
     risk_signal_id: Option<Uuid>,
     previous_state: Option<String>,
-    next_state: &'static str,
+    next_state: String,
     reason: String,
     metadata: Value,
 }
@@ -264,8 +239,8 @@ async fn insert_audit(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     access: BackofficeAccess,
     workspace_id: Uuid,
-    action: &'static str,
-    target_type: &'static str,
+    action: &str,
+    target_type: &str,
     target_id: Uuid,
     action_id: Uuid,
     metadata: Value,
@@ -290,4 +265,25 @@ async fn insert_audit(
     .execute(tx.as_mut())
     .await?;
     Ok(())
+}
+
+fn parse_metadata_json(result: &AdminRiskActionResult) -> Result<Value, AppError> {
+    serde_json::from_str(&result.metadata_json)
+        .map_err(|error| AppError::internal("billing_grpc_decode", error.to_string()))
+}
+
+fn metadata_reason(metadata: &Value) -> String {
+    metadata
+        .get("resolution_reason")
+        .and_then(Value::as_str)
+        .unwrap_or("risk signal resolved")
+        .to_string()
+}
+
+fn empty_to_none(value: String) -> Option<String> {
+    if value.trim().is_empty() {
+        None
+    } else {
+        Some(value)
+    }
 }

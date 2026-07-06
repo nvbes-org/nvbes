@@ -12,8 +12,11 @@ use crate::{
             billing::v1::billing_service_server::{BillingService, BillingServiceServer},
             platform::v1::RequestContext,
         },
-        service_admin, service_admin_billing, service_admin_operations, service_admin_platform,
-        service_admin_revenue, service_conversions,
+        service_admin, service_admin_billing, service_admin_entitlements, service_admin_exports,
+        service_admin_operations, service_admin_platform,
+        service_admin_platform_routing_simulation, service_admin_platform_snapshot,
+        service_admin_revenue, service_admin_revenue_snapshot, service_admin_risk,
+        service_admin_usage, service_conversions,
         service_status::{
             checkout_status, empty_to_none, optional_uuid, parse_datetime, parse_uuid,
             portal_status, reconciliation_status, sql_status, usage_status, validate_context,
@@ -263,6 +266,134 @@ impl BillingService for BillingGrpcService {
         ))
     }
 
+    async fn get_admin_billing_overview(
+        &self,
+        request: Request<billing::GetAdminBillingOverviewRequest>,
+    ) -> Result<Response<billing::AdminBillingOverview>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin::billing_overview(&self.state.db, tenant_id(context)?).await?,
+        ))
+    }
+
+    async fn list_admin_provider_event_failures(
+        &self,
+        request: Request<billing::ListAdminProviderEventFailuresRequest>,
+    ) -> Result<Response<billing::AdminProviderEventFailures>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin::provider_event_failures(
+                &self.state.db,
+                tenant_id(context)?,
+                i64::from(request.limit),
+            )
+            .await?,
+        ))
+    }
+
+    async fn search_admin_billing(
+        &self,
+        request: Request<billing::SearchAdminBillingRequest>,
+    ) -> Result<Response<billing::AdminBillingSearchResults>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin::search_billing(
+                &self.state.db,
+                tenant_id(context)?,
+                &request.query,
+                i64::from(request.limit),
+            )
+            .await?,
+        ))
+    }
+
+    async fn build_admin_finance_export(
+        &self,
+        request: Request<billing::BuildAdminFinanceExportRequest>,
+    ) -> Result<Response<billing::AdminFinanceExport>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin_exports::build_finance_export(
+                &self.state.db,
+                tenant_id(context)?,
+                &request.export_type,
+            )
+            .await?,
+        ))
+    }
+
+    async fn get_admin_usage_center(
+        &self,
+        request: Request<billing::GetAdminUsageCenterRequest>,
+    ) -> Result<Response<billing::AdminUsageCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin_usage::usage_center(&self.state.db).await?,
+        ))
+    }
+
+    async fn run_admin_usage_action(
+        &self,
+        request: Request<billing::AdminUsageActionRequest>,
+    ) -> Result<Response<billing::AdminUsageActionResult>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin_usage::run_usage_action(
+                &self.state.db,
+                tenant_id(context)?,
+                actor_principal_id(context)?,
+                request,
+            )
+            .await?,
+        ))
+    }
+
+    async fn get_admin_entitlements_center(
+        &self,
+        request: Request<billing::GetAdminEntitlementsCenterRequest>,
+    ) -> Result<Response<billing::AdminEntitlementsCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin_entitlements::entitlements_center(&self.state.db).await?,
+        ))
+    }
+
+    async fn get_admin_billing_platform_center(
+        &self,
+        request: Request<billing::GetAdminBillingPlatformCenterRequest>,
+    ) -> Result<Response<billing::AdminBillingPlatformCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin_platform_snapshot::billing_platform_center(&self.state.db).await?,
+        ))
+    }
+
+    async fn simulate_admin_billing_routing(
+        &self,
+        request: Request<billing::SimulateAdminBillingRoutingRequest>,
+    ) -> Result<Response<billing::AdminBillingRoutingSimulationResult>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin_platform_routing_simulation::simulate_routing(&self.state.db, request)
+                .await?,
+        ))
+    }
+
     async fn run_admin_operations_action(
         &self,
         request: Request<billing::AdminOperationsActionRequest>,
@@ -293,7 +424,6 @@ impl BillingService for BillingGrpcService {
             billing::AdminBillingPlatformActionKind::try_from(request.action_kind)
                 .unwrap_or(billing::AdminBillingPlatformActionKind::Unspecified),
             tenant_id(context)?,
-            workspace_id(&request.workspace_id)?,
             actor_principal_id(context)?,
             optional_uuid(&request.target_id, "target_id")?,
             request.reason,
@@ -301,6 +431,17 @@ impl BillingService for BillingGrpcService {
         )
         .await?;
         Ok(Response::new(result))
+    }
+
+    async fn get_admin_revenue_center(
+        &self,
+        request: Request<billing::GetAdminRevenueCenterRequest>,
+    ) -> Result<Response<billing::AdminRevenueCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin_revenue_snapshot::revenue_center(&self.state.db).await?,
+        ))
     }
 
     async fn run_admin_billing_action(
@@ -317,6 +458,38 @@ impl BillingService for BillingGrpcService {
             actor_principal_id(context)?,
             action_kind,
             request,
+        )
+        .await?;
+        Ok(Response::new(result))
+    }
+
+    async fn get_admin_risk_decision_center(
+        &self,
+        request: Request<billing::GetAdminRiskDecisionCenterRequest>,
+    ) -> Result<Response<billing::AdminRiskDecisionCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin_risk::risk_decision_center(&self.state.db).await?,
+        ))
+    }
+
+    async fn run_admin_risk_action(
+        &self,
+        request: Request<billing::AdminRiskActionRequest>,
+    ) -> Result<Response<billing::AdminRiskActionResult>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        let result = service_admin_risk::run_risk_action(
+            &self.state.db,
+            billing::AdminRiskActionKind::try_from(request.action_kind)
+                .unwrap_or(billing::AdminRiskActionKind::Unspecified),
+            tenant_id(context)?,
+            actor_principal_id(context)?,
+            workspace_id,
+            parse_uuid(&request.target_id, "target_id")?,
+            request.reason,
         )
         .await?;
         Ok(Response::new(result))

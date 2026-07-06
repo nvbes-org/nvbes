@@ -1,11 +1,12 @@
 use axum::{Json, Router, http::HeaderMap, routing::get};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, Row};
+use sqlx::Row;
+use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
-use crate::billing_grpc::get_admin_command_center_billing_metrics;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
 use axum::extract::State;
 
@@ -46,19 +47,25 @@ async fn command_center_route(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<CommandCenterSnapshot>, AppError> {
-    let actor_id = actor_principal_id(&headers)?;
+    let actor_principal_id = actor_principal_id(&headers)?;
     Ok(Json(
-        load_command_center_snapshot(&state.db, &state.billing_grpc_endpoint, actor_id).await?,
+        load_command_center_snapshot(&state, actor_principal_id).await?,
     ))
 }
 
 async fn load_command_center_snapshot(
-    db: &PgPool,
-    billing_grpc_endpoint: &str,
-    actor_id: uuid::Uuid,
+    state: &AppState,
+    actor_principal_id: Uuid,
 ) -> Result<CommandCenterSnapshot, AppError> {
-    let billing_metrics =
-        get_admin_command_center_billing_metrics(billing_grpc_endpoint, actor_id).await?;
+    let db = &state.db;
+    let billing_metrics = crate::billing_grpc::get_admin_command_center_billing_metrics(
+        &state.billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id: Uuid::nil(),
+            actor_principal_id,
+        },
+    )
+    .await?;
     let row = sqlx::query(
         r#"
         SELECT
@@ -72,7 +79,7 @@ async fn load_command_center_snapshot(
           (
             (SELECT COUNT(*) FROM developer_marketplace_apps WHERE status::text = 'pending') +
             (SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending')
-          ) AS local_pending_approval_count,
+          ) AS pending_approval_count,
           (
             SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending'
           ) AS critical_pending_approval_count,
@@ -94,8 +101,8 @@ async fn load_command_center_snapshot(
     .fetch_one(db)
     .await?;
 
-    let pending_approval_count: i64 = row.get::<i64, _>("local_pending_approval_count")
-        + billing_metrics.pending_kyc_approval_count;
+    let pending_approval_count: i64 =
+        row.get::<i64, _>("pending_approval_count") + billing_metrics.pending_kyc_approval_count;
     let critical_pending_approval_count = row.get("critical_pending_approval_count");
     let overdue_approval_count = row.get("overdue_approval_count");
     let open_incident_count = row.get("open_incident_count");

@@ -24,10 +24,15 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
+        let billing_grpc_endpoint = crate::billing_grpc::billing_grpc_endpoint(config.api_port)
+            .unwrap_or_else(|error| {
+                tracing::warn!(%error, "falling back to local Billing gRPC endpoint");
+                "http://127.0.0.1:3021".to_string()
+            });
         let state = Self {
-            billing_grpc_endpoint: crate::billing_grpc::billing_grpc_endpoint(config.api_port),
             config,
             db,
+            billing_grpc_endpoint,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),
         };

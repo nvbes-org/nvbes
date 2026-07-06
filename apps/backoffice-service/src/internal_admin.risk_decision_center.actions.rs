@@ -56,7 +56,15 @@ async fn approve_policy_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        approve_policy(&state.db, access, workspace_id, policy_id, request.reason).await?,
+        approve_policy(
+            &state.billing_grpc_endpoint,
+            &state.db,
+            access,
+            workspace_id,
+            policy_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -76,7 +84,15 @@ async fn block_policy_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        block_policy(&state.db, access, workspace_id, policy_id, request.reason).await?,
+        block_policy(
+            &state.billing_grpc_endpoint,
+            &state.db,
+            access,
+            workspace_id,
+            policy_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -96,7 +112,15 @@ async fn resolve_risk_signal_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        resolve_risk_signal(&state.db, access, workspace_id, signal_id, request.reason).await?,
+        resolve_risk_signal(
+            &state.billing_grpc_endpoint,
+            &state.db,
+            access,
+            workspace_id,
+            signal_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
