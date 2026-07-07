@@ -126,7 +126,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-phase-ledger",
-		"tools/migration/phase-ledger.mjs --write",
+		"node tools/migration/phase-ledger.mjs --write",
 		"```",
 		"",
 	);
@@ -178,13 +178,13 @@ function validate(ledger, expected) {
 
 function validateGeneration(ledger) {
 	const generation = ledger.generation ?? {};
-	if (generation.command !== "tools/migration/phase-ledger.mjs --write") {
+	if (generation.command !== "node tools/migration/phase-ledger.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (generation.source !== sourcePath) {
 		errors.push(`${outputPath}: generation.source must match blueprint source`);
 	}
-	if (generation.strict_cutover_command !== "tools/migration/phase-ledger.mjs --strict") {
+	if (generation.strict_cutover_command !== "node tools/migration/phase-ledger.mjs --strict") {
 		errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	}
 }
@@ -207,9 +207,9 @@ const existing = readJson(outputPath);
 const ledger = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/phase-ledger.mjs --write",
+		command: "node tools/migration/phase-ledger.mjs --write",
 		source: sourcePath,
-		strict_cutover_command: "tools/migration/phase-ledger.mjs --strict",
+		strict_cutover_command: "node tools/migration/phase-ledger.mjs --strict",
 	},
 	summary: { phases: generated.length, pending: 0, accepted: 0, passed: 0, failed: 0 },
 	phases: mergeExisting(generated, existing),
@@ -231,8 +231,8 @@ if (write) {
 validate(ledger, generated);
 
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/phase-ledger.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/phase-ledger.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/phase-ledger.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/phase-ledger.mjs --write`);
 }
 
 if (errors.length > 0) {

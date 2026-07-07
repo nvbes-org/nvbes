@@ -1,11 +1,14 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::domains::oauth::{
-    hash_client_secret,
-    logic::OAuthManagementAuth,
-    parse_client_type, parse_step_up_level,
-    service::types::{CreateOAuthClientInput, CreateOAuthClientResult, OAuthClientView},
+use crate::domains::{
+    cloud::workspace_port,
+    oauth::{
+        hash_client_secret,
+        logic::OAuthManagementAuth,
+        parse_client_type, parse_step_up_level,
+        service::types::{CreateOAuthClientInput, CreateOAuthClientResult, OAuthClientView},
+    },
 };
 use crate::http::error::AppError;
 use nvbes_core::authz::parse_role;
@@ -78,22 +81,22 @@ pub async fn create_client(
         ));
     }
     if requested_service_account_role == "owner" {
-        let owner_access = sqlx::query_scalar::<_, bool>(
-            r#"
-            SELECT EXISTS(
-              SELECT 1
-              FROM workspace_memberships
-              WHERE workspace_id = $1
-                AND principal_id = $2
-                AND status = 'active'
-                AND role = 'owner'
+        let owner_access = if owner_scope_type == "workspace" {
+            workspace_port::list_workspace_members(
+                Some(tenant_id),
+                owner_scope_id,
+                OAuthManagementAuth::user_id(auth),
             )
-            "#,
-        )
-        .bind(owner_scope_id)
-        .bind(OAuthManagementAuth::user_id(auth))
-        .fetch_one(db)
-        .await?;
+            .await?
+            .into_iter()
+            .any(|member| {
+                member.principal_id == OAuthManagementAuth::user_id(auth)
+                    && member.active
+                    && member.role == "owner"
+            })
+        } else {
+            false
+        };
 
         if !owner_access {
             return Err(AppError::forbidden(

@@ -60,7 +60,7 @@ pub async fn list_webhooks(
 ) -> Result<Json<DeveloperWebhooksResponse>, AppError> {
     let tenant_id =
         require_developer_permission(&state, &auth, DeveloperPermission::WebhooksRead).await?;
-    let response = webhooks_service::list_endpoints(&state.db, tenant_id).await?;
+    let response = webhooks_service::list_endpoints(&state.db, tenant_id, auth.user_id).await?;
 
     Ok(Json(response))
 }
@@ -113,7 +113,7 @@ pub async fn delete_webhook(
 ) -> Result<axum::http::StatusCode, AppError> {
     let tenant_id =
         require_developer_permission(&state, &auth, DeveloperPermission::WebhooksManage).await?;
-    webhooks_service::delete_endpoint(&state.db, tenant_id, endpoint_id).await?;
+    webhooks_service::delete_endpoint(&state.db, tenant_id, auth.user_id, endpoint_id).await?;
 
     Ok(axum::http::StatusCode::NO_CONTENT)
 }

@@ -65,6 +65,7 @@ export const gateEvidence = {
 			"Domain gate is satisfied for repository controls by strict parity, generated public contracts and evidence-backed domain ledgers.",
 	},
 	G4: {
+		owner: "Product leads",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
 			"docs/migration/live-evidence-instances.generated.json",
@@ -75,6 +76,7 @@ export const gateEvidence = {
 			"Pending frontend sign-off; requires accepted g4-frontend-signoff live evidence before gate approval.",
 	},
 	G5: {
+		owner: "Infra lead",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
 			"docs/migration/live-evidence-instances.generated.json",
@@ -86,6 +88,7 @@ export const gateEvidence = {
 			"Pending infra sign-off; requires accepted g5-infra-signoff live restore and rollback evidence before gate approval.",
 	},
 	G6: {
+		owner: "Data lead",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
 			"docs/migration/live-evidence-instances.generated.json",
@@ -97,6 +100,7 @@ export const gateEvidence = {
 			"Pending migration rehearsals; requires accepted p11-rehearsals live evidence before gate approval.",
 	},
 	G7: {
+		owner: "Migration lead",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
 			"docs/migration/live-evidence-instances.generated.json",
@@ -109,6 +113,7 @@ export const gateEvidence = {
 			"Pending production cutover; requires accepted p12-cutover and final reconciliation live evidence before gate approval.",
 	},
 	G8: {
+		owner: "Infra lead",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
 			"docs/migration/live-evidence-instances.generated.json",

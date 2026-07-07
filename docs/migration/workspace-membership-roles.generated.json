@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/workspace-membership-roles.mjs --write",
+    "command": "node tools/migration/workspace-membership-roles.mjs --write",
     "sources": [
       "libs/rust/core/src/authz.policy.rs",
       "libs/rust/core/src/authz.policy.tests.rs",
       "libs/rust/core/src/authz.role.rs",
-      "apps/identity-api/src/identity.domains.authz.db.rs",
-      "apps/identity-api/src/identity.domains.authz.service.rs",
-      "apps/identity-api/src/identity.domains.authz.routes.rs",
-      "apps/identity-api/openapi.json"
+      "apps/account-service/src/identity.domains.authz.db.rs",
+      "apps/account-service/src/identity.domains.authz.service.rs",
+      "apps/account-service/src/identity.domains.authz.routes.rs",
+      "apps/account-service/openapi.json"
     ],
     "targeted_tests": [
       "cargo test -p nvbes-core workspace_membership_roles_cover_expected_permission_boundaries --locked",
-      "cargo test -p nvbes-identity-api permission_denied_metadata_captures_role_action_and_target_role --locked"
+      "cargo test -p nvbes-account-service permission_denied_metadata_captures_role_action_and_target_role --locked"
     ]
   },
   "summary": {
@@ -151,57 +151,57 @@
     },
     {
       "id": "service-policy-call",
-      "description": "Identity API authorization calls the shared role policy",
-      "path": "apps/identity-api/src/identity.domains.authz.service.rs",
+      "description": "Account Service authorization calls the shared role policy",
+      "path": "apps/account-service/src/identity.domains.authz.service.rs",
       "status": "passed",
       "pattern": "is_allowed(access.role, action, effective_resource)"
     },
     {
       "id": "denied-audit-call",
       "description": "Denied workspace actions are audited before returning an error",
-      "path": "apps/identity-api/src/identity.domains.authz.service.rs",
+      "path": "apps/account-service/src/identity.domains.authz.service.rs",
       "status": "passed",
       "pattern": "record_permission_denied(db, &access, action, effective_resource, headers).await?"
     },
     {
       "id": "audit-insert",
       "description": "Permission denied decisions insert an audit event",
-      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "path": "apps/account-service/src/identity.domains.authz.db.rs",
       "status": "passed",
       "pattern": "record_event_tx"
     },
     {
       "id": "audit-action",
       "description": "Permission denied audit uses stable action literal",
-      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "path": "apps/account-service/src/identity.domains.authz.db.rs",
       "status": "passed",
       "pattern": "action: \"permission.denied\""
     },
     {
       "id": "audit-metadata-helper",
       "description": "Permission denied audit metadata is generated through a tested helper",
-      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "path": "apps/account-service/src/identity.domains.authz.db.rs",
       "status": "passed",
       "pattern": "permission_denied_metadata"
     },
     {
       "id": "audit-metadata-test",
       "description": "Permission denied audit metadata has a unit test",
-      "path": "apps/identity-api/src/identity.domains.authz.db.rs",
+      "path": "apps/account-service/src/identity.domains.authz.db.rs",
       "status": "passed",
       "pattern": "permission_denied_metadata_captures_role_action_and_target_role"
     },
     {
       "id": "decision-route",
       "description": "Authz decision endpoint is routed",
-      "path": "apps/identity-api/src/identity.domains.authz.routes.rs",
+      "path": "apps/account-service/src/identity.domains.authz.routes.rs",
       "status": "passed",
       "pattern": "/authz/decision"
     },
     {
       "id": "decision-openapi",
       "description": "Authz decision endpoint is present in OpenAPI",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "\"/authz/decision\""
     }

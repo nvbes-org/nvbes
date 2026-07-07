@@ -1,6 +1,6 @@
 use std::{future::Future, net::SocketAddr};
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use tonic::{Request, Response, Status, transport::Server};
 use uuid::Uuid;
 
@@ -8,15 +8,17 @@ use crate::{
     app::BillingAppState,
     grpc::{
         pb::nvbes::{
-            billing::v1::{
-                BillingOverview, BillingPortal, CheckoutSession, CreateCheckoutRequest,
-                GetBillingOverviewRequest, GetBillingPortalRequest, ReconciliationRun,
-                RunReconciliationRequest, UsageEvent, UsageIngestResponse,
-                billing_service_server::{BillingService, BillingServiceServer},
-            },
+            billing::v1 as billing,
+            billing::v1::billing_service_server::{BillingService, BillingServiceServer},
             platform::v1::RequestContext,
         },
-        service_conversions,
+        service_admin, service_admin_billing, service_admin_operations, service_admin_platform,
+        service_admin_revenue, service_conversions,
+        service_status::{
+            checkout_status, empty_to_none, optional_uuid, parse_datetime, parse_uuid,
+            portal_status, reconciliation_status, sql_status, usage_status, validate_context,
+            workspace_id,
+        },
     },
 };
 
@@ -50,15 +52,15 @@ pub async fn serve(
 impl BillingService for BillingGrpcService {
     async fn get_billing_overview(
         &self,
-        request: Request<GetBillingOverviewRequest>,
-    ) -> Result<Response<BillingOverview>, Status> {
+        request: Request<billing::GetBillingOverviewRequest>,
+    ) -> Result<Response<billing::BillingOverview>, Status> {
         let request = request.into_inner();
         let workspace_id = workspace_id(&request.workspace_id)?;
         validate_context(request.context.as_ref(), Some(workspace_id))?;
-
-        let overview = nvbes_billing::fetch_workspace_billing_overview(&self.state.db, workspace_id)
-            .await
-            .map_err(sql_status)?;
+        let overview =
+            nvbes_billing::fetch_workspace_billing_overview(&self.state.db, workspace_id)
+                .await
+                .map_err(sql_status)?;
         Ok(Response::new(
             service_conversions::billing_overview_response(overview),
         ))
@@ -66,12 +68,11 @@ impl BillingService for BillingGrpcService {
 
     async fn get_billing_portal(
         &self,
-        request: Request<GetBillingPortalRequest>,
-    ) -> Result<Response<BillingPortal>, Status> {
+        request: Request<billing::GetBillingPortalRequest>,
+    ) -> Result<Response<billing::BillingPortal>, Status> {
         let request = request.into_inner();
         let workspace_id = workspace_id(&request.workspace_id)?;
         validate_context(request.context.as_ref(), Some(workspace_id))?;
-
         let portal = nvbes_billing::portal_views::fetch_portal_view(&self.state.db, workspace_id)
             .await
             .map_err(sql_status)?;
@@ -83,13 +84,12 @@ impl BillingService for BillingGrpcService {
 
     async fn create_checkout(
         &self,
-        request: Request<CreateCheckoutRequest>,
-    ) -> Result<Response<CheckoutSession>, Status> {
+        request: Request<billing::CreateCheckoutRequest>,
+    ) -> Result<Response<billing::CheckoutSession>, Status> {
         let request = request.into_inner();
         let workspace_id = workspace_id(&request.workspace_id)?;
         let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
         let actor_principal_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
-
         let checkout = nvbes_billing::checkout_sessions::create_billing_checkout_session(
             &self.state.db,
             &self.state.config,
@@ -108,22 +108,248 @@ impl BillingService for BillingGrpcService {
         )
         .await
         .map_err(checkout_status)?;
-
         Ok(Response::new(
             service_conversions::checkout_session_response(checkout),
         ))
     }
 
+    async fn create_portal(
+        &self,
+        request: Request<billing::CreatePortalRequest>,
+    ) -> Result<Response<billing::PortalSession>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        let actor_principal_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
+        let portal = nvbes_billing::portal_actions::create_billing_portal_session(
+            &self.state.db,
+            &self.state.config,
+            nvbes_billing::portal_actions::CreateBillingPortalSessionInput {
+                workspace_id,
+                actor_principal_id,
+                portal: nvbes_billing::types::CreatePortalInput {
+                    return_url: empty_to_none(request.return_url),
+                },
+                ip: None,
+                user_agent: Some("nvbes-billing-grpc".to_string()),
+            },
+        )
+        .await
+        .map_err(portal_status)?;
+        Ok(Response::new(service_conversions::portal_session_response(
+            portal,
+        )))
+    }
+
+    async fn get_entitlements(
+        &self,
+        request: Request<billing::GetEntitlementsRequest>,
+    ) -> Result<Response<billing::EntitlementSnapshot>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        validate_context(request.context.as_ref(), Some(workspace_id))?;
+        let overview =
+            nvbes_billing::fetch_workspace_billing_overview(&self.state.db, workspace_id)
+                .await
+                .map_err(sql_status)?;
+        Ok(Response::new(service_conversions::entitlement_snapshot(
+            overview,
+        )))
+    }
+
+    async fn list_invoices(
+        &self,
+        request: Request<billing::ListInvoicesRequest>,
+    ) -> Result<Response<billing::ListInvoicesResponse>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        validate_context(request.context.as_ref(), Some(workspace_id))?;
+        let invoices =
+            nvbes_billing::portal_views::fetch_portal_invoices(&self.state.db, workspace_id)
+                .await
+                .map_err(sql_status)?
+                .into_iter()
+                .map(service_conversions::billing_invoice)
+                .collect();
+        Ok(Response::new(billing::ListInvoicesResponse {
+            invoices,
+            page: None,
+        }))
+    }
+
+    async fn get_invoice(
+        &self,
+        request: Request<billing::GetInvoiceRequest>,
+    ) -> Result<Response<billing::BillingInvoice>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        validate_context(request.context.as_ref(), Some(workspace_id))?;
+        let invoice_id = parse_uuid(&request.invoice_id, "invoice_id")?.to_string();
+        let invoice =
+            nvbes_billing::portal_views::fetch_portal_invoices(&self.state.db, workspace_id)
+                .await
+                .map_err(sql_status)?
+                .into_iter()
+                .map(service_conversions::billing_invoice)
+                .find(|invoice| invoice.invoice_id == invoice_id)
+                .ok_or_else(|| Status::not_found("billing invoice was not found"))?;
+        Ok(Response::new(invoice))
+    }
+
+    async fn record_ledger_entry(
+        &self,
+        _request: Request<billing::RecordLedgerEntryRequest>,
+    ) -> Result<Response<billing::LedgerEntry>, Status> {
+        Err(Status::unimplemented(
+            "Billing ledger write RPC is not implemented by billing-service yet",
+        ))
+    }
+
+    async fn list_ledger_entries(
+        &self,
+        _request: Request<billing::ListLedgerEntriesRequest>,
+    ) -> Result<Response<billing::ListLedgerEntriesResponse>, Status> {
+        Err(Status::unimplemented(
+            "Billing ledger query RPC is not implemented by billing-service yet",
+        ))
+    }
+
+    async fn ingest_provider_webhook(
+        &self,
+        _request: Request<billing::IngestProviderWebhookRequest>,
+    ) -> Result<Response<billing::ProviderWebhookEvent>, Status> {
+        Err(Status::unimplemented(
+            "Billing provider webhook RPC is not implemented by billing-service yet",
+        ))
+    }
+
+    async fn list_provider_webhook_events(
+        &self,
+        _request: Request<billing::ListProviderWebhookEventsRequest>,
+    ) -> Result<Response<billing::ListProviderWebhookEventsResponse>, Status> {
+        Err(Status::unimplemented(
+            "Billing provider webhook listing RPC is not implemented by billing-service yet",
+        ))
+    }
+
+    async fn reconcile_provider_webhook(
+        &self,
+        _request: Request<billing::ReconcileProviderWebhookRequest>,
+    ) -> Result<Response<billing::ProviderWebhookEvent>, Status> {
+        Err(Status::unimplemented(
+            "Billing provider webhook reconciliation RPC is not implemented by billing-service yet",
+        ))
+    }
+
+    async fn get_admin_command_center_billing_metrics(
+        &self,
+        request: Request<billing::GetAdminCommandCenterBillingMetricsRequest>,
+    ) -> Result<Response<billing::AdminCommandCenterBillingMetrics>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin::command_center_metrics(&self.state.db).await?,
+        ))
+    }
+
+    async fn get_admin_operations_center(
+        &self,
+        request: Request<billing::GetAdminOperationsCenterRequest>,
+    ) -> Result<Response<billing::AdminOperationsCenterSnapshot>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin::operations_center_snapshot(&self.state.db).await?,
+        ))
+    }
+
+    async fn run_admin_operations_action(
+        &self,
+        request: Request<billing::AdminOperationsActionRequest>,
+    ) -> Result<Response<billing::AdminOperationsActionResult>, Status> {
+        let request = request.into_inner();
+        let context = validate_context(request.context.as_ref(), None)?;
+        let result = service_admin_operations::run_operations_action(
+            &self.state.db,
+            billing::AdminOperationsActionKind::try_from(request.action_kind)
+                .unwrap_or(billing::AdminOperationsActionKind::Unspecified),
+            tenant_id(context)?,
+            actor_principal_id(context)?,
+            parse_uuid(&request.target_id, "target_id")?,
+            request.reason,
+        )
+        .await?;
+        Ok(Response::new(result))
+    }
+
+    async fn run_admin_billing_platform_action(
+        &self,
+        request: Request<billing::AdminBillingPlatformActionRequest>,
+    ) -> Result<Response<billing::AdminBillingPlatformActionResult>, Status> {
+        let request = request.into_inner();
+        let context = validate_context(request.context.as_ref(), None)?;
+        let result = service_admin_platform::run_platform_action(
+            &self.state.db,
+            billing::AdminBillingPlatformActionKind::try_from(request.action_kind)
+                .unwrap_or(billing::AdminBillingPlatformActionKind::Unspecified),
+            tenant_id(context)?,
+            workspace_id(&request.workspace_id)?,
+            actor_principal_id(context)?,
+            optional_uuid(&request.target_id, "target_id")?,
+            request.reason,
+            request.routing_rule,
+        )
+        .await?;
+        Ok(Response::new(result))
+    }
+
+    async fn run_admin_billing_action(
+        &self,
+        request: Request<billing::AdminBillingActionRequest>,
+    ) -> Result<Response<billing::AdminBillingActionResult>, Status> {
+        let request = request.into_inner();
+        let context = validate_context(request.context.as_ref(), None)?;
+        let action_kind = billing::AdminBillingActionKind::try_from(request.action_kind)
+            .unwrap_or(billing::AdminBillingActionKind::Unspecified);
+        let result = service_admin_billing::run_billing_admin_action(
+            &self.state.db,
+            tenant_id(context)?,
+            actor_principal_id(context)?,
+            action_kind,
+            request,
+        )
+        .await?;
+        Ok(Response::new(result))
+    }
+
+    async fn run_admin_revenue_action(
+        &self,
+        request: Request<billing::AdminRevenueActionRequest>,
+    ) -> Result<Response<billing::AdminRevenueActionResult>, Status> {
+        let request = request.into_inner();
+        let context = validate_context(request.context.as_ref(), None)?;
+        let result = service_admin_revenue::run_revenue_action(
+            &self.state.db,
+            billing::AdminRevenueActionKind::try_from(request.action_kind)
+                .unwrap_or(billing::AdminRevenueActionKind::Unspecified),
+            tenant_id(context)?,
+            actor_principal_id(context)?,
+            parse_uuid(&request.target_id, "target_id")?,
+            request.reason,
+        )
+        .await?;
+        Ok(Response::new(result))
+    }
+
     async fn ingest_usage(
         &self,
-        request: Request<UsageEvent>,
-    ) -> Result<Response<UsageIngestResponse>, Status> {
+        request: Request<billing::UsageEvent>,
+    ) -> Result<Response<billing::UsageIngestResponse>, Status> {
         let request = request.into_inner();
         validate_context(request.context.as_ref(), None)?;
         let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
         let workspace_id = optional_uuid(&request.workspace_id, "workspace_id")?;
         let occurred_at = parse_datetime(&request.occurred_at, "occurred_at")?;
-
         let response = nvbes_billing::usage::ingest_usage_event(
             &self.state.db,
             nvbes_billing::usage::UsageEvent {
@@ -139,16 +365,15 @@ impl BillingService for BillingGrpcService {
         )
         .await
         .map_err(usage_status)?;
-
-        Ok(Response::new(UsageIngestResponse {
+        Ok(Response::new(billing::UsageIngestResponse {
             accepted: response.accepted,
         }))
     }
 
     async fn run_reconciliation(
         &self,
-        request: Request<RunReconciliationRequest>,
-    ) -> Result<Response<ReconciliationRun>, Status> {
+        request: Request<billing::RunReconciliationRequest>,
+    ) -> Result<Response<billing::ReconciliationRun>, Status> {
         let request = request.into_inner();
         validate_context(request.context.as_ref(), None)?;
         let period_end = if request.period_end.trim().is_empty() {
@@ -156,148 +381,24 @@ impl BillingService for BillingGrpcService {
         } else {
             parse_datetime(&request.period_end, "period_end")?
         };
-
-        let result = nvbes_billing::reconciliation_db::run_ledger_reconciliation(
-            &self.state.db,
-            period_end,
-        )
-        .await
-        .map_err(reconciliation_status)?;
-
+        let result =
+            nvbes_billing::reconciliation_db::run_ledger_reconciliation(&self.state.db, period_end)
+                .await
+                .map_err(reconciliation_status)?;
         Ok(Response::new(service_conversions::reconciliation_run(
             result,
         )))
     }
 }
 
-fn validate_context(
-    context: Option<&RequestContext>,
-    workspace_id: Option<Uuid>,
-) -> Result<&RequestContext, Status> {
-    let context = context.ok_or_else(|| {
-        Status::invalid_argument("request context is required for Billing gRPC calls")
-    })?;
-    if context.request_id.trim().is_empty() || context.actor_principal_id.trim().is_empty() {
-        return Err(Status::invalid_argument(
-            "request_id and actor_principal_id are required in request context",
-        ));
-    }
-    if let Some(workspace_id) = workspace_id {
-        let tenant = context.tenant.as_ref().ok_or_else(|| {
-            Status::invalid_argument("tenant context is required for workspace Billing calls")
-        })?;
-        if tenant.workspace_id != workspace_id.to_string() {
-            return Err(Status::permission_denied(
-                "request context workspace does not match the Billing workspace",
-            ));
-        }
-    }
-    Ok(context)
+fn tenant_id(context: &RequestContext) -> Result<Uuid, Status> {
+    let tenant = context
+        .tenant
+        .as_ref()
+        .ok_or_else(|| Status::invalid_argument("tenant context is required"))?;
+    parse_uuid(&tenant.tenant_id, "tenant_id")
 }
 
-fn workspace_id(value: &str) -> Result<Uuid, Status> {
-    parse_uuid(value, "workspace_id")
-}
-
-fn parse_uuid(value: &str, field: &'static str) -> Result<Uuid, Status> {
-    Uuid::parse_str(value)
-        .map_err(|_| Status::invalid_argument(format!("{field} must be a valid UUID")))
-}
-
-fn optional_uuid(value: &str, field: &'static str) -> Result<Option<Uuid>, Status> {
-    if value.trim().is_empty() {
-        Ok(None)
-    } else {
-        parse_uuid(value, field).map(Some)
-    }
-}
-
-fn parse_datetime(value: &str, field: &'static str) -> Result<DateTime<Utc>, Status> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|value| value.with_timezone(&Utc))
-        .map_err(|_| Status::invalid_argument(format!("{field} must be an RFC3339 timestamp")))
-}
-
-fn empty_to_none(value: String) -> Option<String> {
-    let value = value.trim().to_string();
-    if value.is_empty() { None } else { Some(value) }
-}
-
-fn sql_status(error: sqlx::Error) -> Status {
-    match error {
-        sqlx::Error::RowNotFound => Status::not_found("billing workspace was not found"),
-        error => Status::internal(format!("billing database error: {error}")),
-    }
-}
-
-fn checkout_status(error: nvbes_billing::checkout_sessions::BillingCheckoutSessionError) -> Status {
-    use nvbes_billing::checkout_sessions::BillingCheckoutSessionError;
-
-    match error {
-        BillingCheckoutSessionError::WorkspaceNotFound => {
-            Status::not_found("billing workspace was not found")
-        }
-        BillingCheckoutSessionError::InvalidRedirect { field, .. } => {
-            Status::invalid_argument(format!("{field} is not an allowed redirect URL"))
-        }
-        BillingCheckoutSessionError::BillingLocked
-        | BillingCheckoutSessionError::ManualReviewHold
-        | BillingCheckoutSessionError::FraudBlocked
-        | BillingCheckoutSessionError::RoutingBlocked(_) => {
-            Status::failed_precondition(error.to_string())
-        }
-        BillingCheckoutSessionError::FraudPolicy(_)
-        | BillingCheckoutSessionError::RoutingRule(_)
-        | BillingCheckoutSessionError::CheckoutProvider(_)
-        | BillingCheckoutSessionError::Database(_) => Status::internal(error.to_string()),
-    }
-}
-
-fn usage_status(error: nvbes_billing::usage::BillingUsageIngestError) -> Status {
-    match error {
-        nvbes_billing::usage::BillingUsageIngestError::Validation { code, message } => {
-            Status::invalid_argument(format!("{code}: {message}"))
-        }
-        nvbes_billing::usage::BillingUsageIngestError::Database(_)
-        | nvbes_billing::usage::BillingUsageIngestError::Serialization(_) => {
-            Status::internal(error.to_string())
-        }
-    }
-}
-
-fn reconciliation_status(
-    error: nvbes_billing::reconciliation_db::BillingReconciliationError,
-) -> Status {
-    Status::internal(error.to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::validate_context;
-    use crate::grpc::pb::nvbes::platform::v1::{RequestContext, TenantContext};
-    use uuid::Uuid;
-
-    #[test]
-    fn context_workspace_must_match_request_workspace() {
-        let workspace_id = Uuid::new_v4();
-        let context = RequestContext {
-            request_id: "req_123".to_string(),
-            correlation_id: "corr_123".to_string(),
-            actor_principal_id: Uuid::new_v4().to_string(),
-            tenant: Some(TenantContext {
-                tenant_id: Uuid::new_v4().to_string(),
-                workspace_id: workspace_id.to_string(),
-                region_id: "eu".to_string(),
-                data_residency: "eu".to_string(),
-            }),
-        };
-
-        assert!(validate_context(Some(&context), Some(workspace_id)).is_ok());
-        assert!(
-            validate_context(Some(&context), Some(Uuid::new_v4()))
-                .expect_err("mismatched workspace should be rejected")
-                .message()
-                .contains("workspace")
-        );
-    }
+fn actor_principal_id(context: &RequestContext) -> Result<Uuid, Status> {
+    parse_uuid(&context.actor_principal_id, "actor_principal_id")
 }

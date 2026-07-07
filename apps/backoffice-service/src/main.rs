@@ -28,6 +28,8 @@ mod backoffice_dual_control;
 mod billing_admin;
 #[path = "internal_admin.billing.admin.access.rs"]
 mod billing_admin_access;
+#[path = "internal_admin.billing.admin.action_log.rs"]
+mod billing_admin_action_log;
 #[path = "internal_admin.billing.admin.exports.rs"]
 mod billing_admin_exports;
 #[path = "internal_admin.billing.admin.mutations.rs"]
@@ -48,6 +50,16 @@ mod billing_admin_tests;
 mod billing_admin_types;
 #[path = "internal_admin.billing.admin.validation.rs"]
 mod billing_admin_validation;
+#[path = "internal_admin.billing.grpc.rs"]
+mod billing_grpc;
+#[path = "internal_admin.billing.grpc.admin.rs"]
+mod billing_grpc_admin;
+#[path = "internal_admin.billing.grpc.operations.rs"]
+mod billing_grpc_operations;
+#[path = "internal_admin.billing.grpc.platform.rs"]
+mod billing_grpc_platform;
+#[path = "internal_admin.billing.grpc.revenue.rs"]
+mod billing_grpc_revenue;
 #[path = "internal_admin.billing_platform_center.rs"]
 mod billing_platform_center;
 #[path = "internal_admin.billing_platform_center.action_log.rs"]
@@ -64,8 +76,6 @@ mod billing_platform_center_actions_tests;
 mod billing_platform_center_mutations;
 #[path = "internal_admin.billing_platform_center.routing_mutations.rs"]
 mod billing_platform_center_routing_mutations;
-#[path = "internal_admin.billing_platform_center.routing_rule_conflicts.rs"]
-mod billing_platform_center_routing_rule_conflicts;
 #[path = "internal_admin.billing_platform_center.routing_rule_simulation.rs"]
 mod billing_platform_center_routing_rule_simulation;
 #[cfg(test)]
@@ -158,6 +168,8 @@ mod entitlements_center_mutations;
 mod error;
 #[path = "internal_admin.global_search.rs"]
 mod global_search;
+#[path = "internal_admin.grpc.pb.rs"]
+mod grpc_pb;
 #[path = "internal_admin.idempotency.rs"]
 mod idempotency;
 #[path = "internal_admin.identity_governance_center.rs"]
@@ -240,6 +252,10 @@ mod region_center_types;
 mod region_center_validation;
 #[path = "internal_admin.revenue_center.rs"]
 mod revenue_center;
+#[path = "internal_admin.revenue_center.action_log.rs"]
+mod revenue_center_action_log;
+#[path = "internal_admin.revenue_center.action_values.rs"]
+mod revenue_center_action_values;
 #[path = "internal_admin.revenue_center.actions.rs"]
 mod revenue_center_actions;
 #[cfg(test)]

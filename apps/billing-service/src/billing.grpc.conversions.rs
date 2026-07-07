@@ -3,7 +3,8 @@ use uuid::Uuid;
 
 use crate::grpc::pb::nvbes::billing::v1::{
     BillingInvoice, BillingOverview, BillingPaymentMethod, BillingPortal, BillingProviderReference,
-    BillingSubscription, CheckoutSession, ProductEntitlements, ReconciliationRun,
+    BillingSubscription, CheckoutSession, EntitlementFeature, EntitlementQuota,
+    EntitlementSnapshot, PortalSession, ProductEntitlements, ReconciliationRun,
 };
 
 pub fn billing_overview_response(
@@ -50,10 +51,72 @@ pub fn checkout_session_response(
     value: nvbes_billing::types::CheckoutSessionResponse,
 ) -> CheckoutSession {
     CheckoutSession {
-        checkout_session_id: value.checkout_id,
+        checkout_session_id: String::new(),
         checkout_url: value.url,
         provider: value.provider,
         expires_at: String::new(),
+    }
+}
+
+pub fn portal_session_response(
+    value: nvbes_billing::types::PortalSessionResponse,
+) -> PortalSession {
+    PortalSession {
+        portal_url: value.url,
+        provider: value.provider,
+    }
+}
+
+pub fn entitlement_snapshot(
+    value: nvbes_billing::types::BillingOverviewResponse,
+) -> EntitlementSnapshot {
+    EntitlementSnapshot {
+        workspace_id: value.workspace_id.to_string(),
+        plan_code: value.plan.code,
+        status: value.subscription.status,
+        features: vec![
+            EntitlementFeature {
+                code: "upload".to_string(),
+                enabled: value.entitlements.can_upload,
+                source: "plan".to_string(),
+            },
+            EntitlementFeature {
+                code: "share_links".to_string(),
+                enabled: value.entitlements.can_create_share_links,
+                source: "plan".to_string(),
+            },
+            EntitlementFeature {
+                code: "billing_locked".to_string(),
+                enabled: value.entitlements.billing_locked,
+                source: "subscription".to_string(),
+            },
+        ],
+        quotas: vec![
+            EntitlementQuota {
+                code: "storage_bytes".to_string(),
+                unit: "bytes".to_string(),
+                quantity: value.entitlements.included_storage_bytes,
+                source: "plan".to_string(),
+            },
+            EntitlementQuota {
+                code: "included_users".to_string(),
+                unit: "users".to_string(),
+                quantity: i64::from(value.entitlements.included_users),
+                source: "plan".to_string(),
+            },
+            EntitlementQuota {
+                code: "max_share_links".to_string(),
+                unit: "links".to_string(),
+                quantity: i64::from(value.entitlements.max_share_links),
+                source: "plan".to_string(),
+            },
+            EntitlementQuota {
+                code: "api_key_limit".to_string(),
+                unit: "keys".to_string(),
+                quantity: i64::from(value.entitlements.api_key_limit),
+                source: "plan".to_string(),
+            },
+        ],
     }
 }
 
@@ -68,7 +131,9 @@ pub fn reconciliation_run(
     }
 }
 
-fn billing_invoice(value: nvbes_billing::portal_views::BillingPortalInvoiceView) -> BillingInvoice {
+pub fn billing_invoice(
+    value: nvbes_billing::portal_views::BillingPortalInvoiceView,
+) -> BillingInvoice {
     BillingInvoice {
         invoice_id: value.invoice_id.to_string(),
         invoice_number: value.invoice_number.unwrap_or_default(),
@@ -143,21 +208,13 @@ mod tests {
 
     #[test]
     fn checkout_response_uses_local_checkout_id_not_provider_session_id() {
-        let response =
-            checkout_session_response(nvbes_billing::types::CheckoutSessionResponse {
-                provider: "stripe".to_string(),
-                session_id: "cs_provider_secret".to_string(),
-                checkout_id: "local_checkout_123".to_string(),
-                url: "https://checkout.example".to_string(),
-                provider_customer_id: "cus_provider_secret".to_string(),
-                provider_product_id: None,
-                provider_price_id: None,
-                payment_id: None,
-                stripe_customer_id: None,
-                stripe_price_id: None,
-            });
+        let response = checkout_session_response(nvbes_billing::types::CheckoutSessionResponse {
+            provider: "stripe".to_string(),
+            url: "https://checkout.example".to_string(),
+        });
 
-        assert_eq!(response.checkout_session_id, "local_checkout_123");
-        assert!(!response.checkout_session_id.contains("provider_secret"));
+        assert_eq!(response.checkout_session_id, "");
+        assert_eq!(response.checkout_url, "https://checkout.example");
+        assert_eq!(response.provider, "stripe");
     }
 }

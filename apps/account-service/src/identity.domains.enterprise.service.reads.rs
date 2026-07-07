@@ -1,6 +1,7 @@
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, resolve_admin_scope};
-use crate::domains::enterprise::db;
+use crate::domains::developer::grpc as developer_grpc;
+use crate::domains::enterprise::{db, grpc};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
@@ -8,8 +9,12 @@ use uuid::Uuid;
 use super::super::security_posture::security_posture;
 use super::super::types::*;
 use super::access::{
-    all_grants, all_roles, default_security_signals, metric, require_actor_access,
-    security_signals, usage,
+    all_grants, all_roles, default_security_signals, enrich_break_glass_accounts, metric,
+    require_actor_access, security_signals, usage,
+};
+use super::developer_credentials::enterprise_developer_credential;
+use super::policy_views::{
+    mfa_policy_value, mfa_policy_view, session_policy_ttl, session_policy_view,
 };
 
 pub async fn get_context(
@@ -44,7 +49,8 @@ pub async fn get_overview(
     tenant_id: Uuid,
 ) -> Result<EnterpriseOverviewResponse, AppError> {
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
-    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id, scope).await?;
+    let (workspaces, users, storage) =
+        db::usage_metrics(db, tenant_id, scope, auth.user_id).await?;
     Ok(EnterpriseOverviewResponse {
         metrics: vec![
             metric("workspaces", "Workspaces", workspaces),
@@ -52,11 +58,8 @@ pub async fn get_overview(
             metric("storage_used_bytes", "Storage used", storage),
         ],
         security_signals: default_security_signals(auth),
-        recent_audit_events: db::list_audit_events(db, tenant_id, scope, 5)
-            .await?
-            .into_iter()
-            .map(db::AuditEventRow::into_view)
-            .collect(),
+        recent_audit_events: grpc::audit::list_audit_events(tenant_id, auth.user_id, scope, 5)
+            .await?,
     })
 }
 
@@ -66,13 +69,14 @@ pub async fn list_users(
     tenant_id: Uuid,
 ) -> Result<EnterpriseUsersResponse, AppError> {
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
+    let users = db::list_users(db, tenant_id, scope, auth.user_id)
+        .await?
+        .into_iter()
+        .map(db::EnterpriseUserRow::into_view)
+        .collect();
     Ok(EnterpriseUsersResponse {
-        users: db::list_users(db, tenant_id, scope)
-            .await?
-            .into_iter()
-            .map(db::EnterpriseUserRow::into_view)
-            .collect(),
-        invitations: db::list_invitations(db, tenant_id, scope)
+        users: enrich_break_glass_accounts(tenant_id, auth.user_id, users).await?,
+        invitations: db::list_invitations(db, tenant_id, scope, auth.user_id)
             .await?
             .into_iter()
             .map(db::EnterpriseInvitationRow::into_view)
@@ -92,7 +96,7 @@ pub async fn list_workspaces(
 ) -> Result<EnterpriseWorkspacesResponse, AppError> {
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     Ok(EnterpriseWorkspacesResponse {
-        workspaces: db::list_workspaces(db, tenant_id, scope)
+        workspaces: db::list_workspaces(db, tenant_id, scope, auth.user_id)
             .await?
             .into_iter()
             .map(db::WorkspaceSummaryRow::into_view)
@@ -117,10 +121,10 @@ pub async fn list_developers(
         ));
     }
     Ok(EnterpriseDevelopersResponse {
-        credentials: db::list_developers(db, tenant_id)
+        credentials: developer_grpc::list_credential_summaries(tenant_id, auth.user_id)
             .await?
             .into_iter()
-            .map(db::DeveloperCredentialRow::into_view)
+            .map(enterprise_developer_credential)
             .collect(),
         page: Some(EnterprisePage {
             cursor: None,
@@ -142,44 +146,18 @@ pub async fn list_policies(
             "This action requires tenant-wide administrative privileges.",
         ));
     }
-    let session_policy = db::session_policy(db, tenant_id).await?;
-    let mfa_policy = db::mfa_policy(db, tenant_id).await?;
+    let policy_set = grpc::get_policy_set(tenant_id, auth.user_id).await?;
+    let session_policy_ttl = session_policy_ttl(&policy_set)?;
+    let mfa_policy = mfa_policy_value(&policy_set)?;
     Ok(EnterprisePoliciesResponse {
-        policies: db::list_policies(db, tenant_id)
+        policies: db::list_policies(db, tenant_id, auth.user_id)
             .await?
             .into_iter()
             .map(db::PolicySummaryRow::into_view)
             .collect(),
-        session_policy: session_policy_view(session_policy, auth_session_ttl_hours),
-        mfa_policy: mfa_policy_view(mfa_policy),
+        session_policy: session_policy_view(session_policy_ttl, auth_session_ttl_hours),
+        mfa_policy: mfa_policy_view(&mfa_policy),
     })
-}
-
-pub(super) fn session_policy_view(
-    row: Option<db::SessionPolicyRow>,
-    fallback_ttl_hours: i64,
-) -> EnterpriseSessionPolicy {
-    let policy_ttl = row.and_then(|row| row.admin_session_ttl_hours);
-    let admin_session_ttl_hours = i64::from(policy_ttl.unwrap_or(fallback_ttl_hours as i32));
-    EnterpriseSessionPolicy {
-        admin_session_ttl_hours,
-        recommended_admin_session_ttl_hours: 8,
-        compliant: admin_session_ttl_hours <= 8,
-        step_up_required_for_admin_elevation: true,
-        source: if policy_ttl.is_some() {
-            "tenant_policy".to_string()
-        } else {
-            "environment".to_string()
-        },
-    }
-}
-
-pub(super) fn mfa_policy_view(row: db::MfaPolicyRow) -> EnterpriseMfaPolicy {
-    EnterpriseMfaPolicy {
-        compliant: row.policy == "required_admins" || row.policy == "required_all",
-        policy: row.policy,
-        recommended_policy: "required_admins".to_string(),
-    }
 }
 
 pub async fn get_security(
@@ -195,7 +173,16 @@ pub async fn get_security(
             "This action requires tenant-wide administrative privileges.",
         ));
     }
-    let summary = db::security_summary(db, tenant_id).await?;
+    let mut summary = db::security_summary(db, tenant_id, auth.user_id).await?;
+    let trust_center = grpc::trust::get_trust_center(tenant_id, auth.user_id).await?;
+    summary.verified_domain_count = trust_center
+        .verified_domains
+        .iter()
+        .filter(|domain| domain.verified)
+        .count() as i64;
+    summary.sso_provider_count = trust_center.sso.active_providers;
+    summary.stale_secret_count =
+        developer_grpc::count_stale_secrets(tenant_id, auth.user_id).await?;
     Ok(EnterpriseSecurityResponse {
         signals: security_signals(&summary),
         posture: security_posture(&summary, auth_session_ttl_hours),
@@ -212,11 +199,7 @@ pub async fn list_audit_events(
 ) -> Result<EnterpriseAuditEventsResponse, AppError> {
     let scope = resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     Ok(EnterpriseAuditEventsResponse {
-        events: db::list_audit_events(db, tenant_id, scope, 50)
-            .await?
-            .into_iter()
-            .map(db::AuditEventRow::into_view)
-            .collect(),
+        events: grpc::audit::list_audit_events(tenant_id, auth.user_id, scope, 50).await?,
         page: EnterprisePage {
             cursor: None,
             has_more: false,
@@ -236,7 +219,8 @@ pub async fn get_usage(
             "This action requires tenant-wide administrative privileges.",
         ));
     }
-    let (workspaces, users, storage) = db::usage_metrics(db, tenant_id, scope).await?;
+    let (workspaces, users, storage) =
+        db::usage_metrics(db, tenant_id, scope, auth.user_id).await?;
     Ok(EnterpriseUsageResponse {
         metrics: vec![
             usage("workspaces", "Workspaces", workspaces, None, "count"),
@@ -245,7 +229,3 @@ pub async fn get_usage(
         ],
     })
 }
-
-#[cfg(test)]
-#[path = "identity.domains.enterprise.service.reads.tests.rs"]
-mod tests;

@@ -4,7 +4,7 @@ use nvbes_redis::connection::RedisPool;
 use super::types::{JwtService, TokenClaims};
 use crate::http::error::AppError;
 
-const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
+const CLOUD_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
 
 impl JwtService {
     pub fn decode_token(&self, token: &str, expected_type: &str) -> Result<TokenClaims, AppError> {
@@ -29,7 +29,7 @@ impl JwtService {
             .or_else(|| self.decoding_keys.first().map(|(_, dk)| dk.clone()))
             .ok_or_else(|| AppError::internal("no_decoding_key", "No decoding key available"))?;
         let mut validation = Validation::new(Algorithm::RS256);
-        let audiences = [self.audience.as_str(), DRIVE_TOKEN_AUDIENCE];
+        let audiences = [self.audience.as_str(), CLOUD_TOKEN_AUDIENCE];
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&audiences);
         validation.validate_exp = true;
@@ -88,7 +88,7 @@ impl JwtService {
             .or_else(|| self.decoding_keys.first().map(|(_, dk)| dk.clone()))
             .ok_or_else(|| AppError::internal("no_decoding_key", "No decoding key available"))?;
         let mut validation = Validation::new(Algorithm::RS256);
-        let audiences = [self.audience.as_str(), DRIVE_TOKEN_AUDIENCE];
+        let audiences = [self.audience.as_str(), CLOUD_TOKEN_AUDIENCE];
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&audiences);
         validation.validate_exp = false;

@@ -12,7 +12,7 @@ export function PortalRolesPage() {
   return (
     <section>
       <PageHeader
-        title="Developer roles"
+        title="Console roles"
         body="Review the fine-grained roles and permissions active for this tenant session."
       />
       {meQuery.data ? (
@@ -36,8 +36,8 @@ export function PortalRolesPage() {
         </div>
       ) : (
         <EmptyState
-          title="No developer context"
-          body="Developer roles load after the portal session is authenticated."
+          title="No Console context"
+          body="Console roles load after the session is authenticated."
         />
       )}
     </section>

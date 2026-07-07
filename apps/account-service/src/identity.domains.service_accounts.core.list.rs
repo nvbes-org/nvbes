@@ -1,12 +1,15 @@
-use sqlx::PgPool;
+use std::collections::HashMap;
+
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
     domains::{
         authz::WorkspaceAccess,
+        cloud::workspace_port,
         service_accounts::{
-            types::{ServiceAccountView, ServiceAccountsResult},
-            views::service_account_view_from_row,
+            types::{ServiceAccountClientView, ServiceAccountView, ServiceAccountsResult},
+            views::service_account_client_view_from_row,
         },
     },
     http::error::AppError,
@@ -16,16 +19,28 @@ pub async fn list_service_accounts(
     db: &PgPool,
     access: &WorkspaceAccess,
 ) -> Result<ServiceAccountsResult, AppError> {
+    let workspace =
+        workspace_port::get_workspace(access.tenant_id, access.workspace_id, access.auth.user_id)
+            .await?;
+    let member_roles = workspace_port::list_workspace_members(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
+    )
+    .await?
+    .into_iter()
+    .filter(|member| member.active)
+    .map(|member| (member.principal_id, member.role))
+    .collect::<HashMap<_, _>>();
+
     let rows = sqlx::query(
         r#"
         SELECT
           sa.principal_id,
           sa.tenant_id,
-          w.organization_id,
           sa.workspace_id,
           sa.name,
           sa.description,
-          wm.role::text AS role,
           p.status::text AS principal_status,
           sa.created_at,
           sa.updated_at,
@@ -43,10 +58,6 @@ pub async fn list_service_accounts(
           ocp.required_acr::text AS required_acr
         FROM service_accounts sa
         INNER JOIN principals p ON p.id = sa.principal_id
-        INNER JOIN workspaces w ON w.id = sa.workspace_id
-        LEFT JOIN workspace_memberships wm
-          ON wm.workspace_id = sa.workspace_id
-         AND wm.principal_id = sa.principal_id
         LEFT JOIN oauth_clients oc
           ON oc.client_id = sa.client_id
         LEFT JOIN oauth_client_policies ocp
@@ -64,7 +75,7 @@ pub async fn list_service_accounts(
     Ok(ServiceAccountsResult {
         service_accounts: rows
             .into_iter()
-            .map(service_account_view_from_row)
+            .map(|row| service_account_view_from_row(row, workspace.organization_id, &member_roles))
             .collect(),
     })
 }
@@ -85,4 +96,33 @@ pub async fn get_service_account(
                 "The requested service account was not found.",
             )
         })
+}
+
+fn service_account_view_from_row(
+    row: sqlx::postgres::PgRow,
+    organization_id: Option<Uuid>,
+    member_roles: &HashMap<Uuid, String>,
+) -> ServiceAccountView {
+    let principal_id = row.get("principal_id");
+    ServiceAccountView {
+        principal_id,
+        tenant_id: row.get("tenant_id"),
+        organization_id,
+        workspace_id: row.get("workspace_id"),
+        name: row.get("name"),
+        description: row.get("description"),
+        role: member_roles
+            .get(&principal_id)
+            .cloned()
+            .unwrap_or_else(|| "member".to_string()),
+        status: row.get("principal_status"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+        oauth_clients: oauth_client_from_row(&row).into_iter().collect(),
+    }
+}
+
+fn oauth_client_from_row(row: &sqlx::postgres::PgRow) -> Option<ServiceAccountClientView> {
+    row.get::<Option<Uuid>, _>("oauth_client_uuid")
+        .map(|_| service_account_client_view_from_row(row))
 }

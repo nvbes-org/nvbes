@@ -116,7 +116,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/infra-deploy.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/infra-deploy.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -179,7 +179,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-infra-deploy",
-		"tools/migration/infra-deploy.mjs --write",
+		"node tools/migration/infra-deploy.mjs --write",
 		"```",
 		"",
 	);
@@ -191,7 +191,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/infra-deploy.mjs --write",
+		command: "node tools/migration/infra-deploy.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"pnpm check:supply-chain",
@@ -226,8 +226,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/infra-deploy.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/infra-deploy.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/infra-deploy.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/infra-deploy.mjs --write`);
 }
 
 if (errors.length > 0) {

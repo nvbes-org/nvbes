@@ -3,6 +3,7 @@ use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 
 use crate::domains::{
+    cloud::workspace_port,
     developer::types::{
         CreateDeveloperAppRequest, CreateDeveloperAppResponse, DeveloperAppView,
         DeveloperAppsResponse, UpdateDeveloperRedirectsRequest,
@@ -115,7 +116,9 @@ pub async fn update_redirects(
     .await?
     .ok_or_else(|| AppError::not_found("oauth_client_not_found", "OAuth client not found."))?;
 
-    Ok(DeveloperAppView::from(oauth_client_view_from_row(&row)))
+    Ok(DeveloperAppView::from(oauth_client_view_from_row(
+        &row, None,
+    )))
 }
 
 pub async fn revoke_app(
@@ -148,14 +151,9 @@ async fn fetch_client_by_client_id(
           oauth_clients.requires_admin_consent,
           oauth_clients.client_assertion_public_key_jwk IS NOT NULL AS client_assertion_public_key_configured,
           sa.principal_id AS service_account_principal_id,
-          sa.workspace_id AS service_account_workspace_id,
-          wm.role::text AS service_account_role
+          sa.workspace_id AS service_account_workspace_id
         FROM oauth_clients
         LEFT JOIN service_accounts sa ON sa.client_id = oauth_clients.client_id
-        LEFT JOIN workspace_memberships wm
-          ON wm.workspace_id = sa.workspace_id
-         AND wm.principal_id = sa.principal_id
-         AND wm.status = 'active'
         WHERE oauth_clients.client_id = $1
           AND oauth_clients.tenant_id = $2
           AND oauth_clients.revoked_at IS NULL
@@ -168,10 +166,26 @@ async fn fetch_client_by_client_id(
     .await?
     .ok_or_else(|| AppError::not_found("oauth_client_not_found", "OAuth client not found."))?;
 
-    Ok(oauth_client_view_from_row(&row))
+    let service_account_principal_id: Option<Uuid> = row.get("service_account_principal_id");
+    let service_account_workspace_id: Option<Uuid> = row.get("service_account_workspace_id");
+    let service_account_role = match (service_account_principal_id, service_account_workspace_id) {
+        (Some(principal_id), Some(workspace_id)) => {
+            workspace_port::list_workspace_members(Some(tenant_id), workspace_id, principal_id)
+                .await?
+                .into_iter()
+                .find(|member| member.principal_id == principal_id && member.active)
+                .map(|member| member.role)
+        }
+        _ => None,
+    };
+
+    Ok(oauth_client_view_from_row(&row, service_account_role))
 }
 
-fn oauth_client_view_from_row(row: &PgRow) -> OAuthClientView {
+fn oauth_client_view_from_row(
+    row: &PgRow,
+    service_account_role: Option<String>,
+) -> OAuthClientView {
     OAuthClientView {
         id: row.get("id"),
         client_id: row.get("client_id"),
@@ -188,7 +202,7 @@ fn oauth_client_view_from_row(row: &PgRow) -> OAuthClientView {
         client_assertion_public_key_configured: row.get("client_assertion_public_key_configured"),
         service_account_principal_id: row.get("service_account_principal_id"),
         service_account_workspace_id: row.get("service_account_workspace_id"),
-        service_account_role: row.get("service_account_role"),
+        service_account_role,
     }
 }
 

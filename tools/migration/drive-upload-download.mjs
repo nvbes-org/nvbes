@@ -132,7 +132,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/drive-upload-download.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/drive-upload-download.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -194,7 +194,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-drive-upload-download",
-		"tools/migration/drive-upload-download.mjs --write",
+		"node tools/migration/drive-upload-download.mjs --write",
 		"```",
 		"",
 	);
@@ -206,7 +206,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/drive-upload-download.mjs --write",
+		command: "node tools/migration/drive-upload-download.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-cloud-service upload --locked",
@@ -240,8 +240,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/drive-upload-download.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/drive-upload-download.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/drive-upload-download.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/drive-upload-download.mjs --write`);
 }
 
 if (errors.length > 0) {

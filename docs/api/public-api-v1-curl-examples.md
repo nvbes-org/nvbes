@@ -3,30 +3,30 @@
 ## Variables
 
 ```bash
-export DRIVE_API_BASE_URL="https://drive.nvbes.fr"
-export DRIVE_TOKEN="gx_test_replace_me"
+export CLOUD_API_BASE_URL="https://cloud.nvbes.fr"
+export CLOUD_TOKEN="gx_test_replace_me"
 export WORKSPACE_ID="00000000-0000-0000-0000-000000000001"
 ```
 
 ## Lister les Workspaces
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces" \
-  -H "Authorization: Bearer $DRIVE_TOKEN"
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces" \
+  -H "Authorization: Bearer $CLOUD_TOKEN"
 ```
 
 ## Lister les Objets
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects?limit=50" \
-  -H "Authorization: Bearer $DRIVE_TOKEN"
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects?limit=50" \
+  -H "Authorization: Bearer $CLOUD_TOKEN"
 ```
 
 ## Creer un Dossier
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/folders" \
-  -H "Authorization: Bearer $DRIVE_TOKEN" \
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/folders" \
+  -H "Authorization: Bearer $CLOUD_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
@@ -38,8 +38,8 @@ curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/folders" \
 ## Creer un Upload
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads" \
-  -H "Authorization: Bearer $DRIVE_TOKEN" \
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads" \
+  -H "Authorization: Bearer $CLOUD_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
@@ -56,8 +56,8 @@ curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads" \
 ```bash
 export UPLOAD_ID="00000000-0000-0000-0000-000000000002"
 
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads/$UPLOAD_ID/complete" \
-  -H "Authorization: Bearer $DRIVE_TOKEN" \
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads/$UPLOAD_ID/complete" \
+  -H "Authorization: Bearer $CLOUD_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
@@ -71,8 +71,8 @@ curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/uploads/$UPLOAD_ID/com
 ```bash
 export OBJECT_ID="00000000-0000-0000-0000-000000000003"
 
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/download-url" \
-  -H "Authorization: Bearer $DRIVE_TOKEN" \
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/download-url" \
+  -H "Authorization: Bearer $CLOUD_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -80,8 +80,8 @@ curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/dow
 ## Creer un Lien Partage
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/share-links" \
-  -H "Authorization: Bearer $DRIVE_TOKEN" \
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/share-links" \
+  -H "Authorization: Bearer $CLOUD_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
@@ -93,6 +93,6 @@ curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/objects/$OBJECT_ID/sha
 ## Lire le Quota
 
 ```bash
-curl -sS "$DRIVE_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/quota" \
-  -H "Authorization: Bearer $DRIVE_TOKEN"
+curl -sS "$CLOUD_API_BASE_URL/v1/workspaces/$WORKSPACE_ID/quota" \
+  -H "Authorization: Bearer $CLOUD_TOKEN"
 ```

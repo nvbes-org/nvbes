@@ -47,7 +47,7 @@ export function DeveloperPortalLayout() {
   if (meQuery.isLoading) {
     return (
       <main className="min-h-screen bg-background p-6 text-sm text-muted-foreground">
-        Loading portal...
+        Loading Console...
       </main>
     );
   }
@@ -56,9 +56,9 @@ export function DeveloperPortalLayout() {
     return (
       <main className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-md rounded-md border border-border bg-card p-6">
-          <h1 className="text-lg font-semibold">Developer access required</h1>
+          <h1 className="text-lg font-semibold">Console access required</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in with a tenant account that has developer portal permissions.
+            Sign in with a tenant account that has Console permissions.
           </p>
           <button
             type="button"
@@ -77,7 +77,7 @@ export function DeveloperPortalLayout() {
       <aside className="border-b border-border bg-card md:border-r md:border-b-0">
         <div className="border-b border-border px-4 py-4">
           <Link to="/" className="font-heading text-base font-semibold">
-            nvbes Developers
+            nvbes Console
           </Link>
           <p className="mt-1 text-xs text-muted-foreground">Tenant {meQuery.data.tenant_id}</p>
         </div>

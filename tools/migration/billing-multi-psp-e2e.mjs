@@ -110,8 +110,8 @@ function rustFiles(root) {
 
 function buildChecks() {
 	return [
-		textCheck("billing-service-stripe-route", sources.billingServiceWebhooks, "Billing API exposes Stripe webhook intake", '"/webhooks/stripe"'),
-		textCheck("billing-service-mollie-route", sources.billingServiceWebhooks, "Billing API exposes Mollie webhook intake", '"/webhooks/mollie"'),
+		textCheck("billing-service-stripe-route", sources.billingServiceWebhooks, "billing-service exposes Stripe webhook intake", '"/webhooks/stripe"'),
+		textCheck("billing-service-mollie-route", sources.billingServiceWebhooks, "billing-service exposes Mollie webhook intake", '"/webhooks/mollie"'),
 		textCheck("stripe-signature-intake", sources.stripeIntake, "Stripe intake verifies raw webhook signature", "verify_stripe_signature"),
 		textCheck("stripe-async-queue", sources.stripeIntake, "Stripe intake enqueues asynchronous processing", "enqueue_stripe_webhook_job"),
 		textCheck("mollie-id-only-intake", sources.mollieWebhooks, "Mollie classic webhook intake parses id-only callback", "mollie_classic_webhook_is_id_only_and_fetch_required"),
@@ -159,7 +159,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/billing-multi-psp-e2e.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/billing-multi-psp-e2e.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	for (const command of report.generation?.targeted_tests ?? []) {
@@ -187,7 +187,7 @@ function serializeMarkdown(data) {
 		"",
 		"## Rules",
 		"",
-		"- PSP webhook intake must live in Billing API, not Identity.",
+		"- PSP webhook intake must live in billing-service, not Account.",
 		"- PSP webhook processing, analytics, emails and dunning must live in Billing worker.",
 		"- The repository smoke proof must be deterministic and must not call external PSP APIs.",
 		"- Multi-PSP continuity must cover Stripe, Mollie, CB, primary ownership and fallback eligibility.",
@@ -215,7 +215,7 @@ function serializeMarkdown(data) {
 		"## Regeneration",
 		"",
 		"```bash",
-		"tools/migration/billing-multi-psp-e2e.mjs --write",
+		"node tools/migration/billing-multi-psp-e2e.mjs --write",
 		"```",
 		"",
 	);
@@ -226,7 +226,7 @@ const checks = buildChecks();
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/billing-multi-psp-e2e.mjs --write",
+		command: "node tools/migration/billing-multi-psp-e2e.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: targetedTests,
 	},
@@ -251,8 +251,8 @@ for (const check of checks) {
 	if (check.status === "failed") errors.push(`${check.path}: missing ${check.description}`);
 }
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/billing-multi-psp-e2e.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/billing-multi-psp-e2e.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/billing-multi-psp-e2e.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/billing-multi-psp-e2e.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -1,8 +1,8 @@
-use sqlx::PgPool;
-
 use crate::{
-    domains::auth::types::AuthContext, domains::authz::WorkspaceAccess, http::error::AppError,
+    domains::{auth::types::AuthContext, authz::WorkspaceAccess, cloud::workspace_port},
+    http::error::AppError,
 };
+use sqlx::PgPool;
 
 pub use super::types::{
     CreateWorkspaceInput, UpdateWorkspaceInput, WorkspaceListResponse, WorkspaceResponse,
@@ -27,15 +27,16 @@ pub async fn create_workspace(
 }
 
 pub async fn get_workspace(
-    db: &PgPool,
+    _db: &PgPool,
     access: &WorkspaceAccess,
 ) -> Result<WorkspaceResponse, AppError> {
-    db::get_workspace_by_id(
-        db,
-        access.workspace_id,
+    let workspace =
+        workspace_port::get_workspace(access.tenant_id, access.workspace_id, access.auth.user_id)
+            .await?;
+    Ok(db::workspace_response_from_cloud(
+        workspace,
         nvbes_tenancy::role_as_str(access.role),
-    )
-    .await
+    ))
 }
 
 pub async fn update_workspace(

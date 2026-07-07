@@ -2,7 +2,12 @@ import { Building2, FileSearch } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { MeterUsage, TenantUsage, UsageCorrection, UsageRollup } from './backoffice-service.types';
+import type {
+  MeterUsage,
+  TenantUsage,
+  UsageCorrection,
+  UsageRollup,
+} from './backoffice-service.types';
 
 export function MeterUsageList({ rows }: { rows: MeterUsage[] }) {
   return (

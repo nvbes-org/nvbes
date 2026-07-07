@@ -1,7 +1,7 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{domains::cloud::workspace_port, http::error::AppError};
 
 pub async fn resolve_or_create_principal(
     db: &PgPool,
@@ -156,38 +156,46 @@ pub async fn resolve_or_create_principal(
 }
 
 pub async fn first_workspace_context(
-    db: &PgPool,
+    _db: &PgPool,
+    tenant_id: Uuid,
     principal_id: Uuid,
 ) -> Result<(Option<Uuid>, Option<Uuid>, Option<String>), AppError> {
-    let row = sqlx::query(
-        r#"
-        SELECT w.id AS workspace_id, w.tenant_id, w.organization_id, w.data_region::text AS data_region
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE wm.principal_id = $1
-          AND wm.status = 'active'
-        ORDER BY
-          CASE wm.role::text
-            WHEN 'owner' THEN 0
-            WHEN 'admin' THEN 1
-            WHEN 'member' THEN 2
-            ELSE 3
-          END,
-          wm.created_at ASC
-        LIMIT 1
-        "#,
-    )
-    .bind(principal_id)
-    .fetch_optional(db)
-    .await?;
+    let mut candidates = Vec::new();
+    for workspace in workspace_port::list_tenant_workspaces(tenant_id, None, principal_id).await? {
+        for member in workspace_port::list_workspace_members(
+            Some(tenant_id),
+            workspace.workspace_id,
+            principal_id,
+        )
+        .await?
+        {
+            if member.principal_id == principal_id && member.active {
+                candidates.push((
+                    role_rank(&member.role),
+                    member.joined_at,
+                    workspace.workspace_id,
+                    workspace.organization_id,
+                    workspace.data_region.clone(),
+                ));
+            }
+        }
+    }
+    candidates.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
 
-    Ok(row
-        .map(|row| {
-            (
-                Some(row.get("workspace_id")),
-                row.get("organization_id"),
-                Some(row.get::<String, _>("data_region")),
-            )
+    Ok(candidates
+        .into_iter()
+        .next()
+        .map(|(_, _, workspace_id, organization_id, data_region)| {
+            (Some(workspace_id), organization_id, data_region)
         })
         .unwrap_or((None, None, None)))
+}
+
+fn role_rank(role: &str) -> u8 {
+    match role {
+        "owner" => 0,
+        "admin" => 1,
+        "member" => 2,
+        _ => 3,
+    }
 }

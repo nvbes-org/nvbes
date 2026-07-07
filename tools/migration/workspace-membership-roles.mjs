@@ -99,7 +99,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/workspace-membership-roles.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/workspace-membership-roles.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -159,7 +159,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-workspace-membership-roles",
-		"tools/migration/workspace-membership-roles.mjs --write",
+		"node tools/migration/workspace-membership-roles.mjs --write",
 		"```",
 		"",
 	);
@@ -171,7 +171,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/workspace-membership-roles.mjs --write",
+		command: "node tools/migration/workspace-membership-roles.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-core workspace_membership_roles_cover_expected_permission_boundaries --locked",
@@ -203,8 +203,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/workspace-membership-roles.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/workspace-membership-roles.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/workspace-membership-roles.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/workspace-membership-roles.mjs --write`);
 }
 
 if (errors.length > 0) {

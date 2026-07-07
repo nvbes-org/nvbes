@@ -638,7 +638,8 @@ ALTER TABLE sessions
     ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL;
 
 ALTER TABLE workspace_policies
-    ADD COLUMN IF NOT EXISTS required_acr TEXT NOT NULL DEFAULT 'aal1';
+    ADD COLUMN IF NOT EXISTS required_acr TEXT NOT NULL DEFAULT 'aal1',
+    ADD COLUMN IF NOT EXISTS mfa_policy TEXT NOT NULL DEFAULT 'optional';
 
 CREATE INDEX IF NOT EXISTS idx_sessions_workspace_id ON sessions(workspace_id);
 ALTER TABLE mfa_factors

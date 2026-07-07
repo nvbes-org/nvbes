@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::{
     app::AppState,
     domains::developer::{
+        grpc,
         rbac::DeveloperPermission,
         service,
         types::{DebugDeveloperTokenInput, DebugDeveloperTokenResponse, DeveloperTokenClaimsView},
@@ -79,24 +80,13 @@ pub async fn debug_token(
         Err(_) => (false, "invalid".to_string(), None),
     };
 
-    sqlx::query(
-        r#"
-        INSERT INTO developer_token_debug_sessions (
-          tenant_id,
-          actor_principal_id,
-          token_hash_prefix,
-          active,
-          access_decision
-        )
-        VALUES ($1, $2, $3, $4, $5)
-        "#,
+    grpc::record_token_debug_session(
+        tenant_id,
+        auth.user_id,
+        token_hash_prefix.clone(),
+        active,
+        access_decision.clone(),
     )
-    .bind(tenant_id)
-    .bind(auth.user_id)
-    .bind(&token_hash_prefix)
-    .bind(active)
-    .bind(&access_decision)
-    .execute(&state.db)
     .await?;
 
     Ok(Json(DebugDeveloperTokenResponse {

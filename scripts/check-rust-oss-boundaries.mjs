@@ -18,6 +18,7 @@ function scopeForPackage(pkg) {
   const manifestPath = relative(process.cwd(), pkg.manifest_path);
 
   if (
+    manifestPath.startsWith('apps/backoffice-') ||
     manifestPath.startsWith('apps/internal-') ||
     manifestPath.startsWith('libs/rust/internal') ||
     manifestPath.includes('/internal/')

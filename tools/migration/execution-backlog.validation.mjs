@@ -4,10 +4,10 @@ export function validateBacklog(backlog, context) {
 	const errors = [];
 	const { strict, jsonPath, packageScripts, readiness, completion, liveEvidence } = context;
 	if (backlog.schema_version !== 1) errors.push(`${jsonPath}: schema_version must be 1`);
-	if (backlog.generation?.command !== "tools/migration/execution-backlog.mjs --write") {
+	if (backlog.generation?.command !== "node tools/migration/execution-backlog.mjs --write") {
 		errors.push(`${jsonPath}: generation.command is invalid`);
 	}
-	if (backlog.generation?.strict_completion_command !== "tools/migration/execution-backlog.mjs --strict") {
+	if (backlog.generation?.strict_completion_command !== "node tools/migration/execution-backlog.mjs --strict") {
 		errors.push(`${jsonPath}: generation.strict_completion_command is invalid`);
 	}
 	if (!Array.isArray(backlog.tasks)) errors.push(`${jsonPath}: tasks must be an array`);
@@ -81,7 +81,7 @@ function validateTaskRows(backlog, packageScripts, errors) {
 			errors.push(`${task.id}: blocking_details must match blocking_items`);
 		}
 		for (const detail of task.blocking_details ?? []) {
-			if (hasPlaceholder(detail)) errors.push(`${task.id}: blocking_details must be concrete`);
+			if (hasWeakGeneratedDetail(detail)) errors.push(`${task.id}: blocking_details must name concrete source items`);
 		}
 		if (task.status === "blocked" && task.blocking_items < 1) errors.push(`${task.id}: blocked task requires at least one blocking item`);
 		if (task.status === "complete" && task.blocking_items !== 0) errors.push(`${task.id}: complete task requires zero blocking items`);
@@ -89,7 +89,12 @@ function validateTaskRows(backlog, packageScripts, errors) {
 }
 
 function hasPlaceholder(value) {
-	return ["", "pending", "none", "todo", "tbd"].includes(String(value ?? "").trim().toLowerCase());
+	return ["", "pending", "none", "todo", "tbd", "unknown"].includes(String(value ?? "").trim().toLowerCase());
+}
+
+function hasWeakGeneratedDetail(value) {
+	const text = String(value ?? "");
+	return hasPlaceholder(text) || text.includes("?") || /\bunresolved item\b/i.test(text);
 }
 
 function validateCoverage(backlog, readiness, completion, liveEvidence, errors) {

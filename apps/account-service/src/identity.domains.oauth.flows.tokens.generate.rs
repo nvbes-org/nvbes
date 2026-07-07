@@ -1,4 +1,4 @@
-use crate::domains::auth::jwt::JwtService;
+use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
 use chrono::Utc;
 use sqlx::postgres::PgPool;
@@ -11,7 +11,7 @@ use crate::domains::oauth::flows::TokenView;
     reason = "OAuth token generation keeps scope, audience, and session context explicit."
 )]
 pub async fn generate_tokens(
-    db: &PgPool,
+    _db: &PgPool,
     jwt: &JwtService,
     user_id: Uuid,
     tenant_id: Option<Uuid>,
@@ -21,13 +21,9 @@ pub async fn generate_tokens(
     audience: Option<String>,
     session_id: Option<Uuid>,
 ) -> Result<TokenView, AppError> {
-    let workspace_region = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT data_region::text FROM workspaces WHERE id = $1",
-    )
-    .bind(workspace_id)
-    .fetch_optional(db)
-    .await?;
-    let workspace_region = workspace_region.flatten();
+    let workspace_region = workspace_port::get_workspace(tenant_id, workspace_id, user_id)
+        .await?
+        .data_region;
 
     let tokens = jwt.generate_token_pair_with_session(
         user_id,

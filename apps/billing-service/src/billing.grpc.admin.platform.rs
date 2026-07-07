@@ -4,14 +4,14 @@ use tonic::Status;
 use uuid::Uuid;
 
 use crate::grpc::pb::nvbes::billing::v1::{
-    AdminBillingPlatformActionKind, AdminBillingPlatformActionResult,
-    CreateBillingRoutingRuleInput,
+    AdminBillingPlatformActionKind, AdminBillingPlatformActionResult, CreateBillingRoutingRuleInput,
 };
 
 pub async fn run_platform_action(
     db: &sqlx::PgPool,
     kind: AdminBillingPlatformActionKind,
     tenant_id: Uuid,
+    workspace_id: Uuid,
     actor_principal_id: Uuid,
     target_id: Option<Uuid>,
     reason: String,
@@ -20,29 +20,80 @@ pub async fn run_platform_action(
     validate_reason(&reason)?;
     match kind {
         AdminBillingPlatformActionKind::ApproveKycProfile => {
-            transition_kyc_profile(db, tenant_id, actor_principal_id, target_id?, "approved", reason)
-                .await
+            transition_kyc_profile(
+                db,
+                workspace_id,
+                actor_principal_id,
+                required_target_id(target_id)?,
+                "approved",
+                reason,
+            )
+            .await
         }
         AdminBillingPlatformActionKind::RejectKycProfile => {
-            transition_kyc_profile(db, tenant_id, actor_principal_id, target_id?, "rejected", reason)
-                .await
+            transition_kyc_profile(
+                db,
+                workspace_id,
+                actor_principal_id,
+                required_target_id(target_id)?,
+                "rejected",
+                reason,
+            )
+            .await
         }
         AdminBillingPlatformActionKind::ActivateEinvoicingProfile => {
-            activate_einvoicing_profile(db, target_id?).await
+            activate_einvoicing_profile(db, required_target_id(target_id)?).await
         }
         AdminBillingPlatformActionKind::CreateRoutingRule => {
             create_routing_rule(db, required_routing_rule(routing_rule)?).await
         }
         AdminBillingPlatformActionKind::EnableRoutingRule => {
-            transition_routing_rule(db, target_id?, "active").await
+            transition_routing_rule(db, required_target_id(target_id)?, "active").await
         }
         AdminBillingPlatformActionKind::DisableRoutingRule => {
-            transition_routing_rule(db, target_id?, "disabled").await
+            transition_routing_rule(db, required_target_id(target_id)?, "disabled").await
         }
-        AdminBillingPlatformActionKind::Unspecified => {
-            Err(Status::invalid_argument("billing platform action kind is required"))
+        AdminBillingPlatformActionKind::ApproveFraudAssessment => {
+            crate::grpc::service_admin_platform_fraud::review_fraud_assessment(
+                db,
+                tenant_id,
+                actor_principal_id,
+                required_target_id(target_id)?,
+                "approved",
+                reason,
+            )
+            .await
         }
+        AdminBillingPlatformActionKind::RejectFraudAssessment => {
+            crate::grpc::service_admin_platform_fraud::review_fraud_assessment(
+                db,
+                tenant_id,
+                actor_principal_id,
+                required_target_id(target_id)?,
+                "rejected",
+                reason,
+            )
+            .await
+        }
+        AdminBillingPlatformActionKind::TrustFraudAssessment => {
+            crate::grpc::service_admin_platform_fraud::review_fraud_assessment(
+                db,
+                workspace_id,
+                actor_principal_id,
+                required_target_id(target_id)?,
+                "trusted",
+                reason,
+            )
+            .await
+        }
+        AdminBillingPlatformActionKind::Unspecified => Err(Status::invalid_argument(
+            "billing platform action kind is required",
+        )),
     }
+}
+
+fn required_target_id(target_id: Option<Uuid>) -> Result<Uuid, Status> {
+    target_id.ok_or_else(|| Status::invalid_argument("target_id is required for this action"))
 }
 
 async fn transition_kyc_profile(
@@ -155,7 +206,10 @@ async fn create_routing_rule(
     let min_amount_minor = input.has_min_amount_minor.then_some(input.min_amount_minor);
     let max_amount_minor = input.has_max_amount_minor.then_some(input.max_amount_minor);
 
-    let mut tx = db.begin().await.map_err(crate::grpc::service_status::sql_status)?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(crate::grpc::service_status::sql_status)?;
     reject_active_routing_rule_overlap(
         tx.as_mut(),
         None,
@@ -188,7 +242,9 @@ async fn create_routing_rule(
     .fetch_one(tx.as_mut())
     .await
     .map_err(crate::grpc::service_status::sql_status)?;
-    tx.commit().await.map_err(crate::grpc::service_status::sql_status)?;
+    tx.commit()
+        .await
+        .map_err(crate::grpc::service_status::sql_status)?;
 
     let metadata = json!({
         "routing_rule_id": rule_id,
@@ -219,9 +275,12 @@ async fn transition_routing_rule(
     rule_id: Uuid,
     next_state: &'static str,
 ) -> Result<AdminBillingPlatformActionResult, Status> {
-    let mut tx = db.begin().await.map_err(crate::grpc::service_status::sql_status)?;
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(crate::grpc::service_status::sql_status)?;
     if next_state == "active" {
-        reject_active_routing_rule_overlap_for_rule(tx.as_mut(), rule_id).await?;
+        reject_active_routing_rule_overlap_for_rule(&mut tx, rule_id).await?;
     }
     let row = sqlx::query_as::<_, (String, String)>(
         r#"
@@ -252,7 +311,9 @@ async fn transition_routing_rule(
             "routing_rule_not_transitionable: Routing rule is missing or already has the requested status.",
         )
     })?;
-    tx.commit().await.map_err(crate::grpc::service_status::sql_status)?;
+    tx.commit()
+        .await
+        .map_err(crate::grpc::service_status::sql_status)?;
     let (action_kind, audit_action) = routing_action_names(next_state);
 
     Ok(AdminBillingPlatformActionResult {
@@ -307,7 +368,7 @@ async fn reject_active_routing_rule_overlap(
 }
 
 async fn reject_active_routing_rule_overlap_for_rule(
-    executor: impl sqlx::Executor<'_, Database = sqlx::Postgres> + Copy,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     rule_id: Uuid,
 ) -> Result<(), Status> {
     let row = sqlx::query(
@@ -319,7 +380,7 @@ async fn reject_active_routing_rule_overlap_for_rule(
         "#,
     )
     .bind(rule_id)
-    .fetch_optional(executor)
+    .fetch_optional(&mut **tx)
     .await
     .map_err(crate::grpc::service_status::sql_status)?;
 
@@ -328,7 +389,7 @@ async fn reject_active_routing_rule_overlap_for_rule(
     };
 
     reject_active_routing_rule_overlap(
-        executor,
+        &mut **tx,
         Some(rule_id),
         row.get::<Option<String>, _>("country").as_deref(),
         row.get::<Option<String>, _>("currency").as_deref(),
@@ -428,4 +489,3 @@ fn routing_action_names(next_state: &'static str) -> (&'static str, &'static str
         )
     }
 }
-

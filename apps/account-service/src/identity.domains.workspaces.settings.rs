@@ -2,7 +2,13 @@ use super::db;
 use super::policy::*;
 use super::types::*;
 use super::validation::*;
-use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
+use crate::{
+    domains::{authz::WorkspaceAccess, cloud::workspace_port},
+    http::error::AppError,
+};
+use nvbes_product_account::cloud_boundary::{
+    UpdateWorkspaceSettingsCommand, WorkspacePolicyCommand,
+};
 use sqlx::PgPool;
 
 pub async fn update_workspace(
@@ -12,7 +18,10 @@ pub async fn update_workspace(
     ip: Option<String>,
     user_agent: Option<String>,
 ) -> Result<WorkspaceResponse, AppError> {
-    let current = db::fetch_workspace_for_update(db, access.workspace_id).await?;
+    let current_workspace =
+        workspace_port::get_workspace(access.tenant_id, access.workspace_id, access.auth.user_id)
+            .await?;
+    let current = db::current_workspace_from_cloud(&current_workspace);
     let previous_name = current.name.clone();
     let name = match input.name {
         Some(name) => validate_workspace_name(&name)?,
@@ -22,38 +31,23 @@ pub async fn update_workspace(
     let policy = normalize_policy_update(&current, input.policy)?;
     let mut tx = db.begin().await?;
 
-    sqlx::query(
-        r#"
-        UPDATE workspaces
-        SET name = $2,
-            updated_at = NOW()
-        WHERE id = $1
-        "#,
+    crate::domains::cloud::workspace_port::update_workspace_settings_tx(
+        &mut tx,
+        &UpdateWorkspaceSettingsCommand {
+            actor_principal_id: access.auth.user_id,
+            workspace_id: access.workspace_id,
+            name: name.clone(),
+            policy: WorkspacePolicyCommand {
+                member_can_create_share_links: policy.member_can_create_share_links,
+                require_admin_approval_for_member_share: policy
+                    .require_admin_approval_for_member_share,
+                default_share_link_ttl_days: policy.default_share_link_ttl_days,
+                max_share_link_ttl_days: policy.max_share_link_ttl_days,
+                required_acr: None,
+                mfa_policy: Some(policy.mfa_policy.as_str().to_string()),
+            },
+        },
     )
-    .bind(access.workspace_id)
-    .bind(&name)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        UPDATE workspace_policies
-        SET member_can_create_share_links = $2,
-            require_admin_approval_for_member_share = $3,
-            default_share_link_ttl_days = $4,
-            max_share_link_ttl_days = $5,
-            mfa_policy = $6,
-            updated_at = NOW()
-        WHERE workspace_id = $1
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(policy.member_can_create_share_links)
-    .bind(policy.require_admin_approval_for_member_share)
-    .bind(policy.default_share_link_ttl_days)
-    .bind(policy.max_share_link_ttl_days)
-    .bind(policy.mfa_policy.as_str())
-    .execute(&mut *tx)
     .await?;
 
     crate::domains::audit::record_event_tx(
@@ -83,10 +77,11 @@ pub async fn update_workspace(
 
     tx.commit().await?;
 
-    db::get_workspace_by_id(
-        db,
-        access.workspace_id,
+    let workspace =
+        workspace_port::get_workspace(access.tenant_id, access.workspace_id, access.auth.user_id)
+            .await?;
+    Ok(db::workspace_response_from_cloud(
+        workspace,
         nvbes_tenancy::role_as_str(access.role),
-    )
-    .await
+    ))
 }

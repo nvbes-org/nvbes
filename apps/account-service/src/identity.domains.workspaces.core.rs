@@ -1,54 +1,32 @@
 use chrono::{Duration, Utc};
+use nvbes_product_account::cloud_boundary::{CreateWorkspaceCommand, WorkspacePolicyCommand};
 use uuid::Uuid;
 
-use super::db::{self, WorkspaceRecord};
+use super::db;
 use super::types::*;
 use super::validation::*;
-use crate::{domains::auth::types::AuthContext, http::error::AppError};
+use crate::{
+    domains::{auth::types::AuthContext, cloud::workspace_port},
+    http::error::AppError,
+};
 use sqlx::PgPool;
 
 pub async fn list_workspaces(
-    db: &PgPool,
+    _db: &PgPool,
     auth: &AuthContext,
 ) -> Result<WorkspaceListResponse, AppError> {
-    let rows = sqlx::query_as::<_, WorkspaceRecord>(
-        r#"
-        SELECT
-          w.id,
-          COALESCE(
-            w.owner_user_id,
-            (SELECT principal_id FROM workspace_memberships WHERE workspace_id = w.id AND role = 'admin' LIMIT 1),
-            '00000000-0000-0000-0000-000000000000'::uuid
-          ) AS owner_principal_id,
-          w.name,
-          w.workspace_type::text AS workspace_type,
-          w.data_region::text AS data_region,
-          w.jurisdiction::text AS jurisdiction,
-          wm.role::text AS role,
-          w.plan_code,
-          w.trial_ends_at,
-          wp.member_can_create_share_links,
-          wp.require_admin_approval_for_member_share,
-          wp.default_share_link_ttl_days,
-          wp.max_share_link_ttl_days,
-          wp.mfa_policy,
-          w.created_at,
-          w.updated_at
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
-        WHERE wm.principal_id = $1
-          AND wm.status = 'active'
-        ORDER BY w.created_at ASC
-        "#,
-    )
-    .bind(auth.user_id)
-    .fetch_all(db)
-    .await?;
+    let mut workspaces = Vec::new();
+    for workspace in workspace_port::list_workspaces(None, auth.user_id).await? {
+        let role = active_member_role(
+            Some(workspace.tenant_id),
+            workspace.workspace_id,
+            auth.user_id,
+        )
+        .await?;
+        workspaces.push(db::workspace_response_from_cloud(workspace, &role).workspace);
+    }
 
-    Ok(WorkspaceListResponse {
-        workspaces: rows.into_iter().map(WorkspaceRecord::into_view).collect(),
-    })
+    Ok(WorkspaceListResponse { workspaces })
 }
 
 pub async fn create_workspace(
@@ -75,55 +53,33 @@ pub async fn create_workspace(
     let plan_code = "trial".to_string();
     let max_share_link_ttl_days = 7;
 
-    let workspace_id: Uuid = sqlx::query_scalar(
-        r#"
-        INSERT INTO workspaces (
-          tenant_id,
-          organization_id,
-          workspace_type,
-          name,
-          plan_code,
-          trial_ends_at,
-          data_region,
-          jurisdiction
-        )
-        VALUES ($1, NULL, $2::workspace_type, $3, $4, $5, $6::data_region, $7::legal_jurisdiction)
-        RETURNING id
-        "#,
+    let workspace_id = Uuid::new_v4();
+    crate::domains::cloud::workspace_port::create_workspace_tx(
+        &mut tx,
+        &CreateWorkspaceCommand {
+            workspace_id,
+            tenant_id,
+            organization_id: None,
+            owner_principal_id: auth.user_id,
+            name: name.clone(),
+            workspace_type: workspace_type.to_string(),
+            plan_code: plan_code.clone(),
+            trial_ends_at: Some(trial_ends_at),
+            data_region: region.to_string(),
+            jurisdiction: jurisdiction.to_string(),
+            owner_role: "owner".to_string(),
+            membership_source: "manual".to_string(),
+            created_at: now,
+            policy: WorkspacePolicyCommand {
+                member_can_create_share_links: false,
+                require_admin_approval_for_member_share: true,
+                default_share_link_ttl_days: 7,
+                max_share_link_ttl_days,
+                required_acr: None,
+                mfa_policy: None,
+            },
+        },
     )
-    .bind(tenant_id)
-    .bind(workspace_type)
-    .bind(&name)
-    .bind(&plan_code)
-    .bind(trial_ends_at)
-    .bind(region)
-    .bind(jurisdiction)
-    .fetch_one(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_policies (
-          workspace_id,
-          member_can_create_share_links,
-          require_admin_approval_for_member_share,
-          default_share_link_ttl_days,
-          max_share_link_ttl_days
-        )
-        VALUES ($1, FALSE, TRUE, 7, $2)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(max_share_link_ttl_days)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        "INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source) VALUES ($1, $2, 'owner', 'active', 'manual')",
-    )
-    .bind(workspace_id)
-    .bind(auth.user_id)
-    .execute(&mut *tx)
     .await?;
 
     crate::domains::audit::record_event_tx(
@@ -148,5 +104,25 @@ pub async fn create_workspace(
 
     tx.commit().await?;
 
-    db::get_workspace_by_id(db, workspace_id, "owner").await
+    let workspace =
+        workspace_port::get_workspace(Some(tenant_id), workspace_id, auth.user_id).await?;
+    Ok(db::workspace_response_from_cloud(workspace, "owner"))
+}
+
+async fn active_member_role(
+    tenant_id: Option<Uuid>,
+    workspace_id: Uuid,
+    actor_principal_id: Uuid,
+) -> Result<String, AppError> {
+    workspace_port::list_workspace_members(tenant_id, workspace_id, actor_principal_id)
+        .await?
+        .into_iter()
+        .find(|member| member.principal_id == actor_principal_id && member.active)
+        .map(|member| member.role)
+        .ok_or_else(|| {
+            AppError::internal(
+                "cloud_grpc_invalid_response",
+                "Cloud returned a workspace without the caller membership.",
+            )
+        })
 }

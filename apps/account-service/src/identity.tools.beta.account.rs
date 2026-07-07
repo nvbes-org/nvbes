@@ -1,6 +1,10 @@
 use anyhow::Context;
+use chrono::{Duration, Utc};
+use nvbes_product_account::cloud_boundary::{CreateWorkspaceCommand, WorkspacePolicyCommand};
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
+
+use nvbes_account_service::domains::cloud::workspace_port;
 
 pub struct BetaAccount {
     pub principal_id: Uuid,
@@ -68,80 +72,78 @@ pub async fn ensure_owner_workspace(
     principal_id: Uuid,
     workspace_name: &str,
 ) -> anyhow::Result<()> {
-    let existing_owner_workspace: Option<Uuid> = sqlx::query_scalar(
-        r#"
-        SELECT wm.workspace_id
-        FROM workspace_memberships wm
-        WHERE wm.principal_id = $1
-          AND wm.status = 'active'
-          AND wm.role IN ('owner', 'admin')
-        LIMIT 1
-        "#,
-    )
-    .bind(principal_id)
-    .fetch_optional(&mut **tx)
-    .await
-    .context("Failed to inspect beta owner workspace memberships.")?;
-
-    if existing_owner_workspace.is_some() {
+    if has_workspace_role(tenant_id, principal_id, &["owner", "admin"]).await? {
         return Ok(());
     }
 
-    let workspace_id = Uuid::new_v4();
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspaces (
-          id, tenant_id, organization_id, name, workspace_type, plan_code,
-          trial_ends_at, data_region, jurisdiction, owner_user_id,
-          created_at, updated_at
-        )
-        VALUES (
-          $1, $2, NULL, $3, 'personal', 'solo_pro',
-          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4,
-          NOW(), NOW()
-        )
-        "#,
+    let now = Utc::now();
+    workspace_port::create_workspace_tx(
+        tx,
+        &CreateWorkspaceCommand {
+            workspace_id: Uuid::new_v4(),
+            tenant_id,
+            organization_id: None,
+            owner_principal_id: principal_id,
+            name: workspace_name.to_string(),
+            workspace_type: "personal".to_string(),
+            plan_code: "solo_pro".to_string(),
+            trial_ends_at: Some(now + Duration::days(14)),
+            data_region: "eu".to_string(),
+            jurisdiction: "gdpr".to_string(),
+            owner_role: "owner".to_string(),
+            membership_source: "system".to_string(),
+            created_at: now,
+            policy: WorkspacePolicyCommand {
+                member_can_create_share_links: false,
+                require_admin_approval_for_member_share: true,
+                default_share_link_ttl_days: 7,
+                max_share_link_ttl_days: 30,
+                required_acr: Some("aal1".to_string()),
+                mfa_policy: None,
+            },
+        },
     )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(workspace_name)
-    .bind(principal_id)
-    .execute(&mut **tx)
     .await
-    .context("Failed to create beta owner workspace.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_policies (
-          workspace_id,
-          member_can_create_share_links,
-          require_admin_approval_for_member_share,
-          default_share_link_ttl_days,
-          max_share_link_ttl_days,
-          required_acr
-        )
-        VALUES ($1, FALSE, TRUE, 7, 30, 'aal1')
-        "#,
-    )
-    .bind(workspace_id)
-    .execute(&mut **tx)
-    .await
-    .context("Failed to create beta owner workspace policy.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source)
-        VALUES ($1, $2, 'owner', 'active', 'system')
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(principal_id)
-    .execute(&mut **tx)
-    .await
-    .context("Failed to create beta owner workspace membership.")?;
+    .map_err(|error| anyhow::anyhow!("Failed to create beta owner workspace: {}", error.message))?;
 
     Ok(())
+}
+
+pub(super) async fn has_workspace_role(
+    tenant_id: Uuid,
+    principal_id: Uuid,
+    roles: &[&str],
+) -> anyhow::Result<bool> {
+    for workspace in workspace_port::list_tenant_workspaces(tenant_id, None, principal_id)
+        .await
+        .map_err(|error| {
+            anyhow::anyhow!(
+                "Failed to inspect beta workspace list through Cloud: {}",
+                error.message
+            )
+        })?
+    {
+        for member in workspace_port::list_workspace_members(
+            Some(tenant_id),
+            workspace.workspace_id,
+            principal_id,
+        )
+        .await
+        .map_err(|error| {
+            anyhow::anyhow!(
+                "Failed to inspect beta workspace memberships through Cloud: {}",
+                error.message
+            )
+        })? {
+            if member.principal_id == principal_id
+                && member.active
+                && roles.iter().any(|role| *role == member.role)
+            {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 async fn load_beta_account(

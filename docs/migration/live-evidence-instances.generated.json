@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/live-evidence-instances.mjs --write",
-    "strict_command": "tools/migration/live-evidence-instances.mjs --strict"
+    "command": "node tools/migration/live-evidence-instances.mjs --write",
+    "strict_command": "node tools/migration/live-evidence-instances.mjs --strict"
   },
   "status": {
     "instance_count": 0,

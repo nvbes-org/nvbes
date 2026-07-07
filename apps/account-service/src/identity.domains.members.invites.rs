@@ -12,6 +12,7 @@ pub mod logic;
 #[derive(Debug, FromRow)]
 pub struct InvitationRecord {
     pub id: Uuid,
+    pub workspace_id: Uuid,
     pub email: String,
     pub role: String,
     pub status: String,

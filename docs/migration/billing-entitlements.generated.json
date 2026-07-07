@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/billing-entitlements.mjs --write",
+    "command": "node tools/migration/billing-entitlements.mjs --write",
     "sources": [
       "libs/rust/billing/src/views.rs",
       "libs/rust/billing/src/types.rs",
       "libs/rust/billing/src/shared.rs",
-      "apps/billing-api/src/billing.domains.public_workspace.rs",
-      "apps/billing-api/src/billing.domains.workspace.rs",
-      "apps/billing-api/src/billing.auth.rs",
+      "apps/billing-service/src/billing.domains.public_workspace.rs",
+      "apps/billing-service/src/billing.domains.workspace.rs",
+      "apps/billing-service/src/billing.auth.rs",
       "libs/rust/billing/src/workspace_views.rs",
       "libs/rust/billing/src/checkout_sessions.rs",
       "libs/rust/billing/src/portal_actions.rs",
-      "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "apps/cloud-service/src/drive.domains.billing.entitlements.rs",
       "contracts/events/billing.entitlement.changed.v1.schema.json",
       "contracts/events/manifest.json",
       "docs/migration/data-map.md",
@@ -132,58 +132,58 @@
       "pattern": "subscription_status_requires_lock"
     },
     {
-      "id": "billing-api-overview",
+      "id": "billing-service-overview",
       "description": "Billing service overview returns entitlements",
       "path": "libs/rust/billing/src/workspace_views.rs",
       "status": "passed",
       "pattern": "entitlements: entitlements_view(&record)"
     },
     {
-      "id": "billing-api-usage-ledger",
+      "id": "billing-service-usage-ledger",
       "description": "Billing service usage response exposes billable storage and seats",
       "path": "libs/rust/billing/src/workspace_views.rs",
       "status": "passed",
       "pattern": "billable_quantity"
     },
     {
-      "id": "billing-api-entitlements-route",
-      "description": "Billing API exposes public entitlements endpoint",
-      "path": "apps/billing-api/src/billing.domains.public_workspace.rs",
+      "id": "billing-service-entitlements-route",
+      "description": "billing-service exposes public entitlements endpoint",
+      "path": "apps/billing-service/src/billing.domains.public_workspace.rs",
       "status": "passed",
       "pattern": "\"/workspaces/{workspaceId}/billing/entitlements\""
     },
     {
-      "id": "billing-api-entitlements-authz",
+      "id": "billing-service-entitlements-authz",
       "description": "Billing entitlements endpoint requires Billing read authorization",
-      "path": "apps/billing-api/src/billing.domains.public_workspace.rs",
+      "path": "apps/billing-service/src/billing.domains.public_workspace.rs",
       "status": "passed",
       "pattern": "BillingWorkspacePermission::Read"
     },
     {
-      "id": "billing-api-entitlements-service",
+      "id": "billing-service-entitlements-service",
       "description": "Billing service returns workspace entitlements",
       "path": "libs/rust/billing/src/workspace_views.rs",
       "status": "passed",
       "pattern": "fetch_workspace_entitlements"
     },
     {
-      "id": "billing-api-type-response",
-      "description": "Billing API returns shared entitlement response type",
-      "path": "apps/billing-api/src/billing.domains.public_workspace.rs",
+      "id": "billing-service-type-response",
+      "description": "billing-service returns shared entitlement response type",
+      "path": "apps/billing-service/src/billing.domains.public_workspace.rs",
       "status": "passed",
       "pattern": "ProductEntitlementsView"
     },
     {
-      "id": "billing-api-internal-entitlements-route",
-      "description": "Billing API exposes internal entitlements endpoint",
-      "path": "apps/billing-api/src/billing.domains.workspace.rs",
+      "id": "billing-service-internal-entitlements-route",
+      "description": "billing-service exposes internal entitlements endpoint",
+      "path": "apps/billing-service/src/billing.domains.workspace.rs",
       "status": "passed",
       "pattern": "\"/internal/workspaces/{workspaceId}/billing/entitlements\""
     },
     {
-      "id": "billing-api-identity-authz",
-      "description": "Billing API authorizes requests through Identity introspection",
-      "path": "apps/billing-api/src/billing.auth.rs",
+      "id": "billing-service-identity-authz",
+      "description": "billing-service authorizes requests through Account introspection",
+      "path": "apps/billing-service/src/billing.auth.rs",
       "status": "passed",
       "pattern": "introspect_identity_token"
     },
@@ -204,21 +204,21 @@
     {
       "id": "drive-entitlement-projection",
       "description": "Drive projects Billing entitlement events locally",
-      "path": "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "path": "apps/cloud-service/src/drive.domains.billing.entitlements.rs",
       "status": "passed",
       "pattern": "drive_entitlement_projection_from_event"
     },
     {
       "id": "drive-entitlement-storage",
       "description": "Drive stores only entitlement projections from Billing",
-      "path": "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "path": "apps/cloud-service/src/drive.domains.billing.entitlements.rs",
       "status": "passed",
       "pattern": "INSERT INTO billing_entitlement_snapshots"
     },
     {
       "id": "drive-entitlement-no-financial-storage",
       "description": "Drive no longer stores Billing invoice estimates",
-      "path": "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+      "path": "apps/cloud-service/src/drive.domains.billing.entitlements.rs",
       "status": "passed",
       "pattern": "persist_entitlement_projection"
     },

@@ -60,7 +60,7 @@ fn build_scanner(config: &AppConfig) -> std::sync::Arc<dyn ScanEngine> {
     }
 }
 
-pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router> {
+pub async fn build_app_state(config: AppConfig, db: Database) -> anyhow::Result<AppState> {
     if config.environment != "development" && config.scan_fail_open {
         panic!("SCAN_FAIL_OPEN is forbidden outside development.");
     }
@@ -72,7 +72,6 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
 
     let rate_limiter = nvbes_core::limiter::RateLimiter::new(redis.clone());
 
-    let cors = nvbes_core::security::cors_layer(&config);
     let product_analytics = build_product_analytics(&config)?;
     let state = AppState {
         config,
@@ -92,9 +91,18 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
         state.db.num_idle(),
     );
 
+    Ok(state)
+}
+
+pub fn build_router(state: AppState) -> Router {
     const MAX_BODY_SIZE: usize = 64 * 1024 * 1024;
 
-    Ok(Router::new()
+    let cors = nvbes_core::security::cors_layer(&state.config);
+    let http_request_timeout_secs = state.config.http_request_timeout_secs;
+    let api_max_connections_per_ip = state.config.api_max_connections_per_ip;
+    let api_max_concurrent_requests = state.config.api_max_concurrent_requests;
+
+    Router::new()
         .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_SIZE))
         .layer(CompressionLayer::new())
         .merge(http::router(&state))
@@ -117,18 +125,23 @@ pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router
         ))
         .layer(
             nvbes_core::http::connection_limit::PerIpConcurrencyLayer::new(
-                state.config.api_max_connections_per_ip,
+                api_max_connections_per_ip,
             ),
         )
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
-            Duration::from_secs(state.config.http_request_timeout_secs),
+            Duration::from_secs(http_request_timeout_secs),
         ))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(
-            state.config.api_max_concurrent_requests as usize,
+            api_max_concurrent_requests as usize,
         ))
-        .with_state(state))
+        .with_state(state)
+}
+
+#[cfg(test)]
+pub async fn build_app(config: AppConfig, db: Database) -> anyhow::Result<Router> {
+    Ok(build_router(build_app_state(config, db).await?))
 }
 
 fn build_product_analytics(
@@ -139,24 +152,11 @@ fn build_product_analytics(
         analytics_id_salt: config.analytics_id_salt.clone(),
     };
 
-    if !config.product_analytics_enabled {
-        return Ok(nvbes_product_analytics::ProductAnalytics::new(
-            analytics_config,
-        )?);
+    if config.product_analytics_enabled {
+        tracing::info!("Cloud product analytics enabled without adapter; events are dropped");
     }
 
-    let project_token = config.product_analytics_token.clone().ok_or_else(|| {
-        anyhow::anyhow!("NVBES_POSTHOG_PROJECT_TOKEN is required when PostHog is enabled")
-    })?;
-    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
-        nvbes_analytics_posthog::PostHogAnalyticsConfig {
-            host: config.posthog_host.clone(),
-            project_token,
-        },
-    )?;
-
-    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
+    Ok(nvbes_product_analytics::ProductAnalytics::new(
         analytics_config,
-        std::sync::Arc::new(sink),
     )?)
 }

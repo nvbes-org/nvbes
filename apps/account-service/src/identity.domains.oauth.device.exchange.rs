@@ -7,7 +7,7 @@ use super::device_codes::{
     delete_device_code, get_device_code_by_device_code, is_expired, save_device_code,
 };
 use super::service::types::{ExchangeDeviceCodeInput, TokenView};
-use crate::domains::auth::jwt::JwtService;
+use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
 use nvbes_redis::refresh_token as refresh_store;
 
@@ -149,13 +149,9 @@ pub async fn exchange_device_code(
             ));
         }
 
-        let workspace_region = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT data_region::text FROM workspaces WHERE id = $1",
-        )
-        .bind(workspace_id)
-        .fetch_optional(db)
-        .await?
-        .flatten();
+        let workspace_region = workspace_port::get_workspace(Some(tenant_id), workspace_id, principal_id)
+            .await?
+            .data_region;
 
         let token_pair = jwt.generate_token_pair_with_session(
             principal_id,

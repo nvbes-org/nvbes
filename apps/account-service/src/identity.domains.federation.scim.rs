@@ -2,78 +2,61 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    domains::federation::{
-        contract::{normalize_scim_base_url, normalize_scim_provider},
-        types::{
-            CreateScimProvisioningConnectorInput, ScimProvisioningConnectorRecord,
-            ScimProvisioningConnectorResponse, ScimProvisioningConnectorsResponse,
-            UpdateScimProvisioningConnectorInput,
+    domains::{
+        enterprise::grpc::federation::{
+            self as enterprise_federation, ConfigureScimConnectorCommand,
         },
-        validation::normalize_registry_status,
+        federation::{
+            contract::{normalize_scim_base_url, normalize_scim_provider},
+            scim_projection,
+            types::{
+                CreateScimProvisioningConnectorInput, ScimProvisioningConnectorResponse,
+                ScimProvisioningConnectorView, ScimProvisioningConnectorsResponse,
+                UpdateScimProvisioningConnectorInput,
+            },
+            validation::normalize_registry_status,
+        },
     },
     http::error::AppError,
 };
 
 pub async fn list_scim_connectors(
-    db: &PgPool,
+    _db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
 ) -> Result<ScimProvisioningConnectorsResponse, AppError> {
-    let rows = sqlx::query_as::<_, ScimProvisioningConnectorRecord>(
-        r#"
-        SELECT
-          id,
-          provider,
-          status,
-          base_url,
-          created_at
-        FROM scim_provisioning_connectors
-        WHERE tenant_id = $1
-        ORDER BY created_at DESC
-        "#,
-    )
-    .bind(tenant_id)
-    .fetch_all(db)
-    .await?;
-
+    let governance =
+        enterprise_federation::get_federation_governance(tenant_id, actor_principal_id).await?;
     Ok(ScimProvisioningConnectorsResponse {
-        connectors: rows
+        connectors: governance
+            .scim_connectors
             .into_iter()
-            .map(ScimProvisioningConnectorRecord::into_view)
-            .collect(),
+            .map(connector_from_grpc)
+            .collect::<Result<_, _>>()?,
     })
 }
 
 pub async fn create_scim_connector(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     input: CreateScimProvisioningConnectorInput,
 ) -> Result<ScimProvisioningConnectorResponse, AppError> {
     let provider = normalize_scim_provider(&input.provider)?;
     let status = normalize_registry_status(input.status.as_deref())?;
     let base_url = normalize_scim_base_url(input.base_url.as_deref(), false).await?;
-    let row = sqlx::query_as::<_, ScimProvisioningConnectorRecord>(
-        r#"
-        INSERT INTO scim_provisioning_connectors (
-          tenant_id,
-          provider,
-          status,
-          base_url
-        )
-        VALUES ($1, $2, $3, $4)
-        RETURNING
-          id,
-          provider,
-          status,
-          base_url,
-          created_at
-        "#,
+    let connector = enterprise_federation::configure_scim_connector(
+        tenant_id,
+        actor_principal_id,
+        ConfigureScimConnectorCommand {
+            connector_id: None,
+            provider,
+            status,
+            base_url,
+        },
     )
-    .bind(tenant_id)
-    .bind(provider)
-    .bind(status)
-    .bind(base_url)
-    .fetch_one(db)
     .await?;
+    let row = scim_projection::upsert_scim_connector_projection(db, &connector).await?;
 
     Ok(ScimProvisioningConnectorResponse {
         connector: row.into_view(),
@@ -83,10 +66,12 @@ pub async fn create_scim_connector(
 pub async fn update_scim_connector(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     connector_id: Uuid,
     input: UpdateScimProvisioningConnectorInput,
 ) -> Result<ScimProvisioningConnectorResponse, AppError> {
-    let current = fetch_scim_connector(db, tenant_id, connector_id).await?;
+    let current =
+        fetch_governance_scim_connector(tenant_id, actor_principal_id, connector_id).await?;
     let provider = match input.provider {
         Some(value) => normalize_scim_provider(&value)?,
         None => current.provider,
@@ -100,29 +85,18 @@ pub async fn update_scim_connector(
         None => current.status.clone(),
     };
 
-    let row = sqlx::query_as::<_, ScimProvisioningConnectorRecord>(
-        r#"
-        UPDATE scim_provisioning_connectors
-        SET provider = $3,
-            status = $4,
-            base_url = $5
-        WHERE id = $1
-          AND tenant_id = $2
-        RETURNING
-          id,
-          provider,
-          status,
-          base_url,
-          created_at
-        "#,
+    let connector = enterprise_federation::configure_scim_connector(
+        tenant_id,
+        actor_principal_id,
+        ConfigureScimConnectorCommand {
+            connector_id: Some(connector_id),
+            provider,
+            status,
+            base_url,
+        },
     )
-    .bind(connector_id)
-    .bind(tenant_id)
-    .bind(provider)
-    .bind(status)
-    .bind(base_url)
-    .fetch_one(db)
     .await?;
+    let row = scim_projection::upsert_scim_connector_projection(db, &connector).await?;
 
     Ok(ScimProvisioningConnectorResponse {
         connector: row.into_view(),
@@ -132,63 +106,74 @@ pub async fn update_scim_connector(
 pub async fn delete_scim_connector(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     connector_id: Uuid,
 ) -> Result<(), AppError> {
-    let deleted = sqlx::query(
-        r#"
-        DELETE FROM scim_provisioning_connectors
-        WHERE id = $1
-          AND tenant_id = $2
-        "#,
-    )
-    .bind(connector_id)
-    .bind(tenant_id)
-    .execute(db)
-    .await?
-    .rows_affected();
-
-    if deleted == 0 {
-        return Err(AppError::not_found(
-            crate::domains::federation::contract::CONNECTOR_NOT_FOUND,
-            "SCIM provisioning connector not found.",
-        ));
-    }
-
+    fetch_governance_scim_connector(tenant_id, actor_principal_id, connector_id).await?;
+    enterprise_federation::delete_scim_connector(tenant_id, actor_principal_id, connector_id)
+        .await?;
+    scim_projection::delete_scim_connector_projection(db, tenant_id, connector_id).await?;
     Ok(())
 }
 
-#[cfg(test)]
-#[path = "identity.domains.federation.scim.tests.rs"]
-mod tests;
-
-pub async fn fetch_scim_connector(
-    db: &PgPool,
+async fn fetch_governance_scim_connector(
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     connector_id: Uuid,
-) -> Result<ScimProvisioningConnectorRecord, AppError> {
-    let row = sqlx::query_as::<_, ScimProvisioningConnectorRecord>(
-        r#"
-        SELECT
-          id,
-          provider,
-          status,
-          base_url,
-          created_at
-        FROM scim_provisioning_connectors
-        WHERE id = $1
-          AND tenant_id = $2
-        LIMIT 1
-        "#,
-    )
-    .bind(connector_id)
-    .bind(tenant_id)
-    .fetch_optional(db)
-    .await?;
+) -> Result<ScimProvisioningConnectorView, AppError> {
+    let governance =
+        enterprise_federation::get_federation_governance(tenant_id, actor_principal_id).await?;
+    governance
+        .scim_connectors
+        .into_iter()
+        .find(|connector| connector.connector_id == connector_id.to_string())
+        .map(connector_from_grpc)
+        .transpose()?
+        .ok_or_else(|| {
+            AppError::not_found(
+                crate::domains::federation::contract::CONNECTOR_NOT_FOUND,
+                "SCIM connector not found.",
+            )
+        })
+}
 
-    row.ok_or_else(|| {
-        AppError::not_found(
-            crate::domains::federation::contract::CONNECTOR_NOT_FOUND,
-            "SCIM connector not found.",
+fn connector_from_grpc(
+    connector: crate::grpc_pb::nvbes::enterprise::v1::ScimConnector,
+) -> Result<ScimProvisioningConnectorView, AppError> {
+    Ok(ScimProvisioningConnectorView {
+        id: parse_uuid(&connector.connector_id, "connector_id")?,
+        provider: connector.provider,
+        status: connector.status,
+        base_url: optional_text(connector.base_url),
+        created_at: parse_time(&connector.created_at, "created_at")?,
+    })
+}
+
+fn parse_uuid(value: &str, field: &str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|error| {
+        AppError::internal(
+            "enterprise_grpc_invalid_federation_governance",
+            format!("Enterprise gRPC returned invalid {field}: {error}"),
         )
     })
+}
+
+fn parse_time(value: &str, field: &str) -> Result<chrono::DateTime<chrono::Utc>, AppError> {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&chrono::Utc))
+        .map_err(|error| {
+            AppError::internal(
+                "enterprise_grpc_invalid_federation_governance",
+                format!("Enterprise gRPC returned invalid {field}: {error}"),
+            )
+        })
+}
+
+fn optional_text(value: String) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
 }

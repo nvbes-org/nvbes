@@ -2,7 +2,7 @@ use sqlx::Row;
 use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
-use crate::domains::auth::jwt::JwtService;
+use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
 
 use super::{ClientAuthentication, TokenView};
@@ -37,22 +37,14 @@ pub async fn client_credentials_grant(
             oauth_clients.client_secret_hash,
             oauth_clients.client_assertion_required,
             oauth_clients.client_type::text AS client_type,
+            oauth_clients.tenant_id AS client_tenant_id,
             oauth_clients.owner_scope_type::text AS owner_scope_type,
             oauth_clients.owner_scope_id,
             sa.principal_id AS service_account_principal_id,
             sa.workspace_id AS service_account_workspace_id,
-            w.tenant_id,
-            w.organization_id,
-            w.data_region::text AS workspace_region,
-            wm.role::text AS service_account_role,
             p.status::text AS principal_status
         FROM oauth_clients
         LEFT JOIN service_accounts sa ON sa.client_id = oauth_clients.client_id
-        LEFT JOIN workspaces w ON w.id = sa.workspace_id
-        LEFT JOIN workspace_memberships wm
-          ON wm.workspace_id = sa.workspace_id
-         AND wm.principal_id = sa.principal_id
-         AND wm.status = 'active'
         LEFT JOIN principals p ON p.id = sa.principal_id
         WHERE oauth_clients.client_id = $1
           AND oauth_clients.revoked_at IS NULL
@@ -73,14 +65,11 @@ pub async fn client_credentials_grant(
     let client_secret_hash: String = client.get("client_secret_hash");
     let client_assertion_required: bool = client.get("client_assertion_required");
     let client_type: String = client.get("client_type");
+    let client_tenant_id: Uuid = client.get("client_tenant_id");
     let owner_scope_type: String = client.get("owner_scope_type");
     let owner_scope_id: Uuid = client.get("owner_scope_id");
     let service_account_principal_id: Option<Uuid> = client.get("service_account_principal_id");
     let service_account_workspace_id: Option<Uuid> = client.get("service_account_workspace_id");
-    let tenant_id: Option<Uuid> = client.get("tenant_id");
-    let organization_id: Option<Uuid> = client.get("organization_id");
-    let workspace_region: Option<String> = client.get("workspace_region");
-    let service_account_role: Option<String> = client.get("service_account_role");
     let principal_status: Option<String> = client.get("principal_status");
 
     if crate::domains::oauth::validation::is_public_client_type(&client_type) {
@@ -105,7 +94,7 @@ pub async fn client_credentials_grant(
             )
         })?;
         crate::domains::oauth::verify_client_secret_with_overlap(
-            db,
+            client_tenant_id,
             &client_auth.client_id,
             client_secret,
             &client_secret_hash,
@@ -186,12 +175,22 @@ pub async fn client_credentials_grant(
             "This OAuth client is not attached to a workspace service account.",
         )
     })?;
-    let tenant_id = tenant_id.ok_or_else(|| {
-        AppError::forbidden(
-            "tenant_context_required",
-            "This OAuth client is not attached to a tenant workspace.",
-        )
-    })?;
+    let workspace = workspace_port::get_workspace(
+        Some(client_tenant_id),
+        workspace_id,
+        service_account_principal_id,
+    )
+    .await?;
+    let service_account_role = workspace_port::list_workspace_members(
+        Some(workspace.tenant_id),
+        workspace_id,
+        service_account_principal_id,
+    )
+    .await?
+    .into_iter()
+    .find(|member| member.principal_id == service_account_principal_id && member.active)
+    .map(|member| member.role);
+
     if principal_status.as_deref() != Some("active") || service_account_role.is_none() {
         return Err(AppError::forbidden(
             "service_account_inactive",
@@ -208,10 +207,10 @@ pub async fn client_credentials_grant(
     let access_token = jwt.generate_m2m_access_token(
         &client_auth.client_id,
         service_account_principal_id,
-        tenant_id,
-        organization_id,
+        workspace.tenant_id,
+        workspace.organization_id,
         workspace_id,
-        workspace_region,
+        workspace.data_region,
         scope_str,
         Some(audience),
     )?;
@@ -222,7 +221,7 @@ pub async fn client_credentials_grant(
             client_uuid,
             client_id: &client_auth.client_id,
             service_account_principal_id,
-            tenant_id,
+            tenant_id: workspace.tenant_id,
             workspace_id,
             jti: &claims.jti,
             scope: scope_str,

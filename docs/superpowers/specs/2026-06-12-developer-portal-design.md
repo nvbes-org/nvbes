@@ -5,14 +5,14 @@ Status: Approved for specification review
 
 ## Goal
 
-Build a dedicated developer experience for nvbes Identity:
+Build a dedicated developer experience for nvbes Account:
 
 - A public developer site for API reference and quickstarts.
-- A connected developer portal for OAuth apps, redirects, client IDs, token inspection, OAuth playground, logs, and Identity webhooks.
+- A connected developer portal for OAuth apps, redirects, client IDs, token inspection, OAuth playground, logs, and Account webhooks.
 - Clean OpenAPI output and generated SDK assets.
 - Fine-grained developer RBAC with predefined roles and explicit permissions.
 
-The V1 must be production-connected. Surfaces that create, inspect, or mutate Identity configuration must call backend endpoints with real authorization checks. Documentation pages can be static content in the frontend repo.
+The V1 must be production-connected. Surfaces that create, inspect, or mutate Account configuration must call backend endpoints with real authorization checks. Documentation pages can be static content in the frontend repo.
 
 ## Product Decisions
 
@@ -49,7 +49,7 @@ Connected portal routes:
 - `/portal/webhooks`
 - `/portal/settings/roles`
 
-Unauthenticated users who enter `/portal/*` are redirected to Identity login with a return URL back to the developer portal.
+Unauthenticated users who enter `/portal/*` are redirected to Account login with a return URL back to the developer portal.
 
 ## Developer RBAC
 
@@ -106,7 +106,7 @@ Add a new flat Rust domain under `apps/account-service/src`:
 - `identity.domains.developer.webhooks.service.rs`
 - `identity.domains.developer.openapi.rs`
 
-Routes should be nested under `/developer` in the Identity API:
+Routes should be nested under `/developer` in the Account service:
 
 - `GET /developer/me`
 - `GET /developer/apps`
@@ -263,7 +263,7 @@ In scope for V1:
 - Token inspector.
 - OAuth playground.
 - Logs filtered by user, client, and tenant.
-- Identity webhooks for `user.created`, `login.failed`, `session.revoked`, and `client.created`.
+- Account webhooks for `user.created`, `login.failed`, `session.revoked`, and `client.created`.
 
 Out of scope for V1:
 

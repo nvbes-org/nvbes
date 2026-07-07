@@ -40,6 +40,8 @@ pub fn router(state: &BillingAppState) -> Router<BillingAppState> {
     Router::new()
         .route("/health", get(health))
         .merge(observability_routes)
+        .merge(crate::domains::public_workspace::router())
+        .merge(crate::domains::webhooks::router())
         .merge(internal_billing_routes)
         .layer(axum::middleware::from_fn(
             |req: Request<axum::body::Body>, next: Next| async move {

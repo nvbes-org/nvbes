@@ -182,7 +182,8 @@ POST   /api/v1/invitations/accept
 
 ## Fichiers et Dossiers
 
-Les routes Drive internes sont exposees a la racine du Drive API. Les routes Identity sont exposees sous `/api/v1`, sauf OAuth sous `/oauth`.
+Les routes Cloud internes sont exposees a la racine du service Cloud. Les
+routes Account sont exposees sous `/api/v1`, sauf OAuth sous `/oauth`.
 
 ```http
 GET    /workspaces/:workspaceId/objects?parentId=

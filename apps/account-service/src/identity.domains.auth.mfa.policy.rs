@@ -1,7 +1,7 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{domains::cloud::workspace_port, http::error::AppError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MfaPolicy {
@@ -67,23 +67,9 @@ pub async fn fetch_policy_context(
         r#"
         SELECT
           p.tenant_id,
-          COALESCE(t.mfa_policy, 'optional') AS tenant_policy,
-          workspace_context.workspace_id,
-          workspace_context.role,
-          COALESCE(workspace_context.mfa_policy, 'optional') AS workspace_policy
+          COALESCE(t.mfa_policy, 'optional') AS tenant_policy
         FROM principals p
         INNER JOIN tenants t ON t.id = p.tenant_id
-        LEFT JOIN LATERAL (
-          SELECT wm.workspace_id, wm.role::text AS role, wp.mfa_policy
-          FROM workspace_memberships wm
-          INNER JOIN workspace_policies wp ON wp.workspace_id = wm.workspace_id
-          WHERE wm.principal_id = p.id
-            AND wm.status = 'active'
-          ORDER BY
-            CASE wm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END,
-            wm.created_at ASC
-          LIMIT 1
-        ) workspace_context ON TRUE
         WHERE p.id = $1
         LIMIT 1
         "#,
@@ -91,16 +77,76 @@ pub async fn fetch_policy_context(
     .bind(principal_id)
     .fetch_one(db)
     .await?;
+    let tenant_id: Uuid = row.get("tenant_id");
+    let workspace_context = mfa_workspace_context(tenant_id, principal_id).await?;
 
     Ok(MfaPolicyContext {
         principal_id,
-        tenant_id: row.get("tenant_id"),
-        workspace_id: row.get("workspace_id"),
-        workspace_role: row.get("role"),
+        tenant_id,
+        workspace_id: workspace_context
+            .as_ref()
+            .map(|context| context.workspace_id),
+        workspace_role: workspace_context
+            .as_ref()
+            .map(|context| context.role.clone()),
         tenant_policy: parse_mfa_policy(row.get::<String, _>("tenant_policy").as_str()),
-        workspace_policy: parse_mfa_policy(row.get::<String, _>("workspace_policy").as_str()),
+        workspace_policy: workspace_context
+            .as_ref()
+            .map(|context| parse_mfa_policy(&context.mfa_policy))
+            .unwrap_or(MfaPolicy::Optional),
         has_active_factor,
     })
+}
+
+struct MfaWorkspaceContext {
+    workspace_id: Uuid,
+    role: String,
+    mfa_policy: String,
+}
+
+async fn mfa_workspace_context(
+    tenant_id: Uuid,
+    principal_id: Uuid,
+) -> Result<Option<MfaWorkspaceContext>, AppError> {
+    let mut selected = None;
+    let mut selected_rank = i32::MAX;
+
+    for workspace in workspace_port::list_workspaces(Some(tenant_id), principal_id).await? {
+        let role = workspace_port::list_workspace_members(
+            Some(tenant_id),
+            workspace.workspace_id,
+            principal_id,
+        )
+        .await?
+        .into_iter()
+        .find(|member| member.principal_id == principal_id && member.active)
+        .map(|member| member.role);
+        let Some(role) = role else {
+            continue;
+        };
+        let rank = mfa_workspace_role_rank(&role);
+        if rank < selected_rank {
+            selected_rank = rank;
+            selected = Some(MfaWorkspaceContext {
+                workspace_id: workspace.workspace_id,
+                role,
+                mfa_policy: workspace
+                    .mfa_policy
+                    .unwrap_or_else(|| "optional".to_string()),
+            });
+        }
+    }
+
+    Ok(selected)
+}
+
+fn mfa_workspace_role_rank(role: &str) -> i32 {
+    match role {
+        "owner" => 0,
+        "admin" => 1,
+        "member" => 2,
+        _ => 3,
+    }
 }
 
 fn policy_requires_mfa(policy: MfaPolicy, workspace_role: Option<&str>) -> bool {

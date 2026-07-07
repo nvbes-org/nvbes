@@ -1,3 +1,4 @@
+use nvbes_product_account::cloud_boundary::UpdateWorkspaceMembershipRoleCommand;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -52,19 +53,15 @@ pub async fn update_service_account(
     .await?;
 
     if let Some(role) = next_role {
-        sqlx::query(
-            r#"
-            UPDATE workspace_memberships
-            SET role = $3::workspace_member_role,
-                updated_at = NOW()
-            WHERE workspace_id = $1
-              AND principal_id = $2
-            "#,
+        crate::domains::cloud::workspace_port::update_workspace_membership_role_tx(
+            &mut tx,
+            &UpdateWorkspaceMembershipRoleCommand {
+                actor_principal_id: access.auth.user_id,
+                workspace_id: access.workspace_id,
+                principal_id: service_account_id,
+                role: role.to_string(),
+            },
         )
-        .bind(access.workspace_id)
-        .bind(service_account_id)
-        .bind(role.to_string())
-        .execute(&mut *tx)
         .await?;
     }
 

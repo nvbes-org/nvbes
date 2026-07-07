@@ -55,7 +55,7 @@ export function buildLiveEvidenceTemplate() {
 		evidence_type: "reconciliation",
 		environment: "staging",
 		captured_at: "1970-01-01T00:00:00.000Z",
-		owner: "migration lead required",
+		owner: "Migration lead",
 		source_artifact: "docs/migration/reconciliation.<run>.json",
 		command: "node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json",
 		result: "blocking",

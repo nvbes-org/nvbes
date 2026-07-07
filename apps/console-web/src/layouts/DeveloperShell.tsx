@@ -91,10 +91,10 @@ export function DeveloperShell() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
         <div className="w-full max-w-md rounded-md border border-border bg-card p-6">
-          <p className="text-xs font-medium uppercase text-muted-foreground">Developer Console</p>
+          <p className="text-xs font-medium uppercase text-muted-foreground">Console</p>
           <h1 className="mt-2 text-lg font-semibold">Sign in required</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Use an Identity session with developer console permissions to continue.
+            Use an Identity session with Console permissions to continue.
           </p>
           <button
             type="button"
@@ -109,15 +109,13 @@ export function DeveloperShell() {
   }
 
   if (contextQuery.isLoading) {
-    return (
-      <ConsoleSessionState title="Loading session" message="Checking developer console access." />
-    );
+    return <ConsoleSessionState title="Loading session" message="Checking Console access." />;
   }
 
   if (contextQuery.isError || !context) {
     return (
       <ConsoleSessionState
-        title="Developer context unavailable"
+        title="Console context unavailable"
         message="The console could not load tenant-scoped Identity data."
       />
     );
@@ -129,9 +127,9 @@ export function DeveloperShell() {
         <div className="flex h-full flex-col">
           <div className="border-b border-border px-5 py-4">
             <Link to="/" className="block text-base font-semibold">
-              nvbes Developers
+              nvbes Console
             </Link>
-            <p className="mt-1 text-xs text-muted-foreground">Identity Developer Console</p>
+            <p className="mt-1 text-xs text-muted-foreground">Identity Console</p>
           </div>
           <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
             {navigationItems.map((item) => {
@@ -186,9 +184,7 @@ export function DeveloperShell() {
         <header className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:px-8">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">
-                Developer Console
-              </p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Console</p>
               <h1 className="text-lg font-semibold">Identity integrations</h1>
             </div>
             <div className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground sm:flex">
@@ -207,7 +203,7 @@ function ConsoleSessionState({ title, message }: { title: string; message: strin
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <div className="w-full max-w-md rounded-md border border-border bg-card p-6">
-        <p className="text-xs font-medium uppercase text-muted-foreground">Developer Console</p>
+        <p className="text-xs font-medium uppercase text-muted-foreground">Console</p>
         <h1 className="mt-2 text-lg font-semibold">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
       </div>

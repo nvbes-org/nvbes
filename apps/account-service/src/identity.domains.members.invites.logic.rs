@@ -1,11 +1,13 @@
+use axum::http::StatusCode;
 use chrono::{DateTime, Duration, Utc};
-use sqlx::Row;
+use nvbes_product_account::cloud_boundary::{
+    AcceptWorkspaceInvitationCommand, CreateWorkspaceInvitationCommand,
+};
 use uuid::Uuid;
 
-use crate::domains::auth;
 use crate::domains::auth::types::AuthContext;
 use crate::domains::authz::WorkspaceAccess;
-use crate::domains::members::invites::InvitationRecord;
+use crate::domains::{auth, cloud::workspace_port};
 use crate::http::error::AppError;
 use nvbes_core::config::AppConfig;
 use nvbes_tenancy::role_as_db;
@@ -32,80 +34,46 @@ pub async fn invite_member(
             "You are already a member of this workspace.",
         ));
     }
-    let mut tx = db.begin().await?;
-    let existing_member = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(*)
-        FROM workspace_memberships wm
-        INNER JOIN users u ON u.principal_id = wm.principal_id
-        WHERE wm.workspace_id = $1
-          AND lower(u.email) = $2
-          AND wm.status = 'active'
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(&email)
-    .fetch_one(&mut *tx)
-    .await?;
-    if existing_member > 0 {
+
+    let existing_member = active_member_exists_for_email(db, access, &email).await?;
+    if existing_member {
         return Err(AppError::conflict(
             "member_conflict",
             "This user is already an active member of the workspace.",
         ));
     }
-    let pending_invitation = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(*)
-        FROM workspace_invitations
-        WHERE workspace_id = $1
-          AND email = $2
-          AND status = 'pending'
-          AND expires_at > NOW()
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(&email)
-    .fetch_one(&mut *tx)
-    .await?;
-    if pending_invitation > 0 {
+    let pending_invitation = pending_invitation_exists(access, &email, Utc::now()).await?;
+    if pending_invitation {
         return Err(AppError::conflict(
             "invitation_pending",
             "A pending invitation already exists for this email.",
         ));
     }
+    let workspace =
+        workspace_port::get_workspace(access.tenant_id, access.workspace_id, access.auth.user_id)
+            .await?;
+
+    let mut tx = db.begin().await?;
     let invitation_token = auth::password::generate_token("gxi");
     auth::password::log_dev_token(&invitation_token, &config.environment, "member_invitation");
     let token_hash = auth::password::token_hash(&invitation_token);
     let expires_at = Utc::now() + Duration::days(7);
-    let invitation = sqlx::query_as::<_, InvitationRecord>(r#"
-        INSERT INTO workspace_invitations (
-          workspace_id,
-          email,
-          role,
-          invited_by,
-          token_hash,
-          expires_at
-        )
-        VALUES ($1, $2, $3::workspace_member_role, $4, $5, $6)
-        RETURNING id, email, role::text AS role, status::text AS status, expires_at, accepted_at, revoked_at, created_at
-        "#)
-    .bind(access.workspace_id)
-    .bind(&email)
-    .bind(role_as_db(input.role))
-    .bind(access.auth.user_id)
-    .bind(&token_hash)
-    .bind(expires_at)
-    .fetch_one(&mut *tx)
+    let invitation = workspace_port::create_workspace_invitation_tx(
+        &mut tx,
+        &CreateWorkspaceInvitationCommand {
+            workspace_id: access.workspace_id,
+            email: email.clone(),
+            role: role_as_db(input.role).to_string(),
+            invited_by: access.auth.user_id,
+            token_hash,
+            expires_at,
+        },
+    )
     .await?;
-    let workspace_name =
-        sqlx::query_scalar::<_, String>("SELECT name FROM workspaces WHERE id = $1")
-            .bind(access.workspace_id)
-            .fetch_one(db)
-            .await?;
     let email_msg = crate::email::templates::invitation_email(
         config,
         &email,
-        &workspace_name,
+        &workspace.name,
         &inviter.display_name,
         &invitation_token,
     )?;
@@ -154,26 +122,27 @@ pub async fn accept_invitation(
 ) -> Result<AcceptInvitationResponse, AppError> {
     let token_hash_value = auth::password::token_hash(input.token.trim());
     let now = Utc::now();
-    let mut tx = db.begin().await?;
-    let invitation = sqlx::query(r#"
-        SELECT id, workspace_id, email, role::text AS role, status::text AS status, expires_at, accepted_at
-        FROM workspace_invitations
-        WHERE token_hash = $1
-        LIMIT 1
-        "#)
-    .bind(&token_hash_value)
-    .fetch_optional(&mut *tx)
-    .await?;
-    let invitation = invitation.ok_or_else(|| {
-        AppError::bad_request("invalid_invitation", "Invitation token is invalid.")
-    })?;
-    let invitation_id: Uuid = invitation.get("id");
-    let workspace_id: Uuid = invitation.get("workspace_id");
-    let email: String = invitation.get("email");
-    let role_string: String = invitation.get("role");
-    let status: String = invitation.get("status");
-    let expires_at: DateTime<Utc> = invitation.get("expires_at");
-    let accepted_at: Option<DateTime<Utc>> = invitation.get("accepted_at");
+    let invitation = match workspace_port::get_workspace_invitation_by_token_hash(
+        &token_hash_value,
+        auth.user_id,
+    )
+    .await
+    {
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            return Err(AppError::bad_request(
+                "invalid_invitation",
+                "Invitation token is invalid.",
+            ));
+        }
+        result => result?,
+    };
+    let invitation_id = invitation.id;
+    let workspace_id = invitation.workspace_id;
+    let email = invitation.email;
+    let role_string = invitation.role;
+    let status = invitation.status;
+    let expires_at = invitation.expires_at;
+    let accepted_at = invitation.accepted_at;
     let current_email = auth::db::fetch_user_record(db, auth.user_id).await?.email;
     if auth::password::normalize_email(&email) != auth::password::normalize_email(&current_email) {
         return Err(AppError::forbidden(
@@ -187,51 +156,37 @@ pub async fn accept_invitation(
             "Invitation is no longer available.",
         ));
     }
-    let existing = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(*)
-        FROM workspace_memberships
-        WHERE workspace_id = $1
-          AND principal_id = $2
-          AND status = 'active'
-        "#,
+    let workspace =
+        workspace_port::get_workspace(auth.tenant_id, workspace_id, auth.user_id).await?;
+    let existing = active_member_exists(
+        Some(workspace.tenant_id),
+        workspace_id,
+        auth.user_id,
+        auth.user_id,
     )
-    .bind(workspace_id)
-    .bind(auth.user_id)
-    .fetch_one(&mut *tx)
     .await?;
-    if existing > 0 {
+    if existing {
         return Err(AppError::conflict(
             "member_conflict",
             "You are already an active member of this workspace.",
         ));
     }
-    sqlx::query(r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source)
-        VALUES ($1, $2, $3::workspace_member_role, 'active', 'invitation')
-        ON CONFLICT (workspace_id, principal_id)
-        DO UPDATE SET role = EXCLUDED.role, status = 'active', source = 'invitation', updated_at = NOW()
-        "#)
-    .bind(workspace_id)
-    .bind(auth.user_id)
-    .bind(&role_string)
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(
-        r#"
-        UPDATE workspace_invitations
-        SET status = 'accepted', accepted_at = $2, updated_at = $2
-        WHERE id = $1
-        "#,
+    let mut tx = db.begin().await?;
+    workspace_port::accept_workspace_invitation_tx(
+        &mut tx,
+        &AcceptWorkspaceInvitationCommand {
+            invitation_id,
+            workspace_id,
+            principal_id: auth.user_id,
+            role: role_string.clone(),
+            accepted_at: now,
+        },
     )
-    .bind(invitation_id)
-    .bind(now)
-    .execute(&mut *tx)
     .await?;
     crate::domains::audit::record_event_tx(
         &mut tx,
         crate::domains::audit::AuditRecordInput {
-            tenant_id: auth.tenant_id.unwrap_or_default(),
+            tenant_id: auth.tenant_id.unwrap_or(workspace.tenant_id),
             workspace_id: Some(workspace_id),
             actor_principal_id: Some(auth.user_id),
             action: "member.accepted",
@@ -260,6 +215,64 @@ fn ensure_invitable_role(role: crate::domains::authz::WorkspaceRole) -> Result<(
     }
 
     Ok(())
+}
+
+async fn active_member_exists_for_email(
+    db: &PgPool,
+    access: &WorkspaceAccess,
+    email: &str,
+) -> Result<bool, AppError> {
+    let Some(principal_id) = user_principal_id_by_email(db, email).await? else {
+        return Ok(false);
+    };
+
+    active_member_exists(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
+        principal_id,
+    )
+    .await
+}
+
+async fn user_principal_id_by_email(db: &PgPool, email: &str) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar::<_, Uuid>("SELECT principal_id FROM users WHERE lower(email) = $1 LIMIT 1")
+        .bind(email)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::from)
+}
+
+async fn active_member_exists(
+    tenant_id: Option<Uuid>,
+    workspace_id: Uuid,
+    actor_principal_id: Uuid,
+    principal_id: Uuid,
+) -> Result<bool, AppError> {
+    let members =
+        workspace_port::list_workspace_members(tenant_id, workspace_id, actor_principal_id).await?;
+
+    Ok(members
+        .into_iter()
+        .any(|member| member.principal_id == principal_id && member.active))
+}
+
+async fn pending_invitation_exists(
+    access: &WorkspaceAccess,
+    email: &str,
+    now: DateTime<Utc>,
+) -> Result<bool, AppError> {
+    let invitations = workspace_port::list_workspace_invitations(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
+        &["pending"],
+    )
+    .await?;
+
+    Ok(invitations.into_iter().any(|invitation| {
+        auth::password::normalize_email(&invitation.email) == email && invitation.expires_at > now
+    }))
 }
 
 #[cfg(test)]

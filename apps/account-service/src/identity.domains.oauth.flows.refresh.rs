@@ -3,7 +3,7 @@ use sqlx::Row;
 use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
-use crate::domains::auth::jwt::JwtService;
+use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
 use nvbes_redis::refresh_token as refresh_store;
 
@@ -68,6 +68,7 @@ pub async fn refresh_token(
                 client_type::text AS client_type,
                 client_secret_hash,
                 client_assertion_required,
+                tenant_id,
                 revoked_at
             FROM oauth_clients
             WHERE id = $1
@@ -101,6 +102,7 @@ pub async fn refresh_token(
         }
 
         let oauth_client_type: String = client_row.get("client_type");
+        let client_tenant_id: Uuid = client_row.get("tenant_id");
         let client_secret_hash: String = client_row.get("client_secret_hash");
         let client_assertion_required: bool = client_row.get("client_assertion_required");
         if !crate::domains::oauth::validation::is_public_client_type(&oauth_client_type) {
@@ -115,7 +117,13 @@ pub async fn refresh_token(
                 let secret = client_auth.client_secret.as_deref().ok_or_else(|| {
                     AppError::unauthorized("invalid_client", "Client authentication is required.")
                 })?;
-                crate::domains::oauth::verify_client_secret_with_overlap(db, &client_auth.client_id, secret, &client_secret_hash).await?;
+                crate::domains::oauth::verify_client_secret_with_overlap(
+                    client_tenant_id,
+                    &client_auth.client_id,
+                    secret,
+                    &client_secret_hash,
+                )
+                .await?;
             }
         }
 
@@ -170,13 +178,9 @@ pub async fn refresh_token(
         }
 
         let workspace_region = if let Some(workspace_id) = next_workspace_id {
-            sqlx::query_scalar::<_, Option<String>>(
-                "SELECT data_region::text FROM workspaces WHERE id = $1",
-            )
-            .bind(workspace_id)
-            .fetch_optional(db)
-            .await?
-            .flatten()
+            workspace_port::get_workspace(session.tenant_id, workspace_id, user_id)
+                .await?
+                .data_region
         } else {
             None
         };

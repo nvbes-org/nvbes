@@ -98,17 +98,9 @@ if (!content.includes("This journal cannot approve cutover until all G0-G8 gates
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|no-go|not run|not scheduled)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} journal marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} journal marker(s) remain`);
 	}
 }
 
@@ -221,6 +213,25 @@ function validateJournalGoDependencies() {
 			errors.push(`go cutover decision requires ${row[0]} incident entry resolved or accepted`);
 		}
 	}
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, "no-go": 0, "not run": 0, "not scheduled": 0 };
+	for (const [, value] of tableRowsAfter("## Run Metadata")) {
+		if (value === "pending") counts.pending += 1;
+		if (value === "no-go") counts["no-go"] += 1;
+		if (value === "not run") counts["not run"] += 1;
+		if (value === "not scheduled") counts["not scheduled"] += 1;
+	}
+	for (const row of tableRowsAfter("## Timeline")) {
+		if (row[0] === "not run") counts["not run"] += 1;
+		if (row.at(-1) === "no-go") counts["no-go"] += 1;
+	}
+	for (const row of tableRowsAfter("## Incident Entries")) {
+		if (row[0] === "not run") counts["not run"] += 1;
+		if (row.at(-1) === "no-go") counts["no-go"] += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

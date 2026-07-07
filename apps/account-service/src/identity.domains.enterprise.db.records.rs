@@ -119,64 +119,6 @@ impl WorkspaceSummaryRow {
 }
 
 #[derive(Debug, FromRow)]
-pub struct AuditEventRow {
-    pub id: Uuid,
-    pub event_type: String,
-    pub actor_id: Option<Uuid>,
-    pub actor_email: Option<String>,
-    pub target_type: Option<String>,
-    pub target_id: Option<Uuid>,
-    pub metadata: Value,
-    pub created_at: DateTime<Utc>,
-}
-
-impl AuditEventRow {
-    pub fn into_view(self) -> EnterpriseAuditEvent {
-        EnterpriseAuditEvent {
-            id: self.id,
-            event_type: self.event_type,
-            actor_id: self.actor_id,
-            actor_email: self.actor_email,
-            target_type: self.target_type,
-            target_id: self.target_id,
-            metadata: serde_json::from_value(self.metadata).ok(),
-            created_at: self.created_at,
-        }
-    }
-}
-
-#[derive(Debug, FromRow)]
-pub struct DeveloperCredentialRow {
-    pub id: Uuid,
-    pub client_id: String,
-    pub name: String,
-    pub status: String,
-    pub secret_last4: String,
-    pub owner_email: Option<String>,
-    pub scopes: Vec<String>,
-    pub last_used_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub expires_at: Option<DateTime<Utc>>,
-}
-
-impl DeveloperCredentialRow {
-    pub fn into_view(self) -> EnterpriseDeveloperCredentialSummary {
-        EnterpriseDeveloperCredentialSummary {
-            id: self.id,
-            client_id: self.client_id,
-            name: self.name,
-            status: self.status,
-            secret_last4: self.secret_last4,
-            owner_email: self.owner_email,
-            scopes: self.scopes,
-            last_used_at: self.last_used_at,
-            created_at: self.created_at,
-            expires_at: self.expires_at,
-        }
-    }
-}
-
-#[derive(Debug, FromRow)]
 pub struct PolicySummaryRow {
     pub id: Uuid,
     pub name: String,
@@ -184,16 +126,6 @@ pub struct PolicySummaryRow {
     pub enabled: bool,
     pub configuration: Value,
     pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, FromRow)]
-pub struct SessionPolicyRow {
-    pub admin_session_ttl_hours: Option<i32>,
-}
-
-#[derive(Debug, FromRow)]
-pub struct MfaPolicyRow {
-    pub policy: String,
 }
 
 impl PolicySummaryRow {

@@ -1,8 +1,9 @@
 use crate::{
     app::AppState,
     domains::developer::{
+        grpc,
         rbac::DeveloperPermission,
-        sandbox, service,
+        service,
         types::{
             DeveloperSandboxResponse, DeveloperSandboxTenantSummary, UpsertDeveloperSandboxInput,
         },
@@ -17,9 +18,7 @@ pub async fn get_sandbox(
 ) -> Result<Json<DeveloperSandboxResponse>, AppError> {
     let tenant_id =
         service::require_permission(&state.db, &auth, DeveloperPermission::SandboxUse).await?;
-    Ok(Json(DeveloperSandboxResponse {
-        sandbox: sandbox::find_sandbox(&state.db, tenant_id).await?,
-    }))
+    Ok(Json(grpc::get_sandbox(tenant_id, auth.user_id).await?))
 }
 
 pub async fn upsert_sandbox(
@@ -30,7 +29,7 @@ pub async fn upsert_sandbox(
     let tenant_id =
         service::require_permission(&state.db, &auth, DeveloperPermission::SandboxUse).await?;
     Ok(Json(
-        sandbox::upsert_sandbox(&state.db, tenant_id, input.data_profile.as_deref()).await?,
+        grpc::upsert_sandbox(tenant_id, auth.user_id, input).await?,
     ))
 }
 
@@ -40,5 +39,5 @@ pub async fn reset_sandbox(
 ) -> Result<Json<DeveloperSandboxTenantSummary>, AppError> {
     let tenant_id =
         service::require_permission(&state.db, &auth, DeveloperPermission::SandboxUse).await?;
-    Ok(Json(sandbox::reset_sandbox(&state.db, tenant_id).await?))
+    Ok(Json(grpc::reset_sandbox(tenant_id, auth.user_id).await?))
 }

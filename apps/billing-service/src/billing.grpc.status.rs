@@ -89,6 +89,23 @@ pub fn checkout_status(
     }
 }
 
+pub fn portal_status(error: nvbes_billing::portal_actions::BillingPortalActionError) -> Status {
+    match error {
+        nvbes_billing::portal_actions::BillingPortalActionError::WorkspaceNotFound => {
+            Status::not_found("billing workspace was not found")
+        }
+        nvbes_billing::portal_actions::BillingPortalActionError::BillingLocked => {
+            Status::failed_precondition("billing workspace is locked")
+        }
+        nvbes_billing::portal_actions::BillingPortalActionError::Portal(error) => {
+            Status::failed_precondition(error.to_string())
+        }
+        nvbes_billing::portal_actions::BillingPortalActionError::Database(error) => {
+            Status::internal(format!("billing database error: {error}"))
+        }
+    }
+}
+
 pub fn usage_status(error: nvbes_billing::usage::BillingUsageIngestError) -> Status {
     match error {
         nvbes_billing::usage::BillingUsageIngestError::Validation { code, message } => {

@@ -123,7 +123,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/identity-mfa-webauthn.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/identity-mfa-webauthn.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -185,7 +185,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-identity-mfa-webauthn",
-		"tools/migration/identity-mfa-webauthn.mjs --write",
+		"node tools/migration/identity-mfa-webauthn.mjs --write",
 		"```",
 		"",
 	);
@@ -197,7 +197,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/identity-mfa-webauthn.mjs --write",
+		command: "node tools/migration/identity-mfa-webauthn.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-account-service validate_single_factor --locked",
@@ -231,8 +231,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/identity-mfa-webauthn.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/identity-mfa-webauthn.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-mfa-webauthn.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-mfa-webauthn.mjs --write`);
 }
 
 if (errors.length > 0) {

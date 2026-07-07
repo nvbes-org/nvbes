@@ -1,3 +1,5 @@
+#[path = "identity.worker.enterprise_grpc.rs"]
+pub mod enterprise_grpc;
 #[path = "identity.worker.housekeeping.rs"]
 pub mod housekeeping;
 #[path = "identity.worker.jobs.rs"]

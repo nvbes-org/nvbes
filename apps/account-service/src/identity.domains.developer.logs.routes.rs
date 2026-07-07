@@ -5,15 +5,15 @@ use axum::{
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
-use sqlx::Row;
 use uuid::Uuid;
 
 use crate::{
     app::AppState,
     domains::developer::{
+        grpc,
         rbac::{self, DeveloperPermission},
         rbac_db,
-        types::{DeveloperLogEntry, DeveloperLogsResponse},
+        types::DeveloperLogsResponse,
     },
     http::{
         error::AppError,
@@ -83,65 +83,17 @@ pub async fn list_logs(
         .map(str::trim)
         .filter(|value| !value.is_empty());
 
-    let rows = sqlx::query(
-        r#"
-        SELECT id, event_type, user_id, client_id, tenant_id, created_at
-        FROM (
-          SELECT
-            risk.id::text AS id,
-            risk.event_type AS event_type,
-            risk.principal_id AS user_id,
-            risk.metadata->>'client_id' AS client_id,
-            principal.tenant_id AS tenant_id,
-            risk.created_at AS created_at
-          FROM risk_events risk
-          INNER JOIN principals principal ON principal.id = risk.principal_id
-          WHERE principal.tenant_id = $1
-
-          UNION ALL
-
-          SELECT
-            audit.id::text AS id,
-            audit.action AS event_type,
-            audit.actor_principal_id AS user_id,
-            audit.metadata->>'client_id' AS client_id,
-            audit.tenant_id AS tenant_id,
-            audit.created_at AS created_at
-          FROM audit_events audit
-          WHERE audit.tenant_id = $1
-        ) logs
-        WHERE ($2::uuid IS NULL OR user_id = $2)
-          AND ($3::text IS NULL OR client_id = $3)
-          AND ($4::text IS NULL OR event_type = $4)
-        ORDER BY created_at DESC
-        LIMIT $5
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(user_id)
-    .bind(client_id)
-    .bind(event_type)
-    .bind(DEVELOPER_LOG_LIMIT)
-    .fetch_all(&state.db)
-    .await?;
-
-    Ok(Json(DeveloperLogsResponse {
-        logs: rows
-            .into_iter()
-            .map(|row| DeveloperLogEntry {
-                id: row.get("id"),
-                event_type: row.get("event_type"),
-                user_id: row
-                    .get::<Option<Uuid>, _>("user_id")
-                    .map(|value| value.to_string()),
-                client_id: row.get("client_id"),
-                tenant_id: row
-                    .get::<Option<Uuid>, _>("tenant_id")
-                    .map(|value| value.to_string()),
-                created_at: row.get("created_at"),
-            })
-            .collect(),
-    }))
+    Ok(Json(
+        grpc::list_activity_logs(
+            tenant_id,
+            auth.user_id,
+            user_id,
+            client_id.map(str::to_string),
+            event_type.map(str::to_string),
+            DEVELOPER_LOG_LIMIT,
+        )
+        .await?,
+    ))
 }
 
 async fn require_developer_permission(

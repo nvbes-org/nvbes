@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, parse_identity_role};
-use crate::domains::enterprise::{db, policy};
+use crate::domains::enterprise::{db, grpc, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
@@ -52,25 +52,12 @@ pub(super) async fn require_actor_access(
                     )
                 })?;
             let role = policy::role_from_db(&row.role);
-            let break_glass = match (
-                row.break_glass_procedure_reference,
-                row.break_glass_reason,
-                row.break_glass_created_at,
-            ) {
-                (Some(procedure_reference), Some(reason), Some(created_at)) => {
-                    Some(EnterpriseBreakGlassAccount {
-                        procedure_reference,
-                        reason,
-                        created_at,
-                        last_used_at: row.break_glass_last_used_at,
-                    })
-                }
-                _ => None,
-            };
+            let break_glass =
+                active_break_glass_account(tenant_id, auth.user_id, auth.user_id).await?;
             Ok(ActorAccess {
                 grants: policy::grants_for_role(&role),
                 role,
-                break_glass: row.break_glass,
+                break_glass: break_glass.is_some(),
                 break_glass_account: break_glass,
             })
         }
@@ -117,15 +104,59 @@ pub(super) async fn require_actor_access(
 pub(super) async fn fetch_user_view(
     db: &Database,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     user_id: Uuid,
     scope: AdminScope,
 ) -> Result<EnterpriseUser, AppError> {
-    db::list_users(db, tenant_id, scope)
+    let users = db::list_users(db, tenant_id, scope, actor_principal_id)
         .await?
         .into_iter()
-        .find(|row| row.id == user_id)
+        .filter(|row| row.id == user_id)
         .map(db::EnterpriseUserRow::into_view)
+        .collect::<Vec<_>>();
+    enrich_break_glass_accounts(tenant_id, actor_principal_id, users)
+        .await?
+        .into_iter()
+        .next()
         .ok_or_else(|| AppError::not_found("enterprise_user_not_found", "Tenant member not found."))
+}
+
+pub(super) async fn enrich_break_glass_accounts(
+    tenant_id: Uuid,
+    actor_principal_id: Uuid,
+    mut users: Vec<EnterpriseUser>,
+) -> Result<Vec<EnterpriseUser>, AppError> {
+    let principal_ids = users.iter().map(|user| user.id).collect::<Vec<_>>();
+    let accounts = grpc::break_glass::list_active_break_glass_accounts(
+        tenant_id,
+        actor_principal_id,
+        principal_ids,
+    )
+    .await?;
+    let mut accounts = accounts
+        .into_iter()
+        .map(|account| (account.principal_id, account.account))
+        .collect::<BTreeMap<_, _>>();
+    for user in &mut users {
+        user.break_glass = accounts.remove(&user.id);
+    }
+    Ok(users)
+}
+
+async fn active_break_glass_account(
+    tenant_id: Uuid,
+    actor_principal_id: Uuid,
+    principal_id: Uuid,
+) -> Result<Option<EnterpriseBreakGlassAccount>, AppError> {
+    Ok(grpc::break_glass::list_active_break_glass_accounts(
+        tenant_id,
+        actor_principal_id,
+        vec![principal_id],
+    )
+    .await?
+    .into_iter()
+    .next()
+    .map(|account| account.account))
 }
 
 pub(super) struct ActorAccess {

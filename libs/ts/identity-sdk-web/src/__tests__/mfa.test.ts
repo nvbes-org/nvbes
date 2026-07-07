@@ -11,7 +11,7 @@ import {
 } from '../mfa';
 
 const mockToken = 'test-jwt-token';
-const mockBaseUrl = 'https://identity.nvbes.fr';
+const mockBaseUrl = 'https://account.nvbes.fr';
 
 describe('MFA API functions', () => {
   beforeEach(() => {

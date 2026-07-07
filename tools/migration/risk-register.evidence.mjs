@@ -48,7 +48,7 @@ export const riskEvidence = {
 			"allowed for repository gates: critical jobs and webhook replay paths carry idempotency-key evidence; production still needs DLQ and lag evidence in rehearsals",
 	},
 	"rollback-lent": {
-		owner: "infra lead required",
+		owner: "Infra lead",
 		status: "pending",
 		evidence:
 			"docs/migration/rollback-report.md; docs/migration/rehearsal-ledger.md; docs/migration/live-evidence-instances.generated.json; pnpm check:migration-rollback-report -- --strict",

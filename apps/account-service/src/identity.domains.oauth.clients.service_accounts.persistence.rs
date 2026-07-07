@@ -3,6 +3,7 @@ use uuid::Uuid;
 use crate::domains::oauth::logic::OAuthManagementAuth;
 use crate::domains::oauth::service::types::CreateOAuthClientInput;
 use crate::http::error::AppError;
+use nvbes_product_account::cloud_boundary::UpsertWorkspaceMembershipCommand;
 
 pub(super) async fn insert_tenant_membership(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -102,26 +103,22 @@ pub(super) async fn insert_service_account(
 
 pub(super) async fn insert_workspace_membership(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    actor_principal_id: Uuid,
     workspace_id: Uuid,
     principal_id: Uuid,
     service_account_role: &str,
 ) -> Result<(), AppError> {
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (
-          workspace_id,
-          principal_id,
-          role,
-          status,
-          source
-        )
-        VALUES ($1, $2, $3::workspace_member_role, 'active', 'system')
-        "#,
+    crate::domains::cloud::workspace_port::upsert_workspace_membership_tx(
+        tx,
+        &UpsertWorkspaceMembershipCommand {
+            actor_principal_id,
+            workspace_id,
+            principal_id,
+            role: service_account_role.to_string(),
+            status: "active".to_string(),
+            source: "system".to_string(),
+        },
     )
-    .bind(workspace_id)
-    .bind(principal_id)
-    .bind(service_account_role)
-    .execute(&mut **tx)
     .await?;
 
     Ok(())

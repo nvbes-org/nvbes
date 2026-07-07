@@ -14,17 +14,46 @@ pub async fn run_billing_admin_action(
 ) -> Result<AdminBillingActionResult, Status> {
     validate_admin_mutation(request.amount_minor, &request.reason)?;
     match action_kind {
-        AdminBillingActionKind::CreateCreditNote => create_credit_note(db, tenant_id, request).await,
+        AdminBillingActionKind::CreateCreditNote => {
+            create_credit_note(db, tenant_id, request).await
+        }
         AdminBillingActionKind::CreateWriteOff => {
             create_write_off(db, tenant_id, actor_principal_id, request).await
         }
-        AdminBillingActionKind::CreateRefundIntent => create_refund_intent(db, tenant_id, request).await,
+        AdminBillingActionKind::CreateRefundIntent => {
+            create_refund_intent(db, tenant_id, request).await
+        }
         AdminBillingActionKind::CreateManualCompensation => {
             create_manual_compensation(db, tenant_id, actor_principal_id, request).await
         }
-        AdminBillingActionKind::Unspecified => {
-            Err(Status::invalid_argument("billing admin action kind is required"))
+        AdminBillingActionKind::ReplayProviderEvent => {
+            crate::grpc::service_admin_billing_workflow::replay_provider_event(
+                db, tenant_id, request,
+            )
+            .await
         }
+        AdminBillingActionKind::CreateProviderMigration => {
+            crate::grpc::service_admin_billing_workflow::create_provider_migration(
+                db,
+                tenant_id,
+                actor_principal_id,
+                request,
+            )
+            .await
+        }
+        AdminBillingActionKind::OverrideGracePeriod => {
+            let workspace_id = crate::grpc::service_status::workspace_id(&request.workspace_id)?;
+            crate::grpc::service_admin_billing_workflow::override_grace_period(
+                db,
+                tenant_id,
+                workspace_id,
+                request,
+            )
+            .await
+        }
+        AdminBillingActionKind::Unspecified => Err(Status::invalid_argument(
+            "billing admin action kind is required",
+        )),
     }
 }
 
@@ -254,7 +283,7 @@ async fn insert_admin_ledger_pair(
     Ok(result.rows_affected())
 }
 
-fn result(
+pub(crate) fn result(
     object_id: Uuid,
     ledger_entry_count: u64,
     audit_action: &'static str,
@@ -265,6 +294,9 @@ fn result(
         ledger_entry_count,
         audit_action: audit_action.to_string(),
         target_type: target_type.to_string(),
+        provider: String::new(),
+        provider_event_id: String::new(),
+        status: "completed".to_string(),
     }
 }
 
@@ -334,4 +366,3 @@ mod tests {
         assert!(validate_admin_mutation(0, "ticket BILL-123").is_err());
     }
 }
-

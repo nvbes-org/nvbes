@@ -27,5 +27,5 @@
 
 ```bash
 pnpm check:migration-codegen
-tools/migration/codegen.mjs --write
+node tools/migration/codegen.mjs --write
 ```

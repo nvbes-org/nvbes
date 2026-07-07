@@ -4,7 +4,7 @@ use uuid::Uuid;
 use super::types::{JwtService, TokenClaims, TokenPair};
 use crate::http::error::AppError;
 
-const DRIVE_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
+const CLOUD_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
 
 impl JwtService {
     #[cfg(test)]
@@ -201,7 +201,7 @@ impl JwtService {
             client_id: Some(client_id.to_string()),
             auth_time: Some(now.timestamp()),
             iss: self.issuer.clone(),
-            aud: audience.unwrap_or(DRIVE_TOKEN_AUDIENCE).to_string(),
+            aud: audience.unwrap_or(CLOUD_TOKEN_AUDIENCE).to_string(),
             iat: now.timestamp(),
             nbf: now.timestamp(),
             exp: (now + self.access_token_expiry).timestamp(),
@@ -236,7 +236,7 @@ impl JwtService {
             client_id: subject_claims.client_id.clone(),
             auth_time: subject_claims.auth_time,
             iss: self.issuer.clone(),
-            aud: audience.unwrap_or(DRIVE_TOKEN_AUDIENCE).to_string(),
+            aud: audience.unwrap_or(CLOUD_TOKEN_AUDIENCE).to_string(),
             iat: now.timestamp(),
             nbf: now.timestamp(),
             exp: (now + self.access_token_expiry).timestamp(),

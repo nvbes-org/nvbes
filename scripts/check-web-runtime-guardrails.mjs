@@ -20,6 +20,33 @@ const RULES = [
     ],
   },
   {
+    name: 'native XMLHttpRequest',
+    pattern: /\bnew\s+XMLHttpRequest\s*\(/u,
+    message: 'Use typed clients or an approved low-level upload transport instead of raw XMLHttpRequest.',
+    allowed: [
+      /apps\/cloud-web\/src\/drive\.native-fs\.transport\.ts$/u,
+      /\.test\./u,
+    ],
+  },
+  {
+    name: 'native sendBeacon',
+    pattern: /\bnavigator\.sendBeacon\s*\(/u,
+    message: 'Use @nvbes/web-runtime analytics transport instead of raw sendBeacon.',
+    allowed: [/\.test\./u],
+  },
+  {
+    name: 'native EventSource',
+    pattern: /\bnew\s+EventSource\s*\(/u,
+    message: 'Use a typed streaming client or an approved web-runtime transport instead of raw EventSource.',
+    allowed: [/\.test\./u],
+  },
+  {
+    name: 'native WebSocket',
+    pattern: /\bnew\s+WebSocket\s*\(/u,
+    message: 'Use a typed realtime client or an approved web-runtime transport instead of raw WebSocket.',
+    allowed: [/\.test\./u],
+  },
+  {
     name: 'native clipboard',
     pattern: /navigator\.clipboard/u,
     message: 'Use @nvbes/web-ui ClipboardButton or an approved runtime clipboard primitive.',

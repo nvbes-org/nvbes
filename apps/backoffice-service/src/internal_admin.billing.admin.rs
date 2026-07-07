@@ -93,7 +93,16 @@ async fn credit_note_route(
     )?;
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    Ok(Json(create_credit_note(&state.db, access, request).await?))
+    Ok(Json(
+        create_credit_note(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
+    ))
 }
 
 async fn write_off_route(
@@ -110,7 +119,16 @@ async fn write_off_route(
     )?;
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    Ok(Json(create_write_off(&state.db, access, request).await?))
+    Ok(Json(
+        create_write_off(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
+    ))
 }
 
 async fn refund_intent_route(
@@ -128,7 +146,14 @@ async fn refund_intent_route(
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        create_refund_intent(&state.db, access, request).await?,
+        create_refund_intent(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
     ))
 }
 
@@ -147,7 +172,14 @@ async fn replay_provider_event_route(
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        replay_provider_event(&state.db, access, request).await?,
+        replay_provider_event(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
     ))
 }
 
@@ -166,7 +198,14 @@ async fn provider_migration_route(
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        create_provider_migration(&state.db, access, request).await?,
+        create_provider_migration(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
     ))
 }
 
@@ -193,7 +232,14 @@ async fn grace_override_route(
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        override_grace_period(&state.db, access, workspace_id, request).await?,
+        override_grace_period(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
     ))
 }
 
@@ -212,7 +258,14 @@ async fn manual_comp_route(
     require_operator_role_grant(&state.db, &headers).await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        create_manual_compensation(&state.db, access, request).await?,
+        create_manual_compensation(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            request,
+        )
+        .await?,
     ))
 }
 

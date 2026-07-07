@@ -1,19 +1,20 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/identity-register.mjs --write",
+    "command": "node tools/migration/identity-register.mjs --write",
     "sources": [
-      "apps/identity-api/src/identity.domains.auth.routes.register.rs",
-      "apps/identity-api/src/identity.domains.auth.routes.register.tests.rs",
-      "apps/identity-api/src/identity.domains.auth.onboarding.rs",
-      "apps/identity-api/src/identity.domains.auth.db.account.rs",
-      "apps/identity-api/src/identity.domains.auth.routes.rs",
-      "apps/identity-api/src/identity.http.openapi.rs",
-      "apps/identity-api/openapi.json",
+      "apps/account-service/src/identity.domains.auth.routes.register.rs",
+      "apps/account-service/src/identity.domains.auth.routes.register.tests.rs",
+      "apps/account-service/src/identity.domains.auth.onboarding.rs",
+      "apps/account-service/src/identity.domains.auth.db.account.rs",
+      "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
+      "apps/account-service/src/identity.domains.auth.routes.rs",
+      "apps/account-service/src/identity.http.openapi.rs",
+      "apps/account-service/openapi.json",
       "scripts/test-openapi-contract.mjs"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-identity-api register_input_from_request --locked",
+      "cargo test -p nvbes-account-service register_input_from_request --locked",
       "bash scripts/test-openapi-contract-seeded-auth.sh"
     ]
   },
@@ -27,189 +28,189 @@
     {
       "id": "route-mounted",
       "description": "Auth routes mount register under /auth",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.rs",
       "status": "passed",
       "pattern": ".nest(\"/auth\", register::router())"
     },
     {
       "id": "register-route",
       "description": "Register route accepts POST /register",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": ".route(\"/register\", post(register))"
     },
     {
       "id": "openapi-annotation",
       "description": "Register route declares /auth/register OpenAPI path",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "path = \"/auth/register\""
     },
     {
       "id": "request-body",
       "description": "Register route declares RegisterRequest body",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "request_body = RegisterRequest"
     },
     {
       "id": "success-response",
       "description": "Register route returns RegisterResult",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "body = crate::domains::auth::types::RegisterResult"
     },
     {
       "id": "pow-gate",
       "description": "Register route enforces proof-of-work when enabled",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "require_pow_solution"
     },
     {
       "id": "rate-limit",
       "description": "Register route applies dual rate limit",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "\"auth_register\""
     },
     {
       "id": "region-resolution",
       "description": "Register route resolves supported country to data region",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "country_code_to_data_region"
     },
     {
       "id": "onboarding-mapping",
       "description": "Register route maps HTTP request to onboarding input through a tested helper",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
       "status": "passed",
       "pattern": "register_input_from_request"
     },
     {
       "id": "mapping-test",
       "description": "Register route mapping test covers data region, workspace, IP, and user-agent",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.register.tests.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.register.tests.rs",
       "status": "passed",
       "pattern": "register_input_from_request_maps_http_payload_to_onboarding_input"
     },
     {
       "id": "onboarding-register",
       "description": "Onboarding exposes register command",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "pub async fn register"
     },
     {
       "id": "email-validation",
       "description": "Onboarding validates normalized email",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "validate_email(&email)?"
     },
     {
       "id": "password-validation",
       "description": "Onboarding validates password policy",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "validate_password(&input.password)?"
     },
     {
       "id": "register-limiter",
       "description": "Onboarding applies account-level register rate limit",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "\"register\""
     },
     {
       "id": "create-account",
       "description": "Onboarding creates the user account transaction",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "db::create_user_account"
     },
     {
       "id": "password-history",
       "description": "Onboarding records password history",
-      "path": "apps/identity-api/src/identity.domains.auth.onboarding.rs",
+      "path": "apps/account-service/src/identity.domains.auth.onboarding.rs",
       "status": "passed",
       "pattern": "history::insert_password_hash"
     },
     {
       "id": "tenant-insert",
       "description": "Registration creates personal tenant",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.auth.db.account.rs",
       "status": "passed",
       "pattern": "INSERT INTO tenants"
     },
     {
       "id": "principal-insert",
       "description": "Registration creates human principal",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.auth.db.account.rs",
       "status": "passed",
       "pattern": "INSERT INTO principals"
     },
     {
       "id": "user-insert",
       "description": "Registration creates pending verification user",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.auth.db.account.rs",
       "status": "passed",
       "pattern": "'pending_verification'"
     },
     {
       "id": "workspace-insert",
       "description": "Registration creates personal workspace",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
       "status": "passed",
       "pattern": "INSERT INTO workspaces"
     },
     {
       "id": "workspace-policy",
       "description": "Registration creates workspace policy",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
       "status": "passed",
       "pattern": "INSERT INTO workspace_policies"
     },
     {
       "id": "owner-membership",
       "description": "Registration creates owner workspace membership",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
       "status": "passed",
       "pattern": "INSERT INTO workspace_memberships"
     },
     {
       "id": "audit-event",
       "description": "Registration writes user.registered audit event",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.auth.db.account.rs",
       "status": "passed",
       "pattern": "action: \"user.registered\""
     },
     {
       "id": "verification-email",
       "description": "Registration issues verification email token",
-      "path": "apps/identity-api/src/identity.domains.auth.db.account.rs",
+      "path": "apps/account-service/src/identity.domains.auth.db.account.rs",
       "status": "passed",
       "pattern": "issue_verification_email_tx"
     },
     {
       "id": "openapi-source",
       "description": "OpenAPI source exports register path",
-      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "path": "apps/account-service/src/identity.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::auth::routes::register::register"
     },
     {
       "id": "openapi-json-path",
       "description": "Generated OpenAPI contains /auth/register",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "\"/auth/register\""
     },
     {
       "id": "openapi-json-operation",
       "description": "Generated OpenAPI exposes register operation id",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "\"operationId\":\"register\""
     },

@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { billingClient } from '@/billing.client';
+import { accountBillingClient } from '@/account.billing.client';
 import { useAccountContext } from '@/hooks/useAccountContext';
 
 export function useAccountSubscriptionsWorkspaceId() {
@@ -9,22 +9,22 @@ export function useAccountSubscriptionsWorkspaceId() {
 
 export function useAccountSubscriptionsOverview(workspaceId: string) {
   const overviewQuery = useSuspenseQuery({
-    queryKey: ['billing', 'overview', workspaceId],
-    queryFn: () => billingClient.getOverview(workspaceId),
+    queryKey: ['account-billing', 'overview', workspaceId],
+    queryFn: () => accountBillingClient.getOverview(workspaceId),
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const portalQuery = useSuspenseQuery({
-    queryKey: ['billing', 'portal-view', workspaceId],
-    queryFn: () => billingClient.getPortalView(workspaceId),
+    queryKey: ['account-billing', 'portal-view', workspaceId],
+    queryFn: () => accountBillingClient.getPortalView(workspaceId),
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   const openPortal = async () => {
-    const portal = await billingClient.createPortalSession(workspaceId);
+    const portal = await accountBillingClient.createPortalSession(workspaceId);
     window.location.href = portal.url;
   };
 

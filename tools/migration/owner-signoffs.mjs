@@ -100,17 +100,9 @@ for (const row of tableRowsAfter("## Gate Sign-Offs")) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(unassigned|pending|no-go)\b/gi)].map(
-		(match) => match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} owner sign-off marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} owner sign-off marker(s) remain`);
 	}
 }
 
@@ -265,6 +257,19 @@ function countUnassignedOwners(requiredOwnerRows, sourceRows, gateRows) {
 	const sourceOwnerFields = sourceRows.map((row) => row[1]);
 	const gateOwnerFields = gateRows.map((row) => row[1]);
 	return [...requiredOwnerFields, ...sourceOwnerFields, ...gateOwnerFields].filter((value) => value === "unassigned").length;
+}
+
+function strictBlockers() {
+	const counts = { unassigned: 0, pending: 0, "no-go": 0 };
+	const requiredOwnerRows = tableRowsAfter("## Required Owners");
+	const sourceRows = tableRowsAfter("## Source Class Sign-Offs");
+	const gateRows = tableRowsAfter("## Gate Sign-Offs");
+	for (const row of [...requiredOwnerRows, ...sourceRows, ...gateRows]) {
+		if (row.at(-2) === "pending") counts.pending += 1;
+		if (row.at(-1) === "no-go") counts["no-go"] += 1;
+	}
+	counts.unassigned = countUnassignedOwners(requiredOwnerRows, sourceRows, gateRows);
+	return counts;
 }
 
 function statusNumber(key) {

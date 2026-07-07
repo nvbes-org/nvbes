@@ -128,4 +128,3 @@ fn reject_conflict(conflicting_rule_id: Option<Uuid>) -> Result<(), Status> {
     }
     Ok(())
 }
-

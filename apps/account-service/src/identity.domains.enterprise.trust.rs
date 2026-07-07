@@ -1,5 +1,3 @@
-#[path = "identity.domains.enterprise.trust.db.rs"]
-pub mod db;
 #[path = "identity.domains.enterprise.trust.service.rs"]
 mod service;
 #[path = "identity.domains.enterprise.trust.types.rs"]

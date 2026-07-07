@@ -13,6 +13,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[ignore = "token debug persistence moved to developer-service and requires Developer gRPC"]
 async fn debug_token_reports_decisions_and_records_audit() {
     let pool = crate::test_support::shared_test_pool();
     crate::test_support::ensure_test_database(&pool).await;

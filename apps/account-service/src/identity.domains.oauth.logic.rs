@@ -1,7 +1,7 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{domains::developer::grpc as developer_grpc, http::error::AppError};
 
 pub trait OAuthManagementAuth {
     fn user_id(&self) -> Uuid;
@@ -38,7 +38,7 @@ impl OAuthManagementAuth for crate::domains::auth::types::AuthContext {
 }
 
 pub async fn verify_client_secret_with_overlap(
-    db: &sqlx::PgPool,
+    tenant_id: Uuid,
     client_id: &str,
     secret: &str,
     main_hash: &str,
@@ -47,29 +47,8 @@ pub async fn verify_client_secret_with_overlap(
         return Ok(());
     }
 
-    let valid_hashes: Vec<String> = sqlx::query_scalar(
-        r#"
-        SELECT client_secret_hash
-        FROM developer_client_secret_versions
-        WHERE client_id = $1
-          AND revoked_at IS NULL
-          AND (
-            status = 'active'
-            OR (status = 'overlap' AND (expires_at IS NULL OR expires_at > NOW()))
-          )
-        "#,
-    )
-    .bind(client_id)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::from)?;
-
-    for hash in valid_hashes {
-        if hash != main_hash
-            && nvbes_product_account::oauth::verify_client_secret(secret, &hash).is_ok()
-        {
-            return Ok(());
-        }
+    if developer_grpc::verify_client_secret_version(tenant_id, client_id, secret).await? {
+        return Ok(());
     }
 
     Err(AppError::unauthorized(

@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use nvbes_core::config::AppConfig;
+use nvbes_product_account::cloud_boundary::{CreateWorkspaceCommand, WorkspacePolicyCommand};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -133,56 +134,37 @@ pub async fn create_user_account(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO workspaces (id, tenant_id, organization_id, name, workspace_type, plan_code, trial_ends_at, data_region, jurisdiction, created_at, updated_at)
-        VALUES ($1, $2, NULL, $3, 'personal', 'solo_pro', $4, $5::data_region, $6::legal_jurisdiction, $7, $7)
-        "#,
+    crate::domains::cloud::workspace_port::create_workspace_tx(
+        &mut tx,
+        &CreateWorkspaceCommand {
+            workspace_id,
+            tenant_id,
+            organization_id: None,
+            owner_principal_id: principal_id,
+            name: workspace_name,
+            workspace_type: "personal".to_string(),
+            plan_code: "solo_pro".to_string(),
+            trial_ends_at: Some(now + chrono::Duration::days(14)),
+            data_region: data_region.as_deref().unwrap_or("eu").to_string(),
+            jurisdiction: match data_region.as_deref() {
+                Some("us") => "ccpa",
+                Some("ch") => "nfdap",
+                _ => "gdpr",
+            }
+            .to_string(),
+            owner_role: "owner".to_string(),
+            membership_source: "manual".to_string(),
+            created_at: now,
+            policy: WorkspacePolicyCommand {
+                member_can_create_share_links: false,
+                require_admin_approval_for_member_share: true,
+                default_share_link_ttl_days: 7,
+                max_share_link_ttl_days: 30,
+                required_acr: Some("aal1".to_string()),
+                mfa_policy: None,
+            },
+        },
     )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(&workspace_name)
-    .bind(now + chrono::Duration::days(14))
-    .bind(data_region.as_deref().unwrap_or("eu"))
-    .bind(match data_region.as_deref() {
-        Some("us") => "ccpa",
-        Some("ch") => "nfdap",
-        _ => "gdpr",
-    })
-    .bind(now)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_policies (
-          workspace_id,
-          member_can_create_share_links,
-          require_admin_approval_for_member_share,
-          default_share_link_ttl_days,
-          max_share_link_ttl_days,
-          required_acr,
-          created_at,
-          updated_at
-        )
-        VALUES ($1, FALSE, TRUE, 7, 30, 'aal1', $2, $2)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(now)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source, created_at, updated_at)
-        VALUES ($1, $2, 'owner', 'active', 'manual', $3, $3)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(principal_id)
-    .bind(now)
-    .execute(&mut *tx)
     .await?;
 
     record_registration_legal_consents_tx(&mut tx, principal_id, ip.as_deref(), now).await?;

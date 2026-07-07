@@ -5,6 +5,7 @@ use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 use sqlx::Row;
 use std::time::Duration;
+use uuid::Uuid;
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/introspect", post(introspect))
@@ -46,7 +47,7 @@ pub(crate) async fn introspect(
 
     let client_row = sqlx::query(
         r#"
-        SELECT client_secret_hash, revoked_at
+        SELECT client_secret_hash, tenant_id, revoked_at
         FROM oauth_clients
         WHERE client_id = $1
         LIMIT 1
@@ -74,8 +75,9 @@ pub(crate) async fn introspect(
     }
 
     let client_secret_hash: String = client_row.get("client_secret_hash");
+    let client_tenant_id: Uuid = client_row.get("tenant_id");
     crate::domains::oauth::verify_client_secret_with_overlap(
-        &state.db,
+        client_tenant_id,
         &client_id,
         &client_secret,
         &client_secret_hash,

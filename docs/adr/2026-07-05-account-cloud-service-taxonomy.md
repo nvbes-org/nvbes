@@ -6,10 +6,9 @@ Accepted for the Account/Cloud Big Bang refactor.
 
 ## Context
 
-The repository still uses runtime names that describe old product slices:
-Identity, Drive, Developer Web, Internal Admin, and Gateway GraphQL. The target
-platform needs bounded contexts that describe ownership rather than historical
-implementation names.
+The repository previously used runtime names that described old product slices
+instead of durable ownership boundaries. The target platform needs bounded
+contexts that describe ownership rather than historical implementation names.
 
 The Big Bang cutover must remove legacy names from runtime code, packages,
 environment variables, deployment artifacts, observability, and public docs.
@@ -17,41 +16,33 @@ Migration evidence may reference old names only while proving the cutover.
 
 ## Decision
 
-Adopt the following runtime taxonomy:
+Adopt the following runtime taxonomy. The exact historical rename map is
+maintained as migration evidence in
+`docs/migration/account-cloud-big-bang.inventory.md`; this ADR records the
+post-cutover names that are allowed to remain in non-migration docs and runtime
+surfaces.
 
-| Legacy runtime | Target runtime | Owner |
-|---|---|---|
-| `billing-api` | `billing-service` | Billing |
-| `drive-api` | `cloud-service` | Cloud |
-| `drive-web` | `cloud-web` | Cloud |
-| `drive-worker` | `cloud-worker` | Cloud |
-| `developer-web` | `console-web` | Developer |
-| `identity-api` | `account-service` | Account |
-| `identity-web` | `account-web` | Account |
-| `identity-worker` | `account-worker` | Account |
-| `internal-admin` | `backoffice-service` | Backoffice |
-| `internal-admin-web` | `backoffice-web` | Backoffice |
-| `gateway-graphql` | `gateway-cloud` | Gateway Cloud |
+| Target runtime | Owner |
+|---|---|
+| `billing-service` | Billing |
+| `cloud-service` | Cloud |
+| `cloud-web` | Cloud |
+| `cloud-worker` | Cloud |
+| `console-web` | Developer |
+| `account-service` | Account |
+| `account-web` | Account |
+| `account-worker` | Account |
+| `backoffice-service` | Backoffice |
+| `backoffice-web` | Backoffice |
+| `gateway-cloud` | Gateway Cloud |
 
 Create these service runtimes during extraction:
 
 - `developer-service`;
 - `enterprise-service`.
 
-Forbidden runtime aliases after cutover:
-
-- `billing-api`;
-- `drive-api`;
-- `drive-web`;
-- `drive-worker`;
-- `developer-web`;
-- `identity-api`;
-- `identity-web`;
-- `identity-worker`;
-- `internal-admin`;
-- `internal-admin-web`;
-- `gateway-graphql`;
-- `cloud-bff`.
+Historical runtime aliases listed in the migration inventory are forbidden
+after cutover and may remain only in approved migration evidence.
 
 `gateway-cloud` is the only runtime name for the Cloud gateway/BFF. If GraphQL
 remains its public protocol, GraphQL is a protocol choice, not a service name.

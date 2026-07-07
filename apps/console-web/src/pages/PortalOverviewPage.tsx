@@ -14,7 +14,7 @@ const cards = [
   },
   { to: '/portal/logs', title: 'Logs', body: 'Tenant-scoped activity and audit events.' },
   { to: '/portal/webhooks', title: 'Webhooks', body: 'Identity event subscriptions.' },
-  { to: '/portal/roles', title: 'Roles', body: 'Fine-grained developer access model.' },
+  { to: '/portal/roles', title: 'Roles', body: 'Fine-grained Console access model.' },
 ] as const;
 
 export function PortalOverviewPage() {
@@ -26,7 +26,7 @@ export function PortalOverviewPage() {
   return (
     <section>
       <PageHeader
-        title="Developer portal"
+        title="Console"
         body="Manage Identity integrations, inspect tokens, test OAuth flows, and review tenant-scoped logs."
       />
       <div className="mb-6 rounded-md border border-border bg-card p-4 text-sm">

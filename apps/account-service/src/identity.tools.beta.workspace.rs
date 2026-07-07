@@ -1,6 +1,12 @@
 use anyhow::Context;
+use chrono::{Duration, Utc};
+use nvbes_product_account::cloud_boundary::{
+    CreateWorkspaceCommand, UpsertWorkspaceMembershipCommand, WorkspacePolicyCommand,
+};
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
+
+use nvbes_account_service::domains::cloud::workspace_port;
 
 pub async fn ensure_non_admin_workspace(
     tx: &mut Transaction<'_, Postgres>,
@@ -54,58 +60,58 @@ pub async fn ensure_non_admin_workspace(
     .await
     .context("Failed to create beta e2e owner tenant membership.")?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO workspaces (
-          id, tenant_id, organization_id, workspace_type, name, plan_code,
-          trial_ends_at, data_region, jurisdiction, owner_user_id
-        )
-        VALUES (
-          $1, $2, NULL, 'team', $3, 'trial',
-          NOW() + INTERVAL '14 days', 'eu', 'gdpr', $4
-        )
-        "#,
+    let now = Utc::now();
+    workspace_port::create_workspace_tx(
+        tx,
+        &CreateWorkspaceCommand {
+            workspace_id,
+            tenant_id,
+            organization_id: None,
+            owner_principal_id,
+            name: workspace_name.to_string(),
+            workspace_type: "team".to_string(),
+            plan_code: "trial".to_string(),
+            trial_ends_at: Some(now + Duration::days(14)),
+            data_region: "eu".to_string(),
+            jurisdiction: "gdpr".to_string(),
+            owner_role: "owner".to_string(),
+            membership_source: "system".to_string(),
+            created_at: now,
+            policy: WorkspacePolicyCommand {
+                member_can_create_share_links: false,
+                require_admin_approval_for_member_share: true,
+                default_share_link_ttl_days: 7,
+                max_share_link_ttl_days: 7,
+                required_acr: Some("aal1".to_string()),
+                mfa_policy: None,
+            },
+        },
     )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(workspace_name)
-    .bind(owner_principal_id)
-    .execute(&mut **tx)
     .await
-    .context("Failed to create beta e2e non-admin workspace.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_policies (
-          workspace_id,
-          member_can_create_share_links,
-          require_admin_approval_for_member_share,
-          default_share_link_ttl_days,
-          max_share_link_ttl_days
+    .map_err(|error| {
+        anyhow::anyhow!(
+            "Failed to create beta e2e non-admin workspace through Cloud: {}",
+            error.message
         )
-        VALUES ($1, FALSE, TRUE, 7, $2)
-        "#,
+    })?;
+    workspace_port::upsert_workspace_membership_tx(
+        tx,
+        &UpsertWorkspaceMembershipCommand {
+            actor_principal_id: owner_principal_id,
+            workspace_id,
+            principal_id: member_principal_id,
+            role: "member".to_string(),
+            status: "active".to_string(),
+            source: "system".to_string(),
+        },
     )
-    .bind(workspace_id)
-    .bind(7_i32)
-    .execute(&mut **tx)
     .await
-    .context("Failed to create beta e2e workspace policy.")?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source)
-        VALUES
-          ($1, $2, 'owner', 'active', 'system'),
-          ($1, $3, 'member', 'active', 'system')
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(owner_principal_id)
-    .bind(member_principal_id)
-    .execute(&mut **tx)
-    .await
-    .context("Failed to create beta e2e workspace memberships.")?;
+    .map_err(|error| {
+        anyhow::anyhow!(
+            "Failed to create beta e2e workspace member through Cloud: {}",
+            error.message
+        )
+    })?;
 
     Ok(())
 }

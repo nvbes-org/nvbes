@@ -18,10 +18,9 @@ Cloud documentation uses the target Account/Cloud taxonomy:
   indexing and exports.
 - `gateway-cloud` is the only Cloud gateway/BFF runtime name.
 
-Do not introduce runtime references to `drive-api`, `drive-web`,
-`drive-worker`, `identity-api`, `identity-web`, `identity-worker`,
-`gateway-graphql` or `cloud-bff` in Cloud docs except as explicit migration
-evidence.
+Do not introduce legacy runtime aliases in Cloud docs. Use the target names
+above and the taxonomy recorded in
+`docs/adr/2026-07-05-account-cloud-service-taxonomy.md`.
 
 Account owns identity/session entry points. Billing owns billing source of
 truth. Cloud may consume Account and Billing contracts, but Cloud documentation

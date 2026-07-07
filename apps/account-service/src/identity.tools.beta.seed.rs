@@ -1,8 +1,6 @@
+use super::{account, workspace};
 use anyhow::Context;
 use sqlx::PgPool;
-use uuid::Uuid;
-
-use super::{account, workspace};
 
 pub struct PrepareBetaE2eAccountInput {
     pub email: String,
@@ -63,22 +61,7 @@ pub async fn prepare_beta_e2e_account(
     .await
     .context("Failed to clear beta risk events.")?;
 
-    let existing_non_admin_workspace: Option<Uuid> = sqlx::query_scalar(
-        r#"
-        SELECT wm.workspace_id
-        FROM workspace_memberships wm
-        WHERE wm.principal_id = $1
-          AND wm.status = 'active'
-          AND wm.role NOT IN ('owner', 'admin')
-        LIMIT 1
-        "#,
-    )
-    .bind(principal_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .context("Failed to inspect beta workspace memberships.")?;
-
-    if existing_non_admin_workspace.is_none() {
+    if !account::has_workspace_role(tenant_id, principal_id, &["member", "viewer"]).await? {
         workspace::ensure_non_admin_workspace(
             &mut tx,
             tenant_id,

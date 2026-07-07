@@ -1,8 +1,9 @@
 use axum::http::HeaderMap;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use std::time::Duration as StdDuration;
 use uuid::Uuid;
 
+use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use crate::http::request::client_ip;
@@ -100,29 +101,28 @@ pub async fn ensure_device_approval_context(
         ));
     }
 
-    let workspace = sqlx::query(
-        r#"
-        SELECT w.tenant_id, w.organization_id
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE wm.workspace_id = $1
-          AND wm.principal_id = $2
-          AND wm.status = 'active'
-        LIMIT 1
-        "#,
+    let workspace = workspace_port::get_workspace(
+        Some(input.client_tenant_id),
+        input.workspace_id,
+        input.auth.user_id,
     )
-    .bind(input.workspace_id)
-    .bind(input.auth.user_id)
-    .fetch_optional(db)
+    .await?;
+    let active_member = workspace_port::list_workspace_members(
+        Some(workspace.tenant_id),
+        input.workspace_id,
+        input.auth.user_id,
+    )
     .await?
-    .ok_or_else(|| {
-        AppError::forbidden(
+    .into_iter()
+    .any(|member| member.principal_id == input.auth.user_id && member.active);
+    if !active_member {
+        return Err(AppError::forbidden(
             "workspace_access_required",
             "You must be an active member of the selected workspace.",
-        )
-    })?;
+        ));
+    }
 
-    let workspace_tenant_id: Uuid = workspace.get("tenant_id");
+    let workspace_tenant_id = workspace.tenant_id;
     if workspace_tenant_id != input.client_tenant_id {
         return Err(AppError::forbidden(
             "workspace_tenant_mismatch",
@@ -130,7 +130,7 @@ pub async fn ensure_device_approval_context(
         ));
     }
 
-    let workspace_organization_id: Option<Uuid> = workspace.get("organization_id");
+    let workspace_organization_id = workspace.organization_id;
     if input.organization_id.is_some() && input.organization_id != workspace_organization_id {
         return Err(AppError::bad_request(
             "organization_mismatch",

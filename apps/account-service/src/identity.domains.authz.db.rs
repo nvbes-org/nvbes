@@ -1,5 +1,6 @@
 use super::types::*;
 use crate::domains::auth::types::AuthContext;
+use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 use crate::http::request::{client_ip, user_agent};
 use axum::http::HeaderMap;
@@ -25,12 +26,30 @@ pub async fn load_workspace_access(
         ));
     }
 
-    let row = sqlx::query(
+    let workspace =
+        workspace_port::get_workspace(auth.tenant_id, workspace_id, auth.user_id).await?;
+    let role = workspace_port::list_workspace_members(
+        Some(workspace.tenant_id),
+        workspace_id,
+        auth.user_id,
+    )
+    .await?
+    .into_iter()
+    .find(|member| member.principal_id == auth.user_id && member.active)
+    .map(|member| member.role)
+    .ok_or_else(|| {
+        AppError::forbidden(
+            "workspace_access_denied",
+            WorkspaceAccessError::AccessDenied.to_string(),
+        )
+    })?;
+
+    let tenant_id = Some(workspace.tenant_id);
+    let organization_id = workspace.organization_id;
+
+    let policy_row = sqlx::query(
         r#"
         SELECT
-          w.tenant_id,
-          w.organization_id,
-          wm.role::text AS role,
           sp.member_can_create_share_links AS system_member_can_create_share_links,
           sp.require_admin_approval_for_member_share AS system_require_admin_approval_for_member_share,
           sp.default_share_link_ttl_days AS system_default_share_link_ttl_days,
@@ -42,36 +61,17 @@ pub async fn load_workspace_access(
           op.member_can_create_share_links AS organization_member_can_create_share_links,
           op.require_admin_approval_for_member_share AS organization_require_admin_approval_for_member_share,
           op.default_share_link_ttl_days AS organization_default_share_link_ttl_days,
-          op.max_share_link_ttl_days AS organization_max_share_link_ttl_days,
-          wp.member_can_create_share_links AS workspace_member_can_create_share_links,
-          wp.require_admin_approval_for_member_share AS workspace_require_admin_approval_for_member_share,
-          wp.default_share_link_ttl_days AS workspace_default_share_link_ttl_days,
-          wp.max_share_link_ttl_days AS workspace_max_share_link_ttl_days
-        FROM workspaces w
-        INNER JOIN workspace_memberships wm ON wm.workspace_id = w.id
-        INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
-        INNER JOIN system_policies sp ON sp.id = TRUE
-        LEFT JOIN tenant_policies tp ON tp.tenant_id = w.tenant_id
-        LEFT JOIN organization_policies op ON op.organization_id = w.organization_id
-        WHERE wm.workspace_id = $1
-          AND wm.principal_id = $2
-          AND wm.status = 'active'
+          op.max_share_link_ttl_days AS organization_max_share_link_ttl_days
+        FROM system_policies sp
+        LEFT JOIN tenant_policies tp ON tp.tenant_id = $1
+        LEFT JOIN organization_policies op ON op.organization_id = $2
+        WHERE sp.id = TRUE
         "#,
     )
-    .bind(workspace_id)
-    .bind(auth.user_id)
-    .fetch_optional(db)
+    .bind(workspace.tenant_id)
+    .bind(workspace.organization_id)
+    .fetch_one(db)
     .await?;
-
-    let row = row.ok_or_else(|| {
-        AppError::forbidden(
-            "workspace_access_denied",
-            WorkspaceAccessError::AccessDenied.to_string(),
-        )
-    })?;
-
-    let tenant_id: Option<Uuid> = row.get("tenant_id");
-    let organization_id: Option<Uuid> = row.get("organization_id");
     let assurance = crate::domains::oauth::assurance::resolve_assurance_context(
         db,
         redis,
@@ -88,33 +88,33 @@ pub async fn load_workspace_access(
     }
     let effective_policy = resolve_inherited_policy([
         InheritedPolicyLayer::system()
-            .with_member_share_links(row.get("system_member_can_create_share_links"))
+            .with_member_share_links(policy_row.get("system_member_can_create_share_links"))
             .with_require_admin_approval_for_member_share(
-                row.get("system_require_admin_approval_for_member_share"),
+                policy_row.get("system_require_admin_approval_for_member_share"),
             )
-            .with_default_share_link_ttl_days(row.get("system_default_share_link_ttl_days"))
-            .with_max_share_link_ttl_days(row.get("system_max_share_link_ttl_days")),
+            .with_default_share_link_ttl_days(policy_row.get("system_default_share_link_ttl_days"))
+            .with_max_share_link_ttl_days(policy_row.get("system_max_share_link_ttl_days")),
         optional_policy_layer(
             InheritedPolicyLayer::tenant(),
-            row.get("tenant_member_can_create_share_links"),
-            row.get("tenant_require_admin_approval_for_member_share"),
-            row.get("tenant_default_share_link_ttl_days"),
-            row.get("tenant_max_share_link_ttl_days"),
+            policy_row.get("tenant_member_can_create_share_links"),
+            policy_row.get("tenant_require_admin_approval_for_member_share"),
+            policy_row.get("tenant_default_share_link_ttl_days"),
+            policy_row.get("tenant_max_share_link_ttl_days"),
         ),
         optional_policy_layer(
             InheritedPolicyLayer::organization(),
-            row.get("organization_member_can_create_share_links"),
-            row.get("organization_require_admin_approval_for_member_share"),
-            row.get("organization_default_share_link_ttl_days"),
-            row.get("organization_max_share_link_ttl_days"),
+            policy_row.get("organization_member_can_create_share_links"),
+            policy_row.get("organization_require_admin_approval_for_member_share"),
+            policy_row.get("organization_default_share_link_ttl_days"),
+            policy_row.get("organization_max_share_link_ttl_days"),
         ),
         InheritedPolicyLayer::workspace()
-            .with_member_share_links(row.get("workspace_member_can_create_share_links"))
+            .with_member_share_links(workspace.member_can_create_share_links)
             .with_require_admin_approval_for_member_share(
-                row.get("workspace_require_admin_approval_for_member_share"),
+                workspace.require_admin_approval_for_member_share,
             )
-            .with_default_share_link_ttl_days(row.get("workspace_default_share_link_ttl_days"))
-            .with_max_share_link_ttl_days(row.get("workspace_max_share_link_ttl_days")),
+            .with_default_share_link_ttl_days(workspace.default_share_link_ttl_days)
+            .with_max_share_link_ttl_days(workspace.max_share_link_ttl_days),
     ]);
 
     Ok(WorkspaceAccess {
@@ -122,7 +122,7 @@ pub async fn load_workspace_access(
         workspace_id,
         tenant_id,
         organization_id,
-        role: parse_role(row.get::<String, _>("role").as_str())?,
+        role: parse_role(role.as_str())?,
         policy: WorkspacePolicy::member_share_links_enabled(
             effective_policy.member_can_create_share_links,
         ),
@@ -150,15 +150,14 @@ pub async fn record_permission_denied(
     resource: ResourceContext,
     headers: &HeaderMap,
 ) -> Result<(), AppError> {
-    let mut tx = db.begin().await?;
     let tenant_id = if let Some(tenant_id) = access.tenant_id {
         tenant_id
     } else {
-        sqlx::query_scalar::<_, Uuid>("SELECT tenant_id FROM workspaces WHERE id = $1")
-            .bind(access.workspace_id)
-            .fetch_one(&mut *tx)
+        workspace_port::get_workspace(None, access.workspace_id, access.auth.user_id)
             .await?
+            .tenant_id
     };
+    let mut tx = db.begin().await?;
     crate::domains::audit::record_event_tx(
         &mut tx,
         crate::domains::audit::AuditRecordInput {
@@ -193,24 +192,17 @@ fn permission_denied_metadata(
 }
 
 pub async fn target_role_for_member(
-    db: &PgPool,
+    _db: &PgPool,
     workspace_id: Uuid,
     member_id: Uuid,
 ) -> Result<WorkspaceRole, AppError> {
-    let row = sqlx::query(
-        r#"
-        SELECT role::text AS role
-        FROM workspace_memberships
-        WHERE workspace_id = $1 AND principal_id = $2
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(member_id)
-    .fetch_optional(db)
-    .await?;
-
-    let row = row.ok_or_else(|| AppError::not_found("member_not_found", "Member not found."))?;
-    parse_role(row.get::<String, _>("role").as_str())
+    let role = workspace_port::list_workspace_members(None, workspace_id, member_id)
+        .await?
+        .into_iter()
+        .find(|member| member.principal_id == member_id)
+        .map(|member| member.role)
+        .ok_or_else(|| AppError::not_found("member_not_found", "Member not found."))?;
+    parse_role(role.as_str())
 }
 
 #[cfg(test)]

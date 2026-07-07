@@ -96,7 +96,7 @@ Use the dependency set from `apps/account-web/package.json`, keeping only packag
 
 - [ ] **Step 3: Add Vite and React root**
 
-Copy `apps/account-web/vite.config.ts`, then change the Sentry project fallback to `enterprise-web` and the dev/preview port to `5175`. Keep the `/api` proxy pointing to the Identity API base URL.
+Copy `apps/account-web/vite.config.ts`, then change the Sentry project fallback to `enterprise-web` and the dev/preview port to `5175`. Keep the `/api` proxy pointing to the Account service base URL.
 
 `src/main.tsx`:
 

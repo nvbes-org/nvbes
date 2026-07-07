@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "nvbes Drive API",
-    "description": "File storage, sharing, and collaboration API",
+    "title": "nvbes Cloud API",
+    "description": "Cloud file storage, sharing, and collaboration API",
     "contact": {
       "name": "nvbes",
       "url": "https://nvbes.fr"
@@ -14,7 +14,7 @@
   },
   "servers": [
     {
-      "url": "https://drive.nvbes.fr",
+      "url": "https://cloud.nvbes.fr",
       "description": "Production"
     },
     {

@@ -10,6 +10,11 @@ source "$SCRIPT_DIR/lib/dev-ports.sh"
 
 cd "$ROOT_DIR"
 
+export NVBES_BILLING_GRPC_ENDPOINT="${NVBES_BILLING_GRPC_ENDPOINT:-http://127.0.0.1:4021}"
+export NVBES_CLOUD_GRPC_ENDPOINT="${NVBES_CLOUD_GRPC_ENDPOINT:-http://127.0.0.1:4003}"
+export NVBES_DEVELOPER_GRPC_ENDPOINT="${NVBES_DEVELOPER_GRPC_ENDPOINT:-http://127.0.0.1:4041}"
+export NVBES_ENTERPRISE_GRPC_ENDPOINT="${NVBES_ENTERPRISE_GRPC_ENDPOINT:-http://127.0.0.1:4031}"
+
 if ! command -v cargo-watch >/dev/null 2>&1; then
   log_step "Installing missing Rust watcher: cargo-watch"
   export CARGO_HOME="${NVBES_USER_CARGO_HOME:-$HOME/.cargo}"

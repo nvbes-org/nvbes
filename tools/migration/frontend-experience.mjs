@@ -33,7 +33,7 @@ const sources = {
 	enterpriseSidebar: "apps/enterprise-web/src/components/EnterpriseSidebar.tsx",
 	enterprisePermissionsTest: "apps/enterprise-web/src/enterprise.permissions.test.ts",
 	enterpriseInvitesTest: "apps/enterprise-web/src/enterprise.invites.test.ts",
-	cloudConsoleReadme: "apps/cloud-console/README.md",
+	cloudDocsReadme: "docs/cloud/README.md",
 	backofficeServiceReadme: "apps/backoffice-service/README.md",
 };
 
@@ -81,17 +81,17 @@ function buildChecks() {
 		packageScriptCheck("root-check-web-enterprise-lint", "check:web", "Root web check lints Enterprise Web", "lint --projects=cloud-web,account-web,console-web,enterprise-web"),
 		packageScriptCheck("root-check-web-enterprise-typecheck", "check:web", "Root web check typechecks Enterprise Web", "typecheck --projects=cloud-web,account-web,console-web,enterprise-web"),
 		packageScriptCheck("lint-web-enterprise", "lint:web", "Root lint:web includes Enterprise Web", "lint --projects=cloud-web,account-web,console-web,enterprise-web"),
-		textCheck("identity-router", sources.identityRouter, "Identity Web declares routed login/account journeys", "createRouter"),
-		textCheck("identity-account-main", sources.identityAccountLayout, "Identity account shell exposes a main landmark", "<main"),
-		textCheck("identity-critical-e2e", sources.identityCriticalE2e, "Identity Web has browser-level critical journey coverage", "critical identity journeys"),
-		textCheck("identity-universal-login-test", sources.identityUniversalLoginTest, "Identity Web tests universal login API behavior", "Universal Login API helpers"),
-		textCheck("identity-universal-login-hook-test", sources.identityUniversalLoginHookTest, "Identity Web tests universal login hook state", "useUniversalLogin"),
-		textCheck("drive-router", sources.driveRouter, "Drive Web declares routed file journeys", "createRouter"),
-		textCheck("drive-main", sources.driveLayout, "Drive Web shell exposes a main landmark", "<main"),
-		textCheck("drive-share-actions", sources.driveSharedLinks, "Drive Web exposes share copy and revoke actions", "Revoquer le lien"),
-		textCheck("drive-upload-test", sources.driveUploadTest, "Drive Web tests upload drop handling", "drop"),
-		textCheck("drive-session-test", sources.driveSessionTest, "Drive Web tests session storage", "session"),
-		textCheck("drive-workspace-test", sources.driveWorkspaceTest, "Drive Web tests workspace switching state", "workspace"),
+		textCheck("account-router", sources.identityRouter, "Account Web declares routed login/account journeys", "createRouter"),
+		textCheck("account-main", sources.identityAccountLayout, "Account shell exposes a main landmark", "<main"),
+		textCheck("account-critical-e2e", sources.identityCriticalE2e, "Account Web has browser-level critical journey coverage", "critical identity journeys"),
+		textCheck("account-universal-login-test", sources.identityUniversalLoginTest, "Account Web tests universal login API behavior", "Universal Login API helpers"),
+		textCheck("account-universal-login-hook-test", sources.identityUniversalLoginHookTest, "Account Web tests universal login hook state", "useUniversalLogin"),
+		textCheck("cloud-router", sources.driveRouter, "Cloud Web declares routed file journeys", "createRouter"),
+		textCheck("cloud-main", sources.driveLayout, "Cloud Web shell exposes a main landmark", "<main"),
+		textCheck("cloud-share-actions", sources.driveSharedLinks, "Cloud Web exposes share copy and revoke actions", "Revoquer le lien"),
+		textCheck("cloud-upload-test", sources.driveUploadTest, "Cloud Web tests upload drop handling", "drop"),
+		textCheck("cloud-session-test", sources.driveSessionTest, "Cloud Web tests session storage", "session"),
+		textCheck("cloud-workspace-test", sources.driveWorkspaceTest, "Cloud Web tests workspace switching state", "workspace"),
 		textCheck("developer-router", sources.developerRouter, "Console Web declares routed console and portal journeys", "createRouter"),
 		textCheck("developer-console-main", sources.developerShell, "Developer console shell exposes a main landmark", "<main"),
 		textCheck("developer-portal-main", sources.developerPortalLayout, "Developer portal shell exposes a main landmark", "<main"),
@@ -104,7 +104,7 @@ function buildChecks() {
 		textCheck("enterprise-nav", sources.enterpriseSidebar, "Enterprise Web shell exposes navigation", "<nav"),
 		textCheck("enterprise-permissions-test", sources.enterprisePermissionsTest, "Enterprise Web tests permission gating", "permission"),
 		textCheck("enterprise-invites-test", sources.enterpriseInvitesTest, "Enterprise Web tests invitation behavior", "invite"),
-		textCheck("cloud-console-boundary", sources.cloudConsoleReadme, "Cloud Console frontend boundary is documented", "Cloud Console"),
+		textCheck("cloud-docs-boundary", sources.cloudDocsReadme, "Cloud documentation boundary is documented", "nvbes Cloud Documentation"),
 		textCheck("backoffice-service-boundary", sources.backofficeServiceReadme, "Backoffice frontend boundary is documented", "Backoffice"),
 	];
 }
@@ -138,7 +138,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/frontend-experience.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/frontend-experience.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -192,14 +192,14 @@ function serializeMarkdown(data) {
 		"## Decision",
 		"",
 		data.summary.failed === 0
-			? "Frontend repository evidence is covered for Identity, Drive, Developer, Enterprise, Cloud Console and Backoffice boundaries. Production cutover still requires the G4 strict E2E and AA accessibility sign-off."
+			? "Frontend repository evidence is covered for Account, Cloud, Developer, Enterprise and Backoffice boundaries. Production cutover still requires the G4 strict E2E and AA accessibility sign-off."
 			: "Frontend repository evidence is blocked until failed checks pass.",
 		"",
 		"## Regeneration",
 		"",
 		"```bash",
 		"pnpm check:migration-frontend-experience",
-		"tools/migration/frontend-experience.mjs --write",
+		"node tools/migration/frontend-experience.mjs --write",
 		"```",
 		"",
 	);
@@ -211,7 +211,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/frontend-experience.mjs --write",
+		command: "node tools/migration/frontend-experience.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"pnpm check:web",
@@ -244,8 +244,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/frontend-experience.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/frontend-experience.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/frontend-experience.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/frontend-experience.mjs --write`);
 }
 
 if (errors.length > 0) {

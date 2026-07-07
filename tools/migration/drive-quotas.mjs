@@ -123,7 +123,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/drive-quotas.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/drive-quotas.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -184,7 +184,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-drive-quotas",
-		"tools/migration/drive-quotas.mjs --write",
+		"node tools/migration/drive-quotas.mjs --write",
 		"```",
 		"",
 	);
@@ -196,7 +196,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/drive-quotas.mjs --write",
+		command: "node tools/migration/drive-quotas.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-cloud-service quota --locked",
@@ -229,8 +229,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/drive-quotas.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/drive-quotas.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/drive-quotas.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/drive-quotas.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -61,9 +61,10 @@ pub(crate) async fn list_scim_connectors(
     headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<Json<ScimProvisioningConnectorsResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
-        crate::domains::federation::scim::list_scim_connectors(&state.db, tenant_id).await?,
+        crate::domains::federation::scim::list_scim_connectors(&state.db, tenant_id, auth.user_id)
+            .await?,
     ))
 }
 
@@ -88,11 +89,12 @@ pub(crate) async fn create_scim_connector(
     Path(tenant_id): Path<Uuid>,
     Json(request): Json<CreateScimProvisioningConnectorRequest>,
 ) -> Result<Json<crate::domains::federation::types::ScimProvisioningConnectorResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::scim::create_scim_connector(
             &state.db,
             tenant_id,
+            auth.user_id,
             CreateScimProvisioningConnectorInput {
                 provider: request.provider,
                 base_url: request.base_url,
@@ -126,11 +128,12 @@ pub(crate) async fn update_scim_connector(
     Path((tenant_id, connector_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<UpdateScimProvisioningConnectorRequest>,
 ) -> Result<Json<crate::domains::federation::types::ScimProvisioningConnectorResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::scim::update_scim_connector(
             &state.db,
             tenant_id,
+            auth.user_id,
             connector_id,
             UpdateScimProvisioningConnectorInput {
                 provider: request.provider,
@@ -162,8 +165,13 @@ pub(crate) async fn delete_scim_connector(
     headers: HeaderMap,
     Path((tenant_id, connector_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
-    crate::domains::federation::scim::delete_scim_connector(&state.db, tenant_id, connector_id)
-        .await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    crate::domains::federation::scim::delete_scim_connector(
+        &state.db,
+        tenant_id,
+        auth.user_id,
+        connector_id,
+    )
+    .await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }

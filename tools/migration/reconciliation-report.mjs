@@ -43,8 +43,8 @@ const requiredRules = [
 	"accepted domain",
 ];
 const requiredCommands = [
-	"tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json",
-	"tools/migration/reconcile.mjs --env template --report docs/migration/reconciliation.template.json --allow-template",
+	"node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json",
+	"node tools/migration/reconcile.mjs --env template --report docs/migration/reconciliation.template.json --allow-template",
 ];
 
 const errors = [];
@@ -83,17 +83,9 @@ for (const row of summaryRows) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|blocking|no-go|none)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} reconciliation marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} reconciliation marker(s) remain`);
 	}
 }
 
@@ -231,6 +223,21 @@ function normalizeDecision(value) {
 
 function isEmptyMarker(value) {
 	return ["", "none", "pending", "blocking", "no-go"].includes(value ?? "");
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, blocking: 0, "no-go": 0, none: 0 };
+	for (const [field, value] of tableRowsAfter("## Run Metadata")) {
+		if (value === "pending") counts.pending += 1;
+		if (value === "none") counts.none += 1;
+		if (field === "decision" && normalizeDecision(value) === "no-go") counts["no-go"] += 1;
+	}
+	for (const row of tableRowsAfter("## Summary")) {
+		const status = row.at(-1);
+		if (status === "pending") counts.pending += 1;
+		if (status === "blocking") counts.blocking += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

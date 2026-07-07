@@ -9,11 +9,11 @@ export function DeveloperHomePage() {
           Identity platform
         </p>
         <h1 className="max-w-3xl text-4xl font-semibold tracking-normal md:text-6xl">
-          nvbes Developers
+          nvbes Console
         </h1>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground">
           Build secure OAuth apps with nvbes Identity. Configure clients, redirects, webhooks, logs,
-          token inspection, SDKs, and quickstarts from one developer console.
+          token inspection, SDKs, and quickstarts from one console.
         </p>
         <div className="flex flex-wrap gap-3">
           <button
@@ -21,7 +21,7 @@ export function DeveloperHomePage() {
             onClick={() => void startDeveloperLogin(`${window.location.origin}/portal/apps`)}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
-            Open portal
+            Open Console
           </button>
           <Link
             to="/quickstarts/react"

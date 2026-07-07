@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { billingClient } from '@/billing.client';
+import { accountBillingClient } from '@/account.billing.client';
 import { useAccountContext } from '@/hooks/useAccountContext';
 import {
   BillingPageIntro,
@@ -31,15 +31,8 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
   const [portalLoading, setPortalLoading] = useState(false);
 
   const { data: overview } = useSuspenseQuery({
-    queryKey: ['billing', 'overview', workspaceId],
-    queryFn: () => billingClient.getOverview(workspaceId),
-    staleTime: 30 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-  const { data: portalView } = useSuspenseQuery({
-    queryKey: ['billing', 'portal-view', workspaceId],
-    queryFn: () => billingClient.getPortalView(workspaceId),
+    queryKey: ['account-billing', 'overview', workspaceId],
+    queryFn: () => accountBillingClient.getOverview(workspaceId),
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -49,7 +42,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setCheckoutLoading(planCode);
     try {
-      const checkout = await billingClient.createCheckoutSession(workspaceId, planCode);
+      const checkout = await accountBillingClient.createCheckoutSession(workspaceId, planCode);
       window.location.href = checkout.url;
     } finally {
       setCheckoutLoading(null);
@@ -60,14 +53,14 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId) return;
     setPortalLoading(true);
     try {
-      const portal = await billingClient.createPortalSession(workspaceId);
+      const portal = await accountBillingClient.createPortalSession(workspaceId);
       window.location.href = portal.url;
     } finally {
       setPortalLoading(false);
     }
   };
 
-  const currentPlanCode = overview.plan.code;
+  const currentPlanCode = overview.plan_code;
 
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
@@ -76,8 +69,7 @@ function BillingContent({ workspaceId }: { workspaceId: string }) {
       <CurrentPlanCard overview={overview} />
 
       <BillingPortalCard
-        paymentMethodUpdateFlow={portalView.payment_method_update_flow}
-        provider={overview.subscription.billing_provider}
+        provider={overview.billing_provider}
         portalLoading={portalLoading}
         onPortal={() => void handlePortal()}
       />

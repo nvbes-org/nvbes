@@ -1,7 +1,7 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::domains::oauth::logic::OAuthManagementAuth;
+use crate::domains::{cloud::workspace_port, oauth::logic::OAuthManagementAuth};
 use crate::http::error::AppError;
 
 use crate::domains::oauth::service::types::CreateOAuthClientInput;
@@ -17,23 +17,14 @@ pub(super) async fn ensure_service_account_for_client(
     input: &CreateOAuthClientInput,
     service_account_role: &str,
 ) -> Result<Uuid, AppError> {
-    let workspace = sqlx::query(
-        r#"
-        SELECT tenant_id, organization_id
-        FROM workspaces
-        WHERE id = $1
-        LIMIT 1
-        "#,
+    let workspace = workspace_port::get_workspace(
+        OAuthManagementAuth::tenant_id(auth),
+        workspace_id,
+        OAuthManagementAuth::user_id(auth),
     )
-    .bind(workspace_id)
-    .fetch_optional(&mut **tx)
     .await?;
-
-    let workspace = workspace.ok_or_else(|| {
-        AppError::not_found("workspace_not_found", "The target workspace was not found.")
-    })?;
-    let tenant_id: Uuid = workspace.get("tenant_id");
-    let organization_id: Option<Uuid> = workspace.get("organization_id");
+    let tenant_id = workspace.tenant_id;
+    let organization_id = workspace.organization_id;
 
     if let Some(principal_id) = input.service_account_principal_id {
         return attach_existing_service_account(
@@ -178,8 +169,14 @@ async fn create_service_account_for_client(
         input,
     )
     .await?;
-    persistence::insert_workspace_membership(tx, workspace_id, principal_id, service_account_role)
-        .await?;
+    persistence::insert_workspace_membership(
+        tx,
+        OAuthManagementAuth::user_id(auth),
+        workspace_id,
+        principal_id,
+        service_account_role,
+    )
+    .await?;
 
     Ok(principal_id)
 }

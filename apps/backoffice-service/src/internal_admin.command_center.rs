@@ -5,6 +5,7 @@ use sqlx::{PgPool, Row};
 
 use crate::app::AppState;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_grpc::get_admin_command_center_billing_metrics;
 use crate::error::AppError;
 use axum::extract::State;
 
@@ -45,11 +46,19 @@ async fn command_center_route(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<CommandCenterSnapshot>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_command_center_snapshot(&state.db).await?))
+    let actor_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        load_command_center_snapshot(&state.db, &state.billing_grpc_endpoint, actor_id).await?,
+    ))
 }
 
-async fn load_command_center_snapshot(db: &PgPool) -> Result<CommandCenterSnapshot, AppError> {
+async fn load_command_center_snapshot(
+    db: &PgPool,
+    billing_grpc_endpoint: &str,
+    actor_id: uuid::Uuid,
+) -> Result<CommandCenterSnapshot, AppError> {
+    let billing_metrics =
+        get_admin_command_center_billing_metrics(billing_grpc_endpoint, actor_id).await?;
     let row = sqlx::query(
         r#"
         SELECT
@@ -62,9 +71,8 @@ async fn load_command_center_snapshot(db: &PgPool) -> Result<CommandCenterSnapsh
           ) AS audit_events_24h,
           (
             (SELECT COUNT(*) FROM developer_marketplace_apps WHERE status::text = 'pending') +
-            (SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending') +
-            (SELECT COUNT(*) FROM billing_kyc_profiles WHERE review_status = 'pending')
-          ) AS pending_approval_count,
+            (SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending')
+          ) AS local_pending_approval_count,
           (
             SELECT COUNT(*) FROM enterprise_password_recovery_requests WHERE status = 'pending'
           ) AS critical_pending_approval_count,
@@ -80,32 +88,21 @@ async fn load_command_center_snapshot(db: &PgPool) -> Result<CommandCenterSnapsh
             SELECT COUNT(*) FROM audit_events
             WHERE event_hash IS NULL OR event_hash = '' OR event_hash = 'backfill'
           ) AS audit_hash_anomaly_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_events
-            WHERE status::text IN ('failed', 'rejected')
-          ) AS billing_provider_failures,
-          (
-            SELECT COUNT(*) FROM billing_invoices
-            WHERE due_at < NOW() AND status::text IN ('issued', 'pro_forma')
-          ) AS overdue_invoice_count,
-          (
-            SELECT COUNT(*) FROM billing_payments
-            WHERE status::text IN ('failed', 'disputed')
-          ) AS failed_payment_count,
           (SELECT MAX(created_at) FROM audit_events) AS latest_audit_at
         "#,
     )
     .fetch_one(db)
     .await?;
 
-    let pending_approval_count = row.get("pending_approval_count");
+    let pending_approval_count: i64 = row.get::<i64, _>("local_pending_approval_count")
+        + billing_metrics.pending_kyc_approval_count;
     let critical_pending_approval_count = row.get("critical_pending_approval_count");
     let overdue_approval_count = row.get("overdue_approval_count");
     let open_incident_count = row.get("open_incident_count");
     let audit_hash_anomaly_count = row.get("audit_hash_anomaly_count");
-    let billing_provider_failures = row.get("billing_provider_failures");
-    let overdue_invoice_count = row.get("overdue_invoice_count");
-    let failed_payment_count = row.get("failed_payment_count");
+    let billing_provider_failures = billing_metrics.provider_failure_count;
+    let overdue_invoice_count = billing_metrics.overdue_invoice_count;
+    let failed_payment_count = billing_metrics.failed_payment_count;
     let sla_breach_count = open_incident_count
         + billing_provider_failures
         + overdue_invoice_count

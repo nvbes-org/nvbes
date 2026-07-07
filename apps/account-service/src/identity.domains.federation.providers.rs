@@ -3,7 +3,16 @@ use super::validation::{
     normalize_enterprise_provider_family, normalize_federated_provider_type,
     normalize_registry_status, opt_trimmed, validate_federation_endpoint_url_allowed,
 };
-use crate::http::error::AppError;
+use crate::{
+    domains::{
+        enterprise::grpc::federation::{
+            self as enterprise_federation, ConfigureFederationProviderCommand,
+        },
+        federation::provider_projection,
+    },
+    http::error::AppError,
+};
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -13,46 +22,25 @@ mod validation;
 use validation::validate_provider_configuration;
 
 pub async fn list_identity_providers(
-    db: &PgPool,
+    _db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
 ) -> Result<FederatedIdentityProvidersResponse, AppError> {
-    let rows = sqlx::query_as::<_, FederatedIdentityProviderRecord>(
-        r#"
-        SELECT
-          id,
-          provider_type::text AS provider_type,
-          provider_family,
-          name,
-          client_id,
-          issuer,
-          metadata_url,
-          status,
-          sp_entity_id,
-          attribute_mapping,
-          encryption_cert_pem,
-          require_signed_assertions,
-          require_signed_responses,
-          created_at
-        FROM federated_identity_providers
-        WHERE tenant_id = $1
-        ORDER BY created_at DESC
-        "#,
-    )
-    .bind(tenant_id)
-    .fetch_all(db)
-    .await?;
-
+    let governance =
+        enterprise_federation::get_federation_governance(tenant_id, actor_principal_id).await?;
     Ok(FederatedIdentityProvidersResponse {
-        providers: rows
+        providers: governance
+            .providers
             .into_iter()
-            .map(FederatedIdentityProviderRecord::into_view)
-            .collect(),
+            .map(provider_from_grpc)
+            .collect::<Result<_, _>>()?,
     })
 }
 
 pub async fn create_identity_provider(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     input: CreateFederatedIdentityProviderInput,
     strict_mode: bool,
 ) -> Result<FederatedIdentityProviderResponse, AppError> {
@@ -78,46 +66,27 @@ pub async fn create_identity_provider(
         }
         None => None,
     };
-    let row = sqlx::query_as::<_, FederatedIdentityProviderRecord>(
-        r#"
-        INSERT INTO federated_identity_providers (
-          tenant_id,
-          provider_type,
-          provider_family,
-          name,
-          client_id,
-          issuer,
-          metadata_url,
-          status
-        )
-        VALUES ($1, $2::identity_provider_type, $3, $4, $5, $6, $7, $8)
-        RETURNING
-          id,
-          provider_type::text AS provider_type,
-          provider_family,
-          name,
-          client_id,
-          issuer,
-          metadata_url,
-          status,
-          sp_entity_id,
-          attribute_mapping,
-          encryption_cert_pem,
-          require_signed_assertions,
-          require_signed_responses,
-          created_at
-        "#,
+    let provider = enterprise_federation::configure_federation_provider(
+        tenant_id,
+        actor_principal_id,
+        ConfigureFederationProviderCommand {
+            provider_id: None,
+            provider_type,
+            provider_family,
+            name: input.name.trim().to_string(),
+            client_id: opt_trimmed(input.client_id),
+            issuer,
+            metadata_url,
+            status,
+            sp_entity_id: None,
+            attribute_mapping_json: serde_json::json!({}).to_string(),
+            encryption_cert_pem: None,
+            require_signed_assertions: true,
+            require_signed_responses: true,
+        },
     )
-    .bind(tenant_id)
-    .bind(provider_type)
-    .bind(provider_family)
-    .bind(input.name.trim())
-    .bind(opt_trimmed(input.client_id))
-    .bind(issuer)
-    .bind(metadata_url)
-    .bind(status)
-    .fetch_one(db)
     .await?;
+    let row = provider_projection::upsert_identity_provider_projection(db, &provider).await?;
 
     Ok(FederatedIdentityProviderResponse {
         provider: row.into_view(),
@@ -127,11 +96,13 @@ pub async fn create_identity_provider(
 pub async fn update_identity_provider(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     provider_id: Uuid,
     input: UpdateFederatedIdentityProviderInput,
     strict_mode: bool,
 ) -> Result<FederatedIdentityProviderResponse, AppError> {
-    let current = fetch_identity_provider(db, tenant_id, provider_id).await?;
+    let current =
+        fetch_governance_identity_provider(tenant_id, actor_principal_id, provider_id).await?;
     let provider_type = match input.provider_type {
         Some(value) => normalize_federated_provider_type(&value)?,
         None => current.provider_type.clone(),
@@ -162,46 +133,27 @@ pub async fn update_identity_provider(
         metadata_url.as_deref(),
     )?;
 
-    let row = sqlx::query_as::<_, FederatedIdentityProviderRecord>(
-        r#"
-        UPDATE federated_identity_providers
-        SET provider_type = $3::identity_provider_type,
-            provider_family = $4,
-            name = $5,
-            client_id = $6,
-            issuer = $7,
-            metadata_url = $8,
-            status = $9
-        WHERE id = $1
-          AND tenant_id = $2
-        RETURNING
-          id,
-          provider_type::text AS provider_type,
-          provider_family,
-          name,
-          client_id,
-          issuer,
-          metadata_url,
-          status,
-          sp_entity_id,
-          attribute_mapping,
-          encryption_cert_pem,
-          require_signed_assertions,
-          require_signed_responses,
-          created_at
-        "#,
+    let provider = enterprise_federation::configure_federation_provider(
+        tenant_id,
+        actor_principal_id,
+        ConfigureFederationProviderCommand {
+            provider_id: Some(provider_id),
+            provider_type,
+            provider_family,
+            name,
+            client_id,
+            issuer,
+            metadata_url,
+            status,
+            sp_entity_id: current.sp_entity_id,
+            attribute_mapping_json: current.attribute_mapping.to_string(),
+            encryption_cert_pem: current.encryption_cert_pem,
+            require_signed_assertions: current.require_signed_assertions,
+            require_signed_responses: current.require_signed_responses,
+        },
     )
-    .bind(provider_id)
-    .bind(tenant_id)
-    .bind(provider_type)
-    .bind(provider_family)
-    .bind(name)
-    .bind(client_id)
-    .bind(issuer)
-    .bind(metadata_url)
-    .bind(status)
-    .fetch_one(db)
     .await?;
+    let row = provider_projection::upsert_identity_provider_projection(db, &provider).await?;
 
     Ok(FederatedIdentityProviderResponse {
         provider: row.into_view(),
@@ -211,28 +163,13 @@ pub async fn update_identity_provider(
 pub async fn delete_identity_provider(
     db: &PgPool,
     tenant_id: Uuid,
+    actor_principal_id: Uuid,
     provider_id: Uuid,
 ) -> Result<(), AppError> {
-    let deleted = sqlx::query(
-        r#"
-        DELETE FROM federated_identity_providers
-        WHERE id = $1
-          AND tenant_id = $2
-        "#,
-    )
-    .bind(provider_id)
-    .bind(tenant_id)
-    .execute(db)
-    .await?
-    .rows_affected();
-
-    if deleted == 0 {
-        return Err(AppError::not_found(
-            crate::domains::federation::contract::PROVIDER_NOT_FOUND,
-            "Federated identity provider not found.",
-        ));
-    }
-
+    fetch_governance_identity_provider(tenant_id, actor_principal_id, provider_id).await?;
+    enterprise_federation::delete_federation_provider(tenant_id, actor_principal_id, provider_id)
+        .await?;
+    provider_projection::delete_identity_provider_projection(db, tenant_id, provider_id).await?;
     Ok(())
 }
 
@@ -274,4 +211,88 @@ pub async fn fetch_identity_provider(
             "Federated identity provider not found.",
         )
     })
+}
+
+async fn fetch_governance_identity_provider(
+    tenant_id: Uuid,
+    actor_principal_id: Uuid,
+    provider_id: Uuid,
+) -> Result<FederatedIdentityProviderView, AppError> {
+    let governance =
+        enterprise_federation::get_federation_governance(tenant_id, actor_principal_id).await?;
+    governance
+        .providers
+        .into_iter()
+        .find(|provider| provider.provider_id == provider_id.to_string())
+        .map(provider_from_grpc)
+        .transpose()?
+        .ok_or_else(|| {
+            AppError::not_found(
+                crate::domains::federation::contract::PROVIDER_NOT_FOUND,
+                "Federated identity provider not found.",
+            )
+        })
+}
+
+fn provider_from_grpc(
+    provider: crate::grpc_pb::nvbes::enterprise::v1::FederationProvider,
+) -> Result<FederatedIdentityProviderView, AppError> {
+    Ok(FederatedIdentityProviderView {
+        id: parse_uuid(&provider.provider_id, "provider_id")?,
+        provider_type: provider.protocol,
+        provider_family: provider.provider_family,
+        name: provider.name,
+        client_id: optional_text(provider.client_id),
+        issuer: optional_text(provider.issuer),
+        metadata_url: optional_text(provider.metadata_url),
+        status: provider.status,
+        sp_entity_id: optional_text(provider.sp_entity_id),
+        attribute_mapping: parse_json(&provider.attribute_mapping_json)?,
+        encryption_cert_pem: optional_text(provider.encryption_cert_pem),
+        require_signed_assertions: provider.require_signed_assertions,
+        require_signed_responses: provider.require_signed_responses,
+        created_at: parse_time(&provider.created_at, "created_at")?,
+    })
+}
+
+fn parse_uuid(value: &str, field: &str) -> Result<Uuid, AppError> {
+    Uuid::parse_str(value).map_err(|error| {
+        AppError::internal(
+            "enterprise_grpc_invalid_federation_governance",
+            format!("Enterprise gRPC returned invalid {field}: {error}"),
+        )
+    })
+}
+
+fn parse_time(value: &str, field: &str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|value| value.with_timezone(&Utc))
+        .map_err(|error| {
+            AppError::internal(
+                "enterprise_grpc_invalid_federation_governance",
+                format!("Enterprise gRPC returned invalid {field}: {error}"),
+            )
+        })
+}
+
+fn parse_json(value: &str) -> Result<serde_json::Value, AppError> {
+    if value.trim().is_empty() {
+        Ok(serde_json::json!({}))
+    } else {
+        serde_json::from_str(value).map_err(|error| {
+            AppError::internal(
+                "enterprise_grpc_invalid_federation_governance",
+                format!("Enterprise gRPC returned invalid provider attribute mapping: {error}"),
+            )
+        })
+    }
+}
+
+fn optional_text(value: String) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        None
+    } else {
+        Some(value.to_string())
+    }
 }

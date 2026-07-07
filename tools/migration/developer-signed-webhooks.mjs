@@ -14,7 +14,7 @@ const sources = {
 	publicRoutes: "apps/account-service/src/identity.domains.developer.webhooks.routes.rs",
 	consoleRoutes: "apps/account-service/src/identity.domains.developer.routes.rs",
 	delivery: "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
-	replayRoutes: "apps/account-service/src/identity.domains.developer.routes.webhooks.rs",
+	replayRoutes: "apps/developer-service/src/developer.grpc.webhooks.rs",
 	portalMigration: "apps/account-service/migrations/0011_developer_portal.sql",
 	consoleMigration: "apps/account-service/migrations/0008_developer_console.sql",
 	developerTests: "apps/account-service/src/identity.domains.developer.tests.webhooks.rs",
@@ -88,17 +88,17 @@ function buildChecks() {
 		textCheck("delivery-signature-test", sources.delivery, "Unit test proves signature binding", "developer_webhook_signature_binds_event_timestamp_and_payload"),
 		textCheck("delivery-window-test", sources.delivery, "Unit test proves replay window rejection", "developer_webhook_signature_timestamp_rejects_replay_window"),
 		textCheck("delivery-replay-test", sources.delivery, "Unit test proves replay idempotency guard", "developer_webhook_replay_decision_is_idempotency_guard"),
-		textCheck("replay-status-guard", sources.replayRoutes, "Replay route applies replayability guard", "ensure_replayable_delivery_status"),
+		textCheck("replay-status-guard", sources.replayRoutes, "Replay service applies replayability guard", "ensure_replayable(original.get(\"status\"))"),
 		textCheck("replay-conflict", sources.replayRoutes, "Replay insert is idempotent for the original delivery", "ON CONFLICT (tenant_id, replayed_from_delivery_id)"),
 		textCheck("portal-replay-index", sources.portalMigration, "Portal schema prevents duplicate replays per original delivery", "idx_developer_webhook_deliveries_replay_once"),
 		textCheck("console-replay-index", sources.consoleMigration, "Console schema prevents duplicate replays per original delivery", "idx_developer_webhook_deliveries_replay_once"),
 		textCheck("backend-replay-route-test", sources.developerTests, "Backend route test covers replay response shape", "webhook_replay_route"),
-		textCheck("console-web-list", sources.developerApi, "Developer web lists console webhook endpoints", "listDeveloperConsoleWebhooks"),
-		textCheck("console-web-deliveries", sources.developerApi, "Developer web lists delivery attempts", "listDeveloperConsoleWebhookDeliveries"),
-		textCheck("console-web-replay", sources.developerApi, "Developer web calls replay endpoint", "replayDeveloperConsoleWebhookDelivery"),
-		textCheck("console-web-schema", sources.developerSchemas, "Developer web validates webhook delivery status", "DeveloperWebhookDeliverySchema"),
-		textCheck("console-web-helper", sources.webhookHelpers, "Developer web gates replay actions by delivery status", "canReplayWebhookDelivery"),
-		textCheck("console-web-helper-test", sources.consoleWebTests, "Developer web test blocks delivered delivery replay", "blocks delivered deliveries"),
+		textCheck("console-web-list", sources.developerApi, "Console web lists console webhook endpoints", "listDeveloperConsoleWebhooks"),
+		textCheck("console-web-deliveries", sources.developerApi, "Console web lists delivery attempts", "listDeveloperConsoleWebhookDeliveries"),
+		textCheck("console-web-replay", sources.developerApi, "Console web calls replay endpoint", "replayDeveloperConsoleWebhookDelivery"),
+		textCheck("console-web-schema", sources.developerSchemas, "Console web validates webhook delivery status", "DeveloperWebhookDeliverySchema"),
+		textCheck("console-web-helper", sources.webhookHelpers, "Console web gates replay actions by delivery status", "canReplayWebhookDelivery"),
+		textCheck("console-web-helper-test", sources.consoleWebTests, "Console web test blocks delivered delivery replay", "blocks delivered deliveries"),
 	];
 }
 
@@ -131,7 +131,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/developer-signed-webhooks.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/developer-signed-webhooks.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -191,7 +191,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-developer-signed-webhooks",
-		"tools/migration/developer-signed-webhooks.mjs --write",
+		"node tools/migration/developer-signed-webhooks.mjs --write",
 		"```",
 		"",
 	);
@@ -203,7 +203,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/developer-signed-webhooks.mjs --write",
+		command: "node tools/migration/developer-signed-webhooks.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-account-service developer_webhook --locked",
@@ -235,8 +235,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/developer-signed-webhooks.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/developer-signed-webhooks.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/developer-signed-webhooks.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/developer-signed-webhooks.mjs --write`);
 }
 
 if (errors.length > 0) {

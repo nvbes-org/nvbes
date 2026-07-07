@@ -36,6 +36,6 @@ export function serializeReadinessMarkdown(report) {
 			lines.push(`- ${blocker.area}: ${blocker.blocking_items} blocking item(s) in \`${blocker.source}\`; proof: \`${blocker.proof}\``);
 		}
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-readiness-report", "tools/migration/readiness-report.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-readiness-report", "node tools/migration/readiness-report.mjs --write", "```", "");
 	return `${lines.join("\n")}`;
 }

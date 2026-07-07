@@ -37,14 +37,14 @@
 | Core test limits security admin to audit/security views | passed | `libs/rust/core/src/authz.policy.tests.rs` |
 | Core test limits billing admin away from audit | passed | `libs/rust/core/src/authz.policy.tests.rs` |
 | Core test keeps viewer read-only | passed | `libs/rust/core/src/authz.policy.tests.rs` |
-| Identity API authorization calls the shared role policy | passed | `apps/identity-api/src/identity.domains.authz.service.rs` |
-| Denied workspace actions are audited before returning an error | passed | `apps/identity-api/src/identity.domains.authz.service.rs` |
-| Permission denied decisions insert an audit event | passed | `apps/identity-api/src/identity.domains.authz.db.rs` |
-| Permission denied audit uses stable action literal | passed | `apps/identity-api/src/identity.domains.authz.db.rs` |
-| Permission denied audit metadata is generated through a tested helper | passed | `apps/identity-api/src/identity.domains.authz.db.rs` |
-| Permission denied audit metadata has a unit test | passed | `apps/identity-api/src/identity.domains.authz.db.rs` |
-| Authz decision endpoint is routed | passed | `apps/identity-api/src/identity.domains.authz.routes.rs` |
-| Authz decision endpoint is present in OpenAPI | passed | `apps/identity-api/openapi.json` |
+| Account Service authorization calls the shared role policy | passed | `apps/account-service/src/identity.domains.authz.service.rs` |
+| Denied workspace actions are audited before returning an error | passed | `apps/account-service/src/identity.domains.authz.service.rs` |
+| Permission denied decisions insert an audit event | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit uses stable action literal | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit metadata is generated through a tested helper | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit metadata has a unit test | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
+| Authz decision endpoint is routed | passed | `apps/account-service/src/identity.domains.authz.routes.rs` |
+| Authz decision endpoint is present in OpenAPI | passed | `apps/account-service/openapi.json` |
 
 ## Decision
 
@@ -54,5 +54,5 @@ Workspace/Authz membership role parity evidence is covered for repository cutove
 
 ```bash
 pnpm check:migration-workspace-membership-roles
-tools/migration/workspace-membership-roles.mjs --write
+node tools/migration/workspace-membership-roles.mjs --write
 ```

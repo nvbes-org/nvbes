@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/execution-backlog.mjs --write",
-    "strict_completion_command": "tools/migration/execution-backlog.mjs --strict"
+    "command": "node tools/migration/execution-backlog.mjs --write",
+    "strict_completion_command": "node tools/migration/execution-backlog.mjs --strict"
   },
   "status": {
-    "open_tasks": 26,
-    "blocking_items": 60,
+    "open_tasks": 40,
+    "blocking_items": 178,
     "readiness": "no-go",
     "completion": "incomplete",
     "live_evidence": "no-go",
@@ -139,10 +139,22 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "les backups et rollbacks sont testes"
+        "backup/restore 11 pending rows and 11 no-go decisions; rollback 6 blocking steps, 7 empty metadata rows, 1 no-go decision"
       ],
       "next_action": "les backups et rollbacks sont testes",
       "proof": "pnpm check:migration-backup-restore -- --strict && pnpm check:migration-rollback-report -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-communication-observability",
+      "owner_role": "Migration lead",
+      "source": "runbook:Communication et observabilite",
+      "blocking_items": 1,
+      "blocking_details": [
+        "communication 4 pending audience rows, 5 pending approval rows, 6 no go decisions; observability 13 pending rows, 13 no go decisions"
+      ],
+      "next_action": "les messages client, support, dashboards, alertes et signaux observabilite sont prets et signes",
+      "proof": "pnpm check:migration-communication -- --strict && pnpm check:migration-observability -- --strict",
       "status": "blocked"
     },
     {
@@ -151,10 +163,22 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "tous les parcours critiques ont une implementation nouvelle"
+        "smoke manifest 10 pending journeys, 5 pending runtime evidence rows, 10 no-go decisions"
       ],
       "next_action": "tous les parcours critiques ont une implementation nouvelle",
       "proof": "pnpm check:migration-parity -- --strict && pnpm check:migration-smoke-tests -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-cutover-checklist",
+      "owner_role": "Migration lead",
+      "source": "runbook:Artefacts obligatoires",
+      "blocking_items": 1,
+      "blocking_details": [
+        "cutover checklist 18 pending rows, 0 blocking rows"
+      ],
+      "next_action": "la checklist de cutover est passee ou acceptee sans ligne pending, failed ou blocking",
+      "proof": "pnpm check:migration-cutover-checklist -- --strict",
       "status": "blocked"
     },
     {
@@ -163,10 +187,10 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "toutes les donnees migrables sont reconciliees"
+        "template/not-run: 6 blocking domains, decision no-go"
       ],
       "next_action": "toutes les donnees migrables sont reconciliees",
-      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "proof": "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
       "status": "blocked"
     },
     {
@@ -175,10 +199,10 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "chaque gate a une preuve attachee"
+        "5 gate(s) pending/no-go: G4 Frontends, G5 Infra, G6 Repetitions, G7 Cutover, G8 Decommission"
       ],
       "next_action": "chaque gate a une preuve attachee",
-      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "proof": "node tools/migration/gate-evidence.mjs --strict",
       "status": "blocked"
     },
     {
@@ -187,10 +211,10 @@
       "source": "runbook:Validation finale",
       "blocking_items": 1,
       "blocking_details": [
-        "tous les jobs legacy sont arretes ou supprimes"
+        "legacy jobs: decommission has 16 pending rows and 16 no-go decisions"
       ],
       "next_action": "tous les jobs legacy sont arretes ou supprimes",
-      "proof": "tools/migration/job-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "proof": "node tools/migration/job-map.mjs --strict && pnpm check:migration-decommission -- --strict",
       "status": "blocked"
     },
     {
@@ -199,10 +223,10 @@
       "source": "runbook:Validation finale",
       "blocking_items": 1,
       "blocking_details": [
-        "tous les secrets legacy inutiles sont revoques"
+        "legacy secrets: decommission has 16 pending rows and 16 no-go decisions"
       ],
       "next_action": "tous les secrets legacy inutiles sont revoques",
-      "proof": "tools/migration/secret-map.mjs --strict && pnpm check:migration-decommission -- --strict",
+      "proof": "node tools/migration/secret-map.mjs --strict && pnpm check:migration-decommission -- --strict",
       "status": "blocked"
     },
     {
@@ -211,10 +235,10 @@
       "source": "runbook:Statut Operationnel",
       "blocking_items": 1,
       "blocking_details": [
-        "les preuves live de repetition, rollback, reconciliation, cutover et decommission sont attachees et acceptees"
+        "live evidence no-go with 6 missing requirements and 24 missing evidence items"
       ],
       "next_action": "les preuves live de repetition, rollback, reconciliation, cutover et decommission sont attachees et acceptees",
-      "proof": "tools/migration/live-evidence-instances.mjs --strict",
+      "proof": "node tools/migration/live-evidence-instances.mjs --strict",
       "status": "blocked"
     },
     {
@@ -223,10 +247,10 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "aucun composant runtime legacy n'est requis"
+        "legacy runtime: decommission has 16 pending rows and 16 no-go decisions"
       ],
       "next_action": "aucun composant runtime legacy n'est requis",
-      "proof": "pnpm check:migration-decommission -- --strict",
+      "proof": "pnpm check:product-boundaries && pnpm check:migration-decommission -- --strict",
       "status": "blocked"
     },
     {
@@ -235,10 +259,22 @@
       "source": "runbook:Validation finale",
       "blocking_items": 1,
       "blocking_details": [
-        "aucun backlog V2 ne contient une dette necessaire au bon fonctionnement V1"
+        "owner_acceptance missing; 2 V1-required finding(s): Final decommission requires a clean V2 backlog decision.; The V2 debt register still has one V1-required row open."
       ],
       "next_action": "aucun backlog V2 ne contient une dette necessaire au bon fonctionnement V1",
-      "proof": "pnpm check:migration-v2-debt -- --strict && tools/migration/completion-audit.mjs --strict",
+      "proof": "pnpm check:migration-v2-debt -- --strict && node tools/migration/completion-audit.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-owner-signoffs",
+      "owner_role": "Migration lead",
+      "source": "runbook:Artefacts obligatoires",
+      "blocking_items": 1,
+      "blocking_details": [
+        "owner signoffs 31 pending rows, 31 no go decisions"
+      ],
+      "next_action": "les owners ont signe les decisions de migration, acceptation, rollback et support",
+      "proof": "pnpm check:migration-owner-signoffs -- --strict",
       "status": "blocked"
     },
     {
@@ -247,10 +283,10 @@
       "source": "blueprint:Phases de Reconstruction",
       "blocking_items": 1,
       "blocking_details": [
-        "chaque phase de reconstruction a owner, preuve et decision go"
+        "3 phase(s) pending/no-go: P11 Repetitions migration, P12 Big Bang cutover, P13 Decommission"
       ],
       "next_action": "chaque phase de reconstruction a owner, preuve et decision go",
-      "proof": "tools/migration/phase-ledger.mjs --strict",
+      "proof": "node tools/migration/phase-ledger.mjs --strict",
       "status": "blocked"
     },
     {
@@ -259,10 +295,34 @@
       "source": "runbook:Validation finale",
       "blocking_items": 1,
       "blocking_details": [
-        "post-migration-audit.md approuve par Migration lead, Security lead et owners produit"
+        "post-migration audit 5 pending sign-offs and 7 pending audit items"
       ],
       "next_action": "post-migration-audit.md approuve par Migration lead, Security lead et owners produit",
       "proof": "pnpm check:migration-post-migration-audit -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-rehearsal-evidence",
+      "owner_role": "Migration lead",
+      "source": "runbook:P11 Repetitions migration",
+      "blocking_items": 1,
+      "blocking_details": [
+        "rehearsals 3 pending run rows, 3 run no go decisions, 5 stability no go decisions"
+      ],
+      "next_action": "les trois repetitions de migration sont executees, stables et signees",
+      "proof": "pnpm check:migration-rehearsals -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "complete-rejects-reconciliation-journal",
+      "owner_role": "Migration lead",
+      "source": "runbook:Validation cutover",
+      "blocking_items": 1,
+      "blocking_details": [
+        "rejects 1 blocking reject rows, 1 no go decisions; reconciliation report 6 blocking domain rows, 1 metadata no go decisions; cutover journal 1 metadata no go decisions, 1 timeline no go decisions"
+      ],
+      "next_action": "les rejects, la reconciliation executee et le journal de cutover sont resolus et signes",
+      "proof": "pnpm check:migration-rejects -- --strict && pnpm check:migration-reconciliation-report -- --strict && pnpm check:migration-cutover-journal -- --strict",
       "status": "blocked"
     },
     {
@@ -271,10 +331,10 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope"
+        "1 unresolved risk(s): rollback-lent pending"
       ],
       "next_action": "chaque risque bloquant a ete ferme, accepte par owner, ou retire du scope",
-      "proof": "tools/migration/risk-register.mjs --strict",
+      "proof": "node tools/migration/risk-register.mjs --strict",
       "status": "blocked"
     },
     {
@@ -283,39 +343,93 @@
       "source": "blueprint:Criteres de Reussite",
       "blocking_items": 1,
       "blocking_details": [
-        "le runbook de cutover peut etre execute sans decision implicite"
+        "live evidence no-go with 6 missing requirements and 24 missing evidence items; 5 gate(s) pending/no-go: G4 Frontends, G5 Infra, G6 Repetitions, G7 Cutover, G8 Decommission; 3 phase(s) pending/no-go: P11 Repetitions migration, P12 Big Bang cutover, P13 Decommission; template/not-run: 6 blocking domains, decision no-go"
       ],
       "next_action": "le runbook de cutover peut etre execute sans decision implicite",
       "proof": "pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json",
       "status": "blocked"
     },
     {
-      "id": "resolve-developer_oauth_tokens",
+      "id": "complete-snapshot-release-freeze",
       "owner_role": "Migration lead",
-      "source": "docs/migration/developer-oauth-tokens.generated.json",
-      "blocking_items": 2,
+      "source": "runbook:Preparation cutover",
+      "blocking_items": 1,
       "blocking_details": [
-        "developer_oauth_tokens unresolved item 1/2",
-        "developer_oauth_tokens unresolved item 2/2"
+        "snapshots 1 restore no go decisions; release freeze 13 pending rows, 13 no go decisions"
       ],
-      "next_action": "resolve and sign developer_oauth_tokens decisions",
-      "proof": "pnpm check:migration-precutover",
+      "next_action": "les snapshots, restores et decisions de release freeze sont prets pour la fenetre finale",
+      "proof": "pnpm check:migration-snapshots -- --strict && pnpm check:migration-release-freeze -- --strict",
       "status": "blocked"
     },
     {
-      "id": "resolve-gate_decisions",
+      "id": "resolve-communication",
+      "owner_role": "Support lead",
+      "source": "docs/migration/communication-plan.md",
+      "blocking_items": 15,
+      "blocking_details": [
+        "Document: customers / status page and email (column:5=pending)",
+        "Document: internal responders / incident channel (column:5=pending)",
+        "Document: product owners / cutover channel (column:5=pending)",
+        "Document: support team / support brief (column:5=pending)",
+        "Audiences: maintenance announcement / cutover scheduled (column:5=no-go)",
+        "Audiences: maintenance started / T-0 read-only enabled (column:5=no-go)",
+        "Audiences: progress update / checkpoint delay or milestone (column:5=no-go)",
+        "Audiences: rollback notice / rollback decision made (column:5=no-go)",
+        "Audiences: service restored / smoke and reconciliation passed (column:5=no-go)",
+        "Audiences: post-cutover hypercare / service restored (column:5=no-go)",
+        "Message Templates: status page ready / verified status page URL, maintenance draft link, restoration draft link and owner approval record (column:3=pending)",
+        "Message Templates: customer impact described / approved customer impact statement with affected products, read-only window, expected duration and support contact route (column:3=pending)",
+        "Message Templates: rollback message ready / approved rollback message artifact with trigger criteria, incident route, customer-facing wording and migration lead sign-off before cutover (column:3=pending)",
+        "Message Templates: support escalation route / staffed support escalation route with on-call rota, incident channel URL, tested handoff record and acknowledgement from support lead (column:3=pending)",
+        "Message Templates: final success criteria / signed success criteria record requiring smoke-test result, reconciliation report, observability snapshot and cutover journal entry (column:3=pending)"
+      ],
+      "next_action": "resolve and sign communication decisions",
+      "proof": "pnpm check:migration-communication -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-cutover_checklist",
       "owner_role": "Migration lead",
-      "source": "docs/migration/gate-evidence.generated.json",
+      "source": "docs/migration/cutover-checklist.md",
+      "blocking_items": 18,
+      "blocking_details": [
+        "Document: commit target frozen / migration lead (column:4=pending)",
+        "Document: images OCI immutable / infra lead (column:4=pending)",
+        "Document: migrations SQL frozen / data lead (column:4=pending)",
+        "Document: latest rehearsal accepted / migration lead (column:4=pending)",
+        "Document: rollback rehearsal accepted / infra lead (column:4=pending)",
+        "Document: maintenance announced / support lead (column:4=pending)",
+        "Document: secret inventory complete / security lead (column:4=pending)",
+        "Document: dashboards open / infra lead (column:4=pending)",
+        "Document: incident channel open / migration lead (column:4=pending)",
+        "Pre-Cutover: T-0 / enable maintenance and read-only (column:5=pending)",
+        "Pre-Cutover: T+15m / snapshot final source data (column:5=pending)",
+        "Pre-Cutover: T+30m / export final source data (column:5=pending)",
+        "Pre-Cutover: T+60m / transform and import (column:5=pending)",
+        "Pre-Cutover: T+90m / final reconciliation (column:5=pending)",
+        "Pre-Cutover: T+105m / switch DNS/edge (column:5=pending)",
+        "Pre-Cutover: T+120m / start new workers (column:5=pending)",
+        "Pre-Cutover: T+135m / run smoke tests (column:5=pending)",
+        "Pre-Cutover: T+180m / go/no-go final (column:5=pending)"
+      ],
+      "next_action": "resolve and sign cutover_checklist decisions",
+      "proof": "pnpm check:migration-cutover-checklist -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-cutover_journal",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/cutover-journal.md",
       "blocking_items": 5,
       "blocking_details": [
-        "gate_decisions unresolved item 1/5",
-        "gate_decisions unresolved item 2/5",
-        "gate_decisions unresolved item 3/5",
-        "gate_decisions unresolved item 4/5",
-        "gate_decisions unresolved item 5/5"
+        "Document: environment / not run (environment=not run)",
+        "Document: cutover window / not scheduled (cutover window=not scheduled)",
+        "Document: decision / no-go (decision=no-go)",
+        "Run Metadata: not run / preparation (column:7=no-go)",
+        "Timeline: not run / none (column:7=no-go)"
       ],
-      "next_action": "resolve and sign gate_decisions decisions",
-      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "next_action": "resolve and sign cutover_journal decisions",
+      "proof": "pnpm check:migration-cutover-journal -- --strict",
       "status": "blocked"
     },
     {
@@ -324,14 +438,14 @@
       "source": "docs/migration/gate-evidence.generated.json",
       "blocking_items": 5,
       "blocking_details": [
-        "gates unresolved item 1/5",
-        "gates unresolved item 2/5",
-        "gates unresolved item 3/5",
-        "gates unresolved item 4/5",
-        "gates unresolved item 5/5"
+        "G4 Frontends: gate pending/no-go (Product leads) - Pending frontend sign-off; requires accepted g4-frontend-signoff live evidence before gate approval.",
+        "G5 Infra: gate pending/no-go (Infra lead) - Pending infra sign-off; requires accepted g5-infra-signoff live restore and rollback evidence before gate approval.",
+        "G6 Repetitions: gate pending/no-go (Data lead) - Pending migration rehearsals; requires accepted p11-rehearsals live evidence before gate approval.",
+        "G7 Cutover: gate pending/no-go (Migration lead) - Pending production cutover; requires accepted p12-cutover and final reconciliation live evidence before gate approval.",
+        "G8 Decommission: gate pending/no-go (Infra lead) - Pending decommission; requires accepted p13-decommission live evidence before gate approval."
       ],
       "next_action": "resolve and sign gates decisions",
-      "proof": "tools/migration/gate-evidence.mjs --strict",
+      "proof": "node tools/migration/gate-evidence.mjs --strict",
       "status": "blocked"
     },
     {
@@ -340,15 +454,81 @@
       "source": "docs/migration/live-evidence-instances.generated.json",
       "blocking_items": 6,
       "blocking_details": [
-        "live_evidence unresolved item 1/6",
-        "live_evidence unresolved item 2/6",
-        "live_evidence unresolved item 3/6",
-        "live_evidence unresolved item 4/6",
-        "live_evidence unresolved item 5/6",
-        "live_evidence unresolved item 6/6"
+        "g4-frontend-signoff: frontend_signoff:0/1, web_check:0/1, smoke_test:0/1",
+        "g5-infra-signoff: infra_deploy:0/1, infra_deploy@staging, infra_restore:0/1, infra_restore@staging, rollback:0/1, rollback@staging",
+        "p11-rehearsals: rehearsal:0/3, rehearsal@local, rehearsal@staging, rehearsal@production, reconciliation:0/2, rollback:0/1, reject_review:0/1",
+        "p12-cutover: cutover:0/1, cutover@production, reconciliation:0/1, reconciliation@production",
+        "p13-decommission: decommission:0/1, decommission@production",
+        "final-reconciliation: reconciliation:0/1, reconciliation@production"
       ],
       "next_action": "resolve and sign live_evidence decisions",
-      "proof": "tools/migration/live-evidence-instances.mjs --strict",
+      "proof": "node tools/migration/live-evidence-instances.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-observability",
+      "owner_role": "Infra lead",
+      "source": "docs/migration/observability-readiness.md",
+      "blocking_items": 13,
+      "blocking_details": [
+        "Document: API health / errors, latency, saturation (column:6=pending, column:7=no-go)",
+        "Document: auth health / login, MFA, token refresh (column:6=pending, column:7=no-go)",
+        "Document: database health / connections, locks, replication, migrations (column:6=pending, column:7=no-go)",
+        "Document: queue health / lag, DLQ, worker failures (column:6=pending, column:7=no-go)",
+        "Document: worker health / job success, retry, idempotency (column:6=pending, column:7=no-go)",
+        "Document: edge health / DNS, TLS, routing, status codes (column:6=pending, column:7=no-go)",
+        "Document: billing health / entitlements, ledger, webhook replay (column:6=pending, column:7=no-go)",
+        "Document: audit health / append-only writes and export visibility (column:6=pending, column:7=no-go)",
+        "Critical Signals: dashboard set / dashboard URLs or exported dashboard artifact covering API, database, queues, workers, edge, billing and audit panels with owner review record (column:3=pending, column:4=no-go)",
+        "Critical Signals: alert test / fired alert artifact, routed incident URL, notification delivery log and acknowledged owner record for every critical alert path (column:3=pending, column:4=no-go)",
+        "Critical Signals: log trace sample / log and trace sample artifacts for every smoke journey, including request ID, correlation ID, tenant ID where applicable and linked trace URL (column:3=pending, column:4=no-go)",
+        "Critical Signals: SLO snapshot / SLO snapshot report with API error rate, p95/p99 latency, queue lag, worker health, edge status codes, billing replay drift and audit write success metrics (column:3=pending, column:4=no-go)",
+        "Critical Signals: incident channel / staffed incident channel URL, escalation route artifact, on-call owner acknowledgement and support handoff record for the cutover window (column:3=pending, column:4=no-go)"
+      ],
+      "next_action": "resolve and sign observability decisions",
+      "proof": "pnpm check:migration-observability -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-owner_signoffs",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/owner-signoff-matrix.md",
+      "blocking_items": 31,
+      "blocking_details": [
+        "Document: Migration lead / sequence, journal, final go/no-go (column:6=pending, column:7=no-go)",
+        "Document: Data lead / snapshots, export, import, reconciliation (column:6=pending, column:7=no-go)",
+        "Document: Infra lead / deploy, DNS, backups, rollback (column:6=pending, column:7=no-go)",
+        "Document: Security lead / secrets, access, audit, OSS export (column:6=pending, column:7=no-go)",
+        "Document: Support lead / maintenance, status page, hypercare (column:6=pending, column:7=no-go)",
+        "Document: Identity owner / auth, sessions, MFA, OAuth (column:6=pending, column:7=no-go)",
+        "Document: Workspace/Authz owner / tenants, roles, policies (column:6=pending, column:7=no-go)",
+        "Document: Drive owner / metadata, storage, sharing, quotas (column:6=pending, column:7=no-go)",
+        "Document: Billing/Usage owner / plans, entitlements, ledger, webhooks (column:6=pending, column:7=no-go)",
+        "Document: Audit/Privacy owner / audit log, exports, deletion, retention (column:6=pending, column:7=no-go)",
+        "Document: Developer Platform owner / apps, tokens, webhooks, SDKs (column:6=pending, column:7=no-go)",
+        "Document: Cloud/Internal owner / provisioning, support, operations (column:6=pending, column:7=no-go)",
+        "Document: Contracts owner / OpenAPI, Protobuf, event schemas (column:6=pending, column:7=no-go)",
+        "Document: OSS export owner / public allowlist and private-doc exclusion (column:6=pending, column:7=no-go)",
+        "Required Owners: routes and endpoints / Contracts owner (column:4=pending, column:5=no-go)",
+        "Required Owners: source tables / Data lead (column:4=pending, column:5=no-go)",
+        "Required Owners: secrets / Security lead (column:4=pending, column:5=no-go)",
+        "Required Owners: jobs and workers / Infra lead (column:4=pending, column:5=no-go)",
+        "Required Owners: infra resources / Infra lead (column:4=pending, column:5=no-go)",
+        "Required Owners: blocking risks / Migration lead (column:4=pending, column:5=no-go)",
+        "Required Owners: rejected data / Data lead (column:4=pending, column:5=no-go)",
+        "Required Owners: rollback path / Infra lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G0 Freeze / Migration lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G1 Fondation / Migration lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G2 Primitives / Migration lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G3 Domaines / Product leads (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G4 Frontends / Product leads (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G5 Infra / Infra lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G6 Repetitions / Data lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G7 Cutover / Migration lead (column:4=pending, column:5=no-go)",
+        "Source Class Sign-Offs: G8 Decommission / Infra lead (column:4=pending, column:5=no-go)"
+      ],
+      "next_action": "resolve and sign owner_signoffs decisions",
+      "proof": "pnpm check:migration-owner-signoffs -- --strict",
       "status": "blocked"
     },
     {
@@ -357,12 +537,35 @@
       "source": "docs/migration/phase-ledger.generated.json",
       "blocking_items": 3,
       "blocking_details": [
-        "phases unresolved item 1/3",
-        "phases unresolved item 2/3",
-        "phases unresolved item 3/3"
+        "P11 Repetitions migration: pending/no-go (Data lead)",
+        "P12 Big Bang cutover: pending/no-go (Migration lead)",
+        "P13 Decommission: pending/no-go (Infra lead)"
       ],
       "next_action": "resolve and sign phases decisions",
-      "proof": "tools/migration/phase-ledger.mjs --strict",
+      "proof": "node tools/migration/phase-ledger.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-reconciliation_report",
+      "owner_role": "Data lead",
+      "source": "docs/migration/reconciliation-report.md",
+      "blocking_items": 12,
+      "blocking_details": [
+        "Document: environment / none (environment=none)",
+        "Document: snapshot_id / none (snapshot_id=none)",
+        "Document: target_commit / none (target_commit=none)",
+        "Document: started_at / none (started_at=none)",
+        "Document: completed_at / none (completed_at=none)",
+        "Document: decision / no-go until populated (decision=no-go until populated)",
+        "Run Metadata: Identity / source/target account, credential, session and MFA row counts with zero unexplained delta (column:6=blocking)",
+        "Run Metadata: Workspace/Authz / source/target tenant, membership, role and policy row counts with zero unexplained delta (column:6=blocking)",
+        "Run Metadata: Drive / source/target metadata, folder, object, share and quota row counts with zero unexplained delta (column:6=blocking)",
+        "Run Metadata: Billing/Usage / source/target plan, entitlement, usage ledger, invoice and webhook row counts with zero unexplained delta (column:6=blocking)",
+        "Run Metadata: Audit/Privacy / source/target audit event, export, deletion and retention row counts with zero unexplained delta (column:6=blocking)",
+        "Run Metadata: Developer Platform / source/target app, token, OAuth client, webhook and SDK registry row counts with zero unexplained delta (column:6=blocking)"
+      ],
+      "next_action": "resolve and sign reconciliation_report decisions",
+      "proof": "pnpm check:migration-reconciliation-report -- --strict",
       "status": "blocked"
     },
     {
@@ -371,10 +574,65 @@
       "source": "docs/migration/reconciliation.template.json",
       "blocking_items": 1,
       "blocking_details": [
-        "reconciliation_template unresolved item 1/1"
+        "template/not-run: 6 blocking domains, decision no-go"
       ],
       "next_action": "resolve and sign reconciliation_template decisions",
-      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "proof": "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-rehearsals",
+      "owner_role": "Data lead",
+      "source": "docs/migration/rehearsal-ledger.md",
+      "blocking_items": 8,
+      "blocking_details": [
+        "Document: R1 / local (column:6=pending, column:7=no-go)",
+        "Document: R2 / staging anonymized (column:6=pending, column:7=no-go)",
+        "Document: R3 / production snapshot dress rehearsal (column:6=pending, column:7=no-go)",
+        "Required Runs: blocking rejects / zero or owner accepted (column:3=reconciliation report result proving zero blocking rejects or owner acceptance record, column:4=no-go)",
+        "Required Runs: row count deltas / zero or owner accepted (column:3=reconciliation row-count delta report with owner acceptance record for any non-zero delta, column:4=no-go)",
+        "Required Runs: checksum mismatch / zero or owner accepted (column:3=checksum comparison report with owner acceptance record for any mismatch, column:4=no-go)",
+        "Required Runs: rollback duration / inside announced window (column:3=rollback duration result and command output log, column:4=no-go)",
+        "Required Runs: manual actions / all added to cutover checklist (column:3=cutover checklist diff and manual-action owner record, column:4=no-go)"
+      ],
+      "next_action": "resolve and sign rehearsals decisions",
+      "proof": "pnpm check:migration-rehearsals -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-rejects",
+      "owner_role": "Data lead",
+      "source": "docs/migration/rejects.md",
+      "blocking_items": 1,
+      "blocking_details": [
+        "Document: none / none (column:9=no-go)"
+      ],
+      "next_action": "resolve and sign rejects decisions",
+      "proof": "pnpm check:migration-rejects -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-release_freeze",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/release-freeze-manifest.md",
+      "blocking_items": 13,
+      "blocking_details": [
+        "Document: target commit / Migration lead (column:4=pending, column:5=no-go)",
+        "Document: Rust API images / Infra lead (column:4=pending, column:5=no-go)",
+        "Document: worker images / Infra lead (column:4=pending, column:5=no-go)",
+        "Document: frontend artifacts / Product leads (column:4=pending, column:5=no-go)",
+        "Document: SQL migrations / Data lead (column:4=pending, column:5=no-go)",
+        "Document: OpenAPI contracts / Migration lead (column:4=pending, column:5=no-go)",
+        "Document: Protobuf contracts / Migration lead (column:4=pending, column:5=no-go)",
+        "Document: event schemas / Migration lead (column:4=pending, column:5=no-go)",
+        "Release Inputs: capacity verified / Infra lead (column:4=pending, column:5=no-go)",
+        "Release Inputs: production secrets present / Security lead (column:4=pending, column:5=no-go)",
+        "Release Inputs: deploy freeze active / Migration lead (column:4=pending, column:5=no-go)",
+        "Release Inputs: billing mutation freeze / Billing/Usage owner (column:4=pending, column:5=no-go)",
+        "Release Inputs: rollback target confirmed / Infra lead (column:4=pending, column:5=no-go)"
+      ],
+      "next_action": "resolve and sign release_freeze decisions",
+      "proof": "pnpm check:migration-release-freeze -- --strict",
       "status": "blocked"
     },
     {
@@ -383,10 +641,24 @@
       "source": "docs/migration/risk-register.generated.json",
       "blocking_items": 1,
       "blocking_details": [
-        "risks unresolved item 1/1"
+        "rollback-lent: pending blocking risk owned by Infra lead - no-go until an infra owner attaches accepted rollback live evidence with timed rollback proof from staging rehearsal"
       ],
       "next_action": "resolve and sign risks decisions",
-      "proof": "tools/migration/risk-register.mjs --strict",
+      "proof": "node tools/migration/risk-register.mjs --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-snapshots",
+      "owner_role": "Data lead",
+      "source": "docs/migration/snapshot-manifest.md",
+      "blocking_items": 3,
+      "blocking_details": [
+        "Document: final snapshot required / named production or rehearsal source environment with region and isolation record (column:9=no-go)",
+        "Source Snapshots: final target version required / signed target commit SHA, repository tag and CI run URL required (column:7=no-go)",
+        "Target Versions: final snapshot required / restore command output log required with command, operator and target snapshot identifier (column:6=no-go)"
+      ],
+      "next_action": "resolve and sign snapshots decisions",
+      "proof": "pnpm check:migration-snapshots -- --strict",
       "status": "blocked"
     }
   ]

@@ -23,9 +23,10 @@ nvbes-tenancy = { path = "../../libs/rust/tenancy" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 nvbes-product-cloud = { path = "../../libs/rust/products/cloud" }
-nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
 nvbes-region = { path = "../../libs/rust/region" }
 metrics.workspace = true
+prost = "0.14.4"
+prost-types = "0.14"
 rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true
@@ -33,6 +34,8 @@ serde_json.workspace = true
 sha2.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14.6"
 tower = "0.5"
 tower-http = { workspace = true }
 tracing.workspace = true
@@ -43,6 +46,10 @@ uuid.workspace = true
 aws-config = { version = "1.8.16", default-features = false, features = ["rt-tokio", "credentials-process", "sso", "default-https-client"] }
 aws-sdk-s3 = { version = "1.132.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"
+
 [dev-dependencies]
 nvbes-product-account = { path = "../../libs/rust/products/account" }
-nvbes-account-service = { path = "../account-service" }
+openssl = { version = "0.10", features = ["vendored"] }

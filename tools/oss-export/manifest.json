@@ -72,8 +72,9 @@
     "libs/rust/adapters-cloud",
     "libs/rust/cloud",
     "libs/ts/cloud-ui",
+    "libs/ts/backoffice-service-sdk-core",
     "libs/ts/internal-*",
-    "apps/cloud-*",
+    "apps/backoffice-*",
     "apps/internal-*"
   ],
   "copy": [

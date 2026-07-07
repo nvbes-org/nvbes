@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/readiness-report.mjs --write",
-    "strict_cutover_command": "tools/migration/readiness-report.mjs --strict"
+    "command": "node tools/migration/readiness-report.mjs --write",
+    "strict_cutover_command": "node tools/migration/readiness-report.mjs --strict"
   },
   "status": {
     "production_cutover": "no-go",
-    "blocking_areas": 6,
-    "blocking_items": 21,
+    "blocking_areas": 15,
+    "blocking_items": 135,
     "live_evidence_missing_requirements": 6,
     "live_evidence_missing_items": 24
   },
@@ -36,7 +36,7 @@
     {
       "id": "resources",
       "source": "docs/migration/resource-map.generated.json",
-      "total": 30,
+      "total": 44,
       "pending": 0,
       "proof": "pnpm check:migration-resource-map"
     },
@@ -106,7 +106,7 @@
     {
       "id": "workspace_last_owner",
       "source": "docs/migration/workspace-last-owner.generated.json",
-      "total": 18,
+      "total": 17,
       "pending": 0,
       "proof": "pnpm check:migration-workspace-last-owner"
     },
@@ -192,7 +192,7 @@
       "source": "docs/migration/phase-ledger.generated.json",
       "total": 13,
       "pending": 3,
-      "proof": "tools/migration/phase-ledger.mjs --strict"
+      "proof": "node tools/migration/phase-ledger.mjs --strict"
     },
     {
       "id": "domains",
@@ -213,35 +213,98 @@
       "source": "docs/migration/risk-register.generated.json",
       "total": 7,
       "pending": 1,
-      "proof": "tools/migration/risk-register.mjs --strict"
+      "proof": "node tools/migration/risk-register.mjs --strict"
     },
     {
       "id": "gates",
       "source": "docs/migration/gate-evidence.generated.json",
       "total": 9,
       "pending": 5,
-      "proof": "tools/migration/gate-evidence.mjs --strict"
+      "proof": "node tools/migration/gate-evidence.mjs --strict"
     },
     {
-      "id": "gate_decisions",
-      "source": "docs/migration/gate-evidence.generated.json",
-      "total": 9,
+      "id": "owner_signoffs",
+      "source": "docs/migration/owner-signoff-matrix.md",
+      "total": 31,
+      "pending": 31,
+      "proof": "pnpm check:migration-owner-signoffs -- --strict"
+    },
+    {
+      "id": "cutover_checklist",
+      "source": "docs/migration/cutover-checklist.md",
+      "total": 18,
+      "pending": 18,
+      "proof": "pnpm check:migration-cutover-checklist -- --strict"
+    },
+    {
+      "id": "rehearsals",
+      "source": "docs/migration/rehearsal-ledger.md",
+      "total": 8,
+      "pending": 8,
+      "proof": "pnpm check:migration-rehearsals -- --strict"
+    },
+    {
+      "id": "snapshots",
+      "source": "docs/migration/snapshot-manifest.md",
+      "total": 3,
+      "pending": 3,
+      "proof": "pnpm check:migration-snapshots -- --strict"
+    },
+    {
+      "id": "release_freeze",
+      "source": "docs/migration/release-freeze-manifest.md",
+      "total": 13,
+      "pending": 13,
+      "proof": "pnpm check:migration-release-freeze -- --strict"
+    },
+    {
+      "id": "communication",
+      "source": "docs/migration/communication-plan.md",
+      "total": 15,
+      "pending": 15,
+      "proof": "pnpm check:migration-communication -- --strict"
+    },
+    {
+      "id": "observability",
+      "source": "docs/migration/observability-readiness.md",
+      "total": 13,
+      "pending": 13,
+      "proof": "pnpm check:migration-observability -- --strict"
+    },
+    {
+      "id": "rejects",
+      "source": "docs/migration/rejects.md",
+      "total": 1,
+      "pending": 1,
+      "proof": "pnpm check:migration-rejects -- --strict"
+    },
+    {
+      "id": "reconciliation_report",
+      "source": "docs/migration/reconciliation-report.md",
+      "total": 12,
+      "pending": 12,
+      "proof": "pnpm check:migration-reconciliation-report -- --strict"
+    },
+    {
+      "id": "cutover_journal",
+      "source": "docs/migration/cutover-journal.md",
+      "total": 5,
       "pending": 5,
-      "proof": "tools/migration/gate-evidence.mjs --strict"
+      "proof": "pnpm check:migration-cutover-journal -- --strict"
     },
     {
       "id": "reconciliation_template",
       "source": "docs/migration/reconciliation.template.json",
       "total": 1,
       "pending": 1,
-      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
+      "proof": "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
     },
     {
       "id": "live_evidence",
       "source": "docs/migration/live-evidence-instances.generated.json",
       "total": 6,
       "pending": 6,
-      "proof": "tools/migration/live-evidence-instances.mjs --strict"
+      "proof": "node tools/migration/live-evidence-instances.mjs --strict"
     }
   ],
   "blockers": [
@@ -249,37 +312,91 @@
       "area": "phases",
       "source": "docs/migration/phase-ledger.generated.json",
       "blocking_items": 3,
-      "proof": "tools/migration/phase-ledger.mjs --strict"
+      "proof": "node tools/migration/phase-ledger.mjs --strict"
     },
     {
       "area": "risks",
       "source": "docs/migration/risk-register.generated.json",
       "blocking_items": 1,
-      "proof": "tools/migration/risk-register.mjs --strict"
+      "proof": "node tools/migration/risk-register.mjs --strict"
     },
     {
       "area": "gates",
       "source": "docs/migration/gate-evidence.generated.json",
       "blocking_items": 5,
-      "proof": "tools/migration/gate-evidence.mjs --strict"
+      "proof": "node tools/migration/gate-evidence.mjs --strict"
     },
     {
-      "area": "gate_decisions",
-      "source": "docs/migration/gate-evidence.generated.json",
+      "area": "owner_signoffs",
+      "source": "docs/migration/owner-signoff-matrix.md",
+      "blocking_items": 31,
+      "proof": "pnpm check:migration-owner-signoffs -- --strict"
+    },
+    {
+      "area": "cutover_checklist",
+      "source": "docs/migration/cutover-checklist.md",
+      "blocking_items": 18,
+      "proof": "pnpm check:migration-cutover-checklist -- --strict"
+    },
+    {
+      "area": "rehearsals",
+      "source": "docs/migration/rehearsal-ledger.md",
+      "blocking_items": 8,
+      "proof": "pnpm check:migration-rehearsals -- --strict"
+    },
+    {
+      "area": "snapshots",
+      "source": "docs/migration/snapshot-manifest.md",
+      "blocking_items": 3,
+      "proof": "pnpm check:migration-snapshots -- --strict"
+    },
+    {
+      "area": "release_freeze",
+      "source": "docs/migration/release-freeze-manifest.md",
+      "blocking_items": 13,
+      "proof": "pnpm check:migration-release-freeze -- --strict"
+    },
+    {
+      "area": "communication",
+      "source": "docs/migration/communication-plan.md",
+      "blocking_items": 15,
+      "proof": "pnpm check:migration-communication -- --strict"
+    },
+    {
+      "area": "observability",
+      "source": "docs/migration/observability-readiness.md",
+      "blocking_items": 13,
+      "proof": "pnpm check:migration-observability -- --strict"
+    },
+    {
+      "area": "rejects",
+      "source": "docs/migration/rejects.md",
+      "blocking_items": 1,
+      "proof": "pnpm check:migration-rejects -- --strict"
+    },
+    {
+      "area": "reconciliation_report",
+      "source": "docs/migration/reconciliation-report.md",
+      "blocking_items": 12,
+      "proof": "pnpm check:migration-reconciliation-report -- --strict"
+    },
+    {
+      "area": "cutover_journal",
+      "source": "docs/migration/cutover-journal.md",
       "blocking_items": 5,
-      "proof": "tools/migration/gate-evidence.mjs --strict"
+      "proof": "pnpm check:migration-cutover-journal -- --strict"
     },
     {
       "area": "reconciliation_template",
       "source": "docs/migration/reconciliation.template.json",
       "blocking_items": 1,
-      "proof": "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
+      "proof": "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json"
     },
     {
       "area": "live_evidence",
       "source": "docs/migration/live-evidence-instances.generated.json",
       "blocking_items": 6,
-      "proof": "tools/migration/live-evidence-instances.mjs --strict"
+      "proof": "node tools/migration/live-evidence-instances.mjs --strict"
     }
   ]
 }

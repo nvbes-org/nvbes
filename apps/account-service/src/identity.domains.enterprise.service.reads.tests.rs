@@ -1,5 +1,4 @@
 use super::{mfa_policy_view, session_policy_view};
-use crate::domains::enterprise::db::{MfaPolicyRow, SessionPolicyRow};
 
 #[test]
 fn session_policy_view_uses_environment_source_when_tenant_policy_is_missing() {
@@ -14,12 +13,7 @@ fn session_policy_view_uses_environment_source_when_tenant_policy_is_missing() {
 
 #[test]
 fn session_policy_view_marks_short_tenant_policy_compliant() {
-    let view = session_policy_view(
-        Some(SessionPolicyRow {
-            admin_session_ttl_hours: Some(4),
-        }),
-        12,
-    );
+    let view = session_policy_view(Some(4), 12);
 
     assert_eq!(view.admin_session_ttl_hours, 4);
     assert_eq!(view.source, "tenant_policy");
@@ -28,15 +22,9 @@ fn session_policy_view_marks_short_tenant_policy_compliant() {
 
 #[test]
 fn mfa_policy_view_requires_admin_or_all_enforcement_for_compliance() {
-    let optional = mfa_policy_view(MfaPolicyRow {
-        policy: "optional".to_string(),
-    });
-    let admin = mfa_policy_view(MfaPolicyRow {
-        policy: "required_admins".to_string(),
-    });
-    let all = mfa_policy_view(MfaPolicyRow {
-        policy: "required_all".to_string(),
-    });
+    let optional = mfa_policy_view("optional");
+    let admin = mfa_policy_view("required_admins");
+    let all = mfa_policy_view("required_all");
 
     assert!(!optional.compliant);
     assert!(admin.compliant);

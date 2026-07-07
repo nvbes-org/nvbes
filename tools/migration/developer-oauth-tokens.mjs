@@ -99,12 +99,12 @@ function buildChecks() {
 		textCheck("sdk-token-inspect-types", sources.sdkCore, "Generated SDK core includes token inspection result types", "InspectDeveloperTokenResponse"),
 		textCheck("identity-client-oauth-list", sources.identityClient, "Handwritten identity client lists OAuth clients", "listOAuthClients"),
 		textCheck("identity-client-oauth-revoke", sources.identityClient, "Handwritten identity client revokes OAuth clients", "revokeOAuthClient"),
-		textCheck("console-web-oauth-list", sources.developerApi, "Developer web consumes OAuth client list API", "listDeveloperOAuthClients"),
-		textCheck("console-web-token-debug", sources.developerApi, "Developer web consumes token debug API", "debugDeveloperToken"),
-		textCheck("console-web-oauth-schema", sources.developerSchemas, "Developer web validates OAuth client summaries", "DeveloperOAuthClientsSchema"),
-		textCheck("console-web-token-schema", sources.developerSchemas, "Developer web validates debug token responses", "DebugDeveloperTokenSchema"),
-		textCheck("console-web-oauth-schema-test", sources.developerSchemaTests, "Developer web schema test parses OAuth client summaries", "parses OAuth client summaries"),
-		textCheck("console-web-token-schema-test", sources.developerTokenTests, "Developer web token test rejects raw token material in parsed debug response", "parses token debug responses without raw token material"),
+		textCheck("console-web-oauth-list", sources.developerApi, "Console web consumes OAuth client list API", "listDeveloperOAuthClients"),
+		textCheck("console-web-token-debug", sources.developerApi, "Console web consumes token debug API", "debugDeveloperToken"),
+		textCheck("console-web-oauth-schema", sources.developerSchemas, "Console web validates OAuth client summaries", "DeveloperOAuthClientsSchema"),
+		textCheck("console-web-token-schema", sources.developerSchemas, "Console web validates debug token responses", "DebugDeveloperTokenSchema"),
+		textCheck("console-web-oauth-schema-test", sources.developerSchemaTests, "Console web schema test parses OAuth client summaries", "parses OAuth client summaries"),
+		textCheck("console-web-token-schema-test", sources.developerTokenTests, "Console web token test rejects raw token material in parsed debug response", "parses token debug responses without raw token material"),
 	];
 }
 
@@ -137,7 +137,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/developer-oauth-tokens.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/developer-oauth-tokens.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -198,7 +198,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-developer-oauth-tokens",
-		"tools/migration/developer-oauth-tokens.mjs --write",
+		"node tools/migration/developer-oauth-tokens.mjs --write",
 		"```",
 		"",
 	);
@@ -210,7 +210,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/developer-oauth-tokens.mjs --write",
+		command: "node tools/migration/developer-oauth-tokens.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-account-service token_access_decision --locked",
@@ -243,8 +243,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/developer-oauth-tokens.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/developer-oauth-tokens.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/developer-oauth-tokens.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/developer-oauth-tokens.mjs --write`);
 }
 
 if (errors.length > 0) {

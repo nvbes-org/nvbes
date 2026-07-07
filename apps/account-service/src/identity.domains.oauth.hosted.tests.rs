@@ -1,7 +1,8 @@
 use super::hosted_keys::{hosted_authorization_state_key, hosted_authorization_state_ttl_seconds};
 use super::hosted_routes::HostedStartRequest;
 use super::hosted_service::{
-    build_hosted_login_url, build_oauth_error_redirect_url, build_oauth_redirect_url,
+    build_hosted_client_display, build_hosted_login_url, build_oauth_error_redirect_url,
+    build_oauth_redirect_url,
 };
 
 #[test]
@@ -73,4 +74,37 @@ fn hosted_start_request_accepts_authorize_parameters() {
 #[test]
 fn hosted_routes_expose_router() {
     let _router = super::hosted_routes::router();
+}
+
+#[test]
+fn hosted_client_display_prefers_developer_consent_branding() {
+    let display = build_hosted_client_display(
+        "client_123".to_string(),
+        "Fallback Client".to_string(),
+        crate::domains::developer::types::DeveloperConsentScreenResponse {
+            client_id: "client_123".to_string(),
+            product_name: "Branded App".to_string(),
+            logo_url: Some("https://cdn.example/logo.png".to_string()),
+            support_url: Some("https://example.test/support".to_string()),
+            privacy_url: Some("https://example.test/privacy".to_string()),
+            terms_url: Some("https://example.test/terms".to_string()),
+            description: "Use Branded App with nvbes.".to_string(),
+            brand_color: Some("#123456".to_string()),
+            custom_css: None,
+            help_text: Some("Contact support for access.".to_string()),
+            configured: true,
+            updated_at: None,
+        },
+    );
+
+    assert_eq!(display.client_id, "client_123");
+    assert_eq!(display.name, "Branded App");
+    assert_eq!(
+        display.logo_url.as_deref(),
+        Some("https://cdn.example/logo.png")
+    );
+    assert_eq!(
+        display.description.as_deref(),
+        Some("Use Branded App with nvbes.")
+    );
 }

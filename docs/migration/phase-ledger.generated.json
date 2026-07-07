@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/phase-ledger.mjs --write",
+    "command": "node tools/migration/phase-ledger.mjs --write",
     "source": "docs/blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md",
-    "strict_cutover_command": "tools/migration/phase-ledger.mjs --strict"
+    "strict_cutover_command": "node tools/migration/phase-ledger.mjs --strict"
   },
   "summary": {
     "phases": 13,
@@ -70,7 +70,7 @@
         "docs/migration/identity-register.generated.json",
         "docs/migration/identity-login-session.generated.json",
         "docs/migration/identity-mfa-webauthn.generated.json",
-        "apps/identity-api/openapi.json"
+        "apps/account-service/openapi.json"
       ],
       "decision": "go",
       "proof": "pnpm check:migration-identity-register && pnpm check:migration-identity-login-session && pnpm check:migration-identity-mfa-webauthn"
@@ -97,7 +97,7 @@
         "docs/migration/drive-upload-download.generated.json",
         "docs/migration/drive-share-revoke.generated.json",
         "docs/migration/drive-quotas.generated.json",
-        "apps/drive-api/openapi.json"
+        "apps/cloud-service/openapi.json"
       ],
       "decision": "go",
       "proof": "pnpm check:migration-drive-upload-download && pnpm check:migration-drive-share-revoke && pnpm check:migration-drive-quotas"
@@ -124,7 +124,7 @@
       "evidence": [
         "docs/migration/developer-oauth-tokens.generated.json",
         "docs/migration/developer-signed-webhooks.generated.json",
-        "apps/developer-web/src/developer.router.tsx",
+        "apps/console-web/src/developer.router.tsx",
         "libs/ts/identity-sdk-core/openapi.json"
       ],
       "decision": "go",
@@ -137,12 +137,12 @@
       "status": "passed",
       "evidence": [
         "docs/migration/frontend-experience.generated.json",
-        "apps/identity-web/e2e/critical.spec.ts",
-        "apps/drive-web/src/drive.router.tsx",
-        "apps/developer-web/src/developer.router.tsx",
+        "apps/account-web/e2e/critical.spec.ts",
+        "apps/cloud-web/src/drive.router.tsx",
+        "apps/console-web/src/developer.router.tsx",
         "apps/enterprise-web/src/enterprise.router.tsx",
-        "apps/cloud-console/README.md",
-        "apps/internal-admin/README.md"
+        "apps/cloud-web/README.md",
+        "apps/backoffice-service/README.md"
       ],
       "decision": "go",
       "proof": "pnpm check:migration-frontend-experience && pnpm check:web && pnpm --dir apps/enterprise-web test"
@@ -167,7 +167,7 @@
     {
       "phase": "P11",
       "title": "Repetitions migration",
-      "owner": "migration lead required",
+      "owner": "Data lead",
       "status": "pending",
       "evidence": [
         "docs/migration/cutover-evidence-packet.generated.json",
@@ -182,7 +182,7 @@
     {
       "phase": "P12",
       "title": "Big Bang cutover",
-      "owner": "migration lead required",
+      "owner": "Migration lead",
       "status": "pending",
       "evidence": [
         "docs/migration/cutover-evidence-packet.generated.json",
@@ -198,7 +198,7 @@
     {
       "phase": "P13",
       "title": "Decommission",
-      "owner": "migration lead required",
+      "owner": "Infra lead",
       "status": "pending",
       "evidence": [
         "docs/migration/cutover-evidence-packet.generated.json",

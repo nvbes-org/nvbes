@@ -135,7 +135,7 @@ function resourceInventory() {
 const inventory = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/inventory.mjs --write",
+		command: "node tools/migration/inventory.mjs --write",
 		deterministic: true,
 	},
 	summary: {},
@@ -217,7 +217,7 @@ if (write) {
 }
 
 if (!existsSync(outputPath)) {
-	console.error(`${outputPath}: missing; run tools/migration/inventory.mjs --write`);
+	console.error(`${outputPath}: missing; run node tools/migration/inventory.mjs --write`);
 	process.exit(1);
 }
 
@@ -231,7 +231,7 @@ if (validationErrors.length > 0) {
 
 const current = readFileSync(outputPath, "utf8");
 if (current !== serialized) {
-	console.error(`${outputPath}: stale; run tools/migration/inventory.mjs --write`);
+	console.error(`${outputPath}: stale; run node tools/migration/inventory.mjs --write`);
 	process.exit(1);
 }
 

@@ -6,6 +6,8 @@ use nvbes_observability::{
 
 #[path = "identity.worker.state.rs"]
 mod app;
+#[path = "identity.grpc.pb.rs"]
+mod grpc_pb;
 #[path = "identity.worker.rs"]
 mod worker;
 

@@ -6,51 +6,11 @@ use crate::domains::auth::sessions::cache::{cached_session_from_login, current_s
 use crate::http::middleware::jwt::AuthContext;
 
 #[test]
-fn elevation_expiry_never_outlives_step_up_or_session() {
-    let now = Utc::now();
-    let requested = now + Duration::minutes(60);
-    let step_up = now + Duration::minutes(15);
-    let session = now + Duration::minutes(30);
+fn parse_grpc_time_rejects_invalid_enterprise_response() {
+    let err = parse_grpc_time("not-a-time", "expires_at")
+        .expect_err("invalid Enterprise timestamps must fail");
 
-    assert_eq!(
-        bounded_elevation_expires_at(requested, step_up, session),
-        step_up
-    );
-}
-
-#[test]
-fn elevation_expiry_uses_session_when_session_expires_first() {
-    let now = Utc::now();
-    let requested = now + Duration::minutes(60);
-    let step_up = now + Duration::minutes(30);
-    let session = now + Duration::minutes(10);
-
-    assert_eq!(
-        bounded_elevation_expires_at(requested, step_up, session),
-        session
-    );
-}
-
-#[tokio::test]
-async fn grant_rejects_non_admin_base_role() {
-    let redis = crate::test_support::test_redis_pool().await;
-    let auth = test_auth_context(Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
-
-    let err = grant_admin_elevation(
-        &redis,
-        &auth,
-        &EnterpriseRole::Member,
-        auth.tenant_id.expect("tenant id should be present"),
-        EnterpriseAdminElevationInput {
-            duration_minutes: None,
-            reason: None,
-            procedure_reference: None,
-        },
-    )
-    .await
-    .expect_err("members must not self-elevate");
-
-    assert_eq!(err.code, "admin_role_required");
+    assert_eq!(err.code, "enterprise_grpc_invalid_admin_elevation");
 }
 
 #[tokio::test]
@@ -72,6 +32,8 @@ async fn grant_requires_recent_step_up() {
             reason: None,
             procedure_reference: None,
         },
+        false,
+        None,
     )
     .await
     .expect_err("step-up is mandatory before elevation");
@@ -81,7 +43,7 @@ async fn grant_requires_recent_step_up() {
 }
 
 #[tokio::test]
-async fn grant_stores_elevation_bounded_by_step_up() {
+async fn active_admin_elevation_reads_cached_session_state() {
     let redis = crate::test_support::test_redis_pool().await;
     let principal_id = Uuid::new_v4();
     let session_id = Uuid::new_v4();
@@ -96,26 +58,23 @@ async fn grant_stores_elevation_bounded_by_step_up() {
         Some(step_up_expires_at),
     )
     .await;
-
-    let response = grant_admin_elevation(
-        &redis,
-        &auth,
-        &EnterpriseRole::Admin,
-        tenant_id,
-        EnterpriseAdminElevationInput {
-            duration_minutes: Some(60),
-            reason: None,
-            procedure_reference: None,
-        },
-    )
-    .await
-    .expect("active admins with step-up can elevate");
+    let expires_at = Utc::now() + Duration::minutes(5);
+    let mut session = nvbes_redis::session::get_session(&redis, &session_id.to_string())
+        .await
+        .expect("session lookup should succeed")
+        .expect("session should exist");
+    session.admin_elevation_role = Some("admin".to_string());
+    session.admin_elevation_tenant_id = Some(tenant_id.to_string());
+    session.admin_elevation_granted_at = Some(Utc::now());
+    session.admin_elevation_expires_at = Some(expires_at);
+    nvbes_redis::session::set_session(&redis, &session, current_session_ttl(&session))
+        .await
+        .expect("session should be updated");
 
     let elevation = active_admin_elevation(&redis, &auth, tenant_id)
         .await
         .expect("elevation lookup should succeed")
         .expect("elevation should be active");
-    assert!(response.elevation.active);
     assert!(elevation.active);
     assert!(elevation.expires_at.expect("expiry") <= step_up_expires_at);
     cleanup_session(&redis, principal_id).await;

@@ -1,4 +1,4 @@
-use crate::http::error::AppError;
+use crate::{domains::cloud::workspace_port, http::error::AppError};
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -23,17 +23,8 @@ pub async fn resolve_actor_context(
 
     let row = sqlx::query(
         r#"
-        SELECT
-          sa.workspace_id,
-          w.organization_id,
-          w.tenant_id,
-          wm.role::text AS role
+        SELECT sa.workspace_id
         FROM service_accounts sa
-        INNER JOIN workspaces w ON w.id = sa.workspace_id
-        LEFT JOIN workspace_memberships wm
-          ON wm.workspace_id = sa.workspace_id
-         AND wm.principal_id = sa.principal_id
-         AND wm.status = 'active'
         WHERE sa.principal_id = $1
         LIMIT 1
         "#,
@@ -45,12 +36,27 @@ pub async fn resolve_actor_context(
     let Some(row) = row else {
         return Ok((Some("service_account".to_string()), None, None, None, None));
     };
+    let workspace_id: Option<Uuid> = row.get("workspace_id");
+    let Some(workspace_id) = workspace_id else {
+        return Ok((Some("service_account".to_string()), None, None, None, None));
+    };
+
+    let workspace = workspace_port::get_workspace(None, workspace_id, actor_principal_id).await?;
+    let role = workspace_port::list_workspace_members(
+        Some(workspace.tenant_id),
+        workspace_id,
+        actor_principal_id,
+    )
+    .await?
+    .into_iter()
+    .find(|member| member.principal_id == actor_principal_id && member.active)
+    .map(|member| member.role);
 
     Ok((
         Some("service_account".to_string()),
-        row.get("role"),
-        row.get("workspace_id"),
-        row.get("organization_id"),
-        row.get("tenant_id"),
+        role,
+        Some(workspace_id),
+        workspace.organization_id,
+        Some(workspace.tenant_id),
     ))
 }

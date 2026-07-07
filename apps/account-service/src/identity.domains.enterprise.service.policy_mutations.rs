@@ -1,6 +1,6 @@
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, resolve_admin_scope};
-use crate::domains::enterprise::{db, policy};
+use crate::domains::enterprise::{grpc, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
@@ -23,19 +23,7 @@ pub async fn update_session_policy(
         ));
     }
 
-    let mut tx = db.begin().await?;
-    db::set_session_policy(&mut tx, tenant_id, input.admin_session_ttl_hours).await?;
-    db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.policy.session_updated",
-        "tenant_policy",
-        Some(tenant_id),
-        serde_json::json!({"admin_session_ttl_hours": input.admin_session_ttl_hours}),
-    )
-    .await?;
-    tx.commit().await?;
+    grpc::update_session_policy(tenant_id, auth.user_id, input.admin_session_ttl_hours).await?;
 
     super::reads::list_policies(db, auth, tenant_id, fallback_ttl_hours).await
 }
@@ -51,19 +39,7 @@ pub async fn update_mfa_policy(
     ensure_policy_manager(db, redis, auth, tenant_id).await?;
     let policy_value = validate_mfa_policy(input.policy)?;
 
-    let mut tx = db.begin().await?;
-    db::set_mfa_policy(&mut tx, tenant_id, policy_value).await?;
-    db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.policy.mfa_updated",
-        "tenant",
-        Some(tenant_id),
-        serde_json::json!({"mfa_policy": policy_value}),
-    )
-    .await?;
-    tx.commit().await?;
+    grpc::update_mfa_policy(tenant_id, auth.user_id, policy_value).await?;
 
     super::reads::list_policies(db, auth, tenant_id, fallback_ttl_hours).await
 }

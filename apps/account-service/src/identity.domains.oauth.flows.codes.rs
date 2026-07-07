@@ -1,10 +1,10 @@
-use crate::domains::auth::jwt::JwtService;
 use crate::domains::oauth::authorization_codes::{
     CachedAuthorizationCode, delete_authorization_code, get_authorization_code,
     mark_authorization_code_consumed, store_authorization_code,
 };
 use crate::domains::oauth::service::ConsentRequirementInput;
 use crate::domains::oauth::validation::validate_redirect_uri_match;
+use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
 use chrono::Utc;
 use nvbes_redis::refresh_token as refresh_store;
@@ -126,6 +126,7 @@ pub async fn exchange_code(
                 client_secret_hash,
                 client_assertion_required,
                 client_type::text AS client_type,
+                tenant_id,
                 revoked_at
             FROM oauth_clients
             WHERE client_id = $1
@@ -159,6 +160,7 @@ pub async fn exchange_code(
         }
 
         let client_type: String = client_row.get("client_type");
+        let client_tenant_id: Uuid = client_row.get("tenant_id");
         let client_secret_hash: String = client_row.get("client_secret_hash");
         let client_assertion_required: bool = client_row.get("client_assertion_required");
         if !crate::domains::oauth::validation::is_public_client_type(&client_type) {
@@ -173,7 +175,13 @@ pub async fn exchange_code(
                 let client_secret = input.client_secret.as_deref().ok_or_else(|| {
                     AppError::unauthorized("invalid_client", "Client authentication is required.")
                 })?;
-                crate::domains::oauth::verify_client_secret_with_overlap(db, &code.client_id, client_secret, &client_secret_hash).await?;
+                crate::domains::oauth::verify_client_secret_with_overlap(
+                    client_tenant_id,
+                    &code.client_id,
+                    client_secret,
+                    &client_secret_hash,
+                )
+                .await?;
             }
         }
 
@@ -219,13 +227,9 @@ pub async fn exchange_code(
         }
 
         let workspace_region = if let Some(workspace_id) = code.workspace_id {
-            sqlx::query_scalar::<_, Option<String>>(
-                "SELECT data_region::text FROM workspaces WHERE id = $1",
-            )
-            .bind(workspace_id)
-            .fetch_optional(db)
-            .await?
-            .flatten()
+            workspace_port::get_workspace(code.tenant_id, workspace_id, code.user_id)
+                .await?
+                .data_region
         } else {
             None
         };

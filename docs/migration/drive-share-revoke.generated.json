@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/drive-share-revoke.mjs --write",
+    "command": "node tools/migration/drive-share-revoke.mjs --write",
     "sources": [
-      "apps/drive-api/src/drive.domains.share_links.logic.rs",
-      "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
-      "apps/drive-api/src/drive.domains.share_links.manage.rs",
-      "apps/drive-api/src/drive.domains.share_links.public.rs",
-      "apps/drive-api/src/drive.domains.share_links.db.rs",
-      "apps/drive-api/src/drive.domains.share_links.db.queries.rs",
-      "apps/drive-api/src/drive.domains.share_links.routes.manage.rs",
-      "apps/drive-api/src/drive.domains.share_links.routes.public.rs",
-      "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
-      "apps/drive-api/src/drive.domains.authz.service.rs",
-      "apps/drive-api/src/drive.http.openapi.rs",
-      "apps/drive-api/openapi.json",
+      "apps/cloud-service/src/drive.domains.share_links.logic.rs",
+      "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
+      "apps/cloud-service/src/drive.domains.share_links.manage.rs",
+      "apps/cloud-service/src/drive.domains.share_links.public.rs",
+      "apps/cloud-service/src/drive.domains.share_links.db.rs",
+      "apps/cloud-service/src/drive.domains.share_links.db.queries.rs",
+      "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
+      "apps/cloud-service/src/drive.domains.share_links.routes.public.rs",
+      "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "apps/cloud-service/src/drive.domains.authz.service.rs",
+      "apps/cloud-service/src/drive.http.openapi.rs",
+      "apps/cloud-service/openapi.json",
       "docs/migration/data-map.md"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-drive-api share_link --locked",
+      "cargo test -p nvbes-cloud-service share_link --locked",
       "pnpm check:migration-reconciliation-report"
     ]
   },
@@ -32,217 +32,217 @@
     {
       "id": "normalize-expires",
       "description": "Share link expiration is normalized against workspace TTL policy",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.rs",
       "status": "passed",
       "pattern": "pub fn normalize_expires_at"
     },
     {
       "id": "normalize-expires-test",
       "description": "Past and over-policy expirations are covered by tests",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
       "status": "passed",
       "pattern": "normalize_expires_at_rejects_past_and_ttl_overflow"
     },
     {
       "id": "max-downloads",
       "description": "Max-download limits reject non-positive values",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.rs",
       "status": "passed",
       "pattern": "pub fn normalize_max_downloads"
     },
     {
       "id": "max-downloads-test",
       "description": "Max-download validation is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
       "status": "passed",
       "pattern": "normalize_max_downloads_rejects_zero_or_negative_limits"
     },
     {
       "id": "mutation-guard",
       "description": "Share update guard rejects revoked or expired links",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.rs",
       "status": "passed",
       "pattern": "ensure_link_not_revoked_or_expired"
     },
     {
       "id": "mutation-guard-test",
       "description": "Revoked and expired mutation guard is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
       "status": "passed",
       "pattern": "ensure_link_not_revoked_or_expired_blocks_mutation"
     },
     {
       "id": "public-access-guard",
       "description": "Public share access rejects revoked, expired, inactive, quarantined, or unclean links",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.rs",
       "status": "passed",
       "pattern": "pub fn enforce_public_share_access"
     },
     {
       "id": "public-access-test",
       "description": "Public access denial cases are covered by tests",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
       "status": "passed",
       "pattern": "enforce_public_share_access_rejects_revoked_expired_and_unclean_links"
     },
     {
       "id": "download-limit-rule",
       "description": "Public download URL creation enforces max-download limits",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.rs",
       "status": "passed",
       "pattern": "ensure_public_share_download_allowed"
     },
     {
       "id": "download-limit-test",
       "description": "Download-limit boundary is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.share_links.logic.tests.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.logic.tests.rs",
       "status": "passed",
       "pattern": "ensure_public_share_download_allowed_blocks_at_limit_only"
     },
     {
       "id": "create-audit",
       "description": "Share creation writes audit evidence",
-      "path": "apps/drive-api/src/drive.domains.share_links.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.manage.rs",
       "status": "passed",
       "pattern": "\"share_link.created\""
     },
     {
       "id": "update-audit",
       "description": "Share update writes audit evidence",
-      "path": "apps/drive-api/src/drive.domains.share_links.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.manage.rs",
       "status": "passed",
       "pattern": "\"share_link.updated\""
     },
     {
       "id": "revoke-audit",
       "description": "Share revoke writes audit evidence",
-      "path": "apps/drive-api/src/drive.domains.share_links.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.manage.rs",
       "status": "passed",
       "pattern": "\"share_link.revoked\""
     },
     {
       "id": "revoke-conflict",
       "description": "Share revoke is idempotency-safe through an already-revoked conflict",
-      "path": "apps/drive-api/src/drive.domains.share_links.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.manage.rs",
       "status": "passed",
       "pattern": "Share link is already revoked."
     },
     {
       "id": "db-revoke",
       "description": "Share revoke persistence sets revoked_at",
-      "path": "apps/drive-api/src/drive.domains.share_links.db.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.db.rs",
       "status": "passed",
       "pattern": "SET revoked_at = $3"
     },
     {
       "id": "token-hash-query",
       "description": "Public share resolution uses token hashes",
-      "path": "apps/drive-api/src/drive.domains.share_links.db.queries.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.db.queries.rs",
       "status": "passed",
       "pattern": "WHERE sl.token_hash = $1"
     },
     {
       "id": "public-denied-audit",
       "description": "Denied public share access is audited",
-      "path": "apps/drive-api/src/drive.domains.share_links.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.public.rs",
       "status": "passed",
       "pattern": "\"share_link.access_denied\""
     },
     {
       "id": "public-download-count",
       "description": "Public download URL creation increments download counts",
-      "path": "apps/drive-api/src/drive.domains.share_links.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.public.rs",
       "status": "passed",
       "pattern": "increment_download_count_tx"
     },
     {
       "id": "public-download-limit",
       "description": "Public download URL creation uses shared download-limit rule",
-      "path": "apps/drive-api/src/drive.domains.share_links.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.public.rs",
       "status": "passed",
       "pattern": "ensure_public_share_download_allowed(&resolved)"
     },
     {
       "id": "manage-create-route",
       "description": "Managed create-share route is exposed",
-      "path": "apps/drive-api/src/drive.domains.share_links.routes.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
       "status": "passed",
       "pattern": "path = \"/workspaces/{workspaceId}/objects/{objectId}/share-links\""
     },
     {
       "id": "manage-revoke-route",
       "description": "Managed revoke-share route is exposed",
-      "path": "apps/drive-api/src/drive.domains.share_links.routes.manage.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
       "status": "passed",
       "pattern": "path = \"/workspaces/{workspaceId}/share-links/{shareLinkId}\""
     },
     {
       "id": "public-resolve-route",
       "description": "Public share resolve route is exposed",
-      "path": "apps/drive-api/src/drive.domains.share_links.routes.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.routes.public.rs",
       "status": "passed",
       "pattern": "path = \"/public/shares/{token}\""
     },
     {
       "id": "public-download-route",
       "description": "Public share download URL route is exposed",
-      "path": "apps/drive-api/src/drive.domains.share_links.routes.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.routes.public.rs",
       "status": "passed",
       "pattern": "path = \"/public/shares/{token}/download-url\""
     },
     {
       "id": "public-api-create",
       "description": "Public API exposes share-link creation",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/objects/{objectId}/share-links\""
     },
     {
       "id": "public-api-revoke",
       "description": "Public API exposes share-link revocation",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/share-links/{shareLinkId}\""
     },
     {
       "id": "public-api-write-scope",
       "description": "Public API share mutations require share_links:write scope",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
       "status": "passed",
       "pattern": "\"share_links:write\""
     },
     {
       "id": "public-api-revoke-event",
       "description": "Public API revoke records API audit event",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.share_links.rs",
       "status": "passed",
       "pattern": "\"api.share_link.revoked\""
     },
     {
       "id": "authz-write",
       "description": "Authorization maps share mutations to write permission",
-      "path": "apps/drive-api/src/drive.domains.authz.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
       "status": "passed",
       "pattern": "drive.share_links.write"
     },
     {
       "id": "openapi-source",
       "description": "OpenAPI source includes public API share handlers",
-      "path": "apps/drive-api/src/drive.http.openapi.rs",
+      "path": "apps/cloud-service/src/drive.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::public_api::v1_handlers::create_share_link"
     },
     {
       "id": "openapi-create-json",
       "description": "Generated OpenAPI includes public API create-share path",
-      "path": "apps/drive-api/openapi.json",
+      "path": "apps/cloud-service/openapi.json",
       "status": "passed",
       "pattern": "\"/v1/workspaces/{workspaceId}/objects/{objectId}/share-links\""
     },
     {
       "id": "openapi-revoke-json",
       "description": "Generated OpenAPI includes public API revoke-share path",
-      "path": "apps/drive-api/openapi.json",
+      "path": "apps/cloud-service/openapi.json",
       "status": "passed",
       "pattern": "\"/v1/workspaces/{workspaceId}/share-links/{shareLinkId}\""
     },

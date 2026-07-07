@@ -5,7 +5,7 @@ import { optionValue } from "./cli-options.mjs";
 const args = process.argv.slice(2);
 
 if (args.includes("--help")) {
-	console.log("Usage: tools/migration/precutover-gate.mjs --env <env> --reconciliation-report <path> [--verbose]");
+	console.log("Usage: node tools/migration/precutover-gate.mjs --env <env> --reconciliation-report <path> [--verbose]");
 	process.exit(0);
 }
 

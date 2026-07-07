@@ -27,7 +27,7 @@ pub async fn list_events(
     let limit = normalize_limit(input.limit);
     let filters = SecurityEventFilters::from_input(&input);
     let risk_events =
-        fetch_risk_events(db, access.workspace_id, input.before_id, limit, &filters).await?;
+        fetch_risk_events(db, access.tenant_id, input.before_id, limit, &filters).await?;
 
     let summary = security_events_summary(&risk_events);
     let events = risk_events
@@ -62,7 +62,7 @@ pub async fn export_events(
 ) -> Result<SecurityExportResponse, AppError> {
     let risk_events = fetch_risk_events(
         db,
-        access.workspace_id,
+        access.tenant_id,
         None,
         DEFAULT_LIMIT,
         &SecurityEventFilters::default(),
@@ -101,11 +101,7 @@ pub async fn list_recovery_reviews(
           req.created_at,
           req.updated_at
         FROM enterprise_password_recovery_requests req
-        WHERE req.tenant_id = (
-          SELECT tenant_id
-          FROM workspaces
-          WHERE id = $1
-        )
+        WHERE req.tenant_id = $1
           AND (
             $2::timestamptz IS NULL
             OR req.created_at < $2
@@ -115,7 +111,7 @@ pub async fn list_recovery_reviews(
         LIMIT $4
         "#,
     )
-    .bind(access.workspace_id)
+    .bind(access.tenant_id)
     .bind(before_created_at)
     .bind(before_id)
     .bind(limit)

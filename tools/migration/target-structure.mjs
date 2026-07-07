@@ -55,9 +55,9 @@ function buildLedger() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/target-structure.mjs --write",
+			command: "node tools/migration/target-structure.mjs --write",
 			source: sourcePath,
-			strict_cutover_command: "tools/migration/target-structure.mjs --strict",
+			strict_cutover_command: "node tools/migration/target-structure.mjs --strict",
 		},
 		summary,
 		entries,
@@ -92,7 +92,7 @@ function serializeMarkdown(ledger) {
 	for (const entry of ledger.entries) {
 		lines.push(`| \`${entry.path}\` | ${entry.status} | \`${entry.proof}\` |`);
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-target-structure", "tools/migration/target-structure.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-target-structure", "node tools/migration/target-structure.mjs --write", "```", "");
 	return lines.join("\n");
 }
 
@@ -100,9 +100,9 @@ function validate(ledger) {
 	const expectedPaths = new Set(parseTargetTree(read(sourcePath)));
 	const seen = new Set();
 	if (ledger.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (ledger.generation?.command !== "tools/migration/target-structure.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
+	if (ledger.generation?.command !== "node tools/migration/target-structure.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
 	if (ledger.generation?.source !== sourcePath) errors.push(`${outputPath}: generation.source is invalid`);
-	if (ledger.generation?.strict_cutover_command !== "tools/migration/target-structure.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
+	if (ledger.generation?.strict_cutover_command !== "node tools/migration/target-structure.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	if (!Array.isArray(ledger.entries) || ledger.entries.length === 0) {
 		errors.push(`${outputPath}: entries must include target monorepo paths`);
 	}
@@ -148,8 +148,8 @@ if (write) {
 validate(ledger);
 
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/target-structure.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/target-structure.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/target-structure.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/target-structure.mjs --write`);
 }
 
 if (errors.length > 0) {

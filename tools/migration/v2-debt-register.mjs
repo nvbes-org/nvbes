@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 const strict = args.includes("--strict");
 const path = "docs/migration/v2-debt-register.md";
+const reviewPath = "docs/migration/v2-debt-review.md";
 const content = readFileSync(path, "utf8");
+const reviewContent = existsSync(reviewPath) ? readFileSync(reviewPath, "utf8") : "";
 const errors = [];
 
 const requiredHeadings = [
@@ -22,6 +24,7 @@ for (const heading of requiredHeadings) {
 }
 validateTable();
 validateStatusSummary();
+validateDebtReviewEvidence();
 for (const row of rows) validateDebtRow(row);
 
 if (!content.includes("The migration remains incomplete until every V1-required debt item is closed or removed from scope by owner acceptance")) {
@@ -37,13 +40,18 @@ if (strict) {
 }
 
 function tableRowsAfter(heading) {
-	const start = content.indexOf(heading);
+	return tableRowsIn(content, heading);
+}
+
+function tableRowsIn(source, heading) {
+	const start = source.indexOf(heading);
 	if (start === -1) return [];
-	const section = content.slice(start).split(/\n## /)[0];
+	const section = source.slice(start).split(/\n## /)[0];
 	return section
 		.split("\n")
 		.filter((line) => line.startsWith("|") && !line.includes("---") && !line.includes("Item |"))
-		.map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+		.map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()))
+		.filter((row) => !["Item", "Finding"].includes(row[0]));
 }
 
 function tableHeaderAfter(heading) {
@@ -77,6 +85,7 @@ function validateDebtRow(row) {
 	if (decision === "go" && !hasConcreteEvidence(evidence)) {
 		errors.push(`${item}: go decision requires concrete evidence`);
 	}
+	validateEvidencePaths(item, evidence);
 	if (status === "open" && decision !== "no-go") errors.push(`${item}: open status requires no-go decision`);
 }
 
@@ -97,9 +106,49 @@ function validateStatusSummary() {
 	}
 }
 
+function validateDebtReviewEvidence() {
+	if (!existsSync(reviewPath)) {
+		errors.push(`${reviewPath}: missing`);
+		return;
+	}
+	for (const heading of ["# V2 Debt Review", "## Status", "## Findings", "## Resolved Findings", "## Decision"]) {
+		if (!reviewContent.includes(heading)) errors.push(`${reviewPath}: missing heading: ${heading}`);
+	}
+	const findings = tableRowsIn(reviewContent, "## Findings");
+	const resolvedFindings = tableRowsIn(reviewContent, "## Resolved Findings");
+	const expected = {
+		v1_required_findings: findings.length,
+		resolved_findings: resolvedFindings.length,
+	};
+	for (const [key, value] of Object.entries(expected)) {
+		const actual = reviewStatusNumber(key);
+		if (actual === null) errors.push(`${reviewPath}: missing status summary: ${key}`);
+		else if (actual !== value) errors.push(`${reviewPath}: ${key} expected ${value}, found ${actual}`);
+	}
+	if (reviewStatusValue("owner_acceptance") === "missing" && reviewStatusValue("decision") === "go") {
+		errors.push(`${reviewPath}: go decision requires owner acceptance`);
+	}
+	for (const row of findings) {
+		if (row.length !== 4) errors.push(`${reviewPath}: finding row ${row[0] ?? "unknown"} must have 4 columns`);
+	}
+	for (const row of resolvedFindings) {
+		if (row.length !== 3) errors.push(`${reviewPath}: resolved finding row ${row[0] ?? "unknown"} must have 3 columns`);
+	}
+}
+
 function statusNumber(key) {
 	const match = content.match(new RegExp(`- \`${key}\`: (\\d+)`));
 	return match ? Number.parseInt(match[1], 10) : null;
+}
+
+function reviewStatusNumber(key) {
+	const value = reviewStatusValue(key);
+	return value && /^\d+$/.test(value) ? Number.parseInt(value, 10) : null;
+}
+
+function reviewStatusValue(key) {
+	const match = reviewContent.match(new RegExp(`- ${key}: ([^\\n]+)`));
+	return match ? match[1].trim() : null;
 }
 
 function isYes(value) {
@@ -108,6 +157,13 @@ function isYes(value) {
 
 function hasConcreteEvidence(value) {
 	return !["", "pending", "none", "no-go"].includes(value ?? "") && /\b(audit|backlog|query|report|review|ticket|evidence|acceptance)\b/i.test(value);
+}
+
+function validateEvidencePaths(item, evidence) {
+	const matches = evidence.match(/docs\/migration\/[a-z0-9./_-]+/g) ?? [];
+	for (const path of matches) {
+		if (!existsSync(path)) errors.push(`${item}: evidence path missing: ${path}`);
+	}
 }
 
 if (errors.length > 0) {

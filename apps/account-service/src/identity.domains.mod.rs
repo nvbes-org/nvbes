@@ -1,12 +1,16 @@
 use crate::app::AppState;
 use axum::Router;
 
+#[path = "identity.domains.account_billing.mod.rs"]
+pub mod account_billing;
 #[path = "identity.domains.audit.rs"]
 pub mod audit;
 #[path = "identity.domains.auth.mod.rs"]
 pub mod auth;
 #[path = "identity.domains.authz.mod.rs"]
 pub mod authz;
+#[path = "identity.domains.cloud.mod.rs"]
+pub mod cloud;
 #[path = "identity.domains.developer.mod.rs"]
 pub mod developer;
 #[path = "identity.domains.enterprise.mod.rs"]
@@ -30,6 +34,7 @@ pub mod workspaces;
 
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
+        .merge(account_billing::routes::router(state))
         .merge(auth::routes::router(state))
         .merge(authz::routes::router(state))
         .merge(developer::router(state))

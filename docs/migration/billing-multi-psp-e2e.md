@@ -9,7 +9,7 @@
 
 ## Rules
 
-- PSP webhook intake must live in Billing API, not Identity.
+- PSP webhook intake must live in billing-service, not Account.
 - PSP webhook processing, analytics, emails and dunning must live in Billing worker.
 - The repository smoke proof must be deterministic and must not call external PSP APIs.
 - Multi-PSP continuity must cover Stripe, Mollie, CB, primary ownership and fallback eligibility.
@@ -18,12 +18,12 @@
 
 | Check | Status | Path |
 |---|---:|---|
-| Billing API exposes Stripe webhook intake | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
-| Billing API exposes Mollie webhook intake | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
+| billing-service exposes Stripe webhook intake | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
+| billing-service exposes Mollie webhook intake | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
 | Stripe intake verifies raw webhook signature | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
 | Stripe intake enqueues asynchronous processing | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
 | Mollie classic webhook intake parses id-only callback | passed | `libs/rust/billing/src/mollie.webhooks.rs` |
-| Mollie intake enqueues asynchronous processing | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
+| Mollie intake enqueues asynchronous processing | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
 | Stripe webhook queue name is provider-scoped | passed | `libs/rust/billing/src/jobs.rs` |
 | Mollie webhook queue name is provider-scoped | passed | `libs/rust/billing/src/jobs.rs` |
 | Billing worker dispatches Stripe webhook jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
@@ -44,7 +44,7 @@
 | Workspace effects apply only to primary provider subscriptions | passed | `libs/rust/billing/src/stripe_webhook_workspace_effects.rs` |
 | Workspace effects update dunning state from webhook outcomes | passed | `libs/rust/billing/src/stripe_webhook_workspace_effects.rs` |
 | Multi-PSP continuity evidence is generated and passed | passed | `docs/migration/billing-multi-psp-continuity.generated.json` |
-| Identity API and worker do not own PSP webhook runtime | passed | `apps/identity-api/src + apps/identity-worker/src` |
+| Account Service and worker do not own PSP webhook runtime | passed | `apps/account-service/src + apps/account-worker/src` |
 
 ## Decision
 
@@ -59,5 +59,5 @@ pnpm check:migration-billing-multi-psp-e2e
 ## Regeneration
 
 ```bash
-tools/migration/billing-multi-psp-e2e.mjs --write
+node tools/migration/billing-multi-psp-e2e.mjs --write
 ```

@@ -1,31 +1,17 @@
 use std::collections::HashSet;
 
-use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{domains::developer::grpc, http::error::AppError};
 
 use super::rbac::{DeveloperPermission, DeveloperRole, permissions_for_role};
 
 pub async fn load_developer_roles(
-    db: &PgPool,
+    _db: &sqlx::PgPool,
     tenant_id: Uuid,
     principal_id: Uuid,
 ) -> Result<Vec<DeveloperRole>, AppError> {
-    let rows = sqlx::query_scalar::<_, String>(
-        r#"
-        SELECT role::text
-        FROM developer_role_assignments
-        WHERE tenant_id = $1
-          AND principal_id = $2
-          AND revoked_at IS NULL
-        ORDER BY role::text
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(principal_id)
-    .fetch_all(db)
-    .await?;
+    let rows = grpc::list_developer_roles(tenant_id, principal_id).await?;
 
     rows.into_iter()
         .map(|role| parse_developer_role(&role))
@@ -33,7 +19,7 @@ pub async fn load_developer_roles(
 }
 
 pub async fn list_active_roles_for_principal(
-    db: &PgPool,
+    db: &sqlx::PgPool,
     tenant_id: Uuid,
     principal_id: Uuid,
 ) -> Result<Vec<DeveloperRole>, AppError> {

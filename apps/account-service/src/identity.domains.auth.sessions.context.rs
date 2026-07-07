@@ -3,40 +3,52 @@ use crate::domains::auth::sessions::cache::{apply_workspace_context, current_ses
 use crate::domains::auth::types::{
     AuthContext, SwitchWorkspaceInput, SwitchWorkspaceResult, WorkspaceView,
 };
+use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 #[path = "identity.domains.auth.sessions.context.workspace_switch.rs"]
 mod workspace_switch;
 
 pub async fn first_workspace_context(
-    db: &PgPool,
+    _db: &PgPool,
     principal_id: Uuid,
 ) -> Result<(Option<Uuid>, Option<Uuid>, Option<String>), AppError> {
-    let row = sqlx::query(
-        r#"
-        SELECT w.id AS workspace_id, w.tenant_id, w.organization_id, w.data_region::text AS data_region
-        FROM workspace_memberships wm
-        INNER JOIN workspaces w ON w.id = wm.workspace_id
-        WHERE wm.principal_id = $1 AND wm.status = 'active'
-        ORDER BY CASE wm.role::text WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 WHEN 'member' THEN 2 ELSE 3 END, wm.created_at ASC
-        LIMIT 1
-        "#,
-    )
-    .bind(principal_id)
-    .fetch_optional(db)
-    .await?;
+    let mut selected = None;
+    let mut selected_rank = i32::MAX;
+    for workspace in workspace_port::list_workspaces(None, principal_id).await? {
+        let rank = workspace_port::list_workspace_members(
+            Some(workspace.tenant_id),
+            workspace.workspace_id,
+            principal_id,
+        )
+        .await?
+        .into_iter()
+        .find(|member| member.principal_id == principal_id && member.active)
+        .map(|member| workspace_role_rank(&member.role))
+        .unwrap_or(i32::MAX);
 
-    Ok(row
-        .map(|row| {
-            (
-                Some(row.get("workspace_id")),
-                row.get("organization_id"),
-                Some(row.get::<String, _>("data_region")),
-            )
-        })
-        .unwrap_or((None, None, None)))
+        if rank < selected_rank {
+            selected_rank = rank;
+            selected = Some((
+                Some(workspace.workspace_id),
+                workspace.organization_id,
+                workspace.data_region,
+            ));
+        }
+    }
+
+    Ok(selected.unwrap_or((None, None, None)))
+}
+
+fn workspace_role_rank(role: &str) -> i32 {
+    match role {
+        "owner" => 0,
+        "admin" => 1,
+        "member" => 2,
+        _ => 3,
+    }
 }
 
 pub async fn switch_workspace(

@@ -1,9 +1,7 @@
 use tonic::Status;
 use uuid::Uuid;
 
-use crate::grpc::pb::nvbes::billing::v1::{
-    AdminOperationsActionKind, AdminOperationsActionResult,
-};
+use crate::grpc::pb::nvbes::billing::v1::{AdminOperationsActionKind, AdminOperationsActionResult};
 
 pub async fn run_operations_action(
     db: &sqlx::PgPool,
@@ -169,4 +167,3 @@ fn validate_reason(value: &str) -> Result<(), Status> {
         "invalid_operations_reason: Operations action reason must contain between 8 and 500 characters.",
     ))
 }
-

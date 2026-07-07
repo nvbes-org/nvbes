@@ -35,7 +35,7 @@ impl SecurityEventFilters {
 
 pub(super) async fn fetch_risk_events(
     db: &PgPool,
-    workspace_id: Uuid,
+    tenant_id: Option<Uuid>,
     before_id: Option<Uuid>,
     limit: i64,
     filters: &SecurityEventFilters,
@@ -84,7 +84,7 @@ pub(super) async fn fetch_risk_events(
         WHERE principal_id IN (
           SELECT principal_id
           FROM principals
-          WHERE tenant_id = (SELECT tenant_id FROM workspaces WHERE id = $1)
+          WHERE tenant_id = $1
         )
           AND ($2::uuid IS NULL OR id < $2)
           AND (
@@ -142,7 +142,7 @@ pub(super) async fn fetch_risk_events(
         LIMIT $3
         "#,
     )
-    .bind(workspace_id)
+    .bind(tenant_id)
     .bind(before_id)
     .bind(limit)
     .bind(filters.geo_country_code.as_deref())

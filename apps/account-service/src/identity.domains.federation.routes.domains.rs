@@ -67,9 +67,14 @@ pub(crate) async fn list_domains(
     headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<Json<TenantDomainsResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
-        crate::domains::federation::domains::list_tenant_domains(&state.db, tenant_id).await?,
+        crate::domains::federation::domains::list_tenant_domains(
+            &state.db,
+            tenant_id,
+            auth.user_id,
+        )
+        .await?,
     ))
 }
 
@@ -94,11 +99,12 @@ pub(crate) async fn create_domain(
     Path(tenant_id): Path<Uuid>,
     Json(request): Json<CreateTenantDomainRequest>,
 ) -> Result<Json<TenantDomainResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::domains::create_tenant_domain(
             &state.db,
             tenant_id,
+            auth.user_id,
             CreateTenantDomainInput {
                 domain: request.domain,
                 sso_required: request.sso_required,
@@ -132,11 +138,12 @@ pub(crate) async fn update_domain(
     Path((tenant_id, domain_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<UpdateTenantDomainRequest>,
 ) -> Result<Json<TenantDomainResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::domains::update_tenant_domain(
             &state.db,
             tenant_id,
+            auth.user_id,
             domain_id,
             UpdateTenantDomainInput {
                 sso_required: request.sso_required,
@@ -170,11 +177,12 @@ pub(crate) async fn verify_domain(
     Path((tenant_id, domain_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<VerifyTenantDomainRequest>,
 ) -> Result<Json<TenantDomainResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::domains::verify_tenant_domain(
             &state.db,
             tenant_id,
+            auth.user_id,
             domain_id,
             VerifyTenantDomainInput {
                 token: request.token,
@@ -204,8 +212,13 @@ pub(crate) async fn delete_domain(
     headers: HeaderMap,
     Path((tenant_id, domain_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
-    crate::domains::federation::domains::delete_tenant_domain(&state.db, tenant_id, domain_id)
-        .await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    crate::domains::federation::domains::delete_tenant_domain(
+        &state.db,
+        tenant_id,
+        auth.user_id,
+        domain_id,
+    )
+    .await?;
     Ok(Json(serde_json::json!({ "success": true })))
 }

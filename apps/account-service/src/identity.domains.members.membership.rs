@@ -1,8 +1,14 @@
 use uuid::Uuid;
 
-use crate::{domains::authz::WorkspaceAccess, http::error::AppError};
+use crate::{
+    domains::{authz::WorkspaceAccess, cloud::workspace_port},
+    http::error::AppError,
+};
+use nvbes_product_account::cloud_boundary::{
+    UpdateWorkspaceMembershipRoleCommand, UpdateWorkspaceMembershipStatusCommand,
+};
 use nvbes_tenancy::role_as_db;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 use super::invites::InvitationRecord;
 use super::records::MemberRecord;
@@ -13,54 +19,30 @@ pub async fn list_members(
     db: &PgPool,
     access: &WorkspaceAccess,
 ) -> Result<MemberListResponse, AppError> {
-    let members = sqlx::query_as::<_, MemberRecord>(
-        r#"
-        SELECT
-          wm.principal_id AS user_id,
-          u.email,
-          u.firstname,
-          u.lastname,
-          u.username,
-          wm.role::text AS role,
-          wm.status::text AS status,
-          wm.created_at,
-          wm.updated_at
-        FROM workspace_memberships wm
-        INNER JOIN users u ON u.principal_id = wm.principal_id
-        WHERE wm.workspace_id = $1
-        ORDER BY
-          CASE wm.role
-            WHEN 'owner' THEN 0
-            WHEN 'admin' THEN 1
-            WHEN 'member' THEN 2
-            WHEN 'viewer' THEN 3
-          END,
-          u.email ASC
-        "#,
+    let mut members = Vec::new();
+    for member in workspace_port::list_workspace_members(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
     )
-    .bind(access.workspace_id)
-    .fetch_all(db)
-    .await?;
+    .await?
+    {
+        if let Some(record) = member_record_from_cloud_member(db, member).await? {
+            members.push(record);
+        }
+    }
+    members.sort_by(|left, right| {
+        member_role_rank(&left.role)
+            .cmp(&member_role_rank(&right.role))
+            .then_with(|| left.email.cmp(&right.email))
+    });
 
-    let invitations = sqlx::query_as::<_, InvitationRecord>(
-        r#"
-        SELECT
-          id,
-          email,
-          role::text AS role,
-          status::text AS status,
-          expires_at,
-          accepted_at,
-          revoked_at,
-          created_at
-        FROM workspace_invitations
-        WHERE workspace_id = $1
-          AND status IN ('pending', 'accepted')
-        ORDER BY created_at DESC
-        "#,
+    let invitations = workspace_port::list_workspace_invitations(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
+        &["pending", "accepted"],
     )
-    .bind(access.workspace_id)
-    .fetch_all(db)
     .await?;
 
     Ok(MemberListResponse {
@@ -88,35 +70,11 @@ pub async fn update_member_role(
         ));
     }
 
-    let mut tx = db.begin().await?;
-
-    let current_member = sqlx::query_as::<_, MemberRecord>(
-        r#"
-        SELECT
-          wm.principal_id AS user_id,
-          u.email,
-          u.firstname,
-          u.lastname,
-          u.username,
-          wm.role::text AS role,
-          wm.status::text AS status,
-          wm.created_at,
-          wm.updated_at
-        FROM workspace_memberships wm
-        INNER JOIN users u ON u.principal_id = wm.principal_id
-        WHERE wm.workspace_id = $1
-          AND wm.principal_id = $2
-          AND wm.status = 'active'
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(member_id)
-    .fetch_optional(&mut *tx)
-    .await?;
-
-    let current_member = current_member.ok_or_else(|| {
-        AppError::not_found("member_not_found", "Active member not found in workspace.")
-    })?;
+    let current_member = active_member_record(db, access, member_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::not_found("member_not_found", "Active member not found in workspace.")
+        })?;
 
     if current_member.role == role_as_db(input.role) {
         return Err(AppError::conflict(
@@ -125,38 +83,23 @@ pub async fn update_member_role(
         ));
     }
 
-    let updated_member = sqlx::query_as::<_, MemberRecord>(
-        r#"
-        UPDATE workspace_memberships
-        SET role = $3::workspace_member_role,
-            updated_at = NOW()
-        WHERE workspace_id = $1
-          AND principal_id = $2
-        RETURNING
-          principal_id AS user_id,
-          (
-            SELECT email FROM users WHERE principal_id = workspace_memberships.principal_id
-          ) AS email,
-          (
-            SELECT firstname FROM users WHERE principal_id = workspace_memberships.principal_id
-          ) AS firstname,
-          (
-            SELECT lastname FROM users WHERE principal_id = workspace_memberships.principal_id
-          ) AS lastname,
-          (
-            SELECT username FROM users WHERE principal_id = workspace_memberships.principal_id
-          ) AS username,
-          role::text AS role,
-          status::text AS status,
-          created_at,
-          updated_at
-        "#,
+    let mut tx = db.begin().await?;
+
+    crate::domains::cloud::workspace_port::update_workspace_membership_role_tx(
+        &mut tx,
+        &UpdateWorkspaceMembershipRoleCommand {
+            actor_principal_id: access.auth.user_id,
+            workspace_id: access.workspace_id,
+            principal_id: member_id,
+            role: role_as_db(input.role).to_string(),
+        },
     )
-    .bind(access.workspace_id)
-    .bind(member_id)
-    .bind(role_as_db(input.role))
-    .fetch_one(&mut *tx)
     .await?;
+    let updated_member = active_member_record(db, access, member_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::not_found("member_not_found", "Active member not found in workspace.")
+        })?;
 
     auth::sessions::revoke_all_user_sessions_tx(&mut tx, member_id).await?;
 
@@ -205,41 +148,24 @@ pub async fn remove_member(
         ));
     }
 
-    let mut tx = db.begin().await?;
-
-    let existing = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(*)
-        FROM workspace_memberships
-        WHERE workspace_id = $1
-          AND principal_id = $2
-          AND status = 'active'
-        "#,
-    )
-    .bind(access.workspace_id)
-    .bind(member_id)
-    .fetch_one(&mut *tx)
-    .await?;
-
-    if existing == 0 {
+    if active_member_record(db, access, member_id).await?.is_none() {
         return Err(AppError::not_found(
             "member_not_found",
             "Active member not found in workspace.",
         ));
     }
 
-    sqlx::query(
-        r#"
-        UPDATE workspace_memberships
-        SET status = 'removed',
-            updated_at = NOW()
-        WHERE workspace_id = $1
-          AND principal_id = $2
-        "#,
+    let mut tx = db.begin().await?;
+
+    crate::domains::cloud::workspace_port::update_workspace_membership_status_tx(
+        &mut tx,
+        &UpdateWorkspaceMembershipStatusCommand {
+            actor_principal_id: access.auth.user_id,
+            workspace_id: access.workspace_id,
+            principal_id: member_id,
+            status: "removed".to_string(),
+        },
     )
-    .bind(access.workspace_id)
-    .bind(member_id)
-    .execute(&mut *tx)
     .await?;
 
     auth::sessions::revoke_all_user_sessions_tx(&mut tx, member_id).await?;
@@ -269,4 +195,66 @@ pub async fn remove_member(
         removed_user_id: member_id,
         sessions_revoked: true,
     })
+}
+
+async fn active_member_record(
+    db: &PgPool,
+    access: &WorkspaceAccess,
+    member_id: Uuid,
+) -> Result<Option<MemberRecord>, AppError> {
+    let member = workspace_port::list_workspace_members(
+        access.tenant_id,
+        access.workspace_id,
+        access.auth.user_id,
+    )
+    .await?
+    .into_iter()
+    .find(|member| member.principal_id == member_id && member.active);
+
+    match member {
+        Some(member) => member_record_from_cloud_member(db, member).await,
+        None => Ok(None),
+    }
+}
+
+async fn member_record_from_cloud_member(
+    db: &PgPool,
+    member: workspace_port::CloudWorkspaceMemberSummary,
+) -> Result<Option<MemberRecord>, AppError> {
+    let user = sqlx::query(
+        r#"
+        SELECT email, firstname, lastname, username
+        FROM users
+        WHERE principal_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(member.principal_id)
+    .fetch_optional(db)
+    .await?;
+    let Some(user) = user else {
+        return Ok(None);
+    };
+
+    Ok(Some(MemberRecord {
+        user_id: member.principal_id,
+        email: user.get("email"),
+        firstname: user.get("firstname"),
+        lastname: user.get("lastname"),
+        username: user.get("username"),
+        role: member.role,
+        status: member.status,
+        created_at: member.joined_at,
+        updated_at: member.updated_at,
+    }))
+}
+
+fn member_role_rank(role: &str) -> i32 {
+    match role {
+        "owner" => 0,
+        "admin" => 1,
+        "member" => 2,
+        "viewer" => 3,
+        _ => 4,
+    }
 }

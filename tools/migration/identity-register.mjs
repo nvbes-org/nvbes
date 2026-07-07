@@ -12,6 +12,7 @@ const sources = {
 	registerRouteTests: "apps/account-service/src/identity.domains.auth.routes.register.tests.rs",
 	onboarding: "apps/account-service/src/identity.domains.auth.onboarding.rs",
 	accountDb: "apps/account-service/src/identity.domains.auth.db.account.rs",
+	workspaceProjection: "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
 	authRoutes: "apps/account-service/src/identity.domains.auth.routes.rs",
 	openapiSource: "apps/account-service/src/identity.http.openapi.rs",
 	openapiJson: "apps/account-service/openapi.json",
@@ -61,9 +62,9 @@ function buildChecks() {
 		textCheck("tenant-insert", sources.accountDb, "Registration creates personal tenant", "INSERT INTO tenants"),
 		textCheck("principal-insert", sources.accountDb, "Registration creates human principal", "INSERT INTO principals"),
 		textCheck("user-insert", sources.accountDb, "Registration creates pending verification user", "'pending_verification'"),
-		textCheck("workspace-insert", sources.accountDb, "Registration creates personal workspace", "INSERT INTO workspaces"),
-		textCheck("workspace-policy", sources.accountDb, "Registration creates workspace policy", "INSERT INTO workspace_policies"),
-		textCheck("owner-membership", sources.accountDb, "Registration creates owner workspace membership", "INSERT INTO workspace_memberships"),
+		textCheck("workspace-insert", sources.workspaceProjection, "Registration creates personal workspace", "INSERT INTO workspaces"),
+		textCheck("workspace-policy", sources.workspaceProjection, "Registration creates workspace policy", "INSERT INTO workspace_policies"),
+		textCheck("owner-membership", sources.workspaceProjection, "Registration creates owner workspace membership", "INSERT INTO workspace_memberships"),
 		textCheck("audit-event", sources.accountDb, "Registration writes user.registered audit event", 'action: "user.registered"'),
 		textCheck("verification-email", sources.accountDb, "Registration issues verification email token", "issue_verification_email_tx"),
 		textCheck("openapi-source", sources.openapiSource, "OpenAPI source exports register path", "crate::domains::auth::routes::register::register"),
@@ -103,7 +104,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/identity-register.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/identity-register.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -163,7 +164,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-identity-register",
-		"tools/migration/identity-register.mjs --write",
+		"node tools/migration/identity-register.mjs --write",
 		"```",
 		"",
 	);
@@ -175,7 +176,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/identity-register.mjs --write",
+		command: "node tools/migration/identity-register.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-account-service register_input_from_request --locked",
@@ -207,8 +208,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/identity-register.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/identity-register.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-register.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-register.mjs --write`);
 }
 
 if (errors.length > 0) {

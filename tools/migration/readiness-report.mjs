@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { readPackageScripts } from "./execution-backlog.proof.mjs";
 import { serializeReadinessMarkdown } from "./readiness-report.markdown.mjs";
 import { proofForReadinessArea, proofForReadinessBlocker, validateReadinessBlockerProof } from "./readiness-report.proof.mjs";
+import { buildReadinessSourceRows, expectedReadinessSources } from "./readiness-report.sources.mjs";
 
 const args = process.argv.slice(2);
 const write = args.includes("--write");
@@ -12,39 +13,6 @@ const jsonPath = "docs/migration/readiness-report.generated.json";
 const markdownPath = "docs/migration/readiness-report.md";
 const errors = [];
 const packageScripts = readPackageScripts(errors);
-
-const sourceFiles = [
-	["data", "docs/migration/data-map.generated.json", "summary", "pending"],
-	["secrets", "docs/migration/secret-map.generated.json", "summary", "pending"],
-	["jobs", "docs/migration/job-map.generated.json", "summary", "pending"],
-	["resources", "docs/migration/resource-map.generated.json", "summary", "pending"],
-	["target_structure", "docs/migration/target-structure.generated.json", "summary", "pending"],
-	["codegen", "docs/migration/codegen.generated.json", "summary", "pending"],
-	["supply_chain", "docs/migration/supply-chain.generated.json", "summary", "pending"],
-	["runtimes", "docs/migration/runtime-foundation.generated.json", "summary", "pending"],
-	["platform_primitives", "docs/migration/platform-primitives.generated.json", "summary", "pending"],
-	["identity_register", "docs/migration/identity-register.generated.json", "summary", "failed"],
-	["identity_login_session", "docs/migration/identity-login-session.generated.json", "summary", "failed"],
-	["identity_mfa_webauthn", "docs/migration/identity-mfa-webauthn.generated.json", "summary", "failed"],
-	["workspace_membership_roles", "docs/migration/workspace-membership-roles.generated.json", "summary", "failed"],
-	["workspace_last_owner", "docs/migration/workspace-last-owner.generated.json", "summary", "failed"],
-	["drive_upload_download", "docs/migration/drive-upload-download.generated.json", "summary", "failed"],
-	["drive_share_revoke", "docs/migration/drive-share-revoke.generated.json", "summary", "failed"],
-	["drive_quotas", "docs/migration/drive-quotas.generated.json", "summary", "failed"],
-	["audit_append_only", "docs/migration/audit-append-only.generated.json", "summary", "failed"],
-	["privacy_export_delete", "docs/migration/privacy-export-delete.generated.json", "summary", "failed"],
-	["billing_entitlements", "docs/migration/billing-entitlements.generated.json", "summary", "failed"],
-	["billing_webhook_idempotency", "docs/migration/billing-webhook-idempotency.generated.json", "summary", "failed"],
-	["billing_multi_psp_continuity", "docs/migration/billing-multi-psp-continuity.generated.json", "summary", "failed"],
-	["developer_oauth_tokens", "docs/migration/developer-oauth-tokens.generated.json", "summary", "failed"],
-	["developer_signed_webhooks", "docs/migration/developer-signed-webhooks.generated.json", "summary", "failed"],
-	["cloud_provisioning", "docs/migration/cloud-provisioning.generated.json", "summary", "failed"],
-	["phases", "docs/migration/phase-ledger.generated.json", "summary", "pending"],
-	["domains", "docs/migration/domain-ledger.generated.json", "summary", "pending"],
-	["domain_dod", "docs/migration/domain-dod.generated.json", "summary", "pending"],
-	["risks", "docs/migration/risk-register.generated.json", "summary", "pending"],
-	["gates", "docs/migration/gate-evidence.generated.json", "summary", "pending"],
-];
 
 function readJson(path) {
 	if (!existsSync(path)) {
@@ -59,33 +27,16 @@ function readJson(path) {
 	}
 }
 
-function countNoGoGates(gateEvidence) {
-	return (gateEvidence?.gates ?? []).filter((gate) => gate.decision !== "go").length;
+function readText(path) {
+	if (!existsSync(path)) {
+		errors.push(`${path}: missing`);
+		return "";
+	}
+	return readFileSync(path, "utf8");
 }
 
 function sourceRows() {
-	const rows = [];
-	for (const [id, path, summaryKey, pendingKey] of sourceFiles) {
-		const data = readJson(path);
-		const summary = data?.[summaryKey] ?? {};
-		rows.push({
-			id,
-			source: path,
-			total:
-				summary.entries ??
-				summary.risks ??
-				summary.gates ??
-				summary.phases ??
-				summary.domains ??
-				summary.runtimes ??
-				summary.checks ??
-				0,
-			pending: summary[pendingKey] ?? 0,
-			proof: proofForReadinessArea(id),
-		});
-	}
-	const gateEvidence = readJson("docs/migration/gate-evidence.generated.json");
-	rows.push({ id: "gate_decisions", source: "docs/migration/gate-evidence.generated.json", total: gateEvidence?.summary?.gates ?? 0, pending: countNoGoGates(gateEvidence), proof: proofForReadinessArea("gate_decisions") });
+	const rows = buildReadinessSourceRows(readJson, readText);
 	const reconciliation = readJson("docs/migration/reconciliation.template.json");
 	rows.push({ id: "reconciliation_template", source: "docs/migration/reconciliation.template.json", total: 1, pending: reconciliation?.decision === "go" ? 0 : 1, proof: proofForReadinessArea("reconciliation_template") });
 	const liveEvidence = readJson("docs/migration/live-evidence-instances.generated.json");
@@ -108,8 +59,8 @@ function buildReport() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/readiness-report.mjs --write",
-			strict_cutover_command: "tools/migration/readiness-report.mjs --strict",
+			command: "node tools/migration/readiness-report.mjs --write",
+			strict_cutover_command: "node tools/migration/readiness-report.mjs --strict",
 		},
 		status: {
 			production_cutover: blockers.length === 0 ? "go" : "no-go",
@@ -129,10 +80,10 @@ function serializeJson(report) {
 
 function validate(report) {
 	if (report.schema_version !== 1) errors.push(`${jsonPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/readiness-report.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/readiness-report.mjs --write") {
 		errors.push(`${jsonPath}: generation.command is invalid`);
 	}
-	if (report.generation?.strict_cutover_command !== "tools/migration/readiness-report.mjs --strict") {
+	if (report.generation?.strict_cutover_command !== "node tools/migration/readiness-report.mjs --strict") {
 		errors.push(`${jsonPath}: generation.strict_cutover_command is invalid`);
 	}
 	if (!["go", "no-go"].includes(report.status.production_cutover)) {
@@ -144,7 +95,8 @@ function validate(report) {
 	for (const field of ["live_evidence_missing_requirements", "live_evidence_missing_items"]) {
 		if (!Number.isInteger(report.status[field]) || report.status[field] < 0) errors.push(`${jsonPath}: ${field} must be a non-negative integer`);
 	}
-	if (!Array.isArray(report.sources) || report.sources.length !== sourceFiles.length + 3) {
+	const expected = expectedReadinessSources();
+	if (!Array.isArray(report.sources) || report.sources.length !== expected.size) {
 		errors.push(`${jsonPath}: sources must include all readiness inputs`);
 	}
 	if (!Array.isArray(report.blockers)) errors.push(`${jsonPath}: blockers must be an array`);
@@ -157,12 +109,7 @@ function validate(report) {
 
 function validateSourceRows(report) {
 	const sources = Array.isArray(report.sources) ? report.sources : [];
-	const expected = new Map([
-		...sourceFiles.map(([id, source]) => [id, source]),
-		["gate_decisions", "docs/migration/gate-evidence.generated.json"],
-		["reconciliation_template", "docs/migration/reconciliation.template.json"],
-		["live_evidence", "docs/migration/live-evidence-instances.generated.json"],
-	]);
+	const expected = expectedReadinessSources();
 	const seen = new Set();
 	for (const source of sources) {
 		if (!source.id) errors.push(`${jsonPath}: source id is required`);
@@ -248,9 +195,9 @@ validate(report);
 
 for (const [path, expected] of [[jsonPath, json], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/readiness-report.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/readiness-report.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/readiness-report.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/readiness-report.mjs --write`);
 	}
 }
 

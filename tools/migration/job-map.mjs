@@ -180,7 +180,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-job-map",
-		"tools/migration/job-map.mjs --write",
+		"node tools/migration/job-map.mjs --write",
 		"```",
 		"",
 	);
@@ -191,9 +191,9 @@ function validate(map, expectedEntries) {
 	const expectedKeys = new Set(expectedEntries.map(keyFor));
 	const seen = new Set();
 	if (map.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (map.generation?.command !== "tools/migration/job-map.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
+	if (map.generation?.command !== "node tools/migration/job-map.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
 	if (map.generation?.source !== inventoryPath) errors.push(`${outputPath}: generation.source is invalid`);
-	if (map.generation?.strict_cutover_command !== "tools/migration/job-map.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
+	if (map.generation?.strict_cutover_command !== "node tools/migration/job-map.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	if (!Array.isArray(map.entries)) errors.push(`${outputPath}: entries must be an array`);
 	validateDecisionMapRows({ map, expectedEntries, keyFor, outputPath, errors });
 	for (const entry of map.entries ?? []) {
@@ -227,9 +227,9 @@ const existing = existsSync(outputPath) ? readJson(outputPath) : undefined;
 const jobMap = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/job-map.mjs --write",
+		command: "node tools/migration/job-map.mjs --write",
 		source: inventoryPath,
-		strict_cutover_command: "tools/migration/job-map.mjs --strict",
+		strict_cutover_command: "node tools/migration/job-map.mjs --strict",
 	},
 	summary: { entries: generatedEntries.length, pending: 0, keep: 0, rebuild: 0, remove: 0, replace: 0 },
 	entries: mergeExisting(generatedEntries, existing),
@@ -250,15 +250,15 @@ if (write) {
 validate(jobMap, generatedEntries);
 
 if (!existsSync(outputPath)) {
-	errors.push(`${outputPath}: missing; run tools/migration/job-map.mjs --write`);
+	errors.push(`${outputPath}: missing; run node tools/migration/job-map.mjs --write`);
 } else if (readFileSync(outputPath, "utf8") !== serialize(jobMap)) {
-	errors.push(`${outputPath}: stale; run tools/migration/job-map.mjs --write`);
+	errors.push(`${outputPath}: stale; run node tools/migration/job-map.mjs --write`);
 }
 
 if (!existsSync(markdownPath)) {
-	errors.push(`${markdownPath}: missing; run tools/migration/job-map.mjs --write`);
+	errors.push(`${markdownPath}: missing; run node tools/migration/job-map.mjs --write`);
 } else if (readFileSync(markdownPath, "utf8") !== serializeMarkdown(jobMap)) {
-	errors.push(`${markdownPath}: stale; run tools/migration/job-map.mjs --write`);
+	errors.push(`${markdownPath}: stale; run node tools/migration/job-map.mjs --write`);
 }
 
 if (errors.length > 0) {

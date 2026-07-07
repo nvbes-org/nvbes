@@ -1,6 +1,6 @@
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, resolve_admin_scope};
-use crate::domains::enterprise::{db, policy};
+use crate::domains::enterprise::{db, grpc, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
@@ -26,44 +26,25 @@ pub async fn create_invitations(
     }
 
     let mut tx = db.begin().await?;
-    db::ensure_workspaces_belong(&mut tx, tenant_id, &input.workspace_ids, scope).await?;
-    let mut invitations = Vec::new();
-    for raw_email in input.emails {
-        let email = crate::domains::auth::password::normalize_email(&raw_email);
-        crate::domains::auth::password::validate_email(&email)?;
-        for workspace_id in &input.workspace_ids {
-            if db::has_pending_invitation(&mut tx, tenant_id, *workspace_id, &email).await? {
-                return Err(AppError::conflict(
-                    "invitation_pending",
-                    "A pending invitation already exists for this email and workspace.",
-                ));
-            }
-            let token = crate::domains::auth::password::generate_token("gxi");
-            let token_hash = crate::domains::auth::password::token_hash(&token);
-            let row = db::insert_invitation(
-                &mut tx,
-                tenant_id,
-                *workspace_id,
-                &email,
-                policy::role_as_db(&input.role),
-                &token_hash,
-            )
-            .await?;
-            db::insert_audit(
-                &mut tx,
-                tenant_id,
-                auth.user_id,
-                "enterprise.member.invited",
-                "workspace_invitation",
-                Some(row.id),
-                serde_json::json!({"email": email, "role": policy::role_as_db(&input.role), "workspace_id": workspace_id}),
-            )
-            .await?;
-            invitations.push(row.into_view());
-        }
-    }
+    db::ensure_workspaces_belong(
+        &mut tx,
+        tenant_id,
+        &input.workspace_ids,
+        scope,
+        auth.user_id,
+    )
+    .await?;
     tx.commit().await?;
-    Ok(EnterpriseInvitationsResponse { invitations })
+
+    grpc::invitations::create_invitations(
+        tenant_id,
+        auth.user_id,
+        scope,
+        input.emails,
+        policy::role_as_db(&input.role),
+        input.workspace_ids,
+    )
+    .await
 }
 
 pub async fn revoke_developer_secret(
@@ -95,19 +76,11 @@ pub async fn revoke_developer_secret(
     )
     .await?;
 
-    let mut tx = db.begin().await?;
-    let client_id = db::revoke_developer_secret_version(&mut tx, tenant_id, version_id).await?;
-    db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.developer_secret.revoked",
-        "developer_client_secret_version",
-        Some(version_id),
-        serde_json::json!({"client_id": client_id}),
-    )
-    .await?;
-    tx.commit().await?;
+    let client_id =
+        crate::domains::developer::grpc::revoke_secret_version(tenant_id, auth.user_id, version_id)
+            .await?;
+    grpc::audit::record_developer_secret_revoked(tenant_id, auth.user_id, version_id, &client_id)
+        .await?;
 
     super::reads::list_developers(db, auth, tenant_id).await
 }

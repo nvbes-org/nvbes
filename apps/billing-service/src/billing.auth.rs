@@ -27,7 +27,6 @@ struct IdentityIntrospectionResponse {
     scope: Option<String>,
     principal_type: Option<String>,
     sub: Option<String>,
-    role: Option<String>,
     tenant_id: Option<Uuid>,
     workspace_id: Option<Uuid>,
     acr: Option<String>,
@@ -44,7 +43,10 @@ pub async fn authorize_billing_workspace(
 ) -> Result<BillingAuthContext, AppError> {
     let token = bearer_token(headers)?;
     let identity = introspect_identity_token(headers, &token).await?;
-    if identity.workspace_id.is_some_and(|claim| claim != workspace_id) {
+    if identity
+        .workspace_id
+        .is_some_and(|claim| claim != workspace_id)
+    {
         return Err(AppError::forbidden(
             "workspace_context_mismatch",
             "Token workspace context does not match the requested workspace.",
@@ -101,7 +103,10 @@ async fn introspect_identity_token(
     let mut outgoing = HeaderMap::new();
     nvbes_observability::propagate_headers_trace_context(headers, &mut outgoing);
     let response = reqwest::Client::new()
-        .post(format!("{}/oauth/introspect", base_url.trim_end_matches('/')))
+        .post(format!(
+            "{}/oauth/introspect",
+            base_url.trim_end_matches('/')
+        ))
         .headers(outgoing)
         .basic_auth(client_id, Some(client_secret))
         .json(&serde_json::json!({
@@ -121,7 +126,10 @@ async fn introspect_identity_token(
     if !response.status().is_success() {
         return Err(AppError::internal(
             "identity_introspection_failed",
-            format!("Identity introspection failed with status {}.", response.status()),
+            format!(
+                "Identity introspection failed with status {}.",
+                response.status()
+            ),
         ));
     }
 

@@ -6,7 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { suspendWorkspaceMembership } from './backoffice-service.api';
 import { strongConfirmationCode } from './backoffice-service.strong-confirmation';
-import type { AccessActionResult, AdminCredentials, PrivilegedUser } from './backoffice-service.types';
+import type {
+  AccessActionResult,
+  AdminCredentials,
+  PrivilegedUser,
+} from './backoffice-service.types';
 
 export function PrivilegedMembershipAction({
   credentials,

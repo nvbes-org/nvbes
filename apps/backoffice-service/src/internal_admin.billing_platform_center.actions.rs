@@ -129,6 +129,7 @@ async fn create_routing_rule_route(
     Ok(Json(
         create_routing_rule(
             &state.db,
+            &state.billing_grpc_endpoint,
             access,
             workspace_id,
             CreateRoutingRuleInput {
@@ -164,7 +165,15 @@ async fn enable_routing_rule_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        enable_routing_rule(&state.db, access, workspace_id, rule_id, request.reason).await?,
+        enable_routing_rule(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            rule_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -184,7 +193,15 @@ async fn disable_routing_rule_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        disable_routing_rule(&state.db, access, workspace_id, rule_id, request.reason).await?,
+        disable_routing_rule(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            rule_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -204,7 +221,15 @@ async fn approve_kyc_profile_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        approve_kyc_profile(&state.db, access, workspace_id, profile_id, request.reason).await?,
+        approve_kyc_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -224,7 +249,15 @@ async fn reject_kyc_profile_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        reject_kyc_profile(&state.db, access, workspace_id, profile_id, request.reason).await?,
+        reject_kyc_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -244,8 +277,15 @@ async fn activate_einvoicing_profile_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        activate_einvoicing_profile(&state.db, access, workspace_id, profile_id, request.reason)
-            .await?,
+        activate_einvoicing_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 

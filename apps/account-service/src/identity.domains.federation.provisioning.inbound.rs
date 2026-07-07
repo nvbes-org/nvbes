@@ -133,7 +133,7 @@ pub async fn handle_inbound_federation(
     .await?;
 
     let (workspace_id, organization_id, workspace_region) =
-        first_workspace_context(db, principal_id).await?;
+        first_workspace_context(db, tenant_id, principal_id).await?;
     let session_id = Uuid::new_v4();
     let scope = "openid profile email offline_access".to_string();
     let amr = vec!["federated".to_string(), protocol.to_string()];

@@ -1,15 +1,7 @@
 {
   "knownProviderFiles": [
     "Cargo.toml",
-    "apps/cloud-service/Cargo.toml",
-    "apps/cloud-service/src/drive.app.rs",
-    "apps/cloud-web/index.html",
-    "apps/cloud-web/src/drive.analytics.ts",
-    "apps/cloud-web/src/drive.sw.consent.ts",
-    "apps/cloud-web/vite.config.ts",
     "apps/enterprise-web/vite.config.ts",
-    "apps/account-service/Cargo.toml",
-    "apps/account-service/src/identity.app.rs",
     "apps/account-service/src/identity.domains.auth.exposed_credentials.rs",
     "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
     "apps/account-service/src/identity.http.routes.rs",
@@ -92,8 +84,9 @@
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
     "tools/boundary-checks/check-product-boundaries.billing-migrations.mjs",
+    "tools/boundary-checks/check-product-boundaries.billing-providers.mjs",
     "tools/boundary-checks/check-product-boundaries.billing-worker-queues.mjs",
-    "tools/boundary-checks/check-product-boundaries.identity-billing-runtime.mjs",
+    "tools/boundary-checks/check-product-boundaries.account-billing-runtime.mjs",
     "tools/boundary-checks/check-product-boundaries.account-web-billing.mjs",
     "tools/boundary-checks/check-product-boundaries.mjs"
   ]

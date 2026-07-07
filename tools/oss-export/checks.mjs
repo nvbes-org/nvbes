@@ -52,7 +52,18 @@ for (const mapping of manifest.copy ?? []) {
   }
 }
 
-for (const privatePath of ['docs/cloud', 'docs/internal', 'docs/blueprint', 'deploy/cloud', 'deploy/internal']) {
+const requiredPrivateExcludes = [
+  'docs/cloud',
+  'docs/internal',
+  'docs/blueprint',
+  'deploy/cloud',
+  'deploy/internal',
+  'libs/ts/backoffice-service-sdk-core',
+  'apps/backoffice-*',
+  'apps/internal-*',
+];
+
+for (const privatePath of requiredPrivateExcludes) {
   if (!manifest.exclude.includes(privatePath)) {
     errors.push(`${privatePath} must stay excluded from OSS export`);
   }

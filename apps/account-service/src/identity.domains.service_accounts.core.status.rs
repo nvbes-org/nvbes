@@ -1,3 +1,4 @@
+use nvbes_product_account::cloud_boundary::UpdateWorkspaceMembershipStatusCommand;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -83,19 +84,15 @@ async fn update_service_account_status(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
-        r#"
-        UPDATE workspace_memberships
-        SET status = $3::workspace_member_status,
-            updated_at = NOW()
-        WHERE workspace_id = $1
-          AND principal_id = $2
-        "#,
+    crate::domains::cloud::workspace_port::update_workspace_membership_status_tx(
+        &mut tx,
+        &UpdateWorkspaceMembershipStatusCommand {
+            actor_principal_id: access.auth.user_id,
+            workspace_id: access.workspace_id,
+            principal_id: service_account_id,
+            status: membership_status.to_string(),
+        },
     )
-    .bind(access.workspace_id)
-    .bind(service_account_id)
-    .bind(membership_status)
-    .execute(&mut *tx)
     .await?;
 
     record_audit_event(

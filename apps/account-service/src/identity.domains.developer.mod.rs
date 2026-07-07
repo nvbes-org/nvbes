@@ -6,6 +6,8 @@ use crate::app::AppState;
 pub mod apps_routes;
 #[path = "identity.domains.developer.apps.service.rs"]
 pub mod apps_service;
+#[path = "identity.domains.developer.grpc.rs"]
+pub mod grpc;
 #[path = "identity.domains.developer.logs.routes.rs"]
 pub mod logs_routes;
 #[path = "identity.domains.developer.rbac.rs"]
@@ -14,8 +16,6 @@ pub mod rbac;
 pub mod rbac_db;
 #[path = "identity.domains.developer.routes.rs"]
 pub mod routes;
-#[path = "identity.domains.developer.sandbox.rs"]
-pub mod sandbox;
 #[path = "identity.domains.developer.service.rs"]
 pub mod service;
 #[path = "identity.domains.developer.service_accounts.db.rs"]

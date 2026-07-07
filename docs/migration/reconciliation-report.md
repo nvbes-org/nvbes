@@ -73,13 +73,13 @@ The template is `docs/migration/reconciliation.template.json`.
 Validate a rehearsal report with:
 
 ```bash
-tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json
+node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json
 ```
 
 Validate the template only with:
 
 ```bash
-tools/migration/reconcile.mjs --env template --report docs/migration/reconciliation.template.json --allow-template
+node tools/migration/reconcile.mjs --env template --report docs/migration/reconciliation.template.json --allow-template
 ```
 
 ## Decision

@@ -42,7 +42,7 @@ export function describeAccessDecision(result: DebugDeveloperToken | null): stri
 
   switch (result.access_decision) {
     case 'allowed':
-      return 'Token is active, belongs to this developer tenant, and can be accepted.';
+      return 'Token is active, belongs to this Console tenant, and can be accepted.';
     case 'expired':
       return 'Token decoded successfully but is outside its not-before or expiration window.';
     case 'tenant_mismatch':

@@ -29,8 +29,8 @@ function buildLedger() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/codegen.mjs --write",
-			strict_cutover_command: "tools/migration/codegen.mjs --strict",
+			command: "node tools/migration/codegen.mjs --write",
+			strict_cutover_command: "node tools/migration/codegen.mjs --strict",
 		},
 		summary: {
 			entries: entries.length,
@@ -69,7 +69,7 @@ function serializeMarkdown(ledger) {
 	for (const entry of ledger.entries) {
 		lines.push(`| ${entry.id} | ${entry.status} | \`${entry.command}\` | \`${entry.evidence}\` |`);
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-codegen", "tools/migration/codegen.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-codegen", "node tools/migration/codegen.mjs --write", "```", "");
 	return lines.join("\n");
 }
 
@@ -77,8 +77,8 @@ function validate(ledger) {
 	const expectedById = new Map(controls.map((control) => [control.id, control]));
 	const seen = new Set();
 	if (ledger.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (ledger.generation?.command !== "tools/migration/codegen.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
-	if (ledger.generation?.strict_cutover_command !== "tools/migration/codegen.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
+	if (ledger.generation?.command !== "node tools/migration/codegen.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
+	if (ledger.generation?.strict_cutover_command !== "node tools/migration/codegen.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	if (!Array.isArray(ledger.entries) || ledger.entries.length !== controls.length) {
 		errors.push(`${outputPath}: entries must include every codegen control`);
 	}
@@ -127,8 +127,8 @@ if (write) {
 
 validate(ledger);
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/codegen.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/codegen.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/codegen.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/codegen.mjs --write`);
 }
 
 if (errors.length > 0) {

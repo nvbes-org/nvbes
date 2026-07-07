@@ -1,8 +1,4 @@
-import {
-  type BillingOverview,
-  type BillingProviderCode,
-  type PaymentMethodUpdateFlow,
-} from '@nvbes/billing-client';
+import type { AccountBillingOverview } from '@/account.billing.client';
 import { Check, CreditCard, Package } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,30 +11,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { availablePlans } from './BillingPage.plans.data';
 
-function formatCents(cents: number, currency: string): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(cents / 100);
-}
-
-export function CurrentPlanCard({ overview }: { overview: BillingOverview }) {
-  const { plan, subscription } = overview;
+export function CurrentPlanCard({ overview }: { overview: AccountBillingOverview }) {
+  const plan = availablePlans.find((candidate) => candidate.code === overview.plan_code);
+  const price = plan ? `${plan.price}€` : overview.plan_code;
 
   return (
     <Card className="ring-2 ring-primary/30">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>{plan.code}</CardTitle>
+          <CardTitle>{plan?.name ?? overview.plan_code}</CardTitle>
           <Badge variant="default" className="shrink-0">
             Plan actuel
           </Badge>
         </div>
         <CardDescription>
-          <span className="text-2xl font-bold text-foreground">
-            {formatCents(plan.monthly_price_cents, plan.currency)}
-          </span>
+          <span className="text-2xl font-bold text-foreground">{price}</span>
           <span className="text-sm text-muted-foreground">/mois</span>
         </CardDescription>
       </CardHeader>
@@ -47,20 +36,20 @@ export function CurrentPlanCard({ overview }: { overview: BillingOverview }) {
           <div className="flex items-center gap-2">
             <Check className="size-3.5 shrink-0 text-primary" />
             <span className="text-sm text-muted-foreground">
-              {plan.included_users} utilisateur{plan.included_users > 1 ? 's' : ''}
+              {overview.entitlements.included_users} utilisateur
+              {overview.entitlements.included_users > 1 ? 's' : ''}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="size-3.5 shrink-0 text-primary" />
             <span className="text-sm text-muted-foreground">
-              {plan.included_storage_gb} Go de stockage
+              {overview.entitlements.included_storage_gb} Go de stockage
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="size-3.5 shrink-0 text-primary" />
             <span className="text-sm text-muted-foreground">
-              Statut : {subscription.status}
-              {subscription.trial_ends_at && " (periode d'essai)"}
+              Statut : {overview.subscription_status}
             </span>
           </div>
         </div>
@@ -76,18 +65,14 @@ export function CurrentPlanCard({ overview }: { overview: BillingOverview }) {
 }
 
 export function BillingPortalCard({
-  paymentMethodUpdateFlow,
   provider,
   portalLoading,
   onPortal,
 }: {
-  paymentMethodUpdateFlow: PaymentMethodUpdateFlow;
-  provider: BillingProviderCode;
+  provider: string;
   portalLoading: boolean;
   onPortal: () => void;
 }) {
-  const canOpenProviderPortal = paymentMethodUpdateFlow === 'nvbes_provider_redirect';
-
   return (
     <Card>
       <CardHeader>
@@ -101,13 +86,9 @@ export function BillingPortalCard({
           variant="outline"
           className="w-full justify-between"
           onClick={onPortal}
-          disabled={portalLoading || !canOpenProviderPortal}
+          disabled={portalLoading}
         >
-          {portalLoading
-            ? 'Chargement...'
-            : canOpenProviderPortal
-              ? 'Ouvrir le portail de facturation'
-              : 'Portail prestataire indisponible'}
+          {portalLoading ? 'Chargement...' : 'Ouvrir le portail de facturation'}
           <CreditCard data-icon="inline-end" />
         </Button>
       </CardFooter>

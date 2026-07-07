@@ -40,7 +40,7 @@ export function DeveloperCallbackPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <div className="w-full max-w-md rounded-md border border-border bg-card p-6">
-        <p className="text-xs font-medium uppercase text-muted-foreground">Developer Portal</p>
+        <p className="text-xs font-medium uppercase text-muted-foreground">Console</p>
         <h1 className="mt-2 text-lg font-semibold">
           {error ? 'Connection failed' : 'Connection in progress'}
         </h1>

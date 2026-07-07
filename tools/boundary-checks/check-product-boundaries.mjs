@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { checkBillingMigrationBoundaries } from "./check-product-boundaries.billing-migrations.mjs";
 import { checkBillingWorkerQueueBoundaries } from "./check-product-boundaries.billing-worker-queues.mjs";
-import { checkIdentityBillingRuntimeBoundary } from "./check-product-boundaries.identity-billing-runtime.mjs";
-import { checkIdentityWebBillingClientBoundary } from "./check-product-boundaries.account-web-billing.mjs";
+import { checkAccountBillingRuntimeBoundary } from "./check-product-boundaries.account-billing-runtime.mjs";
+import { checkAccountWebBillingClientBoundary } from "./check-product-boundaries.account-web-billing.mjs";
+import { checkBillingProviderEvidence } from "./check-product-boundaries.billing-providers.mjs";
+import { checkGatewayCloudBoundary } from "./check-product-boundaries.gateway-cloud.mjs";
+import { checkLegacyRuntimeNames } from "./check-product-boundaries.legacy-runtime-names.mjs";
+import { checkRustPackageBoundaries } from "./check-product-boundaries.rust-packages.mjs";
 
 const errors = [];
 const textExtensions = new Set([".rs", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".sql"]);
@@ -13,87 +16,6 @@ const skippedDirs = new Set([".git", ".nx", "coverage", "dist", "node_modules", 
 
 function normalizePath(value) {
 	return value.replaceAll("\\", "/");
-}
-
-function run(command, args) {
-	return execFileSync(command, args, {
-		encoding: "utf8",
-		stdio: ["ignore", "pipe", "pipe"],
-	});
-}
-
-function isProductPath(path) {
-	const normalized = normalizePath(path);
-	return normalized.startsWith("libs/rust/products/") || normalized.startsWith("libs/ts/products/");
-}
-
-function scopeForPath(path) {
-	const normalized = normalizePath(path);
-	if (
-		normalized.startsWith("apps/internal-") ||
-		normalized.startsWith("libs/rust/internal/") ||
-		normalized.startsWith("libs/ts/internal-") ||
-		normalized.includes("/internal/")
-	) {
-		return "internal";
-	}
-	if (
-		normalized.startsWith("apps/cloud-") ||
-		normalized.startsWith("libs/rust/cloud/") ||
-		normalized.startsWith("libs/rust/adapters-cloud/") ||
-		normalized.startsWith("libs/ts/cloud-ui/")
-	) {
-		return "cloud";
-	}
-	if (normalized.startsWith("libs/rust/adapters-oss/")) {
-		return "adapter";
-	}
-	if (normalized.startsWith("apps/")) {
-		return "app";
-	}
-	return "oss";
-}
-
-function checkRustProductPackages() {
-	const metadata = JSON.parse(run("cargo", ["metadata", "--format-version", "1", "--no-deps"]));
-	const workspaceIds = new Set(metadata.workspace_members);
-	const workspacePackages = metadata.packages.filter((pkg) => workspaceIds.has(pkg.id));
-	const packagesByName = new Map(workspacePackages.map((pkg) => [pkg.name, pkg]));
-	const directDeps = new Map();
-
-	for (const pkg of workspacePackages) {
-		directDeps.set(
-			pkg.name,
-			pkg.dependencies
-				.map((dep) => packagesByName.get(dep.name))
-				.filter(Boolean)
-				.map((depPkg) => depPkg.name),
-		);
-	}
-
-	function transitiveDeps(pkgName, seen = new Set()) {
-		for (const depName of directDeps.get(pkgName) ?? []) {
-			if (seen.has(depName)) continue;
-			seen.add(depName);
-			transitiveDeps(depName, seen);
-		}
-		return seen;
-	}
-
-	for (const pkg of workspacePackages) {
-		const manifestPath = normalizePath(relative(process.cwd(), pkg.manifest_path));
-		if (!isProductPath(manifestPath)) continue;
-
-		for (const depName of transitiveDeps(pkg.name)) {
-			const depPkg = packagesByName.get(depName);
-			if (!depPkg) continue;
-			const depPath = normalizePath(relative(process.cwd(), depPkg.manifest_path));
-			const depScope = scopeForPath(depPath);
-			if (["adapter", "cloud", "internal", "app"].includes(depScope)) {
-				errors.push(`${pkg.name} cannot depend on ${depScope} package ${depName}`);
-			}
-		}
-	}
 }
 
 function shouldScan(path) {
@@ -311,86 +233,18 @@ function checkInternalAdminBillingBoundary() {
 	}
 }
 
-function checkBillingProviderNeutralSurface() {
-	const requiredProviderFiles = [
-		["libs/rust/billing/src/provider.rs", 'PROVIDER_CODES: &[&str] = &["stripe", "mollie", "cb"]'],
-		["libs/ts/billing-client/src/billing.provider.ts", "['stripe', 'mollie', 'cb']"],
-		["apps/gateway-cloud/src/gateway.schema.enums.rs", "Cb"],
-		["contracts/graphql/schema.graphql", "CB"],
-		["apps/billing-service/migrations/0009_billing_provider_cb.sql", "ADD VALUE IF NOT EXISTS 'cb'"],
-	];
-	for (const [file, expected] of requiredProviderFiles) {
-		if (!existsSync(file)) {
-			errors.push(`${file}: required for provider-neutral Billing surface`);
-			continue;
-		}
-		if (!readFileSync(file, "utf8").includes(expected)) {
-			errors.push(`${file}: Billing provider-neutral surface must include CB provider evidence ${expected}`);
-		}
-	}
-
-	for (const file of [
-		"contracts/events/billing.payment.changed.v1.schema.json",
-		"contracts/events/billing.reconciliation.difference.v1.schema.json",
-	]) {
-		if (!existsSync(file)) {
-			errors.push(`${file}: required for Billing event provider contracts`);
-			continue;
-		}
-		const content = readFileSync(file, "utf8");
-		if (!content.includes('"enum": ["stripe", "mollie", "cb"]')) {
-			errors.push(`${file}: Billing event provider contract must include stripe, mollie and cb`);
-		}
-	}
-}
-
-function checkBillingMultiPspContinuityEvidence() {
-	const providerSubscriptions = "libs/rust/billing/src/db.provider_subscriptions.rs";
-	if (!existsSync(providerSubscriptions)) {
-		errors.push(`${providerSubscriptions}: required for multi-PSP subscription continuity`);
-	} else {
-		const content = readFileSync(providerSubscriptions, "utf8");
-		for (const expected of [
-			"provider_subscription_fallback_eligible",
-			"active_non_primary_provider_subscription_remains_fallback_eligible",
-			"primary_provider_subscription_is_never_marked_as_fallback",
-			"inactive_non_primary_provider_subscription_is_not_fallback_eligible",
-			"demoted_primary",
-			"fallback_eligible",
-		]) {
-			if (!content.includes(expected)) {
-				errors.push(`${providerSubscriptions}: missing multi-PSP continuity evidence ${expected}`);
-			}
-		}
-	}
-
-	const workspaceEffects = "libs/rust/billing/src/stripe_webhook_workspace_effects.rs";
-	if (!existsSync(workspaceEffects)) {
-		errors.push(`${workspaceEffects}: required for primary-provider webhook workspace effects`);
-	} else {
-		const content = readFileSync(workspaceEffects, "utf8");
-		for (const expected of [
-			"provider_subscription_applies_workspace_effects",
-			"workspace_effects_apply_only_to_primary_provider_subscription",
-		]) {
-			if (!content.includes(expected)) {
-				errors.push(`${workspaceEffects}: missing primary-provider workspace effect evidence ${expected}`);
-			}
-		}
-	}
-}
-
-checkRustProductPackages();
+checkRustPackageBoundaries(errors);
 checkProductSourceImports();
-checkIdentityBillingRuntimeBoundary(errors);
+checkAccountBillingRuntimeBoundary(errors);
 checkBillingWorkerQueueBoundaries(errors);
-checkIdentityWebBillingClientBoundary(errors);
+checkAccountWebBillingClientBoundary(errors);
 checkDriveBillingBoundary();
 checkDriveBillingMigrationBoundary();
 checkInternalAdminBillingBoundary();
 checkBillingMigrationBoundaries(errors);
-checkBillingProviderNeutralSurface();
-checkBillingMultiPspContinuityEvidence();
+checkBillingProviderEvidence(errors);
+checkGatewayCloudBoundary(errors);
+checkLegacyRuntimeNames(errors);
 
 if (errors.length > 0) {
 	console.error("Product boundary violations:");

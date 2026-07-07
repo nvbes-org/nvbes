@@ -11,7 +11,7 @@ use utoipa_swagger_ui::SwaggerUi;
         license(name = "UNLICENSED"),
     ),
     servers(
-        (url = "https://identity.nvbes.fr", description = "Production"),
+        (url = "https://account.nvbes.fr", description = "Production"),
         (url = "http://localhost:8080", description = "Development"),
     ),
     tags(
@@ -25,6 +25,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "security", description = "Security events & audit"),
         (name = "authz", description = "Authorization decisions"),
         (name = "developer", description = "Developer portal, apps, webhooks, logs, and integration tools"),
+        (name = "account-billing", description = "Account-facing Billing facade"),
     ),
     paths(
         crate::domains::auth::routes::register::register,
@@ -87,6 +88,10 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::security::routes::list_recovery_reviews,
         crate::domains::security::routes::worker_queue_status,
         crate::domains::authz::routes::decide,
+        crate::domains::account_billing::routes::get_account_billing_overview,
+        crate::domains::account_billing::routes::get_account_billing_portal,
+        crate::domains::account_billing::routes::create_account_checkout,
+        crate::domains::account_billing::routes::create_account_billing_portal,
         crate::domains::developer::routes::me,
         crate::domains::developer::apps_routes::list_apps,
         crate::domains::developer::apps_routes::create_app,

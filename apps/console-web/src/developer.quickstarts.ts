@@ -34,8 +34,8 @@ const identity = createIdentityClient({
   },
   curl: {
     title: 'curl quickstart',
-    command: 'curl https://identity.nvbes.fr/.well-known/openid-configuration',
-    code: `curl -s https://identity.nvbes.fr/.well-known/openid-configuration | jq .issuer`,
+    command: 'curl https://account.nvbes.fr/.well-known/openid-configuration',
+    code: `curl -s https://account.nvbes.fr/.well-known/openid-configuration | jq .issuer`,
   },
 } as const;
 

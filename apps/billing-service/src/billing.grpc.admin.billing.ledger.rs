@@ -97,4 +97,3 @@ mod tests {
         assert!(validate_admin_mutation(0, "ticket BILL-123").is_err());
     }
 }
-

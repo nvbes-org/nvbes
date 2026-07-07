@@ -167,7 +167,15 @@ async fn replay_provider_event_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        replay_provider_event(&state.db, access, workspace_id, event_id, request.reason).await?,
+        replay_provider_event(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            event_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -189,6 +197,7 @@ async fn replay_export_run_route(
     Ok(Json(
         replay_export_run(
             &state.db,
+            &state.billing_grpc_endpoint,
             access,
             workspace_id,
             export_run_id,
@@ -216,6 +225,7 @@ async fn resolve_reconciliation_difference_route(
     Ok(Json(
         resolve_reconciliation_difference(
             &state.db,
+            &state.billing_grpc_endpoint,
             access,
             workspace_id,
             difference_id,

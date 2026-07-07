@@ -1,31 +1,31 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/drive-quotas.mjs --write",
+    "command": "node tools/migration/drive-quotas.mjs --write",
     "sources": [
-      "apps/drive-api/src/drive.domains.quotas.logic.rs",
-      "apps/drive-api/src/drive.domains.quotas.service.rs",
-      "apps/drive-api/src/drive.domains.quotas.db.rs",
-      "apps/drive-api/src/drive.domains.quotas.routes.rs",
-      "apps/drive-api/src/drive.domains.quotas.types.rs",
-      "apps/drive-api/src/drive.domains.quotas.observability.rs",
-      "apps/drive-api/src/drive.domains.uploads.core.rs",
-      "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
-      "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
-      "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
-      "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
-      "apps/drive-api/src/drive.domains.share_links.public.rs",
-      "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
-      "apps/drive-worker/src/drive.workers.maintenance.rs",
-      "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
-      "apps/drive-api/src/drive.http.openapi.rs",
-      "apps/drive-api/openapi.json",
+      "apps/cloud-service/src/drive.domains.quotas.logic.rs",
+      "apps/cloud-service/src/drive.domains.quotas.service.rs",
+      "apps/cloud-service/src/drive.domains.quotas.db.rs",
+      "apps/cloud-service/src/drive.domains.quotas.routes.rs",
+      "apps/cloud-service/src/drive.domains.quotas.types.rs",
+      "apps/cloud-service/src/drive.domains.quotas.observability.rs",
+      "apps/cloud-service/src/drive.domains.uploads.core.rs",
+      "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
+      "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
+      "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
+      "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
+      "apps/cloud-service/src/drive.domains.share_links.public.rs",
+      "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
+      "apps/cloud-worker/src/drive.workers.maintenance.rs",
+      "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
+      "apps/cloud-service/src/drive.http.openapi.rs",
+      "apps/cloud-service/openapi.json",
       "docs/migration/data-map.md",
       "docs/migration/job-map.md"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-drive-api quota --locked",
-      "cargo test -p nvbes-drive-worker recalculate_quotas_updates_used_storage_bytes --locked",
+      "cargo test -p nvbes-cloud-service quota --locked",
+      "cargo test -p nvbes-cloud-worker recalculate_quotas_updates_used_storage_bytes --locked",
       "pnpm check:migration-reconciliation-report"
     ]
   },
@@ -39,245 +39,245 @@
     {
       "id": "quota-response",
       "description": "Quota response exposes storage, bandwidth, block state, and alerts",
-      "path": "apps/drive-api/src/drive.domains.quotas.types.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.types.rs",
       "status": "passed",
       "pattern": "pub struct QuotaResponse"
     },
     {
       "id": "quota-route",
       "description": "Drive quota route is exposed",
-      "path": "apps/drive-api/src/drive.domains.quotas.routes.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.routes.rs",
       "status": "passed",
       "pattern": "path = \"/workspaces/{workspaceId}/quota\""
     },
     {
       "id": "quota-route-authz",
       "description": "Drive quota route requires ViewQuota authorization",
-      "path": "apps/drive-api/src/drive.domains.quotas.routes.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.routes.rs",
       "status": "passed",
       "pattern": "WorkspaceAction::ViewQuota"
     },
     {
       "id": "public-api-quota",
       "description": "Public API quota route is exposed",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/quota\""
     },
     {
       "id": "public-api-scope",
       "description": "Public API quota route requires quota:read scope",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.quotas_audit.rs",
       "status": "passed",
       "pattern": "\"quota:read\""
     },
     {
       "id": "quota-row",
       "description": "Quota service ensures quota row before reading",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "db::ensure_quota_row"
     },
     {
       "id": "quota-percent",
       "description": "Quota service returns storage usage percent",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "storage_usage_percent(used_storage_bytes, included_storage_bytes)"
     },
     {
       "id": "quota-blocked",
       "description": "Quota service returns upload block state",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "upload_blocked(used_storage_bytes, included_storage_bytes)"
     },
     {
       "id": "quota-alerts",
       "description": "Quota service returns threshold alerts",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "storage_alerts(used_storage_bytes, included_storage_bytes)"
     },
     {
       "id": "upload-guard",
       "description": "Quota service blocks uploads that exceed storage limits",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "quota_exceeded"
     },
     {
       "id": "critical-guard",
       "description": "Quota service blocks uploads when already over critical threshold",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "quota_critical_exceeded"
     },
     {
       "id": "upload-records-storage",
       "description": "Completed uploads record storage usage events",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "\"storage_bytes\""
     },
     {
       "id": "upload-records-file-count",
       "description": "Completed uploads record file count usage events",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "\"file_count\""
     },
     {
       "id": "release-records-negative-storage",
       "description": "Deleted files release storage through negative usage events",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "-input.released_storage_bytes"
     },
     {
       "id": "bandwidth-record",
       "description": "Downloads and public access record bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.quotas.service.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.service.rs",
       "status": "passed",
       "pattern": "\"bandwidth_out_bytes\""
     },
     {
       "id": "quota-db-lock",
       "description": "Quota DB locks usage rows before mutation",
-      "path": "apps/drive-api/src/drive.domains.quotas.db.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.db.rs",
       "status": "passed",
       "pattern": "FOR UPDATE OF qu"
     },
     {
       "id": "quota-db-idempotency",
       "description": "Quota usage events are idempotent by workspace and key",
-      "path": "apps/drive-api/src/drive.domains.quotas.db.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.db.rs",
       "status": "passed",
       "pattern": "ON CONFLICT (workspace_id, idempotency_key)"
     },
     {
       "id": "quota-db-bandwidth-cache",
       "description": "Quota DB recalculates current-month bandwidth cache",
-      "path": "apps/drive-api/src/drive.domains.quotas.db.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.db.rs",
       "status": "passed",
       "pattern": "update_bandwidth_usage_cache"
     },
     {
       "id": "upload-core-guard",
       "description": "Upload creation checks quota before accepting upload",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "ensure_upload_allowed_tx"
     },
     {
       "id": "upload-complete-guard",
       "description": "Upload completion rechecks quota against actual size",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "ensure_upload_allowed_tx(&mut tx, access.workspace_id, actual_size)"
     },
     {
       "id": "upload-complete-record",
       "description": "Upload completion records quota usage",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "record_file_uploaded_tx"
     },
     {
       "id": "tus-append-guard",
       "description": "TUS append checks quota against actual size",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
       "status": "passed",
       "pattern": "ensure_upload_allowed_tx(&mut tx, access.workspace_id, actual_size)"
     },
     {
       "id": "download-stream-bandwidth",
       "description": "File streaming records bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
       "status": "passed",
       "pattern": "record_bandwidth_out_tx"
     },
     {
       "id": "download-url-bandwidth",
       "description": "Download URL flow records bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
       "status": "passed",
       "pattern": "record_bandwidth_out_tx"
     },
     {
       "id": "share-public-bandwidth",
       "description": "Public share access records bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.share_links.public.rs",
+      "path": "apps/cloud-service/src/drive.domains.share_links.public.rs",
       "status": "passed",
       "pattern": "record_bandwidth_out_tx"
     },
     {
       "id": "threshold-audit",
       "description": "Quota threshold crossings create audit events",
-      "path": "apps/drive-api/src/drive.domains.quotas.observability.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.observability.rs",
       "status": "passed",
       "pattern": "\"quota.storage_warning\""
     },
     {
       "id": "quota-warning-test",
       "description": "Quota warning/critical alert logic is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.quotas.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.logic.rs",
       "status": "passed",
       "pattern": "storage_alerts_emit_warning_and_critical_levels"
     },
     {
       "id": "quota-blocked-test",
       "description": "Quota upload block behavior is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.quotas.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.logic.rs",
       "status": "passed",
       "pattern": "upload_blocked_only_at_or_over_limit"
     },
     {
       "id": "quota-threshold-test",
       "description": "Quota threshold crossing behavior is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.quotas.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.quotas.logic.rs",
       "status": "passed",
       "pattern": "crosses_threshold_only_when_entering_threshold"
     },
     {
       "id": "worker-job-constant",
       "description": "Quota recalculation job constant exists",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.rs",
       "status": "passed",
       "pattern": "JOB_QUOTAS_RECALCULATE"
     },
     {
       "id": "worker-recalculate",
       "description": "Quota worker recalculates used storage from active files",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.rs",
       "status": "passed",
       "pattern": "RECALCULATE_QUOTAS_SQL"
     },
     {
       "id": "worker-column-test",
       "description": "Quota worker tests the canonical used_storage_bytes column",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.rs",
       "status": "passed",
       "pattern": "recalculate_quotas_updates_used_storage_bytes"
     },
     {
       "id": "worker-dispatch",
       "description": "Worker dispatch executes quota recalculation job",
-      "path": "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
+      "path": "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
       "status": "passed",
       "pattern": "maintenance::JOB_QUOTAS_RECALCULATE"
     },
     {
       "id": "openapi-source",
       "description": "Drive OpenAPI source includes quota public API route",
-      "path": "apps/drive-api/src/drive.http.openapi.rs",
+      "path": "apps/cloud-service/src/drive.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::public_api::v1_handlers::get_quota"
     },
     {
       "id": "openapi-json",
       "description": "Generated OpenAPI includes quota path",
-      "path": "apps/drive-api/openapi.json",
+      "path": "apps/cloud-service/openapi.json",
       "status": "passed",
       "pattern": "\"/v1/workspaces/{workspaceId}/quota\""
     },

@@ -199,3 +199,28 @@ impl From<nvbes_billing::mollie::MollieProviderError> for AppError {
         }
     }
 }
+
+impl From<nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError> for AppError {
+    fn from(err: nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError) -> Self {
+        match err {
+            nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError::MissingStripeWebhookSecret => {
+                Self::conflict(
+                    "stripe_webhook_secret_missing",
+                    "Stripe webhook intake is not configured.",
+                )
+            }
+            nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError::StripeSignature(_) => {
+                Self::bad_request("stripe_webhook_signature_invalid", err.to_string())
+            }
+            nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError::InvalidPayload => {
+                Self::bad_request("billing_webhook_payload_invalid", err.to_string())
+            }
+            nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError::Database(error) => {
+                error.into()
+            }
+            nvbes_billing::stripe_webhook_intake::BillingWebhookIntakeError::Queue(error) => {
+                Self::internal("billing_webhook_enqueue_failed", error.to_string())
+            }
+        }
+    }
+}

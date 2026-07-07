@@ -6,12 +6,19 @@ nvbes is a full-stack monorepo with Rust APIs, React/Vite frontends, shared Rust
 
 ## Repository layout
 
-- `apps/drive-api`: Rust API for Drive
-- `apps/identity-api`: Rust API for Identity
-- `apps/drive-web`: React frontend for Drive
-- `apps/identity-web`: React frontend for Identity
-- `crates/core`: shared Rust primitives
-- `packages/identity-sdk*`: TypeScript and Rust SDKs
+- `apps/account-service`: Rust service for Account, identity, sessions, and token exchange
+- `apps/cloud-service`: Rust service for Cloud workspaces and Drive surfaces
+- `apps/billing-service`: Rust service for billing source-of-truth workflows
+- `apps/developer-service`: Rust service for Developer Console APIs
+- `apps/enterprise-service`: Rust service for enterprise governance workflows
+- `apps/backoffice-service`: internal-only Backoffice service
+- `apps/account-web`: React frontend for Account
+- `apps/cloud-web`: React frontend for Cloud
+- `apps/console-web`: React frontend for Developer Console
+- `apps/enterprise-web`: React frontend for Enterprise
+- `apps/backoffice-web`: React frontend for Backoffice
+- `libs/rust/core`: shared Rust primitives
+- `libs/ts/identity-sdk*`: TypeScript SDK packages
 - `docs`: product, architecture, legal, testing, and operations docs
 
 ## Agent workflow

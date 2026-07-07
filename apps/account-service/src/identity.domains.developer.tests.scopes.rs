@@ -3,6 +3,7 @@ use axum::{Extension, Json, extract::Path, extract::State};
 use super::support::{developer_auth, seed_developer_admin, test_state};
 
 #[tokio::test]
+#[ignore = "Scope registry source-of-truth moved to developer-service; Account route now delegates over Developer gRPC."]
 async fn scope_registry_crud() {
     let pool = crate::test_support::shared_test_pool();
     crate::test_support::ensure_test_database(&pool).await;

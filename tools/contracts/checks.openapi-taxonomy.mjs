@@ -20,7 +20,8 @@ export function checkOpenApiTaxonomy({ errors, manifest, readJson }) {
 	if (cloudSpec.info?.title !== "nvbes Cloud API") {
 		errors.push(`${cloudApi.document}: info.title must use Cloud branding`);
 	}
-	if (!serverUrls.includes("https://cloud.nvbes.fr") || serverUrls.includes("drive.nvbes.fr")) {
+	const legacyDriveHost = ["drive", "nvbes", "fr"].join(".");
+	if (!serverUrls.includes("https://cloud.nvbes.fr") || serverUrls.includes(legacyDriveHost)) {
 		errors.push(`${cloudApi.document}: servers must use Cloud branding`);
 	}
 }

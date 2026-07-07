@@ -4,7 +4,7 @@
 
 **Goal:** internaliser la logique billing produit de nvbes tout en utilisant Stripe comme PSP principal et Mollie comme PSP secondaire.
 
-**Architecture:** `nvbes` devient source de verite pour catalogue, pricing, entitlements, subscriptions, invoices, payments, ledger, usage, dunning, taxes calculees, reconciliation et reporting. Stripe et Mollie restent des adaptateurs PSP pour l'encaissement, le checkout, les moyens de paiement, les mandates, les refunds provider et les webhooks verifies. Le billing canonique vit cote Identity; Drive produit des usages et consomme des entitlements sans posseder la verite financiere.
+**Architecture:** `nvbes` devient source de verite pour catalogue, pricing, entitlements, subscriptions, invoices, payments, ledger, usage, dunning, taxes calculees, reconciliation et reporting. Stripe et Mollie restent des adaptateurs PSP pour l'encaissement, le checkout, les moyens de paiement, les mandates, les refunds provider et les webhooks verifies. Le billing canonique vit dans `billing-service`; `account-service` expose seulement une facade account-facing vers Billing et `cloud-service` produit des usages et consomme des entitlements sans posseder la verite financiere.
 
 **Tech Stack:** Rust stable, Axum, SQLx, PostgreSQL, pnpm/Nx, React/Vite/TanStack, Effect, Biome, contrats OpenAPI/events, workers async, audit append-only.
 
@@ -15,6 +15,8 @@
 Date de cadrage: 2026-06-21.
 
 Ce plan complete `docs/adr/0001-billing-provider-stripe.md`: Stripe reste le provider billing V1 accepte, mais le modele metier doit etre provider-neutral. Mollie est integre comme second PSP quand le modele canonique est stable.
+
+Depuis le refactor Account/Cloud, `docs/adr/2026-07-05-account-cloud-service-taxonomy.md` est l'autorite pour les frontieres runtime. Les references historiques a Identity ou Drive dans ce plan se lisent respectivement comme Account et Cloud uniquement quand elles designent une surface produit, jamais comme une autorisation de conserver un alias runtime legacy ou une vue compatibility apres le cutover.
 
 Le but n'est pas de devenir banque, acquereur, reseau carte ou Merchant of Record. Le but est d'eviter que Stripe controle le modele produit, les droits d'acces, les cycles de subscription, les factures canoniques, le ledger et les donnees finance internes.
 
@@ -77,7 +79,8 @@ flowchart TD
 
 ### Ownership
 
-- `apps/account-service`: control plane billing canonique, webhooks PSP, provider routing, portal/admin API, jobs finance.
+- `apps/billing-service`: control plane billing canonique, webhooks PSP, provider routing, portal/admin API, jobs finance.
+- `apps/account-service`: facade account-facing pour resume de plan, portail, factures et moyens de paiement via les contrats Billing.
 - `apps/cloud-service`: emission d'usage Drive, controle quota local, lecture des entitlements projetes.
 - `libs/rust/billing`: domaine pur, calculs, etats, provider contract, tax/FX/rev-rec simples, tests unitaires.
 - `contracts/events`: schemas versionnes pour usage, entitlement, invoice, payment, dunning et reconciliation.
@@ -87,13 +90,14 @@ flowchart TD
 
 - Docs: creer `docs/adr/0003-internal-billing-platform.md`; modifier `docs/adr/0001-billing-provider-stripe.md`, `docs/product/finops-billing.md` et `docs/roadmap.md`.
 - Domaine Rust: modifier `libs/rust/billing/src/lib.rs`, `types.rs`, `models.rs`; creer `provider.rs`, `catalog.rs`, `pricing.rs`, `entitlements.rs`, `usage.rs`, `subscriptions.rs`, `invoices.rs`, `payments.rs`, `ledger.rs`, `tax.rs`, `fx.rs`, `dunning.rs`, `reconciliation.rs`, `revenue.rs`, `risk.rs`, `exports.rs`.
-- Identity API: modifier `apps/account-service/src/identity.domains.billing.mod.rs`; creer les modules plats `identity.domains.billing.provider.{stripe,mollie,routing,events}.rs`, `identity.domains.billing.service.{catalog,subscription,invoice,payment,admin}.rs`, `identity.domains.billing.jobs.{reconciliation,dunning}.rs`, `identity.domains.billing.routes.{portal,admin}.rs`.
-- Drive API: deprecier `apps/cloud-service/src/drive.domains.billing.manage.checkout.rs`; creer `apps/cloud-service/src/drive.domains.billing.usage_events.rs`.
+- Billing service: modifier `apps/billing-service/src/**` pour exposer le domaine billing canonique, les webhooks PSP, le routing provider, les jobs finance et les contrats gRPC internes.
+- Account facade: modifier `apps/account-service/src/identity.domains.account_billing.*` pour appeler Billing sans persistance billing source-of-truth.
+- Cloud usage: creer ou maintenir `apps/cloud-service/src/drive.domains.billing.usage_events.rs` comme producteur d'usages et lecteur d'entitlements projetes.
 - Events: creer `contracts/events/billing.usage.recorded.v1.schema.json`, `billing.invoice.issued.v1.schema.json`, `billing.payment.changed.v1.schema.json`, `billing.subscription.changed.v1.schema.json` et les enregistrer dans `contracts/events/manifest.json`.
 
 ## Modele de donnees cible
 
-Les migrations doivent etre ajoutees cote `apps/account-service/migrations/` comme schema canonique. Les tables billing existantes dans Drive restent lues pendant la transition, puis deviennent compatibility/read-only.
+Les migrations doivent etre ajoutees cote `apps/billing-service/migrations/` comme schema canonique. Les tables billing historiques hors Billing sont migrees par le pipeline Big Bang puis retirees ou archivees en lecture seule hors runtime; aucune vue compatibility V1 ne peut rester requise apres le cutover.
 
 ### Product catalog
 
@@ -172,7 +176,7 @@ Objectif: poser le modele provider-neutral sans casser Stripe V1.
 - [ ] Creer les tables des sections "Modele de donnees cible" par groupes courts.
 - [ ] Ajouter les contraintes: `tenant_id NOT NULL`, `created_at`, `updated_at`, `currency CHAR(3)`, montants en minor units, `CHECK (amount_minor >= 0)` sauf ledger signe.
 - [ ] Migrer les colonnes existantes `stripe_customer_id`, `billing_subscription_id`, `stripe_price_mappings` vers `billing_provider_mappings` et `billing_provider_price_mappings`.
-- [ ] Garder des vues compatibility si les routes existantes attendent encore les noms actuels.
+- [ ] Supprimer les besoins de vues compatibility en adaptant les routes aux contrats Billing; toute aide de migration doit etre limitee aux scripts de cutover et retiree avant le gate final.
 - [ ] Tests SQLx: une fixture cree plan, account, subscription, invoice, payment, ledger et provider mapping.
 - [ ] Commandes: `rtk cargo test -p nvbes-billing --locked` puis `rtk cargo check --workspace`.
 

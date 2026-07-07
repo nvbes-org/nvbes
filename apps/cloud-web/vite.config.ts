@@ -12,32 +12,28 @@ const permissionsPolicy =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
 const integrityPolicyStyles = 'blocked-destinations=(style)';
 
-function getCsp(mode: string, stripeJsUrl: string, stripeApiUrl: string): string {
+function getCsp(mode: string): string {
   const isDev = mode === 'development';
 
-  const stripeScript = stripeJsUrl ? ` ${stripeJsUrl}` : '';
-  const stripeFrame = stripeJsUrl ? ` ${stripeJsUrl}` : '';
-  const stripeConnect = stripeApiUrl ? ` ${stripeApiUrl}` : '';
-
   if (isDev) {
-    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${stripeScript}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ${stripeConnect} http://localhost:8080 http://127.0.0.1:8080; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
+    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* http://localhost:8080 http://127.0.0.1:8080; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
   }
-  return `default-src 'self'; script-src 'self' ${stripeScript}; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${stripeConnect}; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
+  return `default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
 }
 
-function getMetaCsp(mode: string, stripeJsUrl: string, stripeApiUrl: string): string {
-  return getCsp(mode, stripeJsUrl, stripeApiUrl).replace("; frame-ancestors 'none'", '');
+function getMetaCsp(mode: string): string {
+  return getCsp(mode).replace("; frame-ancestors 'none'", '');
 }
 
 function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
-function cspPlugin(mode: string, stripeJsUrl: string, stripeApiUrl: string): Plugin {
+function cspPlugin(mode: string): Plugin {
   return {
     name: 'csp-injection-plugin',
     transformIndexHtml(html: string) {
-      const cspString = getMetaCsp(mode, stripeJsUrl, stripeApiUrl);
+      const cspString = getMetaCsp(mode);
       const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}" />`;
       return html.replace('<!-- %CSP_META% -->', metaTag);
     },
@@ -99,28 +95,6 @@ export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
 
-  const stripeEnabled =
-    process.env.VITE_STRIPE_ENABLED === 'true' ||
-    localEnv.VITE_STRIPE_ENABLED === 'true' ||
-    rootEnv.VITE_STRIPE_ENABLED === 'true' ||
-    !!(
-      process.env.VITE_STRIPE_PUBLISHABLE_KEY ||
-      localEnv.VITE_STRIPE_PUBLISHABLE_KEY ||
-      rootEnv.VITE_STRIPE_PUBLISHABLE_KEY
-    );
-
-  const stripeJsUrl =
-    process.env.VITE_STRIPE_JS_URL ||
-    localEnv.VITE_STRIPE_JS_URL ||
-    rootEnv.VITE_STRIPE_JS_URL ||
-    (stripeEnabled ? 'https://js.stripe.com' : '');
-
-  const stripeApiUrl =
-    process.env.VITE_STRIPE_API_URL ||
-    localEnv.VITE_STRIPE_API_URL ||
-    rootEnv.VITE_STRIPE_API_URL ||
-    (stripeEnabled ? 'https://api.stripe.com' : '');
-
   const configuredCloudServiceBaseUrl =
     process.env.VITE_CLOUD_SERVICE_BASE_URL ||
     localEnv.VITE_CLOUD_SERVICE_BASE_URL ||
@@ -136,14 +110,14 @@ export default defineConfig(({ mode }) => {
     (configuredCloudServiceBaseUrl.startsWith('http') ? configuredCloudServiceBaseUrl : '') ||
     'http://localhost:4002';
 
-  const cspHeader = getCsp(mode, stripeJsUrl, stripeApiUrl);
+  const cspHeader = getCsp(mode);
 
   return {
     plugins: [
       ...pluginList(react()),
       ...pluginList(tailwindcss()),
       devtoolsJson(),
-      cspPlugin(mode, stripeJsUrl, stripeApiUrl),
+      cspPlugin(mode),
       sriPlugin(),
       ...pluginList(
         VitePWA({

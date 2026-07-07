@@ -10,6 +10,8 @@ source "$SCRIPT_DIR/lib/dev-ports.sh"
 
 export NVBES_DATABASE_URL="${NVBES_CLOUD_DATABASE_URL:-postgres://postgres:postgres@localhost:5432/nvbes_cloud}"
 export NVBES_API_PORT="4002"
+export NVBES_CLOUD_GRPC_PORT="${NVBES_CLOUD_GRPC_PORT:-4003}"
 cd "$ROOT_DIR"
 free_dev_port "$NVBES_API_PORT" "cloud-service"
+free_dev_port "$NVBES_CLOUD_GRPC_PORT" "cloud-service gRPC"
 exec cargo run -p nvbes-cloud-service

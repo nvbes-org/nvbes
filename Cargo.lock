@@ -3454,7 +3454,6 @@ dependencies = [
  "jsonwebtoken",
  "libxml",
  "metrics",
- "nvbes-analytics-posthog",
  "nvbes-audit",
  "nvbes-core",
  "nvbes-dpop",
@@ -3468,6 +3467,9 @@ dependencies = [
  "oauth2",
  "openssl",
  "password-hash",
+ "prost 0.14.4",
+ "prost-types",
+ "protoc-bin-vendored",
  "rand 0.9.4",
  "rand_core 0.6.4",
  "reqwest 0.12.28",
@@ -3477,6 +3479,9 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
  "tower",
  "tower-http",
  "tracing",
@@ -3504,9 +3509,14 @@ dependencies = [
  "nvbes-product-analytics",
  "nvbes-redis",
  "nvbes-region",
+ "prost 0.14.4",
+ "protoc-bin-vendored",
  "serde_json",
  "sqlx",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
  "tracing",
  "uuid",
 ]
@@ -3544,10 +3554,15 @@ dependencies = [
  "nvbes-billing",
  "nvbes-core",
  "nvbes-observability",
+ "prost 0.14.4",
+ "protoc-bin-vendored",
  "serde",
  "serde_json",
  "sqlx",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
  "tower",
  "tower-http",
  "tracing",
@@ -3588,11 +3603,15 @@ dependencies = [
  "nvbes-core",
  "nvbes-observability",
  "nvbes-redis",
+ "prost 0.14.4",
  "protoc-bin-vendored",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
  "tokio",
+ "tonic",
+ "tonic-prost",
  "tonic-prost-build",
  "tower",
  "tower-http",
@@ -3639,8 +3658,6 @@ dependencies = [
  "hmac 0.12.1",
  "jsonwebtoken",
  "metrics",
- "nvbes-account-service",
- "nvbes-analytics-posthog",
  "nvbes-audit",
  "nvbes-core",
  "nvbes-observability",
@@ -3652,6 +3669,10 @@ dependencies = [
  "nvbes-scan",
  "nvbes-storage",
  "nvbes-tenancy",
+ "openssl",
+ "prost 0.14.4",
+ "prost-types",
+ "protoc-bin-vendored",
  "rand 0.9.4",
  "reqwest 0.12.28",
  "serde",
@@ -3659,6 +3680,9 @@ dependencies = [
  "sha2 0.10.9",
  "sqlx",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
  "tower",
  "tower-http",
  "tracing",
@@ -3729,6 +3753,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-developer-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "nvbes-core",
+ "nvbes-observability",
+ "nvbes-product-account",
+ "prost 0.14.4",
+ "protoc-bin-vendored",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "nvbes-dpop"
 version = "0.1.0"
 dependencies = [
@@ -3772,6 +3819,27 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
+]
+
+[[package]]
+name = "nvbes-enterprise-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "nvbes-core",
+ "nvbes-observability",
+ "prost 0.14.4",
+ "protoc-bin-vendored",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

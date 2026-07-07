@@ -30,27 +30,6 @@ async fn require_oauth_management_tenant(
     Ok(tenant_id)
 }
 
-fn map_oauth_client_row(row: &PgRow) -> super::service::types::OAuthClientView {
-    super::service::types::OAuthClientView {
-        id: row.get("id"),
-        client_id: row.get("client_id"),
-        name: row.get("name"),
-        redirect_uris: row.get("redirect_uris"),
-        created_at: row.get("created_at"),
-        last_used_at: row.get("last_used_at"),
-        tenant_id: row.get("tenant_id"),
-        owner_scope_type: row.get("owner_scope_type"),
-        owner_scope_id: row.get("owner_scope_id"),
-        client_type: row.get("client_type"),
-        client_assertion_required: row.get("client_assertion_required"),
-        requires_admin_consent: row.get("requires_admin_consent"),
-        client_assertion_public_key_configured: row.get("client_assertion_public_key_configured"),
-        service_account_principal_id: row.get("service_account_principal_id"),
-        service_account_workspace_id: row.get("service_account_workspace_id"),
-        service_account_role: row.get("service_account_role"),
-    }
-}
-
 fn map_client_policy_row_with_client_id(
     row: &PgRow,
     client_id: Uuid,

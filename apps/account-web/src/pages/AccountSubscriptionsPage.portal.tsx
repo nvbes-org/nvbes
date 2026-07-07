@@ -1,41 +1,33 @@
-import type { BillingPortalView, PaymentMethodUpdateFlow } from '@nvbes/billing-client';
+import type { AccountBillingPortalView } from '@/account.billing.client';
 import { CreditCard, ExternalLink, FileText, Route, ShieldCheck, WalletCards } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { SubscriptionInfoRow } from '@/pages/AccountSubscriptionsPage.row';
 
-const paymentMethodUpdateFlowLabels: Record<PaymentMethodUpdateFlow, string> = {
-  nvbes_provider_redirect: 'Redirection prestataire',
-  provider_portal_unavailable: 'Indisponible pour ce prestataire',
-};
-
-function paymentMethodLabel(method: BillingPortalView['payment_methods'][number]): string {
-  if (method.display_label) {
-    return method.display_label;
-  }
+function paymentMethodLabel(method: AccountBillingPortalView['payment_methods'][number]): string {
   const cardLabel = [method.brand, method.last4 ? `**** ${method.last4}` : null]
     .filter(Boolean)
     .join(' ');
-  return cardLabel || method.method_type;
+  return cardLabel || method.payment_method_id;
 }
 
-function invoiceAmount(invoice: BillingPortalView['invoices'][number]): string {
+function invoiceAmount(invoice: AccountBillingPortalView['invoices'][number]): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: invoice.currency,
   }).format(invoice.total_minor / 100);
 }
 
-function invoiceLabel(invoice: BillingPortalView['invoices'][number]): string {
+function invoiceLabel(invoice: AccountBillingPortalView['invoices'][number]): string {
   return invoice.invoice_number ?? invoice.invoice_id;
 }
 
-function subscriptionRole(subscription: BillingPortalView['subscriptions'][number]): string {
-  if (subscription.primary) {
+function subscriptionRole(subscription: AccountBillingPortalView['subscriptions'][number]): string {
+  if (subscription.providers.some((provider) => provider.primary)) {
     return 'Primaire';
   }
-  if (subscription.fallback_eligible) {
+  if (subscription.providers.some((provider) => provider.fallback_eligible)) {
     return 'Backup';
   }
   return 'Secondaire';
@@ -45,11 +37,9 @@ export function AccountSubscriptionsPortalCard({
   portal,
   onOpen,
 }: {
-  portal: BillingPortalView;
+  portal: AccountBillingPortalView;
   onOpen: () => Promise<void>;
 }) {
-  const canOpenProviderPortal = portal.payment_method_update_flow === 'nvbes_provider_redirect';
-
   return (
     <Card className="animate-fade-slide-up [animation-delay:200ms]">
       <CardHeader>
@@ -60,7 +50,11 @@ export function AccountSubscriptionsPortalCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
-        <SubscriptionInfoRow label="Prestataire actif" value={portal.provider} icon={CreditCard} />
+        <SubscriptionInfoRow
+          label="Prestataire actif"
+          value={portal.provider || 'Non configure'}
+          icon={CreditCard}
+        />
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Routage abonnement"
@@ -69,11 +63,15 @@ export function AccountSubscriptionsPortalCard({
         />
         {portal.subscriptions.map((subscription, index) => (
           <div
-            key={`${subscription.provider}-${subscription.status}-${index}`}
+            key={`${subscription.subscription_id}-${subscription.status}-${index}`}
             className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2 text-sm"
           >
             <div className="min-w-0">
-              <p className="truncate font-medium">{subscription.provider}</p>
+              <p className="truncate font-medium">
+                {subscription.providers.find((provider) => provider.primary)?.provider ??
+                  subscription.providers[0]?.provider ??
+                  subscription.subscription_id}
+              </p>
               <p className="truncate text-muted-foreground">{subscription.status}</p>
             </div>
             <span className="shrink-0 text-muted-foreground">{subscriptionRole(subscription)}</span>
@@ -82,13 +80,13 @@ export function AccountSubscriptionsPortalCard({
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Mise a jour du moyen de paiement"
-          value={paymentMethodUpdateFlowLabels[portal.payment_method_update_flow]}
+          value="Portail prestataire"
           icon={WalletCards}
         />
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Identifiants prestataire exposes"
-          value={portal.exposes_provider_secret_ids ? 'Oui' : 'Non'}
+          value="Non"
           icon={ShieldCheck}
         />
         <Separator className="my-1" />
@@ -104,7 +102,6 @@ export function AccountSubscriptionsPortalCard({
           icon={WalletCards}
         />
         {portal.invoices.map((invoice) => {
-          const providerWithPdf = invoice.providers.find((provider) => provider.pdf_available);
           return (
             <div
               key={invoice.invoice_id}
@@ -114,15 +111,9 @@ export function AccountSubscriptionsPortalCard({
                 <p className="truncate font-medium">{invoiceLabel(invoice)}</p>
                 <p className="truncate text-muted-foreground">
                   {invoice.status} - {invoiceAmount(invoice)}
-                  {providerWithPdf ? ` - ${providerWithPdf.provider}` : ''}
+                  {invoice.providers[0]?.provider ? ` - ${invoice.providers[0].provider}` : ''}
                 </p>
               </div>
-              <Button variant="ghost" size="sm" asChild>
-                <a href={invoice.canonical_pdf_url} target="_blank" rel="noreferrer">
-                  PDF
-                  <ExternalLink className="size-4" data-icon="inline-end" />
-                </a>
-              </Button>
             </div>
           );
         })}
@@ -135,27 +126,20 @@ export function AccountSubscriptionsPortalCard({
               <p className="truncate font-medium">{paymentMethodLabel(method)}</p>
               <p className="truncate text-muted-foreground">
                 {method.providers
-                  .map((provider) => `${provider.provider} - ${provider.mandate_status}`)
+                  .map((provider) => `${provider.provider} - ${provider.status}`)
                   .join(', ') || 'Aucun prestataire actif'}
               </p>
             </div>
             <span className="shrink-0 text-muted-foreground">
               {method.exp_month && method.exp_year
                 ? `${method.exp_month.toString().padStart(2, '0')}/${method.exp_year}`
-                : method.status}
+                : 'Actif'}
             </span>
           </div>
         ))}
         <Separator className="my-3" />
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          disabled={!canOpenProviderPortal}
-          onClick={() => void onOpen()}
-        >
-          {canOpenProviderPortal
-            ? 'Ouvrir le portail de facturation'
-            : 'Portail prestataire indisponible'}
+        <Button variant="outline" className="w-full justify-between" onClick={() => void onOpen()}>
+          Ouvrir le portail de facturation
           <ExternalLink className="size-4" data-icon="inline-end" />
         </Button>
       </CardContent>

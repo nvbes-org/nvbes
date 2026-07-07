@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/runtime-foundation.mjs --write",
+    "command": "node tools/migration/runtime-foundation.mjs --write",
     "source": "docs/blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md",
-    "strict_cutover_command": "tools/migration/runtime-foundation.mjs --strict"
+    "strict_cutover_command": "node tools/migration/runtime-foundation.mjs --strict"
   },
   "summary": {
     "runtimes": 4,
@@ -21,8 +21,8 @@
       "required_paths": [
         "Cargo.toml",
         "libs/rust",
-        "apps/identity-api",
-        "apps/drive-api"
+        "apps/account-service",
+        "apps/cloud-service"
       ],
       "required_commands": [
         "pnpm check:api"
@@ -33,8 +33,8 @@
       "present_paths": [
         "Cargo.toml",
         "libs/rust",
-        "apps/identity-api",
-        "apps/drive-api"
+        "apps/account-service",
+        "apps/cloud-service"
       ],
       "configured_commands": [
         "pnpm check:api"
@@ -44,8 +44,8 @@
       "evidence": [
         "path:Cargo.toml",
         "path:libs/rust",
-        "path:apps/identity-api",
-        "path:apps/drive-api",
+        "path:apps/account-service",
+        "path:apps/cloud-service",
         "command:pnpm check:api"
       ],
       "proof": "pnpm check:api"
@@ -56,9 +56,9 @@
       "required_paths": [
         "pnpm-workspace.yaml",
         "libs/ts",
-        "apps/identity-web",
-        "apps/drive-web",
-        "apps/developer-web"
+        "apps/account-web",
+        "apps/cloud-web",
+        "apps/console-web"
       ],
       "required_commands": [
         "pnpm check:web"
@@ -69,9 +69,9 @@
       "present_paths": [
         "pnpm-workspace.yaml",
         "libs/ts",
-        "apps/identity-web",
-        "apps/drive-web",
-        "apps/developer-web"
+        "apps/account-web",
+        "apps/cloud-web",
+        "apps/console-web"
       ],
       "configured_commands": [
         "pnpm check:web"
@@ -81,9 +81,9 @@
       "evidence": [
         "path:pnpm-workspace.yaml",
         "path:libs/ts",
-        "path:apps/identity-web",
-        "path:apps/drive-web",
-        "path:apps/developer-web",
+        "path:apps/account-web",
+        "path:apps/cloud-web",
+        "path:apps/console-web",
         "command:pnpm check:web"
       ],
       "proof": "pnpm check:web"

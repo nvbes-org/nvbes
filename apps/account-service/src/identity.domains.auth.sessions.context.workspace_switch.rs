@@ -1,8 +1,9 @@
 use crate::domains::auth::types::{AuthContext, StepUpInput, StepUpSubject, SwitchWorkspaceInput};
 use crate::domains::auth::verification;
+use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 use nvbes_tenancy::workspace::WorkspaceAccessError;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 pub(super) struct WorkspaceSwitchContext {
@@ -18,47 +19,21 @@ pub(super) struct WorkspaceSwitchContext {
 }
 
 pub(super) async fn resolve_workspace_switch_context(
-    db: &PgPool,
+    _db: &PgPool,
     auth: &AuthContext,
     workspace_id: Uuid,
 ) -> Result<WorkspaceSwitchContext, AppError> {
-    let workspace = sqlx::query(
-        r#"
-        SELECT
-          w.id,
-          w.tenant_id,
-          w.organization_id,
-          COALESCE(
-            w.owner_user_id,
-            (SELECT principal_id FROM workspace_memberships WHERE workspace_id = w.id AND role = 'admin' LIMIT 1),
-            '00000000-0000-0000-0000-000000000000'::uuid
-          ) AS owner_principal_id,
-          w.name,
-          w.workspace_type::text AS workspace_type,
-          w.data_region::text AS data_region,
-          w.trial_ends_at
-        FROM workspaces w
-        WHERE w.id = $1
-        "#,
+    let workspace =
+        workspace_port::get_workspace(auth.tenant_id, workspace_id, auth.user_id).await?;
+    let role = workspace_port::list_workspace_members(
+        Some(workspace.tenant_id),
+        workspace_id,
+        auth.user_id,
     )
-    .bind(workspace_id)
-    .fetch_optional(db)
     .await?
-    .ok_or_else(|| AppError::not_found("workspace_not_found", "Workspace not found."))?;
-
-    let membership = sqlx::query(
-        r#"
-        SELECT role::text AS role
-        FROM workspace_memberships
-        WHERE workspace_id = $1
-          AND principal_id = $2
-          AND status = 'active'
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(auth.user_id)
-    .fetch_optional(db)
-    .await?
+    .into_iter()
+    .find(|member| member.principal_id == auth.user_id && member.active)
+    .map(|member| member.role)
     .ok_or_else(|| {
         AppError::forbidden(
             "workspace_access_denied",
@@ -66,23 +41,16 @@ pub(super) async fn resolve_workspace_switch_context(
         )
     })?;
 
-    let role = membership.try_get::<String, _>("role").map_err(|_| {
-        AppError::internal(
-            "workspace_membership_invariant",
-            "Workspace membership is inconsistent.",
-        )
-    })?;
-
     Ok(WorkspaceSwitchContext {
-        workspace_id: workspace.get("id"),
-        tenant_id: workspace.get("tenant_id"),
-        organization_id: workspace.get("organization_id"),
-        owner_principal_id: workspace.get("owner_principal_id"),
-        name: workspace.get("name"),
-        workspace_type: workspace.get("workspace_type"),
-        data_region: workspace.get("data_region"),
+        workspace_id: workspace.workspace_id,
+        tenant_id: Some(workspace.tenant_id),
+        organization_id: workspace.organization_id,
+        owner_principal_id: workspace.owner_principal_id.unwrap_or_default(),
+        name: workspace.name,
+        workspace_type: workspace.workspace_type,
+        data_region: workspace.data_region.unwrap_or_default(),
         role,
-        trial_ends_at: workspace.get("trial_ends_at"),
+        trial_ends_at: workspace.trial_ends_at,
     })
 }
 

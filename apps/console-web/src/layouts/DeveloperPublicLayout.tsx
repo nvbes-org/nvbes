@@ -7,7 +7,7 @@ export function DeveloperPublicLayout() {
       <header className="border-b border-border bg-card">
         <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:px-8">
           <Link to="/" className="font-heading text-base font-semibold">
-            nvbes Developers
+            nvbes Console
           </Link>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/quickstarts/react">Quickstarts</Link>
@@ -19,7 +19,7 @@ export function DeveloperPublicLayout() {
               Sign in
             </button>
             <Link to="/portal/apps" className="font-medium text-primary">
-              Portal
+              Console
             </Link>
           </div>
         </nav>

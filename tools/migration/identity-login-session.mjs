@@ -103,7 +103,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/identity-login-session.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/identity-login-session.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -164,7 +164,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-identity-login-session",
-		"tools/migration/identity-login-session.mjs --write",
+		"node tools/migration/identity-login-session.mjs --write",
 		"```",
 		"",
 	);
@@ -176,7 +176,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/identity-login-session.mjs --write",
+		command: "node tools/migration/identity-login-session.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-account-service refreshed_cookies --locked",
@@ -209,8 +209,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/identity-login-session.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/identity-login-session.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-login-session.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-login-session.mjs --write`);
 }
 
 if (errors.length > 0) {

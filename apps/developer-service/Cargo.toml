@@ -1,0 +1,26 @@
+[package]
+name = "nvbes-developer-service"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+nvbes-core = { path = "../../libs/rust/core" }
+nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-product-account = { path = "../../libs/rust/products/account" }
+prost = "0.14.4"
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14.6"
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["json"] }
+url = "2.5"
+uuid.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"

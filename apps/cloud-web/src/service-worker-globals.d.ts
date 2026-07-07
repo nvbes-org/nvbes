@@ -6,7 +6,7 @@ declare global {
   }
 
   interface ExtendableMessageEvent extends ExtendableEvent {
-    readonly data?: any;
+    readonly data?: unknown;
     readonly ports?: MessagePort[];
   }
 }

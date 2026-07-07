@@ -14,7 +14,7 @@ use crate::app::AppState;
         license(name = "UNLICENSED"),
     ),
     servers(
-        (url = "https://drive.nvbes.fr", description = "Production"),
+        (url = "https://cloud.nvbes.fr", description = "Production"),
         (url = "http://localhost:8081", description = "Development"),
     ),
     tags(

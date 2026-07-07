@@ -11,6 +11,7 @@ use sqlx::PgPool;
 pub struct AppState {
     pub config: AppConfig,
     pub db: PgPool,
+    pub billing_grpc_endpoint: String,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub rate_limiter: crate::rate_limit::BackofficeRateLimiter,
 }
@@ -24,6 +25,7 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
         let state = Self {
+            billing_grpc_endpoint: crate::billing_grpc::billing_grpc_endpoint(config.api_port),
             config,
             db,
             observability: nvbes_observability::metrics::HttpMetrics::default(),

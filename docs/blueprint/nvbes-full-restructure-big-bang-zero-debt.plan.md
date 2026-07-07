@@ -302,10 +302,10 @@ l'observabilite sont recenses dans
 La decision d'architecture est verrouillee par
 [ADR Account Cloud Service Taxonomy](../adr/2026-07-05-account-cloud-service-taxonomy.md).
 
-Decision de taxonomie: les anciens runtimes `identity-*` deviennent Account,
-les anciens runtimes `drive-*` deviennent Cloud, `billing-api` devient
-`billing-service`, `developer-web` devient `console-web`, `internal-admin*`
-devient Backoffice, et `gateway-graphql` devient `gateway-cloud`. Aucun alias de
+Decision de taxonomie: les anciens runtimes historiques sont remplaces par les
+bounded contexts Account, Cloud, Billing, Developer, Enterprise, Backoffice et
+Gateway Cloud. La correspondance exacte vit dans l'inventaire de migration; les
+docs non-migration ne doivent conserver que les noms cible. Aucun alias de
 compatibilite runtime ne doit survivre au cutover.
 
 Termine cote repository:
@@ -324,7 +324,7 @@ Verification locale:
   existants sous le seuil bloquant de 500 lignes;
 - `pnpm check:migration-precutover -- --env production --reconciliation-report
   docs/migration/reconciliation.<run>.json` est le gate strict avant cutover;
-- `tools/migration/gate-evidence.mjs --strict` echoue volontairement tant que
+- `node tools/migration/gate-evidence.mjs --strict` echoue volontairement tant que
   les gates n'ont pas owners, preuves et decision `go`.
 
 Bloqueurs restants avant cutover:

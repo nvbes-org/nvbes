@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::domains::{
     authz::{WorkspaceRole, parse_role},
+    cloud::workspace_port,
     enterprise::policy_simulation::types::EnterprisePolicySimulationSubject,
 };
 use crate::http::error::AppError;
@@ -46,53 +47,51 @@ pub(super) async fn load_simulated_access(
     workspace_id: Uuid,
     principal_id: Uuid,
 ) -> Result<Option<SimulationAccess>, AppError> {
+    let workspace =
+        workspace_port::get_workspace(Some(tenant_id), workspace_id, principal_id).await?;
+    let Some(member) =
+        workspace_port::list_workspace_members(Some(tenant_id), workspace_id, principal_id)
+            .await?
+            .into_iter()
+            .find(|member| member.principal_id == principal_id && member.active)
+    else {
+        return Ok(None);
+    };
     let row = sqlx::query(
         r#"
         SELECT
-          wm.role::text AS role,
           sp.member_can_create_share_links AS system_member_can_create_share_links,
           tp.member_can_create_share_links AS tenant_member_can_create_share_links,
-          op.member_can_create_share_links AS organization_member_can_create_share_links,
-          wp.member_can_create_share_links AS workspace_member_can_create_share_links
-        FROM workspaces w
-        INNER JOIN workspace_memberships wm ON wm.workspace_id = w.id
-        INNER JOIN workspace_policies wp ON wp.workspace_id = w.id
-        INNER JOIN system_policies sp ON sp.id = TRUE
-        LEFT JOIN tenant_policies tp ON tp.tenant_id = w.tenant_id
-        LEFT JOIN organization_policies op ON op.organization_id = w.organization_id
-        WHERE w.id = $1
-          AND w.tenant_id = $2
-          AND wm.principal_id = $3
-          AND wm.status = 'active'
+          op.member_can_create_share_links AS organization_member_can_create_share_links
+        FROM system_policies sp
+        LEFT JOIN tenant_policies tp ON tp.tenant_id = $1
+        LEFT JOIN organization_policies op ON op.organization_id = $2
+        WHERE sp.id = TRUE
         "#,
     )
-    .bind(workspace_id)
     .bind(tenant_id)
-    .bind(principal_id)
-    .fetch_optional(db)
+    .bind(workspace.organization_id)
+    .fetch_one(db)
     .await?;
 
-    row.map(|row| {
-        let effective_policy = resolve_inherited_policy([
-            InheritedPolicyLayer::system()
-                .with_member_share_links(row.get("system_member_can_create_share_links")),
-            optional_member_share_layer(
-                InheritedPolicyLayer::tenant(),
-                row.get("tenant_member_can_create_share_links"),
-            ),
-            optional_member_share_layer(
-                InheritedPolicyLayer::organization(),
-                row.get("organization_member_can_create_share_links"),
-            ),
-            InheritedPolicyLayer::workspace()
-                .with_member_share_links(row.get("workspace_member_can_create_share_links")),
-        ]);
-        Ok(SimulationAccess {
-            role: parse_role(row.get::<String, _>("role").as_str())?,
-            member_share_links_enabled: effective_policy.member_can_create_share_links,
-        })
-    })
-    .transpose()
+    let effective_policy = resolve_inherited_policy([
+        InheritedPolicyLayer::system()
+            .with_member_share_links(row.get("system_member_can_create_share_links")),
+        optional_member_share_layer(
+            InheritedPolicyLayer::tenant(),
+            row.get("tenant_member_can_create_share_links"),
+        ),
+        optional_member_share_layer(
+            InheritedPolicyLayer::organization(),
+            row.get("organization_member_can_create_share_links"),
+        ),
+        InheritedPolicyLayer::workspace()
+            .with_member_share_links(workspace.member_can_create_share_links),
+    ]);
+    Ok(Some(SimulationAccess {
+        role: parse_role(&member.role)?,
+        member_share_links_enabled: effective_policy.member_can_create_share_links,
+    }))
 }
 
 async fn resolve_user_subject(

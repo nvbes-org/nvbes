@@ -11,8 +11,9 @@ use nvbes_observability::{
 use tokio::time::{Duration as TokioDuration, sleep};
 
 use crate::app::AppState;
-use nvbes_product_account::email::jobs::{
-    JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
+use nvbes_product_account::email::{
+    jobs::{EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS},
+    templates::html_escape,
 };
 
 use super::jobs::{
@@ -44,7 +45,7 @@ where
     loop {
         capture_worker_heartbeat_if_due(&state, &mut worker_heartbeat_last_run);
         if let Err(error) =
-            run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await
+            run_access_review_schedules_if_due(&mut access_review_schedule_last_run).await
         {
             capture_loop_error(&state, "access_review_schedules", error.as_ref());
             return Err(error);
@@ -99,16 +100,24 @@ async fn run_access_review_reminders_if_due(
     if last_run.elapsed() < ACCESS_REVIEW_REMINDER_INTERVAL {
         return Ok(());
     }
-    let run = nvbes_product_account::enterprise::access_reviews::scheduler::enqueue_due_campaign_reminders(
-        &state.db,
-        &state.redis,
-        &state.config,
-    )
-    .await
-    .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
-    if run.reminders_enqueued > 0 {
+    let claim = super::enterprise_grpc::claim_access_review_reminder_candidates().await?;
+    for candidate in &claim.candidates {
+        let payload = reminder_email_payload(&state.config, candidate);
+        nvbes_product_account::email::jobs::enqueue_email_job_tx(
+            &state.db,
+            &state.redis,
+            payload,
+            &format!(
+                "access-review-reminder:{}:{}:{}",
+                candidate.campaign_id, candidate.recipient_principal_id, candidate.reminder_kind
+            ),
+        )
+        .await
+        .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+    }
+    if !claim.candidates.is_empty() {
         tracing::info!(
-            reminders_enqueued = run.reminders_enqueued,
+            reminders_enqueued = claim.candidates.len(),
             "enqueued access review reminders"
         );
     }
@@ -116,19 +125,47 @@ async fn run_access_review_reminders_if_due(
     Ok(())
 }
 
-async fn run_access_review_schedules_if_due(
-    state: &AppState,
-    last_run: &mut Instant,
-) -> anyhow::Result<()> {
+fn reminder_email_payload(
+    config: &nvbes_core::config::AppConfig,
+    candidate: &crate::grpc_pb::nvbes::enterprise::v1::AccessReviewReminderCandidate,
+) -> EmailSendPayload {
+    let link = format!(
+        "{}/access-reviews",
+        config.web_base_url.trim_end_matches('/')
+    );
+    let subject = if candidate.reminder_kind == "overdue" {
+        format!("Access review overdue: {}", candidate.campaign_name)
+    } else {
+        format!("Access review due soon: {}", candidate.campaign_name)
+    };
+    let text_body = format!(
+        "{}\n\nTenant: {}\nPending items: {}\nDue: {}\n\nOpen access reviews: {}",
+        subject, candidate.tenant_name, candidate.pending_items, candidate.due_at, link
+    );
+    let html_body = format!(
+        "<p>{}</p><p><strong>Tenant:</strong> {}<br><strong>Pending items:</strong> {}<br><strong>Due:</strong> {}</p><p><a href=\"{}\">Open access reviews</a></p>",
+        html_escape(&subject),
+        html_escape(&candidate.tenant_name),
+        candidate.pending_items,
+        html_escape(&candidate.due_at),
+        html_escape(&link)
+    );
+
+    EmailSendPayload {
+        to_email: candidate.recipient_email.clone(),
+        to_name: Some(candidate.recipient_name.clone()),
+        subject,
+        html_body,
+        text_body: Some(text_body),
+        business_type: "access_review_reminder".to_string(),
+    }
+}
+
+async fn run_access_review_schedules_if_due(last_run: &mut Instant) -> anyhow::Result<()> {
     if last_run.elapsed() < ACCESS_REVIEW_SCHEDULE_INTERVAL {
         return Ok(());
     }
-    let run =
-        nvbes_product_account::enterprise::access_reviews::scheduler::materialize_due_schedules(
-            &state.db,
-        )
-        .await
-        .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+    let run = super::enterprise_grpc::materialize_due_access_review_schedules().await?;
     if run.campaigns_created > 0 || run.empty_schedules > 0 {
         tracing::info!(
             campaigns_created = run.campaigns_created,

@@ -1,4 +1,4 @@
-import type { BillingOverview } from '@nvbes/billing-client';
+import type { AccountBillingOverview } from '@/account.billing.client';
 import { CreditCard, Package, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,15 @@ import {
   subscriptionStatusLabels,
   subscriptionStatusVariants,
 } from '@/pages/AccountSubscriptionsPage.utils';
+import { availablePlans } from './BillingPage.plans.data';
 
-export function AccountSubscriptionsPlanOverview({ overview }: { overview: BillingOverview }) {
-  const { plan, subscription } = overview;
-  const status = subscription.status;
+export function AccountSubscriptionsPlanOverview({
+  overview,
+}: {
+  overview: AccountBillingOverview;
+}) {
+  const plan = availablePlans.find((candidate) => candidate.code === overview.plan_code);
+  const status = overview.subscription_status;
 
   return (
     <Card>
@@ -28,23 +33,27 @@ export function AccountSubscriptionsPlanOverview({ overview }: { overview: Billi
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
-        <SubscriptionInfoRow label="Formule" value={plan.code} icon={Package} />
+        <SubscriptionInfoRow
+          label="Formule"
+          value={plan?.name ?? overview.plan_code}
+          icon={Package}
+        />
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Prix mensuel"
-          value={formatSubscriptionCents(plan.monthly_price_cents, plan.currency)}
+          value={plan ? formatSubscriptionCents(Number(plan.price) * 100, 'eur') : 'Non disponible'}
           icon={CreditCard}
         />
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Stockage inclus"
-          value={`${plan.included_storage_gb} Go`}
+          value={`${overview.entitlements.included_storage_gb} Go`}
           icon={Zap}
         />
         <Separator className="my-1" />
         <SubscriptionInfoRow
           label="Utilisateurs inclus"
-          value={`${plan.included_users}`}
+          value={`${overview.entitlements.included_users}`}
           icon={Zap}
         />
       </CardContent>

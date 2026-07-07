@@ -14,7 +14,7 @@
   },
   "servers": [
     {
-      "url": "https://drive.nvbes.fr",
+      "url": "https://cloud.nvbes.fr",
       "description": "Production"
     },
     {

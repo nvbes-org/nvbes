@@ -1,6 +1,7 @@
 use crate::domains::auth::types::StepUpSubject;
 use crate::domains::auth::types::{AuthContext, DeleteAccountResult};
 use crate::domains::auth::{check_rate_limit, sessions_mgmt, verification};
+use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 
 pub async fn delete_account(
@@ -19,17 +20,7 @@ pub async fn delete_account(
 
     verification::require_recent_step_up(redis, auth, Some(nvbes_core::auth::Aal::Aal2)).await?;
 
-    let owned_workspace_ids: Vec<uuid::Uuid> = sqlx::query_scalar(
-        r#"
-        SELECT workspace_id
-        FROM workspace_memberships
-        WHERE principal_id = $1 AND role = 'owner'
-        "#,
-    )
-    .bind(auth.user_id())
-    .fetch_all(db)
-    .await
-    .unwrap_or_default();
+    let owned_workspace_ids = owned_workspace_ids(auth).await.unwrap_or_default();
 
     let mut tx = db.begin().await?;
 
@@ -64,4 +55,24 @@ pub async fn delete_account(
     }
 
     Ok(DeleteAccountResult { success: true })
+}
+
+async fn owned_workspace_ids(auth: &AuthContext) -> Result<Vec<uuid::Uuid>, AppError> {
+    let mut owned_workspace_ids = Vec::new();
+    for workspace in workspace_port::list_workspaces(None, auth.user_id()).await? {
+        let owns_workspace = workspace_port::list_workspace_members(
+            Some(workspace.tenant_id),
+            workspace.workspace_id,
+            auth.user_id(),
+        )
+        .await?
+        .into_iter()
+        .any(|member| {
+            member.principal_id == auth.user_id() && member.active && member.role == "owner"
+        });
+        if owns_workspace {
+            owned_workspace_ids.push(workspace.workspace_id);
+        }
+    }
+    Ok(owned_workspace_ids)
 }

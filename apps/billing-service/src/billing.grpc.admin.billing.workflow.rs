@@ -90,10 +90,8 @@ pub async fn override_grace_period(
     request: AdminBillingActionRequest,
 ) -> Result<AdminBillingActionResult, Status> {
     validate_admin_mutation(request.grace_days, &request.reason)?;
-    let subscription_id = crate::grpc::service_status::optional_uuid(
-        &request.subscription_id,
-        "subscription_id",
-    )?;
+    let subscription_id =
+        crate::grpc::service_status::optional_uuid(&request.subscription_id, "subscription_id")?;
     let mut tx = db
         .begin()
         .await
@@ -134,4 +132,3 @@ pub async fn override_grace_period(
         "billing_access_policy_snapshot",
     ))
 }
-

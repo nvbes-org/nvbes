@@ -5,7 +5,7 @@ use super::{
     hosted_store::{get_hosted_authorization_state, set_hosted_authorization_state},
     hosted_types::{CachedHostedAuthorizationState, HostedClientDisplay, HostedLoginDecision},
 };
-use crate::http::error::AppError;
+use crate::{domains::developer::grpc as developer_grpc, http::error::AppError};
 
 pub struct StartHostedAuthorizationInput {
     pub client_id: String,
@@ -92,34 +92,15 @@ pub async fn get_hosted_login_decision(
     };
 
     #[derive(sqlx::FromRow)]
-    struct ClientBrandingRow {
+    struct ClientRow {
         name: String,
-        product_name: Option<String>,
-        logo_url: Option<String>,
-        description: Option<String>,
-        support_url: Option<String>,
-        privacy_url: Option<String>,
-        terms_url: Option<String>,
-        brand_color: Option<String>,
-        custom_css: Option<String>,
-        help_text: Option<String>,
+        tenant_id: Uuid,
     }
 
-    let client_details = sqlx::query_as::<_, ClientBrandingRow>(
+    let client_details = sqlx::query_as::<_, ClientRow>(
         r#"
-        SELECT
-          c.name,
-          cs.product_name,
-          cs.logo_url,
-          cs.description,
-          cs.support_url,
-          cs.privacy_url,
-          cs.terms_url,
-          cs.brand_color,
-          cs.custom_css,
-          cs.help_text
+        SELECT c.name, c.tenant_id
         FROM oauth_clients c
-        LEFT JOIN developer_consent_screens cs ON cs.client_id = c.client_id
         WHERE c.client_id = $1
         LIMIT 1
         "#,
@@ -129,24 +110,12 @@ pub async fn get_hosted_login_decision(
     .await?;
 
     let client_display = match client_details {
-        Some(row) => {
-            let display_name = row
-                .product_name
-                .filter(|s| !s.trim().is_empty())
-                .unwrap_or(row.name);
-            HostedClientDisplay {
-                client_id: state.client_id.clone(),
-                name: display_name,
-                logo_url: row.logo_url,
-                description: row.description,
-                support_url: row.support_url,
-                privacy_url: row.privacy_url,
-                terms_url: row.terms_url,
-                brand_color: row.brand_color,
-                custom_css: row.custom_css,
-                help_text: row.help_text,
-            }
-        }
+        Some(row) => build_hosted_client_display(
+            state.client_id.clone(),
+            row.name,
+            developer_grpc::get_public_consent_screen(row.tenant_id, state.client_id.clone())
+                .await?,
+        ),
         None => HostedClientDisplay {
             client_id: state.client_id.clone(),
             name: state.client_id.clone(),
@@ -166,4 +135,29 @@ pub async fn get_hosted_login_decision(
         client: client_display,
         scope: state.scope,
     })
+}
+
+pub(crate) fn build_hosted_client_display(
+    client_id: String,
+    client_name: String,
+    consent_screen: crate::domains::developer::types::DeveloperConsentScreenResponse,
+) -> HostedClientDisplay {
+    let name = if consent_screen.product_name.trim().is_empty() {
+        client_name
+    } else {
+        consent_screen.product_name
+    };
+
+    HostedClientDisplay {
+        client_id,
+        name,
+        logo_url: consent_screen.logo_url,
+        description: Some(consent_screen.description).filter(|value| !value.trim().is_empty()),
+        support_url: consent_screen.support_url,
+        privacy_url: consent_screen.privacy_url,
+        terms_url: consent_screen.terms_url,
+        brand_color: consent_screen.brand_color,
+        custom_css: consent_screen.custom_css,
+        help_text: consent_screen.help_text,
+    }
 }

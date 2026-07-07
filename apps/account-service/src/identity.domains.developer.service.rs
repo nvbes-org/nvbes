@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::{
     domains::developer::{
+        grpc,
         rbac::{DeveloperPermission, permissions_for_role},
         rbac_db,
         types::{DeveloperContextResponse, DeveloperOverviewResponse},
@@ -40,35 +41,11 @@ pub async fn get_developer_context(
 }
 
 pub async fn get_developer_overview(
-    db: &PgPool,
+    _db: &PgPool,
     auth: &AuthContext,
 ) -> Result<DeveloperOverviewResponse, AppError> {
     let tenant_id = require_tenant_id(auth)?;
-    let (
-        oauth_clients,
-        marketplace_pending,
-        high_risk_scopes,
-        failed_webhook_deliveries,
-        unhealthy_integrations,
-        active_sandboxes,
-    ) = tokio::try_join!(
-        count_oauth_clients(db, tenant_id),
-        count_pending_marketplace_apps(db, tenant_id),
-        count_high_risk_scopes(db),
-        count_failed_webhook_deliveries(db, tenant_id),
-        count_unhealthy_integrations(db, tenant_id),
-        count_active_sandboxes(db, tenant_id),
-    )?;
-
-    Ok(DeveloperOverviewResponse {
-        tenant_id,
-        oauth_clients,
-        marketplace_pending,
-        high_risk_scopes,
-        failed_webhook_deliveries,
-        unhealthy_integrations,
-        active_sandboxes,
-    })
+    grpc::get_overview_summary(tenant_id, auth.user_id).await
 }
 
 pub(crate) fn require_tenant_id(auth: &AuthContext) -> Result<Uuid, AppError> {
@@ -100,63 +77,4 @@ pub(crate) async fn require_permission(
     }
 
     Ok(tenant_id)
-}
-
-async fn count_oauth_clients(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {
-    count(
-        db,
-        tenant_id,
-        "SELECT COUNT(*) FROM oauth_clients WHERE tenant_id = $1",
-    )
-    .await
-}
-
-async fn count_pending_marketplace_apps(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {
-    count(
-        db,
-        tenant_id,
-        "SELECT COUNT(*) FROM developer_marketplace_apps WHERE tenant_id = $1 AND status = 'pending'",
-    )
-    .await
-}
-
-async fn count_high_risk_scopes(db: &PgPool) -> Result<i64, AppError> {
-    let (total,): (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM developer_scope_registry WHERE risk IN ('high', 'restricted')",
-    )
-    .fetch_one(db)
-    .await?;
-    Ok(total)
-}
-
-async fn count_failed_webhook_deliveries(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {
-    count(
-        db,
-        tenant_id,
-        "SELECT COUNT(*) FROM developer_webhook_deliveries WHERE tenant_id = $1 AND status = 'failed'",
-    )
-    .await
-}
-
-async fn count_unhealthy_integrations(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {
-    count(
-        db,
-        tenant_id,
-        "SELECT COUNT(*) FROM developer_health_checks WHERE tenant_id = $1 AND status IN ('failing', 'warning')",
-    )
-    .await
-}
-
-async fn count_active_sandboxes(db: &PgPool, tenant_id: Uuid) -> Result<i64, AppError> {
-    count(
-        db,
-        tenant_id,
-        "SELECT COUNT(*) FROM developer_sandbox_tenants WHERE tenant_id = $1 AND status = 'active'",
-    )
-    .await
-}
-
-async fn count(db: &PgPool, tenant_id: Uuid, sql: &str) -> Result<i64, AppError> {
-    let (total,): (i64,) = sqlx::query_as(sql).bind(tenant_id).fetch_one(db).await?;
-    Ok(total)
 }

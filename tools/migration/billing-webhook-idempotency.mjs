@@ -63,9 +63,9 @@ function absentTextCheck(id, path, description, pattern) {
 function buildChecks() {
 	return [
 		absentTextCheck("identity-openapi-no-psp-webhook", sources.identityOpenapi, "Identity OpenAPI no longer exposes PSP webhook routes", "/webhooks/stripe"),
-		absentTextCheck("identity-router-no-billing-merge", sources.identityDomainsRouter, "Identity router no longer merges billing routes", "billing::routes::router"),
-		textCheck("billing-service-stripe-route", sources.billingServiceRoutes, "Billing API accepts Stripe webhooks", 'route("/webhooks/stripe", post(handle_stripe_webhook))'),
-		textCheck("billing-service-mollie-route", sources.billingServiceRoutes, "Billing API accepts Mollie webhooks", 'route("/webhooks/mollie", post(handle_mollie_webhook))'),
+		absentTextCheck("identity-router-no-billing-merge", sources.identityDomainsRouter, "Identity router no longer merges legacy billing routes", ".merge(billing::routes::router(state))"),
+		textCheck("billing-service-stripe-route", sources.billingServiceRoutes, "billing-service accepts Stripe webhooks", 'route("/webhooks/stripe", post(handle_stripe_webhook))'),
+		textCheck("billing-service-mollie-route", sources.billingServiceRoutes, "billing-service accepts Mollie webhooks", 'route("/webhooks/mollie", post(handle_mollie_webhook))'),
 		textCheck("billing-service-stripe-rate-limit", sources.billingServiceRoutes, "Stripe webhook intake is rate limited in billing-service", "enforce_stripe_webhook_rate_limit"),
 		textCheck("billing-service-mollie-rate-limit", sources.billingServiceRoutes, "Mollie webhook intake is rate limited in billing-service", "enforce_mollie_webhook_rate_limit"),
 		textCheck("stripe-intake-signature", sources.stripeIntake, "Stripe intake verifies signatures before enqueueing", "verify_stripe_signature(webhook_secret, signature_header, payload)"),
@@ -140,7 +140,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/billing-webhook-idempotency.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/billing-webhook-idempotency.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -197,7 +197,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-billing-webhook-idempotency",
-		"tools/migration/billing-webhook-idempotency.mjs --write",
+		"node tools/migration/billing-webhook-idempotency.mjs --write",
 		"```",
 		"",
 	);
@@ -209,7 +209,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/billing-webhook-idempotency.mjs --write",
+		command: "node tools/migration/billing-webhook-idempotency.mjs --write",
 		sources: Object.values(sources),
 		targeted_test: "cargo test -p nvbes-billing classify_webhook_retry --locked",
 	},
@@ -238,8 +238,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/billing-webhook-idempotency.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/billing-webhook-idempotency.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/billing-webhook-idempotency.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/billing-webhook-idempotency.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use nvbes_product_account::cloud_boundary::UpsertWorkspaceMembershipCommand;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -88,17 +89,17 @@ pub async fn create_service_account(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source, created_at, updated_at)
-        VALUES ($1, $2, $3::workspace_member_role, 'active', 'system', $4, $4)
-        "#,
+    crate::domains::cloud::workspace_port::upsert_workspace_membership_tx(
+        &mut tx,
+        &UpsertWorkspaceMembershipCommand {
+            actor_principal_id: access.auth.user_id,
+            workspace_id: access.workspace_id,
+            principal_id,
+            role: role.to_string(),
+            status: "active".to_string(),
+            source: "system".to_string(),
+        },
     )
-    .bind(access.workspace_id)
-    .bind(principal_id)
-    .bind(role.to_string())
-    .bind(now)
-    .execute(&mut *tx)
     .await?;
 
     record_audit_event(

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/billing-webhook-idempotency.mjs --write",
+    "command": "node tools/migration/billing-webhook-idempotency.mjs --write",
     "sources": [
-      "apps/identity-api/openapi.json",
-      "apps/identity-api/src/identity.domains.mod.rs",
-      "apps/billing-api/src/billing.domains.webhooks.rs",
+      "apps/account-service/openapi.json",
+      "apps/account-service/src/identity.domains.mod.rs",
+      "apps/billing-service/src/billing.domains.webhooks.rs",
       "libs/rust/billing/src/stripe_webhook_intake.rs",
       "libs/rust/billing/src/jobs.rs",
       "apps/billing-worker/src/billing.worker.jobs.rs",
@@ -18,7 +18,7 @@
       "libs/rust/billing/src/dunning_db.rs",
       "libs/rust/billing/src/dunning_jobs.rs",
       "libs/rust/billing/src/db.provider_events.rs",
-      "apps/billing-api/migrations/0002_billing_platform_core.sql"
+      "apps/billing-service/migrations/0002_billing_platform_core.sql"
     ],
     "targeted_test": "cargo test -p nvbes-billing classify_webhook_retry --locked"
   },
@@ -32,42 +32,42 @@
     {
       "id": "identity-openapi-no-psp-webhook",
       "description": "Identity OpenAPI no longer exposes PSP webhook routes",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "/webhooks/stripe"
     },
     {
       "id": "identity-router-no-billing-merge",
-      "description": "Identity router no longer merges billing routes",
-      "path": "apps/identity-api/src/identity.domains.mod.rs",
+      "description": "Identity router no longer merges legacy billing routes",
+      "path": "apps/account-service/src/identity.domains.mod.rs",
       "status": "passed",
-      "pattern": "billing::routes::router"
+      "pattern": ".merge(billing::routes::router(state))"
     },
     {
-      "id": "billing-api-stripe-route",
-      "description": "Billing API accepts Stripe webhooks",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-stripe-route",
+      "description": "billing-service accepts Stripe webhooks",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "route(\"/webhooks/stripe\", post(handle_stripe_webhook))"
     },
     {
-      "id": "billing-api-mollie-route",
-      "description": "Billing API accepts Mollie webhooks",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-mollie-route",
+      "description": "billing-service accepts Mollie webhooks",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "route(\"/webhooks/mollie\", post(handle_mollie_webhook))"
     },
     {
-      "id": "billing-api-stripe-rate-limit",
-      "description": "Stripe webhook intake is rate limited in billing-api",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-stripe-rate-limit",
+      "description": "Stripe webhook intake is rate limited in billing-service",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "enforce_stripe_webhook_rate_limit"
     },
     {
-      "id": "billing-api-mollie-rate-limit",
-      "description": "Mollie webhook intake is rate limited in billing-api",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-mollie-rate-limit",
+      "description": "Mollie webhook intake is rate limited in billing-service",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "enforce_mollie_webhook_rate_limit"
     },
@@ -347,7 +347,7 @@
     {
       "id": "provider-event-unique",
       "description": "Database constrains provider event uniqueness per provider",
-      "path": "apps/billing-api/migrations/0002_billing_platform_core.sql",
+      "path": "apps/billing-service/migrations/0002_billing_platform_core.sql",
       "status": "passed",
       "pattern": "UNIQUE (provider, provider_event_id)"
     }

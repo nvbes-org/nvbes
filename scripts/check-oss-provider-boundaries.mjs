@@ -6,7 +6,7 @@ const policyPath = 'scripts/oss-provider-baseline.json';
 const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
 const knownProviderFiles = new Set(policy.knownProviderFiles);
 const policyFiles = new Set([policyPath, 'scripts/check-oss-provider-boundaries.mjs']);
-const forbiddenIdentityBillingBaselinePatterns = [
+const forbiddenAccountBillingBaselinePatterns = [
   /^apps\/account-service\/src\/identity\.domains\.billing(?:\.|$)/,
   /^apps\/account-service\/migrations\/(?:0016_billing_platform_core|0017_regional_price_mappings|0020_internal_admin_entitlement_actions|0022_internal_admin_usage_actions|0027_internal_admin_risk_actions|0028_internal_admin_operations_actions|0029_internal_admin_revenue_actions|0030_internal_admin_billing_platform_actions)\.sql$/,
 ];
@@ -136,8 +136,8 @@ for (const source of manifest.include ?? []) {
 }
 
 for (const path of knownProviderFiles) {
-  if (forbiddenIdentityBillingBaselinePatterns.some((pattern) => pattern.test(path))) {
-    errors.push(`${path}: Identity Billing runtime cannot remain an OSS provider baseline exception`);
+  if (forbiddenAccountBillingBaselinePatterns.some((pattern) => pattern.test(path))) {
+    errors.push(`${path}: Account Billing runtime cannot remain an OSS provider baseline exception`);
   }
 }
 

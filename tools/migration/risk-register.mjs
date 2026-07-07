@@ -40,11 +40,11 @@ function slug(value) {
 }
 
 function inferOwner(risk) {
-	if (risk.includes("data") || risk.includes("storage") || risk.includes("billing")) return "data lead required";
-	if (risk.includes("rollback") || risk.includes("event replay")) return "infra lead required";
-	if (risk.includes("Cloud/Internal") || risk.includes("OSS")) return "security lead required";
-	if (risk.includes("sessions")) return "product lead required";
-	return "migration lead required";
+	if (risk.includes("data") || risk.includes("storage") || risk.includes("billing")) return "Data lead";
+	if (risk.includes("rollback") || risk.includes("event replay")) return "Infra lead";
+	if (risk.includes("Cloud/Internal") || risk.includes("OSS")) return "Security lead";
+	if (risk.includes("sessions")) return "Product leads";
+	return "Migration lead";
 }
 
 function applyMitigationEvidence(entry) {
@@ -161,13 +161,13 @@ function validate(register, expectedRisks) {
 
 function validateGeneration(register) {
 	const generation = register.generation ?? {};
-	if (generation.command !== "tools/migration/risk-register.mjs --write") {
+	if (generation.command !== "node tools/migration/risk-register.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (generation.source !== sourcePath) {
 		errors.push(`${outputPath}: generation.source must match blueprint source`);
 	}
-	if (generation.strict_cutover_command !== "tools/migration/risk-register.mjs --strict") {
+	if (generation.strict_cutover_command !== "node tools/migration/risk-register.mjs --strict") {
 		errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	}
 }
@@ -198,9 +198,9 @@ const existing = readJson(outputPath);
 const register = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/risk-register.mjs --write",
+		command: "node tools/migration/risk-register.mjs --write",
 		source: sourcePath,
-		strict_cutover_command: "tools/migration/risk-register.mjs --strict",
+		strict_cutover_command: "node tools/migration/risk-register.mjs --strict",
 	},
 	summary: { risks: generatedRisks.length, pending: 0, mitigated: 0, accepted: 0, removed: 0 },
 	risks: mergeExisting(generatedRisks, existing),
@@ -221,14 +221,14 @@ if (write) {
 validate(register, generatedRisks);
 
 if (!existsSync(outputPath)) {
-	errors.push(`${outputPath}: missing; run tools/migration/risk-register.mjs --write`);
+	errors.push(`${outputPath}: missing; run node tools/migration/risk-register.mjs --write`);
 } else if (readFileSync(outputPath, "utf8") !== serialize(register)) {
-	errors.push(`${outputPath}: stale; run tools/migration/risk-register.mjs --write`);
+	errors.push(`${outputPath}: stale; run node tools/migration/risk-register.mjs --write`);
 }
 if (!existsSync(markdownPath)) {
-	errors.push(`${markdownPath}: missing; run tools/migration/risk-register.mjs --write`);
+	errors.push(`${markdownPath}: missing; run node tools/migration/risk-register.mjs --write`);
 } else if (readFileSync(markdownPath, "utf8") !== serializeRiskMarkdown(register)) {
-	errors.push(`${markdownPath}: stale; run tools/migration/risk-register.mjs --write`);
+	errors.push(`${markdownPath}: stale; run node tools/migration/risk-register.mjs --write`);
 }
 
 if (errors.length > 0) {

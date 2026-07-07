@@ -4,6 +4,8 @@ pub mod access_reviews;
 pub mod admin_elevation;
 #[path = "identity.domains.enterprise.db.rs"]
 pub mod db;
+#[path = "identity.domains.enterprise.grpc.rs"]
+pub mod grpc;
 #[path = "identity.domains.enterprise.policy.rs"]
 pub mod policy;
 #[path = "identity.domains.enterprise.policy_simulation.rs"]

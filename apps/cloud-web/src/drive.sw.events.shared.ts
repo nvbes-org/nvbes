@@ -32,7 +32,18 @@ type DriveClients = {
 };
 
 export type DriveWorkerGlobal = typeof globalThis & {
-  addEventListener(type: string, listener: (event: any) => void): void;
+  addEventListener(type: 'error', listener: (event: ErrorEvent) => void): void;
+  addEventListener(
+    type: 'unhandledrejection',
+    listener: (event: PromiseRejectionEvent) => void,
+  ): void;
+  addEventListener(type: 'periodicsync', listener: (event: PeriodicSyncEvent) => void): void;
+  addEventListener(type: 'message', listener: (event: ExtendableMessageEventLike) => void): void;
+  addEventListener(
+    type: 'backgroundfetchsuccess' | 'backgroundfetchfail' | 'backgroundfetchclick',
+    listener: (event: BackgroundFetchEvent) => void,
+  ): void;
+  addEventListener(type: string, listener: (event: Event) => void): void;
   clients: DriveClients;
   skipWaiting(): Promise<void>;
 };

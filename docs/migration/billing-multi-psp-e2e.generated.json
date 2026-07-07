@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/billing-multi-psp-e2e.mjs --write",
+    "command": "node tools/migration/billing-multi-psp-e2e.mjs --write",
     "sources": [
-      "apps/billing-api/src/billing.domains.webhooks.rs",
+      "apps/billing-service/src/billing.domains.webhooks.rs",
       "libs/rust/billing/src/stripe_webhook_intake.rs",
       "libs/rust/billing/src/mollie.webhooks.rs",
       "libs/rust/billing/src/jobs.rs",
@@ -34,16 +34,16 @@
   },
   "checks": [
     {
-      "id": "billing-api-stripe-route",
-      "description": "Billing API exposes Stripe webhook intake",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-stripe-route",
+      "description": "billing-service exposes Stripe webhook intake",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "\"/webhooks/stripe\""
     },
     {
-      "id": "billing-api-mollie-route",
-      "description": "Billing API exposes Mollie webhook intake",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "id": "billing-service-mollie-route",
+      "description": "billing-service exposes Mollie webhook intake",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "\"/webhooks/mollie\""
     },
@@ -71,7 +71,7 @@
     {
       "id": "mollie-async-queue",
       "description": "Mollie intake enqueues asynchronous processing",
-      "path": "apps/billing-api/src/billing.domains.webhooks.rs",
+      "path": "apps/billing-service/src/billing.domains.webhooks.rs",
       "status": "passed",
       "pattern": "enqueue_mollie_webhook_job"
     },
@@ -217,8 +217,8 @@
     },
     {
       "id": "identity-no-psp-webhook-runtime",
-      "description": "Identity API and worker do not own PSP webhook runtime",
-      "path": "apps/identity-api/src + apps/identity-worker/src",
+      "description": "Account Service and worker do not own PSP webhook runtime",
+      "path": "apps/account-service/src + apps/account-worker/src",
       "status": "passed",
       "pattern": "forbidden:/webhooks/stripe,/webhooks/mollie,billing.stripe.webhook.process,billing.mollie.webhook.process,process_stripe_webhook_job,process_mollie_webhook_job,handle_stripe_webhook_intake",
       "matches": []

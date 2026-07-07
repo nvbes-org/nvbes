@@ -32,16 +32,16 @@
 | privacy.workspace_delete | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-workspace-delete` | `target-worker:privacy.workspace_delete` |
 | privacy.account_export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-account-export` | `target-worker:privacy.account_export` |
 | privacy.workspace_export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-workspace-export` | `target-worker:privacy.workspace_export` |
-| data.export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#data-export` | `target-worker:data.export` |
-| email.send | Email | rebuild | Platform lead | `apps/workers#email-send` | `target-worker:email.send` |
-| email.webhook.process | Email | rebuild | Platform lead | `apps/workers#email-webhook-process` | `target-worker:email.webhook.process` |
 | billing.email.send | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-email-send` | `target-worker:billing.email.send` |
 | billing.mollie.webhook.process | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-mollie-webhook-process` | `target-worker:billing.mollie.webhook.process` |
 | billing.stripe.webhook.process | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-stripe-webhook-process` | `target-worker:billing.stripe.webhook.process` |
+| data.export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#data-export` | `target-worker:data.export` |
+| email.send | Email | rebuild | Platform lead | `apps/workers#email-send` | `target-worker:email.send` |
+| email.webhook.process | Email | rebuild | Platform lead | `apps/workers#email-webhook-process` | `target-worker:email.webhook.process` |
 
 ## Regeneration
 
 ```bash
 pnpm check:migration-job-map
-tools/migration/job-map.mjs --write
+node tools/migration/job-map.mjs --write
 ```

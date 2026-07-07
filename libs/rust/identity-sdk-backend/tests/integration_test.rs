@@ -3,13 +3,13 @@ use nvbes_identity_sdk::*;
 #[test]
 fn test_auth_url() {
     let config = AuthConfig {
-        base_url: "https://identity.nvbes.fr".to_string(),
+        base_url: "https://account.nvbes.fr".to_string(),
         client_id: "test-client".to_string(),
         client_secret: None,
     };
 
     let url = format!("{}/auth/me", config.base_url);
-    assert_eq!(url, "https://identity.nvbes.fr/auth/me");
+    assert_eq!(url, "https://account.nvbes.fr/auth/me");
 }
 
 #[test]

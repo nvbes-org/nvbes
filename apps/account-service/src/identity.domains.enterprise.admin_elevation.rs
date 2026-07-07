@@ -1,19 +1,17 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use nvbes_core::auth::Aal;
 use uuid::Uuid;
 
 use crate::domains::auth::sessions::cache::current_session_ttl;
 use crate::domains::auth::verification;
-use crate::domains::enterprise::policy;
+use crate::domains::enterprise::grpc::admin_elevation::{
+    AuthorizeAdminElevationCommand, authorize_admin_elevation,
+};
 use crate::domains::enterprise::types::{
     EnterpriseAdminElevationInput, EnterpriseAdminElevationResponse, EnterpriseAdminElevationView,
     EnterpriseRole,
 };
-use crate::http::error::AppError;
-use crate::http::middleware::jwt::AuthContext;
-
-const DEFAULT_ELEVATION_MINUTES: i64 = 15;
-const MAX_ELEVATION_MINUTES: i64 = 60;
+use crate::http::{error::AppError, middleware::jwt::AuthContext};
 
 pub async fn grant_admin_elevation(
     redis: &nvbes_redis::RedisPool,
@@ -21,31 +19,29 @@ pub async fn grant_admin_elevation(
     base_role: &EnterpriseRole,
     tenant_id: Uuid,
     input: EnterpriseAdminElevationInput,
+    break_glass: bool,
+    break_glass_procedure: Option<(String, String)>,
 ) -> Result<EnterpriseAdminElevationResponse, AppError> {
-    if policy::role_as_db(base_role) != "owner" && policy::role_as_db(base_role) != "admin" {
-        return Err(AppError::forbidden(
-            "admin_role_required",
-            "An existing owner or admin role is required for admin elevation.",
-        ));
-    }
-
     verification::require_recent_step_up(redis, auth, Some(Aal::Aal2)).await?;
-
-    let duration_minutes = input
-        .duration_minutes
-        .unwrap_or(DEFAULT_ELEVATION_MINUTES)
-        .clamp(1, MAX_ELEVATION_MINUTES);
-    let requested_expires_at = Utc::now() + Duration::minutes(duration_minutes);
 
     let mut session = read_session(redis, auth).await?;
     let step_up_expires_at = session
         .step_up_expires_at
         .ok_or_else(|| AppError::from(nvbes_core::auth::step_up_required_error()))?;
-    let expires_at =
-        bounded_elevation_expires_at(requested_expires_at, step_up_expires_at, session.expires_at);
-    if expires_at <= Utc::now() {
-        return Err(AppError::from(nvbes_core::auth::step_up_required_error()));
-    }
+    let authorization = authorize_admin_elevation(AuthorizeAdminElevationCommand {
+        tenant_id,
+        actor_principal_id: auth.user_id,
+        base_role: base_role.clone(),
+        input,
+        break_glass,
+        break_glass_procedure,
+        step_up_expires_at,
+        session_expires_at: session.expires_at,
+    })
+    .await?;
+    let expires_at = parse_grpc_time(&authorization.expires_at, "expires_at")?;
+    let authorized_step_up_expires_at =
+        parse_grpc_time(&authorization.step_up_expires_at, "step_up_expires_at")?;
 
     session.admin_elevation_role = Some("admin".to_string());
     session.admin_elevation_tenant_id = Some(tenant_id.to_string());
@@ -61,19 +57,9 @@ pub async fn grant_admin_elevation(
             active: true,
             role: Some(EnterpriseRole::Admin),
             expires_at: Some(expires_at),
-            step_up_expires_at: Some(step_up_expires_at),
+            step_up_expires_at: Some(authorized_step_up_expires_at),
         },
     })
-}
-
-fn bounded_elevation_expires_at(
-    requested_expires_at: DateTime<Utc>,
-    step_up_expires_at: DateTime<Utc>,
-    session_expires_at: DateTime<Utc>,
-) -> DateTime<Utc> {
-    requested_expires_at
-        .min(step_up_expires_at)
-        .min(session_expires_at)
 }
 
 pub async fn active_admin_elevation(
@@ -141,6 +127,17 @@ async fn read_session(
     }
 
     Ok(session)
+}
+
+fn parse_grpc_time(value: &str, field: &'static str) -> Result<DateTime<Utc>, AppError> {
+    DateTime::parse_from_rfc3339(value.trim())
+        .map(|time| time.with_timezone(&Utc))
+        .map_err(|error| {
+            AppError::internal(
+                "enterprise_grpc_invalid_admin_elevation",
+                format!("{field} from Enterprise gRPC is invalid: {error}"),
+            )
+        })
 }
 
 #[cfg(test)]

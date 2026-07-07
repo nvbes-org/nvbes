@@ -92,10 +92,20 @@ pub async fn operations_center_snapshot(
     })
 }
 
-async fn recent_provider_failures(
-    db: &sqlx::PgPool,
-) -> Result<Vec<RecentProviderFailure>, Status> {
-    let rows = sqlx::query_as::<_, (uuid::Uuid, Option<uuid::Uuid>, Option<String>, String, String, String, String, chrono::DateTime<chrono::Utc>)>(
+async fn recent_provider_failures(db: &sqlx::PgPool) -> Result<Vec<RecentProviderFailure>, Status> {
+    let rows = sqlx::query_as::<
+        _,
+        (
+            uuid::Uuid,
+            Option<uuid::Uuid>,
+            Option<String>,
+            String,
+            String,
+            String,
+            String,
+            chrono::DateTime<chrono::Utc>,
+        ),
+    >(
         r#"
         SELECT bpe.id, bpe.tenant_id, t.name AS tenant_name, bpe.provider::text,
           bpe.provider_event_id, bpe.event_type, bpe.status::text, bpe.received_at
@@ -126,7 +136,18 @@ async fn recent_provider_failures(
 }
 
 async fn recent_export_runs(db: &sqlx::PgPool) -> Result<Vec<RecentExportRun>, Status> {
-    let rows = sqlx::query_as::<_, (uuid::Uuid, String, String, Option<chrono::NaiveDate>, Option<chrono::NaiveDate>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            uuid::Uuid,
+            String,
+            String,
+            Option<chrono::NaiveDate>,
+            Option<chrono::NaiveDate>,
+            chrono::DateTime<chrono::Utc>,
+            chrono::DateTime<chrono::Utc>,
+        ),
+    >(
         r#"
         SELECT id, export_type, status, period_start, period_end, created_at, updated_at
         FROM billing_export_runs
@@ -155,7 +176,17 @@ async fn recent_export_runs(db: &sqlx::PgPool) -> Result<Vec<RecentExportRun>, S
 async fn recent_reconciliation_differences(
     db: &sqlx::PgPool,
 ) -> Result<Vec<RecentReconciliationDifference>, Status> {
-    let rows = sqlx::query_as::<_, (uuid::Uuid, Option<uuid::Uuid>, Option<String>, String, String, chrono::DateTime<chrono::Utc>)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            uuid::Uuid,
+            Option<uuid::Uuid>,
+            Option<String>,
+            String,
+            String,
+            chrono::DateTime<chrono::Utc>,
+        ),
+    >(
         r#"
         SELECT brd.id, brd.tenant_id, t.name AS tenant_name,
           brd.difference_type, brd.severity, brd.created_at

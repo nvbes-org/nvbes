@@ -28,5 +28,5 @@
 
 ```bash
 pnpm check:migration-supply-chain
-tools/migration/supply-chain.mjs --write
+node tools/migration/supply-chain.mjs --write
 ```

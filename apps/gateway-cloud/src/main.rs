@@ -12,6 +12,10 @@ mod http;
 mod pb;
 #[path = "gateway.schema.rs"]
 mod schema;
+#[path = "gateway.schema.enums.rs"]
+mod schema_enums;
+#[path = "gateway.schema.types.rs"]
+mod schema_types;
 #[path = "gateway.state.rs"]
 mod state;
 

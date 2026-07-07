@@ -58,7 +58,7 @@ const requiredGates = [
 const requiredChecks = [
 	"pnpm check",
 	"pnpm check:migration-precutover",
-	"tools/migration/gate-evidence.mjs --strict",
+	"node tools/migration/gate-evidence.mjs --strict",
 ];
 
 const requiredSuccessCriteria = [

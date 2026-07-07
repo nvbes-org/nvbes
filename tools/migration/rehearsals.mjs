@@ -81,17 +81,9 @@ for (const row of tableRowsAfter("## Stability Review")) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|no-go)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} rehearsal marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} rehearsal marker(s) remain`);
 	}
 }
 
@@ -250,6 +242,24 @@ function isEmptyMarker(value) {
 
 function hasConcreteEvidence(value) {
 	return /(sha|checksum|digest|artifact|manifest|report|result|log|snapshot|storage|url|link|command output|record|version|reconciliation|rollback|checklist)/i.test(value ?? "");
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, "no-go": 0 };
+	for (const [, , , , , status, decision] of tableRowsAfter("## Required Runs")) {
+		if (status === "pending") counts.pending += 1;
+		if (decision === "no-go") counts["no-go"] += 1;
+	}
+	for (const row of tableRowsAfter("## Run Evidence")) {
+		for (const evidence of row.slice(1)) {
+			if (evidence === "pending") counts.pending += 1;
+		}
+	}
+	for (const [, , currentState, decision] of tableRowsAfter("## Stability Review")) {
+		if (currentState === "pending") counts.pending += 1;
+		if (decision === "no-go") counts["no-go"] += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

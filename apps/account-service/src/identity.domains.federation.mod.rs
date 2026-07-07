@@ -1,5 +1,7 @@
 #[path = "identity.domains.federation.contract.rs"]
 pub mod contract;
+#[path = "identity.domains.federation.projection.domains.rs"]
+pub(crate) mod domain_projection;
 #[path = "identity.domains.federation.domains.rs"]
 pub mod domains;
 #[path = "identity.domains.federation.http.rs"]
@@ -8,6 +10,10 @@ pub(crate) mod http;
 pub mod identities;
 #[path = "identity.domains.federation.oidc.rs"]
 pub mod oidc;
+#[path = "identity.domains.federation.projection.rs"]
+pub(crate) mod projection;
+#[path = "identity.domains.federation.projection.providers.rs"]
+pub(crate) mod provider_projection;
 #[path = "identity.domains.federation.providers.rs"]
 pub mod providers;
 #[path = "identity.domains.federation.provisioning.rs"]
@@ -26,6 +32,8 @@ pub mod saml_subject;
 pub mod saml_validation;
 #[path = "identity.domains.federation.scim.rs"]
 pub mod scim;
+#[path = "identity.domains.federation.projection.scim.rs"]
+pub(crate) mod scim_projection;
 #[path = "identity.domains.federation.sso_policy.rs"]
 pub mod sso_policy;
 #[path = "identity.domains.federation.types.rs"]

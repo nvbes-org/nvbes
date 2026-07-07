@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/data-migration-pipeline.mjs --write",
+    "command": "node tools/migration/data-migration-pipeline.mjs --write",
     "sources": [
       "docs/migration/data-map.generated.json",
       "docs/migration/rejects.md",

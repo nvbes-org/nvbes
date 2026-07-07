@@ -35,7 +35,9 @@ impl BillingSubscriptionStatus {
             "past_due" => Ok(Self::PastDue),
             "canceled" => Ok(Self::Canceled),
             "incomplete" => Ok(Self::Incomplete),
-            _ => Err(Error::new(format!("unsupported subscription status: {value}"))),
+            _ => Err(Error::new(format!(
+                "unsupported subscription status: {value}"
+            ))),
         }
     }
 }
@@ -75,7 +77,9 @@ impl BillingProviderReferenceStatus {
             "active" => Ok(Self::Active),
             "inactive" | "" => Ok(Self::Inactive),
             "failed" => Ok(Self::Failed),
-            _ => Err(Error::new(format!("unsupported provider reference status: {value}"))),
+            _ => Err(Error::new(format!(
+                "unsupported provider reference status: {value}"
+            ))),
         }
     }
 }

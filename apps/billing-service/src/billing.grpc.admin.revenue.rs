@@ -252,4 +252,3 @@ mod tests {
         assert!(validate_reason("short").is_err());
     }
 }
-

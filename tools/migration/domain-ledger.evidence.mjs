@@ -93,7 +93,7 @@ export const completedDomainEvidence = {
 		implementation_evidence: [
 			"apps/account-worker/src/identity.worker.jobs.process_data_export.rs",
 			"apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
-			"apps/account-service/src/identity.email.jobs.rs",
+			"libs/rust/products/account/src/account.email.jobs.rs",
 		],
 		migration_evidence: ["docs/migration/privacy-export-delete.generated.json"],
 		decision: "go",
@@ -125,8 +125,8 @@ export const completedDomainEvidence = {
 			"libs/go/provisioning/provisioning.go",
 			"libs/go/provisioning/provisioning_test.go",
 			"libs/go/control-plane/foundation.go",
-			"apps/cloud-control-api/README.md",
-			"apps/cloud-console/README.md",
+			"apps/cloud-service/README.md",
+			"apps/cloud-web/README.md",
 		],
 		migration_evidence: [
 			"docs/migration/cloud-provisioning.generated.json",

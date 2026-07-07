@@ -113,7 +113,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/audit-append-only.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/audit-append-only.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, sources)) {
@@ -164,7 +164,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-audit-append-only",
-		"tools/migration/audit-append-only.mjs --write",
+		"node tools/migration/audit-append-only.mjs --write",
 		"```",
 		"",
 	);
@@ -176,7 +176,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/audit-append-only.mjs --write",
+		command: "node tools/migration/audit-append-only.mjs --write",
 		sources: [...migrationTargets.map((target) => target.path), auditCratePath],
 	},
 	summary,
@@ -204,8 +204,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/audit-append-only.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/audit-append-only.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/audit-append-only.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/audit-append-only.mjs --write`);
 }
 
 if (errors.length > 0) {

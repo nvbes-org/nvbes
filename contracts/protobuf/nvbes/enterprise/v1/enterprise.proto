@@ -8,13 +8,37 @@ service EnterpriseService {
   rpc GetPolicySet(GetPolicySetRequest) returns (PolicySet);
   rpc UpdatePolicy(UpdatePolicyRequest) returns (EnterprisePolicy);
   rpc EvaluatePolicy(EvaluatePolicyRequest) returns (PolicyDecision);
+  rpc AuthorizeAdminElevation(AuthorizeAdminElevationRequest) returns (AdminElevationAuthorization);
+  rpc GetTrustCenter(GetTrustCenterRequest) returns (TrustCenter);
+  rpc ListAccessReviews(ListAccessReviewsRequest) returns (ListAccessReviewsResponse);
+  rpc GetAccessReview(GetAccessReviewRequest) returns (AccessReviewDetail);
   rpc StartAccessReview(StartAccessReviewRequest) returns (AccessReview);
   rpc RecordAccessReviewDecision(RecordAccessReviewDecisionRequest) returns (AccessReviewDecision);
+  rpc CloseAccessReview(CloseAccessReviewRequest) returns (AccessReview);
+  rpc ListAccessReviewSchedules(ListAccessReviewSchedulesRequest) returns (ListAccessReviewSchedulesResponse);
+  rpc CreateAccessReviewSchedule(CreateAccessReviewScheduleRequest) returns (AccessReviewSchedule);
+  rpc SetAccessReviewScheduleEnabled(SetAccessReviewScheduleEnabledRequest) returns (AccessReviewSchedule);
+  rpc RunAccessReviewSchedule(RunAccessReviewScheduleRequest) returns (AccessReview);
+  rpc MaterializeDueAccessReviewSchedules(MaterializeDueAccessReviewSchedulesRequest) returns (AccessReviewScheduleRun);
+  rpc ClaimAccessReviewReminderCandidates(ClaimAccessReviewReminderCandidatesRequest) returns (AccessReviewReminderClaim);
   rpc ActivateBreakGlass(ActivateBreakGlassRequest) returns (BreakGlassGrant);
   rpc RevokeBreakGlass(RevokeBreakGlassRequest) returns (BreakGlassGrant);
+  rpc ListBreakGlassAccounts(ListBreakGlassAccountsRequest) returns (ListBreakGlassAccountsResponse);
   rpc ConfigureFederationProvider(ConfigureFederationProviderRequest) returns (FederationProvider);
+  rpc DeleteFederationProvider(DeleteFederationProviderRequest) returns (FederationProviderDeletion);
+  rpc ConfigureTenantDomain(ConfigureTenantDomainRequest) returns (TenantDomain);
+  rpc VerifyTenantDomain(VerifyTenantDomainRequest) returns (TenantDomain);
+  rpc DeleteTenantDomain(DeleteTenantDomainRequest) returns (TenantDomainDeletion);
+  rpc ConfigureScimConnector(ConfigureScimConnectorRequest) returns (ScimConnector);
+  rpc DeleteScimConnector(DeleteScimConnectorRequest) returns (ScimConnectorDeletion);
   rpc TestFederationProvider(TestFederationProviderRequest) returns (FederationTestResult);
   rpc GetFederationGovernance(GetFederationGovernanceRequest) returns (FederationGovernance);
+  rpc CreateInvitations(CreateInvitationsRequest) returns (CreateInvitationsResponse);
+  rpc RecordDeveloperSecretRevoked(RecordDeveloperSecretRevokedRequest) returns (EnterpriseAuditRecord);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+  rpc UpdateUserAccess(UpdateUserAccessRequest) returns (UserAccessChange);
+  rpc SuspendUserAccess(SuspendUserAccessRequest) returns (UserAccessChange);
+  rpc ReactivateUserAccess(ReactivateUserAccessRequest) returns (UserAccessChange);
 }
 
 message GetPolicySetRequest {
@@ -40,11 +64,40 @@ message EvaluatePolicyRequest {
   map<string, string> attributes = 6;
 }
 
+message AuthorizeAdminElevationRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string base_role = 3;
+  int32 duration_minutes = 4;
+  string step_up_expires_at = 5;
+  string session_expires_at = 6;
+  bool break_glass = 7;
+  string break_glass_reason = 8;
+  string break_glass_procedure_reference = 9;
+}
+
+message ListAccessReviewsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message GetAccessReviewRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string review_id = 3;
+}
+
 message StartAccessReviewRequest {
   nvbes.platform.v1.RequestContext context = 1;
   string tenant_id = 2;
   string scope = 3;
   string due_at = 4;
+  string name = 5;
+  string description = 6;
+  bool include_members = 7;
+  bool include_roles = 8;
+  bool include_service_accounts = 9;
+  bool include_oauth_clients = 10;
 }
 
 message RecordAccessReviewDecisionRequest {
@@ -54,6 +107,57 @@ message RecordAccessReviewDecisionRequest {
   string subject_principal_id = 4;
   string decision = 5;
   string reason = 6;
+  string item_id = 7;
+  string target_role = 8;
+}
+
+message CloseAccessReviewRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string review_id = 3;
+  string reason = 4;
+}
+
+message ListAccessReviewSchedulesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message CreateAccessReviewScheduleRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string scope = 5;
+  int32 recurrence_days = 6;
+  int32 due_after_days = 7;
+  bool include_members = 8;
+  bool include_roles = 9;
+  bool include_service_accounts = 10;
+  bool include_oauth_clients = 11;
+}
+
+message SetAccessReviewScheduleEnabledRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string schedule_id = 3;
+  bool enabled = 4;
+}
+
+message RunAccessReviewScheduleRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string schedule_id = 3;
+}
+
+message MaterializeDueAccessReviewSchedulesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  int32 limit = 2;
+}
+
+message ClaimAccessReviewReminderCandidatesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  int32 limit = 2;
 }
 
 message ActivateBreakGlassRequest {
@@ -72,6 +176,12 @@ message RevokeBreakGlassRequest {
   string reason = 4;
 }
 
+message ListBreakGlassAccountsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  repeated string principal_ids = 3;
+}
+
 message ConfigureFederationProviderRequest {
   nvbes.platform.v1.RequestContext context = 1;
   string tenant_id = 2;
@@ -81,6 +191,57 @@ message ConfigureFederationProviderRequest {
   string metadata_url = 6;
   string scim_base_url = 7;
   string status = 8;
+  string provider_family = 9;
+  string name = 10;
+  string client_id = 11;
+  string sp_entity_id = 12;
+  string attribute_mapping_json = 13;
+  string encryption_cert_pem = 14;
+  bool require_signed_assertions = 15;
+  bool require_signed_responses = 16;
+}
+
+message DeleteFederationProviderRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string provider_id = 3;
+}
+
+message ConfigureTenantDomainRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string domain_id = 3;
+  string domain = 4;
+  bool sso_required = 5;
+  string sso_provider_id = 6;
+  string verification_token_hash = 7;
+}
+
+message VerifyTenantDomainRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string domain_id = 3;
+}
+
+message DeleteTenantDomainRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string domain_id = 3;
+}
+
+message ConfigureScimConnectorRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string provider = 4;
+  string status = 5;
+  string base_url = 6;
+}
+
+message DeleteScimConnectorRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
 }
 
 message TestFederationProviderRequest {
@@ -92,6 +253,86 @@ message TestFederationProviderRequest {
 message GetFederationGovernanceRequest {
   nvbes.platform.v1.RequestContext context = 1;
   string tenant_id = 2;
+}
+
+message CreateInvitationsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  repeated string emails = 3;
+  string role = 4;
+  repeated string workspace_ids = 5;
+  string scope = 6;
+  string organization_id = 7;
+}
+
+message RecordDeveloperSecretRevokedRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string version_id = 3;
+  string client_id = 4;
+}
+
+message ListAuditEventsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string scope = 3;
+  string organization_id = 4;
+  int32 limit = 5;
+}
+
+message UpdateUserAccessRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string target_principal_id = 3;
+  string role = 4;
+  repeated string workspace_ids = 5;
+  string scope = 6;
+  string organization_id = 7;
+}
+
+message SuspendUserAccessRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string target_principal_id = 3;
+  string reason = 4;
+  string scope = 5;
+  string organization_id = 6;
+}
+
+message ReactivateUserAccessRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string target_principal_id = 3;
+  string reason = 4;
+  repeated string workspace_ids = 5;
+  string scope = 6;
+  string organization_id = 7;
+}
+
+message GetTrustCenterRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message EnterpriseAuditRecord {
+  string event_id = 1;
+  string action = 2;
+  string created_at = 3;
+}
+
+message AuditEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string actor_id = 3;
+  string actor_email = 4;
+  string target_type = 5;
+  string target_id = 6;
+  string metadata_json = 7;
+  string created_at = 8;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent events = 1;
 }
 
 message PolicySet {
@@ -111,6 +352,107 @@ message PolicyDecision {
   string decision_id = 1;
   string result = 2;
   repeated string obligations = 3;
+  string reason = 4;
+  bool requires_step_up = 5;
+  string role = 6;
+}
+
+message AdminElevationAuthorization {
+  string tenant_id = 1;
+  string role = 2;
+  string expires_at = 3;
+  string step_up_expires_at = 4;
+}
+
+message TrustCenter {
+  TrustCenterTenant tenant = 1;
+  TrustCenterMfaStatus mfa = 2;
+  TrustCenterSsoStatus sso = 3;
+  repeated TrustCenterDomain verified_domains = 4;
+  TrustCenterAuditStatus audit = 5;
+  repeated TrustCenterHostingRegion hosting_regions = 6;
+  TrustCenterDocument dpa = 7;
+  repeated TrustCenterSubprocessor subprocessors = 8;
+  string generated_at = 9;
+}
+
+message TrustCenterTenant {
+  string tenant_id = 1;
+  string name = 2;
+  string slug = 3;
+  string status = 4;
+  string security_tier = 5;
+}
+
+message TrustCenterMfaStatus {
+  bool enabled = 1;
+  int64 active_members = 2;
+  int64 members_with_mfa = 3;
+  int64 active_factors = 4;
+  int64 passkey_factors = 5;
+}
+
+message TrustCenterSsoStatus {
+  bool enabled = 1;
+  int64 active_providers = 2;
+  int64 required_domains = 3;
+  repeated TrustCenterSsoProvider providers = 4;
+}
+
+message TrustCenterSsoProvider {
+  string provider_id = 1;
+  string name = 2;
+  string provider_type = 3;
+  string provider_family = 4;
+  string status = 5;
+  string created_at = 6;
+}
+
+message TrustCenterDomain {
+  string domain_id = 1;
+  string domain = 2;
+  bool verified = 3;
+  bool sso_required = 4;
+  string sso_provider_id = 5;
+  string verified_at = 6;
+}
+
+message TrustCenterAuditStatus {
+  bool immutable = 1;
+  repeated TrustCenterAuditEvent recent_events = 2;
+}
+
+message TrustCenterAuditEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string actor_id = 3;
+  string actor_email = 4;
+  string target_type = 5;
+  string target_id = 6;
+  string metadata_json = 7;
+  string created_at = 8;
+}
+
+message TrustCenterHostingRegion {
+  string data_region = 1;
+  string legal_jurisdiction = 2;
+  int64 workspace_count = 3;
+}
+
+message TrustCenterDocument {
+  string name = 1;
+  string status = 2;
+  string version = 3;
+  string url = 4;
+}
+
+message TrustCenterSubprocessor {
+  string name = 1;
+  string service = 2;
+  string data_categories = 3;
+  string location = 4;
+  bool transfer_outside_eea = 5;
+  string transfer_safeguard = 6;
 }
 
 message AccessReview {
@@ -121,11 +463,101 @@ message AccessReview {
   string due_at = 5;
 }
 
+message AccessReviewSummary {
+  string review_id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string status = 5;
+  string starts_at = 6;
+  string due_at = 7;
+  string created_by = 8;
+  string created_at = 9;
+  string closed_at = 10;
+  int64 pending_items = 11;
+  int64 approved_items = 12;
+  int64 revoked_items = 13;
+  int64 changed_items = 14;
+  int64 due_soon_reminders_sent = 15;
+  int64 overdue_reminders_sent = 16;
+  string last_reminder_at = 17;
+}
+
+message AccessReviewItem {
+  string item_id = 1;
+  string item_type = 2;
+  string subject_id = 3;
+  string subject_label = 4;
+  string workspace_id = 5;
+  string role = 6;
+  string status = 7;
+  string evidence_json = 8;
+  string decision = 9;
+  string reviewed_by = 10;
+  string reviewed_at = 11;
+  string created_at = 12;
+}
+
+message AccessReviewDetail {
+  AccessReviewSummary campaign = 1;
+  repeated AccessReviewItem items = 2;
+}
+
+message ListAccessReviewsResponse {
+  repeated AccessReviewSummary campaigns = 1;
+}
+
 message AccessReviewDecision {
   string review_id = 1;
   string subject_principal_id = 2;
   string decision = 3;
   string decided_at = 4;
+  string target_id = 5;
+}
+
+message AccessReviewSchedule {
+  string schedule_id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string scope = 5;
+  int32 recurrence_days = 6;
+  int32 due_after_days = 7;
+  string next_run_at = 8;
+  string last_review_id = 9;
+  string created_by = 10;
+  string created_at = 11;
+  string disabled_at = 12;
+  bool include_members = 13;
+  bool include_roles = 14;
+  bool include_service_accounts = 15;
+  bool include_oauth_clients = 16;
+}
+
+message ListAccessReviewSchedulesResponse {
+  repeated AccessReviewSchedule schedules = 1;
+}
+
+message AccessReviewScheduleRun {
+  uint64 campaigns_created = 1;
+  uint64 empty_schedules = 2;
+}
+
+message AccessReviewReminderClaim {
+  repeated AccessReviewReminderCandidate candidates = 1;
+}
+
+message AccessReviewReminderCandidate {
+  string tenant_id = 1;
+  string campaign_id = 2;
+  string campaign_name = 3;
+  string tenant_name = 4;
+  string due_at = 5;
+  int64 pending_items = 6;
+  string recipient_principal_id = 7;
+  string recipient_email = 8;
+  string recipient_name = 9;
+  string reminder_kind = 10;
 }
 
 message BreakGlassGrant {
@@ -137,6 +569,19 @@ message BreakGlassGrant {
   string expires_at = 6;
 }
 
+message BreakGlassAccount {
+  string tenant_id = 1;
+  string principal_id = 2;
+  string procedure_reference = 3;
+  string reason = 4;
+  string created_at = 5;
+  string last_used_at = 6;
+}
+
+message ListBreakGlassAccountsResponse {
+  repeated BreakGlassAccount accounts = 1;
+}
+
 message FederationProvider {
   string provider_id = 1;
   string tenant_id = 2;
@@ -145,6 +590,52 @@ message FederationProvider {
   string metadata_url = 5;
   string scim_base_url = 6;
   string status = 7;
+  string provider_family = 8;
+  string name = 9;
+  string client_id = 10;
+  string sp_entity_id = 11;
+  string attribute_mapping_json = 12;
+  string encryption_cert_pem = 13;
+  bool require_signed_assertions = 14;
+  bool require_signed_responses = 15;
+  string created_at = 16;
+}
+
+message FederationProviderDeletion {
+  string provider_id = 1;
+  string tenant_id = 2;
+}
+
+message TenantDomain {
+  string domain_id = 1;
+  string tenant_id = 2;
+  string domain = 3;
+  bool sso_required = 4;
+  string sso_provider_id = 5;
+  string verified_at = 6;
+  string verification_requested_at = 7;
+  string verification_expires_at = 8;
+  string verification_token_hash = 9;
+  string created_at = 10;
+}
+
+message TenantDomainDeletion {
+  string domain_id = 1;
+  string tenant_id = 2;
+}
+
+message ScimConnector {
+  string connector_id = 1;
+  string tenant_id = 2;
+  string provider = 3;
+  string status = 4;
+  string base_url = 5;
+  string created_at = 6;
+}
+
+message ScimConnectorDeletion {
+  string connector_id = 1;
+  string tenant_id = 2;
 }
 
 message FederationTestResult {
@@ -159,4 +650,27 @@ message FederationGovernance {
   repeated FederationProvider providers = 2;
   repeated string required_claims = 3;
   bool scim_required = 4;
+  repeated TenantDomain domains = 5;
+  repeated ScimConnector scim_connectors = 6;
+}
+
+message Invitation {
+  string invitation_id = 1;
+  string email = 2;
+  string role = 3;
+  repeated string workspace_ids = 4;
+  string status = 5;
+  string invited_at = 6;
+  string expires_at = 7;
+}
+
+message CreateInvitationsResponse {
+  repeated Invitation invitations = 1;
+}
+
+message UserAccessChange {
+  string tenant_id = 1;
+  string target_principal_id = 2;
+  string status = 3;
+  repeated string workspace_ids = 4;
 }

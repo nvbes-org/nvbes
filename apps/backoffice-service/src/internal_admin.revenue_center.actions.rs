@@ -71,7 +71,15 @@ async fn close_dunning_case_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        close_dunning_case(&state.db, access, workspace_id, case_id, request.reason).await?,
+        close_dunning_case(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            case_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -91,7 +99,15 @@ async fn reopen_dunning_case_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        reopen_dunning_case(&state.db, access, workspace_id, case_id, request.reason).await?,
+        reopen_dunning_case(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            case_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -111,7 +127,15 @@ async fn hold_invoice_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        hold_invoice(&state.db, access, workspace_id, invoice_id, request.reason).await?,
+        hold_invoice(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            invoice_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -131,7 +155,15 @@ async fn release_invoice_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        release_invoice(&state.db, access, workspace_id, invoice_id, request.reason).await?,
+        release_invoice(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            invoice_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -151,7 +183,15 @@ async fn review_dispute_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        review_dispute(&state.db, access, workspace_id, dispute_id, request.reason).await?,
+        review_dispute(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            dispute_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -171,7 +211,15 @@ async fn resolve_dispute_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        resolve_dispute(&state.db, access, workspace_id, dispute_id, request.reason).await?,
+        resolve_dispute(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            dispute_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 

@@ -158,17 +158,9 @@ if (!content.includes("Rollback is not approved until a rehearsal report replace
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|blocking|no-go|none)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} rollback marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} rollback marker(s) remain`);
 	}
 }
 
@@ -211,6 +203,22 @@ function validateTable(heading, expectedColumns, expectedLabels) {
 			errors.push(`${heading}: row ${row[0] ?? "unknown"} must have ${expectedColumns.length} columns`);
 		}
 	}
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, blocking: 0, "no-go": 0, none: 0 };
+	for (const [field, value] of tableRowsAfter("## Run Metadata")) {
+		if (value === "pending") counts.pending += 1;
+		if (value === "none") counts.none += 1;
+		if (field === "decision" && value.startsWith("no-go")) counts["no-go"] += 1;
+	}
+	for (const [, evidence, status] of tableRowsAfter("## Steps")) {
+		if (evidence === "pending") counts.pending += 1;
+		if (evidence === "none") counts.none += 1;
+		if (status === "pending") counts.pending += 1;
+		if (status === "blocking") counts.blocking += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

@@ -1,6 +1,6 @@
 # Local observability
 
-La stack locale couvre Account Service, Identity web et Account worker avec:
+La stack locale couvre Account Service, Account web et Account worker avec:
 
 - Grafana: UI locale et provisioning declaratif.
 - Prometheus: scrape local des endpoints `/metrics`.
@@ -10,7 +10,7 @@ La stack locale couvre Account Service, Identity web et Account worker avec:
 - Pyroscope: profiles continus.
 - Alloy: entree OTLP, Faro, Pyroscope et pipeline de redaction logs/traces.
 - Beyla: eBPF opt-in pour instrumentation automatique Linux.
-- k6: smoke de charge Identity avec remote-write Mimir.
+- k6: smoke de charge Account avec remote-write Mimir.
 
 ## Demarrage
 
@@ -45,7 +45,7 @@ NVBES_PROFILING_ENDPOINT=http://127.0.0.1:4040
 NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
 ```
 
-Pour activer Faro cote Identity web, apres consentement `grafana` ou
+Pour activer Faro cote Account web, apres consentement `grafana` ou
 `performance`:
 
 ```bash

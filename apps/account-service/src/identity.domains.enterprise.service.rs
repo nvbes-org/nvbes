@@ -2,20 +2,21 @@
 mod access;
 #[path = "identity.domains.enterprise.service.break_glass.rs"]
 mod break_glass;
+#[path = "identity.domains.enterprise.service.developer_credentials.rs"]
+mod developer_credentials;
 #[path = "identity.domains.enterprise.service.mutations.rs"]
 mod mutations;
 #[path = "identity.domains.enterprise.service.policy_mutations.rs"]
 mod policy_mutations;
+#[path = "identity.domains.enterprise.service.policy_views.rs"]
+mod policy_views;
 #[path = "identity.domains.enterprise.service.reads.rs"]
 mod reads;
-#[path = "identity.domains.enterprise.service.user_audit.rs"]
-mod user_audit;
 #[path = "identity.domains.enterprise.service.user_mutations.rs"]
 mod user_mutations;
 
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, resolve_admin_scope};
-use crate::domains::enterprise::db as enterprise_db;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 pub use break_glass::{activate_break_glass_account, revoke_break_glass_account};
@@ -67,53 +68,9 @@ pub async fn grant_admin_elevation(
         &access.role,
         tenant_id,
         input,
-    )
-    .await?;
-    record_admin_elevation_audit(
-        db,
-        auth,
-        tenant_id,
         access.break_glass,
         break_glass_procedure,
     )
     .await?;
     Ok(response)
-}
-
-async fn record_admin_elevation_audit(
-    db: &Database,
-    auth: &AuthContext,
-    tenant_id: Uuid,
-    break_glass: bool,
-    break_glass_procedure: Option<(String, String)>,
-) -> Result<(), AppError> {
-    let mut tx = db.begin().await?;
-    if let Some((reason, procedure_reference)) = break_glass_procedure {
-        enterprise_db::touch_break_glass_account(&mut tx, tenant_id, auth.user_id).await?;
-        enterprise_db::insert_audit(
-            &mut tx,
-            tenant_id,
-            auth.user_id,
-            "enterprise.break_glass.used",
-            "principal",
-            Some(auth.user_id),
-            serde_json::json!({
-                "reason": reason,
-                "procedure_reference": procedure_reference
-            }),
-        )
-        .await?;
-    }
-    enterprise_db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.admin_elevation.granted",
-        "principal",
-        Some(auth.user_id),
-        serde_json::json!({"break_glass": break_glass}),
-    )
-    .await?;
-    tx.commit().await?;
-    Ok(())
 }

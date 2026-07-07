@@ -5,10 +5,10 @@ import { requiredEvidenceFor } from "./live-evidence.rules.mjs";
 export function validateManifest(manifest, { jsonPath, strict }) {
 	const errors = [];
 	if (manifest.schema_version !== 1) errors.push(`${jsonPath}: schema_version must be 1`);
-	if (manifest.generation?.command !== "tools/migration/live-evidence-instances.mjs --write") {
+	if (manifest.generation?.command !== "node tools/migration/live-evidence-instances.mjs --write") {
 		errors.push(`${jsonPath}: generation.command is invalid`);
 	}
-	if (manifest.generation?.strict_command !== "tools/migration/live-evidence-instances.mjs --strict") {
+	if (manifest.generation?.strict_command !== "node tools/migration/live-evidence-instances.mjs --strict") {
 		errors.push(`${jsonPath}: generation.strict_command is invalid`);
 	}
 	if (!Array.isArray(manifest.requirements) || manifest.requirements.length === 0) {

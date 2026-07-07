@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/cloud-provisioning.mjs --write",
+    "command": "node tools/migration/cloud-provisioning.mjs --write",
     "sources": [
       "libs/go/provisioning/provisioning.go",
       "libs/go/provisioning/provisioning_test.go",
       "libs/go/provisioning/README.md",
       "libs/go/control-plane/foundation.go",
       "libs/go/control-plane/foundation_test.go",
-      "apps/cloud-control-api/README.md",
-      "apps/cloud-console/README.md",
-      "apps/cloud/README.md",
+      "apps/cloud-service/README.md",
+      "apps/cloud-web/README.md",
+      "apps/cloud-worker/README.md",
       "deploy/cloud/README.md",
       "docs/cloud/README.md",
       "docs/migration/target-structure.generated.json",
@@ -120,24 +120,24 @@
     },
     {
       "id": "control-api-boundary",
-      "description": "Cloud Control API boundary is documented",
-      "path": "apps/cloud-control-api/README.md",
+      "description": "Cloud Service boundary is documented",
+      "path": "apps/cloud-service/README.md",
       "status": "passed",
       "pattern": "plan/apply orchestration"
     },
     {
       "id": "console-boundary",
-      "description": "Cloud Console boundary is documented",
-      "path": "apps/cloud-console/README.md",
+      "description": "Cloud Web boundary is documented",
+      "path": "apps/cloud-web/README.md",
       "status": "passed",
       "pattern": "provisioning plans"
     },
     {
       "id": "cloud-apps-boundary",
-      "description": "Cloud app boundary exists",
-      "path": "apps/cloud/README.md",
+      "description": "Cloud Worker boundary exists",
+      "path": "apps/cloud-worker/README.md",
       "status": "passed",
-      "pattern": "Cloud control-plane applications"
+      "pattern": "Cloud app boundary names"
     },
     {
       "id": "cloud-deploy-boundary",

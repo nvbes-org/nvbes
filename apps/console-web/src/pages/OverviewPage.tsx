@@ -59,7 +59,7 @@ export function OverviewPage() {
       <section className="rounded-lg border border-border bg-card p-6">
         <div className="flex items-center gap-3 text-red-600">
           <AlertTriangle className="h-5 w-5" />
-          <h2 className="text-base font-semibold">Developer context unavailable</h2>
+          <h2 className="text-base font-semibold">Console context unavailable</h2>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           The console could not load tenant-scoped integration data.

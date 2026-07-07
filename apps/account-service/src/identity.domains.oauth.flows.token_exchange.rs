@@ -33,6 +33,7 @@ pub async fn token_exchange(
             client_secret_hash,
             client_assertion_required,
             client_type::text AS client_type,
+            tenant_id,
             revoked_at
         FROM oauth_clients
         WHERE client_id = $1
@@ -60,6 +61,7 @@ pub async fn token_exchange(
     let client_secret_hash: String = client_row.get("client_secret_hash");
     let client_assertion_required: bool = client_row.get("client_assertion_required");
     let client_type: String = client_row.get("client_type");
+    let client_tenant_id: Uuid = client_row.get("tenant_id");
     let client_display_id: String = client_row.get("client_id");
 
     if !crate::domains::oauth::validation::is_public_client_type(&client_type) {
@@ -75,7 +77,7 @@ pub async fn token_exchange(
                 AppError::unauthorized("invalid_client", "Client authentication is required.")
             })?;
             crate::domains::oauth::verify_client_secret_with_overlap(
-                db,
+                client_tenant_id,
                 &client_display_id,
                 secret,
                 &client_secret_hash,
@@ -84,7 +86,7 @@ pub async fn token_exchange(
         }
     } else if let Some(ref secret) = input.client_secret {
         crate::domains::oauth::verify_client_secret_with_overlap(
-            db,
+            client_tenant_id,
             &client_display_id,
             secret,
             &client_secret_hash,

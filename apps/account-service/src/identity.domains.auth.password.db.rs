@@ -1,4 +1,4 @@
-use crate::http::error::AppError;
+use crate::{domains::cloud::workspace_port, http::error::AppError};
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
@@ -142,28 +142,30 @@ pub async fn find_recovery_request_for_approval(
 }
 
 pub async fn check_approver_is_admin(
-    db: &PgPool,
+    _db: &PgPool,
     tenant_id: Uuid,
     approver_principal_id: Uuid,
 ) -> Result<bool, AppError> {
-    let is_admin = sqlx::query_scalar::<_, bool>(
-        r#"
-        SELECT EXISTS(
-          SELECT 1
-          FROM workspace_memberships wm
-          INNER JOIN workspaces w ON w.id = wm.workspace_id
-          WHERE w.tenant_id = $1
-            AND wm.principal_id = $2
-            AND wm.status = 'active'
-            AND wm.role IN ('owner', 'admin')
+    for workspace in workspace_port::list_workspaces(Some(tenant_id), approver_principal_id).await?
+    {
+        let is_admin = workspace_port::list_workspace_members(
+            Some(tenant_id),
+            workspace.workspace_id,
+            approver_principal_id,
         )
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(approver_principal_id)
-    .fetch_one(db)
-    .await?;
-    Ok(is_admin)
+        .await?
+        .into_iter()
+        .any(|member| {
+            member.principal_id == approver_principal_id
+                && member.active
+                && matches!(member.role.as_str(), "owner" | "admin")
+        });
+        if is_admin {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 pub async fn update_recovery_first_approval(

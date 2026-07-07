@@ -52,7 +52,7 @@ export function ApiReferencePage() {
       ) : null}
       <div className="rounded-md border border-border bg-card">
         <div className="border-b border-border px-4 py-3 text-sm font-semibold">
-          Developer paths
+          Console API paths
         </div>
         <div className="grid divide-y divide-border">
           {developerPaths.map((path) => (

@@ -1,5 +1,6 @@
 use crate::domains::auth::jwt::JwtService;
 use crate::domains::auth::types::derive_display_name;
+use crate::domains::cloud::workspace_port;
 use crate::domains::oauth::flows::IntrospectionResponse;
 use crate::domains::oauth::flows::tokens::{
     introspect_actor::resolve_actor_context, introspect_network::resolve_network_valid,
@@ -91,14 +92,9 @@ pub async fn introspect_token(
                 SELECT
                   sa.name,
                   sa.workspace_id,
-                  wm.role::text AS role,
                   p.status::text AS principal_status
                 FROM service_accounts sa
                 INNER JOIN principals p ON p.id = sa.principal_id
-                LEFT JOIN workspace_memberships wm
-                  ON wm.workspace_id = sa.workspace_id
-                 AND wm.principal_id = sa.principal_id
-                 AND wm.status = 'active'
                 WHERE sa.principal_id = $1
                 LIMIT 1
                 "#,
@@ -113,10 +109,19 @@ pub async fn introspect_token(
             if service_account.get::<String, _>("principal_status") != "active" {
                 return Ok(IntrospectionResponse::inactive());
             }
-            let role: Option<String> = service_account.get("role");
-            if role.is_none()
-                || service_account.get::<Option<Uuid>, _>("workspace_id") != workspace_id
-            {
+            let service_account_workspace_id: Option<Uuid> = service_account.get("workspace_id");
+            if service_account_workspace_id != workspace_id {
+                return Ok(IntrospectionResponse::inactive());
+            }
+            let Some(workspace_id) = workspace_id else {
+                return Ok(IntrospectionResponse::inactive());
+            };
+            let role = workspace_port::list_workspace_members(tenant_id, workspace_id, subject_id)
+                .await?
+                .into_iter()
+                .find(|member| member.principal_id == subject_id && member.active)
+                .map(|member| member.role);
+            if role.is_none() {
                 return Ok(IntrospectionResponse::inactive());
             }
 
@@ -181,21 +186,11 @@ pub async fn introspect_token(
             }
 
             let role = if let Some(workspace_id) = workspace_id {
-                sqlx::query_scalar::<_, Option<String>>(
-                    r#"
-                    SELECT role::text AS role
-                    FROM workspace_memberships
-                    WHERE workspace_id = $1
-                      AND principal_id = $2
-                      AND status = 'active'
-                    LIMIT 1
-                    "#,
-                )
-                .bind(workspace_id)
-                .bind(subject_id)
-                .fetch_optional(db)
-                .await?
-                .flatten()
+                workspace_port::list_workspace_members(tenant_id, workspace_id, subject_id)
+                    .await?
+                    .into_iter()
+                    .find(|member| member.principal_id == subject_id && member.active)
+                    .map(|member| member.role)
             } else {
                 None
             };

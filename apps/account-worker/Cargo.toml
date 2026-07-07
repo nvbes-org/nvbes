@@ -17,5 +17,12 @@ nvbes-region = { path = "../../libs/rust/region" }
 serde_json.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14.6"
 tracing.workspace = true
 uuid.workspace = true
+prost = "0.14.4"
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"

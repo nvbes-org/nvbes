@@ -20,6 +20,7 @@ pub struct AppState {
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
+    pub billing_grpc_endpoint: String,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -83,6 +84,9 @@ impl AppState {
             redis,
             rate_limiter,
             allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
+            billing_grpc_endpoint: crate::domains::account_billing::grpc::billing_grpc_endpoint(
+                config.api_port,
+            )?,
         };
 
         crate::database::ensure_default_oauth_clients_seeded(&state.db).await?;
@@ -152,27 +156,14 @@ fn build_product_analytics(
         analytics_id_salt: config.analytics_id_salt.clone(),
     };
 
-    if !config.product_analytics_enabled {
-        info!("PostHog product analytics disabled");
-        return Ok(nvbes_product_analytics::ProductAnalytics::new(
-            analytics_config,
-        )?);
+    if config.product_analytics_enabled {
+        info!("Account product analytics enabled without Cloud adapter; events are dropped");
+    } else {
+        info!("Account product analytics disabled");
     }
 
-    let project_token = config.product_analytics_token.clone().ok_or_else(|| {
-        anyhow::anyhow!("NVBES_POSTHOG_PROJECT_TOKEN is required when PostHog is enabled")
-    })?;
-    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
-        nvbes_analytics_posthog::PostHogAnalyticsConfig {
-            host: config.posthog_host.clone(),
-            project_token,
-        },
-    )?;
-    info!(host = %config.posthog_host, "PostHog product analytics enabled");
-
-    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
+    Ok(nvbes_product_analytics::ProductAnalytics::new(
         analytics_config,
-        std::sync::Arc::new(sink),
     )?)
 }
 

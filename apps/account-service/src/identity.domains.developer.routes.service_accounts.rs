@@ -9,7 +9,7 @@ use crate::{
     app::AppState,
     domains::{
         developer::{
-            service, service_accounts_db,
+            grpc, service, service_accounts_db,
             types::{
                 DeveloperSecretVersionsResponse, DeveloperServiceAccountsResponse,
                 RotateDeveloperSecretInput, RotateDeveloperSecretResponse,
@@ -37,9 +37,7 @@ pub async fn list_secret_versions(
 ) -> Result<Json<DeveloperSecretVersionsResponse>, AppError> {
     let tenant_id = service::require_tenant_id(&auth)?;
     service_accounts_db::ensure_oauth_client_in_tenant(&state.db, tenant_id, &client_id).await?;
-    let secret_versions =
-        service_accounts_db::list_secret_version_summaries(&state.db, tenant_id, &client_id)
-            .await?;
+    let secret_versions = grpc::list_secret_versions(tenant_id, auth.user_id, client_id).await?;
     Ok(Json(DeveloperSecretVersionsResponse { secret_versions }))
 }
 
@@ -68,76 +66,16 @@ pub async fn rotate_secret(
     );
     let client_secret_hash = oauth::hash_client_secret(&client_secret)?;
     let secret_last4 = service_accounts_db::secret_last4(&client_secret);
-    let mut tx = state.db.begin().await?;
-
-    let previous_version_id = service_accounts_db::ensure_previous_overlap_version(
-        &mut tx,
+    let rotation = grpc::record_secret_rotation(
         tenant_id,
-        &client_id,
-        &current_hash,
+        auth.user_id,
+        client_id.clone(),
+        current_hash,
+        client_secret_hash.clone(),
+        secret_last4.to_string(),
         overlap_ends_at,
+        rotated_at,
     )
-    .await?;
-    let active_version_id: Uuid = sqlx::query_scalar(
-        r#"
-        INSERT INTO developer_client_secret_versions (
-          tenant_id,
-          client_id,
-          status,
-          client_secret_hash,
-          secret_last4,
-          created_at
-        )
-        VALUES ($1, $2, 'active', $3, $4, $5)
-        RETURNING id
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(&client_id)
-    .bind(&client_secret_hash)
-    .bind(secret_last4)
-    .bind(rotated_at)
-    .fetch_one(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        UPDATE developer_secret_rotations
-        SET revoked_at = $3
-        WHERE tenant_id = $1
-          AND client_id = $2
-          AND revoked_at IS NULL
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(&client_id)
-    .bind(rotated_at)
-    .execute(&mut *tx)
-    .await?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO developer_secret_rotations (
-          tenant_id,
-          client_id,
-          previous_version_id,
-          active_version_id,
-          previous_version_expires_at,
-          overlap_ends_at,
-          rotated_by,
-          created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $5, $6, $7)
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(&client_id)
-    .bind(previous_version_id)
-    .bind(active_version_id)
-    .bind(overlap_ends_at)
-    .bind(auth.user_id)
-    .bind(rotated_at)
-    .execute(&mut *tx)
     .await?;
 
     sqlx::query(
@@ -147,18 +85,16 @@ pub async fn rotate_secret(
     .bind(&client_id)
     .bind(&client_secret_hash)
     .bind(rotated_at)
-    .execute(&mut *tx)
+    .execute(&state.db)
     .await?;
 
-    tx.commit().await?;
-
     Ok(Json(RotateDeveloperSecretResponse {
-        client_id,
+        client_id: rotation.client_id,
         client_secret,
-        active_version_id,
-        previous_version_id,
-        overlap_ends_at,
-        rotated_at,
+        active_version_id: rotation.active_version_id,
+        previous_version_id: rotation.previous_version_id,
+        overlap_ends_at: rotation.overlap_ends_at,
+        rotated_at: rotation.rotated_at,
     }))
 }
 
@@ -168,27 +104,15 @@ pub async fn revoke_secret_version(
     Path((client_id, version_id)): Path<(String, Uuid)>,
 ) -> Result<Json<DeveloperSecretVersionsResponse>, AppError> {
     let tenant_id = service::require_tenant_id(&auth)?;
-    let revoked_at = Utc::now();
-
-    sqlx::query(
-        r#"
-        UPDATE developer_client_secret_versions
-        SET status = 'revoked',
-            revoked_at = $4
-        WHERE tenant_id = $1
-          AND client_id = $2
-          AND id = $3
-        "#,
-    )
-    .bind(tenant_id)
-    .bind(&client_id)
-    .bind(version_id)
-    .bind(revoked_at)
-    .execute(&state.db)
-    .await?;
-
-    let secret_versions =
-        service_accounts_db::list_secret_version_summaries(&state.db, tenant_id, &client_id)
-            .await?;
+    service_accounts_db::ensure_oauth_client_in_tenant(&state.db, tenant_id, &client_id).await?;
+    let revoked_client_id =
+        grpc::revoke_secret_version(tenant_id, auth.user_id, version_id).await?;
+    if revoked_client_id != client_id {
+        return Err(AppError::not_found(
+            "developer_secret_not_found",
+            "Developer secret not found for this client.",
+        ));
+    }
+    let secret_versions = grpc::list_secret_versions(tenant_id, auth.user_id, client_id).await?;
     Ok(Json(DeveloperSecretVersionsResponse { secret_versions }))
 }

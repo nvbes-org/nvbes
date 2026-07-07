@@ -77,10 +77,14 @@ pub(crate) async fn list_identity_providers(
     headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<Json<FederatedIdentityProvidersResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
-        crate::domains::federation::providers::list_identity_providers(&state.db, tenant_id)
-            .await?,
+        crate::domains::federation::providers::list_identity_providers(
+            &state.db,
+            tenant_id,
+            auth.user_id,
+        )
+        .await?,
     ))
 }
 
@@ -105,11 +109,12 @@ pub(crate) async fn create_identity_provider(
     Path(tenant_id): Path<Uuid>,
     Json(request): Json<CreateFederatedIdentityProviderRequest>,
 ) -> Result<Json<crate::domains::federation::types::FederatedIdentityProviderResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::providers::create_identity_provider(
             &state.db,
             tenant_id,
+            auth.user_id,
             CreateFederatedIdentityProviderInput {
                 provider_type: request.provider_type,
                 provider_family: request.provider_family,
@@ -148,11 +153,12 @@ pub(crate) async fn update_identity_provider(
     Path((tenant_id, provider_id)): Path<(Uuid, Uuid)>,
     Json(request): Json<UpdateFederatedIdentityProviderRequest>,
 ) -> Result<Json<crate::domains::federation::types::FederatedIdentityProviderResponse>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     Ok(Json(
         crate::domains::federation::providers::update_identity_provider(
             &state.db,
             tenant_id,
+            auth.user_id,
             provider_id,
             UpdateFederatedIdentityProviderInput {
                 provider_type: request.provider_type,
@@ -189,10 +195,11 @@ pub(crate) async fn delete_identity_provider(
     headers: HeaderMap,
     Path((tenant_id, provider_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let _auth = authenticate_tenant(&state, &headers, tenant_id).await?;
+    let auth = authenticate_tenant(&state, &headers, tenant_id).await?;
     crate::domains::federation::providers::delete_identity_provider(
         &state.db,
         tenant_id,
+        auth.user_id,
         provider_id,
     )
     .await?;

@@ -50,6 +50,33 @@ pub fn service_account_view_from_row(row: sqlx::postgres::PgRow) -> ServiceAccou
     }
 }
 
+pub fn service_account_client_view_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> ServiceAccountClientView {
+    ServiceAccountClientView {
+        id: row.get("oauth_client_uuid"),
+        client_id: row.get("client_id"),
+        name: row.get("oauth_client_name"),
+        created_at: row.get("oauth_client_created_at"),
+        last_used_at: row.get("oauth_client_last_used_at"),
+        revoked_at: row.get("oauth_client_revoked_at"),
+        client_assertion_required: row.get("client_assertion_required"),
+        client_assertion_public_key_configured: row.get("client_assertion_public_key_configured"),
+        allowed_scopes: row
+            .get::<Option<Vec<String>>, _>("allowed_scopes")
+            .unwrap_or_default(),
+        allowed_audiences: row
+            .get::<Option<Vec<String>>, _>("allowed_audiences")
+            .unwrap_or_default(),
+        allowed_resources: row
+            .get::<Option<Vec<String>>, _>("allowed_resources")
+            .unwrap_or_default(),
+        required_acr: row
+            .get::<Option<String>, _>("required_acr")
+            .unwrap_or_else(|| "aal1".to_string()),
+    }
+}
+
 pub fn service_account_client_view_from_oauth_result(
     result: &oauth::service::CreateOAuthClientResult,
 ) -> ServiceAccountClientView {

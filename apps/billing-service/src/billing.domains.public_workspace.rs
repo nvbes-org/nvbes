@@ -10,6 +10,9 @@ use uuid::Uuid;
 use crate::{
     app::BillingAppState,
     auth::{BillingWorkspacePermission, authorize_billing_workspace},
+    domains::public_workspace_portal_lists::{
+        get_billing_cards, get_billing_invoices, get_billing_subscriptions,
+    },
     http::error::AppError,
 };
 
@@ -39,6 +42,18 @@ pub fn router() -> Router<BillingAppState> {
         .route(
             "/workspaces/{workspaceId}/billing/portal/view",
             get(get_portal_view),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/invoices",
+            get(get_billing_invoices),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/cards",
+            get(get_billing_cards),
+        )
+        .route(
+            "/workspaces/{workspaceId}/billing/subscriptions",
+            get(get_billing_subscriptions),
         )
         .route(
             "/workspaces/{workspaceId}/billing/portal/invoices/{invoiceId}/pdf",

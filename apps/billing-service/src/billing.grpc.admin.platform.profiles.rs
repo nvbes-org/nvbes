@@ -109,4 +109,3 @@ fn kyc_action_names(next_state: &'static str) -> (&'static str, &'static str) {
         ("reject_kyc_profile", "billing_platform.kyc.rejected")
     }
 }
-

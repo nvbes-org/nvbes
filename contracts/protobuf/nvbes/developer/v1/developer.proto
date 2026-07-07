@@ -10,26 +10,52 @@ service DeveloperService {
   rpc UpdateApp(UpdateAppRequest) returns (DeveloperApp);
   rpc RotateAppSecret(RotateAppSecretRequest) returns (AppSecret);
   rpc DeleteApp(DeleteAppRequest) returns (AppDeletion);
+  rpc GetOverviewSummary(GetOverviewSummaryRequest) returns (DeveloperOverviewSummary);
+  rpc GetClientMetadata(GetClientMetadataRequest) returns (GetClientMetadataResponse);
+  rpc ListDeveloperRoles(ListDeveloperRolesRequest) returns (ListDeveloperRolesResponse);
   rpc ListWebhookEndpoints(ListWebhookEndpointsRequest) returns (ListWebhookEndpointsResponse);
   rpc CreateWebhookEndpoint(CreateWebhookEndpointRequest) returns (WebhookEndpoint);
   rpc UpdateWebhookEndpoint(UpdateWebhookEndpointRequest) returns (WebhookEndpoint);
+  rpc DeleteWebhookEndpoint(DeleteWebhookEndpointRequest) returns (WebhookEndpointDeletion);
+  rpc ListWebhookDeliveries(ListWebhookDeliveriesRequest) returns (ListWebhookDeliveriesResponse);
   rpc ReplayWebhookDelivery(ReplayWebhookDeliveryRequest) returns (WebhookDelivery);
+  rpc ListScopes(ListScopesRequest) returns (ListScopesResponse);
+  rpc CreateScope(CreateScopeRequest) returns (DeveloperScope);
+  rpc UpdateScope(UpdateScopeRequest) returns (DeveloperScope);
+  rpc DeleteScope(DeleteScopeRequest) returns (ScopeDeletion);
   rpc CreateDeveloperToken(CreateDeveloperTokenRequest) returns (DeveloperToken);
   rpc RevokeDeveloperToken(RevokeDeveloperTokenRequest) returns (TokenRevocation);
+  rpc RecordTokenDebugSession(RecordTokenDebugSessionRequest) returns (TokenDebugSession);
+  rpc GetSandbox(GetSandboxRequest) returns (GetSandboxResponse);
   rpc CreateSandbox(CreateSandboxRequest) returns (Sandbox);
   rpc ResetSandbox(ResetSandboxRequest) returns (Sandbox);
+  rpc ListActivityLogs(ListActivityLogsRequest) returns (ListActivityLogsResponse);
   rpc ListApiLogs(ListApiLogsRequest) returns (ListApiLogsResponse);
+  rpc ListHealthChecks(ListHealthChecksRequest) returns (ListHealthChecksResponse);
+  rpc RunHealthChecks(RunHealthChecksRequest) returns (RunHealthChecksResponse);
+  rpc ListMarketplaceApps(ListMarketplaceAppsRequest) returns (ListMarketplaceAppsResponse);
+  rpc SubmitMarketplaceApp(SubmitMarketplaceAppRequest) returns (MarketplaceApp);
+  rpc ReviewMarketplaceApp(ReviewMarketplaceAppRequest) returns (MarketplaceApp);
+  rpc GetConsentScreen(GetConsentScreenRequest) returns (ConsentScreen);
+  rpc GetPublicConsentScreen(GetPublicConsentScreenRequest) returns (ConsentScreen);
+  rpc UpsertConsentScreen(UpsertConsentScreenRequest) returns (ConsentScreen);
+  rpc ListCredentialSummaries(ListCredentialSummariesRequest) returns (ListCredentialSummariesResponse);
+  rpc CountStaleSecrets(CountStaleSecretsRequest) returns (CountStaleSecretsResponse);
+  rpc VerifyClientSecretVersion(VerifyClientSecretVersionRequest) returns (VerifyClientSecretVersionResponse);
+  rpc ListSecretVersions(ListSecretVersionsRequest) returns (ListSecretVersionsResponse);
+  rpc RecordSecretRotation(RecordSecretRotationRequest) returns (SecretRotation);
+  rpc RevokeSecretVersion(RevokeSecretVersionRequest) returns (SecretVersionRevocation);
 }
 
 message ListAppsRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   nvbes.platform.v1.CursorPageRequest page = 3;
 }
 
 message CreateAppRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string name = 3;
   repeated string redirect_uris = 4;
   repeated string scopes = 5;
@@ -37,7 +63,7 @@ message CreateAppRequest {
 
 message UpdateAppRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string client_id = 3;
   string name = 4;
   repeated string redirect_uris = 5;
@@ -47,48 +73,80 @@ message UpdateAppRequest {
 
 message RotateAppSecretRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string client_id = 3;
   string reason = 4;
 }
 
 message DeleteAppRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string client_id = 3;
+}
+
+message GetOverviewSummaryRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message GetClientMetadataRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  repeated string client_ids = 3;
+}
+
+message ListDeveloperRolesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string principal_id = 3;
 }
 
 message ListWebhookEndpointsRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   nvbes.platform.v1.CursorPageRequest page = 3;
 }
 
 message CreateWebhookEndpointRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
-  string url = 3;
-  repeated string event_types = 4;
+  string tenant_id = 2;
+  string name = 3;
+  string url = 4;
+  repeated string event_types = 5;
 }
 
 message UpdateWebhookEndpointRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string endpoint_id = 3;
-  string url = 4;
-  repeated string event_types = 5;
-  string status = 6;
+  string name = 4;
+  string url = 5;
+  repeated string event_types = 6;
+  string status = 7;
+}
+
+message DeleteWebhookEndpointRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string endpoint_id = 3;
+}
+
+message ListWebhookDeliveriesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string endpoint_id = 3;
+  nvbes.platform.v1.CursorPageRequest page = 4;
 }
 
 message ReplayWebhookDeliveryRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string delivery_id = 3;
 }
 
 message CreateDeveloperTokenRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string name = 3;
   repeated string scopes = 4;
   string expires_at = 5;
@@ -96,33 +154,186 @@ message CreateDeveloperTokenRequest {
 
 message RevokeDeveloperTokenRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string token_id = 3;
   string reason = 4;
 }
 
+message RecordTokenDebugSessionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string token_hash_prefix = 3;
+  bool active = 4;
+  string access_decision = 5;
+}
+
+message GetSandboxRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
 message CreateSandboxRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string template = 3;
 }
 
 message ResetSandboxRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string sandbox_id = 3;
+}
+
+message ListActivityLogsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string client_id = 4;
+  string event_type = 5;
+  int64 limit = 6;
 }
 
 message ListApiLogsRequest {
   nvbes.platform.v1.RequestContext context = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string client_id = 3;
   nvbes.platform.v1.CursorPageRequest page = 4;
 }
 
+message ListHealthChecksRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message RunHealthChecksRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message ListMarketplaceAppsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message SubmitMarketplaceAppRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+}
+
+message ReviewMarketplaceAppRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  string status = 4;
+  string review_reason = 5;
+}
+
+message GetConsentScreenRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+}
+
+message GetPublicConsentScreenRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+}
+
+message UpsertConsentScreenRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  string product_name = 4;
+  string logo_url = 5;
+  string support_url = 6;
+  string privacy_url = 7;
+  string terms_url = 8;
+  string description = 9;
+  string brand_color = 10;
+  string custom_css = 11;
+  string help_text = 12;
+}
+
+message ListSecretVersionsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+}
+
+message ListCredentialSummariesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message CountStaleSecretsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message VerifyClientSecretVersionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  string client_secret = 4;
+}
+
+message VerifyClientSecretVersionResponse {
+  bool valid = 1;
+}
+
+message RecordSecretRotationRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  string current_secret_hash = 4;
+  string new_secret_hash = 5;
+  string new_secret_last4 = 6;
+  string overlap_ends_at = 7;
+  string rotated_at = 8;
+}
+
+message RevokeSecretVersionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string version_id = 3;
+}
+
+message ListScopesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+}
+
+message CreateScopeRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string scope_key = 2;
+  string display_name = 3;
+  string description = 4;
+  string risk = 5;
+  string owner_team = 6;
+  string lifecycle = 7;
+  repeated string allowed_audiences = 8;
+}
+
+message UpdateScopeRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string scope_key = 2;
+  string display_name = 3;
+  string description = 4;
+  string risk = 5;
+  string owner_team = 6;
+  string lifecycle = 7;
+  repeated string allowed_audiences = 8;
+}
+
+message DeleteScopeRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string scope_key = 2;
+}
+
 message DeveloperApp {
   string client_id = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string name = 3;
   repeated string redirect_uris = 4;
   repeated string scopes = 5;
@@ -132,6 +343,24 @@ message DeveloperApp {
 message ListAppsResponse {
   repeated DeveloperApp apps = 1;
   nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message DeveloperScope {
+  string scope_key = 1;
+  string display_name = 2;
+  string description = 3;
+  string risk = 4;
+  string owner_team = 5;
+  string lifecycle = 6;
+  repeated string allowed_audiences = 7;
+}
+
+message ListScopesResponse {
+  repeated DeveloperScope scopes = 1;
+}
+
+message ScopeDeletion {
+  string scope_key = 1;
 }
 
 message AppSecret {
@@ -146,12 +375,48 @@ message AppDeletion {
   bool deleted = 2;
 }
 
+message DeveloperOverviewSummary {
+  string tenant_id = 1;
+  int64 oauth_clients = 2;
+  int64 marketplace_pending = 3;
+  int64 high_risk_scopes = 4;
+  int64 failed_webhook_deliveries = 5;
+  int64 unhealthy_integrations = 6;
+  int64 active_sandboxes = 7;
+}
+
+message DeveloperClientMetadata {
+  string client_id = 1;
+  string marketplace_status = 2;
+  bool consent_screen_configured = 3;
+  string health_status = 4;
+}
+
+message GetClientMetadataResponse {
+  repeated DeveloperClientMetadata metadata = 1;
+}
+
+message ListDeveloperRolesResponse {
+  repeated string roles = 1;
+}
+
 message WebhookEndpoint {
   string endpoint_id = 1;
-  string workspace_id = 2;
-  string url = 3;
-  repeated string event_types = 4;
-  string status = 5;
+  string tenant_id = 2;
+  string name = 3;
+  string url = 4;
+  repeated string event_types = 5;
+  string status = 6;
+  string signing_secret = 7;
+  string signing_secret_last4 = 8;
+  string created_at = 9;
+  string updated_at = 10;
+  int64 failed_delivery_count = 11;
+}
+
+message WebhookEndpointDeletion {
+  string endpoint_id = 1;
+  string tenant_id = 2;
 }
 
 message ListWebhookEndpointsResponse {
@@ -165,6 +430,18 @@ message WebhookDelivery {
   string event_type = 3;
   string status = 4;
   string attempted_at = 5;
+  string event_id = 6;
+  int32 attempt_count = 7;
+  string response_status = 8;
+  string error_message = 9;
+  string created_at = 10;
+  string delivered_at = 11;
+  string replayed_from_delivery_id = 12;
+}
+
+message ListWebhookDeliveriesResponse {
+  repeated WebhookDelivery deliveries = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
 }
 
 message DeveloperToken {
@@ -180,11 +457,42 @@ message TokenRevocation {
   bool revoked = 2;
 }
 
+message TokenDebugSession {
+  string session_id = 1;
+  string tenant_id = 2;
+  string actor_principal_id = 3;
+  string token_hash_prefix = 4;
+  bool active = 5;
+  string access_decision = 6;
+  string created_at = 7;
+}
+
 message Sandbox {
   string sandbox_id = 1;
-  string workspace_id = 2;
+  string tenant_id = 2;
   string status = 3;
   string reset_at = 4;
+  string sandbox_name = 5;
+  string sandbox_slug = 6;
+  string data_profile = 7;
+  string updated_at = 8;
+}
+
+message GetSandboxResponse {
+  Sandbox sandbox = 1;
+}
+
+message ActivityLogEntry {
+  string id = 1;
+  string event_type = 2;
+  string user_id = 3;
+  string client_id = 4;
+  string tenant_id = 5;
+  string created_at = 6;
+}
+
+message ListActivityLogsResponse {
+  repeated ActivityLogEntry logs = 1;
 }
 
 message ApiLogEntry {
@@ -194,9 +502,108 @@ message ApiLogEntry {
   string path = 4;
   int32 status_code = 5;
   string occurred_at = 6;
+  string id = 7;
+  string source = 8;
+  string event_type = 9;
+  string severity = 10;
+  string message = 11;
+  string created_at = 12;
 }
 
 message ListApiLogsResponse {
   repeated ApiLogEntry logs = 1;
   nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message HealthCheck {
+  string id = 1;
+  string target_type = 2;
+  string target_id = 3;
+  string check_kind = 4;
+  string status = 5;
+  string summary = 6;
+  string checked_at = 7;
+}
+
+message ListHealthChecksResponse {
+  repeated HealthCheck checks = 1;
+}
+
+message RunHealthChecksResponse {
+  repeated HealthCheck checks = 1;
+}
+
+message MarketplaceApp {
+  string client_id = 1;
+  string status = 2;
+  string review_reason = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+message ListMarketplaceAppsResponse {
+  repeated MarketplaceApp apps = 1;
+}
+
+message ConsentScreen {
+  string client_id = 1;
+  string product_name = 2;
+  string logo_url = 3;
+  string support_url = 4;
+  string privacy_url = 5;
+  string terms_url = 6;
+  string description = 7;
+  string brand_color = 8;
+  string custom_css = 9;
+  string help_text = 10;
+  bool configured = 11;
+  string updated_at = 12;
+}
+
+message SecretVersion {
+  string id = 1;
+  string client_id = 2;
+  string status = 3;
+  string secret_last4 = 4;
+  string created_at = 5;
+  string expires_at = 6;
+  string revoked_at = 7;
+}
+
+message ListSecretVersionsResponse {
+  repeated SecretVersion secret_versions = 1;
+}
+
+message DeveloperCredentialSummary {
+  string id = 1;
+  string client_id = 2;
+  string name = 3;
+  string status = 4;
+  string secret_last4 = 5;
+  string owner_email = 6;
+  repeated string scopes = 7;
+  string last_used_at = 8;
+  string created_at = 9;
+  string expires_at = 10;
+}
+
+message ListCredentialSummariesResponse {
+  repeated DeveloperCredentialSummary credentials = 1;
+}
+
+message CountStaleSecretsResponse {
+  int64 stale_secret_count = 1;
+}
+
+message SecretRotation {
+  string client_id = 1;
+  string active_version_id = 2;
+  string previous_version_id = 3;
+  string overlap_ends_at = 4;
+  string rotated_at = 5;
+}
+
+message SecretVersionRevocation {
+  string client_id = 1;
+  string version_id = 2;
 }

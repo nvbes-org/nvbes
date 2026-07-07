@@ -2,7 +2,7 @@ use chrono::Utc;
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{domains::cloud::workspace_port, http::error::AppError};
 use nvbes_core::auth::Aal;
 use sqlx::PgPool;
 
@@ -172,7 +172,7 @@ pub async fn required_acr_from_risk_tier(
 
 /// Calculate required ACR based on workspace role.
 pub async fn required_acr_from_workspace_role(
-    db: &PgPool,
+    _db: &PgPool,
     user_id: Uuid,
     workspace_id: Option<Uuid>,
 ) -> Result<Option<String>, AppError> {
@@ -183,24 +183,14 @@ pub async fn required_acr_from_workspace_role(
     let Some(workspace_id) = workspace_id else {
         return Ok(None);
     };
-    let row = sqlx::query(
-        r#"
-        SELECT role::text AS role
-        FROM workspace_memberships
-        WHERE workspace_id = $1
-          AND principal_id = $2
-          AND status = 'active'
-        LIMIT 1
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(user_id)
-    .fetch_optional(db)
-    .await?;
-    let Some(row) = row else {
+    let role = workspace_port::list_workspace_members(None, workspace_id, user_id)
+        .await?
+        .into_iter()
+        .find(|member| member.principal_id == user_id && member.active)
+        .map(|member| member.role);
+    let Some(role) = role else {
         return Ok(None);
     };
-    let role: String = row.get("role");
     let required = if role == "owner" || role == "admin" {
         "aal2"
     } else {

@@ -1,6 +1,6 @@
 use crate::database::Database;
 use crate::domains::authz::{AdminScope, resolve_admin_scope};
-use crate::domains::enterprise::{db, policy};
+use crate::domains::enterprise::{db, grpc, policy};
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use uuid::Uuid;
@@ -36,14 +36,18 @@ pub async fn activate_break_glass_account(
     )?;
 
     let mut tx = db.begin().await?;
-    let target_role = db::target_role(&mut tx, tenant_id, user_id, AdminScope::Tenant)
-        .await?
-        .ok_or_else(|| {
-            AppError::not_found("enterprise_user_not_found", "Tenant member not found.")
-        })?;
-    ensure_privileged_target(&target_role)?;
-    db::upsert_break_glass_account(
+    let target_role = db::target_role(
         &mut tx,
+        tenant_id,
+        user_id,
+        AdminScope::Tenant,
+        auth.user_id,
+    )
+    .await?
+    .ok_or_else(|| AppError::not_found("enterprise_user_not_found", "Tenant member not found."))?;
+    tx.commit().await?;
+    ensure_privileged_target(&target_role)?;
+    grpc::break_glass::activate_break_glass(
         tenant_id,
         user_id,
         auth.user_id,
@@ -51,23 +55,8 @@ pub async fn activate_break_glass_account(
         &reason,
     )
     .await?;
-    db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.break_glass.activated",
-        "principal",
-        Some(user_id),
-        serde_json::json!({
-            "target_role": target_role,
-            "reason": reason,
-            "procedure_reference": procedure_reference
-        }),
-    )
-    .await?;
-    tx.commit().await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
+        user: fetch_user_view(db, tenant_id, auth.user_id, user_id, scope).await?,
     })
 }
 
@@ -90,28 +79,9 @@ pub async fn revoke_break_glass_account(
     ensure_owner(&actor_access)?;
     let reason = validate_text("reason", input.reason, MAX_REASON_LEN)?;
 
-    let mut tx = db.begin().await?;
-    let changed =
-        db::revoke_break_glass_account(&mut tx, tenant_id, user_id, auth.user_id, &reason).await?;
-    if changed == 0 {
-        return Err(AppError::not_found(
-            "break_glass_account_not_found",
-            "Active break-glass account not found.",
-        ));
-    }
-    db::insert_audit(
-        &mut tx,
-        tenant_id,
-        auth.user_id,
-        "enterprise.break_glass.revoked",
-        "principal",
-        Some(user_id),
-        serde_json::json!({"reason": reason}),
-    )
-    .await?;
-    tx.commit().await?;
+    grpc::break_glass::revoke_break_glass(tenant_id, user_id, auth.user_id, &reason).await?;
     Ok(EnterpriseAccessUpdateResponse {
-        user: fetch_user_view(db, tenant_id, user_id, scope).await?,
+        user: fetch_user_view(db, tenant_id, auth.user_id, user_id, scope).await?,
     })
 }
 

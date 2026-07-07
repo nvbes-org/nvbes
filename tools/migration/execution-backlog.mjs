@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { readinessBlockingDetails } from "./execution-backlog.blockers.mjs";
+import { completionBlockingDetails } from "./execution-backlog.completion.mjs";
+import { loadBacklogInputs } from "./execution-backlog.inputs.mjs";
 import { preparationCommandsForRequirement } from "./execution-backlog.live-evidence.mjs";
 import { readPackageScripts } from "./execution-backlog.proof.mjs";
 import { validateBacklog } from "./execution-backlog.validation.mjs";
@@ -11,12 +14,6 @@ const strict = args.includes("--strict");
 const jsonPath = "docs/migration/execution-backlog.generated.json";
 const markdownPath = "docs/migration/execution-backlog.md";
 const errors = [];
-
-const inputs = {
-	readiness: "docs/migration/readiness-report.generated.json",
-	completion: "docs/migration/completion-audit.generated.json",
-	liveEvidence: "docs/migration/live-evidence-instances.generated.json",
-};
 const packageScripts = readPackageScripts(errors);
 let inputState;
 
@@ -34,9 +31,18 @@ const ownerByArea = {
 	domain_dod: "Migration lead",
 	risks: "Migration lead",
 	gates: "Migration lead",
-	gate_decisions: "Migration lead",
 	live_evidence: "Migration lead",
+	communication: "Support lead",
+	cutover_checklist: "Migration lead",
+	cutover_journal: "Migration lead",
+	observability: "Infra lead",
+	owner_signoffs: "Migration lead",
 	reconciliation_template: "Data lead",
+	reconciliation_report: "Data lead",
+	rehearsals: "Data lead",
+	rejects: "Data lead",
+	release_freeze: "Migration lead",
+	snapshots: "Data lead",
 };
 
 const ownerByLiveRequirement = {
@@ -49,44 +55,37 @@ const ownerByLiveRequirement = {
 };
 
 const commandByArea = {
-	data: "tools/migration/data-map.mjs --strict",
-	secrets: "tools/migration/secret-map.mjs --strict",
-	jobs: "tools/migration/job-map.mjs --strict",
-	resources: "tools/migration/resource-map.mjs --strict",
-	target_structure: "tools/migration/target-structure.mjs --strict",
-	codegen: "tools/migration/codegen.mjs --strict",
-	supply_chain: "tools/migration/supply-chain.mjs --strict",
-	runtimes: "tools/migration/runtime-foundation.mjs --strict",
-	phases: "tools/migration/phase-ledger.mjs --strict",
-	domains: "tools/migration/domain-ledger.mjs --strict",
-	domain_dod: "tools/migration/domain-dod.mjs --strict",
-	risks: "tools/migration/risk-register.mjs --strict",
-	gates: "tools/migration/gate-evidence.mjs --strict",
-	gate_decisions: "tools/migration/gate-evidence.mjs --strict",
-	live_evidence: "tools/migration/live-evidence-instances.mjs --strict",
-	reconciliation_template: "tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+	data: "node tools/migration/data-map.mjs --strict",
+	secrets: "node tools/migration/secret-map.mjs --strict",
+	jobs: "node tools/migration/job-map.mjs --strict",
+	resources: "node tools/migration/resource-map.mjs --strict",
+	target_structure: "node tools/migration/target-structure.mjs --strict",
+	codegen: "node tools/migration/codegen.mjs --strict",
+	supply_chain: "node tools/migration/supply-chain.mjs --strict",
+	runtimes: "node tools/migration/runtime-foundation.mjs --strict",
+	phases: "node tools/migration/phase-ledger.mjs --strict",
+	domains: "node tools/migration/domain-ledger.mjs --strict",
+	domain_dod: "node tools/migration/domain-dod.mjs --strict",
+	risks: "node tools/migration/risk-register.mjs --strict",
+	gates: "node tools/migration/gate-evidence.mjs --strict",
+	live_evidence: "node tools/migration/live-evidence-instances.mjs --strict",
+	communication: "pnpm check:migration-communication -- --strict",
+	cutover_checklist: "pnpm check:migration-cutover-checklist -- --strict",
+	cutover_journal: "pnpm check:migration-cutover-journal -- --strict",
+	observability: "pnpm check:migration-observability -- --strict",
+	owner_signoffs: "pnpm check:migration-owner-signoffs -- --strict",
+	reconciliation_template: "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json",
+	reconciliation_report: "pnpm check:migration-reconciliation-report -- --strict",
+	rehearsals: "pnpm check:migration-rehearsals -- --strict",
+	rejects: "pnpm check:migration-rejects -- --strict",
+	release_freeze: "pnpm check:migration-release-freeze -- --strict",
+	snapshots: "pnpm check:migration-snapshots -- --strict",
 };
 
-function readJson(path) {
-	if (!existsSync(path)) {
-		errors.push(`${path}: missing`);
-		return undefined;
-	}
-	try {
-		return JSON.parse(readFileSync(path, "utf8"));
-	} catch (error) {
-		errors.push(`${path}: invalid JSON: ${error.message}`);
-		return undefined;
-	}
-}
-
-function buildTasks(readiness, completion, liveEvidence) {
+function buildTasks(readiness, completion, liveEvidence, blockerSources) {
 	const tasks = [];
 	for (const blocker of readiness?.blockers ?? []) {
-		const blockingDetails = Array.from(
-			{ length: blocker.blocking_items },
-			(_, index) => `${blocker.area} unresolved item ${index + 1}/${blocker.blocking_items}`,
-		);
+		const blockingDetails = readinessBlockingDetails(blocker, { liveEvidence, ...blockerSources });
 		tasks.push({
 			id: `resolve-${blocker.area}`,
 			owner_role: ownerByArea[blocker.area] ?? "Migration lead",
@@ -105,7 +104,7 @@ function buildTasks(readiness, completion, liveEvidence) {
 			owner_role: "Migration lead",
 			source: item.source,
 			blocking_items: 1,
-			blocking_details: [item.requirement],
+			blocking_details: completionBlockingDetails(item, blockerSources),
 			next_action: item.requirement,
 			proof: item.proof,
 			status: "blocked",
@@ -124,7 +123,7 @@ function buildTasks(readiness, completion, liveEvidence) {
 			preparation_commands: preparationCommandsForRequirement(requirement),
 			proof: requirement.strict_command
 				? `${requirement.strict_command} && pnpm check:migration-live-evidence-instances -- --strict`
-				: "tools/migration/live-evidence-instances.mjs --strict",
+				: "node tools/migration/live-evidence-instances.mjs --strict",
 			status: "blocked",
 		});
 	}
@@ -132,16 +131,14 @@ function buildTasks(readiness, completion, liveEvidence) {
 }
 
 function buildBacklog() {
-	const readiness = readJson(inputs.readiness);
-	const completion = readJson(inputs.completion);
-	const liveEvidence = readJson(inputs.liveEvidence);
+	const { readiness, completion, liveEvidence, blockerSources } = loadBacklogInputs(errors);
 	inputState = { readiness, completion, liveEvidence };
-	const tasks = buildTasks(readiness, completion, liveEvidence);
+	const tasks = buildTasks(readiness, completion, liveEvidence, blockerSources);
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/execution-backlog.mjs --write",
-			strict_completion_command: "tools/migration/execution-backlog.mjs --strict",
+			command: "node tools/migration/execution-backlog.mjs --write",
+			strict_completion_command: "node tools/migration/execution-backlog.mjs --strict",
 		},
 		status: {
 			open_tasks: tasks.filter((task) => task.status !== "complete").length,
@@ -205,7 +202,7 @@ function serializeMarkdown(backlog) {
 	for (const task of liveTasks) {
 		lines.push(`### ${task.id}`, "", "```bash", ...task.preparation_commands, "```", "");
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-execution-backlog", "tools/migration/execution-backlog.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-execution-backlog", "node tools/migration/execution-backlog.mjs --write", "```", "");
 	return lines.join("\n");
 }
 
@@ -229,9 +226,9 @@ validate(backlog);
 
 for (const [path, expected] of [[jsonPath, json], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/execution-backlog.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/execution-backlog.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/execution-backlog.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/execution-backlog.mjs --write`);
 	}
 }
 

@@ -32,9 +32,9 @@
 | Provisioning package is provider-neutral by contract | passed | `libs/go/provisioning/README.md` |
 | Cloud control-plane runtime has health surface | passed | `libs/go/control-plane/foundation.go` |
 | Cloud control-plane health is tested | passed | `libs/go/control-plane/foundation_test.go` |
-| Cloud Control API boundary is documented | passed | `apps/cloud-control-api/README.md` |
-| Cloud Console boundary is documented | passed | `apps/cloud-console/README.md` |
-| Cloud app boundary exists | passed | `apps/cloud/README.md` |
+| Cloud Service boundary is documented | passed | `apps/cloud-service/README.md` |
+| Cloud Web boundary is documented | passed | `apps/cloud-web/README.md` |
+| Cloud Worker boundary exists | passed | `apps/cloud-worker/README.md` |
 | Cloud deployment boundary exists | passed | `deploy/cloud/README.md` |
 | Cloud docs boundary exists | passed | `docs/cloud/README.md` |
 | Target structure includes Cloud app boundary | passed | `docs/migration/target-structure.generated.json` |
@@ -49,5 +49,5 @@ Cloud provisioning repository evidence is covered. Production cutover still requ
 
 ```bash
 pnpm check:migration-cloud-provisioning
-tools/migration/cloud-provisioning.mjs --write
+node tools/migration/cloud-provisioning.mjs --write
 ```

@@ -16,7 +16,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { getWorkspaceDetail, reactivateWorkspace, suspendWorkspace } from './backoffice-service.api';
+import {
+  getWorkspaceDetail,
+  reactivateWorkspace,
+  suspendWorkspace,
+} from './backoffice-service.api';
 import { workspaceDetailTabs } from './backoffice-service.detail-tab-builders';
 import { EntityDetailTabs } from './backoffice-service.detail-tabs';
 import { LockedState } from './backoffice-service.locked-state';

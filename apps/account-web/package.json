@@ -19,7 +19,6 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@grafana/faro-web-sdk": "^2.8.2",
     "@grafana/faro-web-tracing": "^2.8.2",
-    "@nvbes/billing-client": "workspace:*",
     "@nvbes/http-client": "workspace:*",
     "@nvbes/identity-client": "workspace:*",
     "@nvbes/identity-sdk-web": "workspace:*",
