@@ -292,6 +292,22 @@ precedente sont stables.
 Etat actuel: fondation documentaire et controles CI initiaux en place. La
 structuration n'est pas encore eligible au cutover production.
 
+### Statut d'Execution - 2026-07-05
+
+Le refactor Account/Cloud Big Bang est le lot actif de taxonomie runtime. Le
+scope gele, les noms legacy, les noms cibles, les owners, les sources de
+donnees, les contracts, les jobs, les variables d'environnement, les images et
+l'observabilite sont recenses dans
+[Inventaire Account Cloud Big Bang](../migration/account-cloud-big-bang.inventory.md).
+La decision d'architecture est verrouillee par
+[ADR Account Cloud Service Taxonomy](../adr/2026-07-05-account-cloud-service-taxonomy.md).
+
+Decision de taxonomie: les anciens runtimes historiques sont remplaces par les
+bounded contexts Account, Cloud, Billing, Developer, Enterprise, Backoffice et
+Gateway Cloud. La correspondance exacte vit dans l'inventaire de migration; les
+docs non-migration ne doivent conserver que les noms cible. Aucun alias de
+compatibilite runtime ne doit survivre au cutover.
+
 Termine cote repository:
 
 - ADR clean rebuild et boundaries OSS/Cloud/Internal;
@@ -308,7 +324,7 @@ Verification locale:
   existants sous le seuil bloquant de 500 lignes;
 - `pnpm check:migration-precutover -- --env production --reconciliation-report
   docs/migration/reconciliation.<run>.json` est le gate strict avant cutover;
-- `tools/migration/gate-evidence.mjs --strict` echoue volontairement tant que
+- `node tools/migration/gate-evidence.mjs --strict` echoue volontairement tant que
   les gates n'ont pas owners, preuves et decision `go`.
 
 Bloqueurs restants avant cutover:

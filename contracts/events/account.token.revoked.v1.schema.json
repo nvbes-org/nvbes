@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/account.token.revoked.v1.schema.json",
+  "title": "account.token.revoked v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "account.token.revoked"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "token_id",
+        "user_id",
+        "reason",
+        "revoked_at"
+      ],
+      "properties": {
+        "token_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "user_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revoked_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

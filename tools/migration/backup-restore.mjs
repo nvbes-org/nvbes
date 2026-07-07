@@ -67,17 +67,9 @@ for (const row of restoreEvidenceRows) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|no-go)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} backup/restore marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} backup/restore marker(s) remain`);
 	}
 }
 
@@ -196,6 +188,19 @@ function validateDecisionRow(label, status, decision) {
 function hasConcreteEvidence(value) {
 	const normalized = (value ?? "").toLowerCase();
 	return /(artifact|checksum|digest|log|report|result|snapshot|command output|record|link|url|metric|measurement|timestamp|duration)/.test(normalized);
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, blocking: 0, failed: 0, "no-go": 0 };
+	for (const row of [...tableRowsAfter("## Backup Targets"), ...tableRowsAfter("## Restore Evidence")]) {
+		const status = row.at(-2);
+		const decision = row.at(-1);
+		if (status === "pending") counts.pending += 1;
+		if (status === "blocking") counts.blocking += 1;
+		if (status === "failed") counts.failed += 1;
+		if (decision === "no-go") counts["no-go"] += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

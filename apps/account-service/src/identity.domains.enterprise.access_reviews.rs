@@ -1,0 +1,12 @@
+#[path = "identity.domains.enterprise.access_reviews.revocations.rs"]
+pub mod revocations;
+#[path = "identity.domains.enterprise.access_reviews.routes.rs"]
+pub mod routes;
+#[path = "identity.domains.enterprise.access_reviews.runtime.rs"]
+pub mod runtime;
+#[path = "identity.domains.enterprise.access_reviews.service.rs"]
+pub mod service;
+#[path = "identity.domains.enterprise.access_reviews.types.rs"]
+pub mod types;
+#[path = "identity.domains.enterprise.access_reviews.validation.rs"]
+pub mod validation;

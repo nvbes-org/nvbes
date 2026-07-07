@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/developer.webhook.endpoint.created.v1.schema.json",
+  "title": "developer.webhook.endpoint.created v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "developer.webhook.endpoint.created"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "endpoint_id",
+        "event_types"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "event_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

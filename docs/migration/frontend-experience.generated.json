@@ -1,38 +1,38 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/frontend-experience.mjs --write",
+    "command": "node tools/migration/frontend-experience.mjs --write",
     "sources": [
       "package.json",
-      "apps/identity-web/src/identity.router.tsx",
-      "apps/identity-web/src/components/AccountLayout.tsx",
-      "apps/identity-web/e2e/critical.spec.ts",
-      "apps/identity-web/src/identity.universal-login.test.js",
-      "apps/identity-web/src/pages/useUniversalLogin.test.js",
-      "apps/drive-web/src/drive.router.tsx",
-      "apps/drive-web/src/DriveAppLayout.tsx",
-      "apps/drive-web/src/DriveSharedLinksView.tsx",
-      "apps/drive-web/src/drive.uploads.drop.test.ts",
-      "apps/drive-web/src/drive.session.storage.test.ts",
-      "apps/drive-web/src/drive.workspace.store.test.ts",
-      "apps/developer-web/src/developer.router.tsx",
-      "apps/developer-web/src/layouts/DeveloperShell.tsx",
-      "apps/developer-web/src/layouts/DeveloperPortalLayout.tsx",
-      "apps/developer-web/src/layouts/DeveloperPublicLayout.tsx",
-      "apps/developer-web/src/__tests__/developer.permissions.test.ts",
-      "apps/developer-web/src/__tests__/developer.session.test.ts",
-      "apps/developer-web/src/__tests__/developer.webhooks.test.ts",
+      "apps/account-web/src/identity.router.tsx",
+      "apps/account-web/src/components/AccountLayout.tsx",
+      "apps/account-web/e2e/critical.spec.ts",
+      "apps/account-web/src/identity.universal-login.test.js",
+      "apps/account-web/src/pages/useUniversalLogin.test.js",
+      "apps/cloud-web/src/drive.router.tsx",
+      "apps/cloud-web/src/DriveAppLayout.tsx",
+      "apps/cloud-web/src/DriveSharedLinksView.tsx",
+      "apps/cloud-web/src/drive.uploads.drop.test.ts",
+      "apps/cloud-web/src/drive.session.storage.test.ts",
+      "apps/cloud-web/src/drive.workspace.store.test.ts",
+      "apps/console-web/src/developer.router.tsx",
+      "apps/console-web/src/layouts/DeveloperShell.tsx",
+      "apps/console-web/src/layouts/DeveloperPortalLayout.tsx",
+      "apps/console-web/src/layouts/DeveloperPublicLayout.tsx",
+      "apps/console-web/src/__tests__/developer.permissions.test.ts",
+      "apps/console-web/src/__tests__/developer.session.test.ts",
+      "apps/console-web/src/__tests__/developer.webhooks.test.ts",
       "apps/enterprise-web/src/enterprise.router.tsx",
       "apps/enterprise-web/src/components/EnterpriseLayout.tsx",
       "apps/enterprise-web/src/components/EnterpriseSidebar.tsx",
       "apps/enterprise-web/src/enterprise.permissions.test.ts",
       "apps/enterprise-web/src/enterprise.invites.test.ts",
-      "apps/cloud-console/README.md",
-      "apps/internal-admin/README.md"
+      "docs/cloud/README.md",
+      "apps/backoffice-service/README.md"
     ],
     "targeted_tests": [
       "pnpm check:web",
-      "pnpm --dir apps/identity-web test:e2e:critical",
+      "pnpm --dir apps/account-web test:e2e:critical",
       "pnpm --dir apps/enterprise-web test"
     ]
   },
@@ -48,152 +48,152 @@
       "description": "Root web check formats Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: format:check --projects=drive-web,identity-web,developer-web,enterprise-web"
+      "pattern": "check:web: format:check --projects=cloud-web,account-web,console-web,enterprise-web"
     },
     {
       "id": "root-check-web-enterprise-lint",
       "description": "Root web check lints Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: lint --projects=drive-web,identity-web,developer-web,enterprise-web"
+      "pattern": "check:web: lint --projects=cloud-web,account-web,console-web,enterprise-web"
     },
     {
       "id": "root-check-web-enterprise-typecheck",
       "description": "Root web check typechecks Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: typecheck --projects=drive-web,identity-web,developer-web,enterprise-web"
+      "pattern": "check:web: typecheck --projects=cloud-web,account-web,console-web,enterprise-web"
     },
     {
       "id": "lint-web-enterprise",
       "description": "Root lint:web includes Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "lint:web: lint --projects=drive-web,identity-web,developer-web,enterprise-web"
+      "pattern": "lint:web: lint --projects=cloud-web,account-web,console-web,enterprise-web"
     },
     {
-      "id": "identity-router",
-      "description": "Identity Web declares routed login/account journeys",
-      "path": "apps/identity-web/src/identity.router.tsx",
+      "id": "account-router",
+      "description": "Account Web declares routed login/account journeys",
+      "path": "apps/account-web/src/identity.router.tsx",
       "status": "passed",
       "pattern": "createRouter"
     },
     {
-      "id": "identity-account-main",
-      "description": "Identity account shell exposes a main landmark",
-      "path": "apps/identity-web/src/components/AccountLayout.tsx",
+      "id": "account-main",
+      "description": "Account shell exposes a main landmark",
+      "path": "apps/account-web/src/components/AccountLayout.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
-      "id": "identity-critical-e2e",
-      "description": "Identity Web has browser-level critical journey coverage",
-      "path": "apps/identity-web/e2e/critical.spec.ts",
+      "id": "account-critical-e2e",
+      "description": "Account Web has browser-level critical journey coverage",
+      "path": "apps/account-web/e2e/critical.spec.ts",
       "status": "passed",
       "pattern": "critical identity journeys"
     },
     {
-      "id": "identity-universal-login-test",
-      "description": "Identity Web tests universal login API behavior",
-      "path": "apps/identity-web/src/identity.universal-login.test.js",
+      "id": "account-universal-login-test",
+      "description": "Account Web tests universal login API behavior",
+      "path": "apps/account-web/src/identity.universal-login.test.js",
       "status": "passed",
       "pattern": "Universal Login API helpers"
     },
     {
-      "id": "identity-universal-login-hook-test",
-      "description": "Identity Web tests universal login hook state",
-      "path": "apps/identity-web/src/pages/useUniversalLogin.test.js",
+      "id": "account-universal-login-hook-test",
+      "description": "Account Web tests universal login hook state",
+      "path": "apps/account-web/src/pages/useUniversalLogin.test.js",
       "status": "passed",
       "pattern": "useUniversalLogin"
     },
     {
-      "id": "drive-router",
-      "description": "Drive Web declares routed file journeys",
-      "path": "apps/drive-web/src/drive.router.tsx",
+      "id": "cloud-router",
+      "description": "Cloud Web declares routed file journeys",
+      "path": "apps/cloud-web/src/drive.router.tsx",
       "status": "passed",
       "pattern": "createRouter"
     },
     {
-      "id": "drive-main",
-      "description": "Drive Web shell exposes a main landmark",
-      "path": "apps/drive-web/src/DriveAppLayout.tsx",
+      "id": "cloud-main",
+      "description": "Cloud Web shell exposes a main landmark",
+      "path": "apps/cloud-web/src/DriveAppLayout.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
-      "id": "drive-share-actions",
-      "description": "Drive Web exposes share copy and revoke actions",
-      "path": "apps/drive-web/src/DriveSharedLinksView.tsx",
+      "id": "cloud-share-actions",
+      "description": "Cloud Web exposes share copy and revoke actions",
+      "path": "apps/cloud-web/src/DriveSharedLinksView.tsx",
       "status": "passed",
       "pattern": "Revoquer le lien"
     },
     {
-      "id": "drive-upload-test",
-      "description": "Drive Web tests upload drop handling",
-      "path": "apps/drive-web/src/drive.uploads.drop.test.ts",
+      "id": "cloud-upload-test",
+      "description": "Cloud Web tests upload drop handling",
+      "path": "apps/cloud-web/src/drive.uploads.drop.test.ts",
       "status": "passed",
       "pattern": "drop"
     },
     {
-      "id": "drive-session-test",
-      "description": "Drive Web tests session storage",
-      "path": "apps/drive-web/src/drive.session.storage.test.ts",
+      "id": "cloud-session-test",
+      "description": "Cloud Web tests session storage",
+      "path": "apps/cloud-web/src/drive.session.storage.test.ts",
       "status": "passed",
       "pattern": "session"
     },
     {
-      "id": "drive-workspace-test",
-      "description": "Drive Web tests workspace switching state",
-      "path": "apps/drive-web/src/drive.workspace.store.test.ts",
+      "id": "cloud-workspace-test",
+      "description": "Cloud Web tests workspace switching state",
+      "path": "apps/cloud-web/src/drive.workspace.store.test.ts",
       "status": "passed",
       "pattern": "workspace"
     },
     {
       "id": "developer-router",
-      "description": "Developer Web declares routed console and portal journeys",
-      "path": "apps/developer-web/src/developer.router.tsx",
+      "description": "Console Web declares routed console and portal journeys",
+      "path": "apps/console-web/src/developer.router.tsx",
       "status": "passed",
       "pattern": "createRouter"
     },
     {
       "id": "developer-console-main",
       "description": "Developer console shell exposes a main landmark",
-      "path": "apps/developer-web/src/layouts/DeveloperShell.tsx",
+      "path": "apps/console-web/src/layouts/DeveloperShell.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
       "id": "developer-portal-main",
       "description": "Developer portal shell exposes a main landmark",
-      "path": "apps/developer-web/src/layouts/DeveloperPortalLayout.tsx",
+      "path": "apps/console-web/src/layouts/DeveloperPortalLayout.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
       "id": "developer-public-main",
       "description": "Developer public shell exposes a main landmark",
-      "path": "apps/developer-web/src/layouts/DeveloperPublicLayout.tsx",
+      "path": "apps/console-web/src/layouts/DeveloperPublicLayout.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
       "id": "developer-permissions-test",
-      "description": "Developer Web tests permission gating",
-      "path": "apps/developer-web/src/__tests__/developer.permissions.test.ts",
+      "description": "Console Web tests permission gating",
+      "path": "apps/console-web/src/__tests__/developer.permissions.test.ts",
       "status": "passed",
       "pattern": "permission"
     },
     {
       "id": "developer-session-test",
-      "description": "Developer Web tests session handling",
-      "path": "apps/developer-web/src/__tests__/developer.session.test.ts",
+      "description": "Console Web tests session handling",
+      "path": "apps/console-web/src/__tests__/developer.session.test.ts",
       "status": "passed",
       "pattern": "session"
     },
     {
-      "id": "developer-webhooks-test",
-      "description": "Developer Web tests webhook replay gating",
-      "path": "apps/developer-web/src/__tests__/developer.webhooks.test.ts",
+      "id": "console-webhooks-test",
+      "description": "Console Web tests webhook replay gating",
+      "path": "apps/console-web/src/__tests__/developer.webhooks.test.ts",
       "status": "passed",
       "pattern": "webhook"
     },
@@ -233,18 +233,18 @@
       "pattern": "invite"
     },
     {
-      "id": "cloud-console-boundary",
-      "description": "Cloud Console frontend boundary is documented",
-      "path": "apps/cloud-console/README.md",
+      "id": "cloud-docs-boundary",
+      "description": "Cloud documentation boundary is documented",
+      "path": "docs/cloud/README.md",
       "status": "passed",
-      "pattern": "Cloud Console"
+      "pattern": "nvbes Cloud Documentation"
     },
     {
-      "id": "internal-admin-boundary",
-      "description": "Internal Admin frontend boundary is documented",
-      "path": "apps/internal-admin/README.md",
+      "id": "backoffice-service-boundary",
+      "description": "Backoffice frontend boundary is documented",
+      "path": "apps/backoffice-service/README.md",
       "status": "passed",
-      "pattern": "Internal Admin"
+      "pattern": "Backoffice"
     }
   ]
 }

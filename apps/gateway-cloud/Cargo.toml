@@ -1,0 +1,28 @@
+[package]
+name = "nvbes-gateway-cloud"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "nvbes-gateway-cloud"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-graphql.workspace = true
+async-graphql-axum.workspace = true
+axum.workspace = true
+nvbes-core = { path = "../../libs/rust/core" }
+prost = "0.14.4"
+serde.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+tonic-prost = "0.14.6"
+tower-http = { workspace = true }
+tracing.workspace = true
+uuid.workspace = true
+
+[build-dependencies]
+protoc-bin-vendored = "3.2.0"
+tonic-prost-build = "0.14.6"

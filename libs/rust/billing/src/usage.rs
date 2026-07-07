@@ -150,7 +150,7 @@ mod tests {
             quantity,
             unit: "gb_month".to_string(),
             occurred_at: DateTime::from_timestamp(1_735_689_600, 0).unwrap(),
-            source: "drive-api".to_string(),
+            source: "cloud-service".to_string(),
             idempotency_key: idempotency_key.to_string(),
         }
     }

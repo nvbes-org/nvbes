@@ -1,0 +1,12 @@
+{
+  "name": "backoffice-service",
+  "projectType": "application",
+  "root": "apps/backoffice-service",
+  "sourceRoot": "apps/backoffice-service/src",
+  "tags": [
+    "scope:internal",
+    "type:app",
+    "domain:backoffice",
+    "layer:app"
+  ]
+}

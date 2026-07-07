@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/identity-login-session.mjs --write",
+    "command": "node tools/migration/identity-login-session.mjs --write",
     "sources": [
-      "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
-      "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
-      "apps/identity-api/src/identity.domains.auth.routes.login.pwd.rs",
-      "apps/identity-api/src/identity.domains.auth.routes.login.identifier.rs",
-      "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
-      "apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs",
-      "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
-      "apps/identity-api/openapi.json",
+      "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+      "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+      "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
+      "apps/account-service/src/identity.domains.auth.routes.login.identifier.rs",
+      "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
+      "apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs",
+      "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
+      "apps/account-service/openapi.json",
       "scripts/test-openapi-contract.mjs",
       "tools/migration/risk-register.evidence.mjs"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-identity-api refreshed_cookies --locked",
-      "cargo test -p nvbes-identity-api logout_state_revokes_current_session_and_refresh_token_only --locked",
+      "cargo test -p nvbes-account-service refreshed_cookies --locked",
+      "cargo test -p nvbes-account-service logout_state_revokes_current_session_and_refresh_token_only --locked",
       "bash scripts/test-openapi-contract-seeded-auth.sh"
     ]
   },
@@ -30,154 +30,154 @@
     {
       "id": "identifier-route",
       "description": "Login identifier route is present",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.login.identifier.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier.rs",
       "status": "passed",
       "pattern": "challenge_identifier"
     },
     {
       "id": "password-route",
       "description": "Password login route is present",
-      "path": "apps/identity-api/src/identity.domains.auth.routes.login.pwd.rs",
+      "path": "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
       "status": "passed",
       "pattern": "challenge_pwd"
     },
     {
       "id": "login-throttle",
       "description": "Primary login applies throttle rules",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
       "status": "passed",
       "pattern": "LOGIN_THROTTLE_ACTION"
     },
     {
       "id": "password-check",
       "description": "Primary login verifies stored password",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
       "status": "passed",
       "pattern": "verify_password(&stored_hash, &input.password)"
     },
     {
       "id": "login-failed-risk",
       "description": "Failed login records risk event",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
       "status": "passed",
       "pattern": "\"login_failed\""
     },
     {
       "id": "login-failed-audit",
       "description": "Failed login records audit event",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
       "status": "passed",
       "pattern": "\"auth.login_failed\""
     },
     {
       "id": "session-token",
       "description": "Successful login issues a session-bound token",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
       "status": "passed",
       "pattern": "generate_token_pair_with_session"
     },
     {
       "id": "session-cache",
       "description": "Successful login stores cached session",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
       "status": "passed",
       "pattern": "set_session(redis, &cached_session"
     },
     {
       "id": "login-success-risk",
       "description": "Successful login records risk event",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
       "status": "passed",
       "pattern": "\"login_success\""
     },
     {
       "id": "login-success-audit",
       "description": "Successful login records audit event",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
       "status": "passed",
       "pattern": "\"auth.login_success\""
     },
     {
       "id": "logout-route",
       "description": "OpenAPI contains logout route",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "\"/auth/logout\""
     },
     {
       "id": "sessions-route",
       "description": "OpenAPI contains session listing route",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "\"/auth/sessions\""
     },
     {
       "id": "logout-state-helper",
       "description": "Logout revocation state is isolated from audit persistence",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
       "status": "passed",
       "pattern": "revoke_logout_session_state"
     },
     {
       "id": "logout-revokes-refresh",
       "description": "Logout revokes refresh tokens for the current session",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
       "status": "passed",
       "pattern": "revoke_session_refresh_tokens"
     },
     {
       "id": "logout-deletes-session",
       "description": "Logout deletes the current session cache",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
       "status": "passed",
       "pattern": "delete_session(redis, &user_id.to_string(), &session_id.to_string())"
     },
     {
       "id": "logout-audit",
       "description": "Logout records session revoked audit event",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
       "status": "passed",
       "pattern": "\"auth.session_revoked\""
     },
     {
       "id": "logout-test",
       "description": "Logout state test proves only current session and refresh token are revoked",
-      "path": "apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs",
+      "path": "apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs",
       "status": "passed",
       "pattern": "logout_state_revokes_current_session_and_refresh_token_only"
     },
     {
       "id": "refresh-entrypoint",
       "description": "Refresh middleware retries expired access tokens",
-      "path": "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+      "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
       "status": "passed",
       "pattern": "refresh_expired_session"
     },
     {
       "id": "refresh-session-guard",
       "description": "Refresh rejects revoked or expired cached sessions",
-      "path": "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+      "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
       "status": "passed",
       "pattern": "session.revoked_at.is_some()"
     },
     {
       "id": "refresh-token-rotation",
       "description": "Refresh rotates cached access-token hash",
-      "path": "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+      "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
       "status": "passed",
       "pattern": "update_session_token_hash"
     },
     {
       "id": "refresh-cookie-helper",
       "description": "Refresh cookie construction is pure-testable",
-      "path": "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+      "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
       "status": "passed",
       "pattern": "build_refreshed_cookies_from_config"
     },
     {
       "id": "refresh-cookie-test",
       "description": "Refresh cookie tests cover authuser-scoped secure cookies",
-      "path": "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
+      "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
       "status": "passed",
       "pattern": "refreshed_cookies_are_authuser_scoped_and_secure_outside_development"
     },

@@ -107,8 +107,8 @@ pyroscope.write "local" {
 faro.receiver "identity_web" {
   extra_log_labels = {
     environment = "development",
-    job         = "identity-web",
-    service     = "identity-web",
+    job         = "account-web",
+    service     = "account-web",
   }
 
   log_format = "json"

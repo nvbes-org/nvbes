@@ -1,0 +1,21 @@
+[package]
+name = "nvbes-product-account"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+argon2.workspace = true
+chrono.workspace = true
+hex.workspace = true
+nvbes-core = { path = "../../core" }
+nvbes-email = { path = "../../email" }
+nvbes-redis = { path = "../../redis" }
+password-hash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true

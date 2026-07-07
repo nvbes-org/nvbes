@@ -9,21 +9,21 @@ const outputPath = "docs/migration/drive-upload-download.generated.json";
 const markdownPath = "docs/migration/drive-upload-download.md";
 
 const sources = {
-	uploadLogic: "apps/drive-api/src/drive.domains.uploads.logic.rs",
-	uploadCore: "apps/drive-api/src/drive.domains.uploads.core.rs",
-	uploadComplete: "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
-	uploadTusAppend: "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
-	uploadTusFinalize: "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
-	publicUploads: "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
-	downloadRoutes: "apps/drive-api/src/drive.domains.files.routes.download.rs",
-	downloadStream: "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
-	downloadUrl: "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
-	downloadRange: "apps/drive-api/src/drive.domains.files.transfer.range.rs",
-	publicDownload: "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
-	workerStorage: "apps/drive-worker/src/drive.workers.maintenance.storage.rs",
-	workerDispatch: "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
-	openapiSource: "apps/drive-api/src/drive.http.openapi.rs",
-	openapiJson: "apps/drive-api/openapi.json",
+	uploadLogic: "apps/cloud-service/src/drive.domains.uploads.logic.rs",
+	uploadCore: "apps/cloud-service/src/drive.domains.uploads.core.rs",
+	uploadComplete: "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
+	uploadTusAppend: "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
+	uploadTusFinalize: "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
+	publicUploads: "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+	downloadRoutes: "apps/cloud-service/src/drive.domains.files.routes.download.rs",
+	downloadStream: "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
+	downloadUrl: "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
+	downloadRange: "apps/cloud-service/src/drive.domains.files.transfer.range.rs",
+	publicDownload: "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
+	workerStorage: "apps/cloud-worker/src/drive.workers.maintenance.storage.rs",
+	workerDispatch: "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
+	openapiSource: "apps/cloud-service/src/drive.http.openapi.rs",
+	openapiJson: "apps/cloud-service/openapi.json",
 	dataMap: "docs/migration/data-map.md",
 	jobMap: "docs/migration/job-map.generated.json",
 };
@@ -132,16 +132,16 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/drive-upload-download.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/drive-upload-download.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
 		errors.push(`${outputPath}: generation.sources must match drive upload/download source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-drive-api upload --locked",
-		"cargo test -p nvbes-drive-api download --locked",
-		"cargo test -p nvbes-drive-api resolve_range --locked",
+		"cargo test -p nvbes-cloud-service upload --locked",
+		"cargo test -p nvbes-cloud-service download --locked",
+		"cargo test -p nvbes-cloud-service resolve_range --locked",
 		"pnpm check:migration-reconciliation-report",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -194,7 +194,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-drive-upload-download",
-		"tools/migration/drive-upload-download.mjs --write",
+		"node tools/migration/drive-upload-download.mjs --write",
 		"```",
 		"",
 	);
@@ -206,12 +206,12 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/drive-upload-download.mjs --write",
+		command: "node tools/migration/drive-upload-download.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-drive-api upload --locked",
-			"cargo test -p nvbes-drive-api download --locked",
-			"cargo test -p nvbes-drive-api resolve_range --locked",
+			"cargo test -p nvbes-cloud-service upload --locked",
+			"cargo test -p nvbes-cloud-service download --locked",
+			"cargo test -p nvbes-cloud-service resolve_range --locked",
 			"pnpm check:migration-reconciliation-report",
 		],
 	},
@@ -240,8 +240,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/drive-upload-download.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/drive-upload-download.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/drive-upload-download.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/drive-upload-download.mjs --write`);
 }
 
 if (errors.length > 0) {

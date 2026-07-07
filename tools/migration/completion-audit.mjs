@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { structuredMarkerCount } from "./completion-audit.markers.mjs";
 import { serializeCompletionMarkdown } from "./completion-audit.markdown.mjs";
 import { buildCompletionRequirements } from "./completion-requirements.mjs";
 import { readPackageScripts, validateProofCommand } from "./execution-backlog.proof.mjs";
@@ -20,6 +21,9 @@ const phaseLedgerPath = "docs/migration/phase-ledger.generated.json";
 const domainLedgerPath = "docs/migration/domain-ledger.generated.json";
 const domainDodPath = "docs/migration/domain-dod.generated.json";
 const liveEvidencePath = "docs/migration/live-evidence-instances.generated.json";
+const riskRegisterPath = "docs/migration/risk-register.generated.json";
+const secretMapPath = "docs/migration/secret-map.generated.json";
+const jobMapPath = "docs/migration/job-map.generated.json";
 const errors = [];
 const packageScripts = readPackageScripts(errors);
 
@@ -45,9 +49,7 @@ function read(path) {
 }
 
 function markerCount(path) {
-	const content = read(path).toLowerCase();
-	const matches = content.match(/\b(no-go|pending|blocking|not run|not scheduled|none)\b/g);
-	return matches?.length ?? 0;
+	return structuredMarkerCount(read(path));
 }
 
 function gateSummary(gateEvidence) {
@@ -73,6 +75,19 @@ function ledgerSummary(ledger, key) {
 	};
 }
 
+function riskSummary(register) {
+	const risks = register?.risks ?? [];
+	return {
+		total: risks.length,
+		closed: risks.filter((risk) => ["mitigated", "accepted", "removed"].includes(risk.status)).length,
+		pending: risks.filter((risk) => risk.status === "pending").length,
+	};
+}
+
+function decisionMapReady(map) {
+	return (map?.summary?.entries ?? 0) > 0 && (map?.summary?.pending ?? 1) === 0;
+}
+
 function buildAudit() {
 	const readiness = readJson(readinessPath);
 	const gateEvidence = readJson(gateEvidencePath);
@@ -84,21 +99,29 @@ function buildAudit() {
 	const domainLedger = readJson(domainLedgerPath);
 	const domainDodLedger = readJson(domainDodPath);
 	const liveEvidence = readJson(liveEvidencePath);
+	const riskRegister = readJson(riskRegisterPath);
+	const secretMap = readJson(secretMapPath);
+	const jobMap = readJson(jobMapPath);
 	const gates = gateSummary(gateEvidence);
 	const runtimes = ledgerSummary(runtimeFoundation, "runtimes");
 	const phases = ledgerSummary(phaseLedger, "phases");
 	const domains = ledgerSummary(domainLedger, "domains");
 	const domainDod = ledgerSummary(domainDodLedger, "entries");
+	const risks = riskSummary(riskRegister);
 	const readinessGo = readiness?.status?.production_cutover === "go";
 	const noReadinessBlockers = (readiness?.status?.blocking_items ?? 1) === 0;
 	const targetStructureReady = (targetStructure?.summary?.entries ?? 0) > 0 && (targetStructure?.summary?.pending ?? 1) === 0;
 	const codegenReady = (codegen?.summary?.entries ?? 0) > 0 && (codegen?.summary?.pending ?? 1) === 0;
 	const supplyChainReady = (supplyChain?.summary?.entries ?? 0) > 0 && (supplyChain?.summary?.pending ?? 1) === 0;
+	const secretMapReady = decisionMapReady(secretMap);
+	const jobMapReady = decisionMapReady(jobMap);
+	const decommissionReady = markerCount("docs/migration/decommission-manifest.md") === 0;
 	const allGatesGo = gates.total > 0 && gates.go === gates.total && gates.withEvidence === gates.total;
 	const allRuntimesGo = runtimes.total > 0 && runtimes.go === runtimes.total && runtimes.withEvidence === runtimes.total && runtimes.accepted === runtimes.total;
 	const allPhasesGo = phases.total > 0 && phases.go === phases.total && phases.withEvidence === phases.total && phases.accepted === phases.total;
 	const allDomainsGo = domains.total > 0 && domains.go === domains.total && domains.withEvidence === domains.total && domains.accepted === domains.total;
 	const allDomainDodGo = domainDod.total > 0 && domainDod.go === domainDod.total && domainDod.withEvidence === domainDod.total && domainDod.accepted === domainDod.total;
+	const allRisksClosed = risks.total > 0 && risks.closed === risks.total && risks.pending === 0;
 	const liveEvidenceReady = liveEvidence?.status?.decision === "go" && (liveEvidence?.status?.missing_requirements ?? 1) === 0;
 	const strictReady = readinessGo && noReadinessBlockers && liveEvidenceReady && allGatesGo && allRuntimesGo && allPhasesGo && allDomainsGo && allDomainDodGo;
 	const requirements = buildCompletionRequirements({
@@ -107,6 +130,7 @@ function buildAudit() {
 		allGatesGo,
 		allRuntimesGo,
 		allPhasesGo,
+		allRisksClosed,
 		gateEvidencePath,
 		liveEvidencePath,
 		liveEvidenceReady,
@@ -116,7 +140,10 @@ function buildAudit() {
 		readinessPath,
 		scripts: packageScripts,
 		codegenReady,
+		decommissionReady,
+		jobMapReady,
 		strictReady,
+		secretMapReady,
 		supplyChainReady,
 		targetStructureReady,
 	});
@@ -125,8 +152,8 @@ function buildAudit() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/completion-audit.mjs --write",
-			strict_completion_command: "tools/migration/completion-audit.mjs --strict",
+			command: "node tools/migration/completion-audit.mjs --write",
+			strict_completion_command: "node tools/migration/completion-audit.mjs --strict",
 		},
 		status: {
 			objective: incomplete.length === 0 ? "complete" : "incomplete",
@@ -192,8 +219,8 @@ function validate(audit) {
 
 function validateGeneration(audit) {
 	const generation = audit.generation ?? {};
-	if (generation.command !== "tools/migration/completion-audit.mjs --write") errors.push(`${jsonPath}: generation.command is invalid`);
-	if (generation.strict_completion_command !== "tools/migration/completion-audit.mjs --strict") errors.push(`${jsonPath}: generation.strict_completion_command is invalid`);
+	if (generation.command !== "node tools/migration/completion-audit.mjs --write") errors.push(`${jsonPath}: generation.command is invalid`);
+	if (generation.strict_completion_command !== "node tools/migration/completion-audit.mjs --strict") errors.push(`${jsonPath}: generation.strict_completion_command is invalid`);
 }
 
 function validateStatusShape(audit) {
@@ -248,9 +275,9 @@ validate(audit);
 
 for (const [path, expected] of [[jsonPath, json], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/completion-audit.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/completion-audit.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/completion-audit.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/completion-audit.mjs --write`);
 	}
 }
 

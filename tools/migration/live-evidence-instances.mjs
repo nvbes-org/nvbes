@@ -111,8 +111,8 @@ function buildManifest() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/live-evidence-instances.mjs --write",
-			strict_command: "tools/migration/live-evidence-instances.mjs --strict",
+			command: "node tools/migration/live-evidence-instances.mjs --write",
+			strict_command: "node tools/migration/live-evidence-instances.mjs --strict",
 		},
 		status: {
 			instance_count: instances.length,
@@ -239,14 +239,14 @@ if (write) {
 }
 
 errors.push(...validateManifest(manifest, { jsonPath, strict }));
-if (!existsSync(evidenceDir)) errors.push(`${evidenceDir}: missing; run tools/migration/live-evidence-instances.mjs --write`);
+if (!existsSync(evidenceDir)) errors.push(`${evidenceDir}: missing; run node tools/migration/live-evidence-instances.mjs --write`);
 for (const file of nonJsonInstanceFiles()) errors.push(`${evidenceDir}/${file}: live evidence instances must be JSON files`);
 
 for (const [path, expected] of [[templatePath, templateJson], [jsonPath, manifestJson], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/live-evidence-instances.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/live-evidence-instances.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/live-evidence-instances.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/live-evidence-instances.mjs --write`);
 	}
 }
 

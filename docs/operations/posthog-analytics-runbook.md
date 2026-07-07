@@ -55,11 +55,11 @@ NVBES_ANALYTICS_ID_SALT=
 
 Identity:
 
-- `identity-api` construit le sink serveur PostHog au bootstrap quand
+- `account-service` construit le sink serveur PostHog au bootstrap quand
   `NVBES_POSTHOG_ENABLED=true`.
-- `identity-worker` reutilise le meme `AppState` que l'API et emet les
+- `account-worker` reutilise le meme `AppState` que l'API et emet les
   evenements worker via ce sink serveur.
-- `identity-web` utilise `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` et
+- `account-web` utilise `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` et
   `VITE_ANALYTICS_ID_SALT`; l'initialisation PostHog est lazy et ne demarre
   qu'apres consentement analytics/PostHog.
 - La CSP Identity ajoute `VITE_POSTHOG_HOST` dans `connect-src`; sans host

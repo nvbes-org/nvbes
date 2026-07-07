@@ -23,11 +23,11 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `migrate-staging.sh`: applique les migrations PostgreSQL sur staging apres confirmation explicite.
 - `release-gate.sh`: gates staging et production, avec build, preflight Stripe et E2E critiques pour staging.
 - `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust.
-- `dev-identity-worker.sh`: lance le worker Identity en isolation.
-- `dev-identity-db-reset.sh`: recree la base Identity locale `nvbes` quand les checksums SQLx dev ne correspondent plus.
-- `dev-drive-worker.sh`: lance le worker Drive en isolation.
-- `dev-drive-db-reset.sh`: recree la base Drive locale `nvbes_drive` quand les checksums SQLx dev ne correspondent plus.
-- `dev-worker.sh`: alias historique vers le worker Identity.
+- `dev-account-worker.sh`: lance le worker Account en isolation.
+- `dev-account-db-reset.sh`: recree la base Account locale `nvbes` quand les checksums SQLx dev ne correspondent plus.
+- `dev-cloud-worker.sh`: lance le worker Cloud en isolation.
+- `dev-cloud-db-reset.sh`: recree la base Cloud locale `nvbes_cloud` quand les checksums SQLx dev ne correspondent plus.
+- `dev-worker.sh`: alias historique vers le worker Account.
 - `generate-openapi.sh`: regenere les specs OpenAPI et republie `libs/ts/identity-sdk-core/openapi.json`.
 
 Variables attendues pour les tests deployes:
@@ -49,5 +49,5 @@ Variables attendues par les gates:
 - `NVBES_PRODUCTION_WEB_BASE_URL` et `NVBES_PRODUCTION_API_BASE_URL` pour le smoke production post-deploiement
 - `NVBES_STAGING_DATABASE_URL` et `NVBES_ALLOW_STAGING_MIGRATION=yes` pour `db:migrate:staging`
 - `NVBES_DATABASE_URL` pour `test-e2e-critical.sh` et `beta:seed:staging`
-- `NVBES_IDENTITY_API_BASE_URL` et `NVBES_DRIVE_API_BASE_URL` pour `beta:seed:staging` quand Identity et Drive ne sont pas agreges derriere `NVBES_API_BASE_URL`
+- `NVBES_ACCOUNT_SERVICE_BASE_URL` et `NVBES_CLOUD_SERVICE_BASE_URL` pour `beta:seed:staging` quand Identity et Drive ne sont pas agreges derriere `NVBES_API_BASE_URL`
 - `NVBES_BETA_SEED_EMAIL`, `NVBES_BETA_SEED_PASSWORD`, `NVBES_BETA_SEED_WORKSPACE` pour `beta:seed:staging`

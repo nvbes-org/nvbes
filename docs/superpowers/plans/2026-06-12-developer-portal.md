@@ -4,7 +4,7 @@
 
 **Goal:** Build a production-connected developer site and portal for nvbes Identity with OAuth app management, fine-grained developer RBAC, token tools, logs, webhooks, OpenAPI, SDK links, and quickstarts.
 
-**Architecture:** Add `apps/developer-web` as a standalone React/Vite app and add a `developer` domain inside `apps/identity-api` as the backend product facade. The developer domain enforces developer permissions before delegating to existing OAuth, session, security event, and tenant primitives. Each task below leaves the repository in a compiling or narrowly testable state.
+**Architecture:** Add `apps/console-web` as a standalone React/Vite app and add a `developer` domain inside `apps/account-service` as the backend product facade. The developer domain enforces developer permissions before delegating to existing OAuth, session, security event, and tenant primitives. Each task below leaves the repository in a compiling or narrowly testable state.
 
 **Tech Stack:** Rust, Axum, SQLx, PostgreSQL, utoipa OpenAPI, pnpm workspaces, Nx, React, TypeScript, Vite, TanStack Router, TanStack Query, `@nvbes/web-ui`, `@nvbes/web-runtime`, lucide-react.
 
@@ -14,43 +14,43 @@
 
 Frontend app:
 
-- Create `apps/developer-web/package.json`: npm scripts and dependencies for Nx inferred targets.
-- Create `apps/developer-web/project.json`: Nx project metadata.
-- Create `apps/developer-web/index.html`: Vite root HTML.
-- Create `apps/developer-web/tsconfig.json`: app TypeScript project config.
-- Create `apps/developer-web/vite.config.ts`: Vite Plus config with React, Tailwind, devtools JSON, and `/api` proxy.
-- Create `apps/developer-web/src/main.tsx`: React entrypoint.
-- Create `apps/developer-web/src/App.tsx`: providers and router mount.
-- Create `apps/developer-web/src/styles.css`: Tailwind theme entry and developer app tokens.
-- Create `apps/developer-web/src/developer.router.tsx`: route tree.
-- Create `apps/developer-web/src/developer.api.ts`: typed API functions.
-- Create `apps/developer-web/src/developer.schemas.ts`: Zod response and form schemas.
-- Create `apps/developer-web/src/developer.fixtures.ts`: local docs content and deterministic UI fallback data for docs-only views.
-- Create `apps/developer-web/src/layouts/DeveloperPublicLayout.tsx`: public docs layout.
-- Create `apps/developer-web/src/layouts/DeveloperPortalLayout.tsx`: authenticated portal shell.
-- Create page files under `apps/developer-web/src/pages/`: `DeveloperHomePage.tsx`, `QuickstartPage.tsx`, `ApiReferencePage.tsx`, `PortalOverviewPage.tsx`, `PortalAppsPage.tsx`, `PortalAppDetailPage.tsx`, `PortalTokenInspectorPage.tsx`, `PortalOAuthPlaygroundPage.tsx`, `PortalLogsPage.tsx`, `PortalWebhooksPage.tsx`, `PortalRolesPage.tsx`.
+- Create `apps/console-web/package.json`: npm scripts and dependencies for Nx inferred targets.
+- Create `apps/console-web/project.json`: Nx project metadata.
+- Create `apps/console-web/index.html`: Vite root HTML.
+- Create `apps/console-web/tsconfig.json`: app TypeScript project config.
+- Create `apps/console-web/vite.config.ts`: Vite Plus config with React, Tailwind, devtools JSON, and `/api` proxy.
+- Create `apps/console-web/src/main.tsx`: React entrypoint.
+- Create `apps/console-web/src/App.tsx`: providers and router mount.
+- Create `apps/console-web/src/styles.css`: Tailwind theme entry and developer app tokens.
+- Create `apps/console-web/src/developer.router.tsx`: route tree.
+- Create `apps/console-web/src/developer.api.ts`: typed API functions.
+- Create `apps/console-web/src/developer.schemas.ts`: Zod response and form schemas.
+- Create `apps/console-web/src/developer.fixtures.ts`: local docs content and deterministic UI fallback data for docs-only views.
+- Create `apps/console-web/src/layouts/DeveloperPublicLayout.tsx`: public docs layout.
+- Create `apps/console-web/src/layouts/DeveloperPortalLayout.tsx`: authenticated portal shell.
+- Create page files under `apps/console-web/src/pages/`: `DeveloperHomePage.tsx`, `QuickstartPage.tsx`, `ApiReferencePage.tsx`, `PortalOverviewPage.tsx`, `PortalAppsPage.tsx`, `PortalAppDetailPage.tsx`, `PortalTokenInspectorPage.tsx`, `PortalOAuthPlaygroundPage.tsx`, `PortalLogsPage.tsx`, `PortalWebhooksPage.tsx`, `PortalRolesPage.tsx`.
 
 Root web scripts:
 
-- Modify `package.json`: add `developer-web` to root web build/check/lint project lists and add `dev:developer-web`.
-- Create `scripts/dev-developer-web.sh`: start the new app consistently with existing web scripts.
+- Modify `package.json`: add `console-web` to root web build/check/lint project lists and add `dev:console-web`.
+- Create `scripts/dev-console-web.sh`: start the new app consistently with existing web scripts.
 
 Backend domain:
 
-- Create `apps/identity-api/migrations/0008_developer_portal.sql`: developer role assignments, webhook endpoints, subscriptions, and deliveries.
-- Create `apps/identity-api/src/identity.domains.developer.mod.rs`: module declarations and router.
-- Create `apps/identity-api/src/identity.domains.developer.types.rs`: request/response DTOs and OpenAPI schemas.
-- Create `apps/identity-api/src/identity.domains.developer.rbac.rs`: permission matrix and enforcement helpers.
-- Create `apps/identity-api/src/identity.domains.developer.rbac.db.rs`: SQLx role assignment queries.
-- Create `apps/identity-api/src/identity.domains.developer.apps.routes.rs`: `/developer/apps` route handlers.
-- Create `apps/identity-api/src/identity.domains.developer.apps.service.rs`: OAuth facade for developer apps.
-- Create `apps/identity-api/src/identity.domains.developer.tokens.routes.rs`: token inspector and OAuth playground exchange route handlers.
-- Create `apps/identity-api/src/identity.domains.developer.logs.routes.rs`: filtered logs route handlers.
-- Create `apps/identity-api/src/identity.domains.developer.webhooks.routes.rs`: webhook endpoint route handlers.
-- Create `apps/identity-api/src/identity.domains.developer.webhooks.service.rs`: webhook endpoint, subscription, delivery, and signing helpers.
-- Create `apps/identity-api/src/identity.domains.developer.tests.rs`: focused RBAC and facade tests.
-- Modify `apps/identity-api/src/identity.domains.mod.rs`: expose and merge the developer router.
-- Modify `apps/identity-api/src/identity.http.openapi.rs`: add developer tag and paths.
+- Create `apps/account-service/migrations/0008_developer_portal.sql`: developer role assignments, webhook endpoints, subscriptions, and deliveries.
+- Create `apps/account-service/src/identity.domains.developer.mod.rs`: module declarations and router.
+- Create `apps/account-service/src/identity.domains.developer.types.rs`: request/response DTOs and OpenAPI schemas.
+- Create `apps/account-service/src/identity.domains.developer.rbac.rs`: permission matrix and enforcement helpers.
+- Create `apps/account-service/src/identity.domains.developer.rbac.db.rs`: SQLx role assignment queries.
+- Create `apps/account-service/src/identity.domains.developer.apps.routes.rs`: `/developer/apps` route handlers.
+- Create `apps/account-service/src/identity.domains.developer.apps.service.rs`: OAuth facade for developer apps.
+- Create `apps/account-service/src/identity.domains.developer.tokens.routes.rs`: token inspector and OAuth playground exchange route handlers.
+- Create `apps/account-service/src/identity.domains.developer.logs.routes.rs`: filtered logs route handlers.
+- Create `apps/account-service/src/identity.domains.developer.webhooks.routes.rs`: webhook endpoint route handlers.
+- Create `apps/account-service/src/identity.domains.developer.webhooks.service.rs`: webhook endpoint, subscription, delivery, and signing helpers.
+- Create `apps/account-service/src/identity.domains.developer.tests.rs`: focused RBAC and facade tests.
+- Modify `apps/account-service/src/identity.domains.mod.rs`: expose and merge the developer router.
+- Modify `apps/account-service/src/identity.http.openapi.rs`: add developer tag and paths.
 
 OpenAPI and docs:
 
@@ -61,29 +61,29 @@ OpenAPI and docs:
 
 ---
 
-## Task 1: Scaffold `developer-web`
+## Task 1: Scaffold `console-web`
 
 **Files:**
 
-- Create: `apps/developer-web/package.json`
-- Create: `apps/developer-web/project.json`
-- Create: `apps/developer-web/index.html`
-- Create: `apps/developer-web/tsconfig.json`
-- Create: `apps/developer-web/vite.config.ts`
-- Create: `apps/developer-web/src/main.tsx`
-- Create: `apps/developer-web/src/App.tsx`
-- Create: `apps/developer-web/src/styles.css`
-- Create: `apps/developer-web/src/developer.router.tsx`
+- Create: `apps/console-web/package.json`
+- Create: `apps/console-web/project.json`
+- Create: `apps/console-web/index.html`
+- Create: `apps/console-web/tsconfig.json`
+- Create: `apps/console-web/vite.config.ts`
+- Create: `apps/console-web/src/main.tsx`
+- Create: `apps/console-web/src/App.tsx`
+- Create: `apps/console-web/src/styles.css`
+- Create: `apps/console-web/src/developer.router.tsx`
 - Modify: `package.json`
-- Create: `scripts/dev-developer-web.sh`
+- Create: `scripts/dev-console-web.sh`
 
 - [ ] **Step 1: Create the package manifest**
 
-Create `apps/developer-web/package.json`:
+Create `apps/console-web/package.json`:
 
 ```json
 {
-  "name": "nvbes-developer-web",
+  "name": "nvbes-console-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -136,21 +136,21 @@ Create `apps/developer-web/package.json`:
 
 - [ ] **Step 2: Create the Nx project metadata**
 
-Create `apps/developer-web/project.json`:
+Create `apps/console-web/project.json`:
 
 ```json
 {
-  "name": "developer-web",
+  "name": "console-web",
   "projectType": "application",
-  "root": "apps/developer-web",
-  "sourceRoot": "apps/developer-web/src",
+  "root": "apps/console-web",
+  "sourceRoot": "apps/console-web/src",
   "tags": ["type:app", "domain:identity", "layer:app"]
 }
 ```
 
 - [ ] **Step 3: Create TypeScript and Vite entry files**
 
-Create `apps/developer-web/tsconfig.json`:
+Create `apps/console-web/tsconfig.json`:
 
 ```json
 {
@@ -167,7 +167,7 @@ Create `apps/developer-web/tsconfig.json`:
 }
 ```
 
-Create `apps/developer-web/index.html`:
+Create `apps/console-web/index.html`:
 
 ```html
 <!doctype html>
@@ -185,7 +185,7 @@ Create `apps/developer-web/index.html`:
 </html>
 ```
 
-Create `apps/developer-web/vite.config.ts`:
+Create `apps/console-web/vite.config.ts`:
 
 ```ts
 import tailwindcss from '@tailwindcss/vite';
@@ -196,10 +196,10 @@ import { defineConfig, loadEnv } from 'vite-plus';
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, '../../', '');
-  const identityApiProxyTarget =
-    process.env.VITE_IDENTITY_API_PROXY_TARGET ||
-    localEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    rootEnv.VITE_IDENTITY_API_PROXY_TARGET ||
+  const accountServiceProxyTarget =
+    process.env.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    localEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    rootEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
     'http://localhost:8080';
 
   return {
@@ -207,9 +207,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5175,
       proxy: {
-        '/api': identityApiProxyTarget,
-        '/developer': identityApiProxyTarget,
-        '/oauth': identityApiProxyTarget,
+        '/api': accountServiceProxyTarget,
+        '/developer': accountServiceProxyTarget,
+        '/oauth': accountServiceProxyTarget,
       },
     },
   };
@@ -218,7 +218,7 @@ export default defineConfig(({ mode }) => {
 
 - [ ] **Step 4: Create a minimal route tree**
 
-Create `apps/developer-web/src/developer.router.tsx`:
+Create `apps/console-web/src/developer.router.tsx`:
 
 ```tsx
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
@@ -313,7 +313,7 @@ declare module '@tanstack/react-router' {
 
 - [ ] **Step 5: Create React app entrypoint**
 
-Create `apps/developer-web/src/App.tsx`:
+Create `apps/console-web/src/App.tsx`:
 
 ```tsx
 import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
@@ -328,7 +328,7 @@ export default function App() {
   const [queryClient] = useState(() => createQueryClient());
 
   return (
-    <ErrorBoundary name="developer-web">
+    <ErrorBoundary name="console-web">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         {import.meta.env.DEV ? (
@@ -343,7 +343,7 @@ export default function App() {
 }
 ```
 
-Create `apps/developer-web/src/main.tsx`:
+Create `apps/console-web/src/main.tsx`:
 
 ```tsx
 import React from 'react';
@@ -363,7 +363,7 @@ ReactDOM.createRoot(rootEl).render(
 );
 ```
 
-Create `apps/developer-web/src/styles.css`:
+Create `apps/console-web/src/styles.css`:
 
 ```css
 @import 'tailwindcss';
@@ -431,28 +431,28 @@ Modify root `package.json`:
 ```json
 {
   "scripts": {
-    "dev:developer-web": "bash scripts/dev-developer-web.sh",
-    "build:web": "pnpm --dir apps/drive-web build && pnpm --dir apps/identity-web build && pnpm --dir apps/developer-web build"
+    "dev:console-web": "bash scripts/dev-console-web.sh",
+    "build:web": "pnpm --dir apps/cloud-web build && pnpm --dir apps/account-web build && pnpm --dir apps/console-web build"
   }
 }
 ```
 
-Also add `developer-web` to root `build`, `check:web`, `format:check`, and `lint:web` project lists next to `identity-web`.
+Also add `console-web` to root `build`, `check:web`, `format:check`, and `lint:web` project lists next to `account-web`.
 
-Create `scripts/dev-developer-web.sh`:
+Create `scripts/dev-console-web.sh`:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-pnpm --dir apps/developer-web dev
+pnpm --dir apps/console-web dev
 ```
 
 Run:
 
 ```bash
-rtk chmod +x scripts/dev-developer-web.sh
+rtk chmod +x scripts/dev-console-web.sh
 ```
 
 - [ ] **Step 7: Verify Nx discovers the app**
@@ -460,18 +460,18 @@ rtk chmod +x scripts/dev-developer-web.sh
 Run:
 
 ```bash
-rtk pnpm exec nx show project developer-web --json
+rtk pnpm exec nx show project console-web --json
 ```
 
-Expected: JSON output with `"root":"apps/developer-web"` and targets including `build`, `lint`, and `typecheck`.
+Expected: JSON output with `"root":"apps/console-web"` and targets including `build`, `lint`, and `typecheck`.
 
 - [ ] **Step 8: Verify frontend checks**
 
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
 ```
 
 Expected: both commands pass.
@@ -479,8 +479,8 @@ Expected: both commands pass.
 - [ ] **Step 9: Commit**
 
 ```bash
-rtk git add apps/developer-web package.json scripts/dev-developer-web.sh
-rtk git commit -m "feat(developer): scaffold developer web app"
+rtk git add apps/console-web package.json scripts/dev-console-web.sh
+rtk git commit -m "feat(developer): scaffold console web app"
 ```
 
 ---
@@ -489,16 +489,16 @@ rtk git commit -m "feat(developer): scaffold developer web app"
 
 **Files:**
 
-- Create: `apps/identity-api/migrations/0008_developer_portal.sql`
-- Create: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.rbac.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.mod.rs`
+- Create: `apps/account-service/migrations/0008_developer_portal.sql`
+- Create: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Create: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.rbac.rs`
+- Create: `apps/account-service/src/identity.domains.developer.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.mod.rs`
 
 - [ ] **Step 1: Write failing RBAC tests**
 
-Create `apps/identity-api/src/identity.domains.developer.tests.rs`:
+Create `apps/account-service/src/identity.domains.developer.tests.rs`:
 
 ```rust
 use super::rbac::{DeveloperPermission, DeveloperRole, permissions_for_role};
@@ -537,14 +537,14 @@ fn docs_viewer_has_only_docs_access() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api developer_ --lib
+rtk cargo test -p nvbes-account-service developer_ --lib
 ```
 
 Expected: fail because the developer module does not exist.
 
 - [ ] **Step 3: Add SQL migration**
 
-Create `apps/identity-api/migrations/0008_developer_portal.sql`:
+Create `apps/account-service/migrations/0008_developer_portal.sql`:
 
 ```sql
 CREATE TYPE developer_role AS ENUM (
@@ -626,7 +626,7 @@ CREATE INDEX idx_developer_webhook_deliveries_tenant_event
 
 - [ ] **Step 4: Add RBAC types and permission mapping**
 
-Create `apps/identity-api/src/identity.domains.developer.rbac.rs`:
+Create `apps/account-service/src/identity.domains.developer.rbac.rs`:
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -727,7 +727,7 @@ impl DeveloperRole {
 }
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.types.rs`:
+Create `apps/account-service/src/identity.domains.developer.types.rs`:
 
 ```rust
 use serde::Serialize;
@@ -745,7 +745,7 @@ pub struct DeveloperMeResponse {
 
 - [ ] **Step 5: Add module declarations and empty router**
 
-Create `apps/identity-api/src/identity.domains.developer.mod.rs`:
+Create `apps/account-service/src/identity.domains.developer.mod.rs`:
 
 ```rust
 use axum::Router;
@@ -766,7 +766,7 @@ pub fn router(_state: &AppState) -> Router<AppState> {
 }
 ```
 
-Modify `apps/identity-api/src/identity.domains.mod.rs`:
+Modify `apps/account-service/src/identity.domains.mod.rs`:
 
 ```rust
 #[path = "identity.domains.developer.mod.rs"]
@@ -780,7 +780,7 @@ Add `.merge(developer::router(state))` in `router`.
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api developer_ --lib
+rtk cargo test -p nvbes-account-service developer_ --lib
 ```
 
 Expected: pass.
@@ -788,7 +788,7 @@ Expected: pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-rtk git add apps/identity-api/migrations/0008_developer_portal.sql apps/identity-api/src/identity.domains.developer.*.rs apps/identity-api/src/identity.domains.mod.rs
+rtk git add apps/account-service/migrations/0008_developer_portal.sql apps/account-service/src/identity.domains.developer.*.rs apps/account-service/src/identity.domains.mod.rs
 rtk git commit -m "feat(identity): add developer rbac foundation"
 ```
 
@@ -798,15 +798,15 @@ rtk git commit -m "feat(identity): add developer rbac foundation"
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.developer.rbac.db.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Modify: `apps/identity-api/src/identity.http.openapi.rs`
+- Create: `apps/account-service/src/identity.domains.developer.rbac.db.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Modify: `apps/account-service/src/identity.http.openapi.rs`
 
 - [ ] **Step 1: Add database loader**
 
-Create `apps/identity-api/src/identity.domains.developer.rbac.db.rs`:
+Create `apps/account-service/src/identity.domains.developer.rbac.db.rs`:
 
 ```rust
 use std::collections::HashSet;
@@ -871,7 +871,7 @@ pub fn parse_developer_role(role: &str) -> Result<DeveloperRole, AppError> {
 
 - [ ] **Step 2: Add route handler**
 
-Create `apps/identity-api/src/identity.domains.developer.routes.rs`:
+Create `apps/account-service/src/identity.domains.developer.routes.rs`:
 
 ```rust
 use axum::{Extension, Json, Router, extract::State, routing::get};
@@ -926,7 +926,7 @@ pub async fn me(
 
 - [ ] **Step 3: Wire the module**
 
-Modify `apps/identity-api/src/identity.domains.developer.mod.rs`:
+Modify `apps/account-service/src/identity.domains.developer.mod.rs`:
 
 ```rust
 use axum::Router;
@@ -953,7 +953,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 - [ ] **Step 4: Add OpenAPI tag and path**
 
-Modify `apps/identity-api/src/identity.http.openapi.rs`:
+Modify `apps/account-service/src/identity.http.openapi.rs`:
 
 ```rust
 (name = "developer", description = "Developer portal, apps, webhooks, logs, and integration tools"),
@@ -970,7 +970,7 @@ crate::domains::developer::routes::me,
 Run:
 
 ```bash
-rtk cargo check -p nvbes-identity-api
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass.
@@ -978,7 +978,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.developer.*.rs apps/identity-api/src/identity.http.openapi.rs
+rtk git add apps/account-service/src/identity.domains.developer.*.rs apps/account-service/src/identity.http.openapi.rs
 rtk git commit -m "feat(identity): expose developer portal access"
 ```
 
@@ -988,15 +988,15 @@ rtk git commit -m "feat(identity): expose developer portal access"
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.developer.apps.routes.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.apps.service.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Modify: `apps/identity-api/src/identity.http.openapi.rs`
+- Create: `apps/account-service/src/identity.domains.developer.apps.routes.rs`
+- Create: `apps/account-service/src/identity.domains.developer.apps.service.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Modify: `apps/account-service/src/identity.http.openapi.rs`
 
 - [ ] **Step 1: Add app DTOs**
 
-Append to `apps/identity-api/src/identity.domains.developer.types.rs`:
+Append to `apps/account-service/src/identity.domains.developer.types.rs`:
 
 ```rust
 use chrono::{DateTime, Utc};
@@ -1043,7 +1043,7 @@ pub struct UpdateDeveloperRedirectsRequest {
 
 - [ ] **Step 2: Add permission helper**
 
-Append to `apps/identity-api/src/identity.domains.developer.rbac.rs`:
+Append to `apps/account-service/src/identity.domains.developer.rbac.rs`:
 
 ```rust
 pub fn has_permission(permissions: &[DeveloperPermission], required: DeveloperPermission) -> bool {
@@ -1053,7 +1053,7 @@ pub fn has_permission(permissions: &[DeveloperPermission], required: DeveloperPe
 
 - [ ] **Step 3: Add service facade**
 
-Create `apps/identity-api/src/identity.domains.developer.apps.service.rs`:
+Create `apps/account-service/src/identity.domains.developer.apps.service.rs`:
 
 ```rust
 use sqlx::PgPool;
@@ -1159,7 +1159,7 @@ impl From<crate::domains::oauth::service::types::OAuthClientView> for DeveloperA
 
 - [ ] **Step 4: Add routes**
 
-Create `apps/identity-api/src/identity.domains.developer.apps.routes.rs` with handlers for list, create, get, update redirects, and revoke. Each handler must load permissions with `rbac_db::permissions_for_roles`, enforce the required permission, then call the service. Use required permissions:
+Create `apps/account-service/src/identity.domains.developer.apps.routes.rs` with handlers for list, create, get, update redirects, and revoke. Each handler must load permissions with `rbac_db::permissions_for_roles`, enforce the required permission, then call the service. Use required permissions:
 
 ```rust
 DeveloperPermission::AppsRead
@@ -1172,7 +1172,7 @@ Use the same `jwt_auth_middleware` pattern as `identity.domains.developer.routes
 
 - [ ] **Step 5: Wire app routes**
 
-Modify `apps/identity-api/src/identity.domains.developer.mod.rs`:
+Modify `apps/account-service/src/identity.domains.developer.mod.rs`:
 
 ```rust
 #[path = "identity.domains.developer.apps.routes.rs"]
@@ -1200,7 +1200,7 @@ crate::domains::developer::apps_routes::revoke_app,
 Run:
 
 ```bash
-rtk cargo check -p nvbes-identity-api
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass. If `CreateOAuthClientInput` fields differ because of concurrent OAuth work, adapt only the constructor in `apps.service.rs` to the current type and keep the route contract unchanged.
@@ -1208,7 +1208,7 @@ Expected: pass. If `CreateOAuthClientInput` fields differ because of concurrent 
 - [ ] **Step 8: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.developer.*.rs apps/identity-api/src/identity.http.openapi.rs
+rtk git add apps/account-service/src/identity.domains.developer.*.rs apps/account-service/src/identity.http.openapi.rs
 rtk git commit -m "feat(identity): add developer app management facade"
 ```
 
@@ -1218,15 +1218,15 @@ rtk git commit -m "feat(identity): add developer app management facade"
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.developer.webhooks.service.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.webhooks.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Modify: `apps/identity-api/src/identity.http.openapi.rs`
+- Create: `apps/account-service/src/identity.domains.developer.webhooks.service.rs`
+- Create: `apps/account-service/src/identity.domains.developer.webhooks.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Modify: `apps/account-service/src/identity.http.openapi.rs`
 
 - [ ] **Step 1: Add webhook DTOs**
 
-Append to `apps/identity-api/src/identity.domains.developer.types.rs`:
+Append to `apps/account-service/src/identity.domains.developer.types.rs`:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -1270,7 +1270,7 @@ pub struct DeveloperWebhooksResponse {
 
 - [ ] **Step 2: Add webhook service**
 
-Create `apps/identity-api/src/identity.domains.developer.webhooks.service.rs` with these public functions:
+Create `apps/account-service/src/identity.domains.developer.webhooks.service.rs` with these public functions:
 
 ```rust
 pub async fn list_endpoints(
@@ -1316,7 +1316,7 @@ If a repo helper exists, use it and keep the route response unchanged.
 
 - [ ] **Step 3: Add webhook routes**
 
-Create `apps/identity-api/src/identity.domains.developer.webhooks.routes.rs` with:
+Create `apps/account-service/src/identity.domains.developer.webhooks.routes.rs` with:
 
 - `GET /developer/webhooks` requiring `DeveloperPermission::WebhooksRead`
 - `POST /developer/webhooks` requiring `DeveloperPermission::WebhooksManage`
@@ -1341,7 +1341,7 @@ crate::domains::developer::webhooks_routes::delete_webhook,
 Run:
 
 ```bash
-rtk cargo check -p nvbes-identity-api
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass.
@@ -1349,7 +1349,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.developer.*.rs apps/identity-api/src/identity.http.openapi.rs
+rtk git add apps/account-service/src/identity.domains.developer.*.rs apps/account-service/src/identity.http.openapi.rs
 rtk git commit -m "feat(identity): add developer webhooks"
 ```
 
@@ -1359,11 +1359,11 @@ rtk git commit -m "feat(identity): add developer webhooks"
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.developer.tokens.routes.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.logs.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Modify: `apps/identity-api/src/identity.http.openapi.rs`
+- Create: `apps/account-service/src/identity.domains.developer.tokens.routes.rs`
+- Create: `apps/account-service/src/identity.domains.developer.logs.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Modify: `apps/account-service/src/identity.http.openapi.rs`
 
 - [ ] **Step 1: Add DTOs**
 
@@ -1418,7 +1418,7 @@ pub struct DeveloperLogsResponse {
 
 - [ ] **Step 2: Implement token routes**
 
-Create `apps/identity-api/src/identity.domains.developer.tokens.routes.rs` with:
+Create `apps/account-service/src/identity.domains.developer.tokens.routes.rs` with:
 
 - `POST /developer/tokens/inspect` requiring `DeveloperPermission::TokensInspect`
 - `POST /developer/oauth/playground/exchange` requiring `DeveloperPermission::OAuthPlayground`
@@ -1438,7 +1438,7 @@ Ok(Json(InspectDeveloperTokenResponse {
 
 - [ ] **Step 3: Implement logs route**
 
-Create `apps/identity-api/src/identity.domains.developer.logs.routes.rs` with `GET /developer/logs` requiring `DeveloperPermission::LogsRead`. Query params:
+Create `apps/account-service/src/identity.domains.developer.logs.routes.rs` with `GET /developer/logs` requiring `DeveloperPermission::LogsRead`. Query params:
 
 ```rust
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
@@ -1467,7 +1467,7 @@ crate::domains::developer::logs_routes::list_logs,
 Run:
 
 ```bash
-rtk cargo check -p nvbes-identity-api
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass.
@@ -1475,7 +1475,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.developer.*.rs apps/identity-api/src/identity.http.openapi.rs
+rtk git add apps/account-service/src/identity.domains.developer.*.rs apps/account-service/src/identity.http.openapi.rs
 rtk git commit -m "feat(identity): add developer integration tools"
 ```
 
@@ -1485,7 +1485,7 @@ rtk git commit -m "feat(identity): add developer integration tools"
 
 **Files:**
 
-- Modify: `apps/identity-api/openapi.json`
+- Modify: `apps/account-service/openapi.json`
 - Modify: `libs/ts/identity-sdk-core/openapi.json`
 - Modify: `libs/ts/identity-sdk-core/src/types.gen.ts`
 - Create: `docs/api/identity-developer-portal.md`
@@ -1498,7 +1498,7 @@ Run:
 rtk pnpm generate:openapi
 ```
 
-Expected: `apps/identity-api/openapi.json` and `libs/ts/identity-sdk-core/openapi.json` include `/developer/me`, `/developer/apps`, `/developer/webhooks`, `/developer/tokens/inspect`, `/developer/oauth/playground/exchange`, and `/developer/logs`.
+Expected: `apps/account-service/openapi.json` and `libs/ts/identity-sdk-core/openapi.json` include `/developer/me`, `/developer/apps`, `/developer/webhooks`, `/developer/tokens/inspect`, `/developer/oauth/playground/exchange`, and `/developer/logs`.
 
 - [ ] **Step 2: Generate TypeScript OpenAPI types**
 
@@ -1517,7 +1517,7 @@ Create `docs/api/identity-developer-portal.md`:
 ```markdown
 # Identity Developer Portal API
 
-The developer portal API is served by `identity-api` under `/developer`.
+The developer portal API is served by `account-service` under `/developer`.
 
 ## Permissions
 
@@ -1550,7 +1550,7 @@ Webhook deliveries are signed. The signing secret is displayed only when created
 Run:
 
 ```bash
-rtk git diff -- apps/identity-api/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts docs/api/identity-developer-portal.md
+rtk git diff -- apps/account-service/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts docs/api/identity-developer-portal.md
 ```
 
 Expected: only developer API additions and generated type changes.
@@ -1558,7 +1558,7 @@ Expected: only developer API additions and generated type changes.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add apps/identity-api/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts docs/api/identity-developer-portal.md
+rtk git add apps/account-service/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts docs/api/identity-developer-portal.md
 rtk git commit -m "docs(api): expose developer portal contract"
 ```
 
@@ -1568,15 +1568,15 @@ rtk git commit -m "docs(api): expose developer portal contract"
 
 **Files:**
 
-- Create: `apps/developer-web/src/developer.schemas.ts`
-- Create: `apps/developer-web/src/developer.api.ts`
-- Create: `apps/developer-web/src/layouts/DeveloperPublicLayout.tsx`
-- Create: `apps/developer-web/src/layouts/DeveloperPortalLayout.tsx`
-- Modify: `apps/developer-web/src/developer.router.tsx`
+- Create: `apps/console-web/src/developer.schemas.ts`
+- Create: `apps/console-web/src/developer.api.ts`
+- Create: `apps/console-web/src/layouts/DeveloperPublicLayout.tsx`
+- Create: `apps/console-web/src/layouts/DeveloperPortalLayout.tsx`
+- Modify: `apps/console-web/src/developer.router.tsx`
 
 - [ ] **Step 1: Add Zod schemas**
 
-Create `apps/developer-web/src/developer.schemas.ts`:
+Create `apps/console-web/src/developer.schemas.ts`:
 
 ```ts
 import { z } from 'zod';
@@ -1636,7 +1636,7 @@ export type DeveloperApp = z.infer<typeof DeveloperAppSchema>;
 
 - [ ] **Step 2: Add API functions**
 
-Create `apps/developer-web/src/developer.api.ts`:
+Create `apps/console-web/src/developer.api.ts`:
 
 ```ts
 import { identityHttpClient } from '@nvbes/identity-client';
@@ -1673,7 +1673,7 @@ export function hasDeveloperPermission(
 
 - [ ] **Step 3: Add portal layout**
 
-Create `apps/developer-web/src/layouts/DeveloperPortalLayout.tsx`:
+Create `apps/console-web/src/layouts/DeveloperPortalLayout.tsx`:
 
 ```tsx
 import { useQuery } from '@tanstack/react-query';
@@ -1748,7 +1748,7 @@ export function DeveloperPortalLayout() {
 
 - [ ] **Step 4: Add public layout**
 
-Create `apps/developer-web/src/layouts/DeveloperPublicLayout.tsx`:
+Create `apps/console-web/src/layouts/DeveloperPublicLayout.tsx`:
 
 ```tsx
 import { Link, Outlet } from '@tanstack/react-router';
@@ -1781,8 +1781,8 @@ export function DeveloperPublicLayout() {
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
 ```
 
 Expected: pass.
@@ -1790,7 +1790,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src
+rtk git add apps/console-web/src
 rtk git commit -m "feat(developer): add portal API shell"
 ```
 
@@ -1800,22 +1800,22 @@ rtk git commit -m "feat(developer): add portal API shell"
 
 **Files:**
 
-- Create/modify page files under `apps/developer-web/src/pages/`
-- Modify: `apps/developer-web/src/developer.router.tsx`
+- Create/modify page files under `apps/console-web/src/pages/`
+- Modify: `apps/console-web/src/developer.router.tsx`
 
 - [ ] **Step 1: Create page components**
 
 Create these page files with focused components:
 
 ```text
-apps/developer-web/src/pages/PortalOverviewPage.tsx
-apps/developer-web/src/pages/PortalAppsPage.tsx
-apps/developer-web/src/pages/PortalAppDetailPage.tsx
-apps/developer-web/src/pages/PortalTokenInspectorPage.tsx
-apps/developer-web/src/pages/PortalOAuthPlaygroundPage.tsx
-apps/developer-web/src/pages/PortalLogsPage.tsx
-apps/developer-web/src/pages/PortalWebhooksPage.tsx
-apps/developer-web/src/pages/PortalRolesPage.tsx
+apps/console-web/src/pages/PortalOverviewPage.tsx
+apps/console-web/src/pages/PortalAppsPage.tsx
+apps/console-web/src/pages/PortalAppDetailPage.tsx
+apps/console-web/src/pages/PortalTokenInspectorPage.tsx
+apps/console-web/src/pages/PortalOAuthPlaygroundPage.tsx
+apps/console-web/src/pages/PortalLogsPage.tsx
+apps/console-web/src/pages/PortalWebhooksPage.tsx
+apps/console-web/src/pages/PortalRolesPage.tsx
 ```
 
 Use this empty-state pattern in every data page:
@@ -1903,8 +1903,8 @@ Add public and portal child routes for every route listed in the spec.
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
 ```
 
 Expected: pass.
@@ -1912,7 +1912,7 @@ Expected: pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-rtk git add apps/developer-web/src
+rtk git add apps/console-web/src
 rtk git commit -m "feat(developer): build portal screens"
 ```
 
@@ -1922,16 +1922,16 @@ rtk git commit -m "feat(developer): build portal screens"
 
 **Files:**
 
-- Create: `apps/developer-web/src/developer.quickstarts.ts`
-- Create: `apps/developer-web/src/pages/DeveloperHomePage.tsx`
-- Create: `apps/developer-web/src/pages/QuickstartPage.tsx`
-- Create: `apps/developer-web/src/pages/ApiReferencePage.tsx`
-- Modify: `apps/developer-web/src/developer.router.tsx`
+- Create: `apps/console-web/src/developer.quickstarts.ts`
+- Create: `apps/console-web/src/pages/DeveloperHomePage.tsx`
+- Create: `apps/console-web/src/pages/QuickstartPage.tsx`
+- Create: `apps/console-web/src/pages/ApiReferencePage.tsx`
+- Modify: `apps/console-web/src/developer.router.tsx`
 - Modify: `libs/ts/identity-sdk/README.md`
 
 - [ ] **Step 1: Add quickstart content**
 
-Create `apps/developer-web/src/developer.quickstarts.ts`:
+Create `apps/console-web/src/developer.quickstarts.ts`:
 
 ```ts
 export const quickstarts = {
@@ -1941,7 +1941,7 @@ export const quickstarts = {
     code: `import { createIdentityClient } from '@nvbes/identity-sdk-web';
 
 export const identity = createIdentityClient({
-  issuer: import.meta.env.VITE_NVBES_IDENTITY_ISSUER,
+  issuer: import.meta.env.VITE_NVBES_ACCOUNT_ISSUER,
   clientId: import.meta.env.VITE_NVBES_CLIENT_ID,
   redirectUri: window.location.origin + '/auth/callback',
 });`,
@@ -1965,13 +1965,13 @@ pub fn router() -> Router {
     code: `import { createIdentityClient } from '@nvbes/identity-sdk';
 
 const identity = createIdentityClient({
-  baseUrl: process.env.NVBES_IDENTITY_API_URL,
+  baseUrl: process.env.NVBES_ACCOUNT_SERVICE_URL,
 });`,
   },
   curl: {
     title: 'curl quickstart',
-    command: 'curl https://identity.nvbes.fr/.well-known/openid-configuration',
-    code: `curl -s https://identity.nvbes.fr/.well-known/openid-configuration | jq .issuer`,
+    command: 'curl https://account.nvbes.fr/.well-known/openid-configuration',
+    code: `curl -s https://account.nvbes.fr/.well-known/openid-configuration | jq .issuer`,
   },
 } as const;
 ```
@@ -2002,8 +2002,8 @@ The nvbes Developer Portal includes quickstarts for React, Rust Axum, Node, and 
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
 ```
 
 Expected: pass.
@@ -2011,7 +2011,7 @@ Expected: pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add apps/developer-web/src libs/ts/identity-sdk/README.md
+rtk git add apps/console-web/src libs/ts/identity-sdk/README.md
 rtk git commit -m "feat(developer): add quickstarts and api reference"
 ```
 
@@ -2038,8 +2038,8 @@ Expected: pass.
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
 rtk pnpm check:structure
 rtk pnpm check:nx-boundaries
 ```
@@ -2052,7 +2052,7 @@ Run:
 
 ```bash
 rtk pnpm generate:openapi
-rtk git diff --exit-code apps/identity-api/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts
+rtk git diff --exit-code apps/account-service/openapi.json libs/ts/identity-sdk-core/openapi.json libs/ts/identity-sdk-core/src/types.gen.ts
 ```
 
 Expected: no diff after generated files are committed.
@@ -2062,7 +2062,7 @@ Expected: no diff after generated files are committed.
 Run:
 
 ```bash
-rtk pnpm dev:developer-web
+rtk pnpm dev:console-web
 ```
 
 Expected: Vite starts on `http://localhost:5175`.
@@ -2080,7 +2080,7 @@ Open `http://localhost:5175` in the in-app browser. Verify:
 - [ ] **Step 6: Commit final fixes**
 
 ```bash
-rtk git add apps/developer-web apps/identity-api libs/ts/identity-sdk-core libs/ts/identity-sdk docs/api package.json scripts
+rtk git add apps/console-web apps/account-service libs/ts/identity-sdk-core libs/ts/identity-sdk docs/api package.json scripts
 rtk git commit -m "chore(developer): verify developer portal"
 ```
 
@@ -2090,7 +2090,7 @@ rtk git commit -m "chore(developer): verify developer portal"
 
 Spec coverage:
 
-- Dedicated `apps/developer-web`: covered by Tasks 1, 8, 9, and 10.
+- Dedicated `apps/console-web`: covered by Tasks 1, 8, 9, and 10.
 - Developer RBAC roles and fine permissions: covered by Tasks 2 and 3.
 - Dashboard app creation, redirects, client ID copy: covered by Tasks 4 and 9.
 - OpenAPI and generated SDK types: covered by Task 7.

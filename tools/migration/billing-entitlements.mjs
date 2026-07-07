@@ -12,13 +12,13 @@ const sources = {
 	sharedViews: "libs/rust/billing/src/views.rs",
 	sharedTypes: "libs/rust/billing/src/types.rs",
 	sharedShared: "libs/rust/billing/src/shared.rs",
-	billingPublicWorkspaceRoutes: "apps/billing-api/src/billing.domains.public_workspace.rs",
-	billingInternalWorkspaceRoutes: "apps/billing-api/src/billing.domains.workspace.rs",
-	billingWorkspaceAuth: "apps/billing-api/src/billing.auth.rs",
+	billingPublicWorkspaceRoutes: "apps/billing-service/src/billing.domains.public_workspace.rs",
+	billingInternalWorkspaceRoutes: "apps/billing-service/src/billing.domains.workspace.rs",
+	billingWorkspaceAuth: "apps/billing-service/src/billing.auth.rs",
 	billingWorkspaceViews: "libs/rust/billing/src/workspace_views.rs",
 	billingCheckoutSessions: "libs/rust/billing/src/checkout_sessions.rs",
 	billingPortalActions: "libs/rust/billing/src/portal_actions.rs",
-	driveEntitlements: "apps/drive-api/src/drive.domains.billing.entitlements.rs",
+	driveEntitlements: "apps/cloud-service/src/drive.domains.billing.entitlements.rs",
 	entitlementEvent: "contracts/events/billing.entitlement.changed.v1.schema.json",
 	eventManifest: "contracts/events/manifest.json",
 	dataMap: "docs/migration/data-map.md",
@@ -65,14 +65,14 @@ function buildChecks() {
 		textCheck("shared-invoice-test", sources.sharedViews, "Invoice overage calculation is covered by unit test", "build_invoice_estimate_charges_only_billable_overages"),
 		textCheck("shared-usage-overage", sources.sharedViews, "Invoice estimate charges storage and seat overages", "storage_overage_amount_cents + seat_overage_amount_cents"),
 		textCheck("shared-lock-helper", sources.sharedShared, "Billing policy helper locks degraded subscription statuses", "subscription_status_requires_lock"),
-		textCheck("billing-api-overview", sources.billingWorkspaceViews, "Billing service overview returns entitlements", "entitlements: entitlements_view(&record)"),
-		textCheck("billing-api-usage-ledger", sources.billingWorkspaceViews, "Billing service usage response exposes billable storage and seats", "billable_quantity"),
-		textCheck("billing-api-entitlements-route", sources.billingPublicWorkspaceRoutes, "Billing API exposes public entitlements endpoint", '"/workspaces/{workspaceId}/billing/entitlements"'),
-		textCheck("billing-api-entitlements-authz", sources.billingPublicWorkspaceRoutes, "Billing entitlements endpoint requires Billing read authorization", "BillingWorkspacePermission::Read"),
-		textCheck("billing-api-entitlements-service", sources.billingWorkspaceViews, "Billing service returns workspace entitlements", "fetch_workspace_entitlements"),
-		textCheck("billing-api-type-response", sources.billingPublicWorkspaceRoutes, "Billing API returns shared entitlement response type", "ProductEntitlementsView"),
-		textCheck("billing-api-internal-entitlements-route", sources.billingInternalWorkspaceRoutes, "Billing API exposes internal entitlements endpoint", '"/internal/workspaces/{workspaceId}/billing/entitlements"'),
-		textCheck("billing-api-identity-authz", sources.billingWorkspaceAuth, "Billing API authorizes requests through Identity introspection", "introspect_identity_token"),
+		textCheck("billing-service-overview", sources.billingWorkspaceViews, "Billing service overview returns entitlements", "entitlements: entitlements_view(&record)"),
+		textCheck("billing-service-usage-ledger", sources.billingWorkspaceViews, "Billing service usage response exposes billable storage and seats", "billable_quantity"),
+		textCheck("billing-service-entitlements-route", sources.billingPublicWorkspaceRoutes, "billing-service exposes public entitlements endpoint", '"/workspaces/{workspaceId}/billing/entitlements"'),
+		textCheck("billing-service-entitlements-authz", sources.billingPublicWorkspaceRoutes, "Billing entitlements endpoint requires Billing read authorization", "BillingWorkspacePermission::Read"),
+		textCheck("billing-service-entitlements-service", sources.billingWorkspaceViews, "Billing service returns workspace entitlements", "fetch_workspace_entitlements"),
+		textCheck("billing-service-type-response", sources.billingPublicWorkspaceRoutes, "billing-service returns shared entitlement response type", "ProductEntitlementsView"),
+		textCheck("billing-service-internal-entitlements-route", sources.billingInternalWorkspaceRoutes, "billing-service exposes internal entitlements endpoint", '"/internal/workspaces/{workspaceId}/billing/entitlements"'),
+		textCheck("billing-service-identity-authz", sources.billingWorkspaceAuth, "billing-service authorizes requests through Account introspection", "introspect_identity_token"),
 		textCheck("billing-checkout-policy-lock", sources.billingCheckoutSessions, "Billing checkout enforces lock policy", "subscription_status_requires_lock(&record.subscription_status)"),
 		textCheck("billing-portal-policy-lock", sources.billingPortalActions, "Billing portal operations enforce lock policy", "subscription_status_requires_lock(&record.subscription_status)"),
 		textCheck("drive-entitlement-projection", sources.driveEntitlements, "Drive projects Billing entitlement events locally", "drive_entitlement_projection_from_event"),
@@ -119,7 +119,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/billing-entitlements.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/billing-entitlements.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -180,7 +180,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-billing-entitlements",
-		"tools/migration/billing-entitlements.mjs --write",
+		"node tools/migration/billing-entitlements.mjs --write",
 		"```",
 		"",
 	);
@@ -192,7 +192,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/billing-entitlements.mjs --write",
+		command: "node tools/migration/billing-entitlements.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-billing entitlements_view --locked",
@@ -225,8 +225,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/billing-entitlements.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/billing-entitlements.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/billing-entitlements.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/billing-entitlements.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -68,7 +68,7 @@ function normalizeUrl(value, name) {
 function loadOpenApiSpec() {
 	const stdout = execFileSync(
 		"cargo",
-		["run", "-p", "nvbes-identity-api", "--", "--export-openapi"],
+		["run", "-p", "nvbes-account-service", "--", "--export-openapi"],
 		{
 			cwd: ROOT_DIR,
 			encoding: "utf8",
@@ -753,7 +753,7 @@ function prepareSeededAuthAccount(credentials, workspaceName) {
 			"run",
 			"-q",
 			"-p",
-			"nvbes-identity-api",
+			"nvbes-account-service",
 			"--",
 			"--prepare-beta-e2e-account",
 			"--email",

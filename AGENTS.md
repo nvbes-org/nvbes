@@ -26,12 +26,21 @@ Monorepo full-stack avec Rust (Axum), TypeScript/React, orchestré par pnpm work
 ```
 nvbes/
 ├── apps/
-│   ├── drive-api/          # API stockage/fichiers (Axum)
-│   ├── drive-web/          # Frontend Drive (React + shadcn/ui)
-│   ├── drive-worker/       # Worker asynchrone Drive
-│   ├── identity-api/       # Service d'identité (Axum)
-│   ├── identity-web/       # Frontend Identity (React)
-│   └── identity-worker/    # Worker asynchrone Identity
+│   ├── account-service/    # Service Account / identité (Axum)
+│   ├── account-web/        # Frontend Account (React)
+│   ├── account-worker/     # Worker asynchrone Account
+│   ├── billing-service/    # Service Billing (Axum)
+│   ├── billing-worker/     # Worker asynchrone Billing
+│   ├── cloud-service/      # API stockage/fichiers Cloud (Axum)
+│   ├── cloud-web/          # Frontend Cloud/Drive (React + shadcn/ui)
+│   ├── cloud-worker/       # Worker asynchrone Cloud
+│   ├── console-web/        # Frontend Developer Console
+│   ├── developer-service/  # Service Developer (Axum)
+│   ├── enterprise-service/ # Service Enterprise (Axum)
+│   ├── enterprise-web/     # Frontend Enterprise
+│   ├── gateway-cloud/      # Gateway Cloud
+│   ├── backoffice-service/ # Service Backoffice (Axum)
+│   └── backoffice-web/     # Frontend Backoffice
 ├── libs/
 │   ├── rust/
 │   │   ├── core/           # Primitives partagées (config, auth, mfa)
@@ -68,7 +77,7 @@ nvbes/
 Les fichiers Rust utilisent une convention plate avec des noms qualifiés par des points, pour une navigation LLM optimale :
 
 ```
-apps/identity-api/src/
+apps/account-service/src/
 ├── identity.app.rs                    # AppState
 ├── identity.domains.billing.mod.rs    # module billing
 ├── identity.domains.billing.service.rs# logique métier
@@ -90,7 +99,7 @@ pub mod routes;
 **Règles** :
 
 - Tous les fichiers `.rs` sont dans `src/` (pas de sous-répertoires profonds)
-- Le préfixe (`identity.`, `drive.`) identifie la crate
+- Le préfixe (`identity.`, `drive.`, `backoffice.`) identifie la crate ou le domaine historique conservé dans le fichier
 - Le suffixe (`service`, `routes`, `db`) identifie la couche
 - Les modules Rust restent organisés logiquement via `mod.rs`
 
@@ -106,7 +115,7 @@ Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier ent
 ## Philosophie d'architecture
 
 - Favoriser le graphe de projets et les frontières de domaine nettes plutôt qu’un gros dossier monolithique.
-- Préserver l’indépendance des produits `identity` et `drive`.
+- Préserver l’indépendance des produits Account, Cloud, Billing, Developer, Enterprise et Backoffice.
 - Partager seulement les primitives réellement transverses.
 - Toute extraction doit réduire la taille cognitive du code, pas seulement déplacer des lignes.
 - Le backlog de refactor agentique est documenté dans [docs/blueprint/nvbes-monorepo-agentic-refactor.work.md](docs/blueprint/nvbes-monorepo-agentic-refactor.work.md).
@@ -114,13 +123,13 @@ Fichiers sous 300 lignes = contexte LLM optimal. Le LLM peut lire un fichier ent
 ## Commandes
 
 ```bash
-pnpm dev              # APIs, frontends et worker Identity historique
+pnpm dev              # Runtimes locaux principaux
 pnpm dev:web          # Frontend uniquement
-pnpm dev:api          # APIs Rust + worker Identity historique
-pnpm dev:identity-api # API Identity
-pnpm dev:drive-api    # API Drive
-pnpm dev:identity-worker
-pnpm dev:drive-worker
+pnpm dev:api          # Services Rust
+pnpm dev:account-service
+pnpm dev:cloud-service
+pnpm dev:account-worker
+pnpm dev:cloud-worker
 pnpm check            # Checks complets
 pnpm lint             # Lint complet
 pnpm test             # Tests complets
@@ -208,10 +217,10 @@ Le codebase est conçu pour être navigable par des LLMs (Claude Code, Cursor) :
 
 ### Règles de conception
 
-- `apps/identity-api` est le produit final, pas un copié de `apps/drive-api`
+- `apps/account-service` est le produit Account final, pas un copié de `apps/cloud-service`
 - Réécrire le code si nécessaire plutôt que de copier/coller
 - Les services doivent être complets ou non-existants (pas de moitié implémenté)
-- Pas de duplication de code entre `apps/drive-api` et `apps/identity-api`
+- Pas de duplication de code entre `apps/cloud-service` et `apps/account-service`
 
 ### Architecture des Services
 

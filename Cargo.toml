@@ -1,13 +1,15 @@
 [workspace]
 members = [
-  "apps/billing-api",
+  "apps/billing-service",
   "apps/billing-worker",
-  "apps/drive-api",
-  "apps/drive-worker",
-  "apps/gateway-graphql",
-  "apps/identity-api",
-  "apps/identity-worker",
-  "apps/internal-admin",
+  "apps/cloud-service",
+  "apps/cloud-worker",
+  "apps/developer-service",
+  "apps/gateway-cloud",
+  "apps/account-service",
+  "apps/account-worker",
+  "apps/enterprise-service",
+  "apps/backoffice-service",
   "libs/rust/audit",
   "libs/rust/billing",
   "libs/rust/core",
@@ -22,6 +24,10 @@ members = [
   "libs/rust/platform",
   "libs/rust/ports",
   "libs/rust/product-analytics",
+  "libs/rust/products/account",
+  "libs/rust/products/cloud",
+  "libs/rust/products/developer",
+  "libs/rust/products/enterprise",
   "libs/rust/scan",
   "libs/rust/storage",
   "libs/rust/tenancy",
@@ -45,6 +51,7 @@ base64 = "0.22.1"
 chrono = { version = "0.4.44", features = ["serde"] }
 csv = "1.3.1"
 data-encoding = "2.9.0"
+hex = "0.4"
 hkdf = "0.12.4"
 hmac = "0.12.1"
 ipnet = "2.11.0"

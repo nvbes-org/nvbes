@@ -30,13 +30,13 @@ function keyFor(entry) {
 
 function inferDomain(file, table) {
 	const name = table.toLowerCase();
-	if (file.startsWith("apps/billing-api/migrations/")) return "Billing/Usage";
+	if (file.startsWith("apps/billing-service/migrations/")) return "Billing/Usage";
 	if (name.includes("developer") || name.includes("oauth_client") || name.includes("webhook")) return "Developer Platform";
 	if (name.includes("billing") || name.includes("invoice") || name.includes("subscription") || name.includes("usage") || name.includes("plan") || name.includes("stripe")) return "Billing/Usage";
 	if (name.includes("audit") || name.includes("privacy") || name.includes("consent")) return "Audit/Privacy";
 	if (name.includes("storage") || name.includes("upload") || name.includes("share") || name.includes("quota")) return "Drive";
 	if (name.includes("workspace") || name.includes("organization") || name.includes("tenant") || name.includes("member") || name.includes("invitation")) return "Workspace/Authz";
-	if (file.includes("drive-api/")) return "Drive";
+	if (file.includes("cloud-service/")) return "Drive";
 	return "Identity";
 }
 
@@ -136,7 +136,7 @@ function mergeExisting(generated, existing) {
 				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
 			};
 		}
-		if (entry.source.file.startsWith("apps/billing-api/migrations/")) {
+		if (entry.source.file.startsWith("apps/billing-service/migrations/")) {
 			return {
 				...entry,
 				decision: current.decision && current.decision !== "pending" ? current.decision : entry.decision,
@@ -221,7 +221,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-data-map",
-		"tools/migration/data-map.mjs --write",
+		"node tools/migration/data-map.mjs --write",
 		"```",
 		"",
 	);
@@ -232,9 +232,9 @@ function validate(map, expectedEntries) {
 	const expectedKeys = new Set(expectedEntries.map(keyFor));
 	const seen = new Set();
 	if (map.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (map.generation?.command !== "tools/migration/data-map.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
+	if (map.generation?.command !== "node tools/migration/data-map.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
 	if (map.generation?.source !== inventoryPath) errors.push(`${outputPath}: generation.source is invalid`);
-	if (map.generation?.strict_cutover_command !== "tools/migration/data-map.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
+	if (map.generation?.strict_cutover_command !== "node tools/migration/data-map.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	if (!Array.isArray(map.entries)) errors.push(`${outputPath}: entries must be an array`);
 	validateDecisionMapRows({ map, expectedEntries, keyFor, outputPath, errors });
 	for (const entry of map.entries ?? []) {
@@ -265,9 +265,9 @@ const existing = existsSync(outputPath) ? readJson(outputPath) : undefined;
 const dataMap = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/data-map.mjs --write",
+		command: "node tools/migration/data-map.mjs --write",
 		source: inventoryPath,
-		strict_cutover_command: "tools/migration/data-map.mjs --strict",
+		strict_cutover_command: "node tools/migration/data-map.mjs --strict",
 	},
 	summary: { entries: generatedEntries.length, pending: 0, keep: 0, rebuild: 0, remove: 0, replace: 0 },
 	entries: mergeExisting(generatedEntries, existing),
@@ -285,10 +285,10 @@ if (write) {
 
 validate(dataMap, generatedEntries);
 
-if (!existsSync(outputPath)) errors.push(`${outputPath}: missing; run tools/migration/data-map.mjs --write`);
-else if (readFileSync(outputPath, "utf8") !== serialize(dataMap)) errors.push(`${outputPath}: stale; run tools/migration/data-map.mjs --write`);
-if (!existsSync(markdownPath)) errors.push(`${markdownPath}: missing; run tools/migration/data-map.mjs --write`);
-else if (readFileSync(markdownPath, "utf8") !== serializeMarkdown(dataMap)) errors.push(`${markdownPath}: stale; run tools/migration/data-map.mjs --write`);
+if (!existsSync(outputPath)) errors.push(`${outputPath}: missing; run node tools/migration/data-map.mjs --write`);
+else if (readFileSync(outputPath, "utf8") !== serialize(dataMap)) errors.push(`${outputPath}: stale; run node tools/migration/data-map.mjs --write`);
+if (!existsSync(markdownPath)) errors.push(`${markdownPath}: missing; run node tools/migration/data-map.mjs --write`);
+else if (readFileSync(markdownPath, "utf8") !== serializeMarkdown(dataMap)) errors.push(`${markdownPath}: stale; run node tools/migration/data-map.mjs --write`);
 
 if (errors.length > 0) {
 	console.error("Migration data-map checks failed:");

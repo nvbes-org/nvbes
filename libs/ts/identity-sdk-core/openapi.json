@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "nvbes Identity API",
+    "title": "nvbes Account Service",
     "description": "Authentication, authorization, and identity management API",
     "contact": {
       "name": "nvbes",
@@ -14,7 +14,7 @@
   },
   "servers": [
     {
-      "url": "https://identity.nvbes.fr",
+      "url": "https://account.nvbes.fr",
       "description": "Production"
     },
     {
@@ -212,6 +212,292 @@
           },
           "500": {
             "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/billing/workspaces/{workspaceId}/checkout": {
+      "post": {
+        "tags": [
+          "account-billing"
+        ],
+        "operationId": "create_account_checkout",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountCheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Account billing checkout session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBillingSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Billing service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/billing/workspaces/{workspaceId}/overview": {
+      "get": {
+        "tags": [
+          "account-billing"
+        ],
+        "operationId": "get_account_billing_overview",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account billing overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBillingOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Billing service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/billing/workspaces/{workspaceId}/portal": {
+      "get": {
+        "tags": [
+          "account-billing"
+        ],
+        "operationId": "get_account_billing_portal",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account billing portal view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBillingPortalView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Billing service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "account-billing"
+        ],
+        "operationId": "create_account_billing_portal",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountBillingPortalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Account billing portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBillingSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Billing service unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -8871,6 +9157,271 @@
           }
         }
       },
+      "AccountBillingEntitlements": {
+        "type": "object",
+        "required": [
+          "included_storage_gb",
+          "included_users",
+          "retention_days",
+          "max_share_links",
+          "audit_level"
+        ],
+        "properties": {
+          "audit_level": {
+            "type": "string"
+          },
+          "included_storage_gb": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "included_users": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "max_share_links": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "retention_days": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AccountBillingInvoice": {
+        "type": "object",
+        "required": [
+          "invoice_id",
+          "status",
+          "total_minor",
+          "currency",
+          "providers"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "invoice_id": {
+            "type": "string"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issued_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingProviderReference"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "total_minor": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AccountBillingOverview": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "plan_code",
+          "subscription_status",
+          "billing_provider",
+          "entitlements"
+        ],
+        "properties": {
+          "billing_provider": {
+            "type": "string"
+          },
+          "current_period_end": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current_period_start": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entitlements": {
+            "$ref": "#/components/schemas/AccountBillingEntitlements"
+          },
+          "plan_code": {
+            "type": "string"
+          },
+          "subscription_status": {
+            "type": "string"
+          },
+          "workspace_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountBillingPaymentMethod": {
+        "type": "object",
+        "required": [
+          "payment_method_id",
+          "providers"
+        ],
+        "properties": {
+          "brand": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exp_month": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "exp_year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "last4": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_method_id": {
+            "type": "string"
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingProviderReference"
+            }
+          }
+        }
+      },
+      "AccountBillingPortalView": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "provider",
+          "invoices",
+          "payment_methods",
+          "subscriptions"
+        ],
+        "properties": {
+          "invoices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingInvoice"
+            }
+          },
+          "payment_methods": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingPaymentMethod"
+            }
+          },
+          "provider": {
+            "type": "string"
+          },
+          "subscriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingSubscription"
+            }
+          },
+          "workspace_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountBillingProviderReference": {
+        "type": "object",
+        "required": [
+          "provider",
+          "status",
+          "primary",
+          "fallback_eligible"
+        ],
+        "properties": {
+          "fallback_eligible": {
+            "type": "boolean"
+          },
+          "primary": {
+            "type": "boolean"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountBillingSession": {
+        "type": "object",
+        "required": [
+          "url",
+          "provider"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountBillingSubscription": {
+        "type": "object",
+        "required": [
+          "subscription_id",
+          "status",
+          "providers"
+        ],
+        "properties": {
+          "plan_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountBillingProviderReference"
+            }
+          },
+          "status": {
+            "type": "string"
+          },
+          "subscription_id": {
+            "type": "string"
+          }
+        }
+      },
       "AccountChooserResult": {
         "type": "object",
         "required": [
@@ -9536,6 +10087,40 @@
           },
           "scope": {
             "$ref": "#/components/schemas/AccessReviewCampaignScopeInput"
+          }
+        }
+      },
+      "CreateAccountBillingPortalRequest": {
+        "type": "object",
+        "properties": {
+          "return_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CreateAccountCheckoutRequest": {
+        "type": "object",
+        "required": [
+          "plan_code"
+        ],
+        "properties": {
+          "cancel_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "plan_code": {
+            "type": "string"
+          },
+          "success_url": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -15016,6 +15601,10 @@
     {
       "name": "developer",
       "description": "Developer portal, apps, webhooks, logs, and integration tools"
+    },
+    {
+      "name": "account-billing",
+      "description": "Account-facing Billing facade"
     }
   ]
 }

@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 export function validateInventory(value, outputPath) {
 	const errors = [];
 	if (value.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (value.generation?.command !== "tools/migration/inventory.mjs --write") {
+	if (value.generation?.command !== "node tools/migration/inventory.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (value.generation?.deterministic !== true) {

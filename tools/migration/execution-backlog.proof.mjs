@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 
 export function readPackageScripts(errors, path = "package.json") {
 	try {
@@ -40,6 +40,7 @@ export function validateProofCommand(task, scripts) {
 		}
 		if (bin?.startsWith("tools/migration/")) {
 			validateToolPath(task, bin, errors);
+			validateDirectToolExecutable(task, bin, errors);
 			continue;
 		}
 		errors.push(`${task.id}: proof uses unsupported command segment ${segment}`);
@@ -115,4 +116,12 @@ function validateToolPath(task, toolPath, errors) {
 		return;
 	}
 	if (!existsSync(toolPath)) errors.push(`${task.id}: proof tool is missing: ${toolPath}`);
+}
+
+function validateDirectToolExecutable(task, toolPath, errors) {
+	if (!existsSync(toolPath)) return;
+	const executable = (statSync(toolPath).mode & 0o111) !== 0;
+	if (!executable) {
+		errors.push(`${task.id}: proof must use node ${toolPath} because the tool is not executable`);
+	}
 }

@@ -10,7 +10,7 @@ No breaking changes or high-risk actions are introduced. The backend endpoint `/
 
 ### Backend
 
-#### [MODIFY] [identity.domains.developer.tests.rs](file:///Users/shayn/Development/nvbes/apps/identity-api/src/identity.domains.developer.tests.rs)
+#### [MODIFY] [identity.domains.developer.tests.rs](file:///Users/shayn/Development/nvbes/apps/account-service/src/identity.domains.developer.tests.rs)
 - Add a new integration test `test_webhook_replay_workflow` that:
   - Sets up a tenant, a webhook endpoint, and a failed webhook delivery.
   - Calls the `replay_delivery` route.
@@ -20,11 +20,11 @@ No breaking changes or high-risk actions are introduced. The backend endpoint `/
 
 ### Frontend
 
-#### [MODIFY] [developer.api.ts](file:///Users/shayn/Development/nvbes/apps/developer-web/src/developer.api.ts)
+#### [MODIFY] [developer.api.ts](file:///Users/shayn/Development/nvbes/apps/console-web/src/developer.api.ts)
 - Add `listDeveloperConsoleWebhookDeliveries` function.
 - Add `replayDeveloperConsoleWebhookDelivery` function.
 
-#### [MODIFY] [WebhooksPage.tsx](file:///Users/shayn/Development/nvbes/apps/developer-web/src/pages/WebhooksPage.tsx)
+#### [MODIFY] [WebhooksPage.tsx](file:///Users/shayn/Development/nvbes/apps/console-web/src/pages/WebhooksPage.tsx)
 - Upgrade the endpoint listing to support an expandable/accordion view.
 - Introduce a sub-component `WebhookDeliveriesList` which:
   - Fetches delivery history for the given endpoint ID.
@@ -40,11 +40,11 @@ No breaking changes or high-risk actions are introduced. The backend endpoint `/
 ### Automated Tests
 - Run backend tests:
   ```bash
-  rtk cargo test -p identity-api domains::developer
+  rtk cargo test -p account-service domains::developer
   ```
 - Run frontend tests:
   ```bash
-  pnpm --filter developer-web test
+  pnpm --filter console-web test
   ```
 
 ### Manual Verification

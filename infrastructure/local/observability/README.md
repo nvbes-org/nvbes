@@ -1,6 +1,6 @@
 # Local observability
 
-La stack locale couvre Identity API, Identity web et Identity worker avec:
+La stack locale couvre Account Service, Account web et Account worker avec:
 
 - Grafana: UI locale et provisioning declaratif.
 - Prometheus: scrape local des endpoints `/metrics`.
@@ -10,7 +10,7 @@ La stack locale couvre Identity API, Identity web et Identity worker avec:
 - Pyroscope: profiles continus.
 - Alloy: entree OTLP, Faro, Pyroscope et pipeline de redaction logs/traces.
 - Beyla: eBPF opt-in pour instrumentation automatique Linux.
-- k6: smoke de charge Identity avec remote-write Mimir.
+- k6: smoke de charge Account avec remote-write Mimir.
 
 ## Demarrage
 
@@ -36,16 +36,16 @@ Endpoints locaux principaux:
 
 ## Variables applicatives
 
-Pour envoyer Identity API et worker vers Alloy/Tempo/Pyroscope:
+Pour envoyer Account Service et worker vers Alloy/Tempo/Pyroscope:
 
 ```bash
 NVBES_OTLP_ENDPOINT=http://127.0.0.1:14317
 NVBES_PROFILING_ENABLED=true
 NVBES_PROFILING_ENDPOINT=http://127.0.0.1:4040
-NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
+NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR=127.0.0.1:4102
 ```
 
-Pour activer Faro cote Identity web, apres consentement `grafana` ou
+Pour activer Faro cote Account web, apres consentement `grafana` ou
 `performance`:
 
 ```bash
@@ -78,7 +78,7 @@ payload ou contenu utilisateur.
 
 ## k6
 
-Le smoke k6 cible `GET /health` sur Identity API et pousse ses metriques vers
+Le smoke k6 cible `GET /health` sur Account Service et pousse ses metriques vers
 Mimir:
 
 ```bash
@@ -94,7 +94,7 @@ pnpm dev:infra:obs:k6:identity
 Surcharges utiles:
 
 ```bash
-IDENTITY_API_BASE_URL=http://host.docker.internal:4000 K6_VUS=2 K6_DURATION=1m \
+ACCOUNT_SERVICE_BASE_URL=http://host.docker.internal:4000 K6_VUS=2 K6_DURATION=1m \
   docker compose --profile loadtest -f infrastructure/local/docker-compose.yml run --rm k6-identity-smoke
 ```
 

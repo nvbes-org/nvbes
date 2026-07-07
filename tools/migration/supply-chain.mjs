@@ -32,8 +32,8 @@ function buildLedger() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/supply-chain.mjs --write",
-			strict_cutover_command: "tools/migration/supply-chain.mjs --strict",
+			command: "node tools/migration/supply-chain.mjs --write",
+			strict_cutover_command: "node tools/migration/supply-chain.mjs --strict",
 		},
 		summary: {
 			entries: entries.length,
@@ -74,7 +74,7 @@ function serializeMarkdown(ledger) {
 	for (const entry of ledger.entries) {
 		lines.push(`| ${entry.id} | ${entry.status} | \`${entry.command}\` | \`${entry.evidence}\` |`);
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-supply-chain", "tools/migration/supply-chain.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-supply-chain", "node tools/migration/supply-chain.mjs --write", "```", "");
 	return lines.join("\n");
 }
 
@@ -119,10 +119,10 @@ function validate(ledger) {
 	if (summary.active !== active) errors.push(`${outputPath}: summary.active must be ${active}`);
 	if (summary.pending !== pending) errors.push(`${outputPath}: summary.pending must be ${pending}`);
 	if (strict && pending !== 0) errors.push(`${outputPath}: strict cutover requires zero pending controls`);
-	if (ledger.generation?.command !== "tools/migration/supply-chain.mjs --write") {
+	if (ledger.generation?.command !== "node tools/migration/supply-chain.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
-	if (ledger.generation?.strict_cutover_command !== "tools/migration/supply-chain.mjs --strict") {
+	if (ledger.generation?.strict_cutover_command !== "node tools/migration/supply-chain.mjs --strict") {
 		errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	}
 }
@@ -141,8 +141,8 @@ if (write) {
 
 validate(ledger);
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/supply-chain.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/supply-chain.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/supply-chain.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/supply-chain.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <!-- Content Security Policy (CSP) dynamique par environnement -->
+    <!-- %CSP_META% -->
+    <!-- Protection Referrer -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- Désactivation détection de format automatique (prévention fuite de données) -->
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <meta
+      name="description"
+      content="nvbes Drive — stockage sécurisé, partage de fichiers et synchronisation cloud pour la plateforme nvbes."
+    />
+    <meta name="robots" content="index, follow" />
+    <!-- Sécurité XSS Legacy (Fallback) -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta property="og:title" content="nvbes Drive" />
+    <meta
+      property="og:description"
+      content="nvbes Drive — stockage sécurisé, partage de fichiers et synchronisation cloud pour la plateforme nvbes."
+    />
+    <meta property="og:url" content="https://drive.nvbes.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="nvbes" />
+    <meta property="og:image" content="/icon.svg" />
+    <meta name="application-name" content="nvbes Drive" />
+    <meta name="apple-mobile-web-app-title" content="nvbes Drive" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="mask-icon" href="/icon.svg" color="#0a0a0a" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>nvbes Drive</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          font-family: system-ui, sans-serif;
+          color: #666;
+          text-align: center;
+          padding: 2rem;
+        "
+      >
+        <p>
+          nvbes Drive nécessite JavaScript pour fonctionner. Veuillez activer JavaScript dans votre
+          navigateur.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" crossorigin="anonymous" src="/src/main.tsx"></script>
+  </body>
+</html>

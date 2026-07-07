@@ -166,7 +166,7 @@ services:
     environment:
       K6_PROMETHEUS_RW_SERVER_URL: http://mimir:9009/api/v1/push
       K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),min,max
-      IDENTITY_API_BASE_URL: ${IDENTITY_API_BASE_URL:-http://host.docker.internal:4000}
+      ACCOUNT_SERVICE_BASE_URL: ${ACCOUNT_SERVICE_BASE_URL:-http://host.docker.internal:4000}
     volumes:
       - ./observability/k6:/scripts:ro
     extra_hosts:

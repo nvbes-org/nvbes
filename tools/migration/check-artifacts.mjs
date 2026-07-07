@@ -28,12 +28,12 @@ const commandCoverage = [
 	],
 ];
 const generatedArtifactChecks = [
-	["docs/migration/readiness-report.generated.json", "pnpm check:migration-readiness-report", "tools/migration/readiness-report.mjs --write"],
-	["docs/migration/completion-audit.generated.json", "pnpm check:migration-completion-audit", "tools/migration/completion-audit.mjs --write"],
-	["docs/migration/execution-backlog.generated.json", "pnpm check:migration-execution-backlog", "tools/migration/execution-backlog.mjs --write"],
+	["docs/migration/readiness-report.generated.json", "pnpm check:migration-readiness-report", "node tools/migration/readiness-report.mjs --write"],
+	["docs/migration/completion-audit.generated.json", "pnpm check:migration-completion-audit", "node tools/migration/completion-audit.mjs --write"],
+	["docs/migration/execution-backlog.generated.json", "pnpm check:migration-execution-backlog", "node tools/migration/execution-backlog.mjs --write"],
 	["tools/migration/status-consistency.mjs", "pnpm check:migration-status-consistency"],
-	["docs/migration/cutover-evidence-packet.generated.json", "pnpm check:migration-cutover-evidence-packet", "tools/migration/cutover-evidence-packet.mjs --write"],
-	["docs/migration/live-evidence-instances.generated.json", "pnpm check:migration-live-evidence-instances", "tools/migration/live-evidence-instances.mjs --write"],
+	["docs/migration/cutover-evidence-packet.generated.json", "pnpm check:migration-cutover-evidence-packet", "node tools/migration/cutover-evidence-packet.mjs --write"],
+	["docs/migration/live-evidence-instances.generated.json", "pnpm check:migration-live-evidence-instances", "node tools/migration/live-evidence-instances.mjs --write"],
 ];
 const errors = [];
 const packageScripts = readPackageScripts(errors);

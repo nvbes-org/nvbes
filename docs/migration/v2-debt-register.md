@@ -25,7 +25,7 @@ pnpm check:migration-v2-debt -- --strict
 
 | Item | Owner | Scope | V1 Required | Evidence | Status | Decision |
 |---|---|---|---|---|---|---|
-| zero-debt cutover review | Migration lead | V1 | yes | pending debt review report, backlog query result and product owner acceptance evidence | open | no-go |
+| zero-debt cutover review | Migration lead | V1 | yes | `docs/migration/v2-debt-review.md`, product owner acceptance evidence pending | open | no-go |
 
 ## Decision
 

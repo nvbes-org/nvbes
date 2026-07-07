@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/infra-deploy.mjs --write",
+    "command": "node tools/migration/infra-deploy.mjs --write",
     "sources": [
       "deploy/oss/helm/nvbes/Chart.yaml",
       "deploy/oss/helm/nvbes/values.yaml",
@@ -54,18 +54,18 @@
       "pattern": "imageRegistry: ghcr.io/nvbes"
     },
     {
-      "id": "helm-identity-api-image",
-      "description": "Helm values include Identity API image",
+      "id": "helm-account-service-image",
+      "description": "Helm values include Account Service image",
       "path": "deploy/oss/helm/nvbes/values.yaml",
       "status": "passed",
-      "pattern": "repository: nvbes-identity-api"
+      "pattern": "repository: nvbes-account-service"
     },
     {
-      "id": "helm-drive-api-image",
-      "description": "Helm values include Drive API image",
+      "id": "helm-cloud-service-image",
+      "description": "Helm values include Cloud Service image",
       "path": "deploy/oss/helm/nvbes/values.yaml",
       "status": "passed",
-      "pattern": "repository: nvbes-drive-api"
+      "pattern": "repository: nvbes-cloud-service"
     },
     {
       "id": "kustomize-helm",
@@ -79,7 +79,7 @@
       "description": "Compose stack uses released OCI images",
       "path": "deploy/oss/compose/compose.yaml",
       "status": "passed",
-      "pattern": "ghcr.io/nvbes/nvbes-identity-api"
+      "pattern": "ghcr.io/nvbes/nvbes-account-service"
     },
     {
       "id": "opentofu-boundary",

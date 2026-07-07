@@ -76,17 +76,9 @@ if (!content.includes("Cutover remains no-go until every critical journey and ru
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|unassigned|no-go)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} smoke-test marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} smoke-test marker(s) remain`);
 	}
 }
 
@@ -132,7 +124,10 @@ function validateTable(heading, expectedColumns, expectedLabels) {
 }
 
 function validateJourneyRow(row) {
-	const [journey, , command, environment, evidence, status, decision] = row;
+	const [journey, owner, command, environment, evidence, status, decision] = row;
+	if (["pending", "unassigned", "none", ""].includes(owner)) {
+		errors.push(`${journey}: owner is required`);
+	}
 	if (!validStatuses.includes(status)) {
 		errors.push(`${journey}: unsupported journey status ${status}`);
 	}
@@ -193,6 +188,19 @@ function validateRuntimeEvidence(row) {
 function hasConcreteEvidence(value) {
 	const normalized = (value ?? "").toLowerCase();
 	return /(artifact|commit|digest|migration|contract|url|version|region|log|request id|correlation id|metric|latency|lag|health|window|report|result)/.test(normalized);
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, unassigned: 0, "no-go": 0 };
+	for (const [, owner, , , , status, decision] of tableRowsAfter("## Critical Journeys")) {
+		if (status === "pending") counts.pending += 1;
+		if (owner === "unassigned") counts.unassigned += 1;
+		if (decision === "no-go") counts["no-go"] += 1;
+	}
+	for (const [, , status] of tableRowsAfter("## Runtime Evidence")) {
+		if (status === "pending") counts.pending += 1;
+	}
+	return counts;
 }
 
 function countValues(values, knownValues) {

@@ -228,7 +228,7 @@ mod tests {
     fn worker_monitor_slug_normalizes_to_stable_ascii_slug() {
         assert_eq!(
             worker_monitor_slug("Nvbes Identity Worker", "housekeeping.expired accounts"),
-            "nvbes-identity-worker-housekeeping-expired-accounts"
+            "nvbes-account-worker-housekeeping-expired-accounts"
         );
     }
 
@@ -236,7 +236,7 @@ mod tests {
     fn worker_monitor_slug_collapses_repeated_separators() {
         assert_eq!(
             worker_monitor_slug("drive_worker", "loop::heartbeat"),
-            "drive-worker-loop-heartbeat"
+            "cloud-worker-loop-heartbeat"
         );
     }
 
@@ -244,12 +244,12 @@ mod tests {
     fn error_reporting_smoke_result_serializes_with_snake_case_contract() {
         let result = ErrorReportingSmokeResult {
             status: "skipped",
-            app_name: "drive-api".to_string(),
+            app_name: "cloud-service".to_string(),
             environment: "test".to_string(),
             runtime: "api".to_string(),
             event_id: uuid::Uuid::nil().to_string(),
             check_in_id: uuid::Uuid::nil().to_string(),
-            monitor_slug: "drive-api-error-reporting-smoke".to_string(),
+            monitor_slug: "cloud-service-error-reporting-smoke".to_string(),
             configured: false,
             flushed: false,
         };
@@ -258,7 +258,7 @@ mod tests {
 
         assert_eq!(
             serialized["monitor_slug"],
-            "drive-api-error-reporting-smoke"
+            "cloud-service-error-reporting-smoke"
         );
     }
 

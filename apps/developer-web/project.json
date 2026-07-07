@@ -1,7 +1,0 @@
-{
-  "name": "developer-web",
-  "projectType": "application",
-  "root": "apps/developer-web",
-  "sourceRoot": "apps/developer-web/src",
-  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
-}

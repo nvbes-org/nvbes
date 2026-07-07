@@ -5,10 +5,10 @@ import { requiredEvidenceFor } from "./live-evidence.rules.mjs";
 
 export function validatePacket(packet, context) {
 	const errors = [];
-	const { strict, jsonPath, requirements, scripts, completion, backlog, liveBlockingReasons, isLiveBlocking } = context;
+	const { strict, jsonPath, requirements, scripts, completion, backlog, liveEvidence, liveBlockingReasons, isLiveBlocking } = context;
 	validateGeneration(packet, jsonPath, errors);
 	validateStatusShape(packet, jsonPath, errors);
-	validateRequirementRows(packet, jsonPath, requirements, liveBlockingReasons, errors);
+	validateRequirementRows(packet, jsonPath, requirements, liveEvidence, liveBlockingReasons, errors);
 	validateStatusConsistency(packet, jsonPath, completion, backlog, isLiveBlocking, errors);
 	validateTaskProofs(packet, scripts, errors);
 	if (strict && packet.status.decision !== "go") errors.push(`${jsonPath}: cutover evidence decision is ${packet.status.decision}`);
@@ -17,8 +17,8 @@ export function validatePacket(packet, context) {
 
 function validateGeneration(packet, jsonPath, errors) {
 	if (packet.schema_version !== 1) errors.push(`${jsonPath}: schema_version must be 1`);
-	if (packet.generation?.command !== "tools/migration/cutover-evidence-packet.mjs --write") errors.push(`${jsonPath}: generation.command is invalid`);
-	if (packet.generation?.strict_command !== "tools/migration/cutover-evidence-packet.mjs --strict") errors.push(`${jsonPath}: generation.strict_command is invalid`);
+	if (packet.generation?.command !== "node tools/migration/cutover-evidence-packet.mjs --write") errors.push(`${jsonPath}: generation.command is invalid`);
+	if (packet.generation?.strict_command !== "node tools/migration/cutover-evidence-packet.mjs --strict") errors.push(`${jsonPath}: generation.strict_command is invalid`);
 }
 
 function validateStatusShape(packet, jsonPath, errors) {
@@ -32,19 +32,22 @@ function validateStatusShape(packet, jsonPath, errors) {
 	if (!["go", "no-go"].includes(status.decision)) errors.push(`${jsonPath}: status.decision must be go or no-go`);
 }
 
-function validateRequirementRows(packet, jsonPath, requirements, liveBlockingReasons, errors) {
+function validateRequirementRows(packet, jsonPath, requirements, liveEvidence, liveBlockingReasons, errors) {
 	if (!Array.isArray(packet.requirements) || packet.requirements.length !== requirements.length) errors.push(`${jsonPath}: requirements are incomplete`);
 	const expectedById = new Map(requirements.map((requirement) => [requirement.id, requirement]));
+	const liveById = new Map((liveEvidence?.requirements ?? []).map((requirement) => [requirement.id, requirement]));
 	const seen = new Set();
-	for (const row of packet.requirements ?? []) validateRequirementRow(row, jsonPath, expectedById, seen, liveBlockingReasons, errors);
+	for (const row of packet.requirements ?? []) validateRequirementRow(row, jsonPath, expectedById, liveById, seen, liveBlockingReasons, errors);
 	for (const requirement of requirements) if (!seen.has(requirement.id)) errors.push(`${jsonPath}: missing requirement ${requirement.id}`);
 }
 
-function validateRequirementRow(row, jsonPath, expectedById, seen, liveBlockingReasons, errors) {
+function validateRequirementRow(row, jsonPath, expectedById, liveById, seen, liveBlockingReasons, errors) {
 	if (seen.has(row.id)) errors.push(`${jsonPath}: duplicate requirement ${row.id}`);
 	seen.add(row.id);
 	const expected = expectedById.get(row.id);
 	if (!expected) return errors.push(`${jsonPath}: unexpected requirement ${row.id}`);
+	const liveRequirement = liveById.get(row.id);
+	if (!liveRequirement) errors.push(`${row.id}: live evidence requirement is missing`);
 	if (row.scope !== expected.scope) errors.push(`${row.id}: scope must match static requirement`);
 	if (row.live_evidence !== expected.live_evidence) errors.push(`${row.id}: live_evidence must match static requirement`);
 	validateStringList(row.id, "files", row.files, expected.files, errors);
@@ -69,6 +72,9 @@ function validateRequirementRow(row, jsonPath, expectedById, seen, liveBlockingR
 	);
 	if (!Array.isArray(row.missing_files)) errors.push(`${row.id}: missing_files must be an array`);
 	if (!Array.isArray(row.missing_commands)) errors.push(`${row.id}: missing_commands must be an array`);
+	const expectedLiveState = liveRequirement?.ready ? "ready" : "missing";
+	if (row.current?.live_evidence !== expectedLiveState) errors.push(`${row.id}: current.live_evidence must match live evidence readiness`);
+	validateStringList(row.id, "current.missing_evidence", row.current?.missing_evidence, liveRequirement?.missing_evidence ?? [], errors);
 	if (row.repository_ready !== ((row.missing_files?.length ?? 1) === 0 && (row.missing_commands?.length ?? 1) === 0)) errors.push(`${row.id}: repository_ready must match missing files and commands`);
 	const reasons = liveBlockingReasons(row.id, row.repository_ready, row.current);
 	if ((row.live_blocking_reasons ?? []).join("\n") !== reasons.join("\n")) errors.push(`${row.id}: live_blocking_reasons must match current state`);
@@ -82,6 +88,8 @@ function validateTaskProofs(packet, scripts, errors) {
 		if (!row.current || typeof row.current !== "object") errors.push(`${row.id}: current is required`);
 		if (typeof row.current?.phase !== "string") errors.push(`${row.id}: current.phase is required`);
 		if (typeof row.current?.gate !== "string") errors.push(`${row.id}: current.gate is required`);
+		if (typeof row.current?.live_evidence !== "string") errors.push(`${row.id}: current.live_evidence is required`);
+		if (!Array.isArray(row.current?.missing_evidence)) errors.push(`${row.id}: current.missing_evidence is required`);
 		if (!Array.isArray(row.live_blocking_reasons)) errors.push(`${row.id}: live_blocking_reasons must be an array`);
 		if (!Array.isArray(row.preparation_commands) || row.preparation_commands.length === 0) {
 			errors.push(`${row.id}: preparation_commands are required`);

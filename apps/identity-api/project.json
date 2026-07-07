@@ -1,7 +1,0 @@
-{
-  "name": "identity-api",
-  "projectType": "application",
-  "root": "apps/identity-api",
-  "sourceRoot": "apps/identity-api/src",
-  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
-}

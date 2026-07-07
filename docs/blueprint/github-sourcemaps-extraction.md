@@ -78,7 +78,7 @@ Pour `nvbes`, cela suggere:
 
 Priorites exploitables sans copier de code GitHub:
 
-- `ClipboardButton`: composant React partage avec fallback, etat "copie", annonce `aria-live`. Remplacer les copies locales dans `developer-web`.
+- `ClipboardButton`: composant React partage avec fallback, etat "copie", annonce `aria-live`. Remplacer les copies locales dans `console-web`.
 - `RelativeTime`: composant partage pour dates de sessions, logs, tokens, webhooks et fichiers.
 - `SafeStorage`: wrappers `localStorage`/`sessionStorage` tolerants aux exceptions, a utiliser dans les sessions Drive/Developer et le consentement.
 - `LiveRegion` ou `Announcer`: primitive partagee pour toasts, operations async et erreurs formulaire.
@@ -89,7 +89,7 @@ Priorites exploitables sans copier de code GitHub:
 
 Les maps exposent des modules dedies a `session-resume`, `stale-session`, `webauthn-support`, `two-factor` et `clear-data-on-logout`.
 
-Pour `identity-web` et `developer-web`, les idees utiles sont:
+Pour `account-web` et `console-web`, les idees utiles sont:
 
 - detection centralisee de session expiree/stale dans `web-runtime`;
 - reprise de session explicite plutot qu'erreurs disperses;
@@ -149,7 +149,7 @@ Pour `nvbes`, ajouter une primitive partagee:
 - detection des caracteres bidi/invisibles;
 - affichage d'une banniere d'avertissement;
 - option "reveler les caracteres";
-- usage cible dans `developer-web`: token debugger, secrets, scopes, redirect URIs, webhook payloads.
+- usage cible dans `console-web`: token debugger, secrets, scopes, redirect URIs, webhook payloads.
 
 ### 9. Error boundaries par surface
 
@@ -181,9 +181,9 @@ Les modules `code-view` utilisent `@tanstack/react-virtual`, des contextes `Defe
 
 Pour `nvbes`, appliquer aux surfaces a gros volume:
 
-- `drive-web`: preview texte, CSV, logs de scan, gros metadata panels;
-- `developer-web`: logs API, traces, audit events, webhook deliveries;
-- `identity-web`: historique de sessions ou consentements si la liste grossit.
+- `cloud-web`: preview texte, CSV, logs de scan, gros metadata panels;
+- `console-web`: logs API, traces, audit events, webhook deliveries;
+- `account-web`: historique de sessions ou consentements si la liste grossit.
 
 Pattern recommande:
 
@@ -196,7 +196,7 @@ Pattern recommande:
 
 GitHub a un query builder avec scopes, autocomplete, events, items lazy et fallback d'erreur. C'est directement transposable au portail developpeur.
 
-Pour `developer-web`:
+Pour `console-web`:
 
 - recherche logs avec `client:`, `status:`, `route:`, `since:`, `trace:`;
 - recherche webhooks avec `event:`, `delivery:`, `status:`;
@@ -243,13 +243,13 @@ Pour `nvbes`:
 2. Ajouter `safe-storage` dans `libs/ts/web-runtime` et migrer les stockages session/consentement.
 3. Creer `FeatureBoundary` et `ErrorWithRetry` partages, avec reporting d'erreurs.
 4. Creer `SafeHtml` / `VerifiedHtml` et interdire le HTML non verifie hors composant approuve.
-5. Ajouter un detecteur de caracteres Unicode invisibles pour `developer-web`.
+5. Ajouter un detecteur de caracteres Unicode invisibles pour `console-web`.
 6. Ajouter un detecteur de mismatch version frontend/backend avec reload controle.
-7. Creer dans `libs/ts/web-ui` un `ClipboardButton` partage et migrer `developer-web` (`QuickstartPage`, `SecretsPage`, `PortalAppsPage`).
+7. Creer dans `libs/ts/web-ui` un `ClipboardButton` partage et migrer `console-web` (`QuickstartPage`, `SecretsPage`, `PortalAppsPage`).
 8. Ajouter un composant `RelativeTime` partage, avec dates absolues en title pour auditabilite.
 9. Centraliser la detection session stale dans le client HTTP/runtime au lieu de la traiter page par page.
-10. Introduire une primitive query builder/command search shadcn pour `developer-web`.
-11. Virtualiser les listes/gros contenus dans `drive-web` et `developer-web` quand les volumes depassent le rendu confortable.
+10. Introduire une primitive query builder/command search shadcn pour `console-web`.
+11. Virtualiser les listes/gros contenus dans `cloud-web` et `console-web` quand les volumes depassent le rendu confortable.
 12. Introduire un runtime live updates pause-on-hidden pour jobs, scans, webhooks et logs.
 
 ## Sources publiques observees

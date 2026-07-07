@@ -1,30 +1,30 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/drive-upload-download.mjs --write",
+    "command": "node tools/migration/drive-upload-download.mjs --write",
     "sources": [
-      "apps/drive-api/src/drive.domains.uploads.logic.rs",
-      "apps/drive-api/src/drive.domains.uploads.core.rs",
-      "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
-      "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
-      "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
-      "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
-      "apps/drive-api/src/drive.domains.files.routes.download.rs",
-      "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
-      "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
-      "apps/drive-api/src/drive.domains.files.transfer.range.rs",
-      "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
-      "apps/drive-worker/src/drive.workers.maintenance.storage.rs",
-      "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
-      "apps/drive-api/src/drive.http.openapi.rs",
-      "apps/drive-api/openapi.json",
+      "apps/cloud-service/src/drive.domains.uploads.logic.rs",
+      "apps/cloud-service/src/drive.domains.uploads.core.rs",
+      "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
+      "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
+      "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
+      "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+      "apps/cloud-service/src/drive.domains.files.routes.download.rs",
+      "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
+      "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
+      "apps/cloud-service/src/drive.domains.files.transfer.range.rs",
+      "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
+      "apps/cloud-worker/src/drive.workers.maintenance.storage.rs",
+      "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
+      "apps/cloud-service/src/drive.http.openapi.rs",
+      "apps/cloud-service/openapi.json",
       "docs/migration/data-map.md",
       "docs/migration/job-map.generated.json"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-drive-api upload --locked",
-      "cargo test -p nvbes-drive-api download --locked",
-      "cargo test -p nvbes-drive-api resolve_range --locked",
+      "cargo test -p nvbes-cloud-service upload --locked",
+      "cargo test -p nvbes-cloud-service download --locked",
+      "cargo test -p nvbes-cloud-service resolve_range --locked",
       "pnpm check:migration-reconciliation-report"
     ]
   },
@@ -38,315 +38,315 @@
     {
       "id": "upload-name-validation",
       "description": "Upload logic validates object names",
-      "path": "apps/drive-api/src/drive.domains.uploads.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.logic.rs",
       "status": "passed",
       "pattern": "validate_object_name"
     },
     {
       "id": "upload-size-cap-test",
       "description": "Upload size cap is covered by unit test",
-      "path": "apps/drive-api/src/drive.domains.uploads.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.logic.rs",
       "status": "passed",
       "pattern": "validate_size_rejects_values_above_processing_cap"
     },
     {
       "id": "upload-encoding-test",
       "description": "Upload content encoding is covered by unit tests",
-      "path": "apps/drive-api/src/drive.domains.uploads.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.logic.rs",
       "status": "passed",
       "pattern": "ensure_plain_content_encoding_rejects_gzip"
     },
     {
       "id": "upload-object-key",
       "description": "Upload object keys are workspace/object/upload scoped",
-      "path": "apps/drive-api/src/drive.domains.uploads.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.logic.rs",
       "status": "passed",
       "pattern": "workspaces/{workspace_id}/objects/{storage_object_id}/{upload_id}"
     },
     {
       "id": "upload-signed-url",
       "description": "Upload logic signs object-storage upload URLs",
-      "path": "apps/drive-api/src/drive.domains.uploads.logic.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.logic.rs",
       "status": "passed",
       "pattern": "presign_upload"
     },
     {
       "id": "upload-create-quota",
       "description": "Upload creation checks quota before accepting metadata",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "ensure_upload_allowed_tx"
     },
     {
       "id": "upload-create-pending-object",
       "description": "Upload creation inserts pending storage object",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "insert_pending_storage_object_tx"
     },
     {
       "id": "upload-create-session",
       "description": "Upload creation inserts upload session",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "insert_upload_session_tx"
     },
     {
       "id": "upload-create-audit",
       "description": "Upload creation is audited",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "\"upload.created\""
     },
     {
       "id": "tus-multipart-create",
       "description": "TUS upload creates multipart object-storage upload",
-      "path": "apps/drive-api/src/drive.domains.uploads.core.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.core.rs",
       "status": "passed",
       "pattern": "create_multipart_upload"
     },
     {
       "id": "public-upload-create",
       "description": "Public API exposes upload creation",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/uploads\""
     },
     {
       "id": "public-upload-complete",
       "description": "Public API exposes upload completion",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete\""
     },
     {
       "id": "public-upload-scope",
       "description": "Public upload API requires files:write scope",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.uploads.rs",
       "status": "passed",
       "pattern": "\"files:write\""
     },
     {
       "id": "complete-storage-head",
       "description": "Upload completion reads object-storage metadata",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "storage.head_object(object_key)"
     },
     {
       "id": "complete-storage-read",
       "description": "Upload completion downloads uploaded object for validation and scan",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "storage.get_object(object_key)"
     },
     {
       "id": "complete-size-check",
       "description": "Upload completion verifies declared and stored size",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "upload_size_mismatch"
     },
     {
       "id": "complete-checksum",
       "description": "Upload completion verifies SHA-256 checksum",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "upload_checksum_mismatch"
     },
     {
       "id": "complete-scan",
       "description": "Upload completion scans uploaded bytes",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "scan::perform_scan"
     },
     {
       "id": "complete-activate",
       "description": "Upload completion activates or quarantines storage object",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "activate_storage_object_tx"
     },
     {
       "id": "complete-quota",
       "description": "Upload completion records quota usage",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "record_file_uploaded_tx"
     },
     {
       "id": "complete-audit",
       "description": "Upload completion is audited as file uploaded or quarantined",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.complete.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.complete.rs",
       "status": "passed",
       "pattern": "\"file.uploaded\""
     },
     {
       "id": "tus-upload-part",
       "description": "TUS append uploads object-storage parts",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
       "status": "passed",
       "pattern": "upload_part(object_key"
     },
     {
       "id": "tus-complete-multipart",
       "description": "TUS append completes multipart upload",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.append.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.append.rs",
       "status": "passed",
       "pattern": "complete_multipart_upload"
     },
     {
       "id": "tus-finalize-quota",
       "description": "TUS finalization records quota usage",
-      "path": "apps/drive-api/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
+      "path": "apps/cloud-service/src/drive.domains.uploads.lifecycle.tus.finalize.rs",
       "status": "passed",
       "pattern": "record_file_uploaded_tx"
     },
     {
       "id": "download-route",
       "description": "Drive download stream route is exposed",
-      "path": "apps/drive-api/src/drive.domains.files.routes.download.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.routes.download.rs",
       "status": "passed",
       "pattern": "/workspaces/{workspaceId}/objects/{objectId}/download"
     },
     {
       "id": "download-url-route",
       "description": "Drive download URL route is exposed",
-      "path": "apps/drive-api/src/drive.domains.files.routes.download.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.routes.download.rs",
       "status": "passed",
       "pattern": "/workspaces/{workspaceId}/objects/{objectId}/download-url"
     },
     {
       "id": "download-authz",
       "description": "Download routes require DownloadFile authorization",
-      "path": "apps/drive-api/src/drive.domains.files.routes.download.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.routes.download.rs",
       "status": "passed",
       "pattern": "WorkspaceAction::DownloadFile"
     },
     {
       "id": "download-stream-full",
       "description": "Download stream reads full object from object storage",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
       "status": "passed",
       "pattern": "storage.get_object(&object_key)"
     },
     {
       "id": "download-stream-range",
       "description": "Download stream supports object-storage range reads",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
       "status": "passed",
       "pattern": "get_object_range"
     },
     {
       "id": "download-bandwidth",
       "description": "Download stream records bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
       "status": "passed",
       "pattern": "record_bandwidth_out_tx"
     },
     {
       "id": "download-audit",
       "description": "Download stream is audited",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.stream.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.stream.rs",
       "status": "passed",
       "pattern": "\"file.downloaded\""
     },
     {
       "id": "download-url-presign",
       "description": "Download URL flow signs object-storage download URLs",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
       "status": "passed",
       "pattern": "presign_download"
     },
     {
       "id": "download-url-bandwidth",
       "description": "Download URL flow records bandwidth usage",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.download_url.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.download_url.rs",
       "status": "passed",
       "pattern": "record_bandwidth_out_tx"
     },
     {
       "id": "public-download-url",
       "description": "Public API exposes download URL creation",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
       "status": "passed",
       "pattern": "path = \"/v1/workspaces/{workspaceId}/objects/{objectId}/download-url\""
     },
     {
       "id": "public-download-scope",
       "description": "Public download API requires files:read scope",
-      "path": "apps/drive-api/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
+      "path": "apps/cloud-service/src/drive.domains.public_api.routes.v1_handlers.files.download.rs",
       "status": "passed",
       "pattern": "\"files:read\""
     },
     {
       "id": "downloadability-test",
       "description": "Downloadability rules are covered by tests",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.range.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.range.rs",
       "status": "passed",
       "pattern": "ensure_downloadable_file_accepts_active_files_only"
     },
     {
       "id": "range-test",
       "description": "Download range behavior is covered by tests",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.range.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.range.rs",
       "status": "passed",
       "pattern": "resolve_range_supports_full_suffix_and_clamped_ranges"
     },
     {
       "id": "range-reject-test",
       "description": "Invalid ranges are covered by tests",
-      "path": "apps/drive-api/src/drive.domains.files.transfer.range.rs",
+      "path": "apps/cloud-service/src/drive.domains.files.transfer.range.rs",
       "status": "passed",
       "pattern": "resolve_range_rejects_multiple_ranges_and_marks_unsatisfiable"
     },
     {
       "id": "storage-purge-deleted",
       "description": "Worker purges deleted object-storage keys and metadata",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.storage.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.storage.rs",
       "status": "passed",
       "pattern": "purge_deleted_storage"
     },
     {
       "id": "storage-purge-quarantined",
       "description": "Worker purges quarantined object-storage keys and metadata",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.storage.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.storage.rs",
       "status": "passed",
       "pattern": "purge_quarantined"
     },
     {
       "id": "storage-delete-objects",
       "description": "Worker deletes object-storage keys before metadata cleanup",
-      "path": "apps/drive-worker/src/drive.workers.maintenance.storage.rs",
+      "path": "apps/cloud-worker/src/drive.workers.maintenance.storage.rs",
       "status": "passed",
       "pattern": "storage.delete_objects(keys)"
     },
     {
       "id": "worker-dispatch-storage",
       "description": "Worker dispatch includes storage purge jobs",
-      "path": "apps/drive-worker/src/drive.workers.executor.dispatch.rs",
+      "path": "apps/cloud-worker/src/drive.workers.executor.dispatch.rs",
       "status": "passed",
       "pattern": "JOB_STORAGE_PURGE_DELETED"
     },
     {
       "id": "openapi-source",
       "description": "Drive OpenAPI source includes public upload/download routes",
-      "path": "apps/drive-api/src/drive.http.openapi.rs",
+      "path": "apps/cloud-service/src/drive.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::public_api::v1_handlers::create_upload"
     },
     {
       "id": "openapi-upload-json",
       "description": "Generated OpenAPI includes public upload path",
-      "path": "apps/drive-api/openapi.json",
+      "path": "apps/cloud-service/openapi.json",
       "status": "passed",
       "pattern": "\"/v1/workspaces/{workspaceId}/uploads\""
     },
     {
       "id": "openapi-download-json",
       "description": "Generated OpenAPI includes public download URL path",
-      "path": "apps/drive-api/openapi.json",
+      "path": "apps/cloud-service/openapi.json",
       "status": "passed",
       "pattern": "\"/v1/workspaces/{workspaceId}/objects/{objectId}/download-url\""
     },

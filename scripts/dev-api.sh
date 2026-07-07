@@ -14,10 +14,12 @@ cleanup() {
 
 trap cleanup INT TERM
 
-bash "$SCRIPT_DIR/dev-identity-api.sh" &
-bash "$SCRIPT_DIR/dev-billing-api.sh" &
-bash "$SCRIPT_DIR/dev-gateway-graphql.sh" &
+bash "$SCRIPT_DIR/dev-account-service.sh" &
+bash "$SCRIPT_DIR/dev-billing-service.sh" &
+bash "$SCRIPT_DIR/dev-developer-service.sh" &
+bash "$SCRIPT_DIR/dev-enterprise-service.sh" &
+bash "$SCRIPT_DIR/dev-gateway-cloud.sh" &
 bash "$SCRIPT_DIR/dev-billing-worker.sh" &
 bash "$SCRIPT_DIR/dev-worker.sh" &
-bash "$SCRIPT_DIR/dev-drive-api.sh" &
+bash "$SCRIPT_DIR/dev-cloud-service.sh" &
 wait

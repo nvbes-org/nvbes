@@ -33,5 +33,5 @@
 
 ```bash
 pnpm check:migration-platform-primitives
-tools/migration/platform-primitives.mjs --write
+node tools/migration/platform-primitives.mjs --write
 ```

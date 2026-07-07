@@ -19,12 +19,12 @@
 
 | Check | Status | Path |
 |---|---:|---|
-| Identity OpenAPI no longer exposes PSP webhook routes | passed | `apps/identity-api/openapi.json` |
-| Identity router no longer merges billing routes | passed | `apps/identity-api/src/identity.domains.mod.rs` |
-| Billing API accepts Stripe webhooks | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
-| Billing API accepts Mollie webhooks | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
-| Stripe webhook intake is rate limited in billing-api | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
-| Mollie webhook intake is rate limited in billing-api | passed | `apps/billing-api/src/billing.domains.webhooks.rs` |
+| Identity OpenAPI no longer exposes PSP webhook routes | passed | `apps/account-service/openapi.json` |
+| Identity router no longer merges legacy billing routes | passed | `apps/account-service/src/identity.domains.mod.rs` |
+| billing-service accepts Stripe webhooks | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
+| billing-service accepts Mollie webhooks | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
+| Stripe webhook intake is rate limited in billing-service | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
+| Mollie webhook intake is rate limited in billing-service | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
 | Stripe intake verifies signatures before enqueueing | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
 | Stripe intake locks existing provider event rows | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
 | Processed Stripe webhooks are treated as duplicates | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
@@ -64,7 +64,7 @@
 | Dunning processing claims due attempts safely | passed | `libs/rust/billing/src/dunning_jobs.rs` |
 | Dunning processing validates batch size | passed | `libs/rust/billing/src/dunning_jobs.rs` |
 | Provider event intake is idempotent per provider event | passed | `libs/rust/billing/src/db.provider_events.rs` |
-| Database constrains provider event uniqueness per provider | passed | `apps/billing-api/migrations/0002_billing_platform_core.sql` |
+| Database constrains provider event uniqueness per provider | passed | `apps/billing-service/migrations/0002_billing_platform_core.sql` |
 
 ## Decision
 
@@ -74,5 +74,5 @@ Billing webhook idempotency and replay evidence is covered for repository cutove
 
 ```bash
 pnpm check:migration-billing-webhook-idempotency
-tools/migration/billing-webhook-idempotency.mjs --write
+node tools/migration/billing-webhook-idempotency.mjs --write
 ```

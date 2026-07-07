@@ -1,6 +1,6 @@
 # Identity Developer Portal API
 
-The developer portal API is served by `identity-api` under `/developer`.
+The developer portal API is served by `account-service` under `/developer`.
 
 ## Permissions
 

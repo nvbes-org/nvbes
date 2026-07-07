@@ -278,5 +278,6 @@ export const operationsArtifacts = [
 	},
 	{ "path": "docs/migration/post-migration-audit.md", "headings": ["# Post-Migration Audit", "## Required Sign-Off", "## Audit Items", "## Decision"] },
 	{ "path": "docs/migration/decommission-manifest.md", "headings": ["# Decommission Manifest", "## Status", "## Legacy Runtime", "## Decision"] },
-	{ "path": "docs/migration/v2-debt-register.md", "headings": ["# V2 Debt Register", "## Status", "## Debt Review", "## Decision"] }
+	{ "path": "docs/migration/v2-debt-register.md", "headings": ["# V2 Debt Register", "## Status", "## Debt Review", "## Decision"] },
+	{ "path": "docs/migration/v2-debt-review.md", "headings": ["# V2 Debt Review", "## Status", "## Scan Inputs", "## Findings", "## Decision"] }
 ];

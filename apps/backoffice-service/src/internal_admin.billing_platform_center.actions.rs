@@ -1,0 +1,311 @@
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    http::HeaderMap,
+    routing::{get, post},
+};
+use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::app::AppState;
+use crate::backoffice_authorization::{
+    BackofficePermission, require_operator_permission_headers, require_operator_role_grant,
+    require_permission, require_strong_confirmation,
+};
+use crate::backoffice_dual_control::require_dual_control;
+use crate::billing_admin_access::authorize_backoffice;
+use crate::billing_platform_center_mutations::{
+    activate_einvoicing_profile, approve_kyc_profile, reject_kyc_profile,
+};
+use crate::billing_platform_center_routing_mutations::{
+    CreateRoutingRuleInput, create_routing_rule, disable_routing_rule, enable_routing_rule,
+};
+use crate::billing_platform_center_routing_rule_simulation::{
+    RoutingRuleSimulationInput, RoutingRuleSimulationResult, simulate_routing_rule,
+};
+use crate::billing_platform_center_types::BillingPlatformActionResult;
+use crate::error::AppError;
+
+#[derive(Debug, Deserialize)]
+struct BillingPlatformActionRequest {
+    confirm_code: String,
+    reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateRoutingRuleRequest {
+    confirm_code: String,
+    provider: String,
+    country: Option<String>,
+    currency: Option<String>,
+    payment_method: Option<String>,
+    customer_type: Option<String>,
+    min_amount_minor: Option<i64>,
+    max_amount_minor: Option<i64>,
+    fallback_enabled: bool,
+    priority: i32,
+    reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SimulateRoutingRuleQuery {
+    country: Option<String>,
+    currency: String,
+    payment_method: String,
+    customer_type: String,
+    amount_minor: i64,
+}
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate",
+            get(simulate_routing_rule_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules",
+            post(create_routing_rule_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable",
+            post(enable_routing_rule_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/disable",
+            post(disable_routing_rule_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/approve",
+            post(approve_kyc_profile_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/reject",
+            post(reject_kyc_profile_route),
+        )
+        .route(
+            "/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate",
+            post(activate_einvoicing_profile_route),
+        )
+}
+
+async fn simulate_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Query(query): Query<SimulateRoutingRuleQuery>,
+) -> Result<Json<RoutingRuleSimulationResult>, AppError> {
+    require_billing_platform_simulation_authorization(&headers)?;
+    let _access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        simulate_routing_rule(
+            &state.db,
+            RoutingRuleSimulationInput {
+                country: query.country,
+                currency: query.currency,
+                payment_method: query.payment_method,
+                customer_type: query.customer_type,
+                amount_minor: query.amount_minor,
+            },
+        )
+        .await?,
+    ))
+}
+
+async fn create_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Json(request): Json<CreateRoutingRuleRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "CREATE ROUTING RULE",
+        workspace_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        create_routing_rule(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            CreateRoutingRuleInput {
+                provider: request.provider,
+                country: request.country,
+                currency: request.currency,
+                payment_method: request.payment_method,
+                customer_type: request.customer_type,
+                min_amount_minor: request.min_amount_minor,
+                max_amount_minor: request.max_amount_minor,
+                fallback_enabled: request.fallback_enabled,
+                priority: request.priority,
+                reason: request.reason,
+            },
+        )
+        .await?,
+    ))
+}
+
+async fn enable_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((workspace_id, rule_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<BillingPlatformActionRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "ENABLE ROUTING RULE",
+        rule_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        enable_routing_rule(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            rule_id,
+            request.reason,
+        )
+        .await?,
+    ))
+}
+
+async fn disable_routing_rule_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((workspace_id, rule_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<BillingPlatformActionRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "DISABLE ROUTING RULE",
+        rule_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        disable_routing_rule(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            rule_id,
+            request.reason,
+        )
+        .await?,
+    ))
+}
+
+async fn approve_kyc_profile_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((workspace_id, profile_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<BillingPlatformActionRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "APPROVE KYC",
+        profile_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        approve_kyc_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
+    ))
+}
+
+async fn reject_kyc_profile_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((workspace_id, profile_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<BillingPlatformActionRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "REJECT KYC",
+        profile_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        reject_kyc_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
+    ))
+}
+
+async fn activate_einvoicing_profile_route(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((workspace_id, profile_id)): Path<(Uuid, Uuid)>,
+    Json(request): Json<BillingPlatformActionRequest>,
+) -> Result<Json<BillingPlatformActionResult>, AppError> {
+    require_billing_platform_mutation(
+        &state.db,
+        &headers,
+        &request.confirm_code,
+        "ACTIVATE EINVOICING",
+        profile_id,
+    )
+    .await?;
+    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
+    Ok(Json(
+        activate_einvoicing_profile(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            access,
+            workspace_id,
+            profile_id,
+            request.reason,
+        )
+        .await?,
+    ))
+}
+
+async fn require_billing_platform_mutation(
+    db: &sqlx::PgPool,
+    headers: &HeaderMap,
+    confirm_code: &str,
+    expected_code: &str,
+    target_id: Uuid,
+) -> Result<(), AppError> {
+    require_billing_platform_authorization(headers)?;
+    require_strong_confirmation(confirm_code, expected_code, target_id)?;
+    require_dual_control(headers)?;
+    require_operator_role_grant(db, headers).await
+}
+
+fn require_billing_platform_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_operator_permission_headers(headers, BackofficePermission::BillingPlatformMutate)
+}
+
+fn require_billing_platform_simulation_authorization(headers: &HeaderMap) -> Result<(), AppError> {
+    require_permission(headers, BackofficePermission::BillingPlatformMutate)
+}

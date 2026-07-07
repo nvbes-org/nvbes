@@ -58,7 +58,9 @@ La couverture attendue par type de test est definie dans [Strategie de test](../
 
 ## Domaines Backend
 
-Identity expose ses domaines sous `/api/v1` et OAuth sous `/oauth`. Drive expose ses routes produit a la racine du Drive API, plus l'API publique versionnee sous `/v1`.
+Account expose les domaines compte sous `/api/v1` et OAuth sous `/oauth`.
+Cloud expose les routes produit Cloud a la racine du service Cloud, plus l'API
+publique versionnee sous `/v1`.
 
 - Auth.
 - Workspaces.

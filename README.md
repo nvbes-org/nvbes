@@ -6,14 +6,21 @@ Le premier produit est nvbes Drive: un drive cloud europeen securise pour petite
 
 ## Monorepo V1
 
-Structure initiale:
+Structure runtime cible:
 
-- `apps/drive-web`: frontend React + Vite + TypeScript pour Drive.
-- `apps/identity-web`: frontend React + Vite + TypeScript pour Identity.
-- `apps/drive-api`: backend Rust Drive.
-- `apps/identity-api`: backend Rust Identity.
-- `apps/drive-worker`: worker asynchrone Drive.
-- `apps/identity-worker`: worker asynchrone Identity.
+- `apps/cloud-web`: frontend React + Vite + TypeScript pour Cloud/Drive.
+- `apps/account-web`: frontend React + Vite + TypeScript pour Account.
+- `apps/console-web`: frontend React + Vite + TypeScript pour Developer.
+- `apps/backoffice-web`: frontend React + Vite + TypeScript pour Backoffice.
+- `apps/cloud-service`: backend Rust Cloud/Drive.
+- `apps/account-service`: backend Rust Account.
+- `apps/billing-service`: backend Rust Billing.
+- `apps/developer-service`: backend Rust Developer.
+- `apps/enterprise-service`: backend Rust Enterprise.
+- `apps/gateway-cloud`: gateway Cloud.
+- `apps/cloud-worker`: worker asynchrone Cloud.
+- `apps/account-worker`: worker asynchrone Account.
+- `apps/billing-worker`: worker asynchrone Billing.
 - `libs/rust/core`: primitives Rust partagees.
 - `libs/ts/http-client`, `libs/ts/identity-client`, `libs/ts/web-runtime`: runtime frontend partage.
 - `infrastructure`: socle IaC et overlays d'environnements.
@@ -59,19 +66,19 @@ Commandes utiles:
 ```bash
 pnpm dev:web
 pnpm dev:api
-pnpm dev:identity-worker
-pnpm dev:drive-worker
-pnpm dev:drive-db:reset
+pnpm dev:account-worker
+pnpm dev:cloud-worker
+pnpm dev:cloud-db:reset
 ```
 
 Conventions de scripts:
 
-- `pnpm dev`: lance les deux APIs Rust, le worker Identity historique et les deux frontends.
-- `pnpm dev:web`: lance les deux frontends.
-- `pnpm dev:api`: lance les deux APIs Rust et le worker Identity historique.
-- `pnpm dev:identity-api` / `pnpm dev:drive-api`: lancent une API ciblee.
-- `pnpm dev:identity-worker` / `pnpm dev:drive-worker`: lancent un worker cible.
-- `pnpm dev:drive-db:reset`: recree la base Drive locale quand une migration dev a change.
+- `pnpm dev`: lance les runtimes locaux principaux.
+- `pnpm dev:web`: lance les frontends locaux.
+- `pnpm dev:api`: lance les services Rust locaux.
+- `pnpm dev:account-service` / `pnpm dev:cloud-service`: lancent une API ciblee.
+- `pnpm dev:account-worker` / `pnpm dev:cloud-worker`: lancent un worker cible.
+- `pnpm dev:cloud-db:reset`: recree la base Cloud locale quand une migration dev a change.
 - `pnpm db:migrate`: applique les migrations locales configurees.
 - `pnpm generate:openapi`: regenere les specs OpenAPI et le SDK core.
 - `pnpm format`: reformate TypeScript, JSON, Markdown et Rust.
@@ -92,7 +99,7 @@ Conventions de scripts:
 - Securite par defaut sur chaque produit.
 - Modules plateforme reutilisables pour les futurs SaaS.
 - Pricing par package avec extension pay-as-you-use.
-- nvbes Identity est la fondation IdP / Authorization Server multi-tenant pour les produits du groupe.
+- nvbes Account est la fondation IdP / Authorization Server multi-tenant pour les produits du groupe.
 
 ## Documentation
 

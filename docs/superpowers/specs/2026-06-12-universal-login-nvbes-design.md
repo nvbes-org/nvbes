@@ -38,11 +38,11 @@ Out of scope:
 
 ## Architecture
 
-Universal Login stays split across `identity-api` and `identity-web`.
+Universal Login stays split across `account-service` and `account-web`.
 
-`identity-api` remains the security boundary. It validates the OAuth request, client, redirect URI, PKCE, requested scopes, session, workspace context, and consent status. It produces explicit flow decisions rather than letting the frontend infer security behavior.
+`account-service` remains the security boundary. It validates the OAuth request, client, redirect URI, PKCE, requested scopes, session, workspace context, and consent status. It produces explicit flow decisions rather than letting the frontend infer security behavior.
 
-`identity-web` remains the hosted product UI. It reads the Universal Login state, reuses the existing login challenge components, shows account chooser and consent screens, applies branding from the backend response, and redirects only through backend-approved decisions.
+`account-web` remains the hosted product UI. It reads the Universal Login state, reuses the existing login challenge components, shows account chooser and consent screens, applies branding from the backend response, and redirects only through backend-approved decisions.
 
 ## Flow
 
@@ -52,11 +52,11 @@ Universal Login stays split across `identity-api` and `identity-web`.
 4. If no valid session exists, the existing challenge login flow runs.
 5. If multiple local accounts or sessions are available, the user selects one.
 6. Identity evaluates whether consent is required for the client and scopes.
-7. If consent is required, `identity-web` displays the client name, scopes, workspace/tenant context, and approve/cancel actions.
+7. If consent is required, `account-web` displays the client name, scopes, workspace/tenant context, and approve/cancel actions.
 8. On approval, Identity creates the authorization code and returns a backend-approved redirect target.
-9. `identity-web` navigates to the redirect target.
+9. `account-web` navigates to the redirect target.
 10. On cancel or redirect-safe OAuth errors, Identity returns an OAuth error redirect target with `error`, `error_description`, and `state` when available.
-11. On non-redirect-safe errors, `identity-web` shows a hosted error page.
+11. On non-redirect-safe errors, `account-web` shows a hosted error page.
 
 ## Backend Contracts
 
@@ -122,7 +122,7 @@ The Rust backend SDK should support server-side product integration:
 
 ## Frontend Behavior
 
-`identity-web` should treat `/login` as the Universal Login shell when an OAuth state or OAuth request is present.
+`account-web` should treat `/login` as the Universal Login shell when an OAuth state or OAuth request is present.
 
 The UI has five explicit states:
 
@@ -182,5 +182,5 @@ Validation after implementation:
 - targeted React tests for login/consent state;
 - targeted TypeScript SDK tests;
 - `cargo check --workspace`;
-- targeted identity-web typecheck/test command;
+- targeted account-web typecheck/test command;
 - update API docs if public route contracts change.

@@ -64,7 +64,7 @@ describe('ErrorReporting browser smoke test', () => {
     delete window[ERROR_REPORTING_SMOKE_GLOBAL];
 
     const installed = installBrowserErrorReportingSmoke({
-      appName: 'drive-web',
+      appName: 'cloud-web',
       dsnConfigured: true,
       enabled: false,
       environment: 'test',
@@ -90,7 +90,7 @@ describe('ErrorReporting browser smoke test', () => {
 
     const tags = new Map<string, string | boolean>();
     installBrowserErrorReportingSmoke({
-      appName: 'identity-web',
+      appName: 'account-web',
       dsnConfigured: true,
       enabled: true,
       environment: 'test',
@@ -112,7 +112,7 @@ describe('ErrorReporting browser smoke test', () => {
     const result = await smoke?.();
 
     expect(result).toMatchObject({
-      appName: 'identity-web',
+      appName: 'account-web',
       eventId: 'info:nvbes browser errorReporting smoke test',
       flushed: true,
       status: 'accepted',
@@ -125,7 +125,7 @@ describe('ErrorReporting browser smoke test', () => {
     delete window[ERROR_REPORTING_SMOKE_GLOBAL];
 
     installBrowserErrorReportingSmoke({
-      appName: 'drive-web',
+      appName: 'cloud-web',
       dsnConfigured: true,
       enabled: true,
       environment: 'test',
@@ -161,13 +161,13 @@ function installTestWindow() {
 
 describe('ErrorReporting privacy scrubbing', () => {
   it('keeps ErrorReporting feedback explicit and low-PII', () => {
-    expect(createErrorReportingFeedbackOptions('drive-web')).toMatchObject({
+    expect(createErrorReportingFeedbackOptions('cloud-web')).toMatchObject({
       autoInject: true,
       showEmail: false,
       showName: false,
       enableScreenshot: false,
       tags: {
-        app: 'drive-web',
+        app: 'cloud-web',
         feature: 'user-feedback',
       },
     });

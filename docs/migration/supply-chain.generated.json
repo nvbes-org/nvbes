@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/supply-chain.mjs --write",
-    "strict_cutover_command": "tools/migration/supply-chain.mjs --strict"
+    "command": "node tools/migration/supply-chain.mjs --write",
+    "strict_cutover_command": "node tools/migration/supply-chain.mjs --strict"
   },
   "summary": {
     "entries": 5,

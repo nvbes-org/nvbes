@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/platform-primitives.mjs --write",
-    "strict_cutover_command": "tools/migration/platform-primitives.mjs --strict"
+    "command": "node tools/migration/platform-primitives.mjs --write",
+    "strict_cutover_command": "node tools/migration/platform-primitives.mjs --strict"
   },
   "summary": {
     "entries": 9,

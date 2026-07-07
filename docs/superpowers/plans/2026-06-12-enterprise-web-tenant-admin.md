@@ -4,7 +4,7 @@
 
 **Goal:** Build `apps/enterprise-web` as the dedicated tenant administration console, with Users V0 complete and route shells for the other enterprise modules.
 
-**Architecture:** Add a first-class Vite/React app rooted in tenant context, not workspace context. Extend `@nvbes/identity-client` with tenant-first contracts, then add matching `identity-api` enterprise routes for context, users, invitations, access updates, suspension, reactivation, and module summaries.
+**Architecture:** Add a first-class Vite/React app rooted in tenant context, not workspace context. Extend `@nvbes/identity-client` with tenant-first contracts, then add matching `account-service` enterprise routes for context, users, invitations, access updates, suspension, reactivation, and module summaries.
 
 **Tech Stack:** pnpm workspaces, Nx, Vite, React, TanStack Router, TanStack Query, zod, vite-plus tests, Axum, SQLx, PostgreSQL.
 
@@ -76,7 +76,7 @@ Use this exact package script surface:
 }
 ```
 
-Use the dependency set from `apps/identity-web/package.json`, keeping only packages used by the shell: `@nvbes/http-client`, `@nvbes/identity-client`, `@nvbes/web-runtime`, `@nvbes/web-ui`, Sentry, TanStack Query/Router, React, Tailwind, lucide, zod, class utilities, and Vite tooling.
+Use the dependency set from `apps/account-web/package.json`, keeping only packages used by the shell: `@nvbes/http-client`, `@nvbes/identity-client`, `@nvbes/web-runtime`, `@nvbes/web-ui`, Sentry, TanStack Query/Router, React, Tailwind, lucide, zod, class utilities, and Vite tooling.
 
 - [ ] **Step 2: Add Nx and TS config**
 
@@ -96,7 +96,7 @@ Use the dependency set from `apps/identity-web/package.json`, keeping only packa
 
 - [ ] **Step 3: Add Vite and React root**
 
-Copy `apps/identity-web/vite.config.ts`, then change the Sentry project fallback to `enterprise-web` and the dev/preview port to `5175`. Keep the `/api` proxy pointing to the Identity API base URL.
+Copy `apps/account-web/vite.config.ts`, then change the Sentry project fallback to `enterprise-web` and the dev/preview port to `5175`. Keep the `/api` proxy pointing to the Account service base URL.
 
 `src/main.tsx`:
 
@@ -202,7 +202,7 @@ export const enterpriseNavSections = [
 ] as const;
 ```
 
-Use TanStack `Link`, lucide icons, and active styling consistent with `identity-web`.
+Use TanStack `Link`, lucide icons, and active styling consistent with `account-web`.
 
 - [ ] **Step 3: Add route shells**
 
@@ -443,12 +443,12 @@ Run the companion backend/API plan before treating Users V0 as integrated. It cr
 
 - [ ] **Step 2: Confirm client/backend route alignment**
 
-Compare `libs/ts/identity-client/src/enterprise.client.ts` with `apps/identity-api/src/identity.domains.enterprise.routes.rs`. Every client method must have a matching backend route and response schema.
+Compare `libs/ts/identity-client/src/enterprise.client.ts` with `apps/account-service/src/identity.domains.enterprise.routes.rs`. Every client method must have a matching backend route and response schema.
 
 - [ ] **Step 3: Commit alignment fixes**
 
 ```bash
-git add libs/ts/identity-client/src apps/identity-api/src/identity.domains.enterprise.* apps/identity-api/src/identity.domains.mod.rs
+git add libs/ts/identity-client/src apps/account-service/src/identity.domains.enterprise.* apps/account-service/src/identity.domains.mod.rs
 git commit -m "fix: align enterprise admin client and API"
 ```
 
@@ -484,7 +484,7 @@ Add `dev:enterprise-web`. Include `enterprise-web` in `build:web`, `check:web`, 
 
 ```bash
 rtk pnpm exec nx run-many -t lint,typecheck --projects=enterprise-web,identity-client
-rtk cargo test -p nvbes-identity-api enterprise
+rtk cargo test -p nvbes-account-service enterprise
 rtk cargo check --workspace
 rtk pnpm --dir apps/enterprise-web dev
 ```

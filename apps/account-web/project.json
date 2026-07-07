@@ -1,0 +1,7 @@
+{
+  "name": "account-web",
+  "projectType": "application",
+  "root": "apps/account-web",
+  "sourceRoot": "apps/account-web/src",
+  "tags": ["scope:oss", "type:app", "domain:account", "layer:app"]
+}

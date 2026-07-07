@@ -9,19 +9,19 @@ const outputPath = "docs/migration/developer-signed-webhooks.generated.json";
 const markdownPath = "docs/migration/developer-signed-webhooks.md";
 
 const sources = {
-	openapi: "apps/identity-api/openapi.json",
-	openapiExport: "apps/identity-api/src/identity.http.openapi.rs",
-	publicRoutes: "apps/identity-api/src/identity.domains.developer.webhooks.routes.rs",
-	consoleRoutes: "apps/identity-api/src/identity.domains.developer.routes.rs",
-	delivery: "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
-	replayRoutes: "apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
-	portalMigration: "apps/identity-api/migrations/0011_developer_portal.sql",
-	consoleMigration: "apps/identity-api/migrations/0008_developer_console.sql",
-	developerTests: "apps/identity-api/src/identity.domains.developer.tests.webhooks.rs",
-	developerApi: "apps/developer-web/src/developer.api.ts",
-	developerSchemas: "apps/developer-web/src/developer.schemas.ts",
-	developerWebTests: "apps/developer-web/src/__tests__/developer.webhooks.test.ts",
-	webhookHelpers: "apps/developer-web/src/pages/WebhooksPage.helpers.ts",
+	openapi: "apps/account-service/openapi.json",
+	openapiExport: "apps/account-service/src/identity.http.openapi.rs",
+	publicRoutes: "apps/account-service/src/identity.domains.developer.webhooks.routes.rs",
+	consoleRoutes: "apps/account-service/src/identity.domains.developer.routes.rs",
+	delivery: "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
+	replayRoutes: "apps/developer-service/src/developer.grpc.webhooks.rs",
+	portalMigration: "apps/account-service/migrations/0011_developer_portal.sql",
+	consoleMigration: "apps/account-service/migrations/0008_developer_console.sql",
+	developerTests: "apps/account-service/src/identity.domains.developer.tests.webhooks.rs",
+	developerApi: "apps/console-web/src/developer.api.ts",
+	developerSchemas: "apps/console-web/src/developer.schemas.ts",
+	consoleWebTests: "apps/console-web/src/__tests__/developer.webhooks.test.ts",
+	webhookHelpers: "apps/console-web/src/pages/WebhooksPage.helpers.ts",
 };
 
 const errors = [];
@@ -88,17 +88,17 @@ function buildChecks() {
 		textCheck("delivery-signature-test", sources.delivery, "Unit test proves signature binding", "developer_webhook_signature_binds_event_timestamp_and_payload"),
 		textCheck("delivery-window-test", sources.delivery, "Unit test proves replay window rejection", "developer_webhook_signature_timestamp_rejects_replay_window"),
 		textCheck("delivery-replay-test", sources.delivery, "Unit test proves replay idempotency guard", "developer_webhook_replay_decision_is_idempotency_guard"),
-		textCheck("replay-status-guard", sources.replayRoutes, "Replay route applies replayability guard", "ensure_replayable_delivery_status"),
+		textCheck("replay-status-guard", sources.replayRoutes, "Replay service applies replayability guard", "ensure_replayable(original.get(\"status\"))"),
 		textCheck("replay-conflict", sources.replayRoutes, "Replay insert is idempotent for the original delivery", "ON CONFLICT (tenant_id, replayed_from_delivery_id)"),
 		textCheck("portal-replay-index", sources.portalMigration, "Portal schema prevents duplicate replays per original delivery", "idx_developer_webhook_deliveries_replay_once"),
 		textCheck("console-replay-index", sources.consoleMigration, "Console schema prevents duplicate replays per original delivery", "idx_developer_webhook_deliveries_replay_once"),
 		textCheck("backend-replay-route-test", sources.developerTests, "Backend route test covers replay response shape", "webhook_replay_route"),
-		textCheck("developer-web-list", sources.developerApi, "Developer web lists console webhook endpoints", "listDeveloperConsoleWebhooks"),
-		textCheck("developer-web-deliveries", sources.developerApi, "Developer web lists delivery attempts", "listDeveloperConsoleWebhookDeliveries"),
-		textCheck("developer-web-replay", sources.developerApi, "Developer web calls replay endpoint", "replayDeveloperConsoleWebhookDelivery"),
-		textCheck("developer-web-schema", sources.developerSchemas, "Developer web validates webhook delivery status", "DeveloperWebhookDeliverySchema"),
-		textCheck("developer-web-helper", sources.webhookHelpers, "Developer web gates replay actions by delivery status", "canReplayWebhookDelivery"),
-		textCheck("developer-web-helper-test", sources.developerWebTests, "Developer web test blocks delivered delivery replay", "blocks delivered deliveries"),
+		textCheck("console-web-list", sources.developerApi, "Console web lists console webhook endpoints", "listDeveloperConsoleWebhooks"),
+		textCheck("console-web-deliveries", sources.developerApi, "Console web lists delivery attempts", "listDeveloperConsoleWebhookDeliveries"),
+		textCheck("console-web-replay", sources.developerApi, "Console web calls replay endpoint", "replayDeveloperConsoleWebhookDelivery"),
+		textCheck("console-web-schema", sources.developerSchemas, "Console web validates webhook delivery status", "DeveloperWebhookDeliverySchema"),
+		textCheck("console-web-helper", sources.webhookHelpers, "Console web gates replay actions by delivery status", "canReplayWebhookDelivery"),
+		textCheck("console-web-helper-test", sources.consoleWebTests, "Console web test blocks delivered delivery replay", "blocks delivered deliveries"),
 	];
 }
 
@@ -131,15 +131,15 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/developer-signed-webhooks.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/developer-signed-webhooks.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
 		errors.push(`${outputPath}: generation.sources must match developer signed webhook source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api developer_webhook --locked",
-		"pnpm --dir apps/developer-web test -- --run developer.webhooks.test.ts",
+		"cargo test -p nvbes-account-service developer_webhook --locked",
+		"pnpm --dir apps/console-web test -- --run developer.webhooks.test.ts",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
@@ -191,7 +191,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-developer-signed-webhooks",
-		"tools/migration/developer-signed-webhooks.mjs --write",
+		"node tools/migration/developer-signed-webhooks.mjs --write",
 		"```",
 		"",
 	);
@@ -203,11 +203,11 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/developer-signed-webhooks.mjs --write",
+		command: "node tools/migration/developer-signed-webhooks.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api developer_webhook --locked",
-			"pnpm --dir apps/developer-web test -- --run developer.webhooks.test.ts",
+			"cargo test -p nvbes-account-service developer_webhook --locked",
+			"pnpm --dir apps/console-web test -- --run developer.webhooks.test.ts",
 		],
 	},
 	summary,
@@ -235,8 +235,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/developer-signed-webhooks.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/developer-signed-webhooks.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/developer-signed-webhooks.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/developer-signed-webhooks.mjs --write`);
 }
 
 if (errors.length > 0) {

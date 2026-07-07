@@ -8,10 +8,10 @@ const write = args.includes("--write");
 const outputPath = "docs/migration/workspace-last-owner.generated.json";
 const markdownPath = "docs/migration/workspace-last-owner.md";
 const sources = {
-	dbOwners: "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
-	userMutations: "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
-	accessRevocations: "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
-	accessRevocationTests: "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
+	userAccessDb: "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
+	userAccess: "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
+	accessRevocations: "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
+	accessRevocationTests: "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
 	corePolicyTests: "libs/rust/core/src/authz.policy.tests.rs",
 };
 
@@ -39,21 +39,20 @@ function textCheck(id, path, description, pattern) {
 
 function buildChecks() {
 	return [
-		textCheck("owner-change-lock", sources.dbOwners, "Owner changes use tenant-scoped advisory transaction lock", "pg_advisory_xact_lock"),
-		textCheck("ownerless-access-query", sources.dbOwners, "Role updates count workspaces that would lose their last owner", "ownerless_workspace_count_after_access"),
-		textCheck("ownerless-status-query", sources.dbOwners, "Lifecycle updates count workspaces that would lose their last owner", "ownerless_workspace_count_after_status"),
-		textCheck("ownerless-other-owner-check", sources.dbOwners, "Ownerless queries require absence of another active owner", "NOT EXISTS (\n                    SELECT 1\n                    FROM workspace_memberships other_owner"),
-		textCheck("update-access-lock", sources.userMutations, "Enterprise access updates lock owner changes before mutation", "lock_tenant_owner_changes(&mut tx, tenant_id)"),
-		textCheck("update-access-ownerless-check", sources.userMutations, "Enterprise access updates check ownerless workspaces before replace", "ownerless_workspace_count_after_access"),
-		textCheck("update-access-conflict", sources.userMutations, "Enterprise access updates reject last-owner removal", "\"last_owner_removal\""),
-		textCheck("update-access-audit", sources.userMutations, "Enterprise access updates audit membership changes", "\"enterprise.member.access_updated\""),
-		textCheck("suspend-ownerless-check", sources.userMutations, "Enterprise suspension checks ownerless workspaces before status change", "ownerless_workspace_count_after_status"),
-		textCheck("suspend-audit", sources.userMutations, "Enterprise suspension audits membership changes", "\"enterprise.member.suspended\""),
-		textCheck("review-member-lock", sources.accessRevocations, "Access review member revocation locks owner changes", "lock_tenant_owner_changes(tx, tenant_id).await?"),
+		textCheck("owner-change-lock", sources.userAccessDb, "Owner changes lock the tenant row before mutation", "SELECT id FROM tenants WHERE id = $1 FOR UPDATE"),
+		textCheck("ownerless-access-query", sources.userAccessDb, "Role updates count workspaces that would lose their last owner", "ensure_not_last_owner_after_access"),
+		textCheck("ownerless-status-query", sources.userAccessDb, "Lifecycle updates count workspaces that would lose their last owner", "ensure_not_last_owner_after_status"),
+		textCheck("ownerless-other-owner-check", sources.userAccessDb, "Ownerless queries require absence of another active owner", "NOT EXISTS (\n            SELECT 1\n            FROM workspace_memberships other_owner"),
+		textCheck("update-access-lock", sources.userAccess, "Enterprise access updates lock owner changes before mutation", "db::lock_tenant_owner_changes(&mut tx, tenant_id).await?"),
+		textCheck("update-access-ownerless-check", sources.userAccess, "Enterprise access updates check ownerless workspaces before replace", "db::ensure_not_last_owner_after_access"),
+		textCheck("update-access-conflict", sources.userAccessDb, "Enterprise access updates reject last-owner removal with failed-precondition", "Status::failed_precondition"),
+		textCheck("update-access-audit", sources.userAccess, "Enterprise access updates audit membership changes", "\"enterprise.member.access_updated\""),
+		textCheck("suspend-ownerless-check", sources.userAccess, "Enterprise suspension checks ownerless workspaces before status change", "db::ensure_not_last_owner_after_status"),
+		textCheck("suspend-audit", sources.userAccess, "Enterprise suspension audits membership changes", "\"enterprise.member.suspended\""),
 		textCheck("review-member-guard", sources.accessRevocations, "Access review member revocation checks tenant last owner", "ensure_not_last_owner(tx, tenant_id, principal_id).await?"),
 		textCheck("review-role-guard", sources.accessRevocations, "Access review role revocation checks workspace last owner", "ensure_not_last_workspace_owner(tx, tenant_id, principal_id, workspace_id).await?"),
 		textCheck("review-service-account-guard", sources.accessRevocations, "Access review service-account revocation checks workspace last owner", "ensure_not_last_workspace_owner(tx, tenant_id, principal_id, workspace_id).await?"),
-		textCheck("guard-conflict-code", sources.accessRevocations, "Last-owner service guard returns stable conflict code", "\"last_owner_removal\""),
+		textCheck("guard-conflict-code", sources.accessRevocations, "Last-owner service guard returns stable failed-precondition status", "Status::failed_precondition"),
 		textCheck("guard-pass-test", sources.accessRevocationTests, "Service test allows non-ownerless mutation", "last_owner_guard_allows_when_no_workspace_would_be_ownerless"),
 		textCheck("guard-block-test", sources.accessRevocationTests, "Service test blocks ownerless mutation", "last_owner_guard_blocks_ownerless_workspace"),
 		textCheck("owner-target-policy-test", sources.corePolicyTests, "Core authz test prevents owner-to-owner invite/remove actions", "owner_cannot_invite_or_remove_another_owner"),
@@ -89,14 +88,14 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/workspace-last-owner.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/workspace-last-owner.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
 		errors.push(`${outputPath}: generation.sources must match workspace last-owner source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api last_owner_guard --locked",
+		"cargo test -p nvbes-enterprise-service last_owner_guard --locked",
 		"cargo test -p nvbes-core owner_cannot_invite_or_remove_another_owner --locked",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -149,7 +148,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-workspace-last-owner",
-		"tools/migration/workspace-last-owner.mjs --write",
+		"node tools/migration/workspace-last-owner.mjs --write",
 		"```",
 		"",
 	);
@@ -161,10 +160,10 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/workspace-last-owner.mjs --write",
+		command: "node tools/migration/workspace-last-owner.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api last_owner_guard --locked",
+			"cargo test -p nvbes-enterprise-service last_owner_guard --locked",
 			"cargo test -p nvbes-core owner_cannot_invite_or_remove_another_owner --locked",
 		],
 	},
@@ -193,8 +192,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/workspace-last-owner.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/workspace-last-owner.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/workspace-last-owner.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/workspace-last-owner.mjs --write`);
 }
 
 if (errors.length > 0) {

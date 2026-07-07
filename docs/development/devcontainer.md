@@ -73,10 +73,10 @@ pnpm dev
 
 Application URLs:
 
-- Drive web: `http://localhost:5173`
-- Identity web: `http://localhost:3001`
-- Identity API: `http://localhost:4000`
-- Drive API: `http://localhost:4002`
+- Cloud web: `http://localhost:5173`
+- Account web: `http://localhost:3001`
+- Account service: `http://localhost:4000`
+- Cloud service: `http://localhost:4002`
 - Grafana: `http://localhost:13000`
 
 ## Sentry and PostHog

@@ -5,7 +5,7 @@ import { optionValue } from "./cli-options.mjs";
 const args = process.argv.slice(2);
 
 if (args.includes("--help")) {
-	console.log("Usage: tools/migration/reconcile.mjs --env <env> --report <path> [--allow-template]");
+	console.log("Usage: node tools/migration/reconcile.mjs --env <env> --report <path> [--allow-template]");
 	process.exit(0);
 }
 

@@ -13,11 +13,11 @@
 ### Task 1: Introduce `AdminScope` and export in `authz` domain
 
 **Files:**
-- Create/Modify: `apps/identity-api/src/identity.domains.authz.types.rs:8-12`
-- Modify: `apps/identity-api/src/identity.domains.authz.mod.rs:15-18`
+- Create/Modify: `apps/account-service/src/identity.domains.authz.types.rs:8-12`
+- Modify: `apps/account-service/src/identity.domains.authz.mod.rs:15-18`
 
 - [ ] **Step 1: Define `AdminScope` enum**
-Add the `AdminScope` enum definition to `apps/identity-api/src/identity.domains.authz.types.rs`:
+Add the `AdminScope` enum definition to `apps/account-service/src/identity.domains.authz.types.rs`:
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminScope {
@@ -27,7 +27,7 @@ pub enum AdminScope {
 ```
 
 - [ ] **Step 2: Export `AdminScope` in `authz` module**
-Modify `apps/identity-api/src/identity.domains.authz.mod.rs` to export `AdminScope`:
+Modify `apps/account-service/src/identity.domains.authz.mod.rs` to export `AdminScope`:
 ```rust
 pub use types::{
     AdminScope, ResourceContext, TenantManagementAuth, WorkspaceAccess, WorkspaceAction,
@@ -37,12 +37,12 @@ pub use types::{
 ```
 
 - [ ] **Step 3: Compile check**
-Run: `rtk cargo check -p nvbes-identity-api`
+Run: `rtk cargo check -p nvbes-account-service`
 Expected: PASS
 
 - [ ] **Step 4: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.authz.types.rs apps/identity-api/src/identity.domains.authz.mod.rs
+git add apps/account-service/src/identity.domains.authz.types.rs apps/account-service/src/identity.domains.authz.mod.rs
 git commit -m "feat(authz): add AdminScope enum and exports"
 ```
 
@@ -51,11 +51,11 @@ git commit -m "feat(authz): add AdminScope enum and exports"
 ### Task 2: Implement `resolve_admin_scope` in `authz` service
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.authz.service.rs`
-- Modify: `apps/identity-api/src/identity.domains.authz.mod.rs`
+- Modify: `apps/account-service/src/identity.domains.authz.service.rs`
+- Modify: `apps/account-service/src/identity.domains.authz.mod.rs`
 
 - [ ] **Step 1: Write `resolve_admin_scope` function**
-Add `resolve_admin_scope` to `apps/identity-api/src/identity.domains.authz.service.rs`:
+Add `resolve_admin_scope` to `apps/account-service/src/identity.domains.authz.service.rs`:
 ```rust
 pub async fn resolve_admin_scope(
     db: &PgPool,
@@ -135,7 +135,7 @@ pub async fn resolve_admin_scope(
 ```
 
 - [ ] **Step 2: Export `resolve_admin_scope` in `authz` mod**
-Modify `apps/identity-api/src/identity.domains.authz.mod.rs` to export `resolve_admin_scope`:
+Modify `apps/account-service/src/identity.domains.authz.mod.rs` to export `resolve_admin_scope`:
 ```rust
 pub use service::{
     authorize_workspace_action, decide_workspace_action, ensure_email_verified,
@@ -144,18 +144,18 @@ pub use service::{
 ```
 
 - [ ] **Step 3: Add unit tests for `resolve_admin_scope`**
-Add unit test cases to `mod tests` inside `apps/identity-api/src/identity.domains.authz.service.rs` to verify:
+Add unit test cases to `mod tests` inside `apps/account-service/src/identity.domains.authz.service.rs` to verify:
 1. Tenant admin resolves to `AdminScope::Tenant`.
 2. Org admin resolves to `AdminScope::Organization(org_id)`.
 3. Non-admin / wrong tenant returns forbidden error.
 
 - [ ] **Step 4: Run tests**
-Run: `rtk cargo test -p nvbes-identity-api --lib domains::authz`
+Run: `rtk cargo test -p nvbes-account-service --lib domains::authz`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.authz.service.rs apps/identity-api/src/identity.domains.authz.mod.rs
+git add apps/account-service/src/identity.domains.authz.service.rs apps/account-service/src/identity.domains.authz.mod.rs
 git commit -m "feat(authz): implement resolve_admin_scope with unit tests"
 ```
 
@@ -164,10 +164,10 @@ git commit -m "feat(authz): implement resolve_admin_scope with unit tests"
 ### Task 3: Support `AdminScope` in Enterprise Actor Access Checks
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.enterprise.service.access.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.service.access.rs`
 
 - [ ] **Step 1: Update `require_actor_access` to support `AdminScope`**
-Change `require_actor_access` in `apps/identity-api/src/identity.domains.enterprise.service.access.rs` to accept `scope: AdminScope` and handle organization roles:
+Change `require_actor_access` in `apps/account-service/src/identity.domains.enterprise.service.access.rs` to accept `scope: AdminScope` and handle organization roles:
 ```rust
 pub(super) async fn require_actor_access(
     db: &Database,
@@ -250,7 +250,7 @@ pub(super) async fn require_actor_access(
 ```
 
 - [ ] **Step 2: Update `ensure_member_manager` to support `AdminScope`**
-Change `ensure_member_manager` in `apps/identity-api/src/identity.domains.enterprise.service.access.rs` to accept `scope: AdminScope` and skip active elevation requirement for organization scopes:
+Change `ensure_member_manager` in `apps/account-service/src/identity.domains.enterprise.service.access.rs` to accept `scope: AdminScope` and skip active elevation requirement for organization scopes:
 ```rust
 pub(super) async fn ensure_member_manager(
     db: &Database,
@@ -297,12 +297,12 @@ pub(super) async fn fetch_user_view(
 ```
 
 - [ ] **Step 4: Compile check**
-Run: `rtk cargo check -p nvbes-identity-api`
+Run: `rtk cargo check -p nvbes-account-service`
 Expected: PASS (with some errors on callers we will fix in later tasks)
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.enterprise.service.access.rs
+git add apps/account-service/src/identity.domains.enterprise.service.access.rs
 git commit -m "feat(enterprise): update require_actor_access and ensure_member_manager for AdminScope"
 ```
 
@@ -311,11 +311,11 @@ git commit -m "feat(enterprise): update require_actor_access and ensure_member_m
 ### Task 4: Add Organization Scoping to Database Reads
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.enterprise.db.reads.rs`
-- Modify: `apps/identity-api/src/identity.domains.enterprise.db.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.db.reads.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.db.rs`
 
 - [ ] **Step 1: Update `list_users` signature and implementation**
-Modify `list_users` in `apps/identity-api/src/identity.domains.enterprise.db.reads.rs` to take `scope: AdminScope` and filter by organization memberships when organization-scoped:
+Modify `list_users` in `apps/account-service/src/identity.domains.enterprise.db.reads.rs` to take `scope: AdminScope` and filter by organization memberships when organization-scoped:
 ```rust
 pub async fn list_users(
     db: &PgPool,
@@ -610,7 +610,7 @@ pub async fn usage_metrics(
 }
 ```
 
-- [ ] **Step 6: Update `apps/identity-api/src/identity.domains.enterprise.db.rs` exports**
+- [ ] **Step 6: Update `apps/account-service/src/identity.domains.enterprise.db.rs` exports**
 Make sure the exported function signatures in `identity.domains.enterprise.db.rs` match the new database read signatures:
 ```rust
 pub use reads::{
@@ -622,7 +622,7 @@ pub use reads::{
 
 - [ ] **Step 7: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.enterprise.db.reads.rs apps/identity-api/src/identity.domains.enterprise.db.rs
+git add apps/account-service/src/identity.domains.enterprise.db.reads.rs apps/account-service/src/identity.domains.enterprise.db.rs
 git commit -m "feat(enterprise): scope reads queries using AdminScope"
 ```
 
@@ -631,10 +631,10 @@ git commit -m "feat(enterprise): scope reads queries using AdminScope"
 ### Task 5: Add Organization Scoping to Database Writes
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.enterprise.db.writes.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.db.writes.rs`
 
 - [ ] **Step 1: Update `ensure_workspaces_belong` to take `scope: AdminScope`**
-Modify `ensure_workspaces_belong` in `apps/identity-api/src/identity.domains.enterprise.db.writes.rs` to validate that the workspaces are inside the organization:
+Modify `ensure_workspaces_belong` in `apps/account-service/src/identity.domains.enterprise.db.writes.rs` to validate that the workspaces are inside the organization:
 ```rust
 pub async fn ensure_workspaces_belong(
     tx: &mut Transaction<'_, Postgres>,
@@ -675,7 +675,7 @@ pub async fn ensure_workspaces_belong(
 
 - [ ] **Step 2: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.enterprise.db.writes.rs
+git add apps/account-service/src/identity.domains.enterprise.db.writes.rs
 git commit -m "feat(enterprise): scope ensure_workspaces_belong query to AdminScope"
 ```
 
@@ -684,7 +684,7 @@ git commit -m "feat(enterprise): scope ensure_workspaces_belong query to AdminSc
 ### Task 6: Scoping reads at the Service Layer
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.enterprise.service.reads.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.service.reads.rs`
 
 - [ ] **Step 1: Resolve scope and pass to readers in all read services**
 Modify `get_context`, `get_overview`, `list_users`, `list_workspaces`, and `list_audit_events` to resolve the `AdminScope` and pass it to db query functions:
@@ -762,7 +762,7 @@ In `list_developers`, `list_policies`, `get_security`, `get_billing`, `get_usage
 
 - [ ] **Step 3: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.enterprise.service.reads.rs
+git add apps/account-service/src/identity.domains.enterprise.service.reads.rs
 git commit -m "feat(enterprise): resolve scope and enforce boundary in service reads"
 ```
 
@@ -771,8 +771,8 @@ git commit -m "feat(enterprise): resolve scope and enforce boundary in service r
 ### Task 7: Scoping Mutations at the Service Layer
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.enterprise.service.mutations.rs`
-- Modify: `apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.service.mutations.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.service.user_mutations.rs`
 
 - [ ] **Step 1: Scoping invitations in `create_invitations`**
 Update `create_invitations` to resolve the `AdminScope` and pass it to validations:
@@ -820,7 +820,7 @@ pub async fn revoke_developer_secret(
 ```
 
 - [ ] **Step 3: Implement `ensure_user_in_organization` helper**
-Add `ensure_user_in_organization` to `apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs`:
+Add `ensure_user_in_organization` to `apps/account-service/src/identity.domains.enterprise.service.user_mutations.rs`:
 ```rust
 async fn ensure_user_in_organization(
     db: &Database,
@@ -846,7 +846,7 @@ async fn ensure_user_in_organization(
 ```
 
 - [ ] **Step 4: Scoping user access changes in `update_user_access`, `suspend_user`, and `reactivate_user`**
-Modify all three functions in `apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs` to resolve the `AdminScope`. If organization-scoped, check `ensure_user_in_organization` and scope workspace checks:
+Modify all three functions in `apps/account-service/src/identity.domains.enterprise.service.user_mutations.rs` to resolve the `AdminScope`. If organization-scoped, check `ensure_user_in_organization` and scope workspace checks:
 ```rust
 pub async fn update_user_access(
     db: &Database,
@@ -878,7 +878,7 @@ pub async fn update_user_access(
 Do the same for `suspend_user` and `reactivate_user` (and update the calls to `fetch_user_view(db, tenant_id, user_id, scope)`).
 
 - [ ] **Step 5: Scope Policy mutations**
-In `apps/identity-api/src/identity.domains.enterprise.service.policy_mutations.rs`, make sure policy mutations (`update_mfa_policy`, `update_session_policy`) check and block organization scoped admins:
+In `apps/account-service/src/identity.domains.enterprise.service.policy_mutations.rs`, make sure policy mutations (`update_mfa_policy`, `update_session_policy`) check and block organization scoped admins:
 ```rust
     let scope = crate::domains::authz::service::resolve_admin_scope(db, auth, tenant_id, auth.organization_id).await?;
     if !matches!(scope, AdminScope::Tenant) {
@@ -888,14 +888,14 @@ In `apps/identity-api/src/identity.domains.enterprise.service.policy_mutations.r
         ));
     }
 ```
-In `apps/identity-api/src/identity.domains.enterprise.policy_simulation.rs`, verify `simulate_policy_decision` also blocks organization scoped admins.
+In `apps/account-service/src/identity.domains.enterprise.policy_simulation.rs`, verify `simulate_policy_decision` also blocks organization scoped admins.
 
 - [ ] **Step 6: Scope Access reviews**
-In `apps/identity-api/src/identity.domains.enterprise.access_reviews.service.rs` and `apps/identity-api/src/identity.domains.enterprise.access_reviews.service.schedules.rs`, block access review administration for organization-scoped admins.
+In `apps/account-service/src/identity.domains.enterprise.access_reviews.service.rs` and `apps/account-service/src/identity.domains.enterprise.access_reviews.service.schedules.rs`, block access review administration for organization-scoped admins.
 
 - [ ] **Step 7: Commit**
 ```bash
-git add apps/identity-api/src/identity.domains.enterprise.service.mutations.rs apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs apps/identity-api/src/identity.domains.enterprise.service.policy_mutations.rs apps/identity-api/src/identity.domains.enterprise.policy_simulation.rs apps/identity-api/src/identity.domains.enterprise.access_reviews.service.rs apps/identity-api/src/identity.domains.enterprise.access_reviews.service.schedules.rs
+git add apps/account-service/src/identity.domains.enterprise.service.mutations.rs apps/account-service/src/identity.domains.enterprise.service.user_mutations.rs apps/account-service/src/identity.domains.enterprise.service.policy_mutations.rs apps/account-service/src/identity.domains.enterprise.policy_simulation.rs apps/account-service/src/identity.domains.enterprise.access_reviews.service.rs apps/account-service/src/identity.domains.enterprise.access_reviews.service.schedules.rs
 git commit -m "feat(enterprise): enforce AdminScope in all mutations and access review endpoints"
 ```
 
@@ -908,7 +908,7 @@ Run: `rtk cargo check --workspace`
 Expected: PASS
 
 - [ ] **Step 2: Add integration tests for organization scoping**
-Create `apps/identity-api/src/identity.domains.enterprise.tests.rs` (or extend an existing test) to setup:
+Create `apps/account-service/src/identity.domains.enterprise.tests.rs` (or extend an existing test) to setup:
 1. A tenant with two organizations (Org A and Org B), with some workspaces in each.
 2. Users: Tenant Admin, Admin of Org A, Member of Org A.
 3. Verify that Admin of Org A:

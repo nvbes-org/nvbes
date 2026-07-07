@@ -32,5 +32,5 @@
 
 ```bash
 pnpm check:migration-runtime-foundation
-tools/migration/runtime-foundation.mjs --write
+node tools/migration/runtime-foundation.mjs --write
 ```

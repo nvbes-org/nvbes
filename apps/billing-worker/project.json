@@ -3,5 +3,10 @@
   "projectType": "application",
   "root": "apps/billing-worker",
   "sourceRoot": "apps/billing-worker/src",
-  "tags": ["scope:oss", "type:app", "domain:billing", "layer:app"]
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:billing",
+    "layer:app"
+  ]
 }

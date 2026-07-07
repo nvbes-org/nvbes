@@ -72,7 +72,10 @@ export async function stopPrivacySafeReplay(): Promise<void> {
 }
 
 export { hasAnyAnalyticsConsent };
-export { createBrowserAnalyticsTransport } from './analytics.browser-transport';
+export {
+  createBrowserAnalyticsTransport,
+  createBrowserAnalyticsTransportFromEnv,
+} from './analytics.browser-transport';
 export type { BrowserAnalyticsTransportOptions } from './analytics.browser-transport';
 export {
   ALL_ANALYTICS_CONSENT,

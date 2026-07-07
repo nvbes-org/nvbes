@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/target-structure.mjs --write",
+    "command": "node tools/migration/target-structure.mjs --write",
     "source": "docs/blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md",
-    "strict_cutover_command": "tools/migration/target-structure.mjs --strict"
+    "strict_cutover_command": "node tools/migration/target-structure.mjs --strict"
   },
   "summary": {
     "entries": 56,

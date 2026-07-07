@@ -1,7 +1,7 @@
 {
   "name": "@nvbes/billing-client",
   "version": "0.1.0",
-  "description": "Typed browser client for nvbes Billing API",
+  "description": "Typed browser client for nvbes billing-service",
   "license": "AGPL-3.0-only",
   "files": [
     "dist"

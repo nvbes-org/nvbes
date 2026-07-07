@@ -95,6 +95,21 @@ export function createBrowserAnalyticsTransport(
   };
 }
 
+export function createBrowserAnalyticsTransportFromEnv(options: {
+  appName: string;
+  environment: string;
+  env: Record<string, string | boolean | undefined>;
+}): AnalyticsTransport {
+  return createBrowserAnalyticsTransport({
+    appName: options.appName,
+    environment: options.environment,
+    sentryDsn: stringEnv(options.env, 'VITE_SENTRY_DSN'),
+    sentryTracesSampleRate: numberEnv(options.env, 'VITE_SENTRY_TRACES_SAMPLE_RATE'),
+    posthogKey: stringEnv(options.env, 'VITE_POSTHOG_KEY'),
+    posthogHost: stringEnv(options.env, 'VITE_POSTHOG_HOST'),
+  });
+}
+
 function initSentry(options: BrowserAnalyticsTransportOptions): boolean {
   const dsn = normalizedOptional(options.sentryDsn);
   if (!dsn || typeof window === 'undefined') {
@@ -142,6 +157,26 @@ function initPostHog(options: BrowserAnalyticsTransportOptions): boolean {
 function normalizedOptional(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function stringEnv(
+  env: Record<string, string | boolean | undefined>,
+  key: string,
+): string | undefined {
+  const value = env[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function numberEnv(
+  env: Record<string, string | boolean | undefined>,
+  key: string,
+): number | undefined {
+  const value = stringEnv(env, key);
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function normalizeFeatureFlagResult(value: unknown): FeatureFlagResult | undefined {

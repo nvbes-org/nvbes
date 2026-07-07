@@ -10,4 +10,4 @@ require_env NVBES_BILLING_DATABASE_URL
 
 NVBES_ENV="${NVBES_ENV:-staging}" \
 NVBES_BILLING_DATABASE_URL="$NVBES_BILLING_DATABASE_URL" \
-cargo run -q -p nvbes-billing-api -- --check-stripe-mappings
+cargo run -q -p nvbes-billing-service -- --check-stripe-mappings

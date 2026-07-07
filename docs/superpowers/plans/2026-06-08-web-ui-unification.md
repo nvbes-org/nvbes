@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create a shared Radix-based web UI package aligned with the Identity visual system, then migrate `identity-web` and `drive-web` to consume shared primitives and a reusable multi-account switcher.
+**Goal:** Create a shared Radix-based web UI package aligned with the Identity visual system, then migrate `account-web` and `cloud-web` to consume shared primitives and a reusable multi-account switcher.
 
 **Architecture:** Introduce `libs/ts/web-ui` as the source of truth for common theme tokens, common UI primitives, and account switching UI. Keep app-specific flows in each app via thin wrappers so product behavior remains local while the reusable surface moves to the shared package.
 
@@ -59,40 +59,40 @@
 - [ ] Implement a generic account switcher that supports loading, active account state, optional remove action, and optional footer actions.
 - [ ] Keep behavior generic through typed props instead of app-specific imports.
 
-### Task 5: Migrate `identity-web` to consume the shared package
+### Task 5: Migrate `account-web` to consume the shared package
 
 **Files:**
-- Modify: `apps/identity-web/package.json`
-- Modify: `apps/identity-web/tsconfig.json`
-- Modify: `apps/identity-web/src/styles.css`
-- Modify: `apps/identity-web/src/components/AccountChooser.tsx`
-- Modify: `apps/identity-web/src/components/ui/avatar.tsx`
-- Modify: `apps/identity-web/src/components/ui/button.tsx`
-- Modify: `apps/identity-web/src/components/ui/card.tsx`
-- Modify: `apps/identity-web/src/components/ui/input.tsx`
-- Modify: `apps/identity-web/src/components/ui/separator.tsx`
-- Modify: `apps/identity-web/src/components/ui/sheet.tsx`
-- Modify: `apps/identity-web/src/components/ui/skeleton.tsx`
+- Modify: `apps/account-web/package.json`
+- Modify: `apps/account-web/tsconfig.json`
+- Modify: `apps/account-web/src/styles.css`
+- Modify: `apps/account-web/src/components/AccountChooser.tsx`
+- Modify: `apps/account-web/src/components/ui/avatar.tsx`
+- Modify: `apps/account-web/src/components/ui/button.tsx`
+- Modify: `apps/account-web/src/components/ui/card.tsx`
+- Modify: `apps/account-web/src/components/ui/input.tsx`
+- Modify: `apps/account-web/src/components/ui/separator.tsx`
+- Modify: `apps/account-web/src/components/ui/sheet.tsx`
+- Modify: `apps/account-web/src/components/ui/skeleton.tsx`
 
 - [ ] Add `@nvbes/web-ui` as a workspace dependency and TS path alias.
 - [ ] Replace the local common primitive implementations with re-exports from the shared package.
 - [ ] Convert `AccountChooser` into a thin wrapper around the shared multi-account switcher.
 - [ ] Replace local theme duplication by importing the shared stylesheet and keeping Identity-only animations local.
 
-### Task 6: Migrate `drive-web` to consume the shared package and Identity theme
+### Task 6: Migrate `cloud-web` to consume the shared package and Identity theme
 
 **Files:**
-- Modify: `apps/drive-web/package.json`
-- Modify: `apps/drive-web/tsconfig.json`
-- Modify: `apps/drive-web/src/styles.css`
-- Modify: `apps/drive-web/src/DriveAccountMenu.tsx`
-- Modify: `apps/drive-web/src/components/ui/avatar.tsx`
-- Modify: `apps/drive-web/src/components/ui/button.tsx`
-- Modify: `apps/drive-web/src/components/ui/card.tsx`
-- Modify: `apps/drive-web/src/components/ui/input.tsx`
-- Modify: `apps/drive-web/src/components/ui/separator.tsx`
-- Modify: `apps/drive-web/src/components/ui/sheet.tsx`
-- Modify: `apps/drive-web/src/components/ui/skeleton.tsx`
+- Modify: `apps/cloud-web/package.json`
+- Modify: `apps/cloud-web/tsconfig.json`
+- Modify: `apps/cloud-web/src/styles.css`
+- Modify: `apps/cloud-web/src/DriveAccountMenu.tsx`
+- Modify: `apps/cloud-web/src/components/ui/avatar.tsx`
+- Modify: `apps/cloud-web/src/components/ui/button.tsx`
+- Modify: `apps/cloud-web/src/components/ui/card.tsx`
+- Modify: `apps/cloud-web/src/components/ui/input.tsx`
+- Modify: `apps/cloud-web/src/components/ui/separator.tsx`
+- Modify: `apps/cloud-web/src/components/ui/sheet.tsx`
+- Modify: `apps/cloud-web/src/components/ui/skeleton.tsx`
 
 - [ ] Add `@nvbes/web-ui` as a workspace dependency and TS path alias.
 - [ ] Replace the local common primitive implementations with re-exports from the shared package.
@@ -102,10 +102,10 @@
 ### Task 7: Clean up dead local files and validate
 
 **Files:**
-- Delete: `apps/identity-web/src/components/AccountChooser.shared.tsx` if unused
+- Delete: `apps/account-web/src/components/AccountChooser.shared.tsx` if unused
 - Delete: Drive account-menu view fragments if unused after wrapper migration
 - Modify: root `package.json` checks to include `web-ui`
 
 - [ ] Remove stale local component files once imports no longer reference them.
 - [ ] Add `web-ui` to root workspace build/check/lint/typecheck scripts.
-- [ ] Run targeted tests and typechecks for `web-ui`, `identity-web`, and `drive-web`.
+- [ ] Run targeted tests and typechecks for `web-ui`, `account-web`, and `cloud-web`.

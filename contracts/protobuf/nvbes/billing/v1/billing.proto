@@ -9,6 +9,14 @@ service BillingService {
   rpc GetBillingPortal(GetBillingPortalRequest) returns (BillingPortal);
   rpc CreateCheckout(CreateCheckoutRequest) returns (CheckoutSession);
   rpc CreatePortal(CreatePortalRequest) returns (PortalSession);
+  rpc GetEntitlements(GetEntitlementsRequest) returns (EntitlementSnapshot);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (BillingInvoice);
+  rpc RecordLedgerEntry(RecordLedgerEntryRequest) returns (LedgerEntry);
+  rpc ListLedgerEntries(ListLedgerEntriesRequest) returns (ListLedgerEntriesResponse);
+  rpc IngestProviderWebhook(IngestProviderWebhookRequest) returns (ProviderWebhookEvent);
+  rpc ListProviderWebhookEvents(ListProviderWebhookEventsRequest) returns (ListProviderWebhookEventsResponse);
+  rpc ReconcileProviderWebhook(ReconcileProviderWebhookRequest) returns (ProviderWebhookEvent);
   rpc GetAdminCommandCenterBillingMetrics(GetAdminCommandCenterBillingMetricsRequest) returns (AdminCommandCenterBillingMetrics);
   rpc GetAdminOperationsCenter(GetAdminOperationsCenterRequest) returns (AdminOperationsCenterSnapshot);
   rpc RunAdminOperationsAction(AdminOperationsActionRequest) returns (AdminOperationsActionResult);
@@ -43,10 +51,72 @@ message CreatePortalRequest {
   string return_url = 3;
 }
 
+message GetEntitlementsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message ListInvoicesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  nvbes.platform.v1.CursorPageRequest page = 3;
+}
+
+message GetInvoiceRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  string invoice_id = 3;
+}
+
+message RecordLedgerEntryRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  string entry_type = 4;
+  string source_type = 5;
+  string source_id = 6;
+  int64 amount_minor = 7;
+  string currency = 8;
+  string occurred_at = 9;
+  string idempotency_key = 10;
+}
+
+message ListLedgerEntriesRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  nvbes.platform.v1.CursorPageRequest page = 4;
+}
+
+message IngestProviderWebhookRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string provider = 2;
+  string provider_event_id = 3;
+  string event_type = 4;
+  string received_at = 5;
+  string payload_json = 6;
+  string signature = 7;
+}
+
+message ListProviderWebhookEventsRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string provider = 2;
+  string status = 3;
+  nvbes.platform.v1.CursorPageRequest page = 4;
+}
+
+message ReconcileProviderWebhookRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string provider_event_id = 2;
+  string action = 3;
+  string reason = 4;
+}
+
 message CheckoutSession {
   string checkout_url = 1;
   string provider = 2;
   string expires_at = 3;
+  string checkout_session_id = 4;
 }
 
 message PortalSession {
@@ -276,6 +346,11 @@ message BillingInvoice {
   repeated BillingProviderReference providers = 7;
 }
 
+message ListInvoicesResponse {
+  repeated BillingInvoice invoices = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
 message BillingPaymentMethod {
   string payment_method_id = 1;
   string brand = 2;
@@ -305,6 +380,58 @@ message ProductEntitlements {
   int64 retention_days = 3;
   int64 max_share_links = 4;
   string audit_level = 5;
+}
+
+message EntitlementSnapshot {
+  string workspace_id = 1;
+  string plan_code = 2;
+  string status = 3;
+  repeated EntitlementFeature features = 4;
+  repeated EntitlementQuota quotas = 5;
+}
+
+message EntitlementFeature {
+  string code = 1;
+  bool enabled = 2;
+  string source = 3;
+}
+
+message EntitlementQuota {
+  string code = 1;
+  string unit = 2;
+  int64 quantity = 3;
+  string source = 4;
+}
+
+message LedgerEntry {
+  string ledger_entry_id = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  string entry_type = 4;
+  string source_type = 5;
+  string source_id = 6;
+  int64 amount_minor = 7;
+  string currency = 8;
+  string occurred_at = 9;
+}
+
+message ListLedgerEntriesResponse {
+  repeated LedgerEntry entries = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
+}
+
+message ProviderWebhookEvent {
+  string provider_event_id = 1;
+  string provider = 2;
+  string event_type = 3;
+  string status = 4;
+  string received_at = 5;
+  string processed_at = 6;
+}
+
+message ListProviderWebhookEventsResponse {
+  repeated ProviderWebhookEvent events = 1;
+  nvbes.platform.v1.CursorPageResponse page = 2;
 }
 
 message UsageEvent {

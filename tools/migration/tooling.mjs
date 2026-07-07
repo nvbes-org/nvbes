@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { readPackageScripts } from "./execution-backlog.proof.mjs";
+import { validateCompletionMarkerCounter } from "./tooling.completion-markers.mjs";
 
 const errors = [];
 const scripts = readPackageScripts(errors);
@@ -238,6 +239,7 @@ for (const script of duplicateScripts) {
 }
 
 validateNoDirectPackageJsonParse();
+validateCompletionMarkerCounter(errors);
 validateMigrationToolFileSizes();
 
 function validateGeneratorOrder() {

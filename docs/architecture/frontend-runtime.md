@@ -1,6 +1,6 @@
 # Runtime Frontend
 
-`identity-web` et `drive-web` utilisent le meme modele runtime:
+`account-web` et `cloud-web` utilisent le meme modele runtime:
 
 - TanStack Router porte les routes client.
 - TanStack Query porte l'etat serveur, le cache, les retries et l'invalidation.

@@ -283,7 +283,12 @@ mod tests {
         .expect("payload");
 
         assert_eq!(payload.business_type, "billing_payment_failed");
-        assert!(payload.text_body.unwrap().contains("4680 EUR through mollie"));
+        assert!(
+            payload
+                .text_body
+                .unwrap()
+                .contains("4680 EUR through mollie")
+        );
         assert!(payload.html_body.contains("4680 EUR"));
     }
 }

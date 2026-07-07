@@ -22,12 +22,12 @@ Refactor nvbes into an Nx-oriented monorepo with explicit project boundaries, sm
 ```text
 nvbes/
 ├── apps/
-│   ├── identity-api/
-│   ├── drive-api/
-│   ├── identity-web/
-│   ├── drive-web/
-│   ├── identity-worker/
-│   └── drive-worker/
+│   ├── account-service/
+│   ├── cloud-service/
+│   ├── account-web/
+│   ├── cloud-web/
+│   ├── account-worker/
+│   └── cloud-worker/
 ├── libs/
 │   ├── rust/
 │   │   ├── core/
@@ -81,7 +81,7 @@ nvbes/
 - [x] Completed physical restructure: moved `crates/` to `libs/rust/` and `packages/` to `libs/ts/`.
 - [x] Extracted `identity.domains.oauth.service.types.rs` as the first step of oversized service decomposition.
 
-### Phase 3 - Identity API
+### Phase 3 - Account service
 
 - Keep the `src/` tree flat.
 - Split oversized services.
@@ -89,7 +89,7 @@ nvbes/
 - [x] Standardize auth helpers and use `nvbes_core::auth::helpers`.
 - Preserve public HTTP contracts.
 
-### Phase 4 - Drive API
+### Phase 4 - Cloud service
 
 - [x] Keep the `src/` tree flat.
 - [x] Split oversized services.
@@ -135,7 +135,7 @@ nvbes/
 - Split the generic primitives into their own libraries.
 - Keep app code from re-owning reusable logic.
 
-### Ticket 3 - Identity API split
+### Ticket 3 - Account service split
 
 - Decompose the largest domain services first (Targeting >500 line limit).
 - [x] Extract `OAuthService` types to `.types.rs`.
@@ -162,9 +162,9 @@ nvbes/
 - [x] Split oversized `routes.rs` files into smaller functional sub-routers.
 - [x] Replace local helpers with shared libraries where appropriate.
 
-### Ticket 4 - Drive API split
+### Ticket 4 - Cloud service split
 
-- [x] Apply the same decomposition pattern as identity.
+- [x] Apply the same decomposition pattern as Account.
 - [x] Rename files to follow `drive.*` dot-notation.
 - [x] Remove duplicated domain behavior.
 

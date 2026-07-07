@@ -53,17 +53,9 @@ for (const row of tableRowsAfter("## Reject Log")) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(blocking|no-go|none)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} reject marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} reject marker(s) remain`);
 	}
 }
 
@@ -177,6 +169,20 @@ function isEmptyMarker(value) {
 
 function hasConcreteEvidence(value) {
 	return /(artifact|report|result|log|journal|record|approval|reconciliation|checksum|snapshot|run|diff|patch|link|url|id)/i.test(value ?? "");
+}
+
+function strictBlockers() {
+	const counts = { blocking: 0, "no-go": 0, none: 0 };
+	for (const row of tableRowsAfter("## Reject Log")) {
+		const rejectClass = row[4];
+		const decision = row.at(-1);
+		if (rejectClass === "blocking") counts.blocking += 1;
+		if (decision === "no-go") counts["no-go"] += 1;
+		for (const value of row) {
+			if (value === "none") counts.none += 1;
+		}
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

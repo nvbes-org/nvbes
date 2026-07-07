@@ -116,6 +116,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/account/billing/workspaces/{workspaceId}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["create_account_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/billing/workspaces/{workspaceId}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_account_billing_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/billing/workspaces/{workspaceId}/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_account_billing_portal"];
+        put?: never;
+        post: operations["create_account_billing_portal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/accounts": {
         parameters: {
             query?: never;
@@ -2088,6 +2136,70 @@ export interface components {
         AccessReviewSchedulesResponse: {
             schedules: components["schemas"]["AccessReviewSchedule"][];
         };
+        AccountBillingEntitlements: {
+            audit_level: string;
+            /** Format: int64 */
+            included_storage_gb: number;
+            /** Format: int64 */
+            included_users: number;
+            /** Format: int64 */
+            max_share_links: number;
+            /** Format: int64 */
+            retention_days: number;
+        };
+        AccountBillingInvoice: {
+            currency: string;
+            invoice_id: string;
+            invoice_number?: string | null;
+            issued_at?: string | null;
+            providers: components["schemas"]["AccountBillingProviderReference"][];
+            status: string;
+            /** Format: int64 */
+            total_minor: number;
+        };
+        AccountBillingOverview: {
+            billing_provider: string;
+            current_period_end?: string | null;
+            current_period_start?: string | null;
+            entitlements: components["schemas"]["AccountBillingEntitlements"];
+            plan_code: string;
+            subscription_status: string;
+            workspace_id: string;
+        };
+        AccountBillingPaymentMethod: {
+            brand?: string | null;
+            /** Format: int32 */
+            exp_month?: number | null;
+            /** Format: int32 */
+            exp_year?: number | null;
+            last4?: string | null;
+            payment_method_id: string;
+            providers: components["schemas"]["AccountBillingProviderReference"][];
+        };
+        AccountBillingPortalView: {
+            invoices: components["schemas"]["AccountBillingInvoice"][];
+            payment_methods: components["schemas"]["AccountBillingPaymentMethod"][];
+            provider: string;
+            subscriptions: components["schemas"]["AccountBillingSubscription"][];
+            workspace_id: string;
+        };
+        AccountBillingProviderReference: {
+            fallback_eligible: boolean;
+            primary: boolean;
+            provider: string;
+            status: string;
+        };
+        AccountBillingSession: {
+            expires_at?: string | null;
+            provider: string;
+            url: string;
+        };
+        AccountBillingSubscription: {
+            plan_code?: string | null;
+            providers: components["schemas"]["AccountBillingProviderReference"][];
+            status: string;
+            subscription_id: string;
+        };
         AccountChooserResult: {
             accounts: components["schemas"]["AccountChooserSession"][];
         };
@@ -2357,6 +2469,14 @@ export interface components {
             /** Format: int32 */
             recurrence_days: number;
             scope: components["schemas"]["AccessReviewCampaignScopeInput"];
+        };
+        CreateAccountBillingPortalRequest: {
+            return_url?: string | null;
+        };
+        CreateAccountCheckoutRequest: {
+            cancel_url?: string | null;
+            plan_code: string;
+            success_url?: string | null;
         };
         CreateDeveloperAppRequest: {
             allowed_audiences?: string[];
@@ -3916,6 +4036,232 @@ export interface operations {
             };
             /** @description Internal server error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_account_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccountCheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Account billing checkout session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountBillingSession"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Billing service unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_account_billing_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account billing overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountBillingOverview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Billing service unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_account_billing_portal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Account billing portal view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountBillingPortalView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Billing service unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_account_billing_portal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workspace ID */
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAccountBillingPortalRequest"];
+            };
+        };
+        responses: {
+            /** @description Account billing portal session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountBillingSession"];
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Billing service unavailable */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,0 +1,12 @@
+{
+  "name": "billing-service",
+  "projectType": "application",
+  "root": "apps/billing-service",
+  "sourceRoot": "apps/billing-service/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:billing",
+    "layer:app"
+  ]
+}

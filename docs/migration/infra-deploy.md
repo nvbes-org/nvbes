@@ -21,8 +21,8 @@
 |---|---:|---|
 | Helm chart is declared as an application chart | passed | `deploy/oss/helm/nvbes/Chart.yaml` |
 | Helm values pin the OCI image registry | passed | `deploy/oss/helm/nvbes/values.yaml` |
-| Helm values include Identity API image | passed | `deploy/oss/helm/nvbes/values.yaml` |
-| Helm values include Drive API image | passed | `deploy/oss/helm/nvbes/values.yaml` |
+| Helm values include Account Service image | passed | `deploy/oss/helm/nvbes/values.yaml` |
+| Helm values include Cloud Service image | passed | `deploy/oss/helm/nvbes/values.yaml` |
 | Kustomize references the Helm chart | passed | `deploy/oss/kustomize/kustomization.yaml` |
 | Compose stack uses released OCI images | passed | `deploy/oss/compose/compose.yaml` |
 | OSS OpenTofu boundary is documented | passed | `deploy/oss/opentofu/README.md` |
@@ -57,5 +57,5 @@ Infra/deploy repository evidence is covered for OCI images, Helm, Kustomize, Com
 
 ```bash
 pnpm check:migration-infra-deploy
-tools/migration/infra-deploy.mjs --write
+node tools/migration/infra-deploy.mjs --write
 ```

@@ -96,7 +96,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 	const args = process.argv.slice(2);
 	if (args.includes("--help")) {
 		console.log(
-			"Usage: tools/migration/live-evidence-prepare.mjs --id <id> --type <type> --env <env> --owner <owner> --source-artifact <path-or-uri> --command <command> --result <passed|accepted|failed|blocking> --decision <go|no-go> --immutable-reference <uri> --packet-requirement <id> [--source-checksum <hex>] [--out <path>]",
+			"Usage: node tools/migration/live-evidence-prepare.mjs --id <id> --type <type> --env <env> --owner <owner> --source-artifact <path-or-uri> --command <command> --result <passed|accepted|failed|blocking> --decision <go|no-go> --immutable-reference <uri> --packet-requirement <id> [--source-checksum <hex>] [--out <path>]",
 		);
 		process.exit(0);
 	}

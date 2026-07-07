@@ -35,13 +35,13 @@ OSS ne depend jamais de Cloud ou Internal.
 ```text
 nvbes/
   apps/
-    identity-api/              # OSS
-    identity-web/              # OSS
-    drive-api/                 # OSS
-    drive-web/                 # OSS
+    account-service/              # OSS
+    account-web/              # OSS
+    cloud-service/                 # OSS
+    cloud-web/                 # OSS
     cloud-control-api/         # Cloud only
     cloud-console/             # Cloud only
-    internal-admin/            # Internal only
+    backoffice-service/            # Internal only
 
   libs/
     rust/
@@ -176,10 +176,10 @@ Il est genere avec un manifeste allowlist:
 ```json
 {
   "include": [
-    "apps/identity-api",
-    "apps/identity-web",
-    "apps/drive-api",
-    "apps/drive-web",
+    "apps/account-service",
+    "apps/account-web",
+    "apps/cloud-service",
+    "apps/cloud-web",
     "libs/rust/platform",
     "libs/rust/products",
     "libs/rust/adapters-oss",

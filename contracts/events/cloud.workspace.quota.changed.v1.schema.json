@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.nvbes.local/events/cloud.workspace.quota.changed.v1.schema.json",
+  "title": "cloud.workspace.quota.changed v1",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "payload"
+  ],
+  "properties": {
+    "event_type": {
+      "const": "cloud.workspace.quota.changed"
+    },
+    "event_version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "used_bytes",
+        "limit_bytes"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "used_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limit_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

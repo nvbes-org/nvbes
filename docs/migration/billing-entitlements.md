@@ -35,17 +35,17 @@
 | Billing policy helper locks degraded subscription statuses | passed | `libs/rust/billing/src/shared.rs` |
 | Billing service overview returns entitlements | passed | `libs/rust/billing/src/workspace_views.rs` |
 | Billing service usage response exposes billable storage and seats | passed | `libs/rust/billing/src/workspace_views.rs` |
-| Billing API exposes public entitlements endpoint | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
-| Billing entitlements endpoint requires Billing read authorization | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
+| billing-service exposes public entitlements endpoint | passed | `apps/billing-service/src/billing.domains.public_workspace.rs` |
+| Billing entitlements endpoint requires Billing read authorization | passed | `apps/billing-service/src/billing.domains.public_workspace.rs` |
 | Billing service returns workspace entitlements | passed | `libs/rust/billing/src/workspace_views.rs` |
-| Billing API returns shared entitlement response type | passed | `apps/billing-api/src/billing.domains.public_workspace.rs` |
-| Billing API exposes internal entitlements endpoint | passed | `apps/billing-api/src/billing.domains.workspace.rs` |
-| Billing API authorizes requests through Identity introspection | passed | `apps/billing-api/src/billing.auth.rs` |
+| billing-service returns shared entitlement response type | passed | `apps/billing-service/src/billing.domains.public_workspace.rs` |
+| billing-service exposes internal entitlements endpoint | passed | `apps/billing-service/src/billing.domains.workspace.rs` |
+| billing-service authorizes requests through Account introspection | passed | `apps/billing-service/src/billing.auth.rs` |
 | Billing checkout enforces lock policy | passed | `libs/rust/billing/src/checkout_sessions.rs` |
 | Billing portal operations enforce lock policy | passed | `libs/rust/billing/src/portal_actions.rs` |
-| Drive projects Billing entitlement events locally | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
-| Drive stores only entitlement projections from Billing | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
-| Drive no longer stores Billing invoice estimates | passed | `apps/drive-api/src/drive.domains.billing.entitlements.rs` |
+| Drive projects Billing entitlement events locally | passed | `apps/cloud-service/src/drive.domains.billing.entitlements.rs` |
+| Drive stores only entitlement projections from Billing | passed | `apps/cloud-service/src/drive.domains.billing.entitlements.rs` |
+| Drive no longer stores Billing invoice estimates | passed | `apps/cloud-service/src/drive.domains.billing.entitlements.rs` |
 | Entitlement changed event schema is versioned | passed | `contracts/events/billing.entitlement.changed.v1.schema.json` |
 | Entitlement event payload requires workspace and status | passed | `contracts/events/billing.entitlement.changed.v1.schema.json` |
 | Event manifest includes billing entitlement changes | passed | `contracts/events/manifest.json` |
@@ -64,5 +64,5 @@ Billing entitlements parity evidence is covered for repository cutover gates. Pr
 
 ```bash
 pnpm check:migration-billing-entitlements
-tools/migration/billing-entitlements.mjs --write
+node tools/migration/billing-entitlements.mjs --write
 ```

@@ -1,142 +1,135 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/workspace-last-owner.mjs --write",
+    "command": "node tools/migration/workspace-last-owner.mjs --write",
     "sources": [
-      "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
-      "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
-      "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
-      "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
+      "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
+      "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
+      "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
+      "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "libs/rust/core/src/authz.policy.tests.rs"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-identity-api last_owner_guard --locked",
+      "cargo test -p nvbes-enterprise-service last_owner_guard --locked",
       "cargo test -p nvbes-core owner_cannot_invite_or_remove_another_owner --locked"
     ]
   },
   "summary": {
-    "checks": 18,
-    "passed": 18,
+    "checks": 17,
+    "passed": 17,
     "failed": 0,
     "status": "passed"
   },
   "checks": [
     {
       "id": "owner-change-lock",
-      "description": "Owner changes use tenant-scoped advisory transaction lock",
-      "path": "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
+      "description": "Owner changes lock the tenant row before mutation",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
       "status": "passed",
-      "pattern": "pg_advisory_xact_lock"
+      "pattern": "SELECT id FROM tenants WHERE id = $1 FOR UPDATE"
     },
     {
       "id": "ownerless-access-query",
       "description": "Role updates count workspaces that would lose their last owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
       "status": "passed",
-      "pattern": "ownerless_workspace_count_after_access"
+      "pattern": "ensure_not_last_owner_after_access"
     },
     {
       "id": "ownerless-status-query",
       "description": "Lifecycle updates count workspaces that would lose their last owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
       "status": "passed",
-      "pattern": "ownerless_workspace_count_after_status"
+      "pattern": "ensure_not_last_owner_after_status"
     },
     {
       "id": "ownerless-other-owner-check",
       "description": "Ownerless queries require absence of another active owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.db.owners.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
       "status": "passed",
-      "pattern": "NOT EXISTS (\n                    SELECT 1\n                    FROM workspace_memberships other_owner"
+      "pattern": "NOT EXISTS (\n            SELECT 1\n            FROM workspace_memberships other_owner"
     },
     {
       "id": "update-access-lock",
       "description": "Enterprise access updates lock owner changes before mutation",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
       "status": "passed",
-      "pattern": "lock_tenant_owner_changes(&mut tx, tenant_id)"
+      "pattern": "db::lock_tenant_owner_changes(&mut tx, tenant_id).await?"
     },
     {
       "id": "update-access-ownerless-check",
       "description": "Enterprise access updates check ownerless workspaces before replace",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
       "status": "passed",
-      "pattern": "ownerless_workspace_count_after_access"
+      "pattern": "db::ensure_not_last_owner_after_access"
     },
     {
       "id": "update-access-conflict",
-      "description": "Enterprise access updates reject last-owner removal",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "description": "Enterprise access updates reject last-owner removal with failed-precondition",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
       "status": "passed",
-      "pattern": "\"last_owner_removal\""
+      "pattern": "Status::failed_precondition"
     },
     {
       "id": "update-access-audit",
       "description": "Enterprise access updates audit membership changes",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
       "status": "passed",
       "pattern": "\"enterprise.member.access_updated\""
     },
     {
       "id": "suspend-ownerless-check",
       "description": "Enterprise suspension checks ownerless workspaces before status change",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
       "status": "passed",
-      "pattern": "ownerless_workspace_count_after_status"
+      "pattern": "db::ensure_not_last_owner_after_status"
     },
     {
       "id": "suspend-audit",
       "description": "Enterprise suspension audits membership changes",
-      "path": "apps/identity-api/src/identity.domains.enterprise.service.user_mutations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.user_access.rs",
       "status": "passed",
       "pattern": "\"enterprise.member.suspended\""
     },
     {
-      "id": "review-member-lock",
-      "description": "Access review member revocation locks owner changes",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
-      "status": "passed",
-      "pattern": "lock_tenant_owner_changes(tx, tenant_id).await?"
-    },
-    {
       "id": "review-member-guard",
       "description": "Access review member revocation checks tenant last owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
       "pattern": "ensure_not_last_owner(tx, tenant_id, principal_id).await?"
     },
     {
       "id": "review-role-guard",
       "description": "Access review role revocation checks workspace last owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
       "pattern": "ensure_not_last_workspace_owner(tx, tenant_id, principal_id, workspace_id).await?"
     },
     {
       "id": "review-service-account-guard",
       "description": "Access review service-account revocation checks workspace last owner",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
       "pattern": "ensure_not_last_workspace_owner(tx, tenant_id, principal_id, workspace_id).await?"
     },
     {
       "id": "guard-conflict-code",
-      "description": "Last-owner service guard returns stable conflict code",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.rs",
+      "description": "Last-owner service guard returns stable failed-precondition status",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
-      "pattern": "\"last_owner_removal\""
+      "pattern": "Status::failed_precondition"
     },
     {
       "id": "guard-pass-test",
       "description": "Service test allows non-ownerless mutation",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
       "pattern": "last_owner_guard_allows_when_no_workspace_would_be_ownerless"
     },
     {
       "id": "guard-block-test",
       "description": "Service test blocks ownerless mutation",
-      "path": "apps/identity-api/src/identity.domains.enterprise.access_reviews.revocations.tests.rs",
+      "path": "apps/enterprise-service/src/enterprise.grpc.access_reviews.revocations.rs",
       "status": "passed",
       "pattern": "last_owner_guard_blocks_ownerless_workspace"
     },

@@ -173,7 +173,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn billing_api_base_url(&self) -> String {
-        std::env::var("NVBES_BILLING_API_BASE_URL")
+        std::env::var("NVBES_BILLING_SERVICE_BASE_URL")
             .ok()
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| self.api_base_url.clone())

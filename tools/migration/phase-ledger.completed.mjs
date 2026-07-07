@@ -51,7 +51,7 @@ export const completedPhaseEvidence = {
 			"docs/migration/identity-register.generated.json",
 			"docs/migration/identity-login-session.generated.json",
 			"docs/migration/identity-mfa-webauthn.generated.json",
-			"apps/identity-api/openapi.json",
+			"apps/account-service/openapi.json",
 		],
 		decision: "go",
 		proof:
@@ -76,7 +76,7 @@ export const completedPhaseEvidence = {
 			"docs/migration/drive-upload-download.generated.json",
 			"docs/migration/drive-share-revoke.generated.json",
 			"docs/migration/drive-quotas.generated.json",
-			"apps/drive-api/openapi.json",
+			"apps/cloud-service/openapi.json",
 		],
 		decision: "go",
 		proof:
@@ -101,7 +101,7 @@ export const completedPhaseEvidence = {
 		evidence: [
 			"docs/migration/developer-oauth-tokens.generated.json",
 			"docs/migration/developer-signed-webhooks.generated.json",
-			"apps/developer-web/src/developer.router.tsx",
+			"apps/console-web/src/developer.router.tsx",
 			"libs/ts/identity-sdk-core/openapi.json",
 		],
 		decision: "go",
@@ -113,12 +113,12 @@ export const completedPhaseEvidence = {
 		status: "passed",
 		evidence: [
 			"docs/migration/frontend-experience.generated.json",
-			"apps/identity-web/e2e/critical.spec.ts",
-			"apps/drive-web/src/drive.router.tsx",
-			"apps/developer-web/src/developer.router.tsx",
+			"apps/account-web/e2e/critical.spec.ts",
+			"apps/cloud-web/src/drive.router.tsx",
+			"apps/console-web/src/developer.router.tsx",
 			"apps/enterprise-web/src/enterprise.router.tsx",
-			"apps/cloud-console/README.md",
-			"apps/internal-admin/README.md",
+			"apps/cloud-web/README.md",
+			"apps/backoffice-service/README.md",
 		],
 		decision: "go",
 		proof:
@@ -141,7 +141,7 @@ export const completedPhaseEvidence = {
 			"pnpm check:migration-infra-deploy && tofu -chdir=infrastructure/environments/development validate && tofu -chdir=infrastructure/environments/staging validate && pnpm check:supply-chain && pnpm check:migration-backup-restore && pnpm check:migration-observability",
 	},
 	P11: {
-		owner: "migration lead required",
+		owner: "Data lead",
 		status: "pending",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
@@ -155,7 +155,7 @@ export const completedPhaseEvidence = {
 			"pnpm check:migration-rehearsals -- --strict && node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json && pnpm check:migration-rejects -- --strict",
 	},
 	P12: {
-		owner: "migration lead required",
+		owner: "Migration lead",
 		status: "pending",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",
@@ -170,7 +170,7 @@ export const completedPhaseEvidence = {
 			"pnpm check:migration-precutover -- --env production --reconciliation-report docs/migration/reconciliation.<run>.json",
 	},
 	P13: {
-		owner: "migration lead required",
+		owner: "Infra lead",
 		status: "pending",
 		evidence: [
 			"docs/migration/cutover-evidence-packet.generated.json",

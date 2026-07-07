@@ -86,7 +86,7 @@ const requiredCommands = [
 	"pnpm check:supply-chain",
 	"pnpm check:go",
 	"pnpm check:python",
-	"tools/migration/reconcile.mjs --env staging",
+	"node tools/migration/reconcile.mjs --env staging",
 ];
 
 const requiredCutoverSteps = [

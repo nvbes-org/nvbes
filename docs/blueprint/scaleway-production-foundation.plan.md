@@ -19,7 +19,7 @@ Le module `infrastructure/modules/scaleway-v1` fournit deja une base V1:
 Les limites principales a corriger avant production sont:
 
 - Les instances API portent encore une exposition publique directe.
-- Il n'y a pas encore de Load Balancer applicatif devant `identity-api` et `drive-api`.
+- Il n'y a pas encore de Load Balancer applicatif devant `account-service` et `cloud-service`.
 - Les sorties internet des instances privees ne sont pas encore centralisees via Public Gateway.
 - Les secrets sont inventories, mais leur provisioning et leur rotation ne sont pas encore industrialises.
 - Les artefacts applicatifs ne sont pas encore normalises autour d'images versionnees.
@@ -43,7 +43,7 @@ Faire entrer le trafic public par un point controle et retirer l'exposition dire
 
 ### Scope
 
-- Ajouter un Load Balancer devant `identity-api` et `drive-api`.
+- Ajouter un Load Balancer devant `account-service` et `cloud-service`.
 - Retirer l'exposition directe des instances applicatives quand possible.
 - Ajouter un Public Gateway pour que les instances privees gardent une sortie internet controlee.
 - Separer explicitement les zones reseau:
@@ -80,8 +80,8 @@ Sortir les secrets applicatifs des VM hors bootstrap minimal et rendre les acces
   - credentials Redis;
   - secret E2EE.
 - Standardiser le nommage:
-  - `nvbes/staging/identity-api/NVBES_JWT_SECRET`;
-  - `nvbes/prod/drive-api/STORAGE_BUCKET`.
+  - `nvbes/staging/account-service/NVBES_JWT_SECRET`;
+  - `nvbes/prod/cloud-service/STORAGE_BUCKET`.
 - Activer Key Manager pour les secrets ou operations cryptographiques critiques.
 - Documenter:
   - rotation;
@@ -106,10 +106,10 @@ Faire de Container Registry la source unique des images deployables.
 ### Scope
 
 - Ajouter Container Registry pour:
-  - `identity-api`;
-  - `drive-api`;
-  - `identity-worker`;
-  - `drive-worker`.
+  - `account-service`;
+  - `cloud-service`;
+  - `account-worker`;
+  - `cloud-worker`.
 - Adapter CI/CD pour build, tag et push.
 - Deployer les instances depuis images versionnees ou pulls controles.
 - Definir une politique de retention registry.

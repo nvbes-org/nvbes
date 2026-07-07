@@ -6,8 +6,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use crate::worker::{
-    BillingWorkerState,
-    email::enqueue_billing_email_for_provider_payment,
+    BillingWorkerState, email::enqueue_billing_email_for_provider_payment,
     workspace_updates::publish_workspace_billing_updates,
 };
 
@@ -49,10 +48,12 @@ async fn process_mollie_webhook_event(
     let workspace_id = outcome.workspace_id;
     let activates_subscription = outcome.initial_subscription.is_some();
     if let Some(request) = outcome.initial_subscription {
-        let subscription =
-            crate::worker::mollie::create_mollie_subscription(&state.config, &request.subscription_input)
-                .await
-                .context("Mollie subscription creation failed")?;
+        let subscription = crate::worker::mollie::create_mollie_subscription(
+            &state.config,
+            &request.subscription_input,
+        )
+        .await
+        .context("Mollie subscription creation failed")?;
         let mut tx = state.db.begin().await?;
         nvbes_billing::mollie_webhook_processing::finalize_mollie_initial_subscription_tx(
             &mut tx,
@@ -79,7 +80,13 @@ async fn process_mollie_webhook_event(
     let plan_code = match workspace_id {
         Some(workspace_id) => {
             let plan_code = publish_workspace_billing_updates(state, workspace_id).await?;
-            capture_mollie_webhook_analytics(state, workspace_id, &payment, plan_code.as_deref(), activates_subscription);
+            capture_mollie_webhook_analytics(
+                state,
+                workspace_id,
+                &payment,
+                plan_code.as_deref(),
+                activates_subscription,
+            );
             enqueue_billing_email_for_provider_payment(
                 &state.db,
                 &state.redis,
@@ -133,9 +140,12 @@ fn capture_mollie_webhook_analytics(
         state.product_analytics.capture(event);
     } else if payment.status == "failed" {
         state.product_analytics.capture(
-            nvbes_product_analytics::ProductAnalyticsEvent::workspace("billing.payment_failed", workspace_id)
-                .property("provider", ProviderCode::Mollie.as_str())
-                .property("status", "past_due"),
+            nvbes_product_analytics::ProductAnalyticsEvent::workspace(
+                "billing.payment_failed",
+                workspace_id,
+            )
+            .property("provider", ProviderCode::Mollie.as_str())
+            .property("status", "past_due"),
         );
     }
 }
@@ -165,7 +175,9 @@ async fn mark_mollie_event_failed(
 
 fn mollie_failure_details(error: &anyhow::Error) -> (&'static str, String) {
     if let Some(error) = error.chain().find_map(|cause| {
-        cause.downcast_ref::<nvbes_billing::mollie_webhook_processing::MollieWebhookProcessingError>()
+        cause
+            .downcast_ref::<nvbes_billing::mollie_webhook_processing::MollieWebhookProcessingError>(
+            )
     }) {
         return (error.code(), error.message().to_string());
     }

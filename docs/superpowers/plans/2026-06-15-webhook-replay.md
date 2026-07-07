@@ -4,7 +4,7 @@
 
 **Goal:** Implement webhook delivery inspection and replay capabilities in the Developer Console.
 
-**Architecture:** Use the existing `/developer/console/webhooks/deliveries/{deliveryId}/replay` Axum backend handler, expose it through the developer-web API client, and render an accordion interface listing delivery logs with auto-polling for pending replay states.
+**Architecture:** Use the existing `/developer/console/webhooks/deliveries/{deliveryId}/replay` Axum backend handler, expose it through the console-web API client, and render an accordion interface listing delivery logs with auto-polling for pending replay states.
 
 **Tech Stack:** Rust (Axum, sqlx), TypeScript, React, TanStack Query, Tailwind CSS.
 
@@ -13,7 +13,7 @@
 ### Task 1: Backend Integration Test
 
 **Files:**
-- Modify: `apps/identity-api/src/identity.domains.developer.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.tests.rs`
 
 - [ ] **Step 1: Write integration test for webhook replay**
   Add `test_webhook_replay_route` to verify the webhook replay route works correctly, including verifying the linked delivery ID.
@@ -138,7 +138,7 @@
   ```
 
 - [ ] **Step 2: Run test to verify it passes**
-  Run: `rtk cargo test -p identity-api domains::developer::tests::test_webhook_replay_route`
+  Run: `rtk cargo test -p account-service domains::developer::tests::test_webhook_replay_route`
   Expected: PASS
 
 - [ ] **Step 3: Commit**
@@ -149,10 +149,10 @@
 ### Task 2: Frontend API Integration
 
 **Files:**
-- Modify: `apps/developer-web/src/developer.api.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
 
 - [ ] **Step 1: Export API functions for listing deliveries and replaying a webhook delivery**
-  Modify `apps/developer-web/src/developer.api.ts` to import:
+  Modify `apps/console-web/src/developer.api.ts` to import:
   ```typescript
     DeveloperWebhookDeliveriesSchema,
     DeveloperWebhookDeliverySchema,
@@ -186,7 +186,7 @@
   ```
 
 - [ ] **Step 2: Build/Check TypeScript**
-  Run: `pnpm --filter developer-web check`
+  Run: `pnpm --filter console-web check`
   Expected: PASS
 
 - [ ] **Step 3: Commit**
@@ -197,7 +197,7 @@
 ### Task 3: Expandable Webhooks UI with Deliveries List & Replay Buttons
 
 **Files:**
-- Modify: `apps/developer-web/src/pages/WebhooksPage.tsx`
+- Modify: `apps/console-web/src/pages/WebhooksPage.tsx`
 
 - [ ] **Step 1: Implement WebhookDeliveriesList component and update WebhooksPage**
   Modify `WebhooksPage.tsx` to support expandable cards, displaying details of delivery logs and replay controls under each endpoint.
@@ -224,7 +224,7 @@
 
   export function WebhooksPage() {
     const webhooksQuery = useQuery({
-      queryKey: ['developer-webhooks'],
+      queryKey: ['console-webhooks'],
       queryFn: ({ signal }) => listDeveloperConsoleWebhooks(signal),
       staleTime: 30_000,
     });
@@ -314,7 +314,7 @@
     const queryClient = useQueryClient();
 
     const deliveriesQuery = useQuery({
-      queryKey: ['developer-webhook-deliveries', endpointId],
+      queryKey: ['console-webhook-deliveries', endpointId],
       queryFn: ({ signal }) => listDeveloperConsoleWebhookDeliveries(endpointId, signal),
       staleTime: 5_000,
       refetchInterval: (query) => {
@@ -327,10 +327,10 @@
       mutationFn: replayDeveloperConsoleWebhookDelivery,
       onSuccess: () => {
         void queryClient.invalidateQueries({
-          queryKey: ['developer-webhook-deliveries', endpointId],
+          queryKey: ['console-webhook-deliveries', endpointId],
         });
         void queryClient.invalidateQueries({
-          queryKey: ['developer-webhooks'],
+          queryKey: ['console-webhooks'],
         });
       },
     });
@@ -474,7 +474,7 @@
   ```
 
 - [ ] **Step 2: Run frontend test to verify they still pass**
-  Run: `pnpm --filter developer-web test`
+  Run: `pnpm --filter console-web test`
   Expected: PASS
 
 - [ ] **Step 3: Commit changes**

@@ -48,17 +48,29 @@ function currentDecision(scope, phaseLedger, gateEvidence) {
 	};
 }
 
+function currentLiveEvidence(requirement, liveEvidence) {
+	const liveRequirement = liveEvidence?.requirements?.find((entry) => entry.id === requirement.id);
+	return {
+		live_evidence: liveRequirement?.ready ? "ready" : "missing",
+		missing_evidence: liveRequirement?.missing_evidence ?? [`${requirement.id} live evidence requirement missing`],
+	};
+}
+
 function buildPacket() {
 	const phaseLedger = readJson("docs/migration/phase-ledger.generated.json");
 	const gateEvidence = readJson("docs/migration/gate-evidence.generated.json");
+	const liveEvidence = readJson("docs/migration/live-evidence-instances.generated.json");
 	const readiness = readJson("docs/migration/readiness-report.generated.json");
 	const completion = readJson("docs/migration/completion-audit.generated.json");
 	const backlog = readJson("docs/migration/execution-backlog.generated.json");
-	inputState = { completion, backlog };
+	inputState = { completion, backlog, liveEvidence };
 	const rows = requirements.map((requirement) => {
 		const missing_files = requirement.files.filter((path) => !existsSync(path));
 		const missing_commands = requirement.commands.filter((command) => !commandExists(command));
-		const current = currentDecision(requirement.scope, phaseLedger, gateEvidence);
+		const current = {
+			...currentDecision(requirement.scope, phaseLedger, gateEvidence),
+			...currentLiveEvidence(requirement, liveEvidence),
+		};
 		const repository_ready = missing_files.length === 0 && missing_commands.length === 0;
 		const live_blocking_reasons = liveBlockingReasons(requirement.id, repository_ready, current);
 		const strict_command = strictCommandFor(requirement);
@@ -82,8 +94,8 @@ function buildPacket() {
 	return {
 		schema_version: 1,
 		generation: {
-			command: "tools/migration/cutover-evidence-packet.mjs --write",
-			strict_command: "tools/migration/cutover-evidence-packet.mjs --strict",
+			command: "node tools/migration/cutover-evidence-packet.mjs --write",
+			strict_command: "node tools/migration/cutover-evidence-packet.mjs --strict",
 		},
 		status: {
 			readiness: readiness?.status?.production_cutover ?? "unknown",
@@ -128,12 +140,13 @@ function serializeMarkdown(packet) {
 		"",
 		"## Evidence Requirements",
 		"",
-		"| ID | Scope | Repository Ready | Current Phase | Current Gate | Blocking Reasons | Uncovered Strict Segments | Live Evidence |",
-		"|---|---|---:|---|---|---|---|---|",
+		"| ID | Scope | Repository Ready | Live Evidence State | Missing Live Evidence | Current Phase | Current Gate | Blocking Reasons | Uncovered Strict Segments | Live Evidence |",
+		"|---|---|---:|---|---|---|---|---|---|---|",
 	];
 	for (const row of packet.requirements) {
+		const missingEvidence = row.current.missing_evidence.map((item) => `\`${item}\``).join("<br>") || "none";
 		lines.push(
-			`| ${row.id} | ${row.scope} | ${row.repository_ready} | ${row.current.phase} | ${row.current.gate} | ${row.live_blocking_reasons.join(", ") || "none"} | ${row.uncovered_strict_command_segments.map((segment) => `\`${segment}\``).join("<br>") || "none"} | ${row.live_evidence} |`,
+			`| ${row.id} | ${row.scope} | ${row.repository_ready} | ${row.current.live_evidence} | ${missingEvidence} | ${row.current.phase} | ${row.current.gate} | ${row.live_blocking_reasons.join(", ") || "none"} | ${row.uncovered_strict_command_segments.map((segment) => `\`${segment}\``).join("<br>") || "none"} | ${row.live_evidence} |`,
 		);
 	}
 	lines.push("", "## Strict Commands", "");
@@ -167,9 +180,9 @@ function isLiveBlocking(row) {
 function liveBlockingReasons(id, repositoryReady, current) {
 	const reasons = [];
 	if (!repositoryReady) reasons.push("repository artifacts missing");
+	if (current?.live_evidence !== "ready") reasons.push("live evidence missing");
 	if (current?.phase?.includes("pending/no-go")) reasons.push("phase pending/no-go");
 	if (current?.gate?.includes("pending/no-go")) reasons.push("gate pending/no-go");
-	if (id === "final-reconciliation") reasons.push("production reconciliation not attached");
 	return reasons;
 }
 
@@ -189,9 +202,9 @@ validate(packet);
 
 for (const [path, expected] of [[jsonPath, json], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/cutover-evidence-packet.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/cutover-evidence-packet.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/cutover-evidence-packet.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/cutover-evidence-packet.mjs --write`);
 	}
 }
 

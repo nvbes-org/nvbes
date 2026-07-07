@@ -27,7 +27,7 @@ export const riskEvidence = {
 		owner: "Product lead",
 		status: "mitigated",
 		evidence:
-			"apps/identity-web/src/identity.return-to.ts; apps/identity-web/src/identity.return-to.test.js; apps/developer-web/src/developer.session.ts; apps/developer-web/src/__tests__/developer.session.test.ts",
+			"apps/account-web/src/identity.return-to.ts; apps/account-web/src/identity.return-to.test.js; apps/console-web/src/developer.session.ts; apps/console-web/src/__tests__/developer.session.test.ts",
 		cutover_impact:
 			"allowed: incompatible sessions are handled by explicit logout/session clearing and a validated login return flow",
 	},
@@ -48,7 +48,7 @@ export const riskEvidence = {
 			"allowed for repository gates: critical jobs and webhook replay paths carry idempotency-key evidence; production still needs DLQ and lag evidence in rehearsals",
 	},
 	"rollback-lent": {
-		owner: "infra lead required",
+		owner: "Infra lead",
 		status: "pending",
 		evidence:
 			"docs/migration/rollback-report.md; docs/migration/rehearsal-ledger.md; docs/migration/live-evidence-instances.generated.json; pnpm check:migration-rollback-report -- --strict",

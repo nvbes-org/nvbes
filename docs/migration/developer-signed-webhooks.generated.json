@@ -1,25 +1,25 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/developer-signed-webhooks.mjs --write",
+    "command": "node tools/migration/developer-signed-webhooks.mjs --write",
     "sources": [
-      "apps/identity-api/openapi.json",
-      "apps/identity-api/src/identity.http.openapi.rs",
-      "apps/identity-api/src/identity.domains.developer.webhooks.routes.rs",
-      "apps/identity-api/src/identity.domains.developer.routes.rs",
-      "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
-      "apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
-      "apps/identity-api/migrations/0011_developer_portal.sql",
-      "apps/identity-api/migrations/0008_developer_console.sql",
-      "apps/identity-api/src/identity.domains.developer.tests.webhooks.rs",
-      "apps/developer-web/src/developer.api.ts",
-      "apps/developer-web/src/developer.schemas.ts",
-      "apps/developer-web/src/__tests__/developer.webhooks.test.ts",
-      "apps/developer-web/src/pages/WebhooksPage.helpers.ts"
+      "apps/account-service/openapi.json",
+      "apps/account-service/src/identity.http.openapi.rs",
+      "apps/account-service/src/identity.domains.developer.webhooks.routes.rs",
+      "apps/account-service/src/identity.domains.developer.routes.rs",
+      "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
+      "apps/developer-service/src/developer.grpc.webhooks.rs",
+      "apps/account-service/migrations/0011_developer_portal.sql",
+      "apps/account-service/migrations/0008_developer_console.sql",
+      "apps/account-service/src/identity.domains.developer.tests.webhooks.rs",
+      "apps/console-web/src/developer.api.ts",
+      "apps/console-web/src/developer.schemas.ts",
+      "apps/console-web/src/__tests__/developer.webhooks.test.ts",
+      "apps/console-web/src/pages/WebhooksPage.helpers.ts"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-identity-api developer_webhook --locked",
-      "pnpm --dir apps/developer-web test -- --run developer.webhooks.test.ts"
+      "cargo test -p nvbes-account-service developer_webhook --locked",
+      "pnpm --dir apps/console-web test -- --run developer.webhooks.test.ts"
     ]
   },
   "summary": {
@@ -32,189 +32,189 @@
     {
       "id": "openapi-webhooks-list",
       "description": "OpenAPI exposes developer webhook listing",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/developer/webhooks'].get"
     },
     {
       "id": "openapi-webhooks-create",
       "description": "OpenAPI exposes developer webhook creation",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/developer/webhooks'].post"
     },
     {
       "id": "openapi-webhooks-delete",
       "description": "OpenAPI exposes developer webhook revocation",
-      "path": "apps/identity-api/openapi.json",
+      "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/developer/webhooks/{endpointId}'].delete"
     },
     {
       "id": "openapi-export-webhooks",
       "description": "OpenAPI export includes developer webhook handlers",
-      "path": "apps/identity-api/src/identity.http.openapi.rs",
+      "path": "apps/account-service/src/identity.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::developer::webhooks_routes::create_webhook"
     },
     {
       "id": "public-route-secret",
       "description": "Webhook creation returns signing secret once",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.routes.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.routes.rs",
       "status": "passed",
       "pattern": "CreateDeveloperWebhookEndpointResponse"
     },
     {
       "id": "public-route-manage-permission",
       "description": "Webhook mutations require manage permission",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.routes.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.routes.rs",
       "status": "passed",
       "pattern": "DeveloperPermission::WebhooksManage"
     },
     {
       "id": "console-replay-route",
       "description": "Developer console exposes delivery replay route",
-      "path": "apps/identity-api/src/identity.domains.developer.routes.rs",
+      "path": "apps/account-service/src/identity.domains.developer.routes.rs",
       "status": "passed",
       "pattern": "/developer/console/webhooks/deliveries/{deliveryId}/replay"
     },
     {
       "id": "delivery-hmac",
       "description": "Webhook signatures use HMAC-SHA256",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "type HmacSha256 = Hmac<Sha256>"
     },
     {
       "id": "delivery-header",
       "description": "Signature header includes timestamp and v1 digest",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "format!(\"t={timestamp},{WEBHOOK_SIGNATURE_VERSION}={signature}\")"
     },
     {
       "id": "delivery-event-binding",
       "description": "Signature binds event id into signed payload",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "mac.update(event_id.to_string().as_bytes())"
     },
     {
       "id": "delivery-payload-binding",
       "description": "Signature binds raw payload bytes",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "mac.update(payload)"
     },
     {
       "id": "delivery-window",
       "description": "Signature freshness window rejects replay outside tolerance",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "WEBHOOK_SIGNATURE_TOLERANCE_SECONDS"
     },
     {
       "id": "delivery-replay-classifier",
       "description": "Replay classifier only allows failed or pending deliveries",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "\"failed\" | \"pending\" => WebhookReplayDecision::Replayable"
     },
     {
       "id": "delivery-signature-test",
       "description": "Unit test proves signature binding",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "developer_webhook_signature_binds_event_timestamp_and_payload"
     },
     {
       "id": "delivery-window-test",
       "description": "Unit test proves replay window rejection",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "developer_webhook_signature_timestamp_rejects_replay_window"
     },
     {
       "id": "delivery-replay-test",
       "description": "Unit test proves replay idempotency guard",
-      "path": "apps/identity-api/src/identity.domains.developer.webhooks.delivery.rs",
+      "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
       "status": "passed",
       "pattern": "developer_webhook_replay_decision_is_idempotency_guard"
     },
     {
       "id": "replay-status-guard",
-      "description": "Replay route applies replayability guard",
-      "path": "apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
+      "description": "Replay service applies replayability guard",
+      "path": "apps/developer-service/src/developer.grpc.webhooks.rs",
       "status": "passed",
-      "pattern": "ensure_replayable_delivery_status"
+      "pattern": "ensure_replayable(original.get(\"status\"))"
     },
     {
       "id": "replay-conflict",
       "description": "Replay insert is idempotent for the original delivery",
-      "path": "apps/identity-api/src/identity.domains.developer.routes.webhooks.rs",
+      "path": "apps/developer-service/src/developer.grpc.webhooks.rs",
       "status": "passed",
       "pattern": "ON CONFLICT (tenant_id, replayed_from_delivery_id)"
     },
     {
       "id": "portal-replay-index",
       "description": "Portal schema prevents duplicate replays per original delivery",
-      "path": "apps/identity-api/migrations/0011_developer_portal.sql",
+      "path": "apps/account-service/migrations/0011_developer_portal.sql",
       "status": "passed",
       "pattern": "idx_developer_webhook_deliveries_replay_once"
     },
     {
       "id": "console-replay-index",
       "description": "Console schema prevents duplicate replays per original delivery",
-      "path": "apps/identity-api/migrations/0008_developer_console.sql",
+      "path": "apps/account-service/migrations/0008_developer_console.sql",
       "status": "passed",
       "pattern": "idx_developer_webhook_deliveries_replay_once"
     },
     {
       "id": "backend-replay-route-test",
       "description": "Backend route test covers replay response shape",
-      "path": "apps/identity-api/src/identity.domains.developer.tests.webhooks.rs",
+      "path": "apps/account-service/src/identity.domains.developer.tests.webhooks.rs",
       "status": "passed",
       "pattern": "webhook_replay_route"
     },
     {
-      "id": "developer-web-list",
-      "description": "Developer web lists console webhook endpoints",
-      "path": "apps/developer-web/src/developer.api.ts",
+      "id": "console-web-list",
+      "description": "Console web lists console webhook endpoints",
+      "path": "apps/console-web/src/developer.api.ts",
       "status": "passed",
       "pattern": "listDeveloperConsoleWebhooks"
     },
     {
-      "id": "developer-web-deliveries",
-      "description": "Developer web lists delivery attempts",
-      "path": "apps/developer-web/src/developer.api.ts",
+      "id": "console-web-deliveries",
+      "description": "Console web lists delivery attempts",
+      "path": "apps/console-web/src/developer.api.ts",
       "status": "passed",
       "pattern": "listDeveloperConsoleWebhookDeliveries"
     },
     {
-      "id": "developer-web-replay",
-      "description": "Developer web calls replay endpoint",
-      "path": "apps/developer-web/src/developer.api.ts",
+      "id": "console-web-replay",
+      "description": "Console web calls replay endpoint",
+      "path": "apps/console-web/src/developer.api.ts",
       "status": "passed",
       "pattern": "replayDeveloperConsoleWebhookDelivery"
     },
     {
-      "id": "developer-web-schema",
-      "description": "Developer web validates webhook delivery status",
-      "path": "apps/developer-web/src/developer.schemas.ts",
+      "id": "console-web-schema",
+      "description": "Console web validates webhook delivery status",
+      "path": "apps/console-web/src/developer.schemas.ts",
       "status": "passed",
       "pattern": "DeveloperWebhookDeliverySchema"
     },
     {
-      "id": "developer-web-helper",
-      "description": "Developer web gates replay actions by delivery status",
-      "path": "apps/developer-web/src/pages/WebhooksPage.helpers.ts",
+      "id": "console-web-helper",
+      "description": "Console web gates replay actions by delivery status",
+      "path": "apps/console-web/src/pages/WebhooksPage.helpers.ts",
       "status": "passed",
       "pattern": "canReplayWebhookDelivery"
     },
     {
-      "id": "developer-web-helper-test",
-      "description": "Developer web test blocks delivered delivery replay",
-      "path": "apps/developer-web/src/__tests__/developer.webhooks.test.ts",
+      "id": "console-web-helper-test",
+      "description": "Console web test blocks delivered delivery replay",
+      "path": "apps/console-web/src/__tests__/developer.webhooks.test.ts",
       "status": "passed",
       "pattern": "blocks delivered deliveries"
     }

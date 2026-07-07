@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a dedicated `developer-web` V0 for nvbes Identity developers with OAuth app governance, scope registry, service accounts, secret rotation, webhooks, logs, token debugging, sandbox status, and integration health checks.
+**Goal:** Build a dedicated `console-web` V0 for nvbes Identity developers with OAuth app governance, scope registry, service accounts, secret rotation, webhooks, logs, token debugging, sandbox status, and integration health checks.
 
-**Architecture:** Add `apps/developer-web` as a standalone React/Vite app and add `identity.domains.developer.*` in `identity-api` as a tenant-scoped facade. The developer domain owns product-specific state and permissions while delegating OAuth, service-account, token, and audit behavior to existing Identity primitives.
+**Architecture:** Add `apps/console-web` as a standalone React/Vite app and add `identity.domains.developer.*` in `account-service` as a tenant-scoped facade. The developer domain owns product-specific state and permissions while delegating OAuth, service-account, token, and audit behavior to existing Identity primitives.
 
 **Tech Stack:** Rust, Axum, SQLx, PostgreSQL, utoipa, pnpm workspaces, Nx, React, TypeScript, Vite, TanStack Router, TanStack Query, Zod, `@nvbes/web-runtime`, `@nvbes/web-ui`, lucide-react.
 
@@ -14,76 +14,76 @@
 
 Frontend app:
 
-- Create `apps/developer-web/package.json`: package scripts and dependencies.
-- Create `apps/developer-web/project.json`: Nx metadata.
-- Create `apps/developer-web/index.html`: Vite HTML entry.
-- Create `apps/developer-web/tsconfig.json`: TypeScript config.
-- Create `apps/developer-web/vite.config.ts`: Vite Plus config with API proxy.
-- Create `apps/developer-web/src/main.tsx`: React root.
-- Create `apps/developer-web/src/App.tsx`: providers and router mount.
-- Create `apps/developer-web/src/styles.css`: Tailwind theme tokens.
-- Create `apps/developer-web/src/developer.schemas.ts`: Zod schemas and inferred types.
-- Create `apps/developer-web/src/developer.api.ts`: typed API client functions.
-- Create `apps/developer-web/src/developer.fixtures.ts`: docs and deterministic empty-state copy.
-- Create `apps/developer-web/src/developer.router.tsx`: route tree.
-- Create `apps/developer-web/src/developer.permissions.ts`: route guard helpers.
-- Create `apps/developer-web/src/layouts/DeveloperShell.tsx`: authenticated console shell.
-- Create `apps/developer-web/src/pages/*.tsx`: Overview, OAuth apps, Marketplace, Scopes, Service accounts, Secrets, Webhooks, Logs, Token debugger, Sandbox, Health checks, Developer roles.
-- Create `apps/developer-web/src/__tests__/*.test.ts`: schema, permission, and workflow helper tests.
+- Create `apps/console-web/package.json`: package scripts and dependencies.
+- Create `apps/console-web/project.json`: Nx metadata.
+- Create `apps/console-web/index.html`: Vite HTML entry.
+- Create `apps/console-web/tsconfig.json`: TypeScript config.
+- Create `apps/console-web/vite.config.ts`: Vite Plus config with API proxy.
+- Create `apps/console-web/src/main.tsx`: React root.
+- Create `apps/console-web/src/App.tsx`: providers and router mount.
+- Create `apps/console-web/src/styles.css`: Tailwind theme tokens.
+- Create `apps/console-web/src/developer.schemas.ts`: Zod schemas and inferred types.
+- Create `apps/console-web/src/developer.api.ts`: typed API client functions.
+- Create `apps/console-web/src/developer.fixtures.ts`: docs and deterministic empty-state copy.
+- Create `apps/console-web/src/developer.router.tsx`: route tree.
+- Create `apps/console-web/src/developer.permissions.ts`: route guard helpers.
+- Create `apps/console-web/src/layouts/DeveloperShell.tsx`: authenticated console shell.
+- Create `apps/console-web/src/pages/*.tsx`: Overview, OAuth apps, Marketplace, Scopes, Service accounts, Secrets, Webhooks, Logs, Token debugger, Sandbox, Health checks, Developer roles.
+- Create `apps/console-web/src/__tests__/*.test.ts`: schema, permission, and workflow helper tests.
 
 Backend domain:
 
-- Create `apps/identity-api/migrations/0008_developer_console.sql`: developer-specific persistence.
-- Create `apps/identity-api/src/identity.domains.developer.mod.rs`: module declarations.
-- Create `apps/identity-api/src/identity.domains.developer.types.rs`: DTOs and OpenAPI schemas.
-- Create `apps/identity-api/src/identity.domains.developer.rbac.rs`: pure permission mapping.
-- Create `apps/identity-api/src/identity.domains.developer.rbac.db.rs`: role assignment queries.
-- Create `apps/identity-api/src/identity.domains.developer.routes.rs`: router.
-- Create `apps/identity-api/src/identity.domains.developer.routes.context.rs`: context and overview handlers.
-- Create `apps/identity-api/src/identity.domains.developer.routes.oauth.rs`: OAuth client, marketplace, consent, scope routes.
-- Create `apps/identity-api/src/identity.domains.developer.routes.service_accounts.rs`: service-account and secret routes.
-- Create `apps/identity-api/src/identity.domains.developer.routes.webhooks.rs`: webhook and delivery replay routes.
-- Create `apps/identity-api/src/identity.domains.developer.routes.tools.rs`: logs, token debugger, sandbox, health routes.
-- Create `apps/identity-api/src/identity.domains.developer.service.rs`: orchestration helpers.
-- Create `apps/identity-api/src/identity.domains.developer.health.rs`: integration health check normalization.
-- Create `apps/identity-api/src/identity.domains.developer.token_debugger.rs`: token inspection summaries.
-- Create `apps/identity-api/src/identity.domains.developer.tests.rs`: focused unit tests.
-- Modify `apps/identity-api/src/identity.domains.mod.rs`: expose and merge developer router.
-- Modify `apps/identity-api/src/identity.http.openapi.rs`: include developer paths and schemas.
+- Create `apps/account-service/migrations/0008_developer_console.sql`: developer-specific persistence.
+- Create `apps/account-service/src/identity.domains.developer.mod.rs`: module declarations.
+- Create `apps/account-service/src/identity.domains.developer.types.rs`: DTOs and OpenAPI schemas.
+- Create `apps/account-service/src/identity.domains.developer.rbac.rs`: pure permission mapping.
+- Create `apps/account-service/src/identity.domains.developer.rbac.db.rs`: role assignment queries.
+- Create `apps/account-service/src/identity.domains.developer.routes.rs`: router.
+- Create `apps/account-service/src/identity.domains.developer.routes.context.rs`: context and overview handlers.
+- Create `apps/account-service/src/identity.domains.developer.routes.oauth.rs`: OAuth client, marketplace, consent, scope routes.
+- Create `apps/account-service/src/identity.domains.developer.routes.service_accounts.rs`: service-account and secret routes.
+- Create `apps/account-service/src/identity.domains.developer.routes.webhooks.rs`: webhook and delivery replay routes.
+- Create `apps/account-service/src/identity.domains.developer.routes.tools.rs`: logs, token debugger, sandbox, health routes.
+- Create `apps/account-service/src/identity.domains.developer.service.rs`: orchestration helpers.
+- Create `apps/account-service/src/identity.domains.developer.health.rs`: integration health check normalization.
+- Create `apps/account-service/src/identity.domains.developer.token_debugger.rs`: token inspection summaries.
+- Create `apps/account-service/src/identity.domains.developer.tests.rs`: focused unit tests.
+- Modify `apps/account-service/src/identity.domains.mod.rs`: expose and merge developer router.
+- Modify `apps/account-service/src/identity.http.openapi.rs`: include developer paths and schemas.
 
 Root and docs:
 
-- Modify `package.json`: include `developer-web` in web scripts.
-- Create `scripts/dev-developer-web.sh`: local dev runner.
+- Modify `package.json`: include `console-web` in web scripts.
+- Create `scripts/dev-console-web.sh`: local dev runner.
 - Modify `scripts/dev-web.sh`: include developer app only if the existing script starts all web apps.
 - Create `docs/api/identity-developer-console.md`: route and permission reference.
 - Regenerate `libs/ts/identity-sdk-core/openapi.json` and `libs/ts/identity-sdk-core/src/types.gen.ts` after backend routes compile.
 
 ---
 
-### Task 1: Scaffold `developer-web`
+### Task 1: Scaffold `console-web`
 
 **Files:**
 
-- Create: `apps/developer-web/package.json`
-- Create: `apps/developer-web/project.json`
-- Create: `apps/developer-web/index.html`
-- Create: `apps/developer-web/tsconfig.json`
-- Create: `apps/developer-web/vite.config.ts`
-- Create: `apps/developer-web/src/main.tsx`
-- Create: `apps/developer-web/src/App.tsx`
-- Create: `apps/developer-web/src/styles.css`
-- Create: `apps/developer-web/src/developer.router.tsx`
-- Create: `scripts/dev-developer-web.sh`
+- Create: `apps/console-web/package.json`
+- Create: `apps/console-web/project.json`
+- Create: `apps/console-web/index.html`
+- Create: `apps/console-web/tsconfig.json`
+- Create: `apps/console-web/vite.config.ts`
+- Create: `apps/console-web/src/main.tsx`
+- Create: `apps/console-web/src/App.tsx`
+- Create: `apps/console-web/src/styles.css`
+- Create: `apps/console-web/src/developer.router.tsx`
+- Create: `scripts/dev-console-web.sh`
 - Modify: `package.json`
 
 - [ ] **Step 1: Create the app package**
 
-Create `apps/developer-web/package.json`:
+Create `apps/console-web/package.json`:
 
 ```json
 {
-  "name": "nvbes-developer-web",
+  "name": "nvbes-console-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -137,19 +137,19 @@ Create `apps/developer-web/package.json`:
 
 - [ ] **Step 2: Add project metadata and app config**
 
-Create `apps/developer-web/project.json`:
+Create `apps/console-web/project.json`:
 
 ```json
 {
-  "name": "developer-web",
+  "name": "console-web",
   "projectType": "application",
-  "root": "apps/developer-web",
-  "sourceRoot": "apps/developer-web/src",
+  "root": "apps/console-web",
+  "sourceRoot": "apps/console-web/src",
   "tags": ["type:app", "domain:identity", "layer:app"]
 }
 ```
 
-Create `apps/developer-web/tsconfig.json`:
+Create `apps/console-web/tsconfig.json`:
 
 ```json
 {
@@ -170,7 +170,7 @@ Create `apps/developer-web/tsconfig.json`:
 }
 ```
 
-Create `apps/developer-web/index.html`:
+Create `apps/console-web/index.html`:
 
 ```html
 <!doctype html>
@@ -188,7 +188,7 @@ Create `apps/developer-web/index.html`:
 </html>
 ```
 
-Create `apps/developer-web/vite.config.ts`:
+Create `apps/console-web/vite.config.ts`:
 
 ```ts
 import path from 'node:path';
@@ -200,13 +200,13 @@ import { defineConfig, loadEnv } from 'vite-plus';
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, '../../', '');
-  const identityApiProxyTarget =
-    process.env.VITE_IDENTITY_API_PROXY_TARGET ||
-    localEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    rootEnv.VITE_IDENTITY_API_PROXY_TARGET ||
-    process.env.VITE_IDENTITY_API_BASE_URL ||
-    localEnv.VITE_IDENTITY_API_BASE_URL ||
-    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+  const accountServiceProxyTarget =
+    process.env.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    localEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    rootEnv.VITE_ACCOUNT_SERVICE_PROXY_TARGET ||
+    process.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    localEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    rootEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
     'http://localhost:4000';
 
   return {
@@ -242,9 +242,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5175,
       proxy: {
-        '/api': identityApiProxyTarget,
-        '/oauth': identityApiProxyTarget,
-        '/.well-known': identityApiProxyTarget
+        '/api': accountServiceProxyTarget,
+        '/oauth': accountServiceProxyTarget,
+        '/.well-known': accountServiceProxyTarget
       }
     }
   };
@@ -253,7 +253,7 @@ export default defineConfig(({ mode }) => {
 
 - [ ] **Step 3: Add the initial React shell**
 
-Create `apps/developer-web/src/developer.router.tsx`:
+Create `apps/console-web/src/developer.router.tsx`:
 
 ```tsx
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from '@tanstack/react-router';
@@ -326,7 +326,7 @@ declare module '@tanstack/react-router' {
 }
 ```
 
-Create `apps/developer-web/src/App.tsx`:
+Create `apps/console-web/src/App.tsx`:
 
 ```tsx
 import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
@@ -341,7 +341,7 @@ export default function App() {
   const [queryClient] = useState(() => createQueryClient());
 
   return (
-    <ErrorBoundary name="developer-web">
+    <ErrorBoundary name="console-web">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         {import.meta.env.DEV ? (
@@ -356,7 +356,7 @@ export default function App() {
 }
 ```
 
-Create `apps/developer-web/src/main.tsx`:
+Create `apps/console-web/src/main.tsx`:
 
 ```tsx
 import React from 'react';
@@ -376,7 +376,7 @@ ReactDOM.createRoot(rootEl).render(
 );
 ```
 
-Create `apps/developer-web/src/styles.css` with the same import stack and theme pattern as `identity-web`, using a restrained operational palette:
+Create `apps/console-web/src/styles.css` with the same import stack and theme pattern as `account-web`, using a restrained operational palette:
 
 ```css
 @import 'tailwindcss';
@@ -438,65 +438,65 @@ Create `apps/developer-web/src/styles.css` with the same import stack and theme 
 
 - [ ] **Step 4: Wire scripts**
 
-Create `scripts/dev-developer-web.sh`:
+Create `scripts/dev-console-web.sh`:
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-pnpm --dir apps/developer-web dev
+pnpm --dir apps/console-web dev
 ```
 
 Run:
 
 ```bash
-rtk chmod +x scripts/dev-developer-web.sh
+rtk chmod +x scripts/dev-console-web.sh
 ```
 
 Modify root `package.json`:
 
-- add `"dev:developer-web": "bash scripts/dev-developer-web.sh"`;
-- add `developer-web` to `build`, `build:web`, `build:analyze`, `check:size`, `check:web`, `format`, `format:check`, and `lint:web` project lists where web apps are enumerated.
+- add `"dev:console-web": "bash scripts/dev-console-web.sh"`;
+- add `console-web` to `build`, `build:web`, `build:analyze`, `check:size`, `check:web`, `format`, `format:check`, and `lint:web` project lists where web apps are enumerated.
 
 - [ ] **Step 5: Verify the scaffold**
 
 Run:
 
 ```bash
-rtk pnpm exec nx show project developer-web --json
-rtk pnpm exec nx run developer-web:format:check --skip-nx-cache
-rtk pnpm exec nx run developer-web:typecheck
-rtk pnpm exec nx run developer-web:lint
-rtk pnpm exec nx run developer-web:build --skip-nx-cache
+rtk pnpm exec nx show project console-web --json
+rtk pnpm exec nx run console-web:format:check --skip-nx-cache
+rtk pnpm exec nx run console-web:typecheck
+rtk pnpm exec nx run console-web:lint
+rtk pnpm exec nx run console-web:build --skip-nx-cache
 ```
 
-Expected: Nx discovers `developer-web`; format check, typecheck, lint, and build pass.
+Expected: Nx discovers `console-web`; format check, typecheck, lint, and build pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web package.json scripts/dev-developer-web.sh
-rtk git commit -m "feat(developer): scaffold developer web app"
+rtk git add apps/console-web package.json scripts/dev-console-web.sh
+rtk git commit -m "feat(developer): scaffold console web app"
 ```
 
 ### Task 2: Add Developer RBAC And Persistence Foundations
 
 **Files:**
 
-- Create: `apps/identity-api/migrations/0008_developer_console.sql`
-- Create: `apps/identity-api/src/identity.domains.developer.mod.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.rbac.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.rbac.db.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.service.rs`
-- Create/replace: `apps/identity-api/src/identity.domains.developer.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.mod.rs`
+- Create: `apps/account-service/migrations/0008_developer_console.sql`
+- Create: `apps/account-service/src/identity.domains.developer.mod.rs`
+- Create: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.rbac.rs`
+- Create: `apps/account-service/src/identity.domains.developer.rbac.db.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Create: `apps/account-service/src/identity.domains.developer.service.rs`
+- Create/replace: `apps/account-service/src/identity.domains.developer.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.mod.rs`
 
 - [ ] **Step 1: Write failing RBAC tests**
 
-Create or replace `apps/identity-api/src/identity.domains.developer.tests.rs`:
+Create or replace `apps/account-service/src/identity.domains.developer.tests.rs`:
 
 ```rust
 use super::rbac::{DeveloperPermission, DeveloperRole, permissions_for_role};
@@ -539,14 +539,14 @@ fn docs_viewer_has_only_docs_access() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api developer_ --lib
+rtk cargo test -p nvbes-account-service developer_ --lib
 ```
 
 Expected: failure because `identity.domains.developer.rbac` is not declared.
 
 - [ ] **Step 3: Add the migration**
 
-Create `apps/identity-api/migrations/0008_developer_console.sql`:
+Create `apps/account-service/migrations/0008_developer_console.sql`:
 
 ```sql
 CREATE TYPE developer_role AS ENUM (
@@ -698,7 +698,7 @@ CREATE TABLE developer_token_debug_sessions (
 
 - [ ] **Step 4: Add module declarations and RBAC**
 
-Create `apps/identity-api/src/identity.domains.developer.mod.rs`:
+Create `apps/account-service/src/identity.domains.developer.mod.rs`:
 
 ```rust
 #[path = "identity.domains.developer.rbac.rs"]
@@ -717,7 +717,7 @@ pub mod types;
 mod tests;
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.rbac.rs`:
+Create `apps/account-service/src/identity.domains.developer.rbac.rs`:
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -786,7 +786,7 @@ pub fn permissions_for_role(role: DeveloperRole) -> Vec<DeveloperPermission> {
 }
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.routes.rs`:
+Create `apps/account-service/src/identity.domains.developer.routes.rs`:
 
 ```rust
 use axum::Router;
@@ -798,19 +798,19 @@ pub fn router(_state: &AppState) -> Router<AppState> {
 }
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.rbac.db.rs`:
+Create `apps/account-service/src/identity.domains.developer.rbac.db.rs`:
 
 ```rust
 // Database-backed developer role lookups are introduced with context routes.
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.service.rs`:
+Create `apps/account-service/src/identity.domains.developer.service.rs`:
 
 ```rust
 // Developer facade orchestration helpers are introduced with the first API routes.
 ```
 
-Modify `apps/identity-api/src/identity.domains.mod.rs`:
+Modify `apps/account-service/src/identity.domains.mod.rs`:
 
 ```rust
 #[path = "identity.domains.developer.mod.rs"]
@@ -824,7 +824,7 @@ Add `.merge(developer::routes::router(state))` to `router`.
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api developer_ --lib
+rtk cargo test -p nvbes-account-service developer_ --lib
 rtk cargo check --workspace
 ```
 
@@ -833,7 +833,7 @@ Expected: developer RBAC tests pass; workspace compiles.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/migrations/0008_developer_console.sql apps/identity-api/src/identity.domains.developer.* apps/identity-api/src/identity.domains.mod.rs
+rtk git add apps/account-service/migrations/0008_developer_console.sql apps/account-service/src/identity.domains.developer.* apps/account-service/src/identity.domains.mod.rs
 rtk git commit -m "feat(identity): add developer console foundations"
 ```
 
@@ -841,20 +841,20 @@ rtk git commit -m "feat(identity): add developer console foundations"
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.developer.routes.context.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Modify: `apps/developer-web/src/developer.schemas.ts`
-- Modify: `apps/developer-web/src/developer.api.ts`
-- Modify: `apps/developer-web/src/developer.permissions.ts`
-- Create: `apps/developer-web/src/layouts/DeveloperShell.tsx`
-- Modify: `apps/developer-web/src/developer.router.tsx`
-- Create: `apps/developer-web/src/pages/OverviewPage.tsx`
-- Test: `apps/developer-web/src/__tests__/developer.permissions.test.ts`
+- Create: `apps/account-service/src/identity.domains.developer.routes.context.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Modify: `apps/console-web/src/developer.schemas.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
+- Modify: `apps/console-web/src/developer.permissions.ts`
+- Create: `apps/console-web/src/layouts/DeveloperShell.tsx`
+- Modify: `apps/console-web/src/developer.router.tsx`
+- Create: `apps/console-web/src/pages/OverviewPage.tsx`
+- Test: `apps/console-web/src/__tests__/developer.permissions.test.ts`
 
 - [ ] **Step 1: Write failing frontend permission tests**
 
-Create `apps/developer-web/src/__tests__/developer.permissions.test.ts`:
+Create `apps/console-web/src/__tests__/developer.permissions.test.ts`:
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -880,14 +880,14 @@ describe('developer permissions', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.permissions.test.ts
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.permissions.test.ts
 ```
 
 Expected: failure because `developer.permissions.ts` is missing.
 
 - [ ] **Step 3: Add backend context DTOs and route**
 
-In `apps/identity-api/src/identity.domains.developer.types.rs`, define context DTOs:
+In `apps/account-service/src/identity.domains.developer.types.rs`, define context DTOs:
 
 ```rust
 use serde::Serialize;
@@ -920,7 +920,7 @@ pub struct DeveloperOverviewResponse {
 }
 ```
 
-Create `apps/identity-api/src/identity.domains.developer.routes.context.rs`:
+Create `apps/account-service/src/identity.domains.developer.routes.context.rs`:
 
 ```rust
 use axum::{
@@ -990,7 +990,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 - [ ] **Step 4: Add frontend schemas, API, and shell**
 
-Create `apps/developer-web/src/developer.schemas.ts`:
+Create `apps/console-web/src/developer.schemas.ts`:
 
 ```ts
 import { z } from 'zod';
@@ -1015,7 +1015,7 @@ export type DeveloperContext = z.infer<typeof DeveloperContextSchema>;
 export type DeveloperOverview = z.infer<typeof DeveloperOverviewSchema>;
 ```
 
-Create `apps/developer-web/src/developer.api.ts`:
+Create `apps/console-web/src/developer.api.ts`:
 
 ```ts
 import { identityHttpClient } from './identity.http';
@@ -1030,9 +1030,9 @@ export function getDeveloperOverview() {
 }
 ```
 
-Create `apps/developer-web/src/identity.http.ts` using the same pattern as `identity-web/src/identity.http.ts`: `VITE_IDENTITY_API_BASE_URL`, fallback `http://localhost:4000`, and `credentials: 'include'`. Developer API functions include the `/api/v1/developer` route prefix explicitly.
+Create `apps/console-web/src/identity.http.ts` using the same pattern as `account-web/src/identity.http.ts`: `VITE_ACCOUNT_SERVICE_BASE_URL`, fallback `http://localhost:4000`, and `credentials: 'include'`. Developer API functions include the `/api/v1/developer` route prefix explicitly.
 
-Create `apps/developer-web/src/developer.permissions.ts`:
+Create `apps/console-web/src/developer.permissions.ts`:
 
 ```ts
 const routeRequirements: Record<string, string> = {
@@ -1067,8 +1067,8 @@ Create `DeveloperShell.tsx` and `OverviewPage.tsx` with a sidebar and overview q
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.permissions.test.ts
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.permissions.test.ts
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 ```
 
@@ -1077,7 +1077,7 @@ Expected: frontend permission tests pass; developer app typechecks; Rust compile
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.domains.developer.* 
+rtk git add apps/console-web/src apps/account-service/src/identity.domains.developer.*
 rtk git commit -m "feat(developer): add console context shell"
 ```
 
@@ -1085,19 +1085,19 @@ rtk git commit -m "feat(developer): add console context shell"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.oauth.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/developer-web/src/developer.schemas.ts`
-- Modify: `apps/developer-web/src/developer.api.ts`
-- Create: `apps/developer-web/src/pages/OAuthAppsPage.tsx`
-- Create: `apps/developer-web/src/pages/MarketplacePage.tsx`
-- Create: `apps/developer-web/src/pages/ScopesPage.tsx`
-- Test: `apps/developer-web/src/__tests__/developer.schemas.test.ts`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.oauth.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/console-web/src/developer.schemas.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
+- Create: `apps/console-web/src/pages/OAuthAppsPage.tsx`
+- Create: `apps/console-web/src/pages/MarketplacePage.tsx`
+- Create: `apps/console-web/src/pages/ScopesPage.tsx`
+- Test: `apps/console-web/src/__tests__/developer.schemas.test.ts`
 
 - [ ] **Step 1: Write failing schema tests**
 
-Create `apps/developer-web/src/__tests__/developer.schemas.test.ts`:
+Create `apps/console-web/src/__tests__/developer.schemas.test.ts`:
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -1136,7 +1136,7 @@ describe('developer schemas', () => {
           risk: 'medium',
           owner_team: 'drive',
           lifecycle: 'active',
-          allowed_audiences: ['drive-api']
+          allowed_audiences: ['cloud-service']
         }
       ]
     });
@@ -1151,7 +1151,7 @@ describe('developer schemas', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.schemas.test.ts
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.schemas.test.ts
 ```
 
 Expected: failure because OAuth and scope schemas are missing.
@@ -1249,8 +1249,8 @@ Build pages with compact tables, filters, and empty states. Use no `any`.
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.schemas.test.ts
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.schemas.test.ts
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 ```
 
@@ -1259,7 +1259,7 @@ Expected: schema tests pass; web and Rust checks pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.domains.developer.*
+rtk git add apps/console-web/src apps/account-service/src/identity.domains.developer.*
 rtk git commit -m "feat(developer): add oauth governance views"
 ```
 
@@ -1267,18 +1267,18 @@ rtk git commit -m "feat(developer): add oauth governance views"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.service_accounts.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/developer-web/src/developer.schemas.ts`
-- Modify: `apps/developer-web/src/developer.api.ts`
-- Create: `apps/developer-web/src/pages/ServiceAccountsPage.tsx`
-- Create: `apps/developer-web/src/pages/SecretsPage.tsx`
-- Test: `apps/developer-web/src/__tests__/developer.secret-rotation.test.ts`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.service_accounts.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/console-web/src/developer.schemas.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
+- Create: `apps/console-web/src/pages/ServiceAccountsPage.tsx`
+- Create: `apps/console-web/src/pages/SecretsPage.tsx`
+- Test: `apps/console-web/src/__tests__/developer.secret-rotation.test.ts`
 
 - [ ] **Step 1: Write failing secret rotation helper test**
 
-Create `apps/developer-web/src/__tests__/developer.secret-rotation.test.ts`:
+Create `apps/console-web/src/__tests__/developer.secret-rotation.test.ts`:
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -1300,7 +1300,7 @@ describe('secret rotation helper', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.secret-rotation.test.ts
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.secret-rotation.test.ts
 ```
 
 Expected: failure because `SecretsPage.helpers` is missing.
@@ -1320,7 +1320,7 @@ The service-account routes delegate to `domains::service_accounts::service` afte
 
 - [ ] **Step 4: Add frontend schemas, helpers, and pages**
 
-Create `apps/developer-web/src/pages/SecretsPage.helpers.ts`:
+Create `apps/console-web/src/pages/SecretsPage.helpers.ts`:
 
 ```ts
 export type SecretRotationForm = {
@@ -1336,15 +1336,15 @@ export function buildSecretRotationPayload(form: SecretRotationForm) {
 }
 ```
 
-Add schemas for service accounts and rotation result, reuse names compatible with `identity-web` service-account schemas where fields match.
+Add schemas for service accounts and rotation result, reuse names compatible with `account-web` service-account schemas where fields match.
 
 - [ ] **Step 5: Verify**
 
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.secret-rotation.test.ts
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.secret-rotation.test.ts
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 ```
 
@@ -1353,7 +1353,7 @@ Expected: helper test passes; web and Rust checks pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.domains.developer.*
+rtk git add apps/console-web/src apps/account-service/src/identity.domains.developer.*
 rtk git commit -m "feat(developer): add service account secret workflows"
 ```
 
@@ -1361,18 +1361,18 @@ rtk git commit -m "feat(developer): add service account secret workflows"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.webhooks.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/developer-web/src/developer.schemas.ts`
-- Modify: `apps/developer-web/src/developer.api.ts`
-- Create: `apps/developer-web/src/pages/WebhooksPage.tsx`
-- Create: `apps/developer-web/src/pages/LogsPage.tsx`
-- Test: `apps/developer-web/src/__tests__/developer.webhooks.test.ts`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.webhooks.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/console-web/src/developer.schemas.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
+- Create: `apps/console-web/src/pages/WebhooksPage.tsx`
+- Create: `apps/console-web/src/pages/LogsPage.tsx`
+- Test: `apps/console-web/src/__tests__/developer.webhooks.test.ts`
 
 - [ ] **Step 1: Write failing replay eligibility test**
 
-Create `apps/developer-web/src/__tests__/developer.webhooks.test.ts`:
+Create `apps/console-web/src/__tests__/developer.webhooks.test.ts`:
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -1394,7 +1394,7 @@ describe('webhook replay eligibility', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.webhooks.test.ts
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.webhooks.test.ts
 ```
 
 Expected: failure because helper is missing.
@@ -1420,7 +1420,7 @@ Replay route rules:
 
 - [ ] **Step 4: Add frontend helpers and pages**
 
-Create `apps/developer-web/src/pages/WebhooksPage.helpers.ts`:
+Create `apps/console-web/src/pages/WebhooksPage.helpers.ts`:
 
 ```ts
 export type ReplayableDelivery = {
@@ -1440,8 +1440,8 @@ Add Webhooks page with endpoint table, delivery table, and replay action. Add Lo
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.webhooks.test.ts
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.webhooks.test.ts
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 ```
 
@@ -1450,7 +1450,7 @@ Expected: replay tests pass; checks pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.domains.developer.*
+rtk git add apps/console-web/src apps/account-service/src/identity.domains.developer.*
 rtk git commit -m "feat(developer): add webhook replay logs"
 ```
 
@@ -1458,21 +1458,21 @@ rtk git commit -m "feat(developer): add webhook replay logs"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.developer.types.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.routes.tools.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.token_debugger.rs`
-- Create: `apps/identity-api/src/identity.domains.developer.health.rs`
-- Modify: `apps/identity-api/src/identity.domains.developer.routes.rs`
-- Modify: `apps/developer-web/src/developer.schemas.ts`
-- Modify: `apps/developer-web/src/developer.api.ts`
-- Create: `apps/developer-web/src/pages/TokenDebuggerPage.tsx`
-- Create: `apps/developer-web/src/pages/SandboxPage.tsx`
-- Create: `apps/developer-web/src/pages/HealthChecksPage.tsx`
-- Test: `apps/developer-web/src/__tests__/developer.health.test.ts`
+- Modify: `apps/account-service/src/identity.domains.developer.types.rs`
+- Create: `apps/account-service/src/identity.domains.developer.routes.tools.rs`
+- Create: `apps/account-service/src/identity.domains.developer.token_debugger.rs`
+- Create: `apps/account-service/src/identity.domains.developer.health.rs`
+- Modify: `apps/account-service/src/identity.domains.developer.routes.rs`
+- Modify: `apps/console-web/src/developer.schemas.ts`
+- Modify: `apps/console-web/src/developer.api.ts`
+- Create: `apps/console-web/src/pages/TokenDebuggerPage.tsx`
+- Create: `apps/console-web/src/pages/SandboxPage.tsx`
+- Create: `apps/console-web/src/pages/HealthChecksPage.tsx`
+- Test: `apps/console-web/src/__tests__/developer.health.test.ts`
 
 - [ ] **Step 1: Write failing health status test**
 
-Create `apps/developer-web/src/__tests__/developer.health.test.ts`:
+Create `apps/console-web/src/__tests__/developer.health.test.ts`:
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -1494,7 +1494,7 @@ describe('health status summary', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.health.test.ts
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.health.test.ts
 ```
 
 Expected: failure because helper is missing.
@@ -1519,7 +1519,7 @@ Health checks:
 
 - [ ] **Step 4: Add frontend helpers and pages**
 
-Create `apps/developer-web/src/pages/HealthChecksPage.helpers.ts`:
+Create `apps/console-web/src/pages/HealthChecksPage.helpers.ts`:
 
 ```ts
 export type HealthStatus = 'passing' | 'warning' | 'failing' | 'unknown';
@@ -1543,8 +1543,8 @@ Add Health Checks page with target filters and run button.
 Run:
 
 ```bash
-rtk pnpm --dir apps/developer-web exec vitest run src/__tests__/developer.health.test.ts
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm --dir apps/console-web exec vitest run src/__tests__/developer.health.test.ts
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 ```
 
@@ -1553,7 +1553,7 @@ Expected: health tests pass; checks pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.domains.developer.*
+rtk git add apps/console-web/src apps/account-service/src/identity.domains.developer.*
 rtk git commit -m "feat(developer): add token debugging health checks"
 ```
 
@@ -1561,11 +1561,11 @@ rtk git commit -m "feat(developer): add token debugging health checks"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.http.openapi.rs`
+- Modify: `apps/account-service/src/identity.http.openapi.rs`
 - Modify: `libs/ts/identity-sdk-core/openapi.json`
 - Modify: `libs/ts/identity-sdk-core/src/types.gen.ts`
-- Create: `apps/developer-web/src/pages/DeveloperRolesPage.tsx`
-- Modify: `apps/developer-web/src/developer.router.tsx`
+- Create: `apps/console-web/src/pages/DeveloperRolesPage.tsx`
+- Modify: `apps/console-web/src/developer.router.tsx`
 - Create: `docs/api/identity-developer-console.md`
 - Modify: `libs/ts/identity-sdk/README.md`
 
@@ -1601,7 +1601,7 @@ Create `docs/api/identity-developer-console.md` with:
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:typecheck
+rtk pnpm exec nx run console-web:typecheck
 rtk cargo check --workspace
 rtk pnpm test:smoke:contract
 ```
@@ -1611,7 +1611,7 @@ Expected: typecheck and cargo check pass; OpenAPI contract smoke passes.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add apps/developer-web/src apps/identity-api/src/identity.http.openapi.rs libs/ts/identity-sdk-core docs/api/identity-developer-console.md libs/ts/identity-sdk/README.md
+rtk git add apps/console-web/src apps/account-service/src/identity.http.openapi.rs libs/ts/identity-sdk-core docs/api/identity-developer-console.md libs/ts/identity-sdk/README.md
 rtk git commit -m "docs(developer): document identity developer console"
 ```
 
@@ -1626,10 +1626,10 @@ rtk git commit -m "docs(developer): document identity developer console"
 Run:
 
 ```bash
-rtk pnpm exec nx run developer-web:format:check
-rtk pnpm exec nx run developer-web:lint
-rtk pnpm exec nx run developer-web:typecheck
-rtk cargo test -p nvbes-identity-api developer_ --lib
+rtk pnpm exec nx run console-web:format:check
+rtk pnpm exec nx run console-web:lint
+rtk pnpm exec nx run console-web:typecheck
+rtk cargo test -p nvbes-account-service developer_ --lib
 rtk cargo check --workspace
 ```
 
@@ -1650,7 +1650,7 @@ Expected: affected lint, typecheck, test, and build targets pass. If unrelated e
 Run:
 
 ```bash
-rtk pnpm dev:developer-web
+rtk pnpm dev:console-web
 ```
 
 Open `http://localhost:5175` in the in-app browser. Verify:
@@ -1667,7 +1667,7 @@ Open `http://localhost:5175` in the in-app browser. Verify:
 If Step 1 or browser QA required fixes:
 
 ```bash
-rtk git add apps/developer-web apps/identity-api docs libs package.json scripts
+rtk git add apps/console-web apps/account-service docs libs package.json scripts
 rtk git commit -m "fix(developer): polish console validation issues"
 ```
 

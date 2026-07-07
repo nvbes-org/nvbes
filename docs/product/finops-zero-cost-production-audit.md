@@ -41,13 +41,13 @@ Tarifs consultés le 2026-06-06. Les prix fournisseurs changent: cette section d
 flowchart LR
   User["Utilisateur / client"] --> CF["Cloudflare DNS, TLS, WAF, CDN"]
   CF --> Web["Frontends Vite / React"]
-  CF --> API["Rust APIs: identity-api + drive-api"]
+  CF --> API["Rust APIs: account-service + cloud-service"]
   API --> PG["Scaleway PostgreSQL managé"]
   API --> Redis["Redis sessions, queues, rate limits"]
   API --> S3["Scaleway Object Storage"]
   API --> Stripe["Stripe Checkout, Billing, Tax"]
   API --> TEM["Scaleway TEM email transactionnel"]
-  Worker["identity-worker + drive-worker"] --> PG
+  Worker["account-worker + cloud-worker"] --> PG
   Worker --> Redis
   Worker --> S3
   Worker --> TEM
@@ -139,7 +139,7 @@ Constantes billing dans `libs/rust/billing/src/shared.rs`:
 - stockage additionnel: 0,04 EUR/GB/mois.
 - siège additionnel: 9 EUR/mois.
 
-Migrations Drive dans `apps/drive-api/migrations/0001_initial_schema.sql`:
+Migrations Drive dans `apps/cloud-service/migrations/0001_initial_schema.sql`:
 
 | Plan | Stockage | Utilisateurs | Rétention | Liens |
 | --- | ---: | ---: | ---: | ---: |
@@ -148,7 +148,7 @@ Migrations Drive dans `apps/drive-api/migrations/0001_initial_schema.sql`:
 | team | 1000 GB | 10 | 90 jours | 1000 |
 | team_plus | 5000 GB | 25 | 365 jours | 5000 |
 
-Migrations Identity dans `apps/identity-api/migrations/0001_initial_schema.sql`:
+Migrations Identity dans `apps/account-service/migrations/0001_initial_schema.sql`:
 
 - Les plans `trial`, `solo_pro`, `team`, `team_plus` existent.
 - Les colonnes `included_storage_gb`, `included_users`, `retention_days`, `max_share_links`, `audit_level` sont ajoutées plus tard avec défaut `0`.

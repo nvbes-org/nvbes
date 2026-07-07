@@ -6,8 +6,8 @@
 - repository_ready: true
 - live_blocking_items: 6
 - completion: no-go
-- backlog_open_tasks: 25
-- backlog_blocking_items: 58
+- backlog_open_tasks: 40
+- backlog_blocking_items: 178
 - decision: no-go
 
 ## Rules
@@ -22,14 +22,14 @@
 
 ## Evidence Requirements
 
-| ID | Scope | Repository Ready | Current Phase | Current Gate | Blocking Reasons | Uncovered Strict Segments | Live Evidence |
-|---|---|---:|---|---|---|---|---|
-| g4-frontend-signoff | G4 Frontends | true | not applicable | pending/no-go | gate pending/no-go | none | critical Playwright journeys and WCAG AA sign-off |
-| g5-infra-signoff | G5 Infra | true | not applicable | pending/no-go | gate pending/no-go | none | staging rebuild, backup restore and timed rollback proof |
-| p11-rehearsals | P11/G6 Repetitions migration | true | pending/no-go | pending/no-go | phase pending/no-go, gate pending/no-go | none | three rehearsal runs and two stable reconciliations |
-| p12-cutover | P12/G7 Big Bang cutover | true | pending/no-go | pending/no-go | phase pending/no-go, gate pending/no-go | none | production cutover journal, final reconciliation, smoke and SLO proof |
-| p13-decommission | P13/G8 Decommission | true | pending/no-go | pending/no-go | phase pending/no-go, gate pending/no-go | none | legacy runtime removed, secrets revoked and post-migration audit approved |
-| final-reconciliation | Production reconciliation | true | not applicable | not applicable | production reconciliation not attached | none | executed production reconciliation JSON replacing the template no-go report |
+| ID | Scope | Repository Ready | Live Evidence State | Missing Live Evidence | Current Phase | Current Gate | Blocking Reasons | Uncovered Strict Segments | Live Evidence |
+|---|---|---:|---|---|---|---|---|---|---|
+| g4-frontend-signoff | G4 Frontends | true | missing | `frontend_signoff:0/1`<br>`web_check:0/1`<br>`smoke_test:0/1` | not applicable | pending/no-go | live evidence missing, gate pending/no-go | none | critical Playwright journeys and WCAG AA sign-off |
+| g5-infra-signoff | G5 Infra | true | missing | `infra_deploy:0/1`<br>`infra_deploy@staging`<br>`infra_restore:0/1`<br>`infra_restore@staging`<br>`rollback:0/1`<br>`rollback@staging` | not applicable | pending/no-go | live evidence missing, gate pending/no-go | none | staging rebuild, backup restore and timed rollback proof |
+| p11-rehearsals | P11/G6 Repetitions migration | true | missing | `rehearsal:0/3`<br>`rehearsal@local`<br>`rehearsal@staging`<br>`rehearsal@production`<br>`reconciliation:0/2`<br>`rollback:0/1`<br>`reject_review:0/1` | pending/no-go | pending/no-go | live evidence missing, phase pending/no-go, gate pending/no-go | none | three rehearsal runs and two stable reconciliations |
+| p12-cutover | P12/G7 Big Bang cutover | true | missing | `cutover:0/1`<br>`cutover@production`<br>`reconciliation:0/1`<br>`reconciliation@production` | pending/no-go | pending/no-go | live evidence missing, phase pending/no-go, gate pending/no-go | none | production cutover journal, final reconciliation, smoke and SLO proof |
+| p13-decommission | P13/G8 Decommission | true | missing | `decommission:0/1`<br>`decommission@production` | pending/no-go | pending/no-go | live evidence missing, phase pending/no-go, gate pending/no-go | none | legacy runtime removed, secrets revoked and post-migration audit approved |
+| final-reconciliation | Production reconciliation | true | missing | `reconciliation:0/1`<br>`reconciliation@production` | not applicable | not applicable | live evidence missing | none | executed production reconciliation JSON replacing the template no-go report |
 
 ## Strict Commands
 

@@ -9,9 +9,9 @@ const outputPath = "docs/migration/billing-webhook-idempotency.generated.json";
 const markdownPath = "docs/migration/billing-webhook-idempotency.md";
 
 const sources = {
-	identityOpenapi: "apps/identity-api/openapi.json",
-	identityDomainsRouter: "apps/identity-api/src/identity.domains.mod.rs",
-	billingApiRoutes: "apps/billing-api/src/billing.domains.webhooks.rs",
+	identityOpenapi: "apps/account-service/openapi.json",
+	identityDomainsRouter: "apps/account-service/src/identity.domains.mod.rs",
+	billingServiceRoutes: "apps/billing-service/src/billing.domains.webhooks.rs",
 	stripeIntake: "libs/rust/billing/src/stripe_webhook_intake.rs",
 	billingJobs: "libs/rust/billing/src/jobs.rs",
 	workerDispatcher: "apps/billing-worker/src/billing.worker.jobs.rs",
@@ -24,7 +24,7 @@ const sources = {
 	dunningDb: "libs/rust/billing/src/dunning_db.rs",
 	dunningJobs: "libs/rust/billing/src/dunning_jobs.rs",
 	providerEventsDb: "libs/rust/billing/src/db.provider_events.rs",
-	migration: "apps/billing-api/migrations/0002_billing_platform_core.sql",
+	migration: "apps/billing-service/migrations/0002_billing_platform_core.sql",
 };
 
 const errors = [];
@@ -63,11 +63,11 @@ function absentTextCheck(id, path, description, pattern) {
 function buildChecks() {
 	return [
 		absentTextCheck("identity-openapi-no-psp-webhook", sources.identityOpenapi, "Identity OpenAPI no longer exposes PSP webhook routes", "/webhooks/stripe"),
-		absentTextCheck("identity-router-no-billing-merge", sources.identityDomainsRouter, "Identity router no longer merges billing routes", "billing::routes::router"),
-		textCheck("billing-api-stripe-route", sources.billingApiRoutes, "Billing API accepts Stripe webhooks", 'route("/webhooks/stripe", post(handle_stripe_webhook))'),
-		textCheck("billing-api-mollie-route", sources.billingApiRoutes, "Billing API accepts Mollie webhooks", 'route("/webhooks/mollie", post(handle_mollie_webhook))'),
-		textCheck("billing-api-stripe-rate-limit", sources.billingApiRoutes, "Stripe webhook intake is rate limited in billing-api", "enforce_stripe_webhook_rate_limit"),
-		textCheck("billing-api-mollie-rate-limit", sources.billingApiRoutes, "Mollie webhook intake is rate limited in billing-api", "enforce_mollie_webhook_rate_limit"),
+		absentTextCheck("identity-router-no-billing-merge", sources.identityDomainsRouter, "Identity router no longer merges legacy billing routes", ".merge(billing::routes::router(state))"),
+		textCheck("billing-service-stripe-route", sources.billingServiceRoutes, "billing-service accepts Stripe webhooks", 'route("/webhooks/stripe", post(handle_stripe_webhook))'),
+		textCheck("billing-service-mollie-route", sources.billingServiceRoutes, "billing-service accepts Mollie webhooks", 'route("/webhooks/mollie", post(handle_mollie_webhook))'),
+		textCheck("billing-service-stripe-rate-limit", sources.billingServiceRoutes, "Stripe webhook intake is rate limited in billing-service", "enforce_stripe_webhook_rate_limit"),
+		textCheck("billing-service-mollie-rate-limit", sources.billingServiceRoutes, "Mollie webhook intake is rate limited in billing-service", "enforce_mollie_webhook_rate_limit"),
 		textCheck("stripe-intake-signature", sources.stripeIntake, "Stripe intake verifies signatures before enqueueing", "verify_stripe_signature(webhook_secret, signature_header, payload)"),
 		textCheck("stripe-provider-event-lock", sources.stripeIntake, "Stripe intake locks existing provider event rows", "WHERE provider_event_id = $1\n        FOR UPDATE"),
 		textCheck("stripe-duplicate-decision", sources.stripeIntake, "Processed Stripe webhooks are treated as duplicates", 'Some("processed") => WebhookRetryDecision::Duplicate'),
@@ -140,7 +140,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/billing-webhook-idempotency.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/billing-webhook-idempotency.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -197,7 +197,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-billing-webhook-idempotency",
-		"tools/migration/billing-webhook-idempotency.mjs --write",
+		"node tools/migration/billing-webhook-idempotency.mjs --write",
 		"```",
 		"",
 	);
@@ -209,7 +209,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/billing-webhook-idempotency.mjs --write",
+		command: "node tools/migration/billing-webhook-idempotency.mjs --write",
 		sources: Object.values(sources),
 		targeted_test: "cargo test -p nvbes-billing classify_webhook_retry --locked",
 	},
@@ -238,8 +238,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/billing-webhook-idempotency.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/billing-webhook-idempotency.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/billing-webhook-idempotency.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/billing-webhook-idempotency.mjs --write`);
 }
 
 if (errors.length > 0) {

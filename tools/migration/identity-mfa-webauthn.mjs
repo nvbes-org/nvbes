@@ -8,24 +8,24 @@ const write = args.includes("--write");
 const outputPath = "docs/migration/identity-mfa-webauthn.generated.json";
 const markdownPath = "docs/migration/identity-mfa-webauthn.md";
 const sources = {
-	mfaRoot: "apps/identity-api/src/identity.domains.auth.routes.mfa.rs",
-	mfaModule: "apps/identity-api/src/identity.domains.auth.mfa.rs",
-	mfaFlow: "apps/identity-api/src/identity.domains.auth.routes.login.mfa_flow.rs",
-	loginMfaRoute: "apps/identity-api/src/identity.domains.auth.routes.login.mfa.rs",
-	loginWebauthnRoute: "apps/identity-api/src/identity.domains.auth.routes.login.webauthn.rs",
-	totpRoute: "apps/identity-api/src/identity.domains.auth.routes.mfa.totp.rs",
-	totpService: "apps/identity-api/src/identity.domains.auth.mfa.totp.rs",
-	recoveryService: "apps/identity-api/src/identity.domains.auth.mfa.recovery.rs",
-	webauthnRoute: "apps/identity-api/src/identity.domains.auth.routes.mfa.webauthn.rs",
-	webauthnRegistrationStart: "apps/identity-api/src/identity.domains.auth.webauthn.registration.start.rs",
-	webauthnRegistrationFinish: "apps/identity-api/src/identity.domains.auth.webauthn.registration.finish.rs",
-	webauthnRegistrationOptions: "apps/identity-api/src/identity.domains.auth.webauthn.registration.options.rs",
-	webauthnRegistrationTests: "apps/identity-api/src/identity.domains.auth.webauthn.registration.tests.rs",
-	webauthnLogin: "apps/identity-api/src/identity.domains.auth.webauthn.login.rs",
-	webauthnDiscoverableLogin: "apps/identity-api/src/identity.domains.auth.webauthn.login.discoverable.rs",
-	webauthnStepUp: "apps/identity-api/src/identity.domains.auth.webauthn.authentication.rs",
-	openapiSource: "apps/identity-api/src/identity.http.openapi.rs",
-	openapiJson: "apps/identity-api/openapi.json",
+	mfaRoot: "apps/account-service/src/identity.domains.auth.routes.mfa.rs",
+	mfaModule: "apps/account-service/src/identity.domains.auth.mfa.rs",
+	mfaFlow: "apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
+	loginMfaRoute: "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+	loginWebauthnRoute: "apps/account-service/src/identity.domains.auth.routes.login.webauthn.rs",
+	totpRoute: "apps/account-service/src/identity.domains.auth.routes.mfa.totp.rs",
+	totpService: "apps/account-service/src/identity.domains.auth.mfa.totp.rs",
+	recoveryService: "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+	webauthnRoute: "apps/account-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
+	webauthnRegistrationStart: "apps/account-service/src/identity.domains.auth.webauthn.registration.start.rs",
+	webauthnRegistrationFinish: "apps/account-service/src/identity.domains.auth.webauthn.registration.finish.rs",
+	webauthnRegistrationOptions: "apps/account-service/src/identity.domains.auth.webauthn.registration.options.rs",
+	webauthnRegistrationTests: "apps/account-service/src/identity.domains.auth.webauthn.registration.tests.rs",
+	webauthnLogin: "apps/account-service/src/identity.domains.auth.webauthn.login.rs",
+	webauthnDiscoverableLogin: "apps/account-service/src/identity.domains.auth.webauthn.login.discoverable.rs",
+	webauthnStepUp: "apps/account-service/src/identity.domains.auth.webauthn.authentication.rs",
+	openapiSource: "apps/account-service/src/identity.http.openapi.rs",
+	openapiJson: "apps/account-service/openapi.json",
 	contractSmoke: "scripts/test-openapi-contract.mjs",
 	dataMap: "docs/migration/data-map.md",
 };
@@ -123,16 +123,16 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/identity-mfa-webauthn.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/identity-mfa-webauthn.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
 		errors.push(`${outputPath}: generation.sources must match identity MFA/WebAuthn source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api validate_single_factor --locked",
-		"cargo test -p nvbes-identity-api shape_registration_options --locked",
-		"cargo test -p nvbes-identity-api login_methods_are_ordered_by_preference --locked",
+		"cargo test -p nvbes-account-service validate_single_factor --locked",
+		"cargo test -p nvbes-account-service shape_registration_options --locked",
+		"cargo test -p nvbes-account-service login_methods_are_ordered_by_preference --locked",
 		"bash scripts/test-openapi-contract-seeded-auth.sh",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -185,7 +185,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-identity-mfa-webauthn",
-		"tools/migration/identity-mfa-webauthn.mjs --write",
+		"node tools/migration/identity-mfa-webauthn.mjs --write",
 		"```",
 		"",
 	);
@@ -197,12 +197,12 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/identity-mfa-webauthn.mjs --write",
+		command: "node tools/migration/identity-mfa-webauthn.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api validate_single_factor --locked",
-			"cargo test -p nvbes-identity-api shape_registration_options --locked",
-			"cargo test -p nvbes-identity-api login_methods_are_ordered_by_preference --locked",
+			"cargo test -p nvbes-account-service validate_single_factor --locked",
+			"cargo test -p nvbes-account-service shape_registration_options --locked",
+			"cargo test -p nvbes-account-service login_methods_are_ordered_by_preference --locked",
 			"bash scripts/test-openapi-contract-seeded-auth.sh",
 		],
 	},
@@ -231,8 +231,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/identity-mfa-webauthn.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/identity-mfa-webauthn.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-mfa-webauthn.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-mfa-webauthn.mjs --write`);
 }
 
 if (errors.length > 0) {

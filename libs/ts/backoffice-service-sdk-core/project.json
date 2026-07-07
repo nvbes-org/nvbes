@@ -1,0 +1,15 @@
+{
+  "name": "backoffice-service-sdk-core",
+  "projectType": "library",
+  "root": "libs/ts/backoffice-service-sdk-core",
+  "sourceRoot": "libs/ts/backoffice-service-sdk-core/src",
+  "tags": ["scope:internal", "type:lib", "domain:backoffice-service", "layer:sdk"],
+  "targets": {
+    "generate:ts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir libs/ts/backoffice-service-sdk-core generate:ts"
+      }
+    }
+  }
+}

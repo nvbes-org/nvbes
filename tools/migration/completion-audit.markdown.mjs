@@ -41,6 +41,6 @@ export function serializeCompletionMarkdown(audit) {
 			`| ${requirement.id} | ${requirement.source} | ${requirement.requirement} | ${requirement.status} | ${evidenceCell(requirement.evidence)} | \`${requirement.proof}\` |`,
 		);
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-completion-audit", "tools/migration/completion-audit.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-completion-audit", "node tools/migration/completion-audit.mjs --write", "```", "");
 	return lines.join("\n");
 }

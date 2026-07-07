@@ -144,13 +144,13 @@ function validate(register, expectedGates) {
 
 function validateGeneration(register) {
 	const generation = register.generation ?? {};
-	if (generation.command !== "tools/migration/gate-evidence.mjs --write") {
+	if (generation.command !== "node tools/migration/gate-evidence.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (generation.source !== sourcePath) {
 		errors.push(`${outputPath}: generation.source must match blueprint source`);
 	}
-	if (generation.strict_cutover_command !== "tools/migration/gate-evidence.mjs --strict") {
+	if (generation.strict_cutover_command !== "node tools/migration/gate-evidence.mjs --strict") {
 		errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	}
 }
@@ -173,9 +173,9 @@ const existing = readJson(outputPath);
 const register = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/gate-evidence.mjs --write",
+		command: "node tools/migration/gate-evidence.mjs --write",
 		source: sourcePath,
-		strict_cutover_command: "tools/migration/gate-evidence.mjs --strict",
+		strict_cutover_command: "node tools/migration/gate-evidence.mjs --strict",
 	},
 	summary: { gates: generatedGates.length, pending: 0, passed: 0, accepted: 0, failed: 0 },
 	gates: mergeExisting(generatedGates, existing),
@@ -196,14 +196,14 @@ if (write) {
 validate(register, generatedGates);
 
 if (!existsSync(outputPath)) {
-	errors.push(`${outputPath}: missing; run tools/migration/gate-evidence.mjs --write`);
+	errors.push(`${outputPath}: missing; run node tools/migration/gate-evidence.mjs --write`);
 } else if (readFileSync(outputPath, "utf8") !== serialize(register)) {
-	errors.push(`${outputPath}: stale; run tools/migration/gate-evidence.mjs --write`);
+	errors.push(`${outputPath}: stale; run node tools/migration/gate-evidence.mjs --write`);
 }
 if (!existsSync(markdownPath)) {
-	errors.push(`${markdownPath}: missing; run tools/migration/gate-evidence.mjs --write`);
+	errors.push(`${markdownPath}: missing; run node tools/migration/gate-evidence.mjs --write`);
 } else if (readFileSync(markdownPath, "utf8") !== serializeGateEvidenceMarkdown(register)) {
-	errors.push(`${markdownPath}: stale; run tools/migration/gate-evidence.mjs --write`);
+	errors.push(`${markdownPath}: stale; run node tools/migration/gate-evidence.mjs --write`);
 }
 
 if (errors.length > 0) {

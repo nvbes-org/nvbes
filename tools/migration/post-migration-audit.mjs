@@ -88,17 +88,9 @@ if (!content.includes("Decommission is not complete until every audit item is ap
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|no-go)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} post-migration audit marker(s) remain`);
-		}
+	const blockers = strictBlockers();
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} post-migration audit marker(s) remain`);
 	}
 }
 
@@ -183,6 +175,17 @@ function statusNumber(key) {
 
 function hasConcreteEvidence(value) {
 	return /\b(docs|tools|pnpm|artifact|ci|s3|gs|oci):?\/?\/?/.test(value ?? "") || /\b(report|journal|inventory|log|evidence|check)\b/i.test(value ?? "");
+}
+
+function strictBlockers() {
+	const counts = { pending: 0, blocking: 0, failed: 0 };
+	for (const row of [...tableRowsAfter("## Required Sign-Off"), ...tableRowsAfter("## Audit Items")]) {
+		const status = row.at(-1);
+		if (status === "pending") counts.pending += 1;
+		if (status === "blocking") counts.blocking += 1;
+		if (status === "failed") counts.failed += 1;
+	}
+	return counts;
 }
 
 if (errors.length > 0) {

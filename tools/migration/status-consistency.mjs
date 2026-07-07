@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
+import { validatePacketLiveEvidenceAlignment } from "./status-consistency.live-evidence.mjs";
 
 const paths = {
 	readiness: "docs/migration/readiness-report.generated.json",
@@ -7,6 +8,12 @@ const paths = {
 	liveEvidence: "docs/migration/live-evidence-instances.generated.json",
 	completion: "docs/migration/completion-audit.generated.json",
 	backlog: "docs/migration/execution-backlog.generated.json",
+	runtimeFoundation: "docs/migration/runtime-foundation.generated.json",
+	domainLedger: "docs/migration/domain-ledger.generated.json",
+	domainDod: "docs/migration/domain-dod.generated.json",
+	gateEvidence: "docs/migration/gate-evidence.generated.json",
+	phaseLedger: "docs/migration/phase-ledger.generated.json",
+	riskRegister: "docs/migration/risk-register.generated.json",
 };
 const errors = [];
 
@@ -28,6 +35,12 @@ const packet = readJson("packet", paths.packet);
 const liveEvidence = readJson("liveEvidence", paths.liveEvidence);
 const completion = readJson("completion", paths.completion);
 const backlog = readJson("backlog", paths.backlog);
+const runtimeFoundation = readJson("runtimeFoundation", paths.runtimeFoundation);
+const domainLedger = readJson("domainLedger", paths.domainLedger);
+const domainDod = readJson("domainDod", paths.domainDod);
+const gateEvidence = readJson("gateEvidence", paths.gateEvidence);
+const phaseLedger = readJson("phaseLedger", paths.phaseLedger);
+const riskRegister = readJson("riskRegister", paths.riskRegister);
 
 const readinessStatus = readiness?.status?.production_cutover;
 const packetStatus = packet?.status;
@@ -40,8 +53,17 @@ const missingLiveEvidenceItems = liveStatus?.missing_evidence_items ?? null;
 
 validateReadinessCounters(readiness);
 validateCompletionCounters(completion);
+validateCompletionSourceCounters(completion, {
+	runtimeFoundation,
+	domainLedger,
+	domainDod,
+	gateEvidence,
+	phaseLedger,
+});
+validateCompletionRiskClosure(completion, riskRegister);
 validateBacklogCounters(backlog);
 validateLiveEvidenceCounters(liveEvidence);
+validatePacketLiveEvidenceAlignment(packet, liveEvidence, errors);
 validateReadinessLiveEvidence(readiness, missingLiveEvidence);
 
 if (packetStatus?.readiness !== readinessStatus) {
@@ -164,6 +186,49 @@ function validateCompletionCounters(report) {
 	}
 }
 
+function validateCompletionSourceCounters(report, sources) {
+	const status = report?.status ?? {};
+	const checks = [
+		["runtimes", status.runtimes_go, status.runtimes_total, ledgerSummary(sources.runtimeFoundation, "runtimes")],
+		["domains", status.domains_go, status.domains_total, ledgerSummary(sources.domainLedger, "domains")],
+		["domain_dod", status.domain_dod_go, status.domain_dod_total, ledgerSummary(sources.domainDod, "entries")],
+		["gates", status.gates_go, status.gates_total, gateSummary(sources.gateEvidence)],
+		["phases", status.phases_go, status.phases_total, ledgerSummary(sources.phaseLedger, "phases")],
+	];
+	for (const [label, actualGo, actualTotal, expected] of checks) {
+		if (actualGo !== expected.go || actualTotal !== expected.total) {
+			errors.push(`completion ${label} ${actualGo}/${actualTotal} must match source ${expected.go}/${expected.total}`);
+		}
+	}
+}
+
+function validateCompletionRiskClosure(report, register) {
+	const riskClosure = (report?.requirements ?? []).find((entry) => entry.id === "risk-closure");
+	const risks = Array.isArray(register?.risks) ? register.risks : [];
+	const pending = risks.filter((risk) => risk.status === "pending").length;
+	const expected = risks.length > 0 && pending === 0 ? "complete" : "blocked";
+	if (!riskClosure) errors.push("completion audit must include risk-closure requirement");
+	else if (riskClosure.status !== expected) {
+		errors.push(`risk-closure ${riskClosure.status} must be ${expected} for ${pending} pending risk(s)`);
+	}
+}
+
+function ledgerSummary(ledger, key) {
+	const rows = Array.isArray(ledger?.[key]) ? ledger[key] : [];
+	return {
+		go: rows.filter((row) => row.decision === "go").length,
+		total: rows.length,
+	};
+}
+
+function gateSummary(gates) {
+	const rows = Array.isArray(gates?.gates) ? gates.gates : [];
+	return {
+		go: rows.filter((row) => row.decision === "go").length,
+		total: rows.length,
+	};
+}
+
 function validateBacklogCounters(report) {
 	const tasks = Array.isArray(report?.tasks) ? report.tasks : [];
 	const openTasks = tasks.filter((task) => task.status !== "complete").length;
@@ -202,8 +267,8 @@ function validateReadinessLiveEvidence(report, missingRequirements) {
 		errors.push(`readiness live_evidence pending ${source.pending} must match missing live evidence ${missingRequirements}`);
 	}
 	if (missingRequirements > 0 && !blocker) errors.push("readiness live_evidence blocker is required while live evidence is missing");
-	if (blocker?.proof !== "tools/migration/live-evidence-instances.mjs --strict") {
-		errors.push(`readiness live_evidence proof ${blocker?.proof} must be tools/migration/live-evidence-instances.mjs --strict`);
+	if (blocker?.proof !== "node tools/migration/live-evidence-instances.mjs --strict") {
+		errors.push(`readiness live_evidence proof ${blocker?.proof} must be node tools/migration/live-evidence-instances.mjs --strict`);
 	}
 }
 

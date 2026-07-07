@@ -14,13 +14,13 @@ const required = [
 	{
 		runtime: "Rust",
 		scope: "backend core and product/platform crates",
-		required_paths: ["Cargo.toml", "libs/rust", "apps/identity-api", "apps/drive-api"],
+		required_paths: ["Cargo.toml", "libs/rust", "apps/account-service", "apps/cloud-service"],
 		required_commands: ["pnpm check:api"],
 	},
 	{
 		runtime: "TypeScript",
 		scope: "frontends, SDKs, web runtime, and tooling",
-		required_paths: ["pnpm-workspace.yaml", "libs/ts", "apps/identity-web", "apps/drive-web", "apps/developer-web"],
+		required_paths: ["pnpm-workspace.yaml", "libs/ts", "apps/account-web", "apps/cloud-web", "apps/console-web"],
 		required_commands: ["pnpm check:web"],
 	},
 	{
@@ -114,8 +114,8 @@ function mergeExisting(generated, existing) {
 			owner: current.owner && !current.owner.endsWith(" required") ? current.owner : entry.owner,
 			status: current.status && current.status !== "pending" ? current.status : entry.status,
 			decision: current.decision === "go" ? current.decision : entry.decision,
-			evidence: Array.isArray(current.evidence) && current.evidence.length > 0 ? current.evidence : entry.evidence,
-			proof: current.proof && current.proof !== "pending runtime foundation evidence" ? current.proof : entry.proof,
+			evidence: entry.evidence,
+			proof: current.status === "accepted" ? current.proof : entry.proof,
 		};
 	});
 }
@@ -155,7 +155,7 @@ function serializeMarkdown(data) {
 	for (const runtime of data.runtimes) {
 		lines.push(`| ${runtime.runtime} | ${runtime.status} | ${runtime.decision} | ${runtime.missing_paths.length} | ${runtime.missing_commands.length} | ${runtime.owner} | \`${runtime.proof}\` |`);
 	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-runtime-foundation", "tools/migration/runtime-foundation.mjs --write", "```", "");
+	lines.push("", "## Regeneration", "", "```bash", "pnpm check:migration-runtime-foundation", "node tools/migration/runtime-foundation.mjs --write", "```", "");
 	return lines.join("\n");
 }
 
@@ -232,10 +232,10 @@ function validate(ledger, expected) {
 	for (const [field, value] of Object.entries(counts)) {
 		if (summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
-	if (ledger.generation?.command !== "tools/migration/runtime-foundation.mjs --write") {
+	if (ledger.generation?.command !== "node tools/migration/runtime-foundation.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
-	if (ledger.generation?.strict_cutover_command !== "tools/migration/runtime-foundation.mjs --strict") {
+	if (ledger.generation?.strict_cutover_command !== "node tools/migration/runtime-foundation.mjs --strict") {
 		errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	}
 }
@@ -245,9 +245,9 @@ const existing = readJson(outputPath);
 const ledger = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/runtime-foundation.mjs --write",
+		command: "node tools/migration/runtime-foundation.mjs --write",
 		source: "docs/blueprint/nvbes-full-restructure-big-bang-zero-debt.plan.md",
-		strict_cutover_command: "tools/migration/runtime-foundation.mjs --strict",
+		strict_cutover_command: "node tools/migration/runtime-foundation.mjs --strict",
 	},
 	summary: { runtimes: generated.length, pending: 0, accepted: 0, passed: 0, failed: 0, missing_paths: 0, missing_commands: 0 },
 	runtimes: mergeExisting(generated, existing),
@@ -273,8 +273,8 @@ if (write) {
 validate(ledger, generated);
 
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/runtime-foundation.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/runtime-foundation.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/runtime-foundation.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/runtime-foundation.mjs --write`);
 }
 
 if (errors.length > 0) {

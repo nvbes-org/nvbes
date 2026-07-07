@@ -94,17 +94,9 @@ if (!content.includes("Initialized. Not approved for production.")) {
 }
 
 if (strict) {
-	const blockers = [...content.matchAll(/\b(pending|no-go)\b/gi)].map((match) =>
-		match[1].toLowerCase(),
-	);
-	if (blockers.length > 0) {
-		const counts = blockers.reduce((acc, blocker) => {
-			acc[blocker] = (acc[blocker] ?? 0) + 1;
-			return acc;
-		}, {});
-		for (const [blocker, count] of Object.entries(counts)) {
-			errors.push(`${count} ${blocker} cutover checklist marker(s) remain`);
-		}
+	const blockers = strictBlockers(checklistRows);
+	for (const [blocker, count] of Object.entries(blockers)) {
+		if (count > 0) errors.push(`${count} ${blocker} cutover checklist marker(s) remain`);
 	}
 }
 
@@ -220,6 +212,17 @@ function validateFinalDecisionDependency(preCutoverRows, windowRows) {
 			errors.push(`T+180m: final decision requires ${row[0]} checklist row`);
 		}
 	}
+}
+
+function strictBlockers(rows) {
+	const counts = { pending: 0, blocking: 0, failed: 0 };
+	for (const row of rows) {
+		const status = row.at(-1);
+		if (status === "pending") counts.pending += 1;
+		if (status === "blocking") counts.blocking += 1;
+		if (status === "failed") counts.failed += 1;
+	}
+	return counts;
 }
 
 function hasConcreteEvidence(value) {

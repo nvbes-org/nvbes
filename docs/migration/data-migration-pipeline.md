@@ -89,5 +89,5 @@ Data migration pipeline repository evidence is covered for export, transform, im
 
 ```bash
 pnpm check:migration-data-migration-pipeline
-tools/migration/data-migration-pipeline.mjs --write
+node tools/migration/data-migration-pipeline.mjs --write
 ```

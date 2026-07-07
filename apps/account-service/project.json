@@ -1,0 +1,12 @@
+{
+  "name": "account-service",
+  "projectType": "application",
+  "root": "apps/account-service",
+  "sourceRoot": "apps/account-service/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:account",
+    "layer:app"
+  ]
+}

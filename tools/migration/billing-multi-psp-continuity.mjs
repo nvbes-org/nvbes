@@ -15,9 +15,9 @@ const sources = {
 	providerSubscriptions: "libs/rust/billing/src/db.provider_subscriptions.rs",
 	workspaceEffects: "libs/rust/billing/src/stripe_webhook_workspace_effects.rs",
 	portalSubscriptions: "libs/rust/billing/src/portal_views.subscriptions.rs",
-	billingMigration: "apps/billing-api/migrations/0002_billing_platform_core.sql",
-	primaryFallbackMigration: "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
-	cbMigration: "apps/billing-api/migrations/0009_billing_provider_cb.sql",
+	billingMigration: "apps/billing-service/migrations/0002_billing_platform_core.sql",
+	primaryFallbackMigration: "apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+	cbMigration: "apps/billing-service/migrations/0009_billing_provider_cb.sql",
 	billingClientProvider: "libs/ts/billing-client/src/billing.provider.ts",
 	graphqlSchema: "contracts/graphql/schema.graphql",
 };
@@ -54,8 +54,8 @@ function buildChecks() {
 		textCheck("cb-fast-r", sources.cbProvider, "CB Fast'R requires customer initiated ecommerce context", "customer_initiated_required"),
 		textCheck("cb-acquirer-pat-port", sources.cbProvider, "CB integration remains behind acquirer or PAT port", "cb_acquirer_or_pat_required"),
 		textCheck("provider-customer-boundary", sources.providerTests, "Provider customer lookup does not reuse unrelated provider IDs", "provider_customer_id_for_does_not_reuse_other_provider_customer"),
-		textCheck("provider-subscription-primary-column", sources.billingMigration, "Provider subscriptions store primary provider ownership", "primary_for_subscription BOOLEAN NOT NULL DEFAULT FALSE"),
-		textCheck("provider-subscription-fallback-column", sources.billingMigration, "Provider subscriptions store fallback eligibility", "fallback_eligible BOOLEAN NOT NULL DEFAULT FALSE"),
+		textCheck("provider-subscription-primary-column", sources.primaryFallbackMigration, "Provider subscriptions store primary provider ownership", "primary_for_subscription BOOLEAN NOT NULL DEFAULT FALSE"),
+		textCheck("provider-subscription-fallback-column", sources.primaryFallbackMigration, "Provider subscriptions store fallback eligibility", "fallback_eligible BOOLEAN NOT NULL DEFAULT FALSE"),
 		textCheck("provider-subscription-one-primary-index", sources.primaryFallbackMigration, "Database enforces one primary provider subscription", "idx_billing_provider_subscriptions_one_primary"),
 		textCheck("provider-subscription-demotion", sources.providerSubscriptions, "New primary provider subscription demotes previous providers", "demoted_primary"),
 		textCheck("provider-subscription-active-fallback", sources.providerSubscriptions, "Active non-primary provider subscriptions remain fallback eligible", "active_non_primary_provider_subscription_remains_fallback_eligible"),
@@ -98,7 +98,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/billing-multi-psp-continuity.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/billing-multi-psp-continuity.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -160,7 +160,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-billing-multi-psp-continuity",
-		"tools/migration/billing-multi-psp-continuity.mjs --write",
+		"node tools/migration/billing-multi-psp-continuity.mjs --write",
 		"```",
 		"",
 	);
@@ -172,7 +172,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/billing-multi-psp-continuity.mjs --write",
+		command: "node tools/migration/billing-multi-psp-continuity.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
 			"cargo test -p nvbes-billing provider_subscription --locked",
@@ -206,8 +206,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/billing-multi-psp-continuity.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/billing-multi-psp-continuity.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/billing-multi-psp-continuity.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/billing-multi-psp-continuity.mjs --write`);
 }
 
 if (errors.length > 0) {

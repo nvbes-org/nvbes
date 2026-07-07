@@ -4,7 +4,7 @@
 
 **Goal:** Build nvbes Identity into a sellable foundation for nvbes products, starting with Universal Login and hardening the OAuth/OIDC, client, session, password lifecycle, and SDK surfaces products depend on.
 
-**Architecture:** Keep `identity-api` as the security boundary and `identity-web` as the hosted UI. Add a small OAuth hosted-login state machine backed by Redis, then adapt the existing `/login` challenge flow to resume the backend-approved authorization decision. Preserve the current PAR-first OAuth implementation and use hosted-login state as the bridge between browser `/oauth/authorize` entry and the React login shell. Then add contract tests and SDK polish around the already-existing OAuth/OIDC, client management, session management, refresh-token rotation, and password lifecycle modules.
+**Architecture:** Keep `account-service` as the security boundary and `account-web` as the hosted UI. Add a small OAuth hosted-login state machine backed by Redis, then adapt the existing `/login` challenge flow to resume the backend-approved authorization decision. Preserve the current PAR-first OAuth implementation and use hosted-login state as the bridge between browser `/oauth/authorize` entry and the React login shell. Then add contract tests and SDK polish around the already-existing OAuth/OIDC, client management, session management, refresh-token rotation, and password lifecycle modules.
 
 **Tech Stack:** Rust, Axum, SQLx, Redis session/cache helpers, React, TypeScript, TanStack Router, TanStack Query-style local API modules, Vitest/React Testing Library, Cargo tests.
 
@@ -14,26 +14,26 @@
 
 Backend files:
 
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.types.rs`: request, cached state, client display, and decision response types.
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.keys.rs`: Redis key and TTL helpers.
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.store.rs`: read/write/delete hosted authorization state in Redis.
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`: validation, hosted-state creation, authorization decision, consent approval/denial.
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.routes.rs`: `/hosted-login/*` API routes.
-- Create `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`: pure/service-level hosted-login tests.
-- Modify `apps/identity-api/src/identity.domains.oauth.mod.rs`: expose the hosted module.
-- Modify `apps/identity-api/src/identity.domains.oauth.routes.rs`: nest hosted-login routes under `/oauth`.
-- Modify `apps/identity-api/src/identity.domains.oauth.routes.authorize.rs`: redirect unauthenticated browser requests to hosted login instead of returning only JSON errors.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.types.rs`: request, cached state, client display, and decision response types.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.keys.rs`: Redis key and TTL helpers.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.store.rs`: read/write/delete hosted authorization state in Redis.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.service.rs`: validation, hosted-state creation, authorization decision, consent approval/denial.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.routes.rs`: `/hosted-login/*` API routes.
+- Create `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`: pure/service-level hosted-login tests.
+- Modify `apps/account-service/src/identity.domains.oauth.mod.rs`: expose the hosted module.
+- Modify `apps/account-service/src/identity.domains.oauth.routes.rs`: nest hosted-login routes under `/oauth`.
+- Modify `apps/account-service/src/identity.domains.oauth.routes.authorize.rs`: redirect unauthenticated browser requests to hosted login instead of returning only JSON errors.
 
 Frontend files:
 
-- Create `apps/identity-web/src/identity.universal-login.api.ts`: typed hosted-login API calls.
-- Create `apps/identity-web/src/pages/useUniversalLogin.ts`: resolve hosted state, authorize session, approve/deny consent.
-- Create `apps/identity-web/src/pages/UniversalLoginErrorPage.tsx`: hosted non-redirect-safe OAuth error state.
-- Modify `apps/identity-web/src/identity.oauth.ts`: support `state_id` hosted-login references next to legacy query parsing.
-- Modify `apps/identity-web/src/pages/useLoginPage.ts`: load hosted state and route login completion into hosted authorization.
-- Modify `apps/identity-web/src/pages/useLoginPage.actions.account.ts`: approve/cancel hosted consent through the new API.
-- Modify `apps/identity-web/src/pages/LoginPageConsent.tsx`: display client name, tenant/workspace context, and scopes from hosted state.
-- Add or modify focused tests under `apps/identity-web/tests/`.
+- Create `apps/account-web/src/identity.universal-login.api.ts`: typed hosted-login API calls.
+- Create `apps/account-web/src/pages/useUniversalLogin.ts`: resolve hosted state, authorize session, approve/deny consent.
+- Create `apps/account-web/src/pages/UniversalLoginErrorPage.tsx`: hosted non-redirect-safe OAuth error state.
+- Modify `apps/account-web/src/identity.oauth.ts`: support `state_id` hosted-login references next to legacy query parsing.
+- Modify `apps/account-web/src/pages/useLoginPage.ts`: load hosted state and route login completion into hosted authorization.
+- Modify `apps/account-web/src/pages/useLoginPage.actions.account.ts`: approve/cancel hosted consent through the new API.
+- Modify `apps/account-web/src/pages/LoginPageConsent.tsx`: display client name, tenant/workspace context, and scopes from hosted state.
+- Add or modify focused tests under `apps/account-web/tests/`.
 
 Docs and generated API:
 
@@ -46,15 +46,15 @@ Docs and generated API:
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.oauth.hosted.types.rs`
-- Create: `apps/identity-api/src/identity.domains.oauth.hosted.keys.rs`
-- Create: `apps/identity-api/src/identity.domains.oauth.hosted.store.rs`
-- Create: `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.mod.rs`
+- Create: `apps/account-service/src/identity.domains.oauth.hosted.types.rs`
+- Create: `apps/account-service/src/identity.domains.oauth.hosted.keys.rs`
+- Create: `apps/account-service/src/identity.domains.oauth.hosted.store.rs`
+- Create: `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.mod.rs`
 
 - [ ] **Step 1: Write the failing store round-trip test**
 
-Add this test to `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`:
+Add this test to `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`:
 
 ```rust
 use super::hosted_keys::{hosted_authorization_state_key, hosted_authorization_state_ttl_seconds};
@@ -77,14 +77,14 @@ fn hosted_authorization_state_ttl_is_short_lived() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_authorization_state --lib
+rtk cargo test -p nvbes-account-service hosted_authorization_state --lib
 ```
 
 Expected: fail because `hosted` module and key helpers do not exist.
 
 - [ ] **Step 3: Add hosted module declarations**
 
-Modify `apps/identity-api/src/identity.domains.oauth.mod.rs`:
+Modify `apps/account-service/src/identity.domains.oauth.mod.rs`:
 
 ```rust
 #[path = "identity.domains.oauth.hosted.types.rs"]
@@ -104,7 +104,7 @@ mod hosted_tests;
 
 - [ ] **Step 4: Add key helpers**
 
-Create `apps/identity-api/src/identity.domains.oauth.hosted.keys.rs`:
+Create `apps/account-service/src/identity.domains.oauth.hosted.keys.rs`:
 
 ```rust
 pub(crate) fn hosted_authorization_state_key(state_id: &str) -> String {
@@ -118,7 +118,7 @@ pub(crate) fn hosted_authorization_state_ttl_seconds() -> u64 {
 
 - [ ] **Step 5: Add hosted types**
 
-Create `apps/identity-api/src/identity.domains.oauth.hosted.types.rs`:
+Create `apps/account-service/src/identity.domains.oauth.hosted.types.rs`:
 
 ```rust
 use chrono::{DateTime, Utc};
@@ -160,7 +160,7 @@ pub(crate) enum HostedLoginDecision {
 
 - [ ] **Step 6: Add Redis store helpers**
 
-Create `apps/identity-api/src/identity.domains.oauth.hosted.store.rs`:
+Create `apps/account-service/src/identity.domains.oauth.hosted.store.rs`:
 
 ```rust
 use super::hosted_keys::{hosted_authorization_state_key, hosted_authorization_state_ttl_seconds};
@@ -208,7 +208,7 @@ pub(crate) async fn delete_hosted_authorization_state(
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_authorization_state --lib
+rtk cargo test -p nvbes-account-service hosted_authorization_state --lib
 ```
 
 Expected: pass.
@@ -216,7 +216,7 @@ Expected: pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.hosted.types.rs apps/identity-api/src/identity.domains.oauth.hosted.keys.rs apps/identity-api/src/identity.domains.oauth.hosted.store.rs apps/identity-api/src/identity.domains.oauth.hosted.tests.rs apps/identity-api/src/identity.domains.oauth.mod.rs
+rtk git add apps/account-service/src/identity.domains.oauth.hosted.types.rs apps/account-service/src/identity.domains.oauth.hosted.keys.rs apps/account-service/src/identity.domains.oauth.hosted.store.rs apps/account-service/src/identity.domains.oauth.hosted.tests.rs apps/account-service/src/identity.domains.oauth.mod.rs
 rtk git commit -m "feat(identity): add hosted login state store"
 ```
 
@@ -226,14 +226,14 @@ rtk git commit -m "feat(identity): add hosted login state store"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`
-- Reuse: `apps/identity-api/src/identity.domains.oauth.routes.par.rs`
-- Reuse: `apps/identity-api/src/identity.domains.oauth.routes.authorize.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.service.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`
+- Reuse: `apps/account-service/src/identity.domains.oauth.routes.par.rs`
+- Reuse: `apps/account-service/src/identity.domains.oauth.routes.authorize.rs`
 
 - [ ] **Step 1: Write failing tests for URL and redirect decisions**
 
-Append to `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`:
+Append to `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`:
 
 ```rust
 use super::hosted_service::{build_hosted_login_url, build_oauth_redirect_url};
@@ -262,14 +262,14 @@ fn oauth_redirect_url_preserves_state() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_login_url oauth_redirect_url --lib
+rtk cargo test -p nvbes-account-service hosted_login_url oauth_redirect_url --lib
 ```
 
 Expected: fail because `hosted_service` helpers do not exist.
 
 - [ ] **Step 3: Add minimal service helpers**
 
-Create `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`:
+Create `apps/account-service/src/identity.domains.oauth.hosted.service.rs`:
 
 ```rust
 use crate::http::error::AppError;
@@ -301,7 +301,7 @@ pub(crate) fn build_oauth_redirect_url(
 
 - [ ] **Step 4: Extend service with hosted authorization input**
 
-Add to `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`:
+Add to `apps/account-service/src/identity.domains.oauth.hosted.service.rs`:
 
 ```rust
 use super::hosted_store::{get_hosted_authorization_state, set_hosted_authorization_state};
@@ -368,7 +368,7 @@ pub(crate) async fn get_hosted_login_decision(
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_login_url oauth_redirect_url --lib
+rtk cargo test -p nvbes-account-service hosted_login_url oauth_redirect_url --lib
 ```
 
 Expected: pass.
@@ -376,7 +376,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.hosted.service.rs apps/identity-api/src/identity.domains.oauth.hosted.tests.rs
+rtk git add apps/account-service/src/identity.domains.oauth.hosted.service.rs apps/account-service/src/identity.domains.oauth.hosted.tests.rs
 rtk git commit -m "feat(identity): add hosted login decisions"
 ```
 
@@ -386,13 +386,13 @@ rtk git commit -m "feat(identity): add hosted login decisions"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.routes.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.routes.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`
 
 - [ ] **Step 1: Write failing route-shape test**
 
-Append to `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`:
+Append to `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`:
 
 ```rust
 use super::hosted_routes::HostedStartRequest;
@@ -421,14 +421,14 @@ fn hosted_start_request_accepts_authorize_parameters() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_start_request --lib
+rtk cargo test -p nvbes-account-service hosted_start_request --lib
 ```
 
 Expected: fail because routes/request type does not exist.
 
 - [ ] **Step 3: Add hosted route module**
 
-Create `apps/identity-api/src/identity.domains.oauth.hosted.routes.rs`:
+Create `apps/account-service/src/identity.domains.oauth.hosted.routes.rs`:
 
 ```rust
 use axum::{
@@ -511,7 +511,7 @@ async fn consent_hosted_login(
 
 - [ ] **Step 4: Mount routes under `/oauth`**
 
-Modify `apps/identity-api/src/identity.domains.oauth.routes.rs`:
+Modify `apps/account-service/src/identity.domains.oauth.routes.rs`:
 
 ```rust
 pub fn router(state: &AppState) -> Router<AppState> {
@@ -537,7 +537,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted_start_request --lib
+rtk cargo test -p nvbes-account-service hosted_start_request --lib
 ```
 
 Expected: pass.
@@ -545,7 +545,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.hosted.routes.rs apps/identity-api/src/identity.domains.oauth.routes.rs apps/identity-api/src/identity.domains.oauth.hosted.tests.rs
+rtk git add apps/account-service/src/identity.domains.oauth.hosted.routes.rs apps/account-service/src/identity.domains.oauth.routes.rs apps/account-service/src/identity.domains.oauth.hosted.tests.rs
 rtk git commit -m "feat(identity): add hosted login routes"
 ```
 
@@ -555,13 +555,13 @@ rtk git commit -m "feat(identity): add hosted login routes"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.oauth.routes.authorize.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.routes.authorize.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.service.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`
 
 - [ ] **Step 1: Write failing redirect error test**
 
-Append to `apps/identity-api/src/identity.domains.oauth.hosted.tests.rs`:
+Append to `apps/account-service/src/identity.domains.oauth.hosted.tests.rs`:
 
 ```rust
 use super::hosted_service::build_oauth_error_redirect_url;
@@ -588,14 +588,14 @@ fn oauth_error_redirect_includes_error_and_state() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_error_redirect --lib
+rtk cargo test -p nvbes-account-service oauth_error_redirect --lib
 ```
 
 Expected: fail because `build_oauth_error_redirect_url` does not exist.
 
 - [ ] **Step 3: Add error redirect helper**
 
-Add to `apps/identity-api/src/identity.domains.oauth.hosted.service.rs`:
+Add to `apps/account-service/src/identity.domains.oauth.hosted.service.rs`:
 
 ```rust
 pub(crate) fn build_oauth_error_redirect_url(
@@ -614,7 +614,7 @@ pub(crate) fn build_oauth_error_redirect_url(
 
 - [ ] **Step 4: Update authorize unauthenticated branch**
 
-Modify `authenticate_authorization_subject` usage in `apps/identity-api/src/identity.domains.oauth.routes.authorize.rs` so browser flows return a hosted-login redirect decision when bearer/session auth is missing. The minimal implementation is to catch `no_bearer_token` or `unauthorized` errors around `authenticate_authorization_subject`, create a hosted state from the resolved PAR params, and return JSON:
+Modify `authenticate_authorization_subject` usage in `apps/account-service/src/identity.domains.oauth.routes.authorize.rs` so browser flows return a hosted-login redirect decision when bearer/session auth is missing. The minimal implementation is to catch `no_bearer_token` or `unauthorized` errors around `authenticate_authorization_subject`, create a hosted state from the resolved PAR params, and return JSON:
 
 ```rust
 let subject = match authenticate_authorization_subject(
@@ -659,8 +659,8 @@ let subject = match authenticate_authorization_subject(
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_error_redirect hosted_authorization_state --lib
-rtk cargo check -p nvbes-identity-api
+rtk cargo test -p nvbes-account-service oauth_error_redirect hosted_authorization_state --lib
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: tests pass and package check passes.
@@ -668,7 +668,7 @@ Expected: tests pass and package check passes.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.routes.authorize.rs apps/identity-api/src/identity.domains.oauth.hosted.service.rs apps/identity-api/src/identity.domains.oauth.hosted.tests.rs
+rtk git add apps/account-service/src/identity.domains.oauth.routes.authorize.rs apps/account-service/src/identity.domains.oauth.hosted.service.rs apps/account-service/src/identity.domains.oauth.hosted.tests.rs
 rtk git commit -m "feat(identity): route authorize through hosted login"
 ```
 
@@ -678,13 +678,13 @@ rtk git commit -m "feat(identity): route authorize through hosted login"
 
 **Files:**
 
-- Create: `apps/identity-web/src/identity.universal-login.api.ts`
-- Create: `apps/identity-web/tests/UniversalLoginApi.test.ts`
-- Modify: `apps/identity-web/src/identity.oauth.ts`
+- Create: `apps/account-web/src/identity.universal-login.api.ts`
+- Create: `apps/account-web/tests/UniversalLoginApi.test.ts`
+- Modify: `apps/account-web/src/identity.oauth.ts`
 
 - [ ] **Step 1: Write failing API contract test**
 
-Create `apps/identity-web/tests/UniversalLoginApi.test.ts`:
+Create `apps/account-web/tests/UniversalLoginApi.test.ts`:
 
 ```typescript
 import { describe, expect, it } from 'vitest';
@@ -716,14 +716,14 @@ describe('Universal Login API', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/identity-web test -- UniversalLoginApi.test.ts
+rtk pnpm --dir apps/account-web test -- UniversalLoginApi.test.ts
 ```
 
 Expected: fail because `identity.universal-login.api.ts` does not exist.
 
 - [ ] **Step 3: Add typed API module**
 
-Create `apps/identity-web/src/identity.universal-login.api.ts`:
+Create `apps/account-web/src/identity.universal-login.api.ts`:
 
 ```typescript
 import { z } from 'zod';
@@ -800,7 +800,7 @@ export async function denyHostedConsent(stateId: string): Promise<HostedLoginDec
 Run:
 
 ```bash
-rtk pnpm --dir apps/identity-web test -- UniversalLoginApi.test.ts
+rtk pnpm --dir apps/account-web test -- UniversalLoginApi.test.ts
 ```
 
 Expected: pass.
@@ -808,8 +808,8 @@ Expected: pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add apps/identity-web/src/identity.universal-login.api.ts apps/identity-web/tests/UniversalLoginApi.test.ts
-rtk git commit -m "feat(identity-web): add universal login API client"
+rtk git add apps/account-web/src/identity.universal-login.api.ts apps/account-web/tests/UniversalLoginApi.test.ts
+rtk git commit -m "feat(account-web): add universal login API client"
 ```
 
 ---
@@ -818,16 +818,16 @@ rtk git commit -m "feat(identity-web): add universal login API client"
 
 **Files:**
 
-- Create: `apps/identity-web/src/pages/useUniversalLogin.ts`
-- Create: `apps/identity-web/src/pages/UniversalLoginErrorPage.tsx`
-- Modify: `apps/identity-web/src/pages/useLoginPage.ts`
-- Modify: `apps/identity-web/src/pages/useLoginPage.actions.account.ts`
-- Modify: `apps/identity-web/src/pages/LoginPageConsent.tsx`
-- Add: `apps/identity-web/tests/UniversalLoginFlow.test.tsx`
+- Create: `apps/account-web/src/pages/useUniversalLogin.ts`
+- Create: `apps/account-web/src/pages/UniversalLoginErrorPage.tsx`
+- Modify: `apps/account-web/src/pages/useLoginPage.ts`
+- Modify: `apps/account-web/src/pages/useLoginPage.actions.account.ts`
+- Modify: `apps/account-web/src/pages/LoginPageConsent.tsx`
+- Add: `apps/account-web/tests/UniversalLoginFlow.test.tsx`
 
 - [ ] **Step 1: Write failing flow test**
 
-Create `apps/identity-web/tests/UniversalLoginFlow.test.tsx`:
+Create `apps/account-web/tests/UniversalLoginFlow.test.tsx`:
 
 ```typescript
 import { describe, expect, it } from 'vitest';
@@ -852,14 +852,14 @@ describe('Universal Login flow helpers', () => {
 Run:
 
 ```bash
-rtk pnpm --dir apps/identity-web test -- UniversalLoginFlow.test.tsx
+rtk pnpm --dir apps/account-web test -- UniversalLoginFlow.test.tsx
 ```
 
 Expected: fail because `useUniversalLogin.ts` does not exist.
 
 - [ ] **Step 3: Add Universal Login hook helpers**
 
-Create `apps/identity-web/src/pages/useUniversalLogin.ts`:
+Create `apps/account-web/src/pages/useUniversalLogin.ts`:
 
 ```typescript
 import type { HostedLoginDecision } from '../identity.universal-login.api';
@@ -901,7 +901,7 @@ export async function denyUniversalLoginConsent(stateId: string): Promise<Hosted
 
 - [ ] **Step 4: Thread hosted state into `useLoginPage`**
 
-Modify `apps/identity-web/src/pages/useLoginPage.ts`:
+Modify `apps/account-web/src/pages/useLoginPage.ts`:
 
 ```typescript
 import { readHostedStateId } from '../identity.universal-login.api';
@@ -953,7 +953,7 @@ if (hostedStateId) {
 
 - [ ] **Step 5: Wire hosted consent actions**
 
-Modify `apps/identity-web/src/pages/useLoginPage.actions.account.ts` to accept `hostedStateId` in the options type. In `handleConsentApprove`, call `approveUniversalLoginConsent(hostedStateId)` and `followHostedDecision` before falling back to legacy `approveConsent`. In `handleConsentCancel`, call `denyUniversalLoginConsent(hostedStateId)` and `followHostedDecision` before falling back to legacy `cancelConsent`.
+Modify `apps/account-web/src/pages/useLoginPage.actions.account.ts` to accept `hostedStateId` in the options type. In `handleConsentApprove`, call `approveUniversalLoginConsent(hostedStateId)` and `followHostedDecision` before falling back to legacy `approveConsent`. In `handleConsentCancel`, call `denyUniversalLoginConsent(hostedStateId)` and `followHostedDecision` before falling back to legacy `cancelConsent`.
 
 Use this implementation shape:
 
@@ -970,7 +970,7 @@ if (hostedStateId) {
 
 - [ ] **Step 6: Update consent component display**
 
-Modify `apps/identity-web/src/pages/LoginPageConsent.tsx` so it accepts optional `clientName?: string` and renders it in the heading:
+Modify `apps/account-web/src/pages/LoginPageConsent.tsx` so it accepts optional `clientName?: string` and renders it in the heading:
 
 ```tsx
 <CardTitle>{clientName ? `Autoriser ${clientName}` : 'Autoriser cette application'}</CardTitle>
@@ -983,8 +983,8 @@ Keep the scope rendering from the existing `scope` prop.
 Run:
 
 ```bash
-rtk pnpm --dir apps/identity-web test -- UniversalLoginFlow.test.tsx UniversalLoginApi.test.ts
-rtk pnpm --dir apps/identity-web check
+rtk pnpm --dir apps/account-web test -- UniversalLoginFlow.test.tsx UniversalLoginApi.test.ts
+rtk pnpm --dir apps/account-web check
 ```
 
 Expected: tests and typecheck pass.
@@ -992,8 +992,8 @@ Expected: tests and typecheck pass.
 - [ ] **Step 8: Commit**
 
 ```bash
-rtk git add apps/identity-web/src/pages/useUniversalLogin.ts apps/identity-web/src/pages/UniversalLoginErrorPage.tsx apps/identity-web/src/pages/useLoginPage.ts apps/identity-web/src/pages/useLoginPage.actions.account.ts apps/identity-web/src/pages/LoginPageConsent.tsx apps/identity-web/tests/UniversalLoginFlow.test.tsx
-rtk git commit -m "feat(identity-web): integrate universal login shell"
+rtk git add apps/account-web/src/pages/useUniversalLogin.ts apps/account-web/src/pages/UniversalLoginErrorPage.tsx apps/account-web/src/pages/useLoginPage.ts apps/account-web/src/pages/useLoginPage.actions.account.ts apps/account-web/src/pages/LoginPageConsent.tsx apps/account-web/tests/UniversalLoginFlow.test.tsx
+rtk git commit -m "feat(account-web): integrate universal login shell"
 ```
 
 ---
@@ -1003,8 +1003,8 @@ rtk git commit -m "feat(identity-web): integrate universal login shell"
 **Files:**
 
 - Modify: `docs/api/v1-contracts.md`
-- Modify: `apps/identity-api/README.md`
-- Modify: `apps/identity-web/README.md`
+- Modify: `apps/account-service/README.md`
+- Modify: `apps/account-web/README.md`
 
 - [ ] **Step 1: Document the hosted login routes**
 
@@ -1023,13 +1023,13 @@ Hosted-login state is short-lived, server-side, and never exposes raw PAR payloa
 
 - [ ] **Step 2: Update README summaries**
 
-Add one bullet to `apps/identity-api/README.md` OAuth section:
+Add one bullet to `apps/account-service/README.md` OAuth section:
 
 ```markdown
 - Universal Login hosted flow via `/oauth/hosted-login/*` for browser products.
 ```
 
-Add one bullet to `apps/identity-web/README.md` functionality list:
+Add one bullet to `apps/account-web/README.md` functionality list:
 
 ```markdown
 - Universal Login hébergé pour les flux OAuth authorization-code + PKCE.
@@ -1040,10 +1040,10 @@ Add one bullet to `apps/identity-web/README.md` functionality list:
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api hosted --lib
+rtk cargo test -p nvbes-account-service hosted --lib
 rtk cargo check --workspace
-rtk pnpm --dir apps/identity-web test -- UniversalLoginApi.test.ts UniversalLoginFlow.test.tsx
-rtk pnpm --dir apps/identity-web check
+rtk pnpm --dir apps/account-web test -- UniversalLoginApi.test.ts UniversalLoginFlow.test.tsx
+rtk pnpm --dir apps/account-web check
 ```
 
 Expected: all commands pass.
@@ -1054,7 +1054,7 @@ Run:
 
 ```bash
 rtk git diff --stat
-rtk git diff -- docs/api/v1-contracts.md apps/identity-api/README.md apps/identity-web/README.md
+rtk git diff -- docs/api/v1-contracts.md apps/account-service/README.md apps/account-web/README.md
 ```
 
 Expected: only Universal Login docs and implementation files changed by this work, with unrelated dirty worktree files left untouched.
@@ -1062,7 +1062,7 @@ Expected: only Universal Login docs and implementation files changed by this wor
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add docs/api/v1-contracts.md apps/identity-api/README.md apps/identity-web/README.md
+rtk git add docs/api/v1-contracts.md apps/account-service/README.md apps/account-web/README.md
 rtk git commit -m "docs(identity): document universal login flow"
 ```
 
@@ -1072,15 +1072,15 @@ rtk git commit -m "docs(identity): document universal login flow"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.oauth.metadata.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.routes.rs`
-- Modify: `apps/identity-api/README.md`
+- Modify: `apps/account-service/src/identity.domains.oauth.metadata.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.routes.token.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.routes.rs`
+- Modify: `apps/account-service/README.md`
 - Modify: `docs/api/v1-contracts.md`
 
 - [ ] **Step 1: Write the discovery metadata regression test**
 
-Append to `apps/identity-api/src/identity.domains.oauth.metadata.rs` tests:
+Append to `apps/account-service/src/identity.domains.oauth.metadata.rs` tests:
 
 ```rust
 #[test]
@@ -1111,14 +1111,14 @@ fn oauth_metadata_advertises_sellable_foundation_endpoints() {
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_metadata_advertises_sellable_foundation_endpoints --lib
+rtk cargo test -p nvbes-account-service oauth_metadata_advertises_sellable_foundation_endpoints --lib
 ```
 
 Expected: pass if metadata helper endpoints are coherent; fail if the helper or module is broken.
 
 - [ ] **Step 3: Add OAuth 2.1-aligned token tests**
 
-Add or extend tests in `apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs` so they assert:
+Add or extend tests in `apps/account-service/src/identity.domains.oauth.routes.token.tests.rs` so they assert:
 
 ```rust
 // Public authorization-code clients must provide PKCE S256.
@@ -1133,7 +1133,7 @@ Use existing test helpers in the same file. Do not create a parallel OAuth test 
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_token --lib
+rtk cargo test -p nvbes-account-service oauth_token --lib
 ```
 
 Expected: pass after any required minimal fixes.
@@ -1155,7 +1155,7 @@ Add to `docs/api/v1-contracts.md` under OAuth:
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.metadata.rs apps/identity-api/src/identity.domains.oauth.routes.token.tests.rs docs/api/v1-contracts.md
+rtk git add apps/account-service/src/identity.domains.oauth.metadata.rs apps/account-service/src/identity.domains.oauth.routes.token.tests.rs docs/api/v1-contracts.md
 rtk git commit -m "test(identity): lock OAuth OIDC foundation contracts"
 ```
 
@@ -1165,10 +1165,10 @@ rtk git commit -m "test(identity): lock OAuth OIDC foundation contracts"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.oauth.clients.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.routes.clients.rs`
-- Modify: `apps/identity-api/src/identity.domains.oauth.service.types.rs`
-- Modify: `apps/identity-api/README.md`
+- Modify: `apps/account-service/src/identity.domains.oauth.clients.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.routes.clients.rs`
+- Modify: `apps/account-service/src/identity.domains.oauth.service.types.rs`
+- Modify: `apps/account-service/README.md`
 
 - [ ] **Step 1: Add client management tests**
 
@@ -1186,7 +1186,7 @@ Extend existing OAuth client tests or create a focused test module beside `ident
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_client --lib
+rtk cargo test -p nvbes-account-service oauth_client --lib
 ```
 
 Expected: tests fail only for missing sellable-surface behavior.
@@ -1200,8 +1200,8 @@ Use the existing `oauth_clients` table, `hash_client_secret`, validation helpers
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api oauth_client --lib
-rtk cargo check -p nvbes-identity-api
+rtk cargo test -p nvbes-account-service oauth_client --lib
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass.
@@ -1209,7 +1209,7 @@ Expected: pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.oauth.clients.rs apps/identity-api/src/identity.domains.oauth.routes.clients.rs apps/identity-api/src/identity.domains.oauth.service.types.rs apps/identity-api/README.md
+rtk git add apps/account-service/src/identity.domains.oauth.clients.rs apps/account-service/src/identity.domains.oauth.routes.clients.rs apps/account-service/src/identity.domains.oauth.service.types.rs apps/account-service/README.md
 rtk git commit -m "feat(identity): harden OAuth client management surface"
 ```
 
@@ -1219,15 +1219,15 @@ rtk git commit -m "feat(identity): harden OAuth client management surface"
 
 **Files:**
 
-- Modify: `apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs`
-- Modify: `apps/identity-api/src/identity.domains.auth.password.change.rs`
-- Modify: `apps/identity-api/src/identity.domains.auth.password.reset.rs`
-- Modify: `apps/identity-api/README.md`
+- Modify: `apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.auth.sessions.mgmt.rs`
+- Modify: `apps/account-service/src/identity.domains.auth.password.change.rs`
+- Modify: `apps/account-service/src/identity.domains.auth.password.reset.rs`
+- Modify: `apps/account-service/README.md`
 
 - [ ] **Step 1: Add session lifecycle tests**
 
-Extend `apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs` with tests asserting:
+Extend `apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs` with tests asserting:
 
 ```rust
 // list_sessions hides expired and revoked sessions.
@@ -1240,7 +1240,7 @@ Extend `apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs` with
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api sessions_mgmt --lib
+rtk cargo test -p nvbes-account-service sessions_mgmt --lib
 ```
 
 Expected: pass for existing behavior or fail with a precise lifecycle gap.
@@ -1265,9 +1265,9 @@ Use existing password DB modules and audit/security-event helpers. Do not add a 
 Run:
 
 ```bash
-rtk cargo test -p nvbes-identity-api password --lib
-rtk cargo test -p nvbes-identity-api sessions_mgmt --lib
-rtk cargo check -p nvbes-identity-api
+rtk cargo test -p nvbes-account-service password --lib
+rtk cargo test -p nvbes-account-service sessions_mgmt --lib
+rtk cargo check -p nvbes-account-service
 ```
 
 Expected: pass.
@@ -1275,7 +1275,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs apps/identity-api/src/identity.domains.auth.password.change.rs apps/identity-api/src/identity.domains.auth.password.reset.rs apps/identity-api/README.md
+rtk git add apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs apps/account-service/src/identity.domains.auth.sessions.mgmt.rs apps/account-service/src/identity.domains.auth.password.change.rs apps/account-service/src/identity.domains.auth.password.reset.rs apps/account-service/README.md
 rtk git commit -m "test(identity): lock session and password lifecycle contracts"
 ```
 
@@ -1290,7 +1290,7 @@ rtk git commit -m "test(identity): lock session and password lifecycle contracts
 - Modify: `libs/ts/identity-sdk/README.md`
 - Modify: `libs/rust/identity-sdk-backend/src/client.oauth.rs`
 - Modify: `libs/rust/identity-sdk-backend/src/types.rs`
-- Modify: `libs/rust/identity-sdk-backend/README.md` if present, otherwise `apps/identity-api/README.md`
+- Modify: `libs/rust/identity-sdk-backend/README.md` if present, otherwise `apps/account-service/README.md`
 
 - [ ] **Step 1: Add TypeScript SDK tests**
 
@@ -1350,7 +1350,7 @@ Expected: pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-rtk git add libs/ts/identity-sdk/src/index.ts libs/ts/identity-sdk/src/storage.ts libs/ts/identity-sdk/README.md libs/rust/identity-sdk-backend/src/client.oauth.rs libs/rust/identity-sdk-backend/src/types.rs apps/identity-api/README.md
+rtk git add libs/ts/identity-sdk/src/index.ts libs/ts/identity-sdk/src/storage.ts libs/ts/identity-sdk/README.md libs/rust/identity-sdk-backend/src/client.oauth.rs libs/rust/identity-sdk-backend/src/types.rs apps/account-service/README.md
 rtk git commit -m "feat(identity): expose product SDK integration surface"
 ```
 

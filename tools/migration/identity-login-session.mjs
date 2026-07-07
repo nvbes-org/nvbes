@@ -8,14 +8,14 @@ const write = args.includes("--write");
 const outputPath = "docs/migration/identity-login-session.generated.json";
 const markdownPath = "docs/migration/identity-login-session.md";
 const sources = {
-	loginSession: "apps/identity-api/src/identity.domains.auth.sessions.create.session.rs",
-	loginVerify: "apps/identity-api/src/identity.domains.auth.sessions.create.verify.rs",
-	loginPwdRoute: "apps/identity-api/src/identity.domains.auth.routes.login.pwd.rs",
-	loginIdentifierRoute: "apps/identity-api/src/identity.domains.auth.routes.login.identifier.rs",
-	sessionMgmt: "apps/identity-api/src/identity.domains.auth.sessions.mgmt.rs",
-	sessionMgmtTests: "apps/identity-api/src/identity.domains.auth.sessions.mgmt.tests.rs",
-	sessionRefresh: "apps/identity-api/src/identity.http.middleware.jwt.session_refresh.rs",
-	openapi: "apps/identity-api/openapi.json",
+	loginSession: "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+	loginVerify: "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+	loginPwdRoute: "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
+	loginIdentifierRoute: "apps/account-service/src/identity.domains.auth.routes.login.identifier.rs",
+	sessionMgmt: "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
+	sessionMgmtTests: "apps/account-service/src/identity.domains.auth.sessions.mgmt.tests.rs",
+	sessionRefresh: "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
+	openapi: "apps/account-service/openapi.json",
 	contractSmoke: "scripts/test-openapi-contract.mjs",
 	riskRegister: "tools/migration/risk-register.evidence.mjs",
 };
@@ -103,15 +103,15 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/identity-login-session.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/identity-login-session.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
 		errors.push(`${outputPath}: generation.sources must match identity login/session source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-identity-api refreshed_cookies --locked",
-		"cargo test -p nvbes-identity-api logout_state_revokes_current_session_and_refresh_token_only --locked",
+		"cargo test -p nvbes-account-service refreshed_cookies --locked",
+		"cargo test -p nvbes-account-service logout_state_revokes_current_session_and_refresh_token_only --locked",
 		"bash scripts/test-openapi-contract-seeded-auth.sh",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
@@ -164,7 +164,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-identity-login-session",
-		"tools/migration/identity-login-session.mjs --write",
+		"node tools/migration/identity-login-session.mjs --write",
 		"```",
 		"",
 	);
@@ -176,11 +176,11 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/identity-login-session.mjs --write",
+		command: "node tools/migration/identity-login-session.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-identity-api refreshed_cookies --locked",
-			"cargo test -p nvbes-identity-api logout_state_revokes_current_session_and_refresh_token_only --locked",
+			"cargo test -p nvbes-account-service refreshed_cookies --locked",
+			"cargo test -p nvbes-account-service logout_state_revokes_current_session_and_refresh_token_only --locked",
 			"bash scripts/test-openapi-contract-seeded-auth.sh",
 		],
 	},
@@ -209,8 +209,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/identity-login-session.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/identity-login-session.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-login-session.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-login-session.mjs --write`);
 }
 
 if (errors.length > 0) {

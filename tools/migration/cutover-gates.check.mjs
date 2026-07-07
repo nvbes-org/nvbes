@@ -8,7 +8,7 @@ const gateChecks = [
 		path: "tools/migration/precutover-gate.mjs",
 		name: "precutover",
 		requiredSubstrings: [
-			'Usage: tools/migration/precutover-gate.mjs --env <env> --reconciliation-report <path> [--verbose]',
+			'Usage: node tools/migration/precutover-gate.mjs --env <env> --reconciliation-report <path> [--verbose]',
 			'failures.push("--env is required")',
 			'failures.push("--reconciliation-report is required")',
 			'command("readiness report", "tools/migration/readiness-report.mjs", ["--strict"])',

@@ -124,10 +124,10 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_STRIPE_API_URL ||
     (stripeEnabled ? 'https://api.stripe.com' : '');
 
-  const identityApiBaseUrl =
-    process.env.VITE_IDENTITY_API_BASE_URL ||
-    localEnv.VITE_IDENTITY_API_BASE_URL ||
-    rootEnv.VITE_IDENTITY_API_BASE_URL ||
+  const accountServiceBaseUrl =
+    process.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    localEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    rootEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
     'http://localhost:4000';
 
   const cspHeader = getCsp(mode, stripeJsUrl, stripeApiUrl);
@@ -222,28 +222,28 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
           rewrite: (requestPath: string) => requestPath.replace(/^\/api\/v1/u, ''),
         },
         '/auth': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/oauth': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/csp-report': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/workspaces': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
         '/legal': {
-          target: identityApiBaseUrl,
+          target: accountServiceBaseUrl,
           changeOrigin: true,
         },
       },

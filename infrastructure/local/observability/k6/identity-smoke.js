@@ -10,11 +10,11 @@ export const options = {
 	},
 };
 
-const identityApiBaseUrl =
-	__ENV.IDENTITY_API_BASE_URL || "http://host.docker.internal:4000";
+const accountServiceBaseUrl =
+	__ENV.ACCOUNT_SERVICE_BASE_URL || "http://host.docker.internal:4000";
 
 export default function identitySmoke() {
-	const response = http.get(`${identityApiBaseUrl}/health`);
+	const response = http.get(`${accountServiceBaseUrl}/health`);
 
 	check(response, {
 		"identity health is 2xx": (result) =>

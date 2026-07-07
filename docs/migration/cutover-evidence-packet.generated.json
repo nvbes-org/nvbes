@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "generation": {
-    "command": "tools/migration/cutover-evidence-packet.mjs --write",
-    "strict_command": "tools/migration/cutover-evidence-packet.mjs --strict"
+    "command": "node tools/migration/cutover-evidence-packet.mjs --write",
+    "strict_command": "node tools/migration/cutover-evidence-packet.mjs --strict"
   },
   "status": {
     "readiness": "no-go",
     "repository_ready": true,
     "live_blocking_items": 6,
     "completion": "no-go",
-    "backlog_open_tasks": 25,
-    "backlog_blocking_items": 58,
+    "backlog_open_tasks": 40,
+    "backlog_blocking_items": 178,
     "decision": "no-go"
   },
   "requirements": [
@@ -29,10 +29,17 @@
       ],
       "current": {
         "phase": "not applicable",
-        "gate": "pending/no-go"
+        "gate": "pending/no-go",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "frontend_signoff:0/1",
+          "web_check:0/1",
+          "smoke_test:0/1"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
+        "live evidence missing",
         "gate pending/no-go"
       ],
       "missing_files": [],
@@ -71,10 +78,20 @@
       ],
       "current": {
         "phase": "not applicable",
-        "gate": "pending/no-go"
+        "gate": "pending/no-go",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "infra_deploy:0/1",
+          "infra_deploy@staging",
+          "infra_restore:0/1",
+          "infra_restore@staging",
+          "rollback:0/1",
+          "rollback@staging"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
+        "live evidence missing",
         "gate pending/no-go"
       ],
       "missing_files": [],
@@ -114,10 +131,21 @@
       ],
       "current": {
         "phase": "pending/no-go",
-        "gate": "pending/no-go"
+        "gate": "pending/no-go",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "rehearsal:0/3",
+          "rehearsal@local",
+          "rehearsal@staging",
+          "rehearsal@production",
+          "reconciliation:0/2",
+          "rollback:0/1",
+          "reject_review:0/1"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
+        "live evidence missing",
         "phase pending/no-go",
         "gate pending/no-go"
       ],
@@ -169,10 +197,18 @@
       ],
       "current": {
         "phase": "pending/no-go",
-        "gate": "pending/no-go"
+        "gate": "pending/no-go",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "cutover:0/1",
+          "cutover@production",
+          "reconciliation:0/1",
+          "reconciliation@production"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
+        "live evidence missing",
         "phase pending/no-go",
         "gate pending/no-go"
       ],
@@ -208,10 +244,16 @@
       ],
       "current": {
         "phase": "pending/no-go",
-        "gate": "pending/no-go"
+        "gate": "pending/no-go",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "decommission:0/1",
+          "decommission@production"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
+        "live evidence missing",
         "phase pending/no-go",
         "gate pending/no-go"
       ],
@@ -244,11 +286,16 @@
       ],
       "current": {
         "phase": "not applicable",
-        "gate": "not applicable"
+        "gate": "not applicable",
+        "live_evidence": "missing",
+        "missing_evidence": [
+          "reconciliation:0/1",
+          "reconciliation@production"
+        ]
       },
       "repository_ready": true,
       "live_blocking_reasons": [
-        "production reconciliation not attached"
+        "live evidence missing"
       ],
       "missing_files": [],
       "missing_commands": [],

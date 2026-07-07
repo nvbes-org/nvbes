@@ -201,9 +201,9 @@ validate(schema);
 
 for (const [path, expected] of [[schemaPath, schemaJson], [markdownPath, markdown]]) {
 	if (!existsSync(path)) {
-		errors.push(`${path}: missing; run tools/migration/live-evidence-schema.mjs --write`);
+		errors.push(`${path}: missing; run node tools/migration/live-evidence-schema.mjs --write`);
 	} else if (readFileSync(path, "utf8") !== expected) {
-		errors.push(`${path}: stale; run tools/migration/live-evidence-schema.mjs --write`);
+		errors.push(`${path}: stale; run node tools/migration/live-evidence-schema.mjs --write`);
 	}
 }
 

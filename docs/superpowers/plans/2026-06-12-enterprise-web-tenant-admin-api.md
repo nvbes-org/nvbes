@@ -2,32 +2,32 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add tenant-first `identity-api` routes required by `enterprise-web` Users V0.
+**Goal:** Add tenant-first `account-service` routes required by `enterprise-web` Users V0.
 
 **Architecture:** Create a flat `identity.domains.enterprise.*` module that authenticates current tenant context, authorizes from database state, exposes tenant read models, and writes audit events for membership changes.
 
-**Tech Stack:** Rust stable, Axum, SQLx, PostgreSQL, existing `identity-api` auth/session/authz modules.
+**Tech Stack:** Rust stable, Axum, SQLx, PostgreSQL, existing `account-service` auth/session/authz modules.
 
 ---
 
 ## File Structure
 
-- `apps/identity-api/src/identity.domains.enterprise.mod.rs`: module declarations.
-- `apps/identity-api/src/identity.domains.enterprise.routes.rs`: Axum route handlers.
-- `apps/identity-api/src/identity.domains.enterprise.types.rs`: request and response DTOs.
-- `apps/identity-api/src/identity.domains.enterprise.service.rs`: orchestration.
-- `apps/identity-api/src/identity.domains.enterprise.db.rs`: SQLx read models and mutations.
-- `apps/identity-api/src/identity.domains.enterprise.policy.rs`: tenant admin authorization helpers.
-- `apps/identity-api/src/identity.domains.enterprise.tests.rs`: targeted tests.
-- `apps/identity-api/src/identity.domains.mod.rs`: router merge.
+- `apps/account-service/src/identity.domains.enterprise.mod.rs`: module declarations.
+- `apps/account-service/src/identity.domains.enterprise.routes.rs`: Axum route handlers.
+- `apps/account-service/src/identity.domains.enterprise.types.rs`: request and response DTOs.
+- `apps/account-service/src/identity.domains.enterprise.service.rs`: orchestration.
+- `apps/account-service/src/identity.domains.enterprise.db.rs`: SQLx read models and mutations.
+- `apps/account-service/src/identity.domains.enterprise.policy.rs`: tenant admin authorization helpers.
+- `apps/account-service/src/identity.domains.enterprise.tests.rs`: targeted tests.
+- `apps/account-service/src/identity.domains.mod.rs`: router merge.
 
 ## Task 1: Add Enterprise Module Skeleton
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.enterprise.mod.rs`
-- Create: `apps/identity-api/src/identity.domains.enterprise.types.rs`
-- Modify: `apps/identity-api/src/identity.domains.mod.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.mod.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.types.rs`
+- Modify: `apps/account-service/src/identity.domains.mod.rs`
 
 - [ ] **Step 1: Add module declarations**
 
@@ -63,8 +63,8 @@ and merge `enterprise::routes::router(state)` with the other domain routers.
 
 ```bash
 rtk cargo check --workspace
-git add apps/identity-api/src/identity.domains.enterprise.mod.rs apps/identity-api/src/identity.domains.enterprise.types.rs apps/identity-api/src/identity.domains.mod.rs
-git commit -m "feat(identity-api): add enterprise module skeleton"
+git add apps/account-service/src/identity.domains.enterprise.mod.rs apps/account-service/src/identity.domains.enterprise.types.rs apps/account-service/src/identity.domains.mod.rs
+git commit -m "feat(account-service): add enterprise module skeleton"
 ```
 
 Expected: workspace compiles.
@@ -73,8 +73,8 @@ Expected: workspace compiles.
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.enterprise.routes.rs`
-- Create: `apps/identity-api/src/identity.domains.enterprise.policy.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.routes.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.policy.rs`
 
 - [ ] **Step 1: Add route tree**
 
@@ -115,8 +115,8 @@ Route handlers must call service functions that authorize from database state, n
 
 ```bash
 rtk cargo check --workspace
-git add apps/identity-api/src/identity.domains.enterprise.routes.rs apps/identity-api/src/identity.domains.enterprise.policy.rs
-git commit -m "feat(identity-api): add enterprise route boundary"
+git add apps/account-service/src/identity.domains.enterprise.routes.rs apps/account-service/src/identity.domains.enterprise.policy.rs
+git commit -m "feat(account-service): add enterprise route boundary"
 ```
 
 Expected: workspace compiles.
@@ -125,8 +125,8 @@ Expected: workspace compiles.
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.enterprise.service.rs`
-- Create: `apps/identity-api/src/identity.domains.enterprise.db.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.service.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.db.rs`
 
 - [ ] **Step 1: Add service functions**
 
@@ -153,8 +153,8 @@ Mutation functions must write audit events with actor, action, target, tenant, o
 
 ```bash
 rtk cargo check --workspace
-git add apps/identity-api/src/identity.domains.enterprise.service.rs apps/identity-api/src/identity.domains.enterprise.db.rs
-git commit -m "feat(identity-api): implement enterprise admin service"
+git add apps/account-service/src/identity.domains.enterprise.service.rs apps/account-service/src/identity.domains.enterprise.db.rs
+git commit -m "feat(account-service): implement enterprise admin service"
 ```
 
 Expected: workspace compiles.
@@ -163,8 +163,8 @@ Expected: workspace compiles.
 
 **Files:**
 
-- Create: `apps/identity-api/src/identity.domains.enterprise.tests.rs`
-- Modify: `apps/identity-api/src/identity.domains.enterprise.mod.rs`
+- Create: `apps/account-service/src/identity.domains.enterprise.tests.rs`
+- Modify: `apps/account-service/src/identity.domains.enterprise.mod.rs`
 
 - [ ] **Step 1: Wire test module**
 
@@ -190,10 +190,10 @@ Cover:
 - [ ] **Step 3: Verify and commit**
 
 ```bash
-rtk cargo test -p nvbes-identity-api enterprise
+rtk cargo test -p nvbes-account-service enterprise
 rtk cargo check --workspace
-git add apps/identity-api/src/identity.domains.enterprise.*
-git commit -m "test(identity-api): cover enterprise admin guardrails"
+git add apps/account-service/src/identity.domains.enterprise.*
+git commit -m "test(account-service): cover enterprise admin guardrails"
 ```
 
 Expected: targeted tests and workspace check pass.

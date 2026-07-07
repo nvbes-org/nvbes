@@ -156,7 +156,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-domain-dod",
-		"tools/migration/domain-dod.mjs --write",
+		"node tools/migration/domain-dod.mjs --write",
 		"```",
 		"",
 	);
@@ -168,9 +168,9 @@ function validate(ledger, generated) {
 	const expectedKeys = new Set(expectedByKey.keys());
 	const seen = new Set();
 	if (ledger.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (ledger.generation?.command !== "tools/migration/domain-dod.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
+	if (ledger.generation?.command !== "node tools/migration/domain-dod.mjs --write") errors.push(`${outputPath}: generation.command is invalid`);
 	if (JSON.stringify(ledger.generation?.sources) !== JSON.stringify([blueprintPath, domainsPath])) errors.push(`${outputPath}: generation.sources is invalid`);
-	if (ledger.generation?.strict_cutover_command !== "tools/migration/domain-dod.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
+	if (ledger.generation?.strict_cutover_command !== "node tools/migration/domain-dod.mjs --strict") errors.push(`${outputPath}: generation.strict_cutover_command is invalid`);
 	if (!Array.isArray(ledger.entries)) errors.push(`${outputPath}: entries must be an array`);
 	validateCriteria(ledger);
 	validateSummary(ledger);
@@ -252,9 +252,9 @@ const existing = readJson(outputPath);
 const ledger = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/domain-dod.mjs --write",
+		command: "node tools/migration/domain-dod.mjs --write",
 		sources: [blueprintPath, domainsPath],
-		strict_cutover_command: "tools/migration/domain-dod.mjs --strict",
+		strict_cutover_command: "node tools/migration/domain-dod.mjs --strict",
 	},
 	summary: { domains: domains.length, criteria: criteria.length, entries: generated.length, pending: 0, accepted: 0, passed: 0, failed: 0 },
 	criteria,
@@ -277,8 +277,8 @@ if (write) {
 validate(ledger, generated);
 
 for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/domain-dod.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/domain-dod.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/domain-dod.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/domain-dod.mjs --write`);
 }
 
 if (errors.length > 0) {

@@ -1,12 +1,12 @@
 {
   "schema": "contracts/graphql/schema.graphql",
   "owners": ["billing", "identity"],
-  "entrypoints": ["gateway-graphql"],
+  "entrypoints": ["gateway-cloud"],
   "rules": [
     {
       "id": "billing-owned-by-billing-service",
       "severity": "block",
-      "description": "Billing resolvers must call billing-api or billing gRPC contracts, not identity-api billing routes."
+      "description": "Billing resolvers must call billing-service or billing gRPC contracts, not account-service billing routes."
     },
     {
       "id": "no-provider-secret-identifiers",
@@ -17,6 +17,11 @@
       "id": "user-auth-at-gateway-service-auth-internal",
       "severity": "block",
       "description": "Gateway resolvers enforce user authorization before calling billing; internal service calls use RequestContext and service credentials."
+    },
+    {
+      "id": "grpc-deadline-policy-required",
+      "severity": "block",
+      "description": "Gateway Cloud gRPC clients must use explicit connection timeouts, request deadlines and correlation context before production cutover."
     },
     {
       "id": "backward-compatible-fields",

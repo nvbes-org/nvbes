@@ -1,0 +1,7 @@
+{
+  "name": "cloud-web",
+  "projectType": "application",
+  "root": "apps/cloud-web",
+  "sourceRoot": "apps/cloud-web/src",
+  "tags": ["scope:oss", "type:app", "domain:cloud", "layer:app"]
+}

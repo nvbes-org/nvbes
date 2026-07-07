@@ -77,5 +77,5 @@
 
 ```bash
 pnpm check:migration-target-structure
-tools/migration/target-structure.mjs --write
+node tools/migration/target-structure.mjs --write
 ```

@@ -42,7 +42,7 @@ No-go attendu:
 - `pnpm check:migration-precutover -- --env production --reconciliation-report
   docs/migration/reconciliation.<run>.json` echoue tant que les decisions,
   preuves et reconciliation finale ne sont pas signees;
-- `tools/migration/gate-evidence.mjs --strict` echoue tant que les gates G0 a
+- `node tools/migration/gate-evidence.mjs --strict` echoue tant que les gates G0 a
   G8 n'ont pas owner, preuves et decision `go`;
 - les checks stricts de data map, secrets, jobs, ressources et risques doivent
   rester bloquants tant que les decisions ne sont pas signees;
@@ -108,9 +108,9 @@ pnpm check:secrets && pnpm check:supply-chain
 Pour la plateforme cible, ajouter les equivalents:
 ```bash
 pnpm check:go && pnpm check:python
-tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation-report.md
-tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json
-tools/migration/live-evidence-prepare.mjs --id <evidence-id> --type reconciliation --env production --owner "<owner>" --source-artifact docs/migration/reconciliation.<run>.json --command "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json" --immutable-reference artifact://<immutable-run-artifact> --packet-requirement final-reconciliation --out docs/migration/live-evidence-instances/<evidence-id>.json
+node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation-report.md
+node tools/migration/reconcile.mjs --env staging --report docs/migration/reconciliation.<run>.json
+node tools/migration/live-evidence-prepare.mjs --id <evidence-id> --type reconciliation --env production --owner "<owner>" --source-artifact docs/migration/reconciliation.<run>.json --command "node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json" --immutable-reference artifact://<immutable-run-artifact> --packet-requirement final-reconciliation --out docs/migration/live-evidence-instances/<evidence-id>.json
 tools/oss-export/check
 tools/security/scan-secrets
 ```

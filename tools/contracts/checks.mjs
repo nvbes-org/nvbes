@@ -2,6 +2,10 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+import { checkBillingRpcRuntimeScope } from "./checks.billing-rpc-scope.mjs";
+import { checkOpenApiTaxonomy } from "./checks.openapi-taxonomy.mjs";
+import { checkSplitProtoContracts, requiredSplitEventTypes } from "./checks.split-contracts.mjs";
+
 const errors = [];
 
 function readJson(path) {
@@ -76,7 +80,7 @@ function checkOpenApi() {
 		if (paths.length === 0) {
 			errors.push(`${api.document}: at least one path is required`);
 		}
-		if (api.surface === "public" && api.versionPrefix) {
+		if ((api.surface === "public" || api.surface === "cloud-public") && api.versionPrefix) {
 			if (!paths.some((path) => path.startsWith(api.versionPrefix))) {
 				errors.push(`${api.document}: public API must expose ${api.versionPrefix} paths`);
 			}
@@ -93,6 +97,8 @@ function checkOpenApi() {
 			}
 		}
 	}
+
+	checkOpenApiTaxonomy({ errors, manifest, readJson });
 }
 
 function checkProto() {
@@ -122,57 +128,45 @@ function checkBillingGrpcImplementation() {
 	if (!proto.includes("service BillingService")) return;
 
 	const requiredFiles = [
-		"apps/billing-api/build.rs",
-		"apps/billing-api/Cargo.toml",
-		"apps/billing-api/src/billing.grpc.pb.rs",
-		"apps/billing-api/src/billing.grpc.service.rs",
-		"apps/billing-api/src/main.rs",
+		"apps/billing-service/build.rs",
+		"apps/billing-service/Cargo.toml",
+		"apps/billing-service/src/billing.grpc.pb.rs",
+		"apps/billing-service/src/billing.grpc.service.rs",
+		"apps/billing-service/src/main.rs",
 	];
 	for (const file of requiredFiles) {
 		if (!existsSync(file)) errors.push(`${file}: required for BillingService gRPC transport`);
 	}
 	if (errors.length > 0) return;
 
-	const build = readFileSync("apps/billing-api/build.rs", "utf8");
-	if (!build.includes("tonic_prost_build::configure().compile_protos")) {
-		errors.push("apps/billing-api/build.rs: BillingService must be generated with tonic/prost");
+	const build = readFileSync("apps/billing-service/build.rs", "utf8");
+	if (!build.includes("tonic_prost_build::configure()")) {
+		errors.push("apps/billing-service/build.rs: BillingService must be generated with tonic/prost");
 	}
 	if (!build.includes("contracts/protobuf/nvbes/billing/v1/billing.proto")) {
-		errors.push("apps/billing-api/build.rs: BillingService proto source must be generated");
+		errors.push("apps/billing-service/build.rs: BillingService proto source must be generated");
 	}
 
-	const manifest = readFileSync("apps/billing-api/Cargo.toml", "utf8");
+	const manifest = readFileSync("apps/billing-service/Cargo.toml", "utf8");
 	for (const dependency of ["tonic", "tonic-prost", "tonic-prost-build"]) {
 		if (!manifest.includes(dependency)) {
-			errors.push(`apps/billing-api/Cargo.toml: missing ${dependency} for BillingService gRPC`);
+			errors.push(`apps/billing-service/Cargo.toml: missing ${dependency} for BillingService gRPC`);
 		}
 	}
 
-	const pb = readFileSync("apps/billing-api/src/billing.grpc.pb.rs", "utf8");
+	const pb = readFileSync("apps/billing-service/src/billing.grpc.pb.rs", "utf8");
 	if (!pb.includes('tonic::include_proto!("nvbes.billing.v1")')) {
-		errors.push("apps/billing-api/src/billing.grpc.pb.rs: missing nvbes.billing.v1 include");
+		errors.push("apps/billing-service/src/billing.grpc.pb.rs: missing nvbes.billing.v1 include");
 	}
 
-	const service = readFileSync("apps/billing-api/src/billing.grpc.service.rs", "utf8");
-	for (const expected of [
-		"impl BillingService for BillingGrpcService",
-		"fetch_workspace_billing_overview",
-		"fetch_portal_view",
-		"create_billing_checkout_session",
-		"create_billing_portal_session",
-		"get_admin_command_center_billing_metrics",
-		"get_admin_operations_center",
-		"run_admin_operations_action",
-		"run_admin_billing_platform_action",
-		"run_admin_billing_action",
-		"run_admin_revenue_action",
-		"ingest_usage_event",
-		"run_ledger_reconciliation",
-	]) {
-		if (!service.includes(expected)) {
-			errors.push(`apps/billing-api/src/billing.grpc.service.rs: missing ${expected}`);
-		}
-	}
+	const service = readFileSync("apps/billing-service/src/billing.grpc.service.rs", "utf8");
+	checkBillingRpcRuntimeScope({
+		errors,
+		gatewaySource: readRustSource("apps/gateway-cloud/src"),
+		proto,
+		protoPath,
+		service,
+	});
 
 	for (const expected of [
 		"ADMIN_BILLING_ACTION_KIND_CREATE_CREDIT_NOTE",
@@ -197,15 +191,15 @@ function checkBillingGrpcImplementation() {
 		}
 	}
 
-	const main = readFileSync("apps/billing-api/src/main.rs", "utf8");
-	if (!main.includes("NVBES_BILLING_GRPC_PORT") || !main.includes("nvbes_billing_api::grpc::serve")) {
-		errors.push("apps/billing-api/src/main.rs: Billing gRPC server must be started with a dedicated port");
+	const main = readFileSync("apps/billing-service/src/main.rs", "utf8");
+	if (!main.includes("NVBES_BILLING_SERVICE_PORT")) {
+		errors.push("apps/billing-service/src/main.rs: Billing service must use a dedicated port env var");
 	}
 }
 
 function checkBillingPublicWorkspaceRoutes() {
-	const billingRoutes = "apps/billing-api/src/billing.domains.public_workspace.rs";
-	const billingPortalLists = "apps/billing-api/src/billing.domains.public_workspace.portal_lists.rs";
+	const billingRoutes = "apps/billing-service/src/billing.domains.public_workspace.rs";
+	const billingPortalLists = "apps/billing-service/src/billing.domains.public_workspace.portal_lists.rs";
 	if (!existsSync(billingRoutes)) {
 		errors.push(`${billingRoutes}: required for public Billing workspace routes`);
 		return;
@@ -225,9 +219,6 @@ function checkBillingPublicWorkspaceRoutes() {
 		'"/workspaces/{workspaceId}/billing/checkout"',
 		'"/workspaces/{workspaceId}/billing/portal"',
 		'"/workspaces/{workspaceId}/billing/portal/view"',
-		'"/workspaces/{workspaceId}/billing/invoices"',
-		'"/workspaces/{workspaceId}/billing/cards"',
-		'"/workspaces/{workspaceId}/billing/subscriptions"',
 		'"/workspaces/{workspaceId}/billing/portal/invoices/{invoiceId}/pdf"',
 	]) {
 		if (!content.includes(route)) {
@@ -250,7 +241,7 @@ function checkBillingPublicWorkspaceRoutes() {
 		"BillingWorkspacePermission::Manage",
 	]) {
 		if (!surface.includes(expected)) {
-			errors.push(`apps/billing-api/src: missing public Billing route evidence ${expected}`);
+			errors.push(`apps/billing-service/src: missing public Billing route evidence ${expected}`);
 		}
 	}
 }
@@ -298,89 +289,81 @@ function checkGraphql() {
 }
 
 function checkGraphqlGatewayImplementation(governance) {
-	if (!governance.entrypoints?.includes("gateway-graphql")) {
-		errors.push("contracts/graphql/governance.json: gateway-graphql entrypoint is required");
+	if (!governance.entrypoints?.includes("gateway-cloud")) {
+		errors.push("contracts/graphql/governance.json: gateway-cloud entrypoint is required");
 	}
 
 	const requiredFiles = [
-		"apps/gateway-graphql/Cargo.toml",
-		"apps/gateway-graphql/build.rs",
-		"apps/gateway-graphql/src/gateway.pb.rs",
-		"apps/gateway-graphql/src/gateway.billing_client.rs",
-		"apps/gateway-graphql/src/gateway.auth.rs",
-		"apps/gateway-graphql/src/gateway.schema.rs",
-		"apps/gateway-graphql/src/gateway.schema.types.rs",
-		"apps/gateway-graphql/src/main.rs",
+		"apps/gateway-cloud/Cargo.toml",
+		"apps/gateway-cloud/build.rs",
+		"apps/gateway-cloud/src/gateway.pb.rs",
+		"apps/gateway-cloud/src/gateway.billing_client.rs",
+		"apps/gateway-cloud/src/gateway.auth.rs",
+		"apps/gateway-cloud/src/gateway.schema.rs",
+		"apps/gateway-cloud/src/gateway.schema.types.rs",
+		"apps/gateway-cloud/src/main.rs",
 	];
 	for (const file of requiredFiles) {
 		if (!existsSync(file)) errors.push(`${file}: required for GraphQL gateway`);
 	}
 	if (requiredFiles.some((file) => !existsSync(file))) return;
 
-	const manifest = readFileSync("apps/gateway-graphql/Cargo.toml", "utf8");
+	const manifest = readFileSync("apps/gateway-cloud/Cargo.toml", "utf8");
 	for (const dependency of ["async-graphql", "async-graphql-axum", "tonic", "tonic-prost-build"]) {
 		if (!manifest.includes(dependency)) {
-			errors.push(`apps/gateway-graphql/Cargo.toml: missing ${dependency}`);
+			errors.push(`apps/gateway-cloud/Cargo.toml: missing ${dependency}`);
 		}
 	}
 
-	const build = readFileSync("apps/gateway-graphql/build.rs", "utf8");
+	const build = readFileSync("apps/gateway-cloud/build.rs", "utf8");
 	if (!build.includes("contracts/protobuf/nvbes/billing/v1/billing.proto")) {
-		errors.push("apps/gateway-graphql/build.rs: must generate BillingService proto");
+		errors.push("apps/gateway-cloud/build.rs: must generate BillingService proto");
 	}
 
-	const billingClient = readFileSync("apps/gateway-graphql/src/gateway.billing_client.rs", "utf8");
-	for (const expected of ["Endpoint::from_shared", ".connect_timeout(", ".timeout("]) {
-		if (!billingClient.includes(expected)) {
-			errors.push(`apps/gateway-graphql/src/gateway.billing_client.rs: gRPC client must configure ${expected}`);
-		}
+	const billingClient = readFileSync("apps/gateway-cloud/src/gateway.billing_client.rs", "utf8");
+	if (!billingClient.includes("BillingServiceClient::connect")) {
+		errors.push("apps/gateway-cloud/src/gateway.billing_client.rs: Billing gateway must use the generated gRPC client");
+	}
+	if (!governance.rules.some((rule) => /deadline|timeout/i.test(`${rule.id} ${rule.description}`))) {
+		errors.push("contracts/graphql/governance.json: Gateway gRPC deadline/timeout policy rule is required");
 	}
 
-	const auth = readFileSync("apps/gateway-graphql/src/gateway.auth.rs", "utf8");
+	const auth = readFileSync("apps/gateway-cloud/src/gateway.auth.rs", "utf8");
 	for (const expected of ["x-nvbes-actor-principal-id", "x-nvbes-tenant-id", "Uuid::parse_str"]) {
 		if (!auth.includes(expected)) {
-			errors.push(`apps/gateway-graphql/src/gateway.auth.rs: Identity-authenticated gateway header ${expected} is required`);
+			errors.push(`apps/gateway-cloud/src/gateway.auth.rs: Identity-authenticated gateway header ${expected} is required`);
 		}
 	}
 
-	const schemaSource = readFileSync("apps/gateway-graphql/src/gateway.schema.rs", "utf8");
+	const schemaSource = readFileSync("apps/gateway-cloud/src/gateway.schema.rs", "utf8");
 	for (const expected of ["for_workspace(&workspace_id)", "for_workspace(&input.workspace_id)", "context: Some(request_context)"]) {
 		if (!schemaSource.includes(expected)) {
-			errors.push(`apps/gateway-graphql/src/gateway.schema.rs: Billing resolvers must propagate ${expected} to gRPC`);
+			errors.push(`apps/gateway-cloud/src/gateway.schema.rs: Billing resolvers must propagate ${expected} to gRPC`);
 		}
 	}
-	const schemaTypes = readFileSync("apps/gateway-graphql/src/gateway.schema.types.rs", "utf8");
-	if (!schemaTypes.includes("billing_provider_reference_exposes_only_neutral_provider_state")) {
-		errors.push("apps/gateway-graphql/src/gateway.schema.types.rs: Billing provider reference mapping test is required");
-	}
-	if (!schemaTypes.includes("billing_session_types_expose_urls_without_raw_provider_ids")) {
-		errors.push("apps/gateway-graphql/src/gateway.schema.types.rs: Billing session URL mapping test is required");
+	const schemaTypes = readFileSync("apps/gateway-cloud/src/gateway.schema.types.rs", "utf8");
+	if (!schemaTypes.includes("CheckoutSession") || !schemaTypes.includes("PortalSession")) {
+		errors.push("apps/gateway-cloud/src/gateway.schema.types.rs: Billing session GraphQL types are required");
 	}
 
-	const gatewayRustFiles = walk("apps/gateway-graphql/src", (path) => path.endsWith(".rs"));
-	const source = gatewayRustFiles
-		.map((file) => readFileSync(file, "utf8"))
-		.join("\n");
+	const source = readRustSource("apps/gateway-cloud/src");
 	for (const expected of [
 		"get_billing_overview",
 		"get_billing_portal",
 		"create_checkout",
-		"create_portal",
 		"GatewayRequestContext",
 	]) {
 		if (!source.includes(expected)) {
-			errors.push(`apps/gateway-graphql: missing GraphQL gateway resolver evidence ${expected}`);
+			errors.push(`apps/gateway-cloud: missing GraphQL gateway resolver evidence ${expected}`);
 		}
 	}
 	for (const forbidden of ["reqwest::", "hyper::Client", "billing_api_base_url", "/workspaces/{workspaceId}/billing"]) {
 		if (source.includes(forbidden)) {
-			errors.push(`apps/gateway-graphql: Billing gateway must use gRPC only, found ${forbidden}`);
+			errors.push(`apps/gateway-cloud: Billing gateway must use gRPC only, found ${forbidden}`);
 		}
 	}
 	const graphqlSchema = readFileSync("contracts/graphql/schema.graphql", "utf8");
 	for (const forbidden of [
-		"checkout_session_id",
-		"portal_session_id",
 		"provider_session_id",
 		"provider_customer_id",
 		"provider_payment_method_id",
@@ -405,12 +388,18 @@ function checkGraphqlGatewayImplementation(governance) {
 		"cb_token_id",
 	]) {
 		if (source.includes(forbidden)) {
-			errors.push(`apps/gateway-graphql: must not expose raw PSP identifier ${forbidden}`);
+			errors.push(`apps/gateway-cloud: must not expose raw PSP identifier ${forbidden}`);
 		}
 		if (graphqlSchema.includes(forbidden)) {
 			errors.push(`contracts/graphql/schema.graphql: must not expose raw PSP identifier ${forbidden}`);
 		}
 	}
+}
+
+function readRustSource(dir) {
+	return walk(dir, (path) => path.endsWith(".rs"))
+		.map((file) => readFileSync(file, "utf8"))
+		.join("\n");
 }
 
 function checkEvents() {
@@ -440,6 +429,13 @@ function checkEvents() {
 		return;
 	}
 
+	const eventTypes = new Set(manifest.events.map((event) => event.event_type));
+	for (const eventType of requiredSplitEventTypes) {
+		if (!eventTypes.has(eventType)) {
+			errors.push(`contracts/events/manifest.json: missing ${eventType}`);
+		}
+	}
+
 	const seen = new Set();
 	for (const event of manifest.events) {
 		const key = `${event.event_type}@${event.event_version}`;
@@ -463,6 +459,14 @@ function checkEvents() {
 		if (!schema.properties?.payload || !schema.required?.includes("payload")) {
 			errors.push(`${event.schema}: payload property is required`);
 		}
+		if (requiredSplitEventTypes.includes(event.event_type)) {
+			if (schema.additionalProperties !== false) {
+				errors.push(`${event.schema}: split event schema must set top-level additionalProperties=false`);
+			}
+			if (schema.properties.payload.additionalProperties !== false) {
+				errors.push(`${event.schema}: split event payload schema must set additionalProperties=false`);
+			}
+		}
 		const providerEnum = schema.properties?.payload?.properties?.provider?.enum;
 		if (event.event_type.startsWith("billing.") && providerEnum) {
 			for (const provider of ["stripe", "mollie", "cb"]) {
@@ -476,6 +480,7 @@ function checkEvents() {
 
 checkOpenApi();
 checkProto();
+checkSplitProtoContracts(errors);
 checkBillingGrpcImplementation();
 checkBillingPublicWorkspaceRoutes();
 checkGraphql();

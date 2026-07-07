@@ -13,9 +13,9 @@ const sources = {
 	provisioningReadme: "libs/go/provisioning/README.md",
 	controlPlane: "libs/go/control-plane/foundation.go",
 	controlPlaneTests: "libs/go/control-plane/foundation_test.go",
-	cloudControlApi: "apps/cloud-control-api/README.md",
-	cloudConsole: "apps/cloud-console/README.md",
-	cloudApps: "apps/cloud/README.md",
+	cloudControlApi: "apps/cloud-service/README.md",
+	cloudConsole: "apps/cloud-web/README.md",
+	cloudApps: "apps/cloud-worker/README.md",
 	cloudDeploy: "deploy/cloud/README.md",
 	cloudDocs: "docs/cloud/README.md",
 	targetStructure: "docs/migration/target-structure.generated.json",
@@ -59,9 +59,9 @@ function buildChecks() {
 		textCheck("provider-neutral-doc", sources.provisioningReadme, "Provisioning package is provider-neutral by contract", "Provider-specific adapters must live outside this package."),
 		textCheck("control-plane-health", sources.controlPlane, "Cloud control-plane runtime has health surface", "func HealthStatus() string"),
 		textCheck("control-plane-test", sources.controlPlaneTests, "Cloud control-plane health is tested", "TestHealthStatus"),
-		textCheck("control-api-boundary", sources.cloudControlApi, "Cloud Control API boundary is documented", "plan/apply orchestration"),
-		textCheck("console-boundary", sources.cloudConsole, "Cloud Console boundary is documented", "provisioning plans"),
-		textCheck("cloud-apps-boundary", sources.cloudApps, "Cloud app boundary exists", "Cloud control-plane applications"),
+		textCheck("control-api-boundary", sources.cloudControlApi, "Cloud Service boundary is documented", "plan/apply orchestration"),
+		textCheck("console-boundary", sources.cloudConsole, "Cloud Web boundary is documented", "provisioning plans"),
+		textCheck("cloud-apps-boundary", sources.cloudApps, "Cloud Worker boundary exists", "Cloud app boundary names"),
 		textCheck("cloud-deploy-boundary", sources.cloudDeploy, "Cloud deployment boundary exists", "provider-specific infrastructure"),
 		textCheck("cloud-docs-boundary", sources.cloudDocs, "Cloud docs boundary exists", "managed hosting, billing, regions, support, SLA and cloud operations"),
 		textCheck("target-structure-cloud-apps", sources.targetStructure, "Target structure includes Cloud app boundary", "\"apps/cloud\""),
@@ -99,7 +99,7 @@ function validateReport(report) {
 		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
 	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "tools/migration/cloud-provisioning.mjs --write") {
+	if (report.generation?.command !== "node tools/migration/cloud-provisioning.mjs --write") {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -156,7 +156,7 @@ function serializeMarkdown(data) {
 		"",
 		"```bash",
 		"pnpm check:migration-cloud-provisioning",
-		"tools/migration/cloud-provisioning.mjs --write",
+		"node tools/migration/cloud-provisioning.mjs --write",
 		"```",
 		"",
 	);
@@ -168,7 +168,7 @@ const summary = summarize(checks);
 const report = {
 	schema_version: 1,
 	generation: {
-		command: "tools/migration/cloud-provisioning.mjs --write",
+		command: "node tools/migration/cloud-provisioning.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: ["go test ./libs/go/provisioning ./libs/go/control-plane"],
 	},
@@ -197,8 +197,8 @@ for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/migration/cloud-provisioning.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/migration/cloud-provisioning.mjs --write`);
+	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/cloud-provisioning.mjs --write`);
+	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/cloud-provisioning.mjs --write`);
 }
 
 if (errors.length > 0) {
