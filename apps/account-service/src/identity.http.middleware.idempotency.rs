@@ -6,7 +6,8 @@ use axum::{
     response::Response,
 };
 use nvbes_core::idempotency::{
-    build_request_signature, derive_scope, fetch_idempotency_response, insert_idempotency_response,
+    IdempotencyClaim, build_request_signature, claim_idempotency_request, derive_scope,
+    fetch_idempotency_response, insert_idempotency_response, release_idempotency_claim,
     validate_key,
 };
 
@@ -79,6 +80,31 @@ pub async fn idempotency_guard(
         ));
     }
 
+    let release_token = match claim_idempotency_request(&state.redis, key, &scope, &signature)
+        .await
+        .map_err(|e| {
+            AppError::internal(
+                "idempotency_claim_error",
+                format!("Failed to reserve idempotency key: {e}"),
+            )
+        })? {
+        IdempotencyClaim::Acquired { release_token } => release_token,
+        IdempotencyClaim::InProgress { request_hash } if request_hash == signature => {
+            return Err(AppError::new(
+                StatusCode::CONFLICT,
+                "idempotency_request_in_progress",
+                "A request with this idempotency key is already being processed. Retry after the first request completes.",
+            ));
+        }
+        IdempotencyClaim::InProgress { .. } => {
+            return Err(AppError::new(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "idempotency_key_reuse",
+                "This idempotency key is already being processed with a different request body. Use a unique key per distinct request.",
+            ));
+        }
+    };
+
     let request = axum::http::Request::from_parts(parts, Body::from(body_bytes.clone()));
     let response = next.run(request).await;
 
@@ -88,7 +114,7 @@ pub async fn idempotency_guard(
         .unwrap_or_default();
     let resp_status = resp_parts.status.as_u16() as i32;
 
-    let _ = insert_idempotency_response(
+    let stored = insert_idempotency_response(
         &state.redis,
         key,
         &scope,
@@ -97,6 +123,10 @@ pub async fn idempotency_guard(
         &resp_bytes,
     )
     .await;
+
+    if stored.is_ok() {
+        let _ = release_idempotency_claim(&state.redis, key, &scope, &release_token).await;
+    }
 
     Ok(Response::from_parts(resp_parts, Body::from(resp_bytes)))
 }

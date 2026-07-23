@@ -1,7 +1,9 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 
+import { prepareProfileAvatar } from '../account.avatar-upload';
+import { uploadProfileAvatarToPresignedUrl } from '../account.avatar-upload.transport';
 import { identityHttpClient } from '../identity.http';
-import { UpdateProfileSchema, type UpdateProfileInput } from './AccountPersonalInfoPage.shared';
+import { type UpdateProfileInput, UpdateProfileSchema } from './AccountPersonalInfoPage.shared';
 
 export type UpdateProfileResponse = z.infer<typeof UpdateProfileSchema>;
 
@@ -16,4 +18,25 @@ export function updateProfile(input: UpdateProfileInput) {
       region: input.region || undefined,
     },
   });
+}
+
+export async function uploadProfileAvatar(file: File) {
+  const uploadFile = await prepareProfileAvatar(file);
+
+  return identityHttpClient
+    .request<{ upload_url: string; object_key: string }>(
+      '/auth/me/avatar',
+      z.object({ upload_url: z.string().url(), object_key: z.string() }),
+      {
+        method: 'POST',
+        body: { content_type: uploadFile.type, size_bytes: uploadFile.size },
+      },
+    )
+    .then(async ({ upload_url }) => {
+      await uploadProfileAvatarToPresignedUrl(upload_url, uploadFile);
+    });
+}
+
+export function deleteProfileAvatar() {
+  return identityHttpClient.delete('/auth/me/avatar', z.object({ success: z.boolean() }));
 }

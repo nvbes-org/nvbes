@@ -3,8 +3,6 @@ import { identityHttpClient } from './identity.http';
 
 const ForgotPasswordResultSchema = z.object({
   success: z.boolean(),
-  requires_admin_approval: z.boolean(),
-  available_at: z.string().nullable().optional(),
 });
 
 const ResetPasswordResultSchema = z.object({

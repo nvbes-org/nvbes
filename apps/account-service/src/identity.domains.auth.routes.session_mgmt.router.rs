@@ -1,12 +1,13 @@
 use crate::app::AppState;
 use axum::Router;
 
+use super::devices::{revoke_device, trust_device};
 use super::{
     forget_account_cookie, get_accounts, list_sessions, logout, me, me_delete, me_email_delete,
     me_email_promote, me_email_resend_verification, me_emails_get, me_emails_post, me_export,
     me_export_download, me_notifications_get, me_notifications_put, me_preferences_get,
-    me_preferences_put, me_update, revoke_all_other_sessions, revoke_session, step_up,
-    switch_workspace,
+    me_preferences_put, me_update, profile::me_avatar, profile::me_avatar_delete,
+    profile::me_avatar_upload, revoke_all_other_sessions, revoke_session, step_up,
 };
 
 pub(super) fn router(state: &AppState) -> Router<AppState> {
@@ -47,11 +48,35 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
             ),
         )
         .route(
+            "/devices/{deviceId}/trust",
+            axum::routing::post(trust_device).layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                crate::http::middleware::jwt::jwt_auth_middleware,
+            )),
+        )
+        .route(
+            "/devices/{deviceId}",
+            axum::routing::delete(revoke_device).layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                crate::http::middleware::jwt::jwt_auth_middleware,
+            )),
+        )
+        .route(
             "/me",
             axum::routing::get(me).layer(axum::middleware::from_fn_with_state(
                 state.clone(),
                 crate::http::middleware::jwt::jwt_auth_middleware,
             )),
+        )
+        .route(
+            "/me/avatar",
+            axum::routing::get(me_avatar)
+                .post(me_avatar_upload)
+                .delete(me_avatar_delete)
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    crate::http::middleware::jwt::jwt_auth_middleware,
+                )),
         )
         .route(
             "/me",
@@ -139,13 +164,6 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
         .route(
             "/step-up",
             axum::routing::post(step_up).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/workspaces/{workspaceId}/switch",
-            axum::routing::post(switch_workspace).layer(axum::middleware::from_fn_with_state(
                 state.clone(),
                 crate::http::middleware::jwt::jwt_auth_middleware,
             )),

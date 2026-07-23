@@ -12,7 +12,7 @@ export function TrackingConsentToggle({
     <div
       className={
         large
-          ? 'flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-background/70 p-3'
+          ? 'flex items-center justify-between gap-4 px-4 py-3.5'
           : 'flex items-center justify-between gap-3'
       }
     >
@@ -20,7 +20,7 @@ export function TrackingConsentToggle({
         <p
           className={
             large
-              ? 'text-xs font-medium text-foreground'
+              ? 'text-sm font-semibold text-foreground'
               : 'text-[11px] font-medium text-foreground'
           }
         >
@@ -28,7 +28,9 @@ export function TrackingConsentToggle({
         </p>
         <p
           className={
-            large ? 'text-[11px] text-muted-foreground' : 'text-[10px] text-muted-foreground'
+            large
+              ? 'mt-0.5 text-xs leading-relaxed text-muted-foreground'
+              : 'text-[10px] text-muted-foreground'
           }
         >
           {description}

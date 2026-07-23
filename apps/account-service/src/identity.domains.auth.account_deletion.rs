@@ -1,7 +1,7 @@
+use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::types::StepUpSubject;
 use crate::domains::auth::types::{AuthContext, DeleteAccountResult};
 use crate::domains::auth::{check_rate_limit, sessions_mgmt, verification};
-use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 
 pub async fn delete_account(

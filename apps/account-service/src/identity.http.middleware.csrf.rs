@@ -9,6 +9,20 @@ use crate::app::AppState;
 use crate::http::error::AppError;
 
 const CSRF_SKIP_PATHS: &[&str] = &[
+    "/auth/register",
+    "/auth/verify-email",
+    "/auth/verify-email/resend",
+    "/auth/verify-email/change",
+    "/auth/challenge/pow",
+    "/auth/challenge/identifier",
+    "/auth/challenge/pwd",
+    "/auth/challenge/mfa",
+    "/auth/challenge/mfa/email/send",
+    "/auth/challenge/webauthn/start",
+    "/auth/challenge/webauthn/discoverable/start",
+    "/auth/challenge/webauthn/discoverable/finish",
+    "/auth/password/forgot",
+    "/auth/password/reset",
     "/oauth/token",
     "/oauth/introspect",
     "/oauth/revoke",
@@ -29,29 +43,15 @@ pub async fn csrf_guard(
         return Ok(next.run(request).await);
     }
 
-    let authuser = request
-        .uri()
-        .query()
-        .and_then(|q| {
-            url::form_urlencoded::parse(q.as_bytes())
-                .find(|(k, _)| k == "authuser")
-                .map(|(_, v)| v.into_owned())
-        })
-        .or_else(|| {
-            headers
-                .get("X-Auth-User")
-                .and_then(|h| h.to_str().ok())
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_else(|| "0".to_string());
+    let authuser = crate::http::authuser::from_uri_and_headers(request.uri(), &headers)?;
 
     let secure_cookie = state.config.environment != "development";
     let session_cookie_base =
         crate::http::cookies::auth_cookie_name_with_user("session", &authuser, secure_cookie);
 
-    if !has_cookie(&headers, &session_cookie_base) {
+    let Some(session_cookie_value) = extract_cookie_value(&headers, &session_cookie_base) else {
         return Ok(next.run(request).await);
-    }
+    };
 
     reject_cross_site_fetch_metadata(&headers)?;
 
@@ -67,12 +67,12 @@ pub async fn csrf_guard(
             AppError::forbidden("missing_csrf_header", "X-CSRF-Token header is required.")
         })?;
 
-    if cookie_value != header_value {
-        return Err(AppError::forbidden(
-            "csrf_token_mismatch",
-            "CSRF token does not match.",
-        ));
-    }
+    validate_signed_double_submit_csrf(
+        &cookie_value,
+        header_value,
+        &session_cookie_value,
+        &state.config.jwt_secret,
+    )?;
 
     Ok(next.run(request).await)
 }
@@ -82,14 +82,6 @@ fn is_mutating_method(method: &Method) -> bool {
         method,
         &Method::POST | &Method::PUT | &Method::PATCH | &Method::DELETE
     )
-}
-
-fn has_cookie(headers: &HeaderMap, name: &str) -> bool {
-    let prefix = format!("{name}=");
-    headers
-        .get(header::COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|cookie_str| cookie_str.split(';').any(|c| c.trim().starts_with(&prefix)))
 }
 
 fn reject_cross_site_fetch_metadata(headers: &HeaderMap) -> Result<(), AppError> {
@@ -155,6 +147,29 @@ fn matches_ignore_ascii_case(value: &str, allowed: &[&str]) -> bool {
         .any(|allowed_value| value.eq_ignore_ascii_case(allowed_value))
 }
 
+fn validate_signed_double_submit_csrf(
+    cookie_value: &str,
+    header_value: &str,
+    session_cookie_value: &str,
+    secret: &str,
+) -> Result<(), AppError> {
+    if cookie_value != header_value {
+        return Err(AppError::forbidden(
+            "csrf_token_mismatch",
+            "CSRF token does not match.",
+        ));
+    }
+
+    if crate::http::cookies::verify_csrf_token(header_value, session_cookie_value, secret) {
+        return Ok(());
+    }
+
+    Err(AppError::forbidden(
+        "csrf_token_invalid",
+        "CSRF token is not valid for this session.",
+    ))
+}
+
 fn extract_cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     let prefix = format!("{name}=");
     let cookie_str = headers.get(header::COOKIE)?.to_str().ok()?;
@@ -169,6 +184,8 @@ fn extract_cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
 mod tests {
     use axum::http::{HeaderMap, HeaderValue};
 
+    use crate::http::cookies::generate_csrf_token;
+
     #[test]
     fn fetch_metadata_rejects_cross_site_requests() {
         let mut headers = HeaderMap::new();
@@ -178,6 +195,24 @@ mod tests {
             .expect_err("cross-site fetch metadata should be rejected");
 
         assert_eq!(error.code, "cross_site_request");
+    }
+
+    #[test]
+    fn public_registration_and_verification_do_not_require_session_csrf() {
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/register"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/verify-email"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/verify-email/resend"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/verify-email/change"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/pow"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/identifier"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/pwd"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/mfa"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/mfa/email/send"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/start"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/discoverable/start"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/discoverable/finish"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/password/forgot"));
+        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/password/reset"));
     }
 
     #[test]
@@ -239,5 +274,51 @@ mod tests {
         let headers = HeaderMap::new();
 
         assert!(super::reject_cross_site_fetch_metadata(&headers).is_ok());
+    }
+
+    #[test]
+    fn signed_double_submit_accepts_token_bound_to_session() {
+        let token = generate_csrf_token("session-a", "secret");
+
+        assert!(
+            super::validate_signed_double_submit_csrf(&token, &token, "session-a", "secret")
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn signed_double_submit_rejects_header_cookie_mismatch() {
+        let token = generate_csrf_token("session-a", "secret");
+        let other = generate_csrf_token("session-a", "secret");
+
+        let error =
+            super::validate_signed_double_submit_csrf(&token, &other, "session-a", "secret")
+                .expect_err("mismatched CSRF token should be rejected");
+
+        assert_eq!(error.code, "csrf_token_mismatch");
+    }
+
+    #[test]
+    fn signed_double_submit_rejects_token_from_other_session() {
+        let token = generate_csrf_token("session-a", "secret");
+
+        let error =
+            super::validate_signed_double_submit_csrf(&token, &token, "session-b", "secret")
+                .expect_err("CSRF token from another session should be rejected");
+
+        assert_eq!(error.code, "csrf_token_invalid");
+    }
+
+    #[test]
+    fn signed_double_submit_rejects_unsigned_legacy_token() {
+        let error = super::validate_signed_double_submit_csrf(
+            "plain-random",
+            "plain-random",
+            "session-a",
+            "secret",
+        )
+        .expect_err("unsigned CSRF token should be rejected");
+
+        assert_eq!(error.code, "csrf_token_invalid");
     }
 }

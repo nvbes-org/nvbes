@@ -1,3 +1,5 @@
+#[path = "identity.http.authuser.rs"]
+pub mod authuser;
 #[path = "identity.http.cookies.rs"]
 pub mod cookies;
 #[path = "identity.http.cors.rs"]

@@ -142,16 +142,27 @@ pub(crate) async fn revoke_consent(
     path = "/legal/consents",
     tag = "legal",
     responses(
-        (status = 200, description = "Consent history listed successfully", body = Vec<UserConsent>),
+        (status = 200, description = "Consent history listed successfully", body = service::ConsentHistoryResult),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+    ),
+    params(
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
     ),
 )]
 pub(crate) async fn list_consents(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
-) -> Result<Json<Vec<UserConsent>>, AppError> {
-    let consents = service::get_consents(&state.db, auth.user_id).await?;
-    Ok(Json(consents))
+    axum::extract::Query(query): axum::extract::Query<ListConsentsQuery>,
+) -> Result<Json<service::ConsentHistoryResult>, AppError> {
+    let result = service::list_consents(&state.db, auth.user_id, query.limit, query.cursor).await?;
+    Ok(Json(result))
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ListConsentsQuery {
+    limit: Option<i64>,
+    cursor: Option<String>,
 }
 
 // Minimal helper to return 200 OK without any body content

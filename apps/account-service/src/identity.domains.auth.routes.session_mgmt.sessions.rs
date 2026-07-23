@@ -7,10 +7,11 @@ use crate::http::middleware::jwt::AuthContext;
 use crate::{app::AppState, domains::auth::verification};
 use axum::{
     Json,
-    extract::{Extension, State},
+    extract::{Extension, Query, State},
     http::{HeaderMap, StatusCode, header::SET_COOKIE},
     response::{IntoResponse, Response},
 };
+use serde::Deserialize;
 
 #[utoipa::path(
     post,
@@ -26,7 +27,7 @@ pub(crate) async fn logout(
     Extension(auth): Extension<AuthContext>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    sessions::logout_browser_sessions(&state.db, &state.redis, &state.jwt, &auth, &headers).await?;
+    sessions::logout_browser_sessions(&state.db, &state.redis, &auth, &headers).await?;
     let result = LogoutResult { success: true };
 
     let mut response = (StatusCode::OK, Json(result)).into_response();
@@ -56,9 +57,23 @@ pub(crate) async fn logout(
 pub(crate) async fn list_sessions(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    Query(query): Query<ListSessionsQuery>,
 ) -> Result<Json<crate::domains::auth::types::SessionsResult>, AppError> {
-    let result = sessions_mgmt::list(&state.redis, auth.user_id(), auth.session_id()).await?;
+    let result = sessions_mgmt::list(
+        &state.redis,
+        auth.user_id(),
+        auth.session_id(),
+        query.limit,
+        query.cursor,
+    )
+    .await?;
     Ok(Json(result))
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ListSessionsQuery {
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
 }
 
 #[utoipa::path(

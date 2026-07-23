@@ -4,6 +4,8 @@ use sqlx::{PgPool, Row};
 use std::net::IpAddr;
 use uuid::Uuid;
 
+use nvbes_core::pagination::KeysetCursor;
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct UserConsent {
     pub id: Uuid,
@@ -135,16 +137,29 @@ pub async fn is_consent_active(
 }
 
 /// Lists all consent records for a principal, including revoked entries.
-pub async fn list_consents(db: &PgPool, principal_id: Uuid) -> Result<Vec<UserConsent>, AppError> {
+pub async fn list_consents(
+    db: &PgPool,
+    principal_id: Uuid,
+    cursor: Option<&KeysetCursor>,
+    limit: i64,
+) -> Result<Vec<UserConsent>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT id, principal_id, consent_type, document_version, ip_address::text, granted_at, revoked_at
         FROM user_consents
         WHERE principal_id = $1
-        ORDER BY granted_at DESC
+          AND (
+            $2::timestamp with time zone IS NULL
+            OR (granted_at, id) < ($2, $3)
+          )
+        ORDER BY granted_at DESC, id DESC
+        LIMIT $4
         "#
     )
     .bind(principal_id)
+    .bind(cursor.map(|value| value.created_at))
+    .bind(cursor.map(|value| value.id))
+    .bind(limit)
     .fetch_all(db)
     .await?;
 

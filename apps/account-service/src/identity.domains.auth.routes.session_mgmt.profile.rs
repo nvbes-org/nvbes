@@ -10,7 +10,94 @@ use crate::{app::AppState, domains::auth::db as auth_db};
 use axum::{
     Json,
     extract::{Extension, State},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
+
+use std::time::Duration;
+
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub struct AvatarUploadInput {
+    pub content_type: String,
+    pub size_bytes: i64,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct AvatarUploadResult {
+    pub upload_url: String,
+    pub object_key: String,
+}
+
+pub(crate) async fn me_avatar_upload(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(input): Json<AvatarUploadInput>,
+) -> Result<Json<AvatarUploadResult>, AppError> {
+    if !["image/jpeg", "image/png", "image/webp"].contains(&input.content_type.as_str())
+        || !(1..=5 * 1024 * 1024).contains(&input.size_bytes)
+    {
+        return Err(AppError::bad_request(
+            "invalid_avatar",
+            "Use a JPEG, PNG, or WebP image of 5 MB maximum.",
+        ));
+    }
+    let object_key = format!(
+        "account/profile-avatars/{}/{}",
+        auth.user_id(),
+        uuid::Uuid::new_v4()
+    );
+    let upload = state
+        .storage
+        .presign_upload(
+            &object_key,
+            Some(&input.content_type),
+            input.size_bytes,
+            Duration::from_secs(600),
+        )
+        .await
+        .map_err(|_| {
+            AppError::internal("storage_error", "Could not prepare profile photo upload.")
+        })?;
+    auth_db::save_profile_avatar(&state.db, auth.user_id(), &object_key).await?;
+    Ok(Json(AvatarUploadResult {
+        upload_url: upload.url,
+        object_key,
+    }))
+}
+
+pub(crate) async fn me_avatar(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Response, AppError> {
+    let Some(object_key) = auth_db::fetch_profile_avatar(&state.db, auth.user_id()).await? else {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    };
+    let download = state
+        .storage
+        .presign_download(&object_key, Duration::from_secs(300))
+        .await
+        .map_err(|_| AppError::internal("storage_error", "Could not prepare profile photo."))?;
+    Response::builder()
+        .status(StatusCode::TEMPORARY_REDIRECT)
+        .header(header::LOCATION, download.url)
+        .body(axum::body::Body::empty())
+        .map_err(|_| AppError::internal("response_error", "Failed to serve profile photo."))
+}
+
+pub(crate) async fn me_avatar_delete(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if let Some(object_key) = auth_db::fetch_profile_avatar(&state.db, auth.user_id()).await? {
+        state
+            .storage
+            .delete_objects(&[object_key])
+            .await
+            .map_err(|_| AppError::internal("storage_error", "Could not remove profile photo."))?;
+    }
+    auth_db::clear_profile_avatar(&state.db, auth.user_id()).await?;
+    Ok(Json(serde_json::json!({ "success": true })))
+}
 
 #[utoipa::path(
     get,

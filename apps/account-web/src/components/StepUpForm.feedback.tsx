@@ -1,6 +1,7 @@
 import { ShieldAlert } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AsyncStateButton } from '@/components/AsyncStateButton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { StepUpMethod } from './useStepUpForm';
 
@@ -8,7 +9,6 @@ export function StepUpError({ error }: { error: string }) {
   return (
     <Alert variant="destructive">
       <ShieldAlert />
-      <AlertTitle>Vérification impossible</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>
   );
@@ -35,9 +35,12 @@ export function StepUpActions({
         Annuler
       </Button>
       {method !== 'webauthn' && (
-        <Button type="submit" className="flex-1 text-xs" disabled={loading}>
-          {loading ? 'Vérification...' : 'Confirmer'}
-        </Button>
+        <AsyncStateButton
+          type="submit"
+          className="flex-1 text-xs"
+          message="Confirmer"
+          state={loading ? 'pending' : 'idle'}
+        />
       )}
     </div>
   );

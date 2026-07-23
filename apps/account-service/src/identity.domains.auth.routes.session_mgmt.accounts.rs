@@ -13,42 +13,11 @@ pub async fn get_accounts(
     uri: Uri,
     headers: axum::http::HeaderMap,
 ) -> Result<Response, AppError> {
-    let current_authuser = resolve_authuser(&uri, &headers);
-    let (result, refreshed_cookies) = account_chooser::list_cookie_accounts(
-        &state.db,
-        &state.redis,
-        &state.jwt,
-        &state,
-        &headers,
-        &current_authuser,
-    )
-    .await?;
-    let mut response = Json(result).into_response();
-    for cookies in refreshed_cookies {
-        response
-            .headers_mut()
-            .append(SET_COOKIE, cookies.session_cookie);
-        response
-            .headers_mut()
-            .append(SET_COOKIE, cookies.csrf_cookie);
-    }
-    Ok(response)
-}
-
-fn resolve_authuser(uri: &Uri, headers: &axum::http::HeaderMap) -> String {
-    uri.query()
-        .and_then(|query| {
-            url::form_urlencoded::parse(query.as_bytes())
-                .find(|(key, _)| key == "authuser")
-                .map(|(_, value)| value.into_owned())
-        })
-        .or_else(|| {
-            headers
-                .get("X-Auth-User")
-                .and_then(|header| header.to_str().ok())
-                .map(str::to_string)
-        })
-        .unwrap_or_else(|| "0".to_string())
+    let current_authuser = crate::http::authuser::from_uri_and_headers(&uri, &headers)?;
+    let result =
+        account_chooser::list_cookie_accounts(&state.db, &state.redis, &headers, &current_authuser)
+            .await?;
+    Ok(Json(result).into_response())
 }
 
 pub async fn forget_account_cookie(

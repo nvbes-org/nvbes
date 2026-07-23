@@ -21,7 +21,6 @@ pub(crate) fn shape_registration_options(
         return options;
     };
     if let Some(public_key_object) = public_key.as_object_mut() {
-        public_key_object.remove("extensions");
         public_key_object.insert(
             "authenticatorSelection".to_string(),
             match kind {
@@ -29,7 +28,7 @@ pub(crate) fn shape_registration_options(
                     "authenticatorAttachment": "cross-platform",
                     "requireResidentKey": false,
                     "residentKey": "discouraged",
-                    "userVerification": "preferred",
+                    "userVerification": "required",
                 }),
                 _ => json!({
                     "authenticatorAttachment": "platform",

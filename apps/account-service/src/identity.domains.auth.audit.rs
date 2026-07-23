@@ -2,7 +2,7 @@ use serde_json::Value;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::{domains::cloud::workspace_port, http::error::AppError};
+use crate::{cloud_boundary::workspace_port, http::error::AppError};
 
 #[derive(Debug, Clone)]
 pub struct AuthAuditInput<'a> {

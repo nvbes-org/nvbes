@@ -1,3 +1,4 @@
+import { sanitizeStyleElementCss, sanitizeUrlForAttribute } from '@nvbes/web-runtime';
 import { ShieldCheckIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -57,15 +58,32 @@ export function LoginPageConsent({
         '--ring': brandColor,
       } as React.CSSProperties)
     : {};
+  const safeCustomCss = sanitizeStyleElementCss(customCss);
+  const safeLogoUrl = sanitizeUrlForAttribute(logoUrl, {
+    allowRelative: false,
+    allowedProtocols: ['https:'],
+  });
+  const safePrivacyUrl = sanitizeUrlForAttribute(privacyUrl, {
+    allowRelative: false,
+    allowedProtocols: ['https:'],
+  });
+  const safeTermsUrl = sanitizeUrlForAttribute(termsUrl, {
+    allowRelative: false,
+    allowedProtocols: ['https:'],
+  });
+  const safeSupportUrl = sanitizeUrlForAttribute(supportUrl, {
+    allowRelative: false,
+    allowedProtocols: ['https:'],
+  });
 
   return (
     <div className="flex flex-col gap-5" style={styleOverrides}>
-      {customCss ? <style>{customCss}</style> : null}
+      {safeCustomCss ? <style>{safeCustomCss}</style> : null}
       <Card className="p-5">
         <div className="mb-4 flex items-center gap-3">
-          {logoUrl ? (
+          {safeLogoUrl ? (
             <img
-              src={logoUrl}
+              src={safeLogoUrl}
               alt={clientName || 'Application Logo'}
               className="size-10 rounded-md border border-border bg-background object-contain p-1"
             />
@@ -128,11 +146,11 @@ export function LoginPageConsent({
             Autoriser
           </Button>
         </div>
-        {(privacyUrl || termsUrl || supportUrl) && (
+        {(safePrivacyUrl || safeTermsUrl || safeSupportUrl) && (
           <div className="flex justify-center gap-3 text-[10px] text-muted-foreground">
-            {privacyUrl && (
+            {safePrivacyUrl && (
               <a
-                href={privacyUrl}
+                href={safePrivacyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground hover:underline transition-colors"
@@ -140,12 +158,12 @@ export function LoginPageConsent({
                 Politique de confidentialité
               </a>
             )}
-            {privacyUrl && (termsUrl || supportUrl) && (
+            {safePrivacyUrl && (safeTermsUrl || safeSupportUrl) && (
               <span className="text-muted-foreground/30">•</span>
             )}
-            {termsUrl && (
+            {safeTermsUrl && (
               <a
-                href={termsUrl}
+                href={safeTermsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground hover:underline transition-colors"
@@ -153,10 +171,10 @@ export function LoginPageConsent({
                 Conditions d'utilisation
               </a>
             )}
-            {termsUrl && supportUrl && <span className="text-muted-foreground/30">•</span>}
-            {supportUrl && (
+            {safeTermsUrl && safeSupportUrl && <span className="text-muted-foreground/30">•</span>}
+            {safeSupportUrl && (
               <a
-                href={supportUrl}
+                href={safeSupportUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground hover:underline transition-colors"

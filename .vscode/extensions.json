@@ -1,16 +1,23 @@
 {
   "recommendations": [
     "biomejs.biome",
-    "eamodio.gitlens",
-    "editorconfig.editorconfig",
-    "github.vscode-github-actions",
-    "mhutchie.git-graph",
-    "nrwl.angular-console",
-    "redhat.vscode-yaml",
     "rust-lang.rust-analyzer",
     "tamasfe.even-better-toml",
-    "vadimcn.vscode-lldb",
-    "vitest.explorer"
+    "vadimcn.vscode-lldb"
   ],
-  "unwantedRecommendations": []
+  "unwantedRecommendations": [
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "editorconfig.editorconfig",
+    "esbenp.prettier-vscode",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "mhutchie.git-graph",
+    "ms-azuretools.vscode-containers",
+    "ms-azuretools.vscode-docker",
+    "nrwl.angular-console",
+    "redhat.vscode-yaml",
+    "vitest.explorer"
+  ]
 }

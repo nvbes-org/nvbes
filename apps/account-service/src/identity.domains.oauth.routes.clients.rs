@@ -77,9 +77,18 @@ fn json_value<T: serde::Serialize>(value: T) -> Result<Json<serde_json::Value>, 
 pub(crate) async fn list_clients(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    Query(query): Query<ListClientsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let result = crate::domains::oauth::clients::list_clients(&state.db, &auth).await?;
+    let result =
+        crate::domains::oauth::clients::list_clients(&state.db, &auth, query.limit, query.cursor)
+            .await?;
     json_value(result)
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ListClientsQuery {
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
 }
 
 #[utoipa::path(
@@ -111,6 +120,8 @@ pub(crate) async fn create_client(
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct ListPoliciesRequest {
     pub client_id: Option<String>,
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
 }
 
 #[utoipa::path(
@@ -119,6 +130,8 @@ pub struct ListPoliciesRequest {
     tag = "oauth",
     params(
         ("clientId" = String, Path, description = "OAuth client ID"),
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
     ),
     responses(
         (status = 200, description = "List client policies", body = crate::domains::oauth::service::OAuthClientPoliciesResult),
@@ -131,9 +144,14 @@ pub(crate) async fn list_client_policies(
     Extension(auth): Extension<AuthContext>,
     Query(request): Query<ListPoliciesRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let result =
-        crate::domains::oauth::policies::list_client_policies(&state.db, &auth, request.client_id)
-            .await?;
+    let result = crate::domains::oauth::policies::list_client_policies(
+        &state.db,
+        &auth,
+        request.client_id,
+        request.limit,
+        request.cursor,
+    )
+    .await?;
     json_value(result)
 }
 

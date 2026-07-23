@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::{
     db,
     email_verification::verification_resend_available_at,
-    generate_random_token, log_dev_token, token_hash,
+    generate_random_token, token_hash,
     types::{
         AddSecondaryEmailInput, AddSecondaryEmailResult, DeleteSecondaryEmailResult,
         EmailAddressesResult, PromoteSecondaryEmailResult, ResendSecondaryEmailVerificationResult,
@@ -14,10 +14,39 @@ use super::{
 };
 use crate::http::error::AppError;
 
-pub async fn list(db: &PgPool, principal_id: Uuid) -> Result<EmailAddressesResult, AppError> {
+pub async fn list(
+    db: &PgPool,
+    principal_id: Uuid,
+    limit: Option<i64>,
+    cursor: Option<String>,
+) -> Result<EmailAddressesResult, AppError> {
+    let limit = limit.unwrap_or(50).clamp(1, 200) as usize;
+    let cursor = cursor
+        .as_deref()
+        .map(nvbes_core::pagination::decode_cursor::<nvbes_core::pagination::KeysetCursor>)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let emails =
+        db::emails::list_email_addresses(db, principal_id, cursor.as_ref(), (limit + 1) as i64)
+            .await?;
+    let page = nvbes_core::pagination::page_from_rows(emails, limit, |email| {
+        nvbes_core::pagination::KeysetCursor {
+            created_at: email.created_at,
+            id: email.id,
+        }
+    });
+    let next_cursor = page
+        .next_cursor
+        .map(|c| nvbes_core::pagination::encode_cursor(&c))
+        .transpose()
+        .map_err(|_| {
+            AppError::internal("pagination_error", "Failed to encode pagination cursor.")
+        })?;
     Ok(EmailAddressesResult {
-        emails: db::emails::list_email_addresses(db, principal_id).await?,
+        emails: page.items,
         primary_min_age_hours: db::emails::primary_email_policy_hours(db, principal_id).await?,
+        next_cursor,
+        has_more: page.has_more,
     })
 }
 
@@ -48,12 +77,6 @@ pub async fn add_secondary(
     enqueue_secondary_verification_email(db, redis, config, &email.email, &verification_token)
         .await?;
     notify_email_added(db, redis, principal_id, &email.email).await?;
-    log_dev_token(
-        &verification_token,
-        &config.environment,
-        "secondary_email_verification",
-    );
-
     Ok(AddSecondaryEmailResult {
         email,
         verification_resend_available_at: verification_resend_available_at(
@@ -101,12 +124,6 @@ pub async fn resend_secondary_verification(
     .await?;
     enqueue_secondary_verification_email(db, redis, config, &email.email, &verification_token)
         .await?;
-    log_dev_token(
-        &verification_token,
-        &config.environment,
-        "secondary_email_verification_resend",
-    );
-
     Ok(ResendSecondaryEmailVerificationResult {
         email,
         verification_resend_available_at: verification_resend_available_at(

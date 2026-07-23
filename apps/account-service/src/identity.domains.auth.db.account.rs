@@ -1,6 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use nvbes_core::config::AppConfig;
-use nvbes_product_account::cloud_boundary::{CreateWorkspaceCommand, WorkspacePolicyCommand};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
@@ -16,7 +15,7 @@ const REGISTER_LEGAL_DOCUMENTS: [(&str, &str); 3] = [
 
 #[expect(
     clippy::too_many_arguments,
-    reason = "Account creation keeps registration, workspace, and audit inputs explicit."
+    reason = "Account creation keeps registration, consent, and audit inputs explicit."
 )]
 pub async fn create_user_account(
     db: &PgPool,
@@ -29,14 +28,13 @@ pub async fn create_user_account(
     birthdate: Option<NaiveDate>,
     region: Option<String>,
     data_region: Option<String>,
-    workspace_name: String,
     password_hash: String,
     verification_token: String,
     ip: Option<String>,
     user_agent: Option<String>,
     legal_documents_accepted: bool,
     marketing_emails_accepted: bool,
-) -> Result<(Uuid, Uuid, DateTime<Utc>), AppError> {
+) -> Result<(Uuid, DateTime<Utc>), AppError> {
     if !legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
@@ -47,7 +45,6 @@ pub async fn create_user_account(
     let now = Utc::now();
     let tenant_id = Uuid::new_v4();
     let principal_id = Uuid::new_v4();
-    let workspace_id = Uuid::new_v4();
     let slug = password::unique_slug(&email);
     let display_name = derive_display_name(
         Some(firstname.as_str()),
@@ -59,13 +56,14 @@ pub async fn create_user_account(
 
     sqlx::query(
         r#"
-        INSERT INTO tenants (id, kind, name, slug, status, security_tier, created_at, updated_at)
-        VALUES ($1, 'personal', $2, $3, 'active', 'standard', $4, $4)
+        INSERT INTO tenants (id, kind, name, slug, status, security_tier, data_region, created_at, updated_at)
+        VALUES ($1, 'personal', $2, $3, 'active', 'standard', $4, $5, $5)
         "#,
     )
     .bind(tenant_id)
     .bind(&username)
     .bind(slug)
+    .bind(data_region.as_deref().unwrap_or("eu"))
     .bind(now)
     .execute(&mut *tx)
     .await?;
@@ -100,7 +98,8 @@ pub async fn create_user_account(
     .bind(now)
     .bind(initial_notifications(marketing_emails_accepted))
     .execute(&mut *tx)
-    .await?;
+    .await
+    .map_err(crate::domains::auth::db::emails::email_constraint_error)?;
 
     sqlx::query(
         r#"
@@ -134,46 +133,13 @@ pub async fn create_user_account(
     .execute(&mut *tx)
     .await?;
 
-    crate::domains::cloud::workspace_port::create_workspace_tx(
-        &mut tx,
-        &CreateWorkspaceCommand {
-            workspace_id,
-            tenant_id,
-            organization_id: None,
-            owner_principal_id: principal_id,
-            name: workspace_name,
-            workspace_type: "personal".to_string(),
-            plan_code: "solo_pro".to_string(),
-            trial_ends_at: Some(now + chrono::Duration::days(14)),
-            data_region: data_region.as_deref().unwrap_or("eu").to_string(),
-            jurisdiction: match data_region.as_deref() {
-                Some("us") => "ccpa",
-                Some("ch") => "nfdap",
-                _ => "gdpr",
-            }
-            .to_string(),
-            owner_role: "owner".to_string(),
-            membership_source: "manual".to_string(),
-            created_at: now,
-            policy: WorkspacePolicyCommand {
-                member_can_create_share_links: false,
-                require_admin_approval_for_member_share: true,
-                default_share_link_ttl_days: 7,
-                max_share_link_ttl_days: 30,
-                required_acr: Some("aal1".to_string()),
-                mfa_policy: None,
-            },
-        },
-    )
-    .await?;
-
     record_registration_legal_consents_tx(&mut tx, principal_id, ip.as_deref(), now).await?;
 
     crate::domains::audit::record_event_tx(
         &mut tx,
         crate::domains::audit::AuditRecordInput {
             tenant_id,
-            workspace_id: Some(workspace_id),
+            workspace_id: None,
             actor_principal_id: Some(principal_id),
             action: "user.registered",
             target_type: "user",
@@ -197,7 +163,7 @@ pub async fn create_user_account(
     )
     .await?;
 
-    Ok((principal_id, workspace_id, now))
+    Ok((principal_id, now))
 }
 
 fn initial_notifications(marketing_emails_accepted: bool) -> serde_json::Value {

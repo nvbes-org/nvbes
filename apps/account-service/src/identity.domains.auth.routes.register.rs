@@ -47,7 +47,6 @@ pub(crate) struct RegisterRequest {
     username: String,
     birthdate: Option<String>,
     region: Option<String>,
-    workspace_name: String,
     pow_nonce: String,
     pow_solution: String,
     #[serde(default)]
@@ -79,7 +78,6 @@ fn register_input_from_request(
         birthdate,
         region: Some(country_code),
         data_region: Some(data_region),
-        workspace_name: request.workspace_name,
         ip,
         user_agent,
         legal_documents_accepted: request.legal_documents_accepted,
@@ -242,28 +240,14 @@ async fn register_inner(
     info!("auth_register_onboarding_completed");
 
     state.product_analytics.capture(
-        ProductAnalyticsEvent::workspace_for_user(
-            "auth.signup_completed",
-            result.user.id,
-            result.workspace.id,
-        )
-        .property(
+        ProductAnalyticsEvent::user("auth.signup_completed", result.user.id).property(
             "country",
             result
                 .user
                 .region
                 .clone()
                 .unwrap_or_else(|| "unknown".to_string()),
-        )
-        .property("workspace_type", result.workspace.workspace_type.clone()),
-    );
-    state.product_analytics.capture(
-        ProductAnalyticsEvent::workspace_for_user(
-            "workspace.created",
-            result.user.id,
-            result.workspace.id,
-        )
-        .property("workspace_type", result.workspace.workspace_type.clone()),
+        ),
     );
     info!("auth_register_analytics_captured");
 

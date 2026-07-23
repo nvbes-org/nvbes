@@ -23,12 +23,14 @@ export function LoginPageStepContent({
   hostedConsent,
   identifierSubmitting,
   loading,
+  loginStateToken,
   mfaMethod,
   oauthRequest,
   password,
   emailCode,
   recoveryCode,
   resetToIdentifier,
+  resendLoginMfaEmailCode,
   setEmail,
   setError,
   setMfaMethod,
@@ -75,11 +77,13 @@ export function LoginPageStepContent({
       hasWebAuthn={hasWebAuthn}
       hostedConsent={hostedConsent}
       loading={loading}
+      loginStateToken={loginStateToken}
       mfaMethod={mfaMethod}
       oauthRequest={oauthRequest}
       emailCode={emailCode}
       recoveryCode={recoveryCode}
       resetToIdentifier={resetToIdentifier}
+      resendLoginMfaEmailCode={resendLoginMfaEmailCode}
       setError={setError}
       setMfaMethod={setMfaMethod}
       setEmailCode={setEmailCode}

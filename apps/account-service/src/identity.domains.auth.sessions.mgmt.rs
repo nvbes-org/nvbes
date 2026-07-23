@@ -3,6 +3,8 @@ use sqlx::{PgPool, Postgres};
 use std::cmp::Reverse;
 use uuid::Uuid;
 
+use nvbes_core::pagination::{KeysetCursor, decode_cursor, encode_cursor, page_from_rows};
+
 use super::types::*;
 use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
 use crate::domains::auth::sessions::cache::session_view_from_cached_session;
@@ -52,7 +54,15 @@ pub async fn list(
     redis: &nvbes_redis::RedisPool,
     user_id: Uuid,
     current_session_id: Uuid,
+    limit: Option<i64>,
+    cursor: Option<String>,
 ) -> Result<SessionsResult, AppError> {
+    let limit = limit.unwrap_or(50).clamp(1, 200);
+    let cursor = cursor
+        .as_deref()
+        .map(decode_cursor::<KeysetCursor>)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
     let session_ids = nvbes_redis::session::list_user_sessions(redis, &user_id.to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_list_failed", err.to_string()))?;
@@ -74,9 +84,31 @@ pub async fn list(
         ));
     }
 
-    sessions.sort_by_key(|session| Reverse(session.created_at));
+    sessions.sort_by_key(|session| Reverse((session.created_at, session.id)));
+    if let Some(cursor) = cursor {
+        sessions
+            .retain(|session| (session.created_at, session.id) < (cursor.created_at, cursor.id));
+    }
+    let page = page_from_rows(sessions, limit as usize, |session| KeysetCursor {
+        created_at: session.created_at,
+        id: session.id,
+    });
 
-    Ok(SessionsResult { sessions })
+    Ok(SessionsResult {
+        sessions: page.items,
+        next_cursor: page
+            .next_cursor
+            .as_ref()
+            .map(encode_cursor)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
+    })
 }
 
 pub async fn revoke(

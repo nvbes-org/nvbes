@@ -17,7 +17,6 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
             username: "ada".to_string(),
             birthdate: Some("1990-05-04".to_string()),
             region: Some("FR".to_string()),
-            workspace_name: "Ada Workspace".to_string(),
             pow_nonce: "nonce".to_string(),
             pow_solution: "solution".to_string(),
             legal_documents_accepted: true,
@@ -38,7 +37,6 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
     assert_eq!(input.birthdate, Some(birthdate));
     assert_eq!(input.region.as_deref(), Some("FR"));
     assert_eq!(input.data_region.as_deref(), Some("eu"));
-    assert_eq!(input.workspace_name, "Ada Workspace");
     assert_eq!(input.ip.as_deref(), Some("203.0.113.10"));
     assert_eq!(input.user_agent.as_deref(), Some("nvbes-test"));
     assert!(input.legal_documents_accepted);

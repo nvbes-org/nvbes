@@ -16,38 +16,56 @@ pub async fn step_up(
     webauthn: &webauthn_rs::Webauthn,
     auth: &impl StepUpSubject,
     input: StepUpInput,
+    rotate_browser_session: bool,
 ) -> Result<StepUpResult, AppError> {
     let resolved = method::resolve_step_up_method(db, redis, webauthn, auth, input).await?;
 
     let now = Utc::now();
     let valid_until = now + chrono::Duration::minutes(auth_step_up_ttl_minutes);
-    if let Ok(Some(mut session)) =
-        nvbes_redis::session::get_session(redis, &auth.session_id().to_string()).await
+    let mut session = nvbes_redis::session::get_session(redis, &auth.session_id().to_string())
+        .await
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
+        .ok_or_else(|| nvbes_core::auth::step_up_required_error())?;
+    if session.principal_id != auth.user_id().to_string()
+        || session.revoked_at.is_some()
+        || session.expires_at <= now
     {
-        apply_step_up(
-            &mut session,
-            resolved.level.as_str(),
-            vec![resolved.authenticated_method.clone()],
-            now,
-            valid_until,
-        );
-        let ttl = current_session_ttl(&session);
-        if nvbes_redis::session::set_session(redis, &session, ttl)
-            .await
-            .is_err()
-        {
-            let _ = nvbes_redis::session::delete_session(
-                redis,
-                &auth.user_id().to_string(),
-                &auth.session_id().to_string(),
-            )
-            .await;
-        }
+        return Err(nvbes_core::auth::step_up_required_error().into());
+    }
+    apply_step_up(
+        &mut session,
+        resolved.level.as_str(),
+        vec![resolved.authenticated_method.clone()],
+        now,
+        valid_until,
+    );
+    let browser_session_token = rotate_browser_session
+        .then(|| crate::domains::auth::sessions::token::issue(auth.session_id()));
+    if let Some(token) = browser_session_token.as_deref() {
+        session.browser_session_token_hash =
+            Some(crate::domains::auth::sessions::token::hash(token));
+    }
+    let ttl = current_session_ttl(&session);
+    if nvbes_redis::session::set_session(redis, &session, ttl)
+        .await
+        .is_err()
+    {
+        let _ = nvbes_redis::session::delete_session(
+            redis,
+            &auth.user_id().to_string(),
+            &auth.session_id().to_string(),
+        )
+        .await;
+        return Err(AppError::internal(
+            "session_step_up_update_failed",
+            "The session could not be updated after step-up authentication.",
+        ));
     }
 
     Ok(StepUpResult {
         success: true,
         valid_until,
+        browser_session_token,
     })
 }
 

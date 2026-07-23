@@ -170,6 +170,7 @@ pub(crate) async fn authorize(
                     redirect_uri: resolved.redirect_uri.clone(),
                     scope: resolved.scope.clone(),
                     state: resolved.state.clone(),
+                    nonce: resolved.nonce.clone(),
                     request_uri: Some(request_uri.clone()),
                     code_challenge: resolved.code_challenge.clone(),
                     code_challenge_method: resolved.code_challenge_method.clone(),
@@ -203,6 +204,7 @@ pub(crate) async fn authorize(
             organization_id: subject.auth.organization_id,
             scope: resolved.scope.unwrap_or_default(),
             redirect_uri: resolved.redirect_uri.clone(),
+            nonce: resolved.nonce,
             audience: resolved.audience,
             resource_indicators: resolved.resource.unwrap_or_default(),
             authorization_details: resolved.authorization_details,
@@ -230,8 +232,14 @@ async fn authenticate_authorization_subject(
     headers: &HeaderMap,
     authuser: Option<&str>,
 ) -> Result<AuthorizationSubject, AppError> {
-    let token = crate::http::request::bearer_token_with_authuser(headers, authuser.unwrap_or("0"))?;
-    let auth = crate::domains::auth::sessions::authenticate(db, redis, jwt, &token).await?;
+    let authuser = authuser.unwrap_or("0");
+    let auth = if let Some(token) = crate::http::request::authorization_bearer_token(headers)? {
+        crate::domains::auth::sessions::authenticate(db, redis, jwt, &token).await?
+    } else {
+        let cookie = crate::http::request::browser_session_token_with_authuser(headers, authuser)?;
+        crate::domains::auth::sessions::authenticate_browser_session(db, redis, &cookie, headers)
+            .await?
+    };
     let workspace_id = auth.workspace_id.ok_or_else(|| {
         AppError::forbidden(
             "workspace_context_required",

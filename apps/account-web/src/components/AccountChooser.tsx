@@ -1,10 +1,12 @@
-import { useLocation } from '@tanstack/react-router';
 import {
-  MultiAccountSwitcher,
   initialsForDisplayName,
+  MultiAccountSwitcher,
   type SharedAccountOption,
 } from '@nvbes/web-ui';
-import { useMemo, useState } from 'react';
+import { useLocation } from '@tanstack/react-router';
+import { useEffect, useMemo, useState } from 'react';
+import { profileAvatarUrl, subscribeToProfileAvatarUpdates } from '@/account.avatar';
+import { accountHrefForAuthuser } from '@/identity.authuser';
 import type { AccountEntry } from '@/lib/account-context';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +20,9 @@ interface AccountChooserProps {
 export function AccountChooser({ accounts, loading, className, density }: AccountChooserProps) {
   const location = useLocation();
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState(() => Date.now());
+
+  useEffect(() => subscribeToProfileAvatarUpdates(() => setAvatarVersion(Date.now())), []);
 
   const mappedAccounts = useMemo<SharedAccountOption[]>(
     () =>
@@ -27,16 +32,14 @@ export function AccountChooser({ accounts, loading, className, density }: Accoun
         displayName: account.user.display_name,
         isActive: account.session.current,
         avatarFallback: initialsForDisplayName(account.user.display_name),
+        avatarUrl: profileAvatarUrl(account.authuser, avatarVersion),
       })),
-    [accounts],
+    [accounts, avatarVersion],
   );
 
   const handleSwitch = (authuser: string) => {
     setSwitchingTo(authuser);
-    const url = new URL(window.location.href);
-    url.searchParams.set('authuser', authuser);
-    url.searchParams.set('from', location.pathname);
-    window.location.assign(url.toString());
+    window.location.assign(accountHrefForAuthuser(authuser, location.pathname, location.searchStr));
   };
 
   const handleConnectAnotherAccount = () => {
@@ -49,6 +52,7 @@ export function AccountChooser({ accounts, loading, className, density }: Accoun
         accounts={mappedAccounts}
         loading={loading}
         density={density}
+        hideCurrentAccountDetailsOnMobile
         switchingAccountId={switchingTo}
         onSelectAccount={handleSwitch}
         onAddAccount={handleConnectAnotherAccount}

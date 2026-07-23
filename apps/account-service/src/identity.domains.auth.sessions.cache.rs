@@ -23,7 +23,7 @@ pub fn cached_session_from_login(
     workspace_id: Option<Uuid>,
     workspace_region: Option<String>,
     client_id: Option<String>,
-    token_hash: String,
+    browser_session_token_hash: String,
     acr: Option<String>,
     amr: Vec<String>,
     auth_time: DateTime<Utc>,
@@ -35,7 +35,7 @@ pub fn cached_session_from_login(
     CachedSession {
         session_id: session_id.to_string(),
         principal_id: principal_id.to_string(),
-        token_hash,
+        browser_session_token_hash: Some(browser_session_token_hash),
         tenant_id: tenant_id.map(|value| value.to_string()),
         organization_id: organization_id.map(|value| value.to_string()),
         workspace_id: workspace_id.map(|value| value.to_string()),
@@ -46,16 +46,41 @@ pub fn cached_session_from_login(
         auth_time: Some(auth_time),
         step_up_verified_at: None,
         step_up_expires_at: None,
-        admin_elevation_role: None,
-        admin_elevation_tenant_id: None,
-        admin_elevation_granted_at: None,
-        admin_elevation_expires_at: None,
         created_at,
         last_seen_at: created_at,
+        idle_timeout_seconds: None,
+        idle_expires_at: None,
         expires_at,
         revoked_at: None,
         ip,
         user_agent,
+        accept_language: None,
+        accept: None,
+        accept_encoding: None,
+        sec_fetch_site: None,
+        sec_fetch_mode: None,
+        sec_fetch_dest: None,
+        sec_ch_ua: None,
+        sec_ch_ua_arch: None,
+        sec_ch_ua_bitness: None,
+        sec_ch_ua_full_version: None,
+        sec_ch_ua_full_version_list: None,
+        sec_ch_ua_model: None,
+        sec_ch_ua_wow64: None,
+        sec_ch_ua_form_factors: None,
+        sec_ch_ua_platform: None,
+        sec_ch_ua_platform_version: None,
+        sec_ch_ua_mobile: None,
+        cookie_theft_risk_score: None,
+        cookie_theft_detected_at: None,
+        account_device_id: None,
+        device_trust_level: None,
+        device_trust_score: None,
+        risk_score: None,
+        risk_decision: None,
+        activity_window_started_at: Some(created_at),
+        activity_request_count: 0,
+        last_activity_risk_event_at: None,
     }
 }
 
@@ -81,6 +106,14 @@ pub fn session_view_from_cached_session(session: &CachedSession, current: bool) 
         revoked_at: session.revoked_at,
         ip: session.ip.clone(),
         user_agent: session.user_agent.clone(),
+        device_id: session
+            .account_device_id
+            .as_deref()
+            .and_then(|value| Uuid::parse_str(value).ok()),
+        device_trust_level: session.device_trust_level.clone(),
+        device_trust_score: session.device_trust_score,
+        risk_score: session.risk_score,
+        risk_decision: session.risk_decision.clone(),
         current,
     }
 }
@@ -149,18 +182,105 @@ pub fn apply_workspace_context(
     session.workspace_region = workspace_region;
 }
 
-pub fn apply_token_rotation(session: &mut CachedSession, token_hash: String) {
-    session.token_hash = token_hash;
+pub fn configure_idle_timeout(
+    session: &mut CachedSession,
+    idle_timeout_minutes: i64,
+    now: DateTime<Utc>,
+) {
+    if idle_timeout_minutes <= 0 {
+        session.idle_timeout_seconds = None;
+        session.idle_expires_at = None;
+        return;
+    }
+
+    let idle_timeout = ChronoDuration::minutes(idle_timeout_minutes);
+    session.idle_timeout_seconds = Some(idle_timeout.num_seconds());
+    session.idle_expires_at = Some((now + idle_timeout).min(session.expires_at));
 }
 
 pub fn refresh_last_seen(session: &mut CachedSession) {
-    session.last_seen_at = Utc::now();
+    refresh_last_seen_at(session, Utc::now());
+}
+
+fn refresh_last_seen_at(session: &mut CachedSession, now: DateTime<Utc>) {
+    session.last_seen_at = now;
+    if let Some(idle_timeout_seconds) = session.idle_timeout_seconds {
+        session.idle_expires_at =
+            Some((now + ChronoDuration::seconds(idle_timeout_seconds)).min(session.expires_at));
+    }
 }
 
 pub fn current_session_ttl(session: &CachedSession) -> u64 {
-    session_ttl_seconds(session.expires_at)
+    session_ttl_seconds(
+        session
+            .idle_expires_at
+            .unwrap_or(session.expires_at)
+            .min(session.expires_at),
+    )
 }
 
 pub fn expires_at_from_ttl(ttl_hours: i64) -> DateTime<Utc> {
     Utc::now() + ChronoDuration::hours(ttl_hours)
+}
+
+#[cfg(test)]
+mod idle_timeout_tests {
+    use super::*;
+
+    fn session(now: DateTime<Utc>, absolute_ttl: ChronoDuration) -> CachedSession {
+        cached_session_from_login(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            "token-hash".to_string(),
+            Some("aal1".to_string()),
+            vec!["pwd".to_string()],
+            now,
+            now,
+            None,
+            None,
+            now + absolute_ttl,
+        )
+    }
+
+    #[test]
+    fn idle_deadline_slides_with_activity() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::days(30));
+        configure_idle_timeout(&mut session, 30, now);
+
+        refresh_last_seen_at(&mut session, now + ChronoDuration::minutes(10));
+
+        assert_eq!(session.last_seen_at, now + ChronoDuration::minutes(10));
+        assert_eq!(
+            session.idle_expires_at,
+            Some(now + ChronoDuration::minutes(40))
+        );
+    }
+
+    #[test]
+    fn idle_deadline_never_exceeds_absolute_expiration() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::minutes(20));
+
+        configure_idle_timeout(&mut session, 30, now);
+        refresh_last_seen_at(&mut session, now + ChronoDuration::minutes(10));
+
+        assert_eq!(session.idle_expires_at, Some(session.expires_at));
+    }
+
+    #[test]
+    fn non_positive_idle_timeout_disables_idle_expiration() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::hours(1));
+
+        configure_idle_timeout(&mut session, 0, now);
+
+        assert_eq!(session.idle_timeout_seconds, None);
+        assert_eq!(session.idle_expires_at, None);
+    }
 }

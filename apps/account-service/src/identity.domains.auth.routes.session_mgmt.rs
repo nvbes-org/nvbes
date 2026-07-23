@@ -2,7 +2,7 @@ use crate::app::AppState;
 use crate::http::middleware::jwt::AuthContext;
 use axum::{
     Json, Router,
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
 };
 
 #[path = "identity.domains.auth.routes.session_mgmt.preferences.rs"]
@@ -12,6 +12,8 @@ mod router_impl;
 
 #[path = "identity.domains.auth.routes.session_mgmt.accounts.rs"]
 pub mod accounts;
+#[path = "identity.domains.auth.routes.session_mgmt.devices.rs"]
+pub mod devices;
 #[path = "identity.domains.auth.routes.session_mgmt.emails.rs"]
 pub mod emails;
 #[path = "identity.domains.auth.routes.session_mgmt.export.rs"]
@@ -22,9 +24,6 @@ pub mod profile;
 pub mod sessions;
 #[path = "identity.domains.auth.routes.session_mgmt.step_up.rs"]
 pub mod step_up;
-#[path = "identity.domains.auth.routes.session_mgmt.switch_workspace.rs"]
-pub mod switch_workspace;
-
 pub fn router(state: &AppState) -> Router<AppState> {
     router_impl::router(state)
 }
@@ -81,8 +80,9 @@ pub(crate) async fn logout(
 pub(crate) async fn list_sessions(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    Query(query): Query<sessions::ListSessionsQuery>,
 ) -> Result<Json<crate::domains::auth::types::SessionsResult>, crate::http::error::AppError> {
-    sessions::list_sessions(State(state), Extension(auth)).await
+    sessions::list_sessions(State(state), Extension(auth), Query(query)).await
 }
 
 #[utoipa::path(
@@ -122,8 +122,9 @@ pub(crate) async fn revoke_all_other_sessions(
 pub(crate) async fn me_emails_get(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    Query(query): Query<sessions::ListSessionsQuery>,
 ) -> Result<Json<crate::domains::auth::types::EmailAddressesResult>, crate::http::error::AppError> {
-    emails::me_emails_get(State(state), Extension(auth)).await
+    emails::me_emails_get(State(state), Extension(auth), Query(query)).await
 }
 
 pub(crate) async fn me_emails_post(
@@ -287,34 +288,9 @@ pub(crate) async fn me_notifications_put(
 pub(crate) async fn step_up(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    uri: axum::http::Uri,
+    headers: axum::http::HeaderMap,
     Json(request): Json<step_up::StepUpRequest>,
-) -> Result<Json<crate::domains::auth::types::StepUpResult>, crate::http::error::AppError> {
-    step_up::step_up(State(state), Extension(auth), Json(request)).await
-}
-
-#[utoipa::path(
-    post,
-    path = "/auth/workspaces/{workspaceId}/switch",
-    tag = "auth",
-    request_body = switch_workspace::SwitchWorkspaceRequest,
-    responses(
-        (status = 200, description = "Workspace switched", body = crate::domains::auth::types::SwitchWorkspaceResult),
-        (status = 401, description = "Unauthorized or invalid credentials", body = nvbes_core::http::error::ErrorEnvelope),
-        (status = 404, description = "Workspace not found", body = nvbes_core::http::error::ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn switch_workspace(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Path(workspace_id): Path<uuid::Uuid>,
-    Json(request): Json<switch_workspace::SwitchWorkspaceRequest>,
-) -> Result<Json<crate::domains::auth::types::SwitchWorkspaceResult>, crate::http::error::AppError>
-{
-    switch_workspace::switch_workspace(
-        State(state),
-        Extension(auth),
-        Path(workspace_id),
-        Json(request),
-    )
-    .await
+) -> Result<axum::response::Response, crate::http::error::AppError> {
+    step_up::step_up(State(state), Extension(auth), uri, headers, Json(request)).await
 }

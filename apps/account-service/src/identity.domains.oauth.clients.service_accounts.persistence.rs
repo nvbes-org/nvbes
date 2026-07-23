@@ -108,7 +108,7 @@ pub(super) async fn insert_workspace_membership(
     principal_id: Uuid,
     service_account_role: &str,
 ) -> Result<(), AppError> {
-    crate::domains::cloud::workspace_port::upsert_workspace_membership_tx(
+    crate::cloud_boundary::workspace_port::upsert_workspace_membership_tx(
         tx,
         &UpsertWorkspaceMembershipCommand {
             actor_principal_id,

@@ -1,9 +1,9 @@
 use super::sessions_mgmt::fetch_view;
+use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::sessions::cache::{apply_workspace_context, current_session_ttl};
 use crate::domains::auth::types::{
     AuthContext, SwitchWorkspaceInput, SwitchWorkspaceResult, WorkspaceView,
 };
-use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 use sqlx::PgPool;
 use uuid::Uuid;

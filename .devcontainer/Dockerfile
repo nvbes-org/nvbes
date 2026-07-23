@@ -34,10 +34,7 @@ RUN apt-get update \
     openssh-client \
     pkg-config \
     postgresql-client \
-    protobuf-compiler \
     python3 \
-    python3-pip \
-    python3-venv \
     redis-tools \
     ripgrep \
     shellcheck \
@@ -59,7 +56,7 @@ RUN arch="$(dpkg --print-architecture)" \
   && npm install -g "pnpm@${PNPM_VERSION}"
 
 RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
-  | sh -s -- -y --profile default --default-toolchain stable --no-modify-path \
+  | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path \
   && rustup component add rustfmt clippy \
   && chmod -R a+w "${RUSTUP_HOME}" "${CARGO_HOME}"
 
@@ -71,9 +68,6 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opent
   && chmod +x /tmp/install-opentofu.sh \
   && /tmp/install-opentofu.sh --install-method deb \
   && rm /tmp/install-opentofu.sh
-
-RUN mkdir -p /workspace-cache/pnpm /workspace-cache/cargo-target \
-  && chown -R "${USERNAME}:${USERNAME}" /workspace-cache
 
 USER ${USERNAME}
 

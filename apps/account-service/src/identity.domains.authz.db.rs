@@ -1,6 +1,6 @@
 use super::types::*;
+use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::types::AuthContext;
-use crate::domains::cloud::workspace_port;
 use crate::http::error::AppError;
 use crate::http::request::{client_ip, user_agent};
 use axum::http::HeaderMap;

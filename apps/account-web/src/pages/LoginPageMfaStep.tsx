@@ -15,6 +15,7 @@ export function LoginPageMfaStep({
   hasWebAuthn,
   hasRecovery,
   availableCount,
+  loginStateToken,
   totpCode,
   emailCode,
   recoveryCode,
@@ -25,6 +26,7 @@ export function LoginPageMfaStep({
   onMfaSubmit,
   onBackToMethodSelect,
   onResetToIdentifier,
+  onResendEmailCode,
 }: LoginPageMfaStepProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -41,6 +43,7 @@ export function LoginPageMfaStep({
         <LoginPageMfaMethodForm
           error={error}
           loading={loading}
+          loginStateToken={loginStateToken}
           mfaMethod={mfaMethod}
           totpCode={totpCode}
           emailCode={emailCode}
@@ -50,6 +53,7 @@ export function LoginPageMfaStep({
           onRecoveryCodeChange={onRecoveryCodeChange}
           onMfaSubmit={onMfaSubmit}
           onBackToMethodSelect={onBackToMethodSelect}
+          onResendEmailCode={onResendEmailCode}
         />
       )}
 

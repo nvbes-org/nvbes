@@ -209,6 +209,7 @@ pub async fn token_exchange(
         token_type: "Bearer".to_string(),
         expires_in: jwt.access_token_expiry.num_seconds(),
         refresh_token: None,
+        id_token: None,
         scope: scope_str.to_string(),
         authorization_details: subject_claims.authorization_details,
         issued_token_type: Some("urn:ietf:params:oauth:token-type:access_token".to_string()),

@@ -1,6 +1,6 @@
+use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::jwt::JwtService;
 use crate::domains::auth::types::derive_display_name;
-use crate::domains::cloud::workspace_port;
 use crate::domains::oauth::flows::IntrospectionResponse;
 use crate::domains::oauth::flows::tokens::{
     introspect_actor::resolve_actor_context, introspect_network::resolve_network_valid,

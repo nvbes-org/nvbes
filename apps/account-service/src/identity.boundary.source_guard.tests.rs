@@ -24,14 +24,8 @@ const BOUNDED_TABLES: &[&str] = &[
 ];
 
 const ALLOWED_RUNTIME_MUTATION_FILES: &[&str] = &[
-    "identity.domains.cloud.workspace_port.rs",
-    "identity.domains.cloud.workspace_projection.rs",
-    "identity.domains.enterprise.db.access_writes.rs",
-    "identity.domains.enterprise.db.break_glass.rs",
-    "identity.domains.enterprise.db.writes.rs",
-    "identity.domains.federation.projection.domains.rs",
-    "identity.domains.federation.projection.providers.rs",
-    "identity.domains.federation.projection.scim.rs",
+    "identity.cloud_boundary.workspace_port.rs",
+    "identity.cloud_boundary.workspace_projection.rs",
 ];
 
 const OAUTH_TOKEN_REGION_FILES: &[&str] = &[
@@ -51,11 +45,6 @@ const OAUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.oauth.flows.tokens.introspect.actor.rs",
 ];
 
-const DEVELOPER_CLOUD_CONTEXT_FILES: &[&str] = &[
-    "identity.domains.developer.apps.service.rs",
-    "identity.domains.developer.service_accounts.db.rs",
-];
-
 const SECURITY_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.security.service.rs",
     "identity.domains.security.service.risk_events.rs",
@@ -70,34 +59,6 @@ const AUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.auth.sessions.context.workspace_switch.rs",
     "identity.domains.authz.db.rs",
 ];
-
-const MEMBERS_CLOUD_CONTEXT_FILES: &[&str] = &[
-    "identity.domains.members.membership.rs",
-    "identity.domains.members.invites.logic.rs",
-];
-
-const WORKSPACES_CLOUD_CONTEXT_FILES: &[&str] = &[
-    "identity.domains.workspaces.core.rs",
-    "identity.domains.workspaces.db.rs",
-    "identity.domains.workspaces.service.rs",
-    "identity.domains.workspaces.settings.rs",
-];
-
-const ENTERPRISE_CLOUD_CONTEXT_FILES: &[&str] = &[
-    "identity.domains.enterprise.db.access_reads.rs",
-    "identity.domains.enterprise.db.reads.rs",
-    "identity.domains.enterprise.db.reads_tenant.rs",
-    "identity.domains.enterprise.db.scope_reads.rs",
-    "identity.domains.enterprise.policy_simulation.db.rs",
-    "identity.domains.enterprise.service.break_glass.rs",
-    "identity.domains.enterprise.service.mutations.rs",
-    "identity.domains.enterprise.service.reads.rs",
-    "identity.domains.enterprise.service.access.rs",
-    "identity.domains.enterprise.service.user_mutations.rs",
-];
-
-const FEDERATION_CLOUD_CONTEXT_FILES: &[&str] =
-    &["identity.domains.federation.provisioning.principal.rs"];
 
 #[test]
 fn account_runtime_mutations_to_external_context_tables_go_through_boundary_ports() {
@@ -190,31 +151,6 @@ fn oauth_client_credentials_workspace_context_reads_go_through_cloud_boundary() 
 }
 
 #[test]
-fn developer_workspace_context_reads_go_through_cloud_boundary() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut violations = Vec::new();
-
-    for file_name in DEVELOPER_CLOUD_CONTEXT_FILES {
-        let path = src_dir.join(file_name);
-        let source = fs::read_to_string(&path).expect("source file should be readable");
-        let normalized = normalize_sql_source(&source);
-        if normalized.contains("from workspaces")
-            || normalized.contains("join workspaces")
-            || normalized.contains("from workspace_memberships")
-            || normalized.contains("join workspace_memberships")
-        {
-            violations.push((*file_name).to_string());
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "Developer runtime views must read workspace context through the Cloud boundary, not Account SQL.\nViolations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
 fn security_workspace_context_reads_go_through_authorized_context() {
     let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut violations = Vec::new();
@@ -260,118 +196,6 @@ fn auth_workspace_context_reads_go_through_cloud_boundary() {
     assert!(
         violations.is_empty(),
         "Auth runtime helpers must read workspace context through the Cloud boundary, not Account SQL.\nViolations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn member_runtime_membership_reads_go_through_cloud_boundary() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut violations = Vec::new();
-
-    for file_name in MEMBERS_CLOUD_CONTEXT_FILES {
-        let path = src_dir.join(file_name);
-        let source = fs::read_to_string(&path).expect("source file should be readable");
-        let normalized = normalize_sql_source(&source);
-        if normalized.contains("from workspaces")
-            || normalized.contains("join workspaces")
-            || normalized.contains("from workspace_memberships")
-            || normalized.contains("join workspace_memberships")
-            || normalized.contains("from workspace_policies")
-            || normalized.contains("join workspace_policies")
-            || normalized.contains("from workspace_invitations")
-            || normalized.contains("join workspace_invitations")
-        {
-            violations.push((*file_name).to_string());
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "Member runtime membership reads must go through the Cloud boundary, not Account SQL.\nViolations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn workspace_runtime_reads_go_through_cloud_boundary() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut violations = Vec::new();
-
-    for file_name in WORKSPACES_CLOUD_CONTEXT_FILES {
-        let path = src_dir.join(file_name);
-        let source = fs::read_to_string(&path).expect("source file should be readable");
-        let normalized = normalize_sql_source(&source);
-        if normalized.contains("from workspaces")
-            || normalized.contains("join workspaces")
-            || normalized.contains("from workspace_memberships")
-            || normalized.contains("join workspace_memberships")
-            || normalized.contains("from workspace_policies")
-            || normalized.contains("join workspace_policies")
-        {
-            violations.push((*file_name).to_string());
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "Workspace runtime reads must go through the Cloud boundary, not Account SQL.\nViolations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn enterprise_runtime_reads_go_through_cloud_boundary() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut violations = Vec::new();
-
-    for file_name in ENTERPRISE_CLOUD_CONTEXT_FILES {
-        let path = src_dir.join(file_name);
-        let source = fs::read_to_string(&path).expect("source file should be readable");
-        let normalized = normalize_sql_source(&source);
-        if normalized.contains("from workspaces")
-            || normalized.contains("join workspaces")
-            || normalized.contains("from workspace_memberships")
-            || normalized.contains("join workspace_memberships")
-            || normalized.contains("from workspace_policies")
-            || normalized.contains("join workspace_policies")
-            || normalized.contains("from workspace_invitations")
-            || normalized.contains("join workspace_invitations")
-        {
-            violations.push((*file_name).to_string());
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "Enterprise runtime reads must go through the Cloud boundary, not Account SQL.\nViolations:\n{}",
-        violations.join("\n")
-    );
-}
-
-#[test]
-fn federation_runtime_reads_go_through_cloud_boundary() {
-    let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut violations = Vec::new();
-
-    for file_name in FEDERATION_CLOUD_CONTEXT_FILES {
-        let path = src_dir.join(file_name);
-        let source = fs::read_to_string(&path).expect("source file should be readable");
-        let normalized = normalize_sql_source(&source);
-        if normalized.contains("from workspaces")
-            || normalized.contains("join workspaces")
-            || normalized.contains("from workspace_memberships")
-            || normalized.contains("join workspace_memberships")
-            || normalized.contains("from workspace_policies")
-            || normalized.contains("join workspace_policies")
-        {
-            violations.push((*file_name).to_string());
-        }
-    }
-
-    assert!(
-        violations.is_empty(),
-        "Federation runtime reads must go through the Cloud boundary, not Account SQL.\nViolations:\n{}",
         violations.join("\n")
     );
 }

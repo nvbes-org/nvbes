@@ -1,3 +1,4 @@
+use nvbes_core::pagination::{KeysetCursor, decode_cursor, encode_cursor, page_from_rows};
 use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 
@@ -15,7 +16,15 @@ pub async fn list_client_policies(
     db: &PgPool,
     auth: &AuthContext,
     client_id: Option<String>,
+    limit: Option<i64>,
+    cursor: Option<String>,
 ) -> Result<OAuthClientPoliciesResult, AppError> {
+    let limit = limit.unwrap_or(50).clamp(1, 200) as usize;
+    let cursor = cursor
+        .as_deref()
+        .map(decode_cursor::<KeysetCursor>)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
     let tenant_id = require_oauth_management_tenant(db, auth).await?;
     let (scope_type, scope_id) = super::logic::resolve_management_scope(auth)?;
     let rows = if let Some(client_id) = client_id {
@@ -40,13 +49,18 @@ pub async fn list_client_policies(
                 (c.owner_scope_type = $3::scope_type AND c.owner_scope_id = $4)
                 OR (c.owner_scope_type = 'tenant' AND c.owner_scope_id = $2)
               )
-            ORDER BY p.created_at DESC
+              AND ($5::timestamp with time zone IS NULL OR (p.created_at, p.id) < ($5, $6))
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT $7
             "#,
         )
         .bind(client_id)
         .bind(tenant_id)
         .bind(scope_type.as_str())
         .bind(scope_id)
+        .bind(cursor.as_ref().map(|c| c.created_at))
+        .bind(cursor.as_ref().map(|c| c.id))
+        .bind((limit + 1) as i64)
         .fetch_all(db)
         .await?
     } else {
@@ -65,26 +79,45 @@ pub async fn list_client_policies(
               p.created_at
             FROM oauth_client_policies p
             INNER JOIN oauth_clients c ON c.id = p.client_id
-            WHERE c.tenant_id = $1
+              WHERE c.tenant_id = $1
               AND (
                 (c.owner_scope_type = $2::scope_type AND c.owner_scope_id = $3)
                 OR (c.owner_scope_type = 'tenant' AND c.owner_scope_id = $1)
               )
-            ORDER BY p.created_at DESC
+              AND ($4::timestamp with time zone IS NULL OR (p.created_at, p.id) < ($4, $5))
+            ORDER BY p.created_at DESC, p.id DESC
+            LIMIT $6
             "#,
         )
         .bind(tenant_id)
         .bind(scope_type.as_str())
         .bind(scope_id)
+        .bind(cursor.as_ref().map(|c| c.created_at))
+        .bind(cursor.as_ref().map(|c| c.id))
+        .bind((limit + 1) as i64)
         .fetch_all(db)
         .await?
     };
 
+    let page = page_from_rows(rows, limit, |row| KeysetCursor {
+        created_at: row.get("created_at"),
+        id: row.get("id"),
+    });
+    let next_cursor = page
+        .next_cursor
+        .map(|c| encode_cursor(&c))
+        .transpose()
+        .map_err(|_| {
+            AppError::internal("pagination_error", "Failed to encode pagination cursor.")
+        })?;
     Ok(OAuthClientPoliciesResult {
-        policies: rows
+        policies: page
+            .items
             .into_iter()
             .map(|row| map_client_policy_row(&row))
             .collect(),
+        next_cursor,
+        has_more: page.has_more,
     })
 }
 

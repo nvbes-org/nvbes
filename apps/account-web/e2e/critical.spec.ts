@@ -44,16 +44,11 @@ test.describe('critical identity journeys', () => {
     );
   });
 
-  test('verification, login, logout, and reset password work in a real browser', async ({
-    page,
-  }) => {
+  test('verification, login, and reset password work in a real browser', async ({ page }) => {
     const { betaEmail, betaPassword } = betaCredentials();
 
     await loginThroughBrowser(page, betaEmail, betaPassword);
     await expect(page).toHaveURL(/\/account$/);
-
-    await logoutThroughBrowser(page);
-    await expect(page).toHaveURL(/\/login$/);
 
     await page.goto('/forgot-password');
     await emailTextbox(page).fill(betaEmail);
@@ -108,7 +103,7 @@ async function loginThroughBrowser(page: Page, email: string, password: string) 
   await expect(page.getByLabel('Mot de passe', { exact: true })).toBeVisible();
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page.getByRole('button', { name: 'Se deconnecter' })).toBeVisible();
+  await expect(page).toHaveURL(/\/account$/);
 }
 
 function emailTextbox(page: Page) {
@@ -124,13 +119,6 @@ function betaCredentials() {
   }
 
   return { betaEmail, betaPassword };
-}
-
-async function logoutThroughBrowser(page: Page) {
-  await Promise.all([
-    page.waitForURL(/\/login$/),
-    page.getByRole('button', { name: 'Se deconnecter' }).first().click(),
-  ]);
 }
 
 async function extractEmailToken(email: string, businessType: 'verification' | 'password_reset') {

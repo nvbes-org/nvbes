@@ -16,40 +16,58 @@ services:
       - nvbes_node_modules:/workspaces/nvbes/node_modules
       - nvbes_pnpm_store:/workspaces/nvbes/pnpm-store
       - nvbes_vscode_server:/home/vscode/.vscode-server
-      - nvbes_vscode_server_insiders:/home/vscode/.vscode-server-insiders
       - nvbes_home_cache:/home/vscode/.cache
-      - nvbes_home_codex:/home/vscode/.codex
       - nvbes_home_config:/home/vscode/.config
       - nvbes_home_gnupg:/home/vscode/.gnupg
-      - nvbes_home_local_share:/home/vscode/.local/share
       - nvbes_home_ssh:/home/vscode/.ssh
     environment:
       CARGO_TARGET_DIR: /workspaces/nvbes/target
       GH_CONFIG_DIR: /home/vscode/.config/gh
       GIT_CONFIG_GLOBAL: /home/vscode/.config/git/config
+      npm_config_store_dir: /workspaces/nvbes/pnpm-store
       PNPM_HOME: /usr/local/node/bin
+      NX_DAEMON: "false"
       NVBES_DEVCONTAINER: "true"
       NVBES_ENV: development
       NVBES_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes
       NVBES_DRIVE_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_drive
       NVBES_REDIS_URL: redis://:redis_dev@redis:6379
+      STORAGE_ENABLED: "true"
+      STORAGE_BUCKET: nvbes
+      STORAGE_ENDPOINT: http://seaweedfs:8333
+      STORAGE_REGION: eu-west-1
+      STORAGE_ACCESS_KEY: nvbes
+      STORAGE_SECRET_KEY: nvbes-dev-secret
+      NVBES_EMAIL_PROVIDER: smtp
+      NVBES_SMTP_HOST: mailhog
+      NVBES_SMTP_PORT: "1025"
+      NVBES_SMTP_STARTTLS: "false"
       NVBES_API_BASE_URL: http://localhost:4000
       NVBES_IDENTITY_API_BASE_URL: http://localhost:4000
       NVBES_DRIVE_API_BASE_URL: http://localhost:4002
-      VITE_IDENTITY_API_BASE_URL: http://localhost:4000
       VITE_DRIVE_API_BASE_URL: /api
       NVBES_DRIVE_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4101
       NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4102
       NVBES_BILLING_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4104
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      seaweedfs:
+        condition: service_started
+      mailhog:
+        condition: service_started
     networks:
       - nvbes_dev
+    mem_limit: 6g
+    mem_reservation: 1g
+    pids_limit: 2048
+    logging: &limited-logging
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   postgres:
     image: postgres:17-alpine
@@ -58,6 +76,16 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: nvbes
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=50
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_POSTGRES_PORT:-15432}:5432"
     volumes:
@@ -70,17 +98,28 @@ services:
       retries: 10
     networks:
       - nvbes_dev
+    mem_limit: 384m
+    mem_reservation: 64m
+    pids_limit: 128
+    logging: *limited-logging
 
   redis:
-    image: redis/redis-stack:7.4.0-v2
+    image: redis:7.4-alpine
     container_name: nvbes-devcontainer-redis
-    environment:
-      REDIS_ARGS: "--requirepass redis_dev --maxmemory 256mb --maxmemory-policy volatile-lru"
+    command:
+      - redis-server
+      - --requirepass
+      - redis_dev
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - volatile-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_REDIS_PORT:-16379}:6379"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_REDIS_INSIGHT_PORT:-18001}:8001"
-    volumes:
-      - nvbes_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "redis_dev", "--raw", "ping"]
       interval: 5s
@@ -88,135 +127,56 @@ services:
       retries: 10
     networks:
       - nvbes_dev
+    mem_limit: 128m
+    mem_reservation: 16m
+    pids_limit: 64
+    logging: *limited-logging
 
-  mimir:
-    image: grafana/mimir:latest
-    container_name: nvbes-devcontainer-mimir
-    command: ["-config.file=/etc/mimir.yaml"]
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.80
+    container_name: nvbes-devcontainer-seaweedfs
+    command: ["server", "-dir=/data", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_MIMIR_PORT:-19009}:9009"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}:8333"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_MASTER_PORT:-19333}:9333"
     volumes:
-      - ../infrastructure/local/observability/mimir.yaml:/etc/mimir.yaml:ro
-      - nvbes_mimir_data:/data
+      - nvbes_seaweedfs_data:/data
+      - ../infrastructure/local/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     networks:
       - nvbes_dev
+    mem_limit: 384m
+    mem_reservation: 64m
+    pids_limit: 128
+    logging: *limited-logging
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: nvbes-devcontainer-prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: nvbes-devcontainer-mailhog
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_PROMETHEUS_PORT:-19090}:9090"
-    volumes:
-      - ../infrastructure/local/observability/prometheus.devcontainer.yml:/etc/prometheus/prometheus.yml:ro
-      - nvbes_prometheus_data:/prometheus
-    depends_on:
-      - mimir
-    networks:
-      - nvbes_dev
-
-  tempo:
-    image: grafana/tempo:latest
-    container_name: nvbes-devcontainer-tempo
-    command: ["-config.file=/etc/tempo.yaml"]
-    ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_PORT:-13200}:3200"
-    volumes:
-      - ../infrastructure/local/observability/tempo.yaml:/etc/tempo.yaml:ro
-    depends_on:
-      - mimir
-    networks:
-      - nvbes_dev
-
-  loki:
-    image: grafana/loki:latest
-    container_name: nvbes-devcontainer-loki
-    command: ["-config.file=/etc/loki/local-config.yaml"]
-    ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_LOKI_PORT:-13100}:3100"
-    networks:
-      - nvbes_dev
-
-  pyroscope:
-    image: grafana/pyroscope:latest
-    container_name: nvbes-devcontainer-pyroscope
-    command: ["server"]
-    ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_PYROSCOPE_UI_PORT:-14041}:4040"
-    networks:
-      - nvbes_dev
-
-  alloy:
-    image: grafana/alloy:latest
-    container_name: nvbes-devcontainer-alloy
-    command:
-      - run
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --stability.level=public-preview
-      - /etc/alloy/config.alloy
-    ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_ALLOY_PORT:-12345}:12345"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_FARO_PORT:-12347}:12347"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_GRPC_PORT:-14317}:4317"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_TEMPO_OTLP_HTTP_PORT:-14318}:4318"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_PYROSCOPE_PORT:-14040}:4040"
-    volumes:
-      - ../infrastructure/local/observability/alloy.local.alloy:/etc/alloy/config.alloy:ro
-      - ../infrastructure/local/observability/app-logs:/var/log/nvbes:ro
-      - nvbes_alloy_data:/var/lib/alloy
-    depends_on:
-      - tempo
-      - loki
-      - pyroscope
-    networks:
-      - nvbes_dev
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: nvbes-devcontainer-grafana
+      - "127.0.0.1:${NVBES_DEVCONTAINER_SMTP_PORT:-11025}:1025"
+      - "127.0.0.1:${NVBES_DEVCONTAINER_MAILHOG_PORT:-18025}:8025"
     environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-    ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_GRAFANA_PORT:-13000}:3000"
-    volumes:
-      - ../infrastructure/local/observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-      - ../infrastructure/local/observability/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ../infrastructure/local/observability/grafana-provisioning/alerting:/etc/grafana/provisioning/alerting:ro
-      - ../infrastructure/local/observability/grafana-dashboards:/var/lib/grafana/dashboards/nvbes:ro
-    depends_on:
-      - mimir
-      - prometheus
-      - tempo
-      - loki
-      - pyroscope
-      - alloy
+      MH_MAX_MESSAGES: "1000"
     networks:
       - nvbes_dev
+    mem_limit: 64m
+    mem_reservation: 8m
+    pids_limit: 64
+    logging: *limited-logging
 
 volumes:
-  nvbes_alloy_data:
+  nvbes_seaweedfs_data:
   nvbes_cargo_registry:
   nvbes_cargo_git:
   nvbes_home_cache:
-  nvbes_home_codex:
-    external: true
-    name: nvbes_devcontainer_nvbes_home_codex
   nvbes_home_config:
   nvbes_home_gnupg:
-  nvbes_home_local_share:
   nvbes_home_ssh:
-  nvbes_mimir_data:
   nvbes_node_modules:
   nvbes_pgdata:
   nvbes_pnpm_store:
-  nvbes_prometheus_data:
-  nvbes_redis_data:
   nvbes_target:
   nvbes_vscode_server:
-  nvbes_vscode_server_insiders:
 
 networks:
   nvbes_dev:

@@ -45,4 +45,15 @@ mod tests {
 
         assert!(build_webauthn(&config).is_ok());
     }
+
+    #[test]
+    fn build_webauthn_rejects_an_origin_outside_the_rp_id() {
+        let config = AppConfig {
+            webauthn_rp_id: "nvbes.com".to_string(),
+            webauthn_rp_origin: "https://login.example.com".to_string(),
+            ..AppConfig::default()
+        };
+
+        assert!(build_webauthn(&config).is_err());
+    }
 }

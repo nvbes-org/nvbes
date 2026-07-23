@@ -8,7 +8,6 @@ export function TrackingConsentBanner() {
       getTrackingConsent={getTrackingConsent}
       setTrackingConsent={setTrackingConsent}
       sourcePrefix="account-web"
-      sessionReplayDescription="Relecture masquée, bloquée sur auth, MFA, billing et fichiers."
       ToggleComponent={TrackingConsentToggle}
     />
   );

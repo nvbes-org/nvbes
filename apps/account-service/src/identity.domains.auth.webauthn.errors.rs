@@ -97,9 +97,37 @@ pub fn map_webauthn_registration_error(err: WebauthnError) -> AppError {
     AppError::forbidden(code, message)
 }
 
+pub fn map_webauthn_authentication_error(err: WebauthnError) -> AppError {
+    let (code, message) = match err {
+        WebauthnError::CredentialPossibleCompromise => (
+            "webauthn_credential_possible_compromise",
+            "WebAuthn credential was rejected because its signature counter is inconsistent.",
+        ),
+        WebauthnError::MismatchedChallenge => (
+            "webauthn_challenge_mismatch",
+            "WebAuthn challenge does not match.",
+        ),
+        WebauthnError::InvalidRPOrigin => (
+            "webauthn_origin_mismatch",
+            "WebAuthn origin does not match.",
+        ),
+        WebauthnError::InvalidRPIDHash => (
+            "webauthn_rp_id_mismatch",
+            "WebAuthn relying party id does not match.",
+        ),
+        WebauthnError::UserNotVerified => (
+            "webauthn_user_not_verified",
+            "WebAuthn authentication requires user verification.",
+        ),
+        _ => ("webauthn_auth_failed", "WebAuthn assertion failed."),
+    };
+
+    AppError::forbidden(code, message)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::map_webauthn_registration_error;
+    use super::{map_webauthn_authentication_error, map_webauthn_registration_error};
     use webauthn_rs_core::error::WebauthnError;
 
     #[test]
@@ -108,5 +136,12 @@ mod tests {
 
         assert_eq!(error.code, "webauthn_registration_challenge_mismatch");
         assert_eq!(error.status, axum::http::StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn maps_signature_counter_compromise_to_specific_error() {
+        let error = map_webauthn_authentication_error(WebauthnError::CredentialPossibleCompromise);
+
+        assert_eq!(error.code, "webauthn_credential_possible_compromise");
     }
 }

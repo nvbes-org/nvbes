@@ -7,9 +7,9 @@ use uuid::Uuid;
 mod inputs;
 
 pub use inputs::{
-    ApproveRecoveryInput, AuthContext, ChangePasswordInput, ForgotPasswordInput, LoginInput,
-    RecoveryCodesGenerateInput, RegisterInput, ResetPasswordInput, StepUpInput, StepUpSubject,
-    SwitchWorkspaceInput, TotpConfirmInput, TotpSetupInput, UpdateProfileInput, VerifyEmailInput,
+    AuthContext, ChangePasswordInput, ForgotPasswordInput, LoginInput, RecoveryCodesGenerateInput,
+    RegisterInput, ResetPasswordInput, StepUpInput, StepUpSubject, SwitchWorkspaceInput,
+    TotpConfirmInput, TotpSetupInput, UpdateProfileInput, VerifyEmailInput,
     WebauthnRegisterFinishInput, WebauthnRegisterStartInput,
 };
 
@@ -45,6 +45,8 @@ pub struct EmailAddressView {
 pub struct EmailAddressesResult {
     pub emails: Vec<EmailAddressView>,
     pub primary_min_age_hours: i32,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -105,13 +107,17 @@ pub struct SessionView {
     pub revoked_at: Option<DateTime<Utc>>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
+    pub device_id: Option<Uuid>,
+    pub device_trust_level: Option<String>,
+    pub device_trust_score: Option<i16>,
+    pub risk_score: Option<f64>,
+    pub risk_decision: Option<String>,
     pub current: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RegisterResult {
     pub user: UserView,
-    pub workspace: WorkspaceView,
     pub verification_resend_available_at: DateTime<Utc>,
 }
 
@@ -120,7 +126,9 @@ pub struct LoginResult {
     pub user: UserView,
     pub session: SessionView,
     #[serde(skip_serializing)]
-    pub session_token: String,
+    pub browser_session_token: String,
+    #[serde(skip_serializing)]
+    pub device_cookie_token: Option<String>,
     pub verification_resend_available_at: Option<DateTime<Utc>>,
 }
 
@@ -145,8 +153,6 @@ pub struct ResendVerificationResult {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ForgotPasswordResult {
     pub success: bool,
-    pub requires_admin_approval: bool,
-    pub available_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -155,16 +161,11 @@ pub struct ResetPasswordResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct ApproveRecoveryResult {
-    pub success: bool,
-    pub available_at: Option<DateTime<Utc>>,
-    pub requires_second_approval: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct StepUpResult {
     pub success: bool,
     pub valid_until: DateTime<Utc>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub browser_session_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -190,6 +191,8 @@ pub struct MfaFactorView {
 pub struct MfaFactorsResult {
     pub factors: Vec<MfaFactorView>,
     pub mfa_enabled: bool,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -225,6 +228,8 @@ pub struct RecoveryCodesResult {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SessionsResult {
     pub sessions: Vec<SessionView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -249,6 +254,44 @@ pub struct DataExportResult {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct DeleteAccountResult {
     pub success: bool,
+}
+
+#[cfg(test)]
+mod sessions_tests {
+    use super::{SessionView, SessionsResult};
+    use chrono::Utc;
+    use uuid::Uuid;
+
+    #[test]
+    fn sessions_result_serializes_pagination_metadata() {
+        let payload = serde_json::to_value(SessionsResult {
+            sessions: vec![SessionView {
+                id: Uuid::from_u128(1),
+                tenant_id: None,
+                organization_id: None,
+                workspace_id: None,
+                workspace_region: None,
+                created_at: Utc::now(),
+                last_seen_at: Utc::now(),
+                expires_at: Utc::now(),
+                revoked_at: None,
+                ip: None,
+                user_agent: None,
+                device_id: None,
+                device_trust_level: None,
+                device_trust_score: None,
+                risk_score: None,
+                risk_decision: None,
+                current: true,
+            }],
+            next_cursor: Some("opaque-cursor".to_string()),
+            has_more: true,
+        })
+        .expect("serializes");
+
+        assert_eq!(payload["next_cursor"], "opaque-cursor");
+        assert_eq!(payload["has_more"], true);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

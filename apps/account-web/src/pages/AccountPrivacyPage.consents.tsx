@@ -1,11 +1,27 @@
-import { type UserConsent } from '@nvbes/identity-client';
-import { FileText, XCircle } from 'lucide-react';
+import type { UserConsent } from '@nvbes/identity-client';
+import { FileCheck2, History, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
 
 export const consentLabels: Record<string, string> = {
   terms_of_service: "Conditions d'utilisation",
-  privacy_policy: 'Politique de confidentialite',
+  data_processing_agreement: 'Accord sur le traitement des données',
+  privacy_policy: 'Politique de confidentialité',
   cookie_consent: 'Consentement cookies global',
   cookie_consent_essentials: 'Cookies essentiels',
   cookie_consent_analytics: 'Cookies analytiques',
@@ -19,10 +35,20 @@ export const consentLabels: Record<string, string> = {
   cookie_consent_vendor_analytics: 'Cookie Analytics legacy',
   cookie_consent_vendor_error_reporting: 'Cookie error reporting legacy',
   marketing_emails: 'Emails marketing',
-  data_processing: 'Traitement des donnees',
+  data_processing: 'Traitement des données',
   third_party_sharing: 'Partage avec des tiers',
   gpc_opt_out: 'Global Privacy Control — Ne pas vendre mes donnees',
 };
+
+const NON_REVOCABLE_CONSENT_TYPES = new Set([
+  'terms_of_service',
+  'data_processing_agreement',
+  'privacy_policy',
+]);
+
+export function isRevocableConsentType(consentType: string): boolean {
+  return !NON_REVOCABLE_CONSENT_TYPES.has(consentType);
+}
 
 export function isVisibleConsentType(consentType: string): boolean {
   return !consentType.startsWith('analytics_');
@@ -30,14 +56,17 @@ export function isVisibleConsentType(consentType: string): boolean {
 
 export function ConsentEmptyState() {
   return (
-    <div className="px-6 py-8">
-      <div className="flex flex-col items-center gap-3">
-        <XCircle className="size-8 text-muted-foreground" />
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Aucun consentement actif.</p>
-        </div>
-      </div>
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <History />
+        </EmptyMedia>
+        <EmptyTitle>Aucun choix révocable</EmptyTitle>
+        <EmptyDescription>
+          Vos futurs consentements apparaîtront ici avec leur date et leur version.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -55,30 +84,29 @@ export function ConsentRow({
     month: 'long',
     day: 'numeric',
   });
+  const version = consent.document_version
+    ? ` · ${consent.document_version.replace(/^v(?=\d)/i, 'version ')}`
+    : '';
 
   return (
-    <div className="flex items-center justify-between gap-3 py-1">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <FileText className="size-4 text-muted-foreground" />
-        </div>
-        <div className="flex min-w-0 flex-col">
-          <span className="text-sm font-medium">{label}</span>
-          <span className="text-xs text-muted-foreground">
-            Accepte le {grantedDate}
-            {consent.document_version ? ` · v${consent.document_version}` : ''}
-          </span>
-        </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-        onClick={onRevoke}
-        aria-label={`Revoquer ${label}`}
-      >
-        <XCircle className="size-4" />
-      </Button>
-    </div>
+    <Item>
+      <ItemMedia variant="icon">
+        <FileCheck2 />
+      </ItemMedia>
+      <ItemContent>
+        <ItemTitle>{label}</ItemTitle>
+        <ItemDescription>
+          Accepté le {grantedDate}
+          {version}
+        </ItemDescription>
+      </ItemContent>
+      {isRevocableConsentType(consent.consent_type) && (
+        <ItemActions>
+          <Button variant="ghost" size="icon" onClick={onRevoke} aria-label={`Révoquer ${label}`}>
+            <X data-icon="inline-start" />
+          </Button>
+        </ItemActions>
+      )}
+    </Item>
   );
 }

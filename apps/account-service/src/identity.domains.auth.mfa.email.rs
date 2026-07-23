@@ -21,6 +21,8 @@ pub async fn eligible_emails(db: &PgPool, user_id: Uuid) -> Result<EmailAddresse
     Ok(EmailAddressesResult {
         emails: db::emails::verified_mfa_eligible_emails(db, user_id).await?,
         primary_min_age_hours: db::emails::primary_email_policy_hours(db, user_id).await?,
+        next_cursor: None,
+        has_more: false,
     })
 }
 
@@ -167,13 +169,7 @@ pub async fn send_login_code(
 ) -> Result<(), AppError> {
     ensure_primary_email_factor(db, principal_id).await?;
 
-    let recipients = verified_email_recipients(db, principal_id).await?;
-    if recipients.is_empty() {
-        return Err(AppError::forbidden(
-            "email_mfa_requires_verified_email",
-            "Email MFA requires at least one verified email.",
-        ));
-    }
+    let recipient = verified_primary_email_recipient(db, principal_id).await?;
 
     let code = generate_email_code();
     nvbes_redis::cache::cache_set_json(
@@ -191,53 +187,57 @@ pub async fn send_login_code(
     .map_err(|err| AppError::internal("email_mfa_code_store_failed", err.to_string()))?;
 
     let code_hash = token_hash(&code);
-    for email in recipients {
-        crate::email::jobs::enqueue_email_job_tx(
-            db,
-            redis,
-            crate::email::jobs::EmailSendPayload {
-                to_email: email.clone(),
-                to_name: None,
-                subject: "Your nvbes sign-in code".to_string(),
-                html_body: format!(
-                    "<p>Your nvbes sign-in code is:</p><p><strong>{code}</strong></p><p>This code expires in 5 minutes.</p>"
-                ),
-                text_body: Some(format!(
-                    "Your nvbes sign-in code is: {code}\n\nThis code expires in 5 minutes."
-                )),
-                business_type: "verification".to_string(),
-            },
-            &format!(
-                "email-mfa:{}:{}:{}:{}",
-                principal_id,
-                auth_state_id,
-                token_hash(&email),
-                code_hash
+    crate::email::jobs::enqueue_email_job_tx(
+        db,
+        redis,
+        crate::email::jobs::EmailSendPayload {
+            to_email: recipient.clone(),
+            to_name: None,
+            subject: "Your nvbes sign-in code".to_string(),
+            html_body: format!(
+                "<p>Your nvbes sign-in code is:</p><p><strong>{code}</strong></p><p>This code expires in 5 minutes.</p>"
             ),
-        )
-        .await?;
-    }
+            text_body: Some(format!(
+                "Your nvbes sign-in code is: {code}\n\nThis code expires in 5 minutes."
+            )),
+            business_type: "verification".to_string(),
+        },
+        &format!(
+            "email-mfa:{}:{}:{}:{}",
+            principal_id,
+            auth_state_id,
+            token_hash(&recipient),
+            code_hash
+        ),
+    )
+    .await?;
     Ok(())
 }
 
-async fn verified_email_recipients(
+async fn verified_primary_email_recipient(
     db: &PgPool,
     principal_id: Uuid,
-) -> Result<Vec<String>, AppError> {
-    let emails = sqlx::query_scalar::<_, String>(
+) -> Result<String, AppError> {
+    sqlx::query_scalar::<_, String>(
         r#"
         SELECT email
         FROM user_email_addresses
         WHERE principal_id = $1
           AND deleted_at IS NULL
           AND verified_at IS NOT NULL
-        ORDER BY is_primary DESC, created_at ASC
+          AND is_primary = TRUE
+        LIMIT 1
         "#,
     )
     .bind(principal_id)
-    .fetch_all(db)
-    .await?;
-    Ok(emails)
+    .fetch_optional(db)
+    .await?
+    .ok_or_else(|| {
+        AppError::forbidden(
+            "email_mfa_requires_verified_primary_email",
+            "Email MFA requires a verified primary email.",
+        )
+    })
 }
 
 pub async fn verify_login_code(
@@ -282,3 +282,7 @@ fn generate_email_code() -> String {
     let mut rng = rand::rng();
     format!("{:06}", rng.random_range(0..1_000_000))
 }
+
+#[cfg(test)]
+#[path = "identity.domains.auth.mfa.email.tests.rs"]
+mod tests;

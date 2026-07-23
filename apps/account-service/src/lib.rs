@@ -3,8 +3,12 @@ pub mod app;
 #[cfg(test)]
 #[path = "identity.boundary.source_guard.tests.rs"]
 mod boundary_source_guard_tests;
+#[path = "identity.cloud_boundary.mod.rs"]
+pub mod cloud_boundary;
 #[path = "identity.database.rs"]
 pub mod database;
+#[path = "identity.developer.client.rs"]
+pub mod developer_client;
 #[path = "identity.domains.mod.rs"]
 pub mod domains;
 #[path = "identity.email.mod.rs"]

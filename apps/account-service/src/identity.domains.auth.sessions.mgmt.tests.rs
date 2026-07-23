@@ -101,6 +101,36 @@ async fn seed_subject(pool: &PgPool, redis: &nvbes_redis::RedisPool) -> (Uuid, U
     (tenant_id, principal_id, session_id, other_session_id)
 }
 
+async fn seed_third_session(
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+    tenant_id: Uuid,
+) -> Uuid {
+    let session_id = Uuid::new_v4();
+    let now = Utc::now() + chrono::Duration::minutes(1);
+    let cached_session = cached_session_from_login(
+        session_id,
+        principal_id,
+        Some(tenant_id),
+        None,
+        None,
+        None,
+        None,
+        format!("session-token-{session_id}"),
+        Some("aal1".to_string()),
+        vec!["pwd".to_string()],
+        now,
+        now,
+        None,
+        None,
+        now + chrono::Duration::hours(2),
+    );
+    nvbes_redis::session::set_session(redis, &cached_session, current_session_ttl(&cached_session))
+        .await
+        .expect("third redis session insert should succeed");
+    session_id
+}
+
 async fn cleanup(
     pool: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -260,4 +290,68 @@ async fn logout_revokes_current_session_and_refresh_token_only() {
     assert!(other_refresh.revoked_at.is_none());
 
     cleanup(&pool, &redis, tenant_id, principal_id).await;
+}
+
+#[tokio::test]
+async fn list_sessions_is_paginated_and_stable() {
+    let redis = test_redis_pool().await;
+    let tenant_id = Uuid::new_v4();
+    let principal_id = Uuid::new_v4();
+    let current_session_id = Uuid::new_v4();
+    let other_session_id = Uuid::new_v4();
+    let extra_session_id = seed_third_session(&redis, principal_id, tenant_id).await;
+
+    for current_session in [current_session_id, other_session_id] {
+        let now = Utc::now();
+        let cached_session = cached_session_from_login(
+            current_session,
+            principal_id,
+            Some(tenant_id),
+            None,
+            None,
+            None,
+            None,
+            format!("session-token-{current_session}"),
+            Some("aal1".to_string()),
+            vec!["pwd".to_string()],
+            now,
+            now,
+            None,
+            None,
+            now + chrono::Duration::hours(2),
+        );
+        nvbes_redis::session::set_session(
+            &redis,
+            &cached_session,
+            current_session_ttl(&cached_session),
+        )
+        .await
+        .expect("redis session insert should succeed");
+    }
+
+    let first = super::list(&redis, principal_id, current_session_id, Some(1), None)
+        .await
+        .expect("first page should load");
+
+    assert_eq!(first.sessions.len(), 1);
+    assert!(first.has_more);
+    assert!(first.next_cursor.is_some());
+    assert_eq!(first.sessions[0].id, extra_session_id);
+
+    let second = super::list(
+        &redis,
+        principal_id,
+        current_session_id,
+        Some(1),
+        first.next_cursor,
+    )
+    .await
+    .expect("second page should load");
+
+    assert_eq!(second.sessions.len(), 1);
+    assert!(second.has_more);
+    assert!(second.next_cursor.is_some());
+    assert_ne!(second.sessions[0].id, extra_session_id);
+    assert_ne!(second.sessions[0].id, current_session_id);
+    assert_eq!(second.sessions[0].id, other_session_id);
 }

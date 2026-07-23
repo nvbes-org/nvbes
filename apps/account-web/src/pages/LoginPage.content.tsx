@@ -24,6 +24,7 @@ export function LoginPageContent({
   hasTotp,
   hasWebAuthn,
   loading,
+  loginStateToken,
   identifierSubmitting,
   location,
   hostedConsent,
@@ -34,6 +35,7 @@ export function LoginPageContent({
   emailCode,
   recoveryCode,
   resetToIdentifier,
+  resendLoginMfaEmailCode,
   setEmail,
   setError,
   setMfaMethod,
@@ -84,6 +86,7 @@ export function LoginPageContent({
               hasTotp={hasTotp}
               hasWebAuthn={hasWebAuthn}
               loading={loading}
+              loginStateToken={loginStateToken}
               identifierSubmitting={identifierSubmitting}
               hostedConsent={hostedConsent}
               mfaMethod={mfaMethod}
@@ -92,6 +95,7 @@ export function LoginPageContent({
               emailCode={emailCode}
               recoveryCode={recoveryCode}
               resetToIdentifier={resetToIdentifier}
+              resendLoginMfaEmailCode={resendLoginMfaEmailCode}
               setEmail={setEmail}
               setError={setError}
               setMfaMethod={setMfaMethod}

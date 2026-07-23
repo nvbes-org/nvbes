@@ -2,8 +2,8 @@ use sqlx::Row;
 use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
-use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::auth::jwt::JwtService};
 
 use super::{ClientAuthentication, TokenView};
 
@@ -236,6 +236,7 @@ pub async fn client_credentials_grant(
         token_type: "Bearer".to_string(),
         expires_in: jwt.access_token_expiry.num_seconds(),
         refresh_token: None,
+        id_token: None,
         scope: scope_str.to_string(),
         authorization_details: Vec::new(),
         issued_token_type: None,

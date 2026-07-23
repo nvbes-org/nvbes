@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode, SubmitEvent } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
@@ -21,7 +21,7 @@ export function StepUpFormCard({
   onSubmit,
 }: {
   children: ReactNode;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 }) {
   return (
     <form onSubmit={onSubmit} className="w-full max-w-md">

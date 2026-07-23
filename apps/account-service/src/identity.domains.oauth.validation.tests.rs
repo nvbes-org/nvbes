@@ -28,9 +28,17 @@ fn normalize_resources_trims_sorts_and_deduplicates() {
 }
 
 #[test]
-fn validate_pkce_for_authorize_requires_challenge_for_public_clients() {
+fn validate_pkce_for_authorize_requires_challenge_for_every_client() {
     let error =
-        validate_pkce_for_authorize("public", None, Some("S256")).expect_err("pkce required");
+        validate_pkce_for_authorize("confidential", None, Some("S256")).expect_err("pkce required");
+
+    assert_eq!(error.code, "pkce_required");
+}
+
+#[test]
+fn validate_pkce_for_exchange_requires_pkce_for_confidential_clients() {
+    let error =
+        validate_pkce_for_exchange("confidential", None, None, None).expect_err("pkce required");
 
     assert_eq!(error.code, "pkce_required");
 }

@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use std::time::Duration as StdDuration;
 use uuid::Uuid;
 
-use crate::domains::cloud::workspace_port;
+use crate::cloud_boundary::workspace_port;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 use crate::http::request::client_ip;

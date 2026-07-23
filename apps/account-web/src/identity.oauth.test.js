@@ -56,6 +56,7 @@ describe('authorizeIdentitySession', () => {
       state: 'oauth-state',
       codeChallenge: 'challenge',
       codeChallengeMethod: 'S256',
+      nonce: 'oidc-nonce',
       consentAction: 'approve',
     });
 
@@ -69,6 +70,8 @@ describe('authorizeIdentitySession', () => {
         }),
       }),
     );
+    const parBody = postMock.mock.calls[0][2];
+    expect(parBody.get('nonce')).toBe('oidc-nonce');
     expect(getMock).toHaveBeenCalledWith(
       expect.stringContaining('/oauth/authorize?'),
       expect.anything(),

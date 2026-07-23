@@ -2,15 +2,12 @@ import { createRoute, redirect } from '@tanstack/react-router';
 
 import type { rootRoute } from './identity.router';
 import {
-  LazyDeviceActivationPage,
   LazyForgotPasswordPage,
   LazyLoginPage,
-  LazyRecoveryReviewsPage,
   LazyRegisterPage,
   LazyResetPasswordPage,
   LazyVerifyEmailPage,
   LazyVerifyEmailResultPage,
-  LazyWorkerQueueStatusPage,
 } from './identity.router.pages';
 import { withAuth } from './identity.router.shared';
 
@@ -57,21 +54,6 @@ export function createStandaloneRoutes(root: typeof rootRoute) {
       getParentRoute: () => root,
       path: '/reset-password',
       component: withAuth(LazyResetPasswordPage),
-    }),
-    createRoute({
-      getParentRoute: () => root,
-      path: '/activate',
-      component: withAuth(LazyDeviceActivationPage),
-    }),
-    createRoute({
-      getParentRoute: () => root,
-      path: '/recovery-reviews',
-      component: withAuth(LazyRecoveryReviewsPage),
-    }),
-    createRoute({
-      getParentRoute: () => root,
-      path: '/worker-queue',
-      component: LazyWorkerQueueStatusPage,
     }),
   ];
 }

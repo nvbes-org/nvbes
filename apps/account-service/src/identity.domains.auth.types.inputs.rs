@@ -14,7 +14,6 @@ pub struct RegisterInput {
     pub birthdate: Option<chrono::NaiveDate>,
     pub region: Option<String>,
     pub data_region: Option<String>,
-    pub workspace_name: String,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
     pub legal_documents_accepted: bool,
@@ -105,11 +104,6 @@ pub struct WebauthnRegisterFinishInput {
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct RecoveryCodesGenerateInput {
     pub password: String,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct ApproveRecoveryInput {
-    pub email: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

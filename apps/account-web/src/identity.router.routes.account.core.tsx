@@ -2,7 +2,6 @@ import { createRoute } from '@tanstack/react-router';
 
 import type { accountRoute } from './identity.router';
 import {
-  LazyAccountAuditsPage,
   LazyAccountLinkedAppsPage,
   LazyAccountNotificationsPage,
   LazyAccountPasswordPage,
@@ -11,14 +10,7 @@ import {
   LazyAccountPrivacyPage,
   LazyAccountSecurityPage,
   LazyAccountSessionsPage,
-  LazyAccountSocialPage,
-  LazyAccountSubscriptionsPage,
-  LazyAccountTrustCenterPage,
-  LazyBillingPage,
-  LazyWorkspacesPage,
-  LazyWorkspaceServiceAccountsPage,
 } from './identity.router.pages';
-import { withBilling } from './identity.router.shared';
 
 export function createAccountCoreRoutes(account: typeof accountRoute) {
   return [
@@ -54,36 +46,6 @@ export function createAccountCoreRoutes(account: typeof accountRoute) {
     }),
     createRoute({
       getParentRoute: () => account,
-      path: '/audits',
-      component: LazyAccountAuditsPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/trust-center',
-      component: LazyAccountTrustCenterPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/workspaces',
-      component: LazyWorkspacesPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/workspaces/service-accounts',
-      component: LazyWorkspaceServiceAccountsPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/billing',
-      component: withBilling(LazyBillingPage),
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/subscriptions',
-      component: withBilling(LazyAccountSubscriptionsPage),
-    }),
-    createRoute({
-      getParentRoute: () => account,
       path: '/notifications',
       component: LazyAccountNotificationsPage,
     }),
@@ -91,11 +53,6 @@ export function createAccountCoreRoutes(account: typeof accountRoute) {
       getParentRoute: () => account,
       path: '/preferences',
       component: LazyAccountPreferencesPage,
-    }),
-    createRoute({
-      getParentRoute: () => account,
-      path: '/social',
-      component: LazyAccountSocialPage,
     }),
   ];
 }

@@ -12,6 +12,7 @@ import {
   submitLoginMfa,
   submitLoginPassword,
   submitRegister,
+  resendLoginMfaEmailCode,
   type SupportedRegion,
   type WebauthnAuthStartResult,
 } from './identity.auth.api';
@@ -98,6 +99,8 @@ export async function submitLoginIdentifierStep(vars: {
   powNonce: string;
   powSolution: string;
   decoy_link_clicked?: boolean;
+  device_fingerprint?: import('@nvbes/identity-sdk-web').DeviceProfile;
+  bot_signals?: import('@nvbes/identity-sdk-web').BotIntegritySignals;
 }): Promise<LoginIdentifierResult> {
   try {
     return await submitLoginIdentifier(
@@ -105,6 +108,8 @@ export async function submitLoginIdentifierStep(vars: {
       vars.powNonce,
       vars.powSolution,
       vars.decoy_link_clicked,
+      vars.device_fingerprint,
+      vars.bot_signals,
     );
   } catch (error) {
     throw normalizeClientError(error);
@@ -166,6 +171,14 @@ export async function submitLoginMfaStep(
       webauthn_response: variables.webauthnResponse,
       webauthn_challenge_id: variables.webauthnChallengeId,
     });
+  } catch (error) {
+    throw normalizeClientError(error);
+  }
+}
+
+export async function resendLoginMfaEmailCodeStep(stateToken: string): Promise<void> {
+  try {
+    await resendLoginMfaEmailCode(stateToken);
   } catch (error) {
     throw normalizeClientError(error);
   }

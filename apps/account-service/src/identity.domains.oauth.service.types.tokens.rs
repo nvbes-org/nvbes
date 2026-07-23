@@ -16,6 +16,8 @@ pub struct TokenView {
     pub token_type: String,
     pub expires_in: i64,
     pub refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token: Option<String>,
     pub scope: String,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     #[schema(value_type = Vec<Object>)]

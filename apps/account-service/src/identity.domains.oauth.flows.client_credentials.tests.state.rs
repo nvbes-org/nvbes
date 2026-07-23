@@ -24,6 +24,8 @@ pub(super) async fn test_state(pool: &PgPool) -> AppState {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string()),
         environment: "development".to_string(),
         app_name: "identity-oauth-client-credentials-test".to_string(),
+        email_provider: "mock".to_string(),
+        otp_provider: "mock".to_string(),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_password: std::env::var("NVBES_REDIS_PASSWORD")

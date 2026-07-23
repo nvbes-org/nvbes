@@ -1,8 +1,6 @@
-use sqlx::Row;
-use uuid::Uuid;
-
 use crate::domains::authz::WorkspaceAccess;
 use crate::http::error::AppError;
+use nvbes_core::pagination::{KeysetCursor, page_from_rows};
 use sqlx::PgPool;
 
 use super::types::*;
@@ -12,7 +10,6 @@ mod risk_events;
 #[path = "identity.domains.security.service.summary.rs"]
 mod summary;
 
-use crate::email::jobs::JOB_EMAIL_SEND;
 use risk_events::{SecurityEventFilters, fetch_risk_events};
 use summary::security_events_summary;
 
@@ -26,11 +23,21 @@ pub async fn list_events(
 ) -> Result<SecurityEventsResponse, AppError> {
     let limit = normalize_limit(input.limit);
     let filters = SecurityEventFilters::from_input(&input);
-    let risk_events =
-        fetch_risk_events(db, access.tenant_id, input.before_id, limit, &filters).await?;
+    let cursor = input
+        .cursor
+        .as_deref()
+        .map(KeysetCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let risk_events = fetch_risk_events(db, access.tenant_id, cursor, limit + 1, &filters).await?;
+    let page = page_from_rows(risk_events, limit as usize, |event| KeysetCursor {
+        created_at: event.created_at,
+        id: event.id,
+    });
 
-    let summary = security_events_summary(&risk_events);
-    let events = risk_events
+    let summary = security_events_summary(&page.items);
+    let events = page
+        .items
         .iter()
         .map(|event| SecurityEventView {
             id: event.id,
@@ -50,7 +57,17 @@ pub async fn list_events(
         .collect::<Vec<_>>();
 
     Ok(SecurityEventsResponse {
-        next_cursor: events.last().map(|event| event.id),
+        next_cursor: page
+            .next_cursor
+            .map(KeysetCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
         events,
         summary,
     })
@@ -74,96 +91,6 @@ pub async fn export_events(
         filename: format!("nvbes-security-{}.csv", access.workspace_id),
         content_type: "text/csv; charset=utf-8",
         body: render_csv(&risk_events),
-    })
-}
-
-pub async fn list_recovery_reviews(
-    db: &PgPool,
-    access: &WorkspaceAccess,
-    limit: Option<i64>,
-    before_created_at: Option<chrono::DateTime<chrono::Utc>>,
-    before_id: Option<Uuid>,
-) -> Result<ListRecoveryReviewsResponse, AppError> {
-    let limit = normalize_limit(limit);
-    let rows = sqlx::query(
-        r#"
-        SELECT
-          req.id,
-          req.principal_id,
-          req.email,
-          req.status,
-          req.available_at,
-          req.approved_by_principal_id,
-          req.approved_at,
-          req.review_available_at,
-          req.secondary_approved_by_principal_id,
-          req.secondary_approved_at,
-          req.created_at,
-          req.updated_at
-        FROM enterprise_password_recovery_requests req
-        WHERE req.tenant_id = $1
-          AND (
-            $2::timestamptz IS NULL
-            OR req.created_at < $2
-            OR (req.created_at = $2 AND ($3::uuid IS NULL OR req.id < $3))
-          )
-        ORDER BY req.created_at DESC, req.id DESC
-        LIMIT $4
-        "#,
-    )
-    .bind(access.tenant_id)
-    .bind(before_created_at)
-    .bind(before_id)
-    .bind(limit)
-    .fetch_all(db)
-    .await?;
-
-    let requests = rows
-        .into_iter()
-        .map(|row| {
-            Ok(RecoveryReviewView {
-                request_id: row.get("id"),
-                principal_id: row.get("principal_id"),
-                email: row.get("email"),
-                status: row.get("status"),
-                available_at: row.get("available_at"),
-                approved_by_principal_id: row.get("approved_by_principal_id"),
-                approved_at: row.get("approved_at"),
-                review_available_at: row.get("review_available_at"),
-                secondary_approved_by_principal_id: row.get("secondary_approved_by_principal_id"),
-                secondary_approved_at: row.get("secondary_approved_at"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-            })
-        })
-        .collect::<Result<Vec<_>, AppError>>()?;
-
-    Ok(ListRecoveryReviewsResponse {
-        workspace_id: access.workspace_id,
-        requests,
-    })
-}
-
-pub async fn worker_queue_status(
-    redis: &nvbes_redis::RedisPool,
-    workspace_id: Uuid,
-) -> Result<WorkerQueueStatusResponse, AppError> {
-    let statuses = nvbes_redis::worker_queue::queue_status(redis, JOB_EMAIL_SEND)
-        .await
-        .map_err(|err| AppError::internal("redis_worker_queue_status_failed", err.to_string()))?
-        .into_iter()
-        .map(|entry| WorkerQueueStatusView {
-            status: entry.status,
-            depth: entry.depth,
-            oldest_age_seconds: entry.oldest_age_seconds,
-        })
-        .collect();
-
-    Ok(WorkerQueueStatusResponse {
-        workspace_id,
-        queue_name: JOB_EMAIL_SEND.to_string(),
-        snapshot_at: chrono::Utc::now(),
-        statuses,
     })
 }
 

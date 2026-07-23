@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { BotIntegritySignals, DeviceProfile } from '@nvbes/identity-sdk-web';
 import { identityHttpClient } from './identity.http';
 
 const RegionResultSchema = z.object({
@@ -53,6 +54,10 @@ const LoginPasswordResultSchema = z.object({
   verification_resend_available_at: z.string().nullable().optional(),
 });
 
+const ResendLoginMfaEmailCodeResultSchema = z.object({
+  success: z.boolean(),
+});
+
 const WebauthnAuthStartResultSchema = z.object({
   challenge_id: z.string(),
   options: z.unknown(),
@@ -71,7 +76,6 @@ export type RegisterInput = {
   username: string;
   birthdate?: string;
   password: string;
-  workspace_name: string;
   region?: string;
   legal_documents_accepted: boolean;
   marketing_emails_accepted: boolean;
@@ -140,6 +144,8 @@ export function submitLoginIdentifier(
   powNonce: string,
   powSolution: string,
   decoyLinkClicked?: boolean,
+  deviceProfile?: DeviceProfile,
+  botSignals?: BotIntegritySignals,
 ): Promise<LoginIdentifierResult> {
   return withAuthRequestTimeout("L'identification", (signal) =>
     identityHttpClient.post(
@@ -150,6 +156,8 @@ export function submitLoginIdentifier(
         pow_nonce: powNonce,
         pow_solution: powSolution,
         ...(decoyLinkClicked !== undefined ? { decoy_link_clicked: decoyLinkClicked } : {}),
+        ...(deviceProfile ? { device_fingerprint: deviceProfile } : {}),
+        ...(botSignals ? { bot_signals: botSignals } : {}),
       },
       { signal },
     ),
@@ -230,6 +238,14 @@ export function submitLoginMfa(
     state_token: stateToken,
     ...input,
   });
+}
+
+export function resendLoginMfaEmailCode(stateToken: string): Promise<{ success: boolean }> {
+  return identityHttpClient.post(
+    '/auth/challenge/mfa/email/send',
+    ResendLoginMfaEmailCodeResultSchema,
+    { state_token: stateToken },
+  );
 }
 
 export function logoutIdentitySession(): Promise<void> {

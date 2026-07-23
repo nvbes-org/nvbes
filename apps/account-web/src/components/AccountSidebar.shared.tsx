@@ -1,24 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import {
-  Bell,
-  Building,
-  CreditCard,
-  Eye,
-  FileSearch,
-  Globe,
-  KeyRound,
-  Link as LinkIcon,
-  LogOut,
-  Monitor,
-  Receipt,
-  Settings,
-  Shield,
-  ShieldCheck,
-  UserCircle,
-} from 'lucide-react';
+import { Bell, Eye, Link as LinkIcon, Monitor, Settings, Shield, UserCircle } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { accountPathForAuthuser, readAuthuser } from '@/identity.authuser';
 
 export const accountNavSections = [
   {
@@ -34,24 +17,12 @@ export const accountNavSections = [
     items: [
       { to: '/account/privacy', icon: Eye, label: 'Consentements' },
       { to: '/account/linked-apps', icon: LinkIcon, label: 'Apps liees' },
-      { to: '/account/audits', icon: FileSearch, label: 'Audits & RGPD' },
-      { to: '/account/trust-center', icon: ShieldCheck, label: 'Trust Center' },
-    ],
-  },
-  {
-    title: 'Organisation',
-    items: [
-      { to: '/account/workspaces', icon: Building, label: 'Workspaces' },
-      { to: '/account/workspaces/service-accounts', icon: KeyRound, label: 'Comptes de service' },
-      { to: '/account/billing', icon: CreditCard, label: 'Facturation' },
-      { to: '/account/subscriptions', icon: Receipt, label: 'Abonnements' },
     ],
   },
   {
     title: 'Parametres',
     items: [
       { to: '/account/notifications', icon: Bell, label: 'Notifications' },
-      { to: '/account/social', icon: Globe, label: 'Contenu & social' },
       { to: '/account/preferences', icon: Settings, label: 'Preferences' },
     ],
   },
@@ -69,34 +40,17 @@ export function SidebarNavItem({
   end?: boolean;
 }) {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
 
   return (
     <Link
-      to={to}
-      search={authuserSearch(authuser)}
+      to={accountPathForAuthuser(authuser, to)}
       activeOptions={{ exact: end }}
       className="flex min-w-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-      activeProps={{ className: 'bg-muted text-foreground' }}
+      activeProps={{ className: 'bg-card text-foreground' }}
     >
       <Icon className="size-4 shrink-0" />
       <span className="truncate">{label}</span>
     </Link>
-  );
-}
-
-export function AccountSidebarLogout({ onLogout }: { onLogout: () => void }) {
-  return (
-    <div className="border-t border-sidebar-border/70 p-3">
-      <Button
-        variant="ghost"
-        className="w-full justify-start gap-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-        size="sm"
-        onClick={onLogout}
-      >
-        <LogOut className="size-4" />
-        Se deconnecter
-      </Button>
-    </div>
   );
 }

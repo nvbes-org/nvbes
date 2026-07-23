@@ -81,8 +81,7 @@ fn hosted_client_display_prefers_developer_consent_branding() {
     let display = build_hosted_client_display(
         "client_123".to_string(),
         "Fallback Client".to_string(),
-        crate::domains::developer::types::DeveloperConsentScreenResponse {
-            client_id: "client_123".to_string(),
+        crate::developer_client::DeveloperConsentScreen {
             product_name: "Branded App".to_string(),
             logo_url: Some("https://cdn.example/logo.png".to_string()),
             support_url: Some("https://example.test/support".to_string()),
@@ -92,8 +91,6 @@ fn hosted_client_display_prefers_developer_consent_branding() {
             brand_color: Some("#123456".to_string()),
             custom_css: None,
             help_text: Some("Contact support for access.".to_string()),
-            configured: true,
-            updated_at: None,
         },
     );
 

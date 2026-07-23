@@ -1,5 +1,5 @@
-use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::auth::jwt::JwtService};
 use chrono::Utc;
 use sqlx::postgres::PgPool;
 use uuid::Uuid;
@@ -45,6 +45,7 @@ pub async fn generate_tokens(
         token_type: tokens.token_type,
         expires_in: tokens.expires_in,
         refresh_token: Some(tokens.refresh_token),
+        id_token: None,
         scope: audience.map_or(scope.clone(), |value| format!("{scope} audience:{value}")),
         authorization_details: Vec::new(),
         issued_token_type: None,

@@ -9,6 +9,7 @@ export interface OAuthAuthorizeRequest {
   scope?: string | null;
   codeChallenge?: string | null;
   codeChallengeMethod?: string | null;
+  nonce?: string | null;
   consentAction?: string | null;
 }
 
@@ -32,6 +33,7 @@ const OAuthAuthorizeRequestSchema = z.object({
   redirectUri: z.string(),
   scope: z.string().nullable().optional(),
   state: z.string().nullable().optional(),
+  nonce: z.string().nullable().optional(),
 });
 
 function oauthApiUrl(): string {
@@ -64,6 +66,7 @@ export function readOAuthAuthorizeRequest(
     scope: searchParams.get('scope'),
     codeChallenge: searchParams.get('code_challenge'),
     codeChallengeMethod: searchParams.get('code_challenge_method'),
+    nonce: searchParams.get('nonce'),
     consentAction: searchParams.get('consent_action'),
   };
 }
@@ -102,6 +105,10 @@ export async function authorizeIdentitySession(
   if (request.codeChallenge) {
     parBody.set('code_challenge', request.codeChallenge);
     parBody.set('code_challenge_method', request.codeChallengeMethod ?? 'S256');
+  }
+
+  if (request.nonce) {
+    parBody.set('nonce', request.nonce);
   }
 
   if (request.consentAction) {

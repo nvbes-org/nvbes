@@ -1,180 +1,53 @@
-use axum::http::{HeaderMap, HeaderValue};
-use uuid::Uuid;
+use axum::http::HeaderMap;
 
 use crate::app::AppState;
 use crate::domains::auth::sessions;
-use crate::http::cookies::{
-    auth_cookie, auth_cookie_name_with_user, csrf_cookie, generate_csrf_token,
-};
 use crate::http::error::AppError;
 
-pub struct RefreshedCookies {
-    pub session_cookie: HeaderValue,
-    pub csrf_cookie: HeaderValue,
-}
-
-pub async fn authenticate_or_refresh_session(
+pub async fn authenticate_session_request(
     state: &AppState,
     headers: &HeaderMap,
     authuser: &str,
-) -> Result<
-    (
-        crate::domains::auth::types::AuthContext,
-        Option<RefreshedCookies>,
-    ),
-    AppError,
-> {
-    let token = crate::http::request::bearer_token_with_authuser(headers, authuser)?;
-
-    match sessions::authenticate(&state.db, &state.redis, &state.jwt, &token).await {
-        Ok(auth) => Ok((auth, None)),
-        Err(error)
-            if error.status == axum::http::StatusCode::UNAUTHORIZED
-                && error.code == "token_expired" =>
-        {
-            let (auth, cookies) = refresh_expired_session(state, authuser, &token).await?;
-            Ok((auth, Some(cookies)))
-        }
-        Err(error) => Err(error),
-    }
-}
-
-pub async fn refresh_expired_session(
-    state: &AppState,
-    authuser: &str,
-    expired_token: &str,
-) -> Result<(crate::domains::auth::types::AuthContext, RefreshedCookies), AppError> {
-    let claims = state.jwt.decode_token_ignore_expiry(expired_token)?;
-
-    let session_id = Uuid::parse_str(&claims.sid)
-        .map_err(|_| AppError::unauthorized("invalid_session", "Invalid session ID"))?;
-    let principal_id = Uuid::parse_str(&claims.sub)
-        .map_err(|_| AppError::unauthorized("invalid_subject", "Invalid subject"))?;
-
-    let session = nvbes_redis::session::get_session(&state.redis, &session_id.to_string())
-        .await
-        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
-        .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found"))?;
-
-    if session.principal_id != principal_id.to_string()
-        || session.revoked_at.is_some()
-        || session.expires_at <= chrono::Utc::now()
-    {
-        return Err(AppError::unauthorized("session_expired", "Session expired"));
-    }
-
-    let new_token = state.jwt.generate_access_token_from_claims(&claims)?;
-    rotate_session_token_hash(state, session_id, principal_id, &session, &new_token).await?;
-
-    let auth = sessions::authenticate(&state.db, &state.redis, &state.jwt, &new_token).await?;
-    let cookies = build_refreshed_cookies(state, authuser, &new_token)?;
-
-    Ok((auth, cookies))
-}
-
-async fn rotate_session_token_hash(
-    state: &AppState,
-    session_id: Uuid,
-    principal_id: Uuid,
-    session: &nvbes_redis::session::CachedSession,
-    new_token: &str,
-) -> Result<(), AppError> {
-    let session_ttl = (session.expires_at - chrono::Utc::now())
-        .num_seconds()
-        .max(1) as u64;
-
-    if nvbes_redis::session::update_session_token_hash(
-        &state.redis,
-        &session_id.to_string(),
-        &crate::domains::auth::password::token_hash(new_token),
-        session_ttl,
-    )
-    .await
-    .is_err()
-    {
-        nvbes_redis::session::delete_session(
+) -> Result<crate::domains::auth::types::AuthContext, AppError> {
+    if let Some(token) = crate::http::request::authorization_bearer_token(headers)? {
+        return sessions::authenticate_with_request(
+            &state.db,
             &state.redis,
-            &principal_id.to_string(),
-            &session_id.to_string(),
+            &state.jwt,
+            &token,
+            headers,
         )
         .await
-        .map_err(|err| AppError::internal("redis_session_cache_reset_failed", err.to_string()))?;
+        .map_err(require_reauthentication_for_unauthorized);
     }
 
-    Ok(())
+    let cookie = crate::http::request::browser_session_token_with_authuser(headers, authuser)?;
+    sessions::authenticate_browser_session(&state.db, &state.redis, &cookie, headers)
+        .await
+        .map_err(require_reauthentication_for_unauthorized)
 }
 
-fn build_refreshed_cookies(
-    state: &AppState,
-    authuser: &str,
-    new_token: &str,
-) -> Result<RefreshedCookies, AppError> {
-    build_refreshed_cookies_from_config(
-        &state.config.environment,
-        state.config.auth_session_ttl_hours,
-        authuser,
-        new_token,
-    )
-}
-
-fn build_refreshed_cookies_from_config(
-    environment: &str,
-    auth_session_ttl_hours: i64,
-    authuser: &str,
-    new_token: &str,
-) -> Result<RefreshedCookies, AppError> {
-    let secure_cookie = environment != "development";
-    let session_cookie_name = auth_cookie_name_with_user("session", authuser, secure_cookie);
-    let session_expires_in = (auth_session_ttl_hours * 60 * 60).max(0);
-    let session_cookie = auth_cookie(
-        &session_cookie_name,
-        new_token,
-        session_expires_in,
-        secure_cookie,
-    )?;
-    let csrf_token = generate_csrf_token();
-    let csrf_cookie_name = auth_cookie_name_with_user("csrf_token", authuser, secure_cookie);
-    let csrf_cookie = csrf_cookie(
-        &csrf_cookie_name,
-        &csrf_token,
-        session_expires_in,
-        secure_cookie,
-    )?;
-
-    Ok(RefreshedCookies {
-        session_cookie,
-        csrf_cookie,
-    })
+fn require_reauthentication_for_unauthorized(error: AppError) -> AppError {
+    if error.status == axum::http::StatusCode::UNAUTHORIZED {
+        error.requiring_reauthentication()
+    } else {
+        error
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::build_refreshed_cookies_from_config;
+    use super::require_reauthentication_for_unauthorized;
+    use crate::http::error::AppError;
+    use nvbes_core::http::error::ErrorRecovery;
 
     #[test]
-    fn refreshed_cookies_are_authuser_scoped_and_secure_outside_development() {
-        let cookies = build_refreshed_cookies_from_config("production", 2, "1", "rotated-token")
-            .expect("cookies should build");
-        let session_cookie = cookies.session_cookie.to_str().expect("valid header");
-        let csrf_cookie = cookies.csrf_cookie.to_str().expect("valid header");
+    fn terminal_session_authentication_errors_require_reauthentication() {
+        let error = require_reauthentication_for_unauthorized(AppError::unauthorized(
+            "session_not_found",
+            "Session not found.",
+        ));
 
-        assert!(session_cookie.starts_with("__Host-session_1=rotated-token;"));
-        assert!(session_cookie.contains("Max-Age=7200"));
-        assert!(session_cookie.contains("HttpOnly"));
-        assert!(session_cookie.contains("Secure"));
-        assert!(csrf_cookie.starts_with("__Host-csrf_token_1="));
-        assert!(csrf_cookie.contains("Max-Age=7200"));
-        assert!(csrf_cookie.contains("Secure"));
-    }
-
-    #[test]
-    fn refreshed_cookies_use_local_names_in_development() {
-        let cookies = build_refreshed_cookies_from_config("development", 1, "0", "local-token")
-            .expect("cookies should build");
-        let session_cookie = cookies.session_cookie.to_str().expect("valid header");
-
-        assert!(session_cookie.starts_with("session=local-token;"));
-        assert!(session_cookie.contains("Max-Age=3600"));
-        assert!(!session_cookie.contains("Secure"));
+        assert_eq!(error.recovery, Some(ErrorRecovery::Reauthenticate));
     }
 }

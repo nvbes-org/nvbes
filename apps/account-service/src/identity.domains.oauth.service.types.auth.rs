@@ -12,6 +12,7 @@ pub struct CreateAuthorizationCodeInput {
     pub organization_id: Option<Uuid>,
     pub scope: String,
     pub redirect_uri: String,
+    pub nonce: Option<String>,
     pub audience: Option<String>,
     pub resource_indicators: Vec<String>,
     pub authorization_details: AuthorizationDetails,

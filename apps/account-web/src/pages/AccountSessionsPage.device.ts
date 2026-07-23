@@ -15,3 +15,10 @@ export function parseUserAgent(ua: string): { browser: string; os: string } {
 
   return { browser, os };
 }
+
+export function deviceTrustLabel(level: string | null): string {
+  if (level === 'trusted') return 'Appareil fiable';
+  if (level === 'recognized') return 'Appareil reconnu';
+  if (level === 'restricted') return 'À vérifier';
+  return 'Nouvel appareil';
+}

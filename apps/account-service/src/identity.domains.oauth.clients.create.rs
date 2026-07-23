@@ -1,14 +1,12 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::domains::{
-    cloud::workspace_port,
-    oauth::{
-        hash_client_secret,
-        logic::OAuthManagementAuth,
-        parse_client_type, parse_step_up_level,
-        service::types::{CreateOAuthClientInput, CreateOAuthClientResult, OAuthClientView},
-    },
+use crate::cloud_boundary::workspace_port;
+use crate::domains::oauth::{
+    hash_client_secret,
+    logic::OAuthManagementAuth,
+    parse_client_type, parse_step_up_level,
+    service::types::{CreateOAuthClientInput, CreateOAuthClientResult, OAuthClientView},
 };
 use crate::http::error::AppError;
 use nvbes_core::authz::parse_role;

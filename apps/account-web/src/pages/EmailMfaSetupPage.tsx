@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import StepUpForm from '@/components/StepUpForm';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { readAuthuser } from '@/identity.authuser';
 
 type EligibleEmail = {
   id: string;
@@ -18,7 +18,7 @@ type EligibleEmail = {
 
 export default function EmailMfaSetupPage() {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const navigate = useNavigate();
   const [step, setStep] = useState<'stepup' | 'select' | 'done'>('stepup');
   const [emails, setEmails] = useState<EligibleEmail[]>([]);
@@ -40,7 +40,10 @@ export default function EmailMfaSetupPage() {
   }, [step]);
 
   const navigateBack = () =>
-    void navigate({ to: '/account/mfa', search: authuserSearch(authuser) });
+    void navigate({
+      to: '/account/$accountIndex/mfa',
+      params: { accountIndex: authuser },
+    });
 
   if (step === 'stepup') {
     return (

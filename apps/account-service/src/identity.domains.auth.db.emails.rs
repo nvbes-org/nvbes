@@ -9,6 +9,7 @@ mod map;
 #[path = "identity.domains.auth.db.emails.policy.rs"]
 mod policy;
 
+pub(crate) use map::email_constraint_error;
 pub use policy::{
     active_email_recipients, primary_email_policy_hours, verified_mfa_eligible_emails,
 };
@@ -16,11 +17,17 @@ pub use policy::{
 pub async fn list_email_addresses(
     db: &PgPool,
     principal_id: Uuid,
+    cursor: Option<&nvbes_core::pagination::KeysetCursor>,
+    limit: i64,
 ) -> Result<Vec<EmailAddressView>, AppError> {
-    let sql = map::email_address_select_sql(
-        "WHERE principal_id = $1 AND deleted_at IS NULL ORDER BY is_primary DESC, created_at ASC",
-    );
-    let rows = sqlx::query(&sql).bind(principal_id).fetch_all(db).await?;
+    let rows = sqlx::query(
+        "SELECT id, principal_id, email, is_primary, verified_at, created_at, updated_at FROM user_email_addresses WHERE principal_id = $1 AND deleted_at IS NULL AND ($2::timestamp with time zone IS NULL OR (created_at, id) < ($2, $3)) ORDER BY created_at DESC, id DESC LIMIT $4",
+    )
+    .bind(principal_id)
+    .bind(cursor.map(|c| c.created_at))
+    .bind(cursor.map(|c| c.id))
+    .bind(limit)
+    .fetch_all(db).await?;
 
     Ok(rows.into_iter().map(map::email_address_view).collect())
 }

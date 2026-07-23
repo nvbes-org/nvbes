@@ -11,7 +11,10 @@ use uuid::Uuid;
 #[path = "identity.domains.authz.service.tenant.rs"]
 mod tenant;
 
-pub use tenant::{ensure_email_verified, ensure_tenant_management_access, resolve_admin_scope};
+pub use tenant::{
+    ensure_email_verified, ensure_tenant_context, ensure_tenant_management_access,
+    resolve_admin_scope,
+};
 
 pub async fn authorize_workspace_action(
     db: &PgPool,

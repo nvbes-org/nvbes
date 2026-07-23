@@ -2,7 +2,7 @@ use chrono::Utc;
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::{domains::cloud::workspace_port, http::error::AppError};
+use crate::{cloud_boundary::workspace_port, http::error::AppError};
 use nvbes_core::auth::Aal;
 use sqlx::PgPool;
 

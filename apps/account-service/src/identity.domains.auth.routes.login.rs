@@ -3,7 +3,7 @@ use crate::domains::auth::sessions;
 use crate::domains::auth::state::{AuthState, create_state, fetch_state};
 use crate::domains::auth::types::LoginResult;
 use crate::http::cookies::{
-    auth_cookie, auth_cookie_name_with_user, csrf_cookie, generate_csrf_token,
+    auth_cookie, auth_cookie_name, auth_cookie_name_with_user, csrf_cookie, generate_csrf_token,
 };
 use crate::http::error::AppError;
 use axum::{
@@ -38,6 +38,12 @@ pub(crate) struct LoginQuery {
     pub(crate) authuser: Option<String>,
 }
 
+impl LoginQuery {
+    pub(crate) fn authuser(&self) -> Result<&str, AppError> {
+        crate::http::authuser::normalize(self.authuser.as_deref())
+    }
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .merge(identifier::router())
@@ -49,13 +55,21 @@ pub fn router() -> Router<AppState> {
 pub(crate) struct LoginRequestMeta {
     ip: Option<String>,
     user_agent: Option<String>,
+    request_profile: sessions::cookie_theft::SessionRequestProfile,
+    installation_token: Option<String>,
 }
 
 impl LoginRequestMeta {
     pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
+        let request_profile = sessions::cookie_theft::SessionRequestProfile::from_headers(headers);
         Self {
-            ip: crate::http::request::client_ip(headers),
-            user_agent: crate::http::request::user_agent(headers),
+            ip: request_profile.ip.clone(),
+            user_agent: request_profile.user_agent.clone(),
+            request_profile,
+            installation_token: crate::http::request::cookie_value(
+                headers,
+                &["__Host-device=", "device="],
+            ),
         }
     }
 
@@ -73,6 +87,10 @@ impl LoginRequestMeta {
             self.ip.clone().unwrap_or_else(|| "unknown".to_string())
         )
     }
+
+    pub(crate) fn installation_token(&self) -> Option<&str> {
+        self.installation_token.as_deref()
+    }
 }
 
 pub(crate) fn login_session_context(
@@ -86,6 +104,8 @@ pub(crate) fn login_session_context(
         email,
         ip: meta.ip(),
         user_agent: meta.user_agent(),
+        request_profile: meta.request_profile.clone(),
+        installation_token: meta.installation_token.clone(),
         device_fingerprint,
         amr,
         acr,
@@ -97,10 +117,12 @@ pub(crate) fn login_response(
     authuser: &str,
     secure_cookie: bool,
     session_expires_in: i64,
+    csrf_secret: &str,
 ) -> Result<Response, AppError> {
     let session_cookie_name = auth_cookie_name_with_user("session", authuser, secure_cookie);
-    let session_cookie_value = result.session_token.clone();
-    let csrf_token = generate_csrf_token();
+    let session_cookie_value = result.browser_session_token.clone();
+    let device_cookie_token = result.device_cookie_token.clone();
+    let csrf_token = generate_csrf_token(&session_cookie_value, csrf_secret);
     let csrf_cookie_name = auth_cookie_name_with_user("csrf_token", authuser, secure_cookie);
 
     let mut response = (StatusCode::OK, Json(result)).into_response();
@@ -113,6 +135,17 @@ pub(crate) fn login_response(
             secure_cookie,
         )?,
     );
+    if let Some(device_cookie_token) = device_cookie_token {
+        response.headers_mut().append(
+            SET_COOKIE,
+            auth_cookie(
+                &auth_cookie_name("device", secure_cookie),
+                &device_cookie_token,
+                60 * 60 * 24 * 180,
+                secure_cookie,
+            )?,
+        );
+    }
     response.headers_mut().append(
         SET_COOKIE,
         csrf_cookie(

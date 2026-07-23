@@ -23,10 +23,18 @@ fn normalize_registration_kind_rejects_unknown_values() {
 
 #[test]
 fn shape_registration_options_sets_cross_platform_attachment_for_security_keys() {
-    let options = shape_registration_options(json!({ "publicKey": {} }), "security_key");
+    let options = shape_registration_options(
+        json!({ "publicKey": { "extensions": { "credProps": true } } }),
+        "security_key",
+    );
 
     assert_eq!(
         options["publicKey"]["authenticatorSelection"]["authenticatorAttachment"],
         "cross-platform"
     );
+    assert_eq!(
+        options["publicKey"]["authenticatorSelection"]["userVerification"],
+        "required"
+    );
+    assert_eq!(options["publicKey"]["extensions"]["credProps"], true);
 }

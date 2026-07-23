@@ -43,6 +43,9 @@ pub(crate) async fn challenge_identifier(
     )
     .await?;
 
+    let device_fingerprint =
+        crate::domains::auth::ua_client_hints::UserAgentClientHints::from_headers(&headers)
+            .enrich_device_profile(request.device_fingerprint);
     let challenge =
         super::identifier_flow::resolve_uniform_identifier_challenge(&state.db, &request.email)
             .await?;
@@ -53,7 +56,7 @@ pub(crate) async fn challenge_identifier(
         challenge.principal_id,
         &request.email,
         &challenge.next_step,
-        request.device_fingerprint,
+        device_fingerprint,
         challenge.available_methods,
     )
     .await

@@ -8,7 +8,7 @@ export default function LoginPage() {
   const transitionDirection = useLoginPageTransition(page.step);
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)]">
+    <div className="flex min-h-screen">
       {!page.checkingAuth && <LoginBrandPanel />}
       <LoginPageContent {...page} transitionDirection={transitionDirection} />
     </div>

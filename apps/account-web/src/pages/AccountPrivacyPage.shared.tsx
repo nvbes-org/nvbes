@@ -1,21 +1,36 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { CookieConsentSettings } from '../components/CookieConsentSettings';
+import { DEFAULT_CONSENT, getTrackingConsent } from '../tracking-consent';
 import { AccountPrivacyConsentList } from './AccountPrivacyConsentList';
-import { GpcStatusCard, PrivacyRightsCard } from './AccountPrivacyPage.cards';
+import { GpcStatusAlert, PrivacyDeleteCard, PrivacyExportCard } from './AccountPrivacyPage.cards';
 import { DeleteAccountDialog } from './AccountPrivacyPage.dialog';
+import { PrivacyOverviewCard } from './AccountPrivacyPage.overview';
+import { createPrivacyOverview } from './AccountPrivacyPage.presentation';
 import type { useAccountPrivacyPage } from './useAccountPrivacyPage';
+
 export { deleteAccount, exportAccountData } from './AccountPrivacyPage.api';
 export {
   ErrorMessage,
-  GpcStatusCard,
-  PrivacyRightsCard,
+  GpcStatusAlert,
+  PrivacyDeleteCard,
+  PrivacyExportCard,
   PrivacySkeleton,
   SuccessMessage,
 } from './AccountPrivacyPage.cards';
 export {
-  consentLabels,
   ConsentEmptyState,
   ConsentRow,
+  consentLabels,
   isVisibleConsentType,
 } from './AccountPrivacyPage.consents';
 export { DeleteAccountDialog } from './AccountPrivacyPage.dialog';
@@ -42,39 +57,81 @@ export function AccountPrivacyPageContent({
   onDelete,
   setShowDeleteDialog,
   setDeleteConfirmText,
+  handleCookieConsentChange,
 }: AccountPrivacyPageContentProps) {
+  const overview = createPrivacyOverview({
+    consents,
+    trackingConsent: getTrackingConsent() ?? DEFAULT_CONSENT,
+    gpcEnabled: Boolean(gpc?.gpc_enabled),
+  });
+
   return (
-    <div className="flex animate-fade-slide-up flex-col gap-6 [animation-delay:0ms]">
-      <div>
-        <h1 className="font-heading text-xl font-semibold">Consentements & vie privee</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Gerer vos consentements, vos donnees et vos droits RGPD.
-        </p>
+    <div className="flex animate-fade-slide-up flex-col gap-8 [animation-delay:0ms]">
+      <header className="flex max-w-3xl flex-col items-start gap-3">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            Vos données, vos choix.
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Comprenez ce qui est utilisé, changez vos préférences et exercez vos droits depuis un
+            seul endroit.
+          </p>
+        </div>
+      </header>
+
+      <PrivacyOverviewCard overview={overview} />
+
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Cookies et diagnostics</h2>
+            </CardTitle>
+            <CardDescription>
+              Choisissez précisément ce qui peut être utilisé au-delà du fonctionnement
+              indispensable du service.
+            </CardDescription>
+            <CardAction>
+              <Badge variant="secondary">
+                {overview.optionalEnabledCount}/{overview.optionalTotal} actifs
+              </Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <CookieConsentSettings
+              key={cookieConsentRevision}
+              onConsentChange={handleCookieConsentChange}
+            />
+          </CardContent>
+          <CardFooter>
+            <Button asChild variant="link">
+              <a href="/legal/privacy-policy">Lire la politique de confidentialité</a>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <GpcStatusAlert gpc={gpc} />
+        <AccountPrivacyConsentList consents={consents} onRevoke={handleRevoke} />
+
+        <div className="flex flex-col gap-2">
+          <h2 className="font-heading text-lg font-semibold">Exercer vos droits</h2>
+          <p className="text-sm text-muted-foreground">
+            Exportez vos informations ou lancez une suppression définitive.
+          </p>
+        </div>
+        <PrivacyExportCard
+          exporting={exporting}
+          exportSuccess={exportSuccess}
+          exportError={exportError}
+          onExport={onExport}
+        />
+        <PrivacyDeleteCard onOpenDelete={handleOpenDelete} />
       </div>
 
-      <AccountPrivacyConsentList consents={consents} onRevoke={handleRevoke} />
-
-      <Card className="animate-fade-slide-up [animation-delay:25ms]">
-        <CardHeader>
-          <CardTitle>Configuration des cookies & traceurs</CardTitle>
-          <CardDescription>
-            Gérez précisément vos choix par catégorie ou par fournisseur (vendors).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <CookieConsentSettings key={cookieConsentRevision} />
-        </CardContent>
-      </Card>
-
-      <GpcStatusCard gpc={gpc} />
-
-      <PrivacyRightsCard
-        exporting={exporting}
-        exportSuccess={exportSuccess}
-        exportError={exportError}
-        onExport={onExport}
-        onOpenDelete={handleOpenDelete}
-      />
+      <p className="text-xs text-muted-foreground">
+        Vos choix peuvent être modifiés à tout moment. Leur retrait n’affecte pas la licéité des
+        traitements déjà réalisés.
+      </p>
 
       <DeleteAccountDialog
         open={showDeleteDialog}

@@ -15,10 +15,7 @@ use crate::{
 };
 
 use super::service;
-use super::types::{
-    ListRecoveryReviewsInput, ListRecoveryReviewsResponse, ListSecurityEventsInput,
-    SecurityEventsResponse, WorkerQueueStatusResponse,
-};
+use super::types::{ListSecurityEventsInput, SecurityEventsResponse};
 
 pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new()
@@ -30,21 +27,9 @@ pub fn router(_state: &AppState) -> Router<AppState> {
             "/workspaces/{workspaceId}/security-events/export",
             get(export_security_events),
         )
-        .route(
-            "/workspaces/{workspaceId}/recovery-reviews",
-            get(list_recovery_reviews),
-        )
-        .route(
-            "/workspaces/{workspaceId}/worker-queue/status",
-            get(worker_queue_status),
-        )
 }
 
 fn security_events_action() -> WorkspaceAction {
-    WorkspaceAction::ExportAudit
-}
-
-fn worker_queue_action() -> WorkspaceAction {
     WorkspaceAction::ExportAudit
 }
 
@@ -55,7 +40,7 @@ fn worker_queue_action() -> WorkspaceAction {
     params(
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
         ("limit" = Option<i64>, Query, description = "Max results"),
-        ("before" = Option<Uuid>, Query, description = "Cursor for pagination"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
         ("geo_country_code" = Option<String>, Query, description = "Filter by resolved ISO country code"),
         ("geo_source" = Option<String>, Query, description = "Filter by geo source"),
         ("geo_confidence" = Option<String>, Query, description = "Filter by geo confidence"),
@@ -65,6 +50,7 @@ fn worker_queue_action() -> WorkspaceAction {
     ),
     responses(
         (status = 200, description = "Security events", body = SecurityEventsResponse),
+        (status = 400, description = "Invalid pagination cursor", body = ErrorEnvelope),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
@@ -135,99 +121,15 @@ pub(crate) async fn export_security_events(
     ))
 }
 
-#[utoipa::path(
-    get,
-    path = "/workspaces/{workspaceId}/recovery-reviews",
-    tag = "security",
-    params(
-        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
-        ("limit" = Option<i64>, Query, description = "Max results"),
-        ("before" = Option<Uuid>, Query, description = "Cursor ID for pagination"),
-    ),
-    responses(
-        (status = 200, description = "Recovery reviews", body = ListRecoveryReviewsResponse),
-        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
-        (status = 500, description = "Internal server error", body = ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn list_recovery_reviews(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(workspace_id): Path<Uuid>,
-    Query(query): Query<ListRecoveryReviewsInput>,
-) -> Result<Json<ListRecoveryReviewsResponse>, AppError> {
-    let access = authorize_workspace_action(
-        &state.db,
-        &state.redis,
-        &state.jwt,
-        &headers,
-        workspace_id,
-        security_events_action(),
-        ResourceContext::default(),
-    )
-    .await?;
-
-    let result = service::list_recovery_reviews(
-        &state.db,
-        &access,
-        query.limit,
-        query.before_created_at,
-        query.before_id,
-    )
-    .await?;
-    Ok(Json(result))
-}
-
-#[utoipa::path(
-    get,
-    path = "/workspaces/{workspaceId}/worker-queue/status",
-    tag = "security",
-    params(
-        ("workspaceId" = Uuid, Path, description = "Workspace ID"),
-    ),
-    responses(
-        (status = 200, description = "Identity email worker queue status", body = WorkerQueueStatusResponse),
-        (status = 401, description = "Unauthorized", body = ErrorEnvelope),
-        (status = 500, description = "Internal server error", body = ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn worker_queue_status(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(workspace_id): Path<Uuid>,
-) -> Result<Json<WorkerQueueStatusResponse>, AppError> {
-    let _access = authorize_workspace_action(
-        &state.db,
-        &state.redis,
-        &state.jwt,
-        &headers,
-        workspace_id,
-        worker_queue_action(),
-        ResourceContext::default(),
-    )
-    .await?;
-
-    let result = service::worker_queue_status(&state.redis, workspace_id).await?;
-    Ok(Json(result))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{security_events_action, worker_queue_action};
+    use super::security_events_action;
     use crate::domains::authz::WorkspaceAction;
 
     #[test]
     fn security_routes_use_export_audit_action() {
         assert!(matches!(
             security_events_action(),
-            WorkspaceAction::ExportAudit
-        ));
-    }
-
-    #[test]
-    fn worker_queue_route_uses_export_audit_action() {
-        assert!(matches!(
-            worker_queue_action(),
             WorkspaceAction::ExportAudit
         ));
     }

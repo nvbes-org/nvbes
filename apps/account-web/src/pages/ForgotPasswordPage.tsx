@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
     onError: () => setError('Une erreur est survenue. Veuillez reessayer.'),
   });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     mutation.mutate(email);

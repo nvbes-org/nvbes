@@ -163,7 +163,6 @@ pub(crate) async fn challenge_mfa(
     let result = sessions::create_session_for_principal(
         &state.db,
         &state.redis,
-        &state.jwt,
         &state.config,
         principal_id,
         super::login_session_context(
@@ -177,9 +176,15 @@ pub(crate) async fn challenge_mfa(
     .await?;
 
     let secure_cookie = state.config.environment != "development";
-    let authuser = query.authuser.as_deref().unwrap_or("0");
+    let authuser = query.authuser()?;
     let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
-    let response = super::login_response(result, authuser, secure_cookie, session_expires_in)?;
+    let response = super::login_response(
+        result,
+        authuser,
+        secure_cookie,
+        session_expires_in,
+        &state.config.jwt_secret,
+    )?;
     delete_state(&state.redis, request.state_token).await?;
     Ok(response)
 }

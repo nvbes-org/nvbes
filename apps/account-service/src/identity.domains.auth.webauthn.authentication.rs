@@ -4,8 +4,11 @@ use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
 use super::super::risk::{self, RiskDecision, RiskEventInput};
-use super::storage::{load_passkeys, persist_passkey};
 use super::types::StoredPasskeyAuthentication;
+use super::{
+    errors::map_webauthn_authentication_error,
+    storage::{load_passkeys, passkey_credentials, record_passkey_authentication},
+};
 use crate::http::error::AppError;
 
 pub async fn start_authentication(
@@ -24,15 +27,15 @@ pub async fn start_authentication(
             "No active WebAuthn credentials are configured.",
         ));
     }
-    let (request, authentication) =
-        webauthn
-            .start_passkey_authentication(&passkeys)
-            .map_err(|_| {
-                AppError::internal(
-                    "webauthn_auth_start_failed",
-                    "Failed to start WebAuthn authentication.",
-                )
-            })?;
+    let credentials = passkey_credentials(&passkeys);
+    let (request, authentication) = webauthn
+        .start_passkey_authentication(&credentials)
+        .map_err(|_| {
+            AppError::internal(
+                "webauthn_auth_start_failed",
+                "Failed to start WebAuthn authentication.",
+            )
+        })?;
 
     let challenge_id = Uuid::new_v4();
     nvbes_redis::auth_challenge::store_auth_challenge(
@@ -106,7 +109,7 @@ pub async fn finish_authentication(
     challenge_id: Uuid,
     credential: &PublicKeyCredential,
 ) -> Result<String, AppError> {
-    let challenge = nvbes_redis::auth_challenge::get_auth_challenge(redis, challenge_id)
+    let challenge = nvbes_redis::auth_challenge::take_auth_challenge(redis, challenge_id)
         .await
         .map_err(|err| AppError::internal("webauthn_challenge_load_failed", format!("{}", err)))?
         .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
@@ -136,21 +139,9 @@ pub async fn finish_authentication(
     let mut passkeys = load_passkeys(db, user_id).await?;
     let result = webauthn
         .finish_passkey_authentication(credential, &stored.authentication)
-        .map_err(|_| AppError::forbidden("webauthn_auth_failed", "WebAuthn assertion failed."))?;
+        .map_err(map_webauthn_authentication_error)?;
 
-    if let Some(passkey) = passkeys
-        .iter_mut()
-        .find(|passkey| passkey.cred_id() == result.cred_id())
-    {
-        passkey.update_credential(&result);
-        persist_passkey(db, user_id, passkey).await?;
-    }
-
-    nvbes_redis::auth_challenge::consume_auth_challenge(redis, challenge_id)
-        .await
-        .map_err(|err| {
-            AppError::internal("webauthn_challenge_consume_failed", format!("{}", err))
-        })?;
+    record_passkey_authentication(db, user_id, &mut passkeys, &result).await?;
 
     let _ = risk::record_event(
         db,

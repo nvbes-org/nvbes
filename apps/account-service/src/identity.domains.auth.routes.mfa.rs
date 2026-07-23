@@ -1,9 +1,10 @@
 use crate::app::AppState;
 use axum::Router;
 use axum::{
-    extract::{Extension, State},
+    extract::{Extension, Query, State},
     routing::get,
 };
+use serde::Deserialize;
 
 #[path = "identity.domains.auth.routes.mfa.email.rs"]
 pub mod email;
@@ -28,6 +29,10 @@ pub use webauthn::__path_webauthn_auth_start;
     get,
     path = "/auth/mfa/factors",
     tag = "auth",
+    params(
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
+    ),
     responses(
         (status = 200, description = "List of MFA factors", body = crate::domains::auth::types::MfaFactorsResult),
         (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
@@ -36,10 +41,19 @@ pub use webauthn::__path_webauthn_auth_start;
 pub(crate) async fn list_mfa_factors(
     State(state): State<AppState>,
     Extension(auth): Extension<crate::http::middleware::jwt::AuthContext>,
+    Query(query): Query<ListMfaFactorsQuery>,
 ) -> Result<axum::Json<crate::domains::auth::types::MfaFactorsResult>, crate::http::error::AppError>
 {
-    let result = crate::domains::auth::mfa::list_factors(&state.db, auth.user_id).await?;
+    let result =
+        crate::domains::auth::mfa::list_factors(&state.db, auth.user_id, query.limit, query.cursor)
+            .await?;
     Ok(axum::Json(result))
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ListMfaFactorsQuery {
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
 }
 
 pub fn router(state: &AppState) -> Router<AppState> {

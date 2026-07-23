@@ -26,6 +26,8 @@ async fn test_config(pool: &PgPool) -> AppState {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string()),
         environment: "development".to_string(),
         app_name: "account-service-test".to_string(),
+        email_provider: "mock".to_string(),
+        otp_provider: "mock".to_string(),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_password: std::env::var("NVBES_REDIS_PASSWORD")
@@ -52,9 +54,9 @@ async fn seed_login_subject(pool: &PgPool, email: &str, password: &str) -> (Uuid
 
     let tenant_id = Uuid::new_v4();
     let principal_id = Uuid::new_v4();
-    let workspace_id = Uuid::new_v4();
     let now = Utc::now();
-    let password_hash = crate::domains::auth::hash_password(password).expect("password should hash");
+    let password_hash =
+        crate::domains::auth::hash_password(password).expect("password should hash");
 
     sqlx::query(
         r#"
@@ -99,32 +101,6 @@ async fn seed_login_subject(pool: &PgPool, email: &str, password: &str) -> (Uuid
     .execute(pool)
     .await
     .expect("user insert should succeed");
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspaces (id, tenant_id, name, workspace_type, plan_code, created_at, updated_at)
-        VALUES ($1, $2, 'Test Workspace', 'personal', 'solo_pro', $3, $3)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(tenant_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .expect("workspace insert should succeed");
-
-    sqlx::query(
-        r#"
-        INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source, created_at, updated_at)
-        VALUES ($1, $2, 'owner', 'active', 'manual', $3, $3)
-        "#,
-    )
-    .bind(workspace_id)
-    .bind(principal_id)
-    .bind(now)
-    .execute(pool)
-    .await
-    .expect("membership insert should succeed");
 
     (tenant_id, principal_id)
 }

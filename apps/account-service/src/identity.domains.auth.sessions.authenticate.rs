@@ -4,9 +4,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::cache::{auth_context_from_cached_session, current_session_ttl, refresh_last_seen};
+use super::cookie_theft::{self, CookieTheftDecision, SessionRequestProfile};
 use crate::domains::auth::jwt::JwtService;
 use crate::domains::auth::types::AuthContext;
-use crate::domains::auth::{db as auth_db, mfa, password, sessions::cache};
+use crate::domains::auth::{audit, db as auth_db, mfa, risk, sessions::cache};
 use crate::http::error::AppError;
 
 pub async fn authenticate(
@@ -14,6 +15,26 @@ pub async fn authenticate(
     redis: &nvbes_redis::RedisPool,
     jwt: &JwtService,
     token: &str,
+) -> Result<AuthContext, AppError> {
+    authenticate_impl(db, redis, jwt, token, None).await
+}
+
+pub async fn authenticate_with_request(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    token: &str,
+    headers: &HeaderMap,
+) -> Result<AuthContext, AppError> {
+    authenticate_impl(db, redis, jwt, token, Some(headers)).await
+}
+
+async fn authenticate_impl(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    jwt: &JwtService,
+    token: &str,
+    headers: Option<&HeaderMap>,
 ) -> Result<AuthContext, AppError> {
     let claims = jwt.decode_token(token, "access")?;
     if claims.token_type != "access" {
@@ -27,18 +48,10 @@ pub async fn authenticate(
         .map_err(|e| AppError::unauthorized("invalid_subject", format!("{}", e)))?;
     let session_id = Uuid::parse_str(&claims.sid)
         .map_err(|e| AppError::unauthorized("invalid_session", format!("{}", e)))?;
-    let token_hash = password::token_hash(token);
-
     let mut session = get_cached_session(redis, session_id)
         .await?
         .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found."))?;
     if session.principal_id != principal_id.to_string() {
-        return Err(AppError::unauthorized(
-            "session_not_found",
-            "Session not found.",
-        ));
-    }
-    if session.token_hash != token_hash {
         return Err(AppError::unauthorized(
             "session_not_found",
             "Session not found.",
@@ -60,6 +73,13 @@ pub async fn authenticate(
         ));
     }
 
+    if let Some(headers) = headers {
+        enforce_cookie_theft_mitigation(db, redis, &mut session, principal_id, session_id, headers)
+            .await?;
+        super::activity::enforce(db, redis, &mut session, principal_id, session_id, headers)
+            .await?;
+    }
+
     refresh_last_seen(&mut session);
     let ttl = current_session_ttl(&session);
     let _ = nvbes_redis::session::set_session(redis, &session, ttl).await;
@@ -79,6 +99,106 @@ pub async fn authenticate(
         claims.scope,
         claims.cnf.map(|c| c.jkt),
     ))
+}
+
+pub(super) async fn enforce_cookie_theft_mitigation(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    session: &mut cache::CachedSession,
+    principal_id: Uuid,
+    session_id: Uuid,
+    headers: &HeaderMap,
+) -> Result<(), AppError> {
+    let profile = SessionRequestProfile::from_headers(headers);
+    if !cookie_theft::has_detection_profile(session) {
+        cookie_theft::apply_profile(session, &profile);
+        return Ok(());
+    }
+
+    let assessment = cookie_theft::assess(session, &profile);
+    session.cookie_theft_risk_score = Some(assessment.score);
+    session.risk_score = Some(session.risk_score.unwrap_or(0.0).max(assessment.score));
+    session.risk_decision = Some(
+        match assessment.decision {
+            CookieTheftDecision::Allow => "allow",
+            CookieTheftDecision::StepUp => "step_up",
+            CookieTheftDecision::Reauthenticate => "deny",
+        }
+        .to_string(),
+    );
+    if assessment.decision == CookieTheftDecision::Allow {
+        return Ok(());
+    }
+
+    let decision = match assessment.decision {
+        CookieTheftDecision::Allow => risk::RiskDecision::Allow,
+        CookieTheftDecision::StepUp => risk::RiskDecision::StepUp,
+        CookieTheftDecision::Reauthenticate => risk::RiskDecision::Deny,
+    };
+    session.cookie_theft_detected_at = Some(assessment.assessed_at);
+    let factors = serde_json::json!({
+        "cookie_theft_risk_score": assessment.score,
+        "factors": assessment.factors,
+        "decision": format!("{:?}", assessment.decision),
+    });
+    let _ = risk::record_event(
+        db,
+        risk::RiskEventInput {
+            principal_id,
+            session_id: Some(session_id),
+            device_id: None,
+            event_type: "cookie_theft_suspected".to_string(),
+            ip_address: profile.ip.clone(),
+            user_agent: profile.user_agent.clone(),
+            risk_score: assessment.score,
+            risk_factors: factors.clone(),
+            decision,
+            metadata: serde_json::json!({
+                "session_id": session_id,
+                "baseline_ip": session.ip.clone(),
+                "baseline_user_agent": session.user_agent.clone(),
+                "current_accept_language": profile.accept_language,
+                "current_sec_fetch_site": profile.sec_fetch_site,
+            }),
+        },
+    )
+    .await;
+    let _ = audit::record_auth_event(
+        db,
+        audit::AuthAuditInput {
+            principal_id,
+            action: "auth.cookie_theft_suspected",
+            target_type: "session",
+            target_id: Some(session_id),
+            ip: profile.ip.as_deref(),
+            user_agent: profile.user_agent.as_deref(),
+            metadata: factors,
+        },
+    )
+    .await;
+
+    if assessment.decision == CookieTheftDecision::Reauthenticate {
+        revoke_suspicious_session(redis, principal_id, session_id).await?;
+        return Err(AppError::unauthorized(
+            "session_reauthentication_required",
+            "Session reauthentication is required.",
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) async fn revoke_suspicious_session(
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+    session_id: Uuid,
+) -> Result<(), AppError> {
+    let _ =
+        nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, principal_id, session_id)
+            .await;
+    nvbes_redis::session::delete_session(redis, &principal_id.to_string(), &session_id.to_string())
+        .await
+        .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))
 }
 
 pub async fn authenticate_bearer(
@@ -117,7 +237,7 @@ pub async fn authenticate_verified_bearer(
     Ok(auth)
 }
 
-async fn get_cached_session(
+pub(super) async fn get_cached_session(
     redis: &nvbes_redis::RedisPool,
     session_id: Uuid,
 ) -> Result<Option<cache::CachedSession>, AppError> {
@@ -126,7 +246,7 @@ async fn get_cached_session(
         .map_err(|err| AppError::internal("redis_session_cache_read_failed", err.to_string()))
 }
 
-async fn build_user_record_from_cache(
+pub(super) async fn build_user_record_from_cache(
     session: &cache::CachedSession,
     db: &PgPool,
     principal_id: Uuid,

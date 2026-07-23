@@ -163,7 +163,6 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
     let result = crate::domains::auth::sessions::create_session_for_principal(
         &state.db,
         &state.redis,
-        &state.jwt,
         &state.config,
         principal_id,
         super::login_session_context(email, &meta, None, vec![method], "aal2"),
@@ -171,7 +170,13 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
     .await?;
 
     let secure_cookie = state.config.environment != "development";
-    let authuser = query.authuser.as_deref().unwrap_or("0");
+    let authuser = query.authuser()?;
     let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
-    super::login_response(result, authuser, secure_cookie, session_expires_in)
+    super::login_response(
+        result,
+        authuser,
+        secure_cookie,
+        session_expires_in,
+        &state.config.jwt_secret,
+    )
 }

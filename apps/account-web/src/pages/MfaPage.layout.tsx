@@ -56,14 +56,16 @@ export function MfaPageHeader({ onBack }: { onBack: () => void }) {
 
 export function MfaPageEmptyState() {
   return (
-    <Empty className="border">
+    <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <ShieldAlert />
         </EmptyMedia>
         <EmptyTitle>Aucun facteur configuré.</EmptyTitle>
         <EmptyDescription>
-          Ajoutez une méthode ci-dessous pour sécuriser votre compte.
+          Ajoutez une méthode d'authentification
+          <br />
+          ci-dessous pour sécuriser votre compte.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

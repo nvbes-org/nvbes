@@ -3,8 +3,8 @@ use sqlx::Row;
 use sqlx::postgres::PgPool;
 use uuid::Uuid;
 
-use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::auth::jwt::JwtService};
 use nvbes_redis::refresh_token as refresh_store;
 
 use super::{ClientAuthentication, TokenView};
@@ -236,6 +236,7 @@ pub async fn refresh_token(
             token_type: tokens.token_type,
             expires_in: tokens.expires_in,
             refresh_token: Some(tokens.refresh_token),
+            id_token: None,
             scope: refresh_scope,
             authorization_details,
             issued_token_type: None,

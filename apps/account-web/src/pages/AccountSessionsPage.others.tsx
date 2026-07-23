@@ -3,9 +3,10 @@ import type { RefObject } from 'react';
 import type { VirtualItem } from '@tanstack/react-virtual';
 import type { AccountSession } from '@nvbes/identity-client';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { parseUserAgent } from './AccountSessionsPage.device';
+import { deviceTrustLabel, parseUserAgent } from './AccountSessionsPage.device';
 
 export function OtherSessionsCard({
   sessions,
@@ -85,6 +86,9 @@ export function OtherSessionsCard({
                       {session.ip ? ` · ${session.ip}` : ''}
                     </span>
                   </div>
+                  <Badge variant="secondary" className="shrink-0">
+                    {deviceTrustLabel(session.device_trust_level)}
+                  </Badge>
                   <Button
                     variant="ghost"
                     size="icon-sm"

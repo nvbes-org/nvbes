@@ -1,7 +1,7 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::{domains::developer::grpc as developer_grpc, http::error::AppError};
+use crate::{developer_client, http::error::AppError};
 
 pub trait OAuthManagementAuth {
     fn user_id(&self) -> Uuid;
@@ -47,7 +47,7 @@ pub async fn verify_client_secret_with_overlap(
         return Ok(());
     }
 
-    if developer_grpc::verify_client_secret_version(tenant_id, client_id, secret).await? {
+    if developer_client::verify_client_secret_version(tenant_id, client_id, secret).await? {
         return Ok(());
     }
 
@@ -175,7 +175,6 @@ pub async fn client_uuid_by_client_id(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::domains::oauth::validation::{
         validate_redirect_uri_allowed, validate_redirect_uri_match,
     };

@@ -22,6 +22,8 @@ pub(crate) async fn enforce_identifier_request_guards(
     .await?;
 
     if request.decoy_link_clicked == Some(true) {
+        crate::domains::auth::bot_response::record_decision("block", "decoy_link_clicked");
+        crate::domains::auth::bot_response::apply_tarpit(1.0).await;
         return Err(AppError::forbidden(
             "decoy_link_clicked",
             "Bot detected: decoy link was clicked.",
@@ -29,25 +31,40 @@ pub(crate) async fn enforce_identifier_request_guards(
     }
 
     if let Some(proof) = &request.bot_guard {
-        crate::domains::auth::bot_guard::verify(proof, "login_identifier", &config.jwt_secret)?;
+        if let Err(error) =
+            crate::domains::auth::bot_guard::verify(proof, "login_identifier", &config.jwt_secret)
+        {
+            crate::domains::auth::bot_response::record_decision("block", "bot_guard_proof");
+            crate::domains::auth::bot_response::apply_tarpit(1.0).await;
+            return Err(error);
+        }
     }
 
-    enforce_bot_score(headers, meta, request)?;
+    enforce_bot_score(headers, meta, request).await?;
     Ok(())
 }
 
-fn enforce_bot_score(
+async fn enforce_bot_score(
     headers: &HeaderMap,
     meta: &LoginRequestMeta,
     request: &IdentifierRequest,
 ) -> Result<(), AppError> {
     let ip = meta.ip().unwrap_or_else(|| "unknown".to_string());
     let http_scores = crate::domains::auth::http_signals::extract_http_signals(headers, &ip)?;
-    let mut bot_score = http_scores.total();
+    let ua_client_hints =
+        crate::domains::auth::ua_client_hints::UserAgentClientHints::from_headers(headers);
+    let ua_ch_assessment = ua_client_hints.assess_consistency(
+        meta.user_agent().as_deref(),
+        request.bot_signals.as_ref(),
+        request.device_fingerprint.as_ref(),
+    );
+    let mut bot_score = (http_scores.total() + ua_ch_assessment.score).min(1.0);
     let mut bot_factors = json!({
         "interval_score": http_scores.interval_score,
         "header_order_score": http_scores.header_order_score,
         "ua_language_score": http_scores.ua_language_score,
+        "ua_ch_score": ua_ch_assessment.score,
+        "ua_ch_factors": ua_ch_assessment.factors,
     });
 
     if let Some(signals) = &request.bot_signals {
@@ -60,6 +77,8 @@ fn enforce_bot_score(
     }
 
     if bot_score >= 0.80 {
+        crate::domains::auth::bot_response::record_decision("block", "bot_score_high");
+        crate::domains::auth::bot_response::apply_tarpit(bot_score).await;
         tracing::warn!(bot_score, ip = %ip, "Bot guard: request blocked");
         return Err(AppError::forbidden(
             "bot_detected",
@@ -67,7 +86,10 @@ fn enforce_bot_score(
         ));
     }
     if bot_score >= 0.60 {
+        crate::domains::auth::bot_response::record_decision("monitor", "bot_score_elevated");
         tracing::info!(bot_score, ip = %ip, "Bot guard: elevated risk, monitoring");
+    } else {
+        crate::domains::auth::bot_response::record_decision("allow", "bot_score_low");
     }
 
     tracing::debug!(bot_score, factors = %bot_factors, "Bot guard score computed");

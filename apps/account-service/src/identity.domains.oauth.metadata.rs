@@ -77,6 +77,7 @@ pub async fn oauth_authorization_server_metadata(
             "sid",
             "email",
             "email_verified",
+            "nonce",
             "display_name",
             "preferred_username",
             "tenant_id",

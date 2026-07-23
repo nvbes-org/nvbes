@@ -14,7 +14,7 @@ pub(crate) async fn resolve_uniform_identifier_challenge(
     email: &str,
 ) -> Result<IdentifierChallenge, AppError> {
     if let Some(policy) =
-        crate::domains::federation::sso_policy::required_sso_policy_for_email(db, email).await?
+        crate::domains::auth::sso_policy::required_sso_policy_for_email(db, email).await?
     {
         return Ok(IdentifierChallenge {
             principal_id: None,

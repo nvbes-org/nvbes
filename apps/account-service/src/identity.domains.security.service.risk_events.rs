@@ -1,3 +1,4 @@
+use nvbes_core::pagination::KeysetCursor;
 use serde_json::Value;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -36,7 +37,7 @@ impl SecurityEventFilters {
 pub(super) async fn fetch_risk_events(
     db: &PgPool,
     tenant_id: Option<Uuid>,
-    before_id: Option<Uuid>,
+    cursor: Option<KeysetCursor>,
     limit: i64,
     filters: &SecurityEventFilters,
 ) -> Result<Vec<RiskEventView>, AppError> {
@@ -86,48 +87,51 @@ pub(super) async fn fetch_risk_events(
           FROM principals
           WHERE tenant_id = $1
         )
-          AND ($2::uuid IS NULL OR id < $2)
           AND (
-            $4::text IS NULL OR upper(COALESCE(
+            $2::timestamptz IS NULL
+            OR (created_at, id) < ($2, $3)
+          )
+          AND (
+            $5::text IS NULL OR upper(COALESCE(
               risk_factors->>'geo_country_code',
               risk_factors #>> '{geo,country_code}',
               metadata #>> '{geo,geo_country_code}',
               metadata->>'geo_country_code'
-            )) = upper($4)
+            )) = upper($5)
           )
           AND (
-            $5::text IS NULL OR COALESCE(
+            $6::text IS NULL OR COALESCE(
               risk_factors->>'geo_source',
               risk_factors #>> '{geo,source}',
               metadata #>> '{geo,geo_source}',
               metadata->>'geo_source'
-            ) = $5
-          )
-          AND (
-            $6::text IS NULL OR COALESCE(
-              risk_factors->>'geo_confidence',
-              risk_factors #>> '{geo,confidence}',
-              metadata #>> '{geo,geo_confidence}',
-              metadata->>'geo_confidence'
             ) = $6
           )
           AND (
             $7::text IS NULL OR COALESCE(
-              risk_factors->>'geo_network_kind',
-              metadata #>> '{geo,geo_network_kind}',
-              metadata->>'geo_network_kind'
+              risk_factors->>'geo_confidence',
+              risk_factors #>> '{geo,confidence}',
+              metadata #>> '{geo,geo_confidence}',
+              metadata->>'geo_confidence'
             ) = $7
           )
           AND (
-            $8::bigint IS NULL OR COALESCE(
+            $8::text IS NULL OR COALESCE(
+              risk_factors->>'geo_network_kind',
+              metadata #>> '{geo,geo_network_kind}',
+              metadata->>'geo_network_kind'
+            ) = $8
+          )
+          AND (
+            $9::bigint IS NULL OR COALESCE(
               NULLIF(risk_factors->>'geo_risk_score', '')::bigint,
               NULLIF(metadata #>> '{geo,geo_risk_score}', '')::bigint,
               NULLIF(metadata->>'geo_risk_score', '')::bigint,
               0
-            ) >= $8
+            ) >= $9
           )
           AND (
-            $9::text IS NULL OR EXISTS (
+            $10::text IS NULL OR EXISTS (
               SELECT 1
               FROM jsonb_array_elements_text(COALESCE(
                 risk_factors->'geo_risk_labels',
@@ -135,15 +139,16 @@ pub(super) async fn fetch_risk_events(
                 metadata->'geo_risk_labels',
                 '[]'::jsonb
               )) AS label(value)
-              WHERE lower(label.value) = $9
+              WHERE lower(label.value) = $10
             )
           )
         ORDER BY created_at DESC, id DESC
-        LIMIT $3
+        LIMIT $4
         "#,
     )
     .bind(tenant_id)
-    .bind(before_id)
+    .bind(cursor.map(|value| value.created_at))
+    .bind(cursor.map(|value| value.id))
     .bind(limit)
     .bind(filters.geo_country_code.as_deref())
     .bind(filters.geo_source.as_deref())

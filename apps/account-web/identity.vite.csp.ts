@@ -1,8 +1,12 @@
 import type { Plugin } from 'vite-plus';
-
-export const permissionsPolicy =
-  'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
-export const integrityPolicyStyles = 'blocked-destinations=(style)';
+import {
+  buildWebCsp,
+  cspMetaFromHeader,
+  integrityPolicyScripts,
+  originFromUrl,
+  permissionsPolicy,
+  uaClientHintsHeaders,
+} from '../../libs/ts/web-runtime/src/csp';
 
 export function getCsp(
   mode: string,
@@ -16,18 +20,18 @@ export function getCsp(
   const posthogConnect = posthogConnectUrl ? ` ${posthogConnectUrl}` : '';
   const faroConnect = faroConnectUrl ? ` ${faroConnectUrl}` : '';
 
-  if (isDev) {
-    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* http://localhost:*${sentryConnect}${posthogConnect}${faroConnect} http://localhost:8080; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
-  }
-  return `default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'${sentryConnect}${posthogConnect}${faroConnect}; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
-}
-
-export function originFromUrl(value: string): string {
-  try {
-    return value ? new URL(value).origin : '';
-  } catch {
-    return '';
-  }
+  return buildWebCsp({
+    mode,
+    styleSrc: ['https://fonts.googleapis.com'],
+    imgSrc: ['https:', ...(isDev ? ['http://localhost:*', 'http://127.0.0.1:*'] : [])],
+    fontSrc: ['https://fonts.gstatic.com'],
+    connectSrc: [
+      sentryConnect.trim(),
+      posthogConnect.trim(),
+      faroConnect.trim(),
+      ...(isDev ? ['http://localhost:8080', 'http://localhost:*', 'http://127.0.0.1:*'] : []),
+    ],
+  });
 }
 
 export function cspPlugin(
@@ -52,7 +56,7 @@ function getMetaCsp(
   posthogConnectUrl: string,
   faroConnectUrl: string,
 ): string {
-  return getCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl)
-    .replace("; frame-ancestors 'none'", '')
-    .replace('; report-uri /csp-report', '');
+  return cspMetaFromHeader(getCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl));
 }
+
+export { integrityPolicyScripts, originFromUrl, permissionsPolicy, uaClientHintsHeaders };

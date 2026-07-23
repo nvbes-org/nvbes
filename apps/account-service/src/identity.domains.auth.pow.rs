@@ -33,6 +33,7 @@ pub async fn issue_challenge(
 }
 
 pub async fn verify_solution(db: &PgPool, nonce: &str, solution: &str) -> Result<(), AppError> {
+    let mut transaction = db.begin().await?;
     let row = sqlx::query(
         r#"
         SELECT difficulty, expires_at, consumed_at
@@ -42,7 +43,7 @@ pub async fn verify_solution(db: &PgPool, nonce: &str, solution: &str) -> Result
         "#,
     )
     .bind(nonce)
-    .fetch_optional(db)
+    .fetch_optional(&mut *transaction)
     .await?
     .ok_or_else(|| AppError::bad_request("pow_invalid_nonce", "Invalid or expired PoW nonce."))?;
 
@@ -72,8 +73,9 @@ pub async fn verify_solution(db: &PgPool, nonce: &str, solution: &str) -> Result
 
     sqlx::query("UPDATE pow_challenges SET consumed_at = NOW() WHERE nonce = $1")
         .bind(nonce)
-        .execute(db)
+        .execute(&mut *transaction)
         .await?;
+    transaction.commit().await?;
 
     Ok(())
 }

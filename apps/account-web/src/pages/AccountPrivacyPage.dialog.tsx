@@ -7,9 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-
-import { ErrorMessage } from './AccountPrivacyPage.cards';
+import { Spinner } from '@/components/ui/spinner';
 
 export function DeleteAccountDialog({
   open,
@@ -32,22 +32,33 @@ export function DeleteAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Supprimer votre compte</DialogTitle>
+          <DialogTitle>Confirmer la suppression</DialogTitle>
           <DialogDescription>
-            Cette action est irreversible. Toutes vos donnees, workspaces et abonnements seront
-            definitivement supprimes. Tapez SUPPRIMER pour confirmer.
+            Cette action est irréversible. Votre compte, vos espaces et vos données seront
+            définitivement supprimés.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <Input
-            type="text"
-            placeholder="SUPPRIMER"
-            value={deleteConfirmText}
-            onChange={(event) => onDeleteConfirmTextChange(event.target.value)}
-            autoFocus
-          />
-          {deleteError && <ErrorMessage message={deleteError} />}
-        </div>
+        <FieldGroup>
+          <Field data-invalid={Boolean(deleteError)}>
+            <FieldLabel htmlFor="delete-account-confirmation">
+              Tapez SUPPRIMER pour confirmer
+            </FieldLabel>
+            <Input
+              id="delete-account-confirmation"
+              type="text"
+              placeholder="SUPPRIMER"
+              value={deleteConfirmText}
+              onChange={(event) => onDeleteConfirmTextChange(event.target.value)}
+              aria-invalid={Boolean(deleteError)}
+              autoComplete="off"
+              autoFocus
+            />
+            <FieldDescription>
+              Cette confirmation évite une suppression accidentelle.
+            </FieldDescription>
+            <FieldError>{deleteError}</FieldError>
+          </Field>
+        </FieldGroup>
         <DialogFooter>
           <Button
             type="button"
@@ -63,7 +74,8 @@ export function DeleteAccountDialog({
             onClick={onDelete}
             disabled={deleting || deleteConfirmText !== 'SUPPRIMER'}
           >
-            {deleting ? 'Suppression...' : 'Supprimer definitivement'}
+            {deleting && <Spinner data-icon="inline-start" />}
+            {deleting ? 'Suppression…' : 'Supprimer définitivement'}
           </Button>
         </DialogFooter>
       </DialogContent>

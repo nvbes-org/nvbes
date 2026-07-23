@@ -30,6 +30,33 @@ async fn require_oauth_management_tenant(
     Ok(tenant_id)
 }
 
+async fn require_oauth_consent_tenant(
+    db: &sqlx::PgPool,
+    auth: &(impl super::logic::OAuthManagementAuth + crate::domains::authz::TenantManagementAuth),
+) -> Result<Uuid, AppError> {
+    let tenant_id = super::logic::OAuthManagementAuth::tenant_id(auth).ok_or_else(|| {
+        AppError::forbidden(
+            "tenant_context_required",
+            "A tenant context is required before using OAuth.",
+        )
+    })?;
+    crate::domains::authz::ensure_tenant_context(auth, tenant_id)?;
+    let active = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (SELECT 1 FROM tenant_memberships WHERE tenant_id = $1 AND principal_id = $2 AND status = 'active')",
+    )
+    .bind(tenant_id)
+    .bind(super::logic::OAuthManagementAuth::user_id(auth))
+    .fetch_one(db)
+    .await?;
+    if !active {
+        return Err(AppError::forbidden(
+            "tenant_membership_required",
+            "An active tenant membership is required.",
+        ));
+    }
+    Ok(tenant_id)
+}
+
 fn map_client_policy_row_with_client_id(
     row: &PgRow,
     client_id: Uuid,

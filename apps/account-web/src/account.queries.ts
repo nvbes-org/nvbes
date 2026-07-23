@@ -21,16 +21,12 @@ export function accountContextQueryOptions(authuser: string) {
   return queryOptions({
     queryKey: accountQueryKeys.context(authuser),
     queryFn: async ({ signal }) => {
-      const [meResult, workspaces, accounts] = await Promise.allSettled([
-        identityClient.getMe({ signal }),
-        identityClient.listWorkspaces({ signal }),
-        identityClient.listAccounts({ signal }),
-      ]);
+      const me = await identityClient.getMe({ signal });
+      const accounts = await identityClient.listAccounts({ signal }).catch(() => []);
 
       return {
-        me: meResult.status === 'fulfilled' ? meResult.value : null,
-        workspaces: workspaces.status === 'fulfilled' ? workspaces.value : [],
-        accounts: accounts.status === 'fulfilled' ? accounts.value : [],
+        me,
+        accounts,
       };
     },
     staleTime: 30 * 1000,

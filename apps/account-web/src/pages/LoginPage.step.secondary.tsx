@@ -14,11 +14,13 @@ export function LoginPageSecondaryStepContent({
   hasWebAuthn,
   hostedConsent,
   loading,
+  loginStateToken,
   mfaMethod,
   oauthRequest,
   emailCode,
   recoveryCode,
   resetToIdentifier,
+  resendLoginMfaEmailCode,
   setError,
   setMfaMethod,
   setEmailCode,
@@ -39,11 +41,13 @@ export function LoginPageSecondaryStepContent({
   | 'hasWebAuthn'
   | 'hostedConsent'
   | 'loading'
+  | 'loginStateToken'
   | 'mfaMethod'
   | 'oauthRequest'
   | 'emailCode'
   | 'recoveryCode'
   | 'resetToIdentifier'
+  | 'resendLoginMfaEmailCode'
   | 'setError'
   | 'setMfaMethod'
   | 'setEmailCode'
@@ -76,6 +80,7 @@ export function LoginPageSecondaryStepContent({
     <LoginPageMfaStep
       error={error}
       loading={loading}
+      loginStateToken={loginStateToken}
       mfaMethod={mfaMethod}
       hasTotp={hasTotp}
       hasEmail={hasEmail}
@@ -95,6 +100,7 @@ export function LoginPageSecondaryStepContent({
         setError(null);
       }}
       onResetToIdentifier={resetToIdentifier}
+      onResendEmailCode={resendLoginMfaEmailCode}
     />
   );
 }

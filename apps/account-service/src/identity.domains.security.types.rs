@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ListSecurityEventsInput {
     pub limit: Option<i64>,
-    pub before_id: Option<Uuid>,
+    pub cursor: Option<String>,
     pub geo_country_code: Option<String>,
     pub geo_source: Option<String>,
     pub geo_confidence: Option<String>,
@@ -19,7 +19,8 @@ pub struct ListSecurityEventsInput {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct SecurityEventsResponse {
     pub events: Vec<SecurityEventView>,
-    pub next_cursor: Option<Uuid>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
     pub summary: SecurityEventsSummary,
 }
 
@@ -64,34 +65,6 @@ pub struct SecurityExportResponse {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ListRecoveryReviewsResponse {
-    pub workspace_id: Uuid,
-    pub requests: Vec<RecoveryReviewView>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct ListRecoveryReviewsInput {
-    pub limit: Option<i64>,
-    pub before_created_at: Option<DateTime<Utc>>,
-    pub before_id: Option<Uuid>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct WorkerQueueStatusResponse {
-    pub workspace_id: Uuid,
-    pub queue_name: String,
-    pub snapshot_at: DateTime<Utc>,
-    pub statuses: Vec<WorkerQueueStatusView>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct WorkerQueueStatusView {
-    pub status: String,
-    pub depth: i64,
-    pub oldest_age_seconds: Option<f64>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
 pub struct RiskEventView {
     pub id: Uuid,
     pub principal_id: Uuid,
@@ -111,22 +84,6 @@ pub struct RiskEventView {
     pub geo_risk_score: Option<i64>,
     pub geo_risk_labels: Vec<String>,
     pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct RecoveryReviewView {
-    pub request_id: Uuid,
-    pub principal_id: Uuid,
-    pub email: String,
-    pub status: String,
-    pub available_at: DateTime<Utc>,
-    pub approved_by_principal_id: Option<Uuid>,
-    pub approved_at: Option<DateTime<Utc>>,
-    pub review_available_at: Option<DateTime<Utc>>,
-    pub secondary_approved_by_principal_id: Option<Uuid>,
-    pub secondary_approved_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[cfg(test)]

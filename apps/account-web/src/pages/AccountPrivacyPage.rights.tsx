@@ -1,84 +1,82 @@
 import { Download, ShieldAlert } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { ErrorMessage, SuccessMessage } from './AccountPrivacyPage.feedback';
 
-export function PrivacyRightsCard({
+export function PrivacyExportCard({
   exporting,
   exportSuccess,
   exportError,
   onExport,
-  onOpenDelete,
 }: {
   exporting: boolean;
   exportSuccess: boolean;
   exportError: string | null;
   onExport: () => void;
-  onOpenDelete: () => void;
 }) {
   return (
-    <Card className="animate-fade-slide-up [animation-delay:100ms]">
+    <Card>
       <CardHeader>
-        <CardTitle>Vos droits RGPD</CardTitle>
+        <CardTitle>
+          <h3>Récupérer vos données</h3>
+        </CardTitle>
         <CardDescription>
-          Conformement au reglement general sur la protection des donnees, vous disposez des droits
-          suivants.
+          Demandez une copie portable des données personnelles associées à votre compte.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-3 py-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-              <Download className="size-4 text-muted-foreground" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <span className="text-sm font-medium">Exporter mes donnees</span>
-              <span className="text-xs text-muted-foreground">
-                Recevez une copie de vos donnees personnelles au format JSON.
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={onExport}
-            disabled={exporting}
-          >
-            {exporting ? 'Export...' : 'Exporter'}
-          </Button>
-        </div>
+      <CardContent className="flex flex-col gap-3">
         {exportSuccess && (
-          <SuccessMessage message="Votre demande d'export a ete enregistree. Vous recevrez vos donnees par email dans un delai de 30 jours." />
+          <SuccessMessage message="Votre demande est enregistrée. Vous recevrez vos données par e-mail dès que l’export sera prêt." />
         )}
         {exportError && <ErrorMessage message={exportError} />}
-
-        <Separator className="my-1" />
-
-        <div className="flex items-center justify-between gap-3 py-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-              <ShieldAlert className="size-4 text-destructive/70" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <span className="text-sm font-medium">Supprimer mon compte</span>
-              <span className="text-xs text-muted-foreground">
-                Supprimez definitivement votre compte et toutes vos donnees.
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
-            onClick={onOpenDelete}
-          >
-            Supprimer
-          </Button>
-        </div>
       </CardContent>
+      <CardFooter className="justify-start">
+        <Button onClick={onExport} disabled={exporting}>
+          {exporting ? <Spinner data-icon="inline-start" /> : <Download data-icon="inline-start" />}
+          {exporting ? 'Préparation…' : 'Préparer mon export'}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+export function PrivacyDeleteCard({ onOpenDelete }: { onOpenDelete: () => void }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h3>Supprimer votre compte</h3>
+        </CardTitle>
+        <CardDescription>
+          Efface définitivement votre compte et lance la suppression des données associées.
+        </CardDescription>
+        <CardAction>
+          <Badge variant="destructive">Irréversible</Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Les obligations légales de conservation peuvent imposer de garder certaines traces
+          limitées pendant leur durée réglementaire.
+        </p>
+      </CardContent>
+      <CardFooter>
+        <Button variant="destructive" onClick={onOpenDelete}>
+          <ShieldAlert data-icon="inline-start" />
+          Commencer la suppression
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

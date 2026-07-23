@@ -3,9 +3,7 @@ use nvbes_core::config::AppConfig;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use super::{
-    generate_random_token, log_dev_token, normalize_email, token_hash, types::*, validate_email,
-};
+use super::{generate_random_token, normalize_email, token_hash, types::*, validate_email};
 use crate::http::error::AppError;
 
 const CLEANUP_ADVISORY_LOCK_ID: i64 = 20260519;
@@ -44,6 +42,38 @@ pub async fn issue_verification_email_tx(
     .map_err(|err| AppError::internal("email_verification_token_store_failed", err.to_string()))?;
 
     Ok(now)
+}
+
+pub async fn enqueue_verification_email(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    config: &AppConfig,
+    principal_id: Uuid,
+    email: &str,
+    display_name: &str,
+    verification_token: &str,
+) -> Result<(), AppError> {
+    let email_msg = crate::email::templates::verification_email(
+        config,
+        email,
+        display_name,
+        verification_token,
+    )?;
+    crate::email::jobs::enqueue_email_job_tx(
+        db,
+        redis,
+        crate::email::jobs::EmailSendPayload {
+            to_email: email.to_string(),
+            to_name: Some(display_name.to_string()),
+            subject: email_msg.subject,
+            html_body: email_msg.html_body.unwrap_or_default(),
+            text_body: email_msg.text_body,
+            business_type: "verification".to_string(),
+        },
+        &format!("verify:{}:{}", principal_id, token_hash(verification_token)),
+    )
+    .await
+    .map_err(AppError::from)
 }
 
 pub async fn resend_verification_email(
@@ -146,36 +176,16 @@ pub async fn resend_verification_email(
         &verification_token,
     )
     .await?;
-    let email_msg = crate::email::templates::verification_email(
+    enqueue_verification_email(
+        db,
+        redis,
         config,
+        principal_id,
         &email,
         &display_name,
         &verification_token,
-    )?;
-    crate::email::jobs::enqueue_email_job_tx(
-        db,
-        redis,
-        crate::email::jobs::EmailSendPayload {
-            to_email: email.to_string(),
-            to_name: Some(display_name.to_string()),
-            subject: email_msg.subject,
-            html_body: email_msg.html_body.unwrap_or_default(),
-            text_body: email_msg.text_body,
-            business_type: "verification".to_string(),
-        },
-        &format!(
-            "verify:{}:{}",
-            principal_id,
-            token_hash(&verification_token)
-        ),
     )
     .await?;
-    log_dev_token(
-        &verification_token,
-        &config.environment,
-        "email_verification",
-    );
-
     Ok(ResendVerificationResult {
         success: true,
         email_verified: false,

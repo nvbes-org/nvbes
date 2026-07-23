@@ -1,10 +1,15 @@
 use jsonwebtoken::{Algorithm, Header};
+use serde::Serialize;
 
 use super::types::{JwtService, Signer, TokenClaims};
 use crate::http::error::AppError;
 
 impl JwtService {
     pub(crate) fn encode_token(&self, claims: &TokenClaims) -> Result<String, AppError> {
+        self.encode_claims(claims)
+    }
+
+    pub(crate) fn encode_claims<T: Serialize>(&self, claims: &T) -> Result<String, AppError> {
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(self.kid.clone());
 

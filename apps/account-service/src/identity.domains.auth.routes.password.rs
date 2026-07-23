@@ -2,12 +2,10 @@ use crate::app::AppState;
 use crate::domains::auth::exposed_credentials;
 use crate::domains::auth::password;
 use crate::domains::auth::types::ChangePasswordInput;
-use crate::domains::auth::verification::require_recent_step_up;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
 use crate::http::request::{client_ip, user_agent};
 use axum::{Json, Router, extract::Extension, extract::State, http::HeaderMap, routing::post};
-use nvbes_core::auth::Aal;
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -19,13 +17,6 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         .route(
             "/password/change",
             post(change_password).layer(axum::middleware::from_fn_with_state(
-                _state.clone(),
-                jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/password/recovery/approve",
-            post(approve_recovery).layer(axum::middleware::from_fn_with_state(
                 _state.clone(),
                 jwt_auth_middleware,
             )),
@@ -43,12 +34,6 @@ pub(crate) struct ForgotPasswordRequest {
 pub(crate) struct ResetPasswordRequest {
     token: String,
     new_password: String,
-}
-
-#[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub(crate) struct ApproveRecoveryRequest {
-    email: String,
 }
 
 #[utoipa::path(
@@ -128,7 +113,6 @@ pub(crate) async fn forgot_password(
             email: request.email,
         },
         state.config.auth_password_reset_ttl_minutes,
-        &state.config.environment,
         client_ip(&headers),
         user_agent(&headers),
     )
@@ -180,63 +164,4 @@ pub(crate) async fn reset_password(
     .await?;
 
     Ok(Json(result))
-}
-
-#[utoipa::path(
-    post,
-    path = "/auth/password/recovery/approve",
-    tag = "auth",
-    request_body = ApproveRecoveryRequest,
-    responses(
-        (status = 200, description = "Recovery approved", body = crate::domains::auth::types::ApproveRecoveryResult),
-        (status = 401, description = "Unauthorized or insufficient AAL", body = ErrorEnvelope),
-        (status = 429, description = "Rate limited", body = ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn approve_recovery(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Extension(auth): Extension<crate::http::middleware::jwt::AuthContext>,
-    Json(request): Json<ApproveRecoveryRequest>,
-) -> Result<Json<crate::domains::auth::types::ApproveRecoveryResult>, AppError> {
-    crate::domains::auth::check_rate_limit(
-        &state.redis,
-        "auth_recovery_approve",
-        &format!(
-            "ip:{}",
-            crate::http::request::client_ip(&headers).unwrap_or_else(|| "unknown".to_string())
-        ),
-        10,
-        std::time::Duration::from_secs(300),
-    )
-    .await?;
-
-    require_recent_step_up(&state.redis, &auth, Some(approve_recovery_required_aal())).await?;
-
-    let result = password::approve_enterprise_recovery(
-        &state.db,
-        &state.redis,
-        auth.user_id,
-        &request.email,
-        state.config.auth_password_reset_ttl_minutes,
-        &state.config.environment,
-    )
-    .await?;
-
-    Ok(Json(result))
-}
-
-fn approve_recovery_required_aal() -> Aal {
-    Aal::Aal2
-}
-
-#[cfg(test)]
-mod tests {
-    use super::approve_recovery_required_aal;
-    use nvbes_core::auth::Aal;
-
-    #[test]
-    fn approve_recovery_requires_aal2_step_up() {
-        assert_eq!(approve_recovery_required_aal(), Aal::Aal2);
-    }
 }

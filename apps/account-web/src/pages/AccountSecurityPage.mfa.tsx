@@ -1,9 +1,8 @@
 import { Key, Monitor, ShieldCheck, ShieldOff } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import type { SecurityOverview } from './useAccountSecurityPage';
+import { Card, CardContent } from '@/components/ui/card';
 import { SecurityActionRow } from './AccountSecurityPage.row';
+import type { SecurityOverview } from './useAccountSecurityPage';
 
 export function SecurityMfaCard({
   overview,
@@ -20,13 +19,7 @@ export function SecurityMfaCard({
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Authentification multi-facteurs</CardTitle>
-        <CardDescription>
-          Ajoutez une couche de securite supplementaire a votre compte.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      <CardContent className="flex flex-col">
         <SecurityActionRow
           icon={overview.mfa_enabled ? ShieldCheck : ShieldOff}
           iconColor={overview.mfa_enabled ? 'size-4 text-primary' : 'size-4 text-muted-foreground'}
@@ -38,8 +31,6 @@ export function SecurityMfaCard({
           disabled={disabled}
         />
 
-        <Separator />
-
         <SecurityActionRow
           icon={Key}
           label="Mot de passe"
@@ -49,8 +40,6 @@ export function SecurityMfaCard({
           onAction={onOpenPassword}
           disabled={disabled}
         />
-
-        <Separator />
 
         <SecurityActionRow
           icon={Monitor}

@@ -136,7 +136,7 @@ fi
 if ! command -v pnpm >/dev/null 2>&1; then
   npm install -g pnpm@11.1.3
 fi
-pnpm install
+pnpm install --frozen-lockfile --prefer-offline
 pnpm dlx lefthook install
 
 printf '\nDev container ready. Run: pnpm db:migrate && pnpm dev\n'

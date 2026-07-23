@@ -129,6 +129,18 @@ pub struct BotSignals {
     /// navigator.platform (e.g. "MacIntel", "Win32", "Linux x86_64").
     pub platform: Option<String>,
 
+    /// UA-CH values read through navigator.userAgentData for server/header consistency checks.
+    pub ua_brands: Option<Vec<String>>,
+    pub ua_architecture: Option<String>,
+    pub ua_bitness: Option<String>,
+    pub ua_form_factors: Option<Vec<String>>,
+    pub ua_full_version_list: Option<Vec<String>>,
+    pub ua_model: Option<String>,
+    pub ua_mobile: Option<bool>,
+    pub ua_platform: Option<String>,
+    pub ua_platform_version: Option<String>,
+    pub ua_wow64: Option<bool>,
+
     /// AudioContext oscilloscope hash — hardware-dependent float.
     pub audio_hash: Option<String>,
 

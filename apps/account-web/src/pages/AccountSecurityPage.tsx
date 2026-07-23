@@ -8,10 +8,7 @@ export default function AccountSecurityPage() {
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
       <div>
-        <h1 className="text-xl font-heading font-semibold">Securite</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerer l&apos;authentification et la securite de votre compte.
-        </p>
+        <h1 className="text-3xl font-heading font-semibold">Securite</h1>
       </div>
       <SecurityMfaCard
         overview={overview}

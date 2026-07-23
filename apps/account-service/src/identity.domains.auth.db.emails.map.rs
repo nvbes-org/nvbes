@@ -4,12 +4,6 @@ use sqlx::Row;
 use crate::domains::auth::types::EmailAddressView;
 use crate::http::error::AppError;
 
-pub fn email_address_select_sql(where_clause: &str) -> String {
-    format!(
-        "SELECT id, principal_id, email, is_primary, verified_at, created_at, updated_at FROM user_email_addresses {where_clause}"
-    )
-}
-
 pub fn email_address_view(row: sqlx::postgres::PgRow) -> EmailAddressView {
     EmailAddressView {
         id: row.get("id"),
@@ -23,20 +17,37 @@ pub fn email_address_view(row: sqlx::postgres::PgRow) -> EmailAddressView {
 
 pub fn email_constraint_error(error: sqlx::Error) -> AppError {
     if let sqlx::Error::Database(ref db_err) = error {
-        match db_err.constraint() {
-            Some("idx_user_email_addresses_active_normalized") | Some("users_email_key") => {
-                AppError::conflict(
-                    "email_already_exists",
-                    "This email is already associated with an account.",
-                )
-            }
-            Some("idx_user_email_addresses_one_primary") => AppError::conflict(
-                "primary_email_conflict",
-                "This account already has a primary email.",
-            ),
-            _ => AppError::internal("database_error", "Failed to update email addresses."),
-        }
+        return email_constraint_error_for(db_err.constraint());
     } else {
         error.into()
+    }
+}
+
+pub(crate) fn email_constraint_error_for(constraint: Option<&str>) -> AppError {
+    match constraint {
+        Some("idx_user_email_addresses_active_normalized") | Some("users_email_key") => {
+            AppError::conflict(
+                "email_already_exists",
+                "This email is already associated with an account.",
+            )
+        }
+        Some("idx_user_email_addresses_one_primary") => AppError::conflict(
+            "primary_email_conflict",
+            "This account already has a primary email.",
+        ),
+        _ => AppError::internal("database_error", "Failed to update email addresses."),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::email_constraint_error_for;
+
+    #[test]
+    fn users_email_constraint_is_a_business_conflict() {
+        let app_error = email_constraint_error_for(Some("users_email_key"));
+
+        assert_eq!(app_error.code, "email_already_exists");
+        assert_eq!(app_error.status, axum::http::StatusCode::CONFLICT);
     }
 }

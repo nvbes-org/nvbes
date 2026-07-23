@@ -9,6 +9,7 @@ pub struct CachedHostedAuthorizationState {
     pub redirect_uri: String,
     pub scope: String,
     pub state: Option<String>,
+    pub nonce: Option<String>,
     pub request_uri: Option<String>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,

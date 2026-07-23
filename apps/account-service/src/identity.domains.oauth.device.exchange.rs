@@ -7,8 +7,8 @@ use super::device_codes::{
     delete_device_code, get_device_code_by_device_code, is_expired, save_device_code,
 };
 use super::service::types::{ExchangeDeviceCodeInput, TokenView};
-use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::auth::jwt::JwtService};
 use nvbes_redis::refresh_token as refresh_store;
 
 pub async fn exchange_device_code(
@@ -200,6 +200,7 @@ pub async fn exchange_device_code(
             token_type: token_pair.token_type,
             expires_in: token_pair.expires_in,
             refresh_token: Some(token_pair.refresh_token),
+            id_token: None,
             scope: audience.map_or(scopes.clone(), |value| format!("{scopes} audience:{value}")),
             authorization_details: Vec::new(),
             issued_token_type: None,

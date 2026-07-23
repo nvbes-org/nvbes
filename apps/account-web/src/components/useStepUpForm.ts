@@ -1,6 +1,6 @@
 import { completeWebAuthnStepUp, listMfaFactors, stepUp } from '@nvbes/identity-sdk-web';
 import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
 
 import { identityHttpClient } from '../identity.http';
@@ -75,7 +75,7 @@ export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
     await completeWebAuthnStepUp('');
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError(null);

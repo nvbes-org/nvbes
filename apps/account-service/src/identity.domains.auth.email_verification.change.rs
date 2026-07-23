@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use super::{
     email_verification::issue_verification_email_tx, email_verification::resend_verification_email,
-    email_verification::verification_resend_available_at, generate_random_token, log_dev_token,
-    normalize_email, types::*, validate_email,
+    email_verification::verification_resend_available_at, generate_random_token, normalize_email,
+    types::*, validate_email,
 };
 use crate::http::error::AppError;
 
@@ -148,12 +148,6 @@ pub async fn change_verification_email(
         &verification_token,
     )
     .await?;
-    log_dev_token(
-        &verification_token,
-        &config.environment,
-        "email_verification_change",
-    );
-
     Ok(ResendVerificationResult {
         success: true,
         email_verified: false,

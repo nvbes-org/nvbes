@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
 };
 use uuid::Uuid;
 
@@ -17,6 +17,10 @@ use crate::http::middleware::jwt::AuthContext;
     get,
     path = "/auth/me/emails",
     tag = "auth",
+    params(
+        ("limit" = Option<i64>, Query, description = "Max results"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
+    ),
     responses(
         (status = 200, description = "User email addresses", body = EmailAddressesResult),
         (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
@@ -25,8 +29,11 @@ use crate::http::middleware::jwt::AuthContext;
 pub(crate) async fn me_emails_get(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    Query(query): Query<super::sessions::ListSessionsQuery>,
 ) -> Result<Json<EmailAddressesResult>, AppError> {
-    Ok(Json(email_addresses::list(&state.db, auth.user_id).await?))
+    Ok(Json(
+        email_addresses::list(&state.db, auth.user_id, query.limit, query.cursor).await?,
+    ))
 }
 
 #[utoipa::path(

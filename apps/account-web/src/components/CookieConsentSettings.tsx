@@ -1,19 +1,22 @@
+import { deriveConsentState, toggleConsentAnalyticsPurpose } from '@nvbes/web-runtime';
 import { useState } from 'react';
-import { deriveConsentState, toggleConsentCategory, toggleConsentVendor } from '@nvbes/web-runtime';
 import {
+  type CookieConsentState,
   DEFAULT_CONSENT,
   getTrackingConsent,
   setTrackingConsent,
-  type CookieConsentState,
 } from '../tracking-consent';
 import {
   CookieConsentAnalyticsSection,
   CookieConsentEssentialSection,
   CookieConsentPerformanceSection,
 } from './CookieConsentSettings.sections';
-import { getConsentVendorCategory } from './CookieConsentSettings.shared';
 
-export function CookieConsentSettings() {
+export function CookieConsentSettings({
+  onConsentChange,
+}: {
+  onConsentChange?: (consent: CookieConsentState) => void;
+}) {
   const [cookieConsent, setCookieConsent] = useState<CookieConsentState>(
     () => getTrackingConsent() || DEFAULT_CONSENT,
   );
@@ -22,34 +25,26 @@ export function CookieConsentSettings() {
     const derived = deriveConsentState(next);
     setCookieConsent(derived);
     setTrackingConsent(derived, source);
+    onConsentChange?.(derived);
   };
 
-  const toggleCategory = (category: keyof CookieConsentState['categories']) => {
+  const togglePurpose = (purpose: keyof CookieConsentState['analytics']) => {
     persistConsent(
-      toggleConsentCategory(cookieConsent, category),
-      `account-web:account-privacy:${category}`,
-    );
-  };
-
-  const toggleVendor = (vendor: keyof CookieConsentState['vendors']) => {
-    persistConsent(
-      toggleConsentVendor(cookieConsent, vendor, getConsentVendorCategory(vendor)),
-      `account-web:account-privacy:${vendor}`,
+      toggleConsentAnalyticsPurpose(cookieConsent, purpose),
+      `account-web:account-privacy:${purpose}`,
     );
   };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-6">
       <CookieConsentEssentialSection />
       <CookieConsentAnalyticsSection
         cookieConsent={cookieConsent}
-        onToggleCategory={toggleCategory}
-        onToggleVendor={toggleVendor}
+        onTogglePurpose={togglePurpose}
       />
       <CookieConsentPerformanceSection
         cookieConsent={cookieConsent}
-        onToggleCategory={toggleCategory}
-        onToggleVendor={toggleVendor}
+        onTogglePurpose={togglePurpose}
       />
     </div>
   );

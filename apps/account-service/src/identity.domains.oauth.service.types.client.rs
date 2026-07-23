@@ -26,6 +26,8 @@ pub struct OAuthClientView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct OAuthClientsResult {
     pub clients: Vec<OAuthClientView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -45,6 +47,8 @@ pub struct OAuthClientPolicyView {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct OAuthClientPoliciesResult {
     pub policies: Vec<OAuthClientPolicyView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

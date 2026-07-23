@@ -3,7 +3,7 @@ use uuid::Uuid;
 use super::{
     CachedLoginChallenge, LoginChallenge, MAX_FAILED_ATTEMPTS,
     keys::{challenge_key, factor_allowed},
-    storage::delete_challenge,
+    storage::{clear_active_challenge_if_current, remove_challenge_reference},
 };
 use crate::http::error::AppError;
 
@@ -81,8 +81,11 @@ pub async fn consume_challenge(
     principal_id: Uuid,
     purpose: &'static str,
 ) -> Result<(), AppError> {
-    let challenge = get_challenge(redis, challenge_id)
-        .await?
+    let client = nvbes_redis::RedisClient::new(redis.clone());
+    let challenge = client
+        .cache_take_json::<CachedLoginChallenge>(&challenge_key(&challenge_id.to_string()))
+        .await
+        .map_err(|err| AppError::internal("login_challenge_consume_failed", format!("{err}")))?
         .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
 
     if challenge.auth_state_id != auth_state_id
@@ -97,7 +100,14 @@ pub async fn consume_challenge(
         ));
     }
 
-    delete_challenge(redis, &challenge).await?;
+    remove_challenge_reference(redis, challenge.auth_state_id, &challenge.id.to_string()).await?;
+    clear_active_challenge_if_current(
+        redis,
+        challenge.auth_state_id,
+        &challenge.purpose,
+        &challenge.id.to_string(),
+    )
+    .await?;
     Ok(())
 }
 

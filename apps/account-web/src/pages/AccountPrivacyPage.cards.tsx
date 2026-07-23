@@ -1,3 +1,3 @@
-export { PrivacySkeleton, ErrorMessage, SuccessMessage } from './AccountPrivacyPage.feedback';
-export { GpcStatusCard } from './AccountPrivacyPage.gpc';
-export { PrivacyRightsCard } from './AccountPrivacyPage.rights';
+export { ErrorMessage, PrivacySkeleton, SuccessMessage } from './AccountPrivacyPage.feedback';
+export { GpcStatusAlert } from './AccountPrivacyPage.gpc';
+export { PrivacyDeleteCard, PrivacyExportCard } from './AccountPrivacyPage.rights';

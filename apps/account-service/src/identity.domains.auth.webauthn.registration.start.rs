@@ -1,7 +1,6 @@
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
-use webauthn_rs::prelude::*;
 
 use super::options::{normalize_registration_kind, shape_registration_options};
 use crate::domains::auth::{
@@ -20,6 +19,7 @@ pub async fn start_registration(
     webauthn: &webauthn_rs::Webauthn,
     session_id: Uuid,
     user_id: Uuid,
+    user_name: &str,
     tenant_id: Uuid,
     workspace_id: Option<Uuid>,
     label: Option<String>,
@@ -29,47 +29,22 @@ pub async fn start_registration(
     let existing = load_passkeys(db, user_id).await?;
     let exclude_credentials = existing
         .iter()
-        .map(|passkey| passkey.cred_id().clone())
+        .map(|passkey| passkey.passkey.cred_id().clone())
         .collect::<Vec<_>>();
-    let (creation, registration) = if kind == "security_key" {
-        let (creation, registration) = webauthn
-            .start_securitykey_registration(
-                user_id,
-                &user_id.to_string(),
-                label.as_deref().unwrap_or("Passkey"),
-                Some(exclude_credentials),
-                None,
-                Some(AuthenticatorAttachment::CrossPlatform),
-            )
-            .map_err(|_| {
-                AppError::internal(
-                    "webauthn_registration_start_failed",
-                    "Failed to start WebAuthn registration.",
-                )
-            })?;
-        (
-            creation,
-            StoredWebauthnRegistration::SecurityKey { registration },
+    let (creation, registration) = webauthn
+        .start_passkey_registration(
+            user_id,
+            user_name,
+            label.as_deref().unwrap_or("Passkey"),
+            Some(exclude_credentials),
         )
-    } else {
-        let (creation, registration) = webauthn
-            .start_passkey_registration(
-                user_id,
-                &user_id.to_string(),
-                label.as_deref().unwrap_or("Passkey"),
-                Some(exclude_credentials),
+        .map_err(|_| {
+            AppError::internal(
+                "webauthn_registration_start_failed",
+                "Failed to start WebAuthn registration.",
             )
-            .map_err(|_| {
-                AppError::internal(
-                    "webauthn_registration_start_failed",
-                    "Failed to start WebAuthn registration.",
-                )
-            })?;
-        (
-            creation,
-            StoredWebauthnRegistration::Passkey { registration },
-        )
-    };
+        })?;
+    let registration = StoredWebauthnRegistration::Passkey { registration };
 
     let factor_id = Uuid::new_v4();
     sqlx::query(

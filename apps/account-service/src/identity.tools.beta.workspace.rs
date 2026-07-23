@@ -6,7 +6,7 @@ use nvbes_product_account::cloud_boundary::{
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
-use nvbes_account_service::domains::cloud::workspace_port;
+use nvbes_account_service::cloud_boundary::workspace_port;
 
 pub async fn ensure_non_admin_workspace(
     tx: &mut Transaction<'_, Postgres>,

@@ -1,11 +1,9 @@
 use chrono::{Duration as ChronoDuration, Utc};
 use nvbes_core::config::AppConfig;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use super::db;
 use super::generate_random_token;
-use super::log_dev_token;
 use super::normalize_email;
 use super::token_hash;
 use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
@@ -20,7 +18,6 @@ pub async fn forgot(
     config: &AppConfig,
     input: ForgotPasswordInput,
     reset_ttl_minutes: i64,
-    environment: &str,
     ip: Option<String>,
     user_agent: Option<String>,
 ) -> Result<ForgotPasswordResult, AppError> {
@@ -28,8 +25,6 @@ pub async fn forgot(
     let principal_data = db::find_principal_and_display_name_by_email(db, &email).await?;
 
     if let Some((principal_id, display_name)) = principal_data {
-        let (tenant_id, tenant_kind) = db::get_tenant_info_by_principal(db, principal_id).await?;
-
         let (risk_score, decision, risk_factors) =
             risk::current_state_summary(db, principal_id).await?;
         let (risk_score, risk_factors, geo_decision, geo_resolution) = password_geo_signal(
@@ -72,50 +67,7 @@ pub async fn forgot(
             ));
         }
 
-        if tenant_kind == "enterprise" {
-            let available_at = Utc::now() + ChronoDuration::hours(24);
-            let request_id = Uuid::new_v4();
-
-            db::insert_enterprise_recovery_request(
-                db,
-                request_id,
-                principal_id,
-                tenant_id,
-                &email,
-                available_at,
-            )
-            .await?;
-
-            let _ = risk::record_event(
-                db,
-                RiskEventInput {
-                    principal_id,
-                    session_id: None,
-                    device_id: None,
-                    event_type: "enterprise_recovery_requested".to_string(),
-                    ip_address: ip.clone(),
-                    user_agent: user_agent.clone(),
-                    risk_score,
-                    risk_factors: risk_factors.clone(),
-                    decision,
-                    metadata: serde_json::json!({
-                        "tenant_kind": tenant_kind,
-                        "available_at": available_at,
-                        "geo": geo_metadata(geo_resolution.as_ref()),
-                    }),
-                },
-            )
-            .await;
-
-            return Ok(ForgotPasswordResult {
-                success: true,
-                requires_admin_approval: true,
-                available_at: Some(available_at),
-            });
-        }
-
         let token = generate_random_token();
-        log_dev_token(&token, environment, "password_reset");
         let mut tx = db.begin().await?;
         db::reset::insert_password_reset_token_tx(
             &mut tx,
@@ -146,16 +98,8 @@ pub async fn forgot(
         )
         .await?;
 
-        Ok(ForgotPasswordResult {
-            success: true,
-            requires_admin_approval: false,
-            available_at: None,
-        })
+        Ok(ForgotPasswordResult { success: true })
     } else {
-        Ok(ForgotPasswordResult {
-            success: true,
-            requires_admin_approval: false,
-            available_at: None,
-        })
+        Ok(ForgotPasswordResult { success: true })
     }
 }

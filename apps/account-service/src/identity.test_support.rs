@@ -4,7 +4,6 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::time::sleep;
 
 static LOCAL_REDIS_STARTED: OnceLock<()> = OnceLock::new();
-static TEST_DATABASE_POOL: OnceLock<PgPool> = OnceLock::new();
 static TEST_DATABASE_BOOTSTRAPPED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
 static TEST_DATABASE_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
 
@@ -104,14 +103,7 @@ pub async fn ensure_test_database(pool: &sqlx::PgPool) {
 }
 
 pub fn shared_test_pool() -> PgPool {
-    TEST_DATABASE_POOL
-        .get_or_init(|| {
-            PgPoolOptions::new()
-                .max_connections(1)
-                .connect_lazy(&test_database_url())
-                .expect("valid pool")
-        })
-        .clone()
+    isolated_test_pool(1)
 }
 
 pub fn isolated_test_pool(max_connections: u32) -> PgPool {

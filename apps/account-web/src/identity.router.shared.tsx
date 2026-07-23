@@ -1,4 +1,4 @@
-import { AuthErrorBoundary, BillingErrorBoundary } from '@nvbes/web-runtime';
+import { AuthErrorBoundary } from '@nvbes/web-runtime';
 import { lazy, type ReactElement, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -36,16 +36,6 @@ export function withAuth(Component: () => ReactElement) {
       <AuthErrorBoundary>
         <Component />
       </AuthErrorBoundary>
-    );
-  };
-}
-
-export function withBilling(Component: () => ReactElement) {
-  return function BillingWrapped() {
-    return (
-      <BillingErrorBoundary>
-        <Component />
-      </BillingErrorBoundary>
     );
   };
 }

@@ -1,8 +1,8 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::domains::{cloud::workspace_port, oauth::logic::OAuthManagementAuth};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::oauth::logic::OAuthManagementAuth};
 
 use crate::domains::oauth::service::types::CreateOAuthClientInput;
 

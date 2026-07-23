@@ -4,22 +4,29 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function PrivacySkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Skeleton className="h-6 w-56" />
-        <Skeleton className="mt-1 h-4 w-72" />
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-7 w-64" />
+        <Skeleton className="h-4 w-full max-w-xl" />
       </div>
       <Card>
         <CardHeader>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-4 w-full max-w-md" />
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <CardContent className="grid gap-3 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-12 w-full rounded-lg" />
+            <Skeleton key={index} className="h-16 w-full rounded-lg" />
           ))}
         </CardContent>
       </Card>
+      <div className="flex flex-col gap-6">
+        <Skeleton className="h-[34rem] w-full rounded-xl" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
     </div>
   );
 }

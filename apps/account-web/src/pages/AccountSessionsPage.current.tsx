@@ -2,7 +2,7 @@ import { Laptop } from 'lucide-react';
 import type { AccountSession } from '@nvbes/identity-client';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { parseUserAgent } from './AccountSessionsPage.device';
+import { deviceTrustLabel, parseUserAgent } from './AccountSessionsPage.device';
 
 export function CurrentSessionCard({ session }: { session: AccountSession }) {
   const device = session.user_agent
@@ -28,7 +28,7 @@ export function CurrentSessionCard({ session }: { session: AccountSession }) {
             </span>
           </div>
           <Badge variant="default" className="ml-auto shrink-0">
-            Actuel
+            {deviceTrustLabel(session.device_trust_level)} · {session.device_trust_score ?? 0}/100
           </Badge>
         </div>
       </CardContent>

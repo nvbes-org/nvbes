@@ -2,7 +2,7 @@ use crate::http::openapi::IdentityApiDoc;
 use utoipa::OpenApi;
 
 #[test]
-fn openapi_includes_service_account_management_routes() {
+fn openapi_excludes_service_account_management_routes() {
     let openapi = serde_json::from_str::<serde_json::Value>(
         &IdentityApiDoc::openapi()
             .to_json()
@@ -11,28 +11,14 @@ fn openapi_includes_service_account_management_routes() {
     .expect("OpenAPI document should be valid JSON");
 
     let paths = &openapi["paths"];
-    assert!(
-        paths
-            .get("/workspaces/{workspaceId}/service-accounts")
-            .is_some()
-    );
-    assert!(
-        paths
-            .get("/workspaces/{workspaceId}/service-accounts/{serviceAccountId}")
-            .is_some()
-    );
-    assert!(
-        paths
-            .get("/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients")
-            .is_some()
-    );
-    assert!(
-        paths
-            .get(
-                "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach"
-            )
-            .is_some()
-    );
+    for path in [
+        "/workspaces/{workspaceId}/service-accounts",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients",
+        "/workspaces/{workspaceId}/service-accounts/{serviceAccountId}/oauth-clients:attach",
+    ] {
+        assert!(paths.get(path).is_none(), "legacy path leaked: {path}");
+    }
 }
 
 #[test]
@@ -70,7 +56,7 @@ fn openapi_includes_stable_introspection_fields() {
 }
 
 #[test]
-fn openapi_exposes_workspace_owner_principal_id() {
+fn openapi_excludes_workspace_management_schema() {
     let openapi = serde_json::from_str::<serde_json::Value>(
         &IdentityApiDoc::openapi()
             .to_json()
@@ -78,9 +64,10 @@ fn openapi_exposes_workspace_owner_principal_id() {
     )
     .expect("OpenAPI document should be valid JSON");
 
-    let properties = &openapi["components"]["schemas"]["WorkspaceView"]["properties"];
     assert!(
-        properties.get("owner_principal_id").is_some(),
-        "missing schema field: owner_principal_id"
+        openapi["components"]["schemas"]
+            .get("WorkspaceView")
+            .is_none(),
+        "WorkspaceView should not be published by Account OpenAPI"
     );
 }

@@ -125,7 +125,7 @@ pub async fn resolve_admin_scope(
     ))
 }
 
-fn ensure_tenant_context(
+pub fn ensure_tenant_context(
     auth: &impl TenantManagementAuth,
     tenant_id: Uuid,
 ) -> Result<(), AppError> {

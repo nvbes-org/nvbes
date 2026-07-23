@@ -1,99 +1,108 @@
 import { Badge } from '@/components/ui/badge';
-import type { CookieConsentState } from '../tracking-consent';
 import {
-  analyticsVendors,
-  essentialVendors,
-  performanceVendors,
-} from './CookieConsentSettings.shared';
-import { TrackingConsentToggle } from './TrackingConsentToggle';
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+  FieldTitle,
+} from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
+import type { CookieConsentState } from '../tracking-consent';
+import { essentialVendors } from './CookieConsentSettings.shared';
 
 export function CookieConsentEssentialSection() {
   return (
-    <div className="space-y-2 p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-foreground">Essentiels et Sécurité</p>
-          <p className="mt-0.5 text-muted-foreground">
-            Nécessaires au fonctionnement technique et à la sécurité.
-          </p>
-        </div>
-        <Badge variant="secondary" className="uppercase tracking-wider">
-          Obligatoire
-        </Badge>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20">
-        {essentialVendors.map((vendor) => (
-          <span key={vendor} className="text-muted-foreground">
-            {vendor}
-          </span>
-        ))}
-      </div>
-    </div>
+    <FieldSet>
+      <FieldLegend>Indispensables au service</FieldLegend>
+      <FieldDescription>
+        Ces éléments assurent la connexion, la sécurité et la continuité du service. Ils ne peuvent
+        pas être désactivés.
+      </FieldDescription>
+      <FieldGroup>
+        <Field orientation="horizontal" data-disabled="true">
+          <FieldContent>
+            <FieldTitle>Fonctionnement et sécurité</FieldTitle>
+            <FieldDescription>{essentialVendors.join(' · ')}</FieldDescription>
+          </FieldContent>
+          <Badge variant="secondary">Toujours actif</Badge>
+        </Field>
+      </FieldGroup>
+    </FieldSet>
   );
 }
 
 export function CookieConsentAnalyticsSection({
   cookieConsent,
-  onToggleCategory,
-  onToggleVendor,
+  onTogglePurpose,
 }: {
   cookieConsent: CookieConsentState;
-  onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
-  onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
+  onTogglePurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
-    <div className="space-y-3 p-4">
-      <TrackingConsentToggle
-        checked={cookieConsent.categories.analytics}
-        onChange={() => onToggleCategory('analytics')}
-        label="Analyses d'audience"
-        description="Mesure l'utilisation pour l'amélioration continue."
-        large
-      />
-      <div className="space-y-2 border-t border-border/20 px-2">
-        {analyticsVendors.map((vendor) => (
-          <TrackingConsentToggle
-            key={vendor.key}
-            checked={cookieConsent.vendors[vendor.key]}
-            onChange={() => onToggleVendor(vendor.key)}
-            label={vendor.label}
-            description={vendor.description}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <FieldSeparator />
+      <FieldSet>
+        <FieldLegend>Comprendre l'usage du produit</FieldLegend>
+        <FieldDescription>
+          Nous aide à savoir quelles fonctions sont utiles, sans lire votre contenu. Fourni par
+          PostHog.
+        </FieldDescription>
+        <FieldGroup>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel htmlFor="privacy-product-analytics">Mesure d'audience</FieldLabel>
+              <FieldDescription>
+                Pages et fonctionnalités utilisées, sans contenu utilisateur.
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="privacy-product-analytics"
+              checked={cookieConsent.analytics.productAnalytics}
+              onCheckedChange={() => onTogglePurpose('productAnalytics')}
+            />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+    </>
   );
 }
 
 export function CookieConsentPerformanceSection({
   cookieConsent,
-  onToggleCategory,
-  onToggleVendor,
+  onTogglePurpose,
 }: {
   cookieConsent: CookieConsentState;
-  onToggleCategory: (category: keyof CookieConsentState['categories']) => void;
-  onToggleVendor: (vendor: keyof CookieConsentState['vendors']) => void;
+  onTogglePurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
-    <div className="space-y-3 p-4">
-      <TrackingConsentToggle
-        checked={cookieConsent.categories.performance}
-        onChange={() => onToggleCategory('performance')}
-        label="Performance & Erreurs"
-        description="Suivi de la stabilité et diagnostics techniques."
-        large
-      />
-      <div className="space-y-2 border-t border-border/20 px-2">
-        {performanceVendors.map((vendor) => (
-          <TrackingConsentToggle
-            key={vendor.key}
-            checked={cookieConsent.vendors[vendor.key]}
-            onChange={() => onToggleVendor(vendor.key)}
-            label={vendor.label}
-            description={vendor.description}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <FieldSeparator />
+      <FieldSet>
+        <FieldLegend>Corriger les problèmes techniques</FieldLegend>
+        <FieldDescription>
+          Autorise des diagnostics minimisés pour améliorer la stabilité. Fourni par Sentry et,
+          selon le déploiement, Grafana Labs.
+        </FieldDescription>
+        <FieldGroup>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel htmlFor="privacy-error-tracking">Rapports d'erreurs</FieldLabel>
+              <FieldDescription>
+                Informations techniques sur les pannes, hors pages sensibles.
+              </FieldDescription>
+            </FieldContent>
+            <Switch
+              id="privacy-error-tracking"
+              checked={cookieConsent.analytics.errorTracking}
+              onCheckedChange={() => onTogglePurpose('errorTracking')}
+            />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+    </>
   );
 }

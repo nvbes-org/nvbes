@@ -18,7 +18,7 @@ pub async fn finish_registration(
     factor_id: Uuid,
     reg: RegisterPublicKeyCredential,
 ) -> Result<(), AppError> {
-    let challenge = nvbes_redis::auth_challenge::get_auth_challenge(redis, factor_id)
+    let challenge = nvbes_redis::auth_challenge::take_auth_challenge(redis, factor_id)
         .await
         .map_err(|err| AppError::internal("webauthn_challenge_load_failed", format!("{}", err)))?
         .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
@@ -91,12 +91,6 @@ pub async fn finish_registration(
     .bind(kind)
     .execute(db)
     .await?;
-
-    nvbes_redis::auth_challenge::consume_auth_challenge(redis, factor_id)
-        .await
-        .map_err(|err| {
-            AppError::internal("webauthn_challenge_consume_failed", format!("{}", err))
-        })?;
 
     let _ = risk::record_event(
         db,

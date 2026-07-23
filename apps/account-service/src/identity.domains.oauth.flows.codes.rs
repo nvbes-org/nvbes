@@ -4,8 +4,8 @@ use crate::domains::oauth::authorization_codes::{
 };
 use crate::domains::oauth::service::ConsentRequirementInput;
 use crate::domains::oauth::validation::validate_redirect_uri_match;
-use crate::domains::{auth::jwt::JwtService, cloud::workspace_port};
 use crate::http::error::AppError;
+use crate::{cloud_boundary::workspace_port, domains::auth::jwt::JwtService};
 use chrono::Utc;
 use nvbes_redis::refresh_token as refresh_store;
 use sqlx::Row;
@@ -67,6 +67,7 @@ pub async fn create_authorization_code(
             user_id,
             client_session_id: Some(session_id),
             redirect_uri: input.redirect_uri.clone(),
+            nonce: input.nonce.clone(),
             scope,
             audience: input.audience.clone(),
             resource_indicators: input.resource_indicators.clone(),
@@ -226,6 +227,23 @@ pub async fn exchange_code(
             ));
         }
 
+        let id_token = if code.scope.split_whitespace().any(|scope| scope == "openid") {
+            let nonce = code.nonce.as_deref().ok_or_else(|| {
+                AppError::bad_request(
+                    "nonce_required",
+                    "An OIDC authorization code must contain a nonce.",
+                )
+            })?;
+            Some(jwt.generate_id_token(
+                code.user_id,
+                &code.client_id,
+                nonce,
+                assurance.auth_time,
+            )?)
+        } else {
+            None
+        };
+
         let workspace_region = if let Some(workspace_id) = code.workspace_id {
             workspace_port::get_workspace(code.tenant_id, workspace_id, code.user_id)
                 .await?
@@ -282,6 +300,7 @@ pub async fn exchange_code(
             refresh_token: Some(tokens.refresh_token),
             scope: code.scope,
             authorization_details: code.authorization_details,
+            id_token,
             issued_token_type: None,
         })
     }

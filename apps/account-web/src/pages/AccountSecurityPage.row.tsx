@@ -24,7 +24,13 @@ export function SecurityActionRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <Button
+      type="button"
+      variant="ghost"
+      className="h-auto w-full cursor-pointer justify-between gap-3 whitespace-normal rounded-lg px-2 py-3 text-left disabled:cursor-not-allowed"
+      onClick={onAction}
+      disabled={disabled}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
           <Icon className={iconColor ?? 'size-4 text-muted-foreground'} />
@@ -38,10 +44,8 @@ export function SecurityActionRow({
         <Badge variant={badgeVariant} className="shrink-0">
           {badgeLabel}
         </Badge>
-        <Button variant="ghost" size="icon-sm" onClick={onAction} disabled={disabled}>
-          <ChevronRight className="size-4" />
-        </Button>
+        <ChevronRight className="size-4" />
       </div>
-    </div>
+    </Button>
   );
 }

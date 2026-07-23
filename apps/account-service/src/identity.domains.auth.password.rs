@@ -6,8 +6,6 @@ pub use core::{generate_token, normalize_email, unique_slug, validate_email, val
 mod change_impl;
 #[path = "identity.domains.auth.password.db.rs"]
 pub mod db;
-#[path = "identity.domains.auth.password.enterprise.rs"]
-pub mod enterprise;
 #[path = "identity.domains.auth.password.forgot.rs"]
 mod forgot_impl;
 #[path = "identity.domains.auth.password.geo.rs"]
@@ -22,7 +20,6 @@ mod reset_impl;
 mod tests;
 
 pub use change_impl::change;
-pub use enterprise::approve_enterprise_recovery;
 pub use forgot_impl::forgot;
 pub use reset_impl::reset;
 
@@ -49,8 +46,4 @@ pub fn generate_random_token() -> String {
 
 pub fn token_hash(token: &str) -> String {
     core::token_hash(token)
-}
-
-pub fn log_dev_token(token: &str, environment: &str, purpose: &str) {
-    core::log_dev_token(token, environment, purpose)
 }

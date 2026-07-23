@@ -1,12 +1,11 @@
+use nvbes_core::pagination::{KeysetCursor, decode_cursor, encode_cursor, page_from_rows};
 use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 
-use crate::domains::{
-    cloud::workspace_port,
-    oauth::{
-        logic::OAuthManagementAuth,
-        service::types::{OAuthClientView, OAuthClientsResult},
-    },
+use crate::cloud_boundary::workspace_port;
+use crate::domains::oauth::{
+    logic::OAuthManagementAuth,
+    service::types::{OAuthClientView, OAuthClientsResult},
 };
 use crate::http::error::AppError;
 
@@ -14,10 +13,16 @@ use crate::http::error::AppError;
 pub async fn list_clients(
     db: &PgPool,
     auth: &(impl OAuthManagementAuth + crate::domains::authz::TenantManagementAuth),
+    limit: Option<i64>,
+    cursor: Option<String>,
 ) -> Result<OAuthClientsResult, AppError> {
-    let tenant_id = super::require_oauth_management_tenant(db, auth).await?;
-    let (current_scope_type, current_scope_id) =
-        crate::domains::oauth::logic::resolve_management_scope(auth)?;
+    let limit = limit.unwrap_or(50).clamp(1, 200) as usize;
+    let decoded = cursor
+        .as_deref()
+        .map(decode_cursor::<KeysetCursor>)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let tenant_id = super::require_oauth_consent_tenant(db, auth).await?;
     let rows = sqlx::query(
         r#"
         SELECT
@@ -39,26 +44,49 @@ pub async fn list_clients(
         FROM oauth_clients
         LEFT JOIN service_accounts sa ON sa.client_id = oauth_clients.client_id
         WHERE oauth_clients.tenant_id = $1
-          AND (
-            (oauth_clients.owner_scope_type = $2::scope_type AND oauth_clients.owner_scope_id = $3)
-            OR (oauth_clients.owner_scope_type = 'tenant' AND oauth_clients.owner_scope_id = $4)
+          AND EXISTS (
+            SELECT 1
+            FROM oauth_consents
+            WHERE oauth_consents.client_id = oauth_clients.id
+              AND oauth_consents.principal_id = $2
+              AND oauth_consents.tenant_id = $1
+              AND oauth_consents.revoked_at IS NULL
+              AND (oauth_consents.expires_at IS NULL OR oauth_consents.expires_at > NOW())
           )
-        ORDER BY oauth_clients.created_at DESC
+          AND ($3::timestamp with time zone IS NULL OR (oauth_clients.created_at, oauth_clients.id) < ($3, $4))
+        ORDER BY oauth_clients.created_at DESC, oauth_clients.id DESC
+        LIMIT $5
         "#,
     )
     .bind(tenant_id)
-    .bind(current_scope_type.as_str())
-    .bind(current_scope_id)
-    .bind(tenant_id)
+    .bind(OAuthManagementAuth::user_id(auth))
+    .bind(decoded.as_ref().map(|c| c.created_at))
+    .bind(decoded.as_ref().map(|c| c.id))
+    .bind((limit + 1) as i64)
     .fetch_all(db)
     .await?;
 
-    let mut clients = Vec::with_capacity(rows.len());
-    for row in rows {
+    let page = page_from_rows(rows, limit, |row| KeysetCursor {
+        created_at: row.get("created_at"),
+        id: row.get("id"),
+    });
+    let mut clients = Vec::with_capacity(page.items.len());
+    for row in page.items {
         clients.push(map_oauth_client_row(tenant_id, row).await?);
     }
 
-    Ok(OAuthClientsResult { clients })
+    let next_cursor = page
+        .next_cursor
+        .map(|cursor| encode_cursor(&cursor))
+        .transpose()
+        .map_err(|_| {
+            AppError::internal("pagination_error", "Failed to encode pagination cursor.")
+        })?;
+    Ok(OAuthClientsResult {
+        clients,
+        next_cursor,
+        has_more: page.has_more,
+    })
 }
 
 async fn map_oauth_client_row(tenant_id: Uuid, row: PgRow) -> Result<OAuthClientView, AppError> {

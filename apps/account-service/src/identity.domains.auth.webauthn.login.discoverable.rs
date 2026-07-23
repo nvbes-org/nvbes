@@ -6,17 +6,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use webauthn_rs::prelude::PublicKeyCredential;
 
-use super::super::super::login_challenges;
 use super::super::super::risk::{self, RiskEventInput};
-use super::super::storage::{discoverable_keys, fetch_user_email, load_passkeys, persist_passkey};
 use super::super::types::StoredDiscoverableAuthentication;
+use super::super::{
+    errors::map_webauthn_authentication_error,
+    storage::{discoverable_keys, fetch_user_email, load_passkeys, record_passkey_authentication},
+};
 use crate::http::error::AppError;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CachedDiscoverableLoginChallenge {
     id: Uuid,
     authentication: StoredDiscoverableAuthentication,
-    failed_attempts: i32,
     expires_at: chrono::DateTime<Utc>,
 }
 
@@ -40,7 +41,6 @@ pub async fn start_discoverable_login_authentication(
     let challenge = CachedDiscoverableLoginChallenge {
         id: challenge_id,
         authentication: StoredDiscoverableAuthentication { authentication },
-        failed_attempts: 0,
         expires_at,
     };
 
@@ -73,18 +73,13 @@ pub async fn finish_discoverable_login_authentication(
     ip: Option<&str>,
     user_agent: Option<&str>,
 ) -> Result<(Uuid, String, String), AppError> {
-    let mut challenge = nvbes_redis::cache::cache_get_json::<CachedDiscoverableLoginChallenge>(
-        redis,
-        &discoverable_login_key(challenge_id),
-    )
-    .await
-    .map_err(|err| AppError::internal("webauthn_challenge_load_failed", err.to_string()))?
-    .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
+    let challenge = nvbes_redis::RedisClient::new(redis.clone())
+        .cache_take_json::<CachedDiscoverableLoginChallenge>(&discoverable_login_key(challenge_id))
+        .await
+        .map_err(|err| AppError::internal("webauthn_challenge_load_failed", err.to_string()))?
+        .ok_or_else(|| AppError::not_found("challenge_not_found", "Challenge not found."))?;
 
-    if challenge.id != challenge_id
-        || challenge.expires_at <= Utc::now()
-        || challenge.failed_attempts >= login_challenges::MAX_FAILED_ATTEMPTS
-    {
+    if challenge.id != challenge_id || challenge.expires_at <= Utc::now() {
         return Err(AppError::not_found(
             "challenge_not_found",
             "Challenge not found.",
@@ -96,43 +91,15 @@ pub async fn finish_discoverable_login_authentication(
         .map_err(|_| AppError::forbidden("webauthn_auth_failed", "WebAuthn assertion failed."))?;
     let mut passkeys = load_passkeys(db, principal_id).await?;
     let discoverable = discoverable_keys(&passkeys);
-    let result = match webauthn.finish_discoverable_authentication(
-        credential,
-        challenge.authentication.authentication.clone(),
-        &discoverable,
-    ) {
-        Ok(result) => result,
-        Err(_) => {
-            challenge.failed_attempts += 1;
-            nvbes_redis::cache::cache_set_json(
-                redis,
-                &discoverable_login_key(challenge_id),
-                &challenge,
-                5 * 60,
-            )
-            .await
-            .map_err(|cache_err| {
-                AppError::internal("webauthn_challenge_store_failed", cache_err.to_string())
-            })?;
-            return Err(AppError::forbidden(
-                "webauthn_auth_failed",
-                "WebAuthn assertion failed.",
-            ));
-        }
-    };
+    let result = webauthn
+        .finish_discoverable_authentication(
+            credential,
+            challenge.authentication.authentication,
+            &discoverable,
+        )
+        .map_err(map_webauthn_authentication_error)?;
 
-    if let Some(passkey) = passkeys
-        .iter_mut()
-        .find(|passkey| passkey.cred_id() == result.cred_id())
-    {
-        passkey.update_credential(&result);
-        persist_passkey(db, principal_id, passkey).await?;
-    }
-
-    nvbes_redis::RedisClient::new(redis.clone())
-        .del_key(&discoverable_login_key(challenge_id))
-        .await
-        .map_err(|err| AppError::internal("webauthn_challenge_consume_failed", err.to_string()))?;
+    record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
 
     let email = fetch_user_email(db, principal_id).await?;
 

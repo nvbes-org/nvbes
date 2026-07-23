@@ -1,15 +1,11 @@
-import { preventAutoSignIn } from '@nvbes/identity-sdk-web';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Outlet, useNavigate } from '@tanstack/react-router';
-import { Menu } from 'lucide-react';
+import { isSessionStaleError } from '@nvbes/web-runtime';
 import { useTransition } from 'react';
-import { accountQueryKeys } from '@/account.queries';
 import { AccountSidebar } from '@/components/AccountSidebar';
+import { IdentityTopBar } from '@/components/IdentityTopBar';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccountContext } from '@/hooks/useAccountContext';
-import { logoutIdentitySessionMutationFn } from '@/identity.auth.queries';
 
 function LayoutSkeleton() {
   return (
@@ -38,75 +34,68 @@ function LayoutSkeleton() {
 
 export default function AccountLayout() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const { me, workspaces, loading } = useAccountContext();
-  const logoutMutation = useMutation({ mutationFn: logoutIdentitySessionMutationFn });
-  const currentWorkspaceRole =
-    workspaces.find((workspace) => workspace.id === me?.current_workspace_id)?.role ?? null;
-
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync(undefined);
-    } finally {
-      queryClient.removeQueries({ queryKey: accountQueryKeys.all });
-      preventAutoSignIn().catch(() => {});
-      startTransition(() => {
-        void navigate({ to: '/login', replace: true });
-      });
-    }
-  };
-
-  if (loading) return <LayoutSkeleton />;
-  if (!me) {
-    return (
-      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
-        <div className="flex flex-col gap-3 text-center">
-          <p className="text-sm text-muted-foreground">Session expiree</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void navigate({ to: '/login' })}
-            disabled={isPending}
-          >
-            {isPending ? 'Redirection...' : 'Se reconnecter'}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const { me, loading, error, retry, retrying } = useAccountContext();
+  const reauthenticationRequired = isSessionStaleError(error);
+  const blockingError = error && (reauthenticationRequired || !me) ? error : null;
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] bg-background">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:flex md:flex-col">
-        <AccountSidebar currentWorkspaceRole={currentWorkspaceRole} onLogout={handleLogout} />
-      </aside>
+    <div className="min-h-screen bg-background">
+      <IdentityTopBar />
 
-      {/* Mobile top bar + Sheet */}
-      <div className="flex flex-1 flex-col min-w-0">
-        <div className="flex items-center gap-3 border-b border-border bg-card px-4 h-12 md:hidden shrink-0">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
-                <Menu className="size-4" />
-                <span className="sr-only">Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-60 p-0">
-              <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <AccountSidebar currentWorkspaceRole={currentWorkspaceRole} onLogout={handleLogout} />
-            </SheetContent>
-          </Sheet>
-          <span className="text-sm font-heading font-medium truncate">Mon compte</span>
-        </div>
-
-        <main className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
-            <Outlet />
+      {loading ? (
+        <LayoutSkeleton />
+      ) : blockingError ? (
+        <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+          <div className="flex flex-col gap-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              {reauthenticationRequired
+                ? 'Votre session a expiré.'
+                : 'Impossible de charger votre compte.'}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!reauthenticationRequired) {
+                  retry();
+                  return;
+                }
+                startTransition(() => {
+                  void navigate({ to: '/login' });
+                });
+              }}
+              disabled={isPending || retrying}
+            >
+              {reauthenticationRequired
+                ? isPending
+                  ? 'Redirection...'
+                  : 'Se reconnecter'
+                : retrying
+                  ? 'Nouvelle tentative...'
+                  : 'Réessayer'}
+            </Button>
           </div>
-        </main>
-      </div>
+        </div>
+      ) : !me ? (
+        <LayoutSkeleton />
+      ) : (
+        <div className="flex h-[calc(100vh-3.5rem)] bg-background">
+          {/* Desktop sidebar */}
+          <aside className="hidden w-60 shrink-0 bg-card md:flex md:flex-col">
+            <AccountSidebar />
+          </aside>
+
+          {/* Mobile top bar + Sheet */}
+          <div className="flex flex-1 flex-col min-w-0">
+            <main className="flex-1 overflow-auto">
+              <div className="mx-auto w-full max-w-2xl px-4 py-8 md:px-8 md:py-12">
+                <Outlet />
+              </div>
+            </main>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

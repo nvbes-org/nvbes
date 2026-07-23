@@ -25,6 +25,7 @@ struct ParRequest {
     redirect_uri: Option<String>,
     scope: Option<String>,
     state: Option<String>,
+    nonce: Option<String>,
     audience: Option<String>,
     resource: Option<Vec<String>>,
     authorization_details: Option<String>,
@@ -103,6 +104,12 @@ async fn par(
         parameters.insert(
             "state".to_string(),
             serde_json::Value::String(state.clone()),
+        );
+    }
+    if let Some(ref nonce) = request.nonce {
+        parameters.insert(
+            "nonce".to_string(),
+            serde_json::Value::String(nonce.clone()),
         );
     }
     if let Some(ref audience) = request.audience {

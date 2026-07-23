@@ -3,6 +3,7 @@ import type { MfaMethod } from './LoginPage.mfa';
 export type LoginPageMfaStepProps = {
   error: string | null;
   loading: boolean;
+  loginStateToken: string | null;
   mfaMethod: MfaMethod | null;
   hasTotp: boolean;
   hasEmail: boolean;
@@ -16,7 +17,8 @@ export type LoginPageMfaStepProps = {
   onEmailCodeChange: (value: string) => void;
   onRecoveryCodeChange: (value: string) => void;
   onMfaMethodSelect: (method: MfaMethod) => void;
-  onMfaSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onMfaSubmit: (event: React.SubmitEvent<HTMLFormElement>) => void;
   onBackToMethodSelect: () => void;
   onResetToIdentifier: () => void;
+  onResendEmailCode: () => Promise<void>;
 };

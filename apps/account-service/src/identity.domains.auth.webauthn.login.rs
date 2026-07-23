@@ -6,8 +6,11 @@ use webauthn_rs::prelude::PublicKeyCredential;
 
 use super::super::login_challenges::{self, CreateLoginChallengeInput};
 use super::super::risk::{self, RiskEventInput};
-use super::storage::{load_passkeys, persist_passkey};
 use super::types::StoredPasskeyAuthentication;
+use super::{
+    errors::map_webauthn_authentication_error,
+    storage::{load_passkeys, passkey_credentials, record_passkey_authentication},
+};
 use crate::http::error::AppError;
 
 #[path = "identity.domains.auth.webauthn.login.discoverable.rs"]
@@ -35,15 +38,15 @@ pub async fn start_login_authentication(
         ));
     }
 
-    let (request, authentication) =
-        webauthn
-            .start_passkey_authentication(&passkeys)
-            .map_err(|_| {
-                AppError::internal(
-                    "webauthn_auth_start_failed",
-                    "Failed to start WebAuthn authentication.",
-                )
-            })?;
+    let credentials = passkey_credentials(&passkeys);
+    let (request, authentication) = webauthn
+        .start_passkey_authentication(&credentials)
+        .map_err(|_| {
+            AppError::internal(
+                "webauthn_auth_start_failed",
+                "Failed to start WebAuthn authentication.",
+            )
+        })?;
 
     let challenge_id = login_challenges::replace_challenge(
         redis,
@@ -141,15 +144,9 @@ pub async fn finish_login_authentication(
     let mut passkeys = load_passkeys(db, principal_id).await?;
     let result = webauthn
         .finish_passkey_authentication(credential, &stored.authentication)
-        .map_err(|_| AppError::forbidden("webauthn_auth_failed", "WebAuthn assertion failed."))?;
+        .map_err(map_webauthn_authentication_error)?;
 
-    if let Some(passkey) = passkeys
-        .iter_mut()
-        .find(|passkey| passkey.cred_id() == result.cred_id())
-    {
-        passkey.update_credential(&result);
-        persist_passkey(db, principal_id, passkey).await?;
-    }
+    record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
 
     login_challenges::consume_challenge(
         redis,

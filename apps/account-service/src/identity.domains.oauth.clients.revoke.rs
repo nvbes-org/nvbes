@@ -7,25 +7,31 @@ use crate::http::error::AppError;
 /// Revoke an OAuth client.
 pub async fn revoke_client(
     db: &PgPool,
-    redis: &nvbes_redis::RedisPool,
+    _redis: &nvbes_redis::RedisPool,
     auth: &(impl OAuthManagementAuth + crate::domains::authz::TenantManagementAuth),
     client_id_str: &str,
 ) -> Result<RevokeOAuthClientResult, AppError> {
-    let tenant_id = super::require_oauth_management_tenant(db, auth).await?;
+    let tenant_id = super::require_oauth_consent_tenant(db, auth).await?;
     let mut tx = db.begin().await?;
 
     let client = sqlx::query(
         r#"
         SELECT id, client_id
         FROM oauth_clients
-        WHERE client_id = $1
-          AND tenant_id = $2
-          AND revoked_at IS NULL
+        WHERE client_id = $1 AND tenant_id = $2 AND revoked_at IS NULL
+          AND EXISTS (
+            SELECT 1 FROM oauth_consents
+            WHERE oauth_consents.client_id = oauth_clients.id
+              AND oauth_consents.principal_id = $3
+              AND oauth_consents.tenant_id = $2
+              AND oauth_consents.revoked_at IS NULL
+          )
         LIMIT 1
         "#,
     )
     .bind(client_id_str)
     .bind(tenant_id)
+    .bind(OAuthManagementAuth::user_id(auth))
     .fetch_optional(&mut *tx)
     .await?;
 
@@ -39,37 +45,15 @@ pub async fn revoke_client(
     let client_uuid: Uuid = client.get("id");
 
     sqlx::query(
-        r#"
-        UPDATE oauth_clients
-        SET revoked_at = NOW()
-        WHERE id = $1
-        "#,
+        "UPDATE oauth_consents SET revoked_at = NOW() WHERE client_id = $1 AND principal_id = $2 AND tenant_id = $3 AND revoked_at IS NULL",
     )
     .bind(client_uuid)
+    .bind(OAuthManagementAuth::user_id(auth))
+    .bind(tenant_id)
     .execute(&mut *tx)
     .await?;
-
-    let tokens_revoked =
-        nvbes_redis::refresh_token::revoke_all_client_refresh_tokens(redis, client_uuid)
-            .await
-            .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
-    let par_revoked =
-        nvbes_redis::par::revoke_pushed_authorization_requests_for_client(redis, client_id_str)
-            .await
-            .map_err(|err| {
-                AppError::internal(
-                    "pushed_authorization_request_revoke_failed",
-                    err.to_string(),
-                )
-            })?;
-
-    crate::domains::oauth::authorization_codes::revoke_authorization_codes_for_client(
-        redis,
-        client_id_str,
-    )
-    .await?;
-    crate::domains::oauth::device_codes::revoke_device_codes_for_client(redis, client_id_str)
-        .await?;
+    let tokens_revoked = 0;
+    let par_revoked = 0;
 
     tx.commit().await?;
 
@@ -79,7 +63,7 @@ pub async fn revoke_client(
         client_uuid = %client_uuid,
         tokens_revoked = tokens_revoked,
         par_revoked = par_revoked,
-        "OAuth client revoked"
+        "OAuth client consent revoked"
     );
 
     Ok(RevokeOAuthClientResult {

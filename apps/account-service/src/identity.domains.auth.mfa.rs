@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use super::{db::map_factor_view, types::*};
@@ -14,7 +14,24 @@ pub mod totp;
 pub use recovery::verify_recovery;
 pub use totp::verify_totp;
 
-pub async fn list_factors(db: &PgPool, user_id: Uuid) -> Result<MfaFactorsResult, AppError> {
+pub async fn list_factors(
+    db: &PgPool,
+    user_id: Uuid,
+    limit: Option<i64>,
+    cursor: Option<String>,
+) -> Result<MfaFactorsResult, AppError> {
+    let limit = limit.unwrap_or(50).clamp(1, 200) as usize;
+    let cursor = cursor
+        .as_deref()
+        .map(nvbes_core::pagination::decode_cursor::<nvbes_core::pagination::KeysetCursor>)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let mfa_enabled: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM mfa_factors WHERE principal_id = $1 AND status = 'active')",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
     let rows = sqlx::query(
         r#"
         SELECT id,
@@ -28,16 +45,41 @@ pub async fn list_factors(db: &PgPool, user_id: Uuid) -> Result<MfaFactorsResult
         FROM mfa_factors
         WHERE principal_id = $1
           AND status = 'active'
-        ORDER BY created_at DESC
+          AND ($2::timestamp with time zone IS NULL OR (created_at, id) < ($2, $3))
+        ORDER BY created_at DESC, id DESC
+        LIMIT $4
         "#,
     )
     .bind(user_id)
+    .bind(cursor.as_ref().map(|c| c.created_at))
+    .bind(cursor.as_ref().map(|c| c.id))
+    .bind((limit + 1) as i64)
     .fetch_all(db)
     .await?;
 
+    let page = nvbes_core::pagination::page_from_rows(rows, limit, |row| {
+        nvbes_core::pagination::KeysetCursor {
+            created_at: row.get("created_at"),
+            id: row.get("id"),
+        }
+    });
+    let next_cursor = page
+        .next_cursor
+        .map(|c| nvbes_core::pagination::encode_cursor(&c))
+        .transpose()
+        .map_err(|_| {
+            AppError::internal("pagination_error", "Failed to encode pagination cursor.")
+        })?;
+    let factors = page
+        .items
+        .into_iter()
+        .map(map_factor_view)
+        .collect::<Vec<_>>();
     Ok(MfaFactorsResult {
-        mfa_enabled: !rows.is_empty(),
-        factors: rows.into_iter().map(map_factor_view).collect(),
+        mfa_enabled,
+        factors,
+        next_cursor,
+        has_more: page.has_more,
     })
 }
 
@@ -134,11 +176,11 @@ pub fn login_methods_from_factor_types(factor_types: &[String]) -> Vec<String> {
         .any(|factor_type| factor_type == "email");
 
     let mut methods = Vec::with_capacity(4);
-    if has_totp {
-        methods.push("totp".to_string());
-    }
     if has_webauthn {
         methods.push("webauthn".to_string());
+    }
+    if has_totp {
+        methods.push("totp".to_string());
     }
     if has_recovery {
         methods.push("recovery".to_string());
@@ -163,6 +205,6 @@ mod tests {
             "email".to_string(),
         ]);
 
-        assert_eq!(methods, vec!["totp", "webauthn", "recovery", "email"]);
+        assert_eq!(methods, vec!["webauthn", "totp", "recovery", "email"]);
     }
 }

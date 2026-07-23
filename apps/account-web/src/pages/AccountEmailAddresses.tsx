@@ -1,64 +1,48 @@
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import type { EmailAddress } from '@nvbes/identity-client';
+import { MailPlus, Send, Trash2 } from 'lucide-react';
 
+import { AsyncStateButton } from '@/components/AsyncStateButton';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function AccountEmailAddresses({
+  adding,
+  deletingEmailId,
   emails,
   emailDraft,
   error,
-  loading,
+  promotingEmailId,
   primaryMinAgeHours,
-  success,
+  resendingEmailId,
   onAdd,
   onDelete,
   onDraftChange,
   onPromote,
   onResendVerification,
 }: {
+  adding: boolean;
+  deletingEmailId: string | null;
   emails: EmailAddress[];
   emailDraft: string;
   error: string | null;
-  loading: boolean;
+  promotingEmailId: string | null;
   primaryMinAgeHours: number;
-  success: string | null;
-  onAdd: (event: FormEvent<HTMLFormElement>) => void;
+  resendingEmailId: string | null;
+  onAdd: (event: SubmitEvent<HTMLFormElement>) => void;
   onDelete: (emailId: string) => void;
   onDraftChange: (value: string) => void;
   onPromote: (emailId: string) => void;
   onResendVerification: (emailId: string) => void;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Emails</CardTitle>
-        <CardDescription>
-          L&apos;email principal reste celui utilise pour la connexion et les documents du compte.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          {emails.map((email) => (
-            <EmailAddressRow
-              key={email.id}
-              email={email}
-              loading={loading}
-              primaryMinAgeHours={primaryMinAgeHours}
-              onDelete={onDelete}
-              onPromote={onPromote}
-              onResendVerification={onResendVerification}
-            />
-          ))}
-        </div>
-
+    <Card className="flex flex-col gap-4">
+      <CardContent>
         <form
           onSubmit={onAdd}
-          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+          className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end pb-5"
         >
           <div className="flex flex-col gap-2">
             <Label htmlFor="secondary-email">Ajouter un email secondaire</Label>
@@ -69,31 +53,57 @@ export function AccountEmailAddresses({
               placeholder="adresse@email.com"
               autoComplete="email"
               onChange={(event) => onDraftChange(event.target.value)}
+              className="bg-card"
             />
           </div>
-          <Button type="submit" disabled={loading || emailDraft.trim().length === 0}>
-            Ajouter
-          </Button>
+          <AsyncStateButton
+            type="submit"
+            size="icon"
+            disabled={adding || emailDraft.trim().length === 0}
+            state={adding ? 'pending' : 'idle'}
+            message="Ajouter l’adresse email secondaire"
+            icon={<MailPlus />}
+          />
         </form>
+        <div className="flex flex-col gap-2">
+          {emails
+            .sort((email) => (email.is_primary ? 1 : 0))
+            .map((email) => (
+              <EmailAddressRow
+                key={email.id}
+                email={email}
+                deleting={deletingEmailId === email.id}
+                promoting={promotingEmailId === email.id}
+                primaryMinAgeHours={primaryMinAgeHours}
+                resending={resendingEmailId === email.id}
+                onDelete={onDelete}
+                onPromote={onPromote}
+                onResendVerification={onResendVerification}
+              />
+            ))}
+        </div>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {success ? <p className="text-sm text-primary">{success}</p> : null}
       </CardContent>
     </Card>
   );
 }
 
 function EmailAddressRow({
+  deleting,
   email,
-  loading,
+  promoting,
   primaryMinAgeHours,
+  resending,
   onDelete,
   onPromote,
   onResendVerification,
 }: {
+  deleting: boolean;
   email: EmailAddress;
-  loading: boolean;
+  promoting: boolean;
   primaryMinAgeHours: number;
+  resending: boolean;
   onDelete: (emailId: string) => void;
   onPromote: (emailId: string) => void;
   onResendVerification: (emailId: string) => void;
@@ -101,7 +111,7 @@ function EmailAddressRow({
   const canPromote = !email.is_primary && email.verified && isOldEnough(email, primaryMinAgeHours);
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between bg-card">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm font-medium">{email.email}</span>
@@ -110,8 +120,8 @@ function EmailAddressRow({
           ) : (
             <Badge variant="secondary">Secondaire</Badge>
           )}
-          <Badge variant={email.verified ? 'default' : 'secondary'}>
-            {email.verified ? 'Verifie' : 'A verifier'}
+          <Badge variant={email.verified ? 'default' : 'destructive'}>
+            {email.verified ? 'Vérifié' : 'Pas vérifié'}
           </Badge>
         </div>
         {!email.is_primary && email.verified && !canPromote ? (
@@ -124,35 +134,37 @@ function EmailAddressRow({
       <div className="flex shrink-0 gap-2">
         {!email.is_primary ? (
           <>
-            {!email.verified ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={loading}
-                onClick={() => onResendVerification(email.id)}
-              >
-                Renvoyer
-              </Button>
-            ) : null}
-            <Button
+            <AsyncStateButton
               type="button"
               variant="outline"
               size="sm"
-              disabled={loading || !canPromote}
+              disabled={promoting || !canPromote}
+              state={promoting ? 'pending' : canPromote ? 'idle' : 'disabled'}
+              message="Définir comme principal"
               onClick={() => onPromote(email.id)}
-            >
-              Principal
-            </Button>
-            <Button
+            />
+            {!email.verified ? (
+              <AsyncStateButton
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                disabled={resending}
+                state={resending ? 'pending' : 'idle'}
+                message={`Renvoyer l’email de vérification à ${email.email}`}
+                icon={<Send />}
+                onClick={() => onResendVerification(email.id)}
+              />
+            ) : null}
+            <AsyncStateButton
               type="button"
               variant="destructive"
-              size="sm"
-              disabled={loading}
+              size="icon-sm"
+              disabled={deleting}
+              state={deleting ? 'pending' : 'idle'}
+              message={`Supprimer l’adresse ${email.email}`}
+              icon={<Trash2 />}
               onClick={() => onDelete(email.id)}
-            >
-              Supprimer
-            </Button>
+            />
           </>
         ) : null}
       </div>

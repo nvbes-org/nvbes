@@ -5,13 +5,14 @@ use super::{
     hosted_store::{get_hosted_authorization_state, set_hosted_authorization_state},
     hosted_types::{CachedHostedAuthorizationState, HostedClientDisplay, HostedLoginDecision},
 };
-use crate::{domains::developer::grpc as developer_grpc, http::error::AppError};
+use crate::{developer_client, http::error::AppError};
 
 pub struct StartHostedAuthorizationInput {
     pub client_id: String,
     pub redirect_uri: String,
     pub scope: Option<String>,
     pub state: Option<String>,
+    pub nonce: Option<String>,
     pub request_uri: Option<String>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
@@ -67,6 +68,7 @@ pub async fn create_hosted_authorization_state(
             .scope
             .unwrap_or_else(|| "openid profile email".to_string()),
         state: input.state,
+        nonce: input.nonce,
         request_uri: input.request_uri,
         code_challenge: input.code_challenge,
         code_challenge_method: input.code_challenge_method,
@@ -113,7 +115,7 @@ pub async fn get_hosted_login_decision(
         Some(row) => build_hosted_client_display(
             state.client_id.clone(),
             row.name,
-            developer_grpc::get_public_consent_screen(row.tenant_id, state.client_id.clone())
+            developer_client::get_public_consent_screen(row.tenant_id, state.client_id.clone())
                 .await?,
         ),
         None => HostedClientDisplay {
@@ -140,7 +142,7 @@ pub async fn get_hosted_login_decision(
 pub(crate) fn build_hosted_client_display(
     client_id: String,
     client_name: String,
-    consent_screen: crate::domains::developer::types::DeveloperConsentScreenResponse,
+    consent_screen: crate::developer_client::DeveloperConsentScreen,
 ) -> HostedClientDisplay {
     let name = if consent_screen.product_name.trim().is_empty() {
         client_name

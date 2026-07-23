@@ -5,17 +5,29 @@ use nvbes_region::{
     geo::{GeoLookupRequest, GeoResolver, parse_ip},
 };
 
-pub fn bearer_token_with_authuser(headers: &HeaderMap, authuser: &str) -> Result<String, AppError> {
-    if let Some(auth_header) = headers.get("Authorization") {
-        let auth_str = auth_header
-            .to_str()
-            .map_err(|_| AppError::unauthorized("invalid_token", "Invalid Authorization header"))?;
-
-        if let Some(token) = auth_str.strip_prefix("Bearer ") {
-            return Ok(token.to_string());
-        }
+pub fn authorization_bearer_token(headers: &HeaderMap) -> Result<Option<String>, AppError> {
+    let Some(auth_header) = headers.get("Authorization") else {
+        return Ok(None);
+    };
+    let auth_str = auth_header
+        .to_str()
+        .map_err(|_| AppError::unauthorized("invalid_token", "Invalid Authorization header"))?;
+    let token = auth_str.strip_prefix("Bearer ").ok_or_else(|| {
+        AppError::unauthorized("invalid_token", "Authorization must use the Bearer scheme.")
+    })?;
+    if token.is_empty() {
+        return Err(AppError::unauthorized(
+            "invalid_token",
+            "Bearer token is empty.",
+        ));
     }
+    Ok(Some(token.to_string()))
+}
 
+pub fn browser_session_token_with_authuser(
+    headers: &HeaderMap,
+    authuser: &str,
+) -> Result<String, AppError> {
     if let Some(cookie_header) = headers.get("Cookie") {
         cookie_header
             .to_str()
@@ -27,14 +39,7 @@ pub fn bearer_token_with_authuser(headers: &HeaderMap, authuser: &str) -> Result
         if authuser == "0" || authuser.is_empty() {
             if let Some(token) = cookie_value(
                 headers,
-                &[
-                    &secure_name,
-                    &normal_name,
-                    "__Host-session=",
-                    "session=",
-                    "__Host-token=",
-                    "token=",
-                ],
+                &[&secure_name, &normal_name, "__Host-session=", "session="],
             ) {
                 return Ok(token);
             }
@@ -46,13 +51,18 @@ pub fn bearer_token_with_authuser(headers: &HeaderMap, authuser: &str) -> Result
     }
 
     Err(AppError::unauthorized(
-        "missing_token",
-        "No token found in Authorization header or cookies",
+        "missing_session_cookie",
+        "No browser session cookie was found.",
     ))
 }
 
 pub fn bearer_token(headers: &HeaderMap) -> Result<String, AppError> {
-    bearer_token_with_authuser(headers, "0")
+    authorization_bearer_token(headers)?.ok_or_else(|| {
+        AppError::unauthorized(
+            "missing_token",
+            "No Bearer token was found in Authorization.",
+        )
+    })
 }
 
 pub fn cookie_value(headers: &HeaderMap, names: &[&str]) -> Option<String> {
@@ -184,7 +194,10 @@ pub fn supported_data_regions() -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{region_from_headers, session_cookie_tokens, session_cookie_values};
+    use super::{
+        authorization_bearer_token, browser_session_token_with_authuser, region_from_headers,
+        session_cookie_tokens, session_cookie_values,
+    };
     use axum::http::{HeaderMap, HeaderValue};
 
     #[test]
@@ -235,5 +248,20 @@ mod tests {
         assert_eq!(cookies[1].token, "one");
         assert_eq!(cookies[2].authuser, "2");
         assert_eq!(cookies[2].token, "two");
+    }
+
+    #[test]
+    fn browser_session_cookie_is_not_treated_as_a_bearer_token() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Cookie",
+            HeaderValue::from_static("__Host-session_1=v1.session.secret-value"),
+        );
+
+        assert_eq!(authorization_bearer_token(&headers).unwrap(), None);
+        assert_eq!(
+            browser_session_token_with_authuser(&headers, "1").unwrap(),
+            "v1.session.secret-value"
+        );
     }
 }

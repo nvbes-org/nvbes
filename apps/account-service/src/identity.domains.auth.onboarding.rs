@@ -1,11 +1,11 @@
-use chrono::{Duration as ChronoDuration, Utc};
+use chrono::Utc;
 use nvbes_core::config::AppConfig;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use super::password::history;
 use super::{
-    db, generate_random_token, hash_password, log_dev_token, normalize_email, token_hash, types::*,
+    db, generate_random_token, hash_password, normalize_email, token_hash, types::*,
     validate_email, validate_password,
 };
 use crate::http::error::AppError;
@@ -16,6 +16,8 @@ pub async fn register(
     config: &AppConfig,
     input: RegisterInput,
 ) -> Result<RegisterResult, AppError> {
+    crate::email::templates::ensure_delivery_configured(config)?;
+
     let email = normalize_email(&input.email);
     validate_email(&email)?;
     validate_password(&input.password)?;
@@ -41,13 +43,7 @@ pub async fn register(
 
     let password_hash = hash_password(&input.password)?;
     let verification_token = generate_random_token();
-    log_dev_token(
-        &verification_token,
-        &config.environment,
-        "email_verification",
-    );
-
-    let (principal_id, workspace_id, now) = db::create_user_account(
+    let (principal_id, now) = db::create_user_account(
         db,
         redis,
         config,
@@ -58,7 +54,6 @@ pub async fn register(
         input.birthdate,
         input.region.clone(),
         input.data_region.clone(),
-        input.workspace_name.clone(),
         password_hash.clone(),
         verification_token.clone(),
         input.ip.clone(),
@@ -74,6 +69,17 @@ pub async fn register(
         Some(&input.username),
     );
 
+    super::email_verification::enqueue_verification_email(
+        db,
+        redis,
+        config,
+        principal_id,
+        &email,
+        &display_name,
+        &verification_token,
+    )
+    .await?;
+
     Ok(RegisterResult {
         user: UserView {
             id: principal_id,
@@ -87,18 +93,6 @@ pub async fn register(
             email_verified: false,
             mfa_enabled: false,
             created_at: now,
-        },
-        workspace: WorkspaceView {
-            id: workspace_id,
-            owner_principal_id: principal_id,
-            name: input.workspace_name,
-            workspace_type: "personal".to_string(),
-            data_region: input
-                .data_region
-                .clone()
-                .unwrap_or_else(|| "eu".to_string()),
-            role: "owner".to_string(),
-            trial_ends_at: Some(now + ChronoDuration::days(14)),
         },
         verification_resend_available_at:
             super::email_verification::verification_resend_available_at(

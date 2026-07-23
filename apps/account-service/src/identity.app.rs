@@ -20,7 +20,7 @@ pub struct AppState {
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
-    pub billing_grpc_endpoint: String,
+    pub storage: std::sync::Arc<dyn nvbes_storage::ObjectStore>,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -84,9 +84,7 @@ impl AppState {
             redis,
             rate_limiter,
             allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
-            billing_grpc_endpoint: crate::domains::account_billing::grpc::billing_grpc_endpoint(
-                config.api_port,
-            )?,
+            storage: nvbes_product_cloud::storage::build_storage(config).await,
         };
 
         crate::database::ensure_default_oauth_clients_seeded(&state.db).await?;

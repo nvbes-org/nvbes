@@ -43,6 +43,17 @@ pub struct TokenClaims {
     pub act: Option<ActorClaim>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IdTokenClaims {
+    pub iss: String,
+    pub sub: String,
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub auth_time: i64,
+    pub nonce: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenPair {
     pub access_token: String,

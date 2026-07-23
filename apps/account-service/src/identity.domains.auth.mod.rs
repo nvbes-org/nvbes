@@ -6,16 +6,22 @@ pub mod account_deletion;
 pub mod audit;
 #[path = "identity.domains.auth.bot_guard.rs"]
 pub mod bot_guard;
+#[path = "identity.domains.auth.bot_response.rs"]
+pub mod bot_response;
 #[path = "identity.domains.auth.bot_scorer.rs"]
 pub mod bot_scorer;
 #[path = "identity.domains.auth.bot_signals.rs"]
 pub mod bot_signals;
 #[path = "identity.domains.auth.challenge_proof.rs"]
 pub mod challenge_proof;
+#[path = "identity.domains.auth.credential_stuffing.rs"]
+pub mod credential_stuffing;
 #[path = "identity.domains.auth.data_export.rs"]
 pub mod data_export;
 #[path = "identity.domains.auth.db.rs"]
 pub mod db;
+#[path = "identity.domains.auth.device_trust.rs"]
+pub mod device_trust;
 #[path = "identity.domains.auth.email_addresses.rs"]
 pub mod email_addresses;
 #[path = "identity.domains.auth.email_verification.rs"]
@@ -74,10 +80,14 @@ pub mod sessions;
 pub mod sessions_context;
 #[path = "identity.domains.auth.sessions.mgmt.rs"]
 pub mod sessions_mgmt;
+#[path = "identity.domains.auth.sso_policy.rs"]
+pub mod sso_policy;
 #[path = "identity.domains.auth.state.rs"]
 pub mod state;
 #[path = "identity.domains.auth.types.rs"]
 pub mod types;
+#[path = "identity.domains.auth.ua_client_hints.rs"]
+pub mod ua_client_hints;
 #[path = "identity.domains.auth.verification.rs"]
 pub mod verification;
 #[path = "identity.domains.auth.webauthn.rs"]
@@ -86,6 +96,6 @@ pub mod webauthn;
 pub use nvbes_core::limiter::RateLimiter;
 pub use nvbes_core::limiter::check_rate_limit;
 pub use password::{
-    generate_random_token, hash_password, log_dev_token, normalize_email, token_hash, unique_slug,
-    validate_email, validate_password, verify_password,
+    generate_random_token, hash_password, normalize_email, token_hash, unique_slug, validate_email,
+    validate_password, verify_password,
 };

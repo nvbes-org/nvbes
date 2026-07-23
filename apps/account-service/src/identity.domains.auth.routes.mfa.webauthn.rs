@@ -112,6 +112,7 @@ pub(crate) async fn begin_webauthn_enrollment(
         &webauthn,
         auth.session_id,
         auth.user_id,
+        &auth.display_name,
         tenant_id,
         auth.workspace_id,
         request.label,

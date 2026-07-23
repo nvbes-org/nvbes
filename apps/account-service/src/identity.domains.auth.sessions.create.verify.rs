@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use crate::domains::auth::{
     audit::{AuthAuditInput, record_auth_event},
+    credential_stuffing,
     login_throttle::{LOGIN_THROTTLE_ACTION, LoginThrottleKeys},
     password, risk,
     types::LoginInput,
@@ -29,7 +30,7 @@ pub async fn verify_primary_credentials(
     nvbes_core::limiter::check_rate_limit_pair(redis, LOGIN_THROTTLE_ACTION, ip_rule, account_rule)
         .await?;
 
-    let row = sqlx::query(
+    let Some(row) = sqlx::query(
         r#"
         SELECT
           u.principal_id,
@@ -53,7 +54,22 @@ pub async fn verify_primary_credentials(
     .bind(&email)
     .fetch_optional(db)
     .await?
-    .ok_or_else(|| AppError::unauthorized("invalid_credentials", "Invalid email or password."))?;
+    else {
+        credential_stuffing::record_failed_login(
+            db,
+            redis,
+            None,
+            &email,
+            input.ip.clone(),
+            input.user_agent.clone(),
+            "unknown_account",
+        )
+        .await?;
+        return Err(AppError::unauthorized(
+            "invalid_credentials",
+            "Invalid email or password.",
+        ));
+    };
 
     let principal_id: Uuid = row.get("principal_id");
     let tenant_id: Option<Uuid> = row.get("tenant_id");
@@ -154,12 +170,32 @@ pub async fn verify_primary_credentials(
             },
         )
         .await;
+        credential_stuffing::record_failed_login(
+            db,
+            redis,
+            Some(principal_id),
+            &email,
+            input.ip.clone(),
+            input.user_agent.clone(),
+            "invalid_password",
+        )
+        .await?;
         return Err(err);
     }
+
+    let stuffing_score = credential_stuffing::successful_password_risk_score(
+        db,
+        redis,
+        principal_id,
+        &email,
+        input.ip.clone(),
+        input.user_agent.clone(),
+    )
+    .await?;
 
     Ok(VerifiedPrimaryLogin {
         principal_id,
         email,
-        risk_score,
+        risk_score: risk_score + stuffing_score,
     })
 }

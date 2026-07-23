@@ -2,7 +2,7 @@
 
 use axum::{
     extract::State,
-    http::{HeaderMap, header::SET_COOKIE, request::Parts},
+    http::{HeaderMap, request::Parts},
     middleware::Next,
     response::Response,
 };
@@ -99,27 +99,14 @@ pub async fn jwt_auth_middleware(
     mut request: axum::http::Request<axum::body::Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let authuser = authuser::resolve_authuser(request.uri(), &headers);
-    let (auth, refreshed_cookies) =
-        session_refresh::authenticate_or_refresh_session(&state, &headers, &authuser).await?;
+    let authuser = authuser::resolve_authuser(request.uri(), &headers)?;
+    let auth = session_refresh::authenticate_session_request(&state, &headers, &authuser).await?;
     let auth_context = AuthContext::from(auth);
 
     // Store auth context in request extensions
     request.extensions_mut().insert(auth_context);
 
-    let mut response = next.run(request).await;
-
-    // Set refreshed cookies on response if token was rotated
-    if let Some(refreshed_cookies) = refreshed_cookies {
-        response
-            .headers_mut()
-            .append(SET_COOKIE, refreshed_cookies.session_cookie);
-        response
-            .headers_mut()
-            .append(SET_COOKIE, refreshed_cookies.csrf_cookie);
-    }
-
-    Ok(response)
+    Ok(next.run(request).await)
 }
 
 /// Extension trait to extract AuthContext from request

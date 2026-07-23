@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +9,7 @@ import type { LoginPageMfaStepProps } from './LoginPageMfaStep.types';
 export function LoginPageMfaMethodForm({
   error,
   loading,
+  loginStateToken,
   mfaMethod,
   totpCode,
   emailCode,
@@ -16,10 +19,12 @@ export function LoginPageMfaMethodForm({
   onRecoveryCodeChange,
   onMfaSubmit,
   onBackToMethodSelect,
+  onResendEmailCode,
 }: Pick<
   LoginPageMfaStepProps,
   | 'error'
   | 'loading'
+  | 'loginStateToken'
   | 'mfaMethod'
   | 'totpCode'
   | 'emailCode'
@@ -29,7 +34,34 @@ export function LoginPageMfaMethodForm({
   | 'onRecoveryCodeChange'
   | 'onMfaSubmit'
   | 'onBackToMethodSelect'
+  | 'onResendEmailCode'
 >) {
+  const [resending, setResending] = useState(false);
+  const [resendInSeconds, setResendInSeconds] = useState(0);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendInSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendInSeconds((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendInSeconds]);
+
+  async function handleResendEmailCode() {
+    if (!loginStateToken || resending || resendInSeconds > 0) return;
+    setResending(true);
+    setResendError(null);
+    try {
+      await onResendEmailCode();
+      setResendInSeconds(30);
+    } catch (error) {
+      setResendError(error instanceof Error ? error.message : 'Le code n’a pas pu être renvoyé.');
+    } finally {
+      setResending(false);
+    }
+  }
+
   return (
     <form onSubmit={onMfaSubmit} className="flex flex-col gap-5">
       {mfaMethod === 'totp' && (
@@ -47,6 +79,20 @@ export function LoginPageMfaMethodForm({
             required
             autoFocus
           />
+          <Button
+            type="button"
+            variant="link"
+            className="self-start px-0"
+            onClick={() => void handleResendEmailCode()}
+            disabled={!loginStateToken || resending || resendInSeconds > 0 || loading}
+          >
+            {resending
+              ? 'Envoi en cours...'
+              : resendInSeconds > 0
+                ? `Renvoyer dans ${resendInSeconds}s`
+                : 'Renvoyer le code'}
+          </Button>
+          {resendError && <p className="text-sm text-destructive">{resendError}</p>}
         </div>
       )}
 

@@ -43,7 +43,7 @@ pub(crate) async fn challenge_pwd(
 ) -> Result<Response, AppError> {
     let meta = super::LoginRequestMeta::from_headers(&headers);
     let auth_state = fetch_state(&state.redis, request.state_token, "pwd").await?;
-    crate::domains::federation::sso_policy::ensure_password_allowed_for_email(
+    crate::domains::auth::sso_policy::ensure_password_allowed_for_email(
         &state.db,
         &auth_state.email,
     )
@@ -64,9 +64,17 @@ pub(crate) async fn challenge_pwd(
         user_agent: meta.user_agent(),
         device_fingerprint: auth_state.device_fingerprint.clone(),
     };
-    let verified =
+    let mut verified =
         sessions::verify_primary_credentials(&state.db, &state.redis, &state.config, &login_input)
             .await?;
+    verified.risk_score += crate::domains::auth::device_trust::pre_auth_risk_score(
+        &state.db,
+        verified.principal_id,
+        meta.installation_token(),
+        auth_state.device_fingerprint.as_ref(),
+        &state.config.jwt_secret,
+    )
+    .await?;
     if let Some(check) =
         ExposedCredentialCheck::from_headers(&headers).filter(|check| check.password_leaked())
     {
@@ -118,7 +126,6 @@ pub(crate) async fn challenge_pwd(
     let result = sessions::create_session_for_principal(
         &state.db,
         &state.redis,
-        &state.jwt,
         &state.config,
         verified.principal_id,
         super::login_session_context(
@@ -132,9 +139,15 @@ pub(crate) async fn challenge_pwd(
     .await?;
 
     let secure_cookie = state.config.environment != "development";
-    let authuser = query.authuser.as_deref().unwrap_or("0");
+    let authuser = query.authuser()?;
     let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
-    let response = super::login_response(result, authuser, secure_cookie, session_expires_in)?;
+    let response = super::login_response(
+        result,
+        authuser,
+        secure_cookie,
+        session_expires_in,
+        &state.config.jwt_secret,
+    )?;
     delete_state(&state.redis, request.state_token).await?;
     Ok(response)
 }

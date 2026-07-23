@@ -5,6 +5,7 @@ pub(super) struct ResolvedParams {
     pub redirect_uri: String,
     pub scope: Option<String>,
     pub state: Option<String>,
+    pub nonce: Option<String>,
     pub audience: Option<String>,
     pub resource: Option<Vec<String>>,
     pub authorization_details: crate::domains::oauth::rar::AuthorizationDetails,
@@ -35,6 +36,10 @@ pub(super) fn build_params_from_map(
             .map(String::from),
         state: params
             .get("state")
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        nonce: params
+            .get("nonce")
             .and_then(|v| v.as_str())
             .map(String::from),
         audience: params

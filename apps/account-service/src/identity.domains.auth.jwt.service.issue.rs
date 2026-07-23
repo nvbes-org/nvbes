@@ -1,12 +1,31 @@
 use chrono::Utc;
 use uuid::Uuid;
 
-use super::types::{JwtService, TokenClaims, TokenPair};
+use super::types::{IdTokenClaims, JwtService, TokenClaims, TokenPair};
 use crate::http::error::AppError;
 
 const CLOUD_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
 
 impl JwtService {
+    pub fn generate_id_token(
+        &self,
+        user_id: Uuid,
+        client_id: &str,
+        nonce: &str,
+        auth_time: i64,
+    ) -> Result<String, AppError> {
+        let now = Utc::now();
+        self.encode_claims(&IdTokenClaims {
+            iss: self.issuer.clone(),
+            sub: user_id.to_string(),
+            aud: client_id.to_string(),
+            exp: (now + chrono::Duration::minutes(5)).timestamp(),
+            iat: now.timestamp(),
+            auth_time,
+            nonce: nonce.to_string(),
+        })
+    }
+
     #[cfg(test)]
     pub fn generate_token_pair(
         &self,

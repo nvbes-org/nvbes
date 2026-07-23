@@ -1,4 +1,5 @@
 import { CircleOffIcon } from 'lucide-react';
+import { AuthBrandWordmark } from './AuthBrandWordmark';
 
 export function LoginBrandPanel() {
   return (
@@ -18,11 +19,12 @@ export function LoginBrandPanel() {
           <div className="mb-16 inline-flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <CircleOffIcon className="size-5 stroke-[2.5]" aria-hidden="true" />
           </div>
-          <h2 className="text-4xl font-bold leading-tight tracking-tight text-foreground/85">
-            nvbes
-          </h2>
-          <p className="mt-4 max-w-xs text-base leading-relaxed text-muted-foreground">
-            Votre cloud, sans dispersion, prêt à grandir avec votre équipe.
+          <AuthBrandWordmark />
+          <p
+            className="auth-brand-tagline mt-4 max-w-xs text-base leading-relaxed text-muted-foreground"
+            data-wordmark="Votre écosystème numérique."
+          >
+            Votre écosystème numérique.
           </p>
         </div>
         <div className="animate-fade-slide-up [animation-delay:200ms]">

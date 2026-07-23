@@ -8,6 +8,7 @@ use axum::{
 use crate::{app::AppState, http::error::AppError};
 
 const ORIGIN_SKIP_PATHS: &[&str] = &[
+    "/csp-report",
     "/oauth/token",
     "/oauth/introspect",
     "/oauth/revoke",
@@ -63,6 +64,7 @@ fn is_mutating_method(method: &Method) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::ORIGIN_SKIP_PATHS;
     use crate::http::cors::same_origin;
 
     #[test]
@@ -87,5 +89,10 @@ mod tests {
             "http://127.0.0.1:3001/path",
             "http://localhost:3001"
         ));
+    }
+
+    #[test]
+    fn csp_reports_skip_origin_validation() {
+        assert!(ORIGIN_SKIP_PATHS.contains(&"/csp-report"));
     }
 }
