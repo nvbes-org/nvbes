@@ -239,18 +239,24 @@ git config --global user.signingkey YOUR_KEY_ID
 git config --global commit.gpgsign true
 ```
 
-Ensure GPG can prompt for the passphrase inside the terminal:
+VS Code forwards the host GPG agent into the devcontainer. Let the host
+Pinentry application request the passphrase. Do not add `pinentry-mode loopback`
+to `~/.gnupg/gpg.conf`: the forwarded agent uses a restricted socket that
+rejects loopback mode.
 
 ```bash
-printf 'pinentry-mode loopback\n' >> ~/.gnupg/gpg.conf
-printf 'allow-loopback-pinentry\n' >> ~/.gnupg/gpg-agent.conf
-gpgconf --kill gpg-agent
+gpg-connect-agent 'GETINFO version' /bye
+echo "test" | gpg --clearsign
 ```
 
-Check the setup:
+If a previous setup added `pinentry-mode loopback`, remove that line from
+`~/.gnupg/gpg.conf` before retrying the signature. A version warning can appear
+when the host and container GPG versions differ; it does not block signing when
+the host agent accepts the signing request.
+
+Check the Git setup:
 
 ```bash
-echo "test" | gpg --clearsign
 git config --global --get gpg.format
 git config --global --get user.signingkey
 ```

@@ -17,6 +17,7 @@ catalog:
   tsx: ^4.22.1
   '@tailwindcss/vite': ^4.3.3
   tailwindcss: ^4.3.3
+  '@sentry/browser': ^10.68.0
 
 allowBuilds:
   '@posthog/cli': true

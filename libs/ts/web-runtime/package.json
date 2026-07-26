@@ -31,7 +31,7 @@
   "dependencies": {
     "@nvbes/http-client": "workspace:*",
     "@radix-ui/react-switch": "^1.2.6",
-    "@sentry/browser": "^10.63.0",
+    "@sentry/browser": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "posthog-js": "1.396.3",

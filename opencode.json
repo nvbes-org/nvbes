@@ -23,6 +23,11 @@
       "command": "npx",
       "args": ["shadcn@latest", "mcp"],
       "enabled": true
+    },
+    "nx-mcp": {
+      "type": "local",
+      "command": ["npx", "nx", "mcp"],
+      "enabled": true
     }
   }
 }

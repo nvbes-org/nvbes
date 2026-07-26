@@ -92,6 +92,7 @@ export default defineConfig(({ mode }) => {
               '**/analytics-posthog-*.js',
               '**/analytics-sentry-*.js',
               '**/password-strength-*.js',
+              '**/stats.html',
             ],
             rollupFormat: 'iife',
             sourcemap: false,
