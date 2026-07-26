@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import type { UseLoginPageActionsOptions } from './useLoginPage.actions.shared';
 
 export type SubmitActionOptions = Pick<
@@ -25,4 +25,4 @@ export type SubmitActionOptions = Pick<
   | 'setError'
 >;
 
-export type LoginFormHandler = (event: FormEvent<HTMLFormElement>) => Promise<void>;
+export type LoginFormHandler = (event: SubmitEvent<HTMLFormElement>) => Promise<void>;

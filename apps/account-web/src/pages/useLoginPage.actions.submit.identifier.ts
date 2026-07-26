@@ -1,4 +1,5 @@
 import { resolvePowChallenge } from '../identity.auth.pow';
+import { collectBotIntegritySignals, collectDeviceProfile } from '@nvbes/identity-sdk-web';
 import { accountServiceBaseUrl } from '../identity.http';
 import { submitIdentifierStep } from './useLoginPage.steps';
 import type { LoginFormHandler, SubmitActionOptions } from './useLoginPage.actions.submit.shared';
@@ -24,6 +25,8 @@ export function buildIdentifierSubmitAction({
         email,
         decoyLinkClicked: decoyRef.current?.wasClicked() ?? false,
         powChallenge: await resolvePowChallenge(accountServiceBaseUrl),
+        deviceFingerprint: collectDeviceProfile(),
+        botSignals: await collectBotIntegritySignals(),
         submitIdentifier: mutations.loginIdentifierMutation.mutateAsync,
         resetMfaState,
         setLoginStateToken,

@@ -25,7 +25,7 @@ const EXPORT_LIMIT: i64 = 10_000;
 #[derive(Debug, Deserialize)]
 pub struct ListAuditEventsInput {
     pub limit: Option<i64>,
-    pub before_id: Option<Uuid>,
+    pub cursor: Option<String>,
     pub action: Option<String>,
     pub actor_user_id: Option<Uuid>,
     pub actor_principal_id: Option<Uuid>,
@@ -39,7 +39,8 @@ pub struct ListAuditEventsInput {
 pub struct AuditEventsResponse {
     pub workspace_id: Uuid,
     pub events: Vec<AuditEventView>,
-    pub next_before: Option<Uuid>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

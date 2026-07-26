@@ -64,10 +64,13 @@ mod tokens;
 mod validation;
 
 pub use birthdate::{parse_birthdate, today_in_region, validate_birthdate};
-pub use password::{hash_password, verify_password};
+pub use password::{
+    dummy_verify_password, hash_password, hash_password_with_pepper, verify_and_check_rehash,
+    verify_password, verify_password_with_pepper,
+};
 pub use tokens::{
-    generate_random_token, generate_token, log_dev_token, random_challenge, token_hash,
-    token_hash_b64, unique_slug,
+    generate_random_token, generate_token, random_challenge, token_hash, token_hash_b64,
+    unique_slug,
 };
 pub use validation::{
     normalize_email, require_non_empty, slugify, validate_email, validate_password,

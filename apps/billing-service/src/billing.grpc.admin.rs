@@ -4,8 +4,8 @@ use uuid::Uuid;
 use crate::grpc::pb::nvbes::billing::v1::{
     AdminBillingOverview, AdminBillingSearchResult, AdminBillingSearchResults,
     AdminCommandCenterBillingMetrics, AdminOperationsCenterSnapshot, AdminProviderEventFailure,
-    AdminProviderEventFailures, RecentExportRun, RecentProviderFailure,
-    RecentReconciliationDifference,
+    AdminProviderEventFailures, AdminTenantBillingSummary, AdminWorkspaceBillingSummary,
+    RecentExportRun, RecentProviderFailure, RecentReconciliationDifference,
 };
 
 pub async fn command_center_metrics(
@@ -163,6 +163,66 @@ pub async fn billing_overview(
         active_subscription_count: row.5,
         captured_payment_total_minor_30d: row.6,
         last_billing_audit_at: row.7.map(|value| value.to_rfc3339()).unwrap_or_default(),
+    })
+}
+
+pub async fn tenant_billing_summary(
+    db: &sqlx::PgPool,
+    tenant_id: Uuid,
+) -> Result<AdminTenantBillingSummary, Status> {
+    let row = sqlx::query_as::<_, (i64, i64)>(
+        r#"
+        SELECT
+          (
+            SELECT COUNT(*) FROM billing_invoices bi
+            WHERE bi.tenant_id = $1 AND bi.status::text IN ('issued', 'pro_forma')
+          ) AS open_invoice_count,
+          (
+            SELECT COUNT(*) FROM billing_provider_events bpe
+            WHERE bpe.tenant_id = $1 AND bpe.status::text IN ('failed', 'rejected')
+          ) AS provider_failure_count
+        "#,
+    )
+    .bind(tenant_id)
+    .fetch_one(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?;
+
+    Ok(AdminTenantBillingSummary {
+        open_invoice_count: row.0,
+        provider_failure_count: row.1,
+    })
+}
+
+pub async fn workspace_billing_summary(
+    db: &sqlx::PgPool,
+    workspace_id: Uuid,
+) -> Result<AdminWorkspaceBillingSummary, Status> {
+    let row = sqlx::query_as::<_, (i64, i64)>(
+        r#"
+        SELECT
+          (
+            SELECT COUNT(DISTINCT bi.id)
+            FROM billing_invoices bi
+            LEFT JOIN billing_accounts ba ON ba.id = bi.billing_account_id
+            LEFT JOIN billing_subscriptions bs ON bs.id = bi.subscription_id
+            WHERE (ba.workspace_id = $1 OR bs.workspace_id = $1)
+              AND bi.status::text IN ('issued', 'pro_forma')
+          ) AS open_invoice_count,
+          (
+            SELECT COUNT(*) FROM billing_subscriptions bs
+            WHERE bs.workspace_id = $1 AND bs.status IN ('active', 'trialing')
+          ) AS active_subscription_count
+        "#,
+    )
+    .bind(workspace_id)
+    .fetch_one(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?;
+
+    Ok(AdminWorkspaceBillingSummary {
+        open_invoice_count: row.0,
+        active_subscription_count: row.1,
     })
 }
 

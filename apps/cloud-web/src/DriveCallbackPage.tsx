@@ -1,10 +1,10 @@
 import { AuthErrorBoundary, clientErrorMessage } from '@nvbes/web-runtime';
-import { useNavigate } from '@tanstack/react-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { completeDriveCallback } from './drive.auth.functions';
+import { drivePathForSession } from './drive.session';
 
 export function DriveCallbackPage() {
   return (
@@ -17,9 +17,6 @@ export function DriveCallbackPage() {
 let callbackExchangeStarted = false;
 
 function CallbackContent() {
-  const navigate = useNavigate();
-  const navigateRef = useRef(navigate);
-  navigateRef.current = navigate;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -31,8 +28,8 @@ function CallbackContent() {
 
     async function run() {
       try {
-        await completeDriveCallback(searchParams);
-        void navigateRef.current({ to: '/', replace: true });
+        const result = await completeDriveCallback(searchParams);
+        window.location.replace(drivePathForSession(result.me.user.id, '/'));
       } catch (err) {
         if (!cancelled) {
           setError(clientErrorMessage(err, 'OAuth callback failed.'));
@@ -48,7 +45,7 @@ function CallbackContent() {
         callbackExchangeStarted = false;
       }, 0);
     };
-    // Run once on mount; navigate ref avoids stale closure & dep instability
+    // Run once on mount; callbackExchangeStarted guards React strict-mode remounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

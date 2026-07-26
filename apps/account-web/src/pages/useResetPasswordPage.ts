@@ -1,8 +1,9 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { resetPassword } from '../identity.password.api';
+import { estimatePasswordStrength } from './RegisterPage.password-strength';
 
 export function useResetPasswordPage() {
   const navigate = useNavigate();
@@ -16,6 +17,13 @@ export function useResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const passwordResult = useMemo(() => {
+    if (!password) {
+      return null;
+    }
+    return estimatePasswordStrength(password);
+  }, [password]);
+
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
     onSuccess: () => setSuccess(true),
@@ -25,12 +33,17 @@ export function useResetPasswordPage() {
       ),
   });
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
     if (password.length < 8) {
       setError('Le mot de passe doit contenir au moins 8 caracteres.');
+      return;
+    }
+
+    if ((passwordResult?.score ?? 0) < 3) {
+      setError('Le mot de passe est trop faible. Veuillez choisir un mot de passe plus fort.');
       return;
     }
 

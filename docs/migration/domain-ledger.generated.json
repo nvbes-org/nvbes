@@ -103,9 +103,7 @@
         "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
         "apps/cloud-service/src/drive.domains.share_links.observability.rs"
       ],
-      "migration_evidence": [
-        "docs/migration/audit-append-only.generated.json"
-      ],
+      "migration_evidence": ["docs/migration/audit-append-only.generated.json"],
       "decision": "go",
       "proof": "pnpm check:migration-audit-append-only"
     },
@@ -119,9 +117,7 @@
         "apps/account-service/src/identity.domains.auth.sessions.mgmt.rs",
         "libs/rust/products/account/src/account.email.jobs.rs"
       ],
-      "migration_evidence": [
-        "docs/migration/privacy-export-delete.generated.json"
-      ],
+      "migration_evidence": ["docs/migration/privacy-export-delete.generated.json"],
       "decision": "go",
       "proof": "pnpm check:migration-privacy-export-delete"
     },
@@ -131,11 +127,11 @@
       "owner": "Developer Platform lead",
       "status": "passed",
       "implementation_evidence": [
-        "apps/account-service/src/identity.domains.developer.routes.oauth.rs",
-        "apps/account-service/src/identity.domains.developer.routes.tokens.rs",
-        "apps/account-service/src/identity.domains.developer.routes.webhooks.rs",
+        "apps/developer-service/src/developer.http.routes.oauth.rs",
+        "apps/developer-service/src/developer.http.routes.tools.rs",
+        "apps/developer-service/src/developer.http.routes.webhooks.rs",
         "apps/console-web/src/developer.router.tsx",
-        "libs/ts/identity-sdk-core/openapi.json"
+        "apps/developer-service/openapi.json"
       ],
       "migration_evidence": [
         "docs/migration/developer-oauth-tokens.generated.json",

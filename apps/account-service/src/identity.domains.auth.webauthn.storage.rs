@@ -48,7 +48,7 @@ pub(crate) async fn persist_passkey(
     sqlx::query(
         r#"
         UPDATE mfa_factors
-        SET factor_data = jsonb_set(COALESCE(factor_data, '{}'::jsonb), '{passkey}', $2::jsonb, true),
+        SET factor_data = jsonb_set(COALESCE(factor_data, '{}'::jsonb), '{passkey}', $3::jsonb, true),
             last_used_at = NOW()
         WHERE id = $1
           AND principal_id = $2

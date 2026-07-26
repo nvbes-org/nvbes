@@ -1,12 +1,13 @@
-import { identityClient } from '@nvbes/identity-client';
 import type { AccountPrincipal } from '@nvbes/identity-client';
-import { useQuery } from '@tanstack/react-query';
+import { identityClient } from '@nvbes/identity-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-
+import { type SubmitEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { notifyProfileAvatarUpdated } from '@/account.avatar';
 import type { SupportedRegion } from '@/identity.auth.api';
 import { identityAuthMutationKeys, supportedRegionsQueryFn } from '@/identity.auth.queries';
 import { readAuthuser } from '@/identity.authuser';
+import { deleteProfileAvatar, uploadProfileAvatar } from './AccountPersonalInfoPage.api';
 import { fillPersonalInfoForm } from './useAccountPersonalInfoPage.form';
 import { useAccountPersonalInfoMutation } from './useAccountPersonalInfoPage.mutation';
 import {
@@ -28,7 +29,7 @@ export function useAccountPersonalInfoPage() {
   const didInitializeFormRef = useRef(false);
   const initializedUserIdRef = useRef<string | null>(null);
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
 
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
@@ -37,21 +38,19 @@ export function useAccountPersonalInfoPage() {
   const [region, setRegion] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarVersion, setAvatarVersion] = useState(() => Date.now());
 
   const personalInfoQueryKey = getAccountPersonalInfoQueryKey(authuser);
+  const queryClient = useQueryClient();
 
   const { data: account } = useQuery({
     queryKey: personalInfoQueryKey,
     queryFn: async ({ signal }): Promise<AccountPersonalInfoQueryData> => {
-      const [me, workspaces] = await Promise.all([
-        identityClient.getMe({ signal }),
-        identityClient.listWorkspaces({ signal }),
-      ]);
+      const me = await identityClient.getMe({ signal });
       return {
         user: me.user,
-        current_workspace_region: me.current_workspace_region,
-        current_workspace_id: me.current_workspace_id,
-        workspaces,
       };
     },
     staleTime: 30 * 60 * 1000,
@@ -76,8 +75,14 @@ export function useAccountPersonalInfoPage() {
   );
 
   const selectedUser = account ? accountPersonalInfoUser(account) : null;
-  const currentWorkspaceRegion = account ? accountPersonalInfoWorkspaceRegion(account) : null;
-  const accountRegion = selectedUser?.region ?? currentWorkspaceRegion ?? '';
+  const accountRegion = selectedUser?.region ?? '';
+  const isPersonalInfoUnchanged = selectedUser
+    ? firstname.trim() === (selectedUser.firstname ?? '').trim() &&
+      lastname.trim() === (selectedUser.lastname ?? '').trim() &&
+      username.trim() === (selectedUser.username ?? '').trim() &&
+      birthdate === (selectedUser.birthdate ?? '') &&
+      region === accountRegion
+    : true;
 
   const mutation = useAccountPersonalInfoMutation({
     authuser,
@@ -133,8 +138,20 @@ export function useAccountPersonalInfoPage() {
     }
   }, [region, supportedRegions]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!editSuccess) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setEditSuccess(false), 1500);
+    return () => window.clearTimeout(timeout);
+  }, [editSuccess]);
+
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isPersonalInfoUnchanged) {
+      return;
+    }
     setEditError(null);
     setEditSuccess(false);
 
@@ -147,16 +164,54 @@ export function useAccountPersonalInfoPage() {
     });
   };
 
+  const handleAvatarChange = async (file: File) => {
+    setAvatarLoading(true);
+    setAvatarError(null);
+    try {
+      await uploadProfileAvatar(file);
+      notifyProfileAvatarUpdated();
+      setAvatarVersion(Date.now());
+      void queryClient.invalidateQueries({ queryKey: personalInfoQueryKey });
+    } catch {
+      setAvatarError(
+        'La photo n’a pas pu être enregistrée. Utilisez une image JPEG, PNG, WebP, HEIC ou HEIF de 5 Mo maximum.',
+      );
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    setAvatarLoading(true);
+    setAvatarError(null);
+    try {
+      await deleteProfileAvatar();
+      setAvatarVersion(Date.now());
+      notifyProfileAvatarUpdated();
+    } catch {
+      setAvatarError('La suppression de la photo a échoué. Réessayez plus tard.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const memberSince = formatMemberSince(selectedUser?.created_at);
 
   return {
+    authuser,
+    avatarVersion,
     birthdate,
+    avatarError,
+    avatarLoading,
     editError,
     editSuccess,
     firstname,
     handleSubmit,
+    handleAvatarChange,
+    handleAvatarDelete,
     lastname,
     loading: mutation.isPending,
+    isPersonalInfoUnchanged,
     memberSince,
     region,
     regionLoading: supportedRegionsQuery.isPending,
@@ -185,22 +240,4 @@ function accountPersonalInfoUser(
   account: AccountPersonalInfoQueryData | AccountPrincipal,
 ): AccountPrincipal {
   return 'user' in account ? account.user : account;
-}
-
-function accountPersonalInfoWorkspaceRegion(
-  account: AccountPersonalInfoQueryData | AccountPrincipal,
-): string | null {
-  if (!('user' in account)) {
-    return null;
-  }
-
-  const currentWorkspace = account.workspaces.find(
-    (workspace) => workspace.id === account.current_workspace_id,
-  );
-  return (
-    account.current_workspace_region ??
-    currentWorkspace?.data_region ??
-    account.workspaces[0]?.data_region ??
-    null
-  );
 }

@@ -13,7 +13,13 @@ export function useAccountPrivacyPageLoad({
   useEffect(() => {
     const fetchConsents = async () => {
       try {
-        const allConsents = await identityClient.listConsents();
+        const allConsents: UserConsent[] = [];
+        let cursor: string | undefined;
+        do {
+          const page = await identityClient.listConsentsPage({ limit: 200, cursor });
+          allConsents.push(...page.consents);
+          cursor = page.has_more && page.next_cursor ? page.next_cursor : undefined;
+        } while (cursor);
         setConsents(allConsents.filter((consent) => consent.revoked_at === null));
       } finally {
         setLoading(false);

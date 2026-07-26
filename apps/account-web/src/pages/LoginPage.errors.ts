@@ -10,9 +10,8 @@ export function isConsentRequiredError(err: unknown): boolean {
   return apiErrorCode(err) === 'consent_required';
 }
 
-export function isMissingLoginSessionError(err: unknown): boolean {
-  if (httpStatus(err) !== 401) return false;
-  return ['invalid_token', 'missing_token'].includes(apiErrorCode(err) ?? '');
+export function isUnauthorizedError(err: unknown): boolean {
+  return httpStatus(err) === 401;
 }
 
 export function isInvalidSignatureError(err: unknown): boolean {

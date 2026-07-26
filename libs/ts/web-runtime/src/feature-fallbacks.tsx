@@ -20,7 +20,7 @@ function FallbackLayout({
 }: FeatureFallbackProps & { title: string; description: string }) {
   return (
     <div className="flex min-h-[400px] items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_35%),linear-gradient(180deg,_#fbfcfe_0%,_#f3f6fb_100%)] p-8">
-      <div className="w-full max-w-md rounded-3xl border border-border/60 bg-background/95 p-8 text-center shadow-2xl shadow-black/5">
+      <div className="w-full max-w-md rounded-3xl p-8 text-center">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
@@ -35,7 +35,7 @@ function FallbackLayout({
             </details>
           )}
         </div>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-3 pt-3">
           <button
             type="button"
             onClick={onReset}

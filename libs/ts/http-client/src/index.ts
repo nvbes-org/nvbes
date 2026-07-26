@@ -5,10 +5,13 @@ const ApiErrorEnvelopeSchema = z.object({
     .object({
       code: z.string().optional(),
       message: z.string().optional(),
+      recovery: z.enum(['reauthenticate']).optional(),
       request_id: z.string().optional(),
     })
     .optional(),
 });
+
+export type HttpRecovery = 'reauthenticate';
 
 export type HttpClientOptions = {
   baseUrl?: string;
@@ -35,6 +38,7 @@ export class HttpError extends Error {
   readonly status: number;
   readonly statusText: string;
   readonly body: unknown;
+  readonly recovery: HttpRecovery | undefined;
   readonly requestId: string | undefined;
 
   constructor(message: string, response: Response, body: unknown, requestId?: string) {
@@ -43,6 +47,7 @@ export class HttpError extends Error {
     this.status = response.status;
     this.statusText = response.statusText;
     this.body = body;
+    this.recovery = readErrorRecovery(body);
     this.requestId = requestId;
   }
 }
@@ -107,6 +112,7 @@ export class HttpClient {
 
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
+      console.error('DTO validation failed', parsed.error.issues, body);
       throw new DtoValidationError(parsed.error);
     }
 
@@ -119,9 +125,14 @@ export class HttpClient {
 
     const credentials = options.credentials ?? this.credentials;
     const method = options.method ?? 'GET';
+    const authuser = currentAuthuser();
+    if (authuser && !headers.has('X-Auth-User')) {
+      headers.set('X-Auth-User', authuser);
+    }
+    applyAjaxRequestHeader(headers, method);
     applyIdempotencyKey(headers, method, options.idempotencyKey ?? this.idempotencyKey);
     if (credentials && MUTATING_METHODS.has(method.toUpperCase()) && !headers.has('X-CSRF-Token')) {
-      const csrfToken = readCsrfToken();
+      const csrfToken = readCsrfToken(authuser);
       if (csrfToken) {
         headers.set('X-CSRF-Token', csrfToken);
       }
@@ -163,12 +174,9 @@ export class HttpClient {
 
   private resolveUrl(path: string): string {
     const url = resolveRequestUrl(path, this.baseUrl);
-    if (typeof window !== 'undefined' && window.location) {
-      const pageParams = new URLSearchParams(window.location.search);
-      const authuser = pageParams.get('authuser');
-      if (authuser) {
-        url.searchParams.set('authuser', authuser);
-      }
+    const authuser = currentAuthuser();
+    if (authuser) {
+      url.searchParams.set('authuser', authuser);
     }
     return url.toString();
   }
@@ -243,8 +251,17 @@ export function createRequestHeaders(
   idempotencyKey?: string | false,
 ): Headers {
   const normalized = new Headers(headers);
+  applyAjaxRequestHeader(normalized, method);
   applyIdempotencyKey(normalized, method, idempotencyKey);
   return normalized;
+}
+
+export function applyAjaxRequestHeader(headers: Headers, method: string): void {
+  if (!MUTATING_METHODS.has(method.toUpperCase()) || headers.has('X-Requested-With')) {
+    return;
+  }
+
+  headers.set('X-Requested-With', 'XMLHttpRequest');
 }
 
 export function applyIdempotencyKey(
@@ -282,12 +299,65 @@ export function createIdempotencyKey(): string {
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const IDEMPOTENCY_KEY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
 
-function readCsrfToken(): string | undefined {
+function currentAuthuser(): string | undefined {
+  if (typeof window === 'undefined' || !window.location) {
+    return undefined;
+  }
+
+  const accountPathMatch = window.location.pathname.match(/^\/account\/([^/]+)(?:\/|$)/u);
+  const fromAccountPath = accountPathMatch?.[1] ? decodeURIComponent(accountPathMatch[1]) : null;
+  if (isAuthuser(fromAccountPath)) {
+    return fromAccountPath;
+  }
+
+  const fromSearch = new URLSearchParams(window.location.search).get('authuser');
+  if (isAuthuser(fromSearch)) {
+    return fromSearch;
+  }
+
+  const pathMatch = window.location.pathname.match(/^\/u\/([^/]+)(?:\/|$)/u);
+  const fromPath = pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : null;
+  if (isAuthuser(fromPath)) {
+    return fromPath;
+  }
+
+  return undefined;
+}
+
+function isAuthuser(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^\d{1,3}$/u.test(value);
+}
+
+function readCsrfToken(authuser?: string): string | undefined {
   if (typeof document === 'undefined') {
     return undefined;
   }
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match?.[1] || undefined;
+  const cookies = parseDocumentCookies(document.cookie);
+  const names =
+    authuser && authuser !== '0'
+      ? [`csrf_token_${authuser}`, `__Host-csrf_token_${authuser}`]
+      : ['csrf_token', '__Host-csrf_token'];
+
+  for (const name of names) {
+    const value = cookies.get(name);
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function parseDocumentCookies(cookieHeader: string): Map<string, string> {
+  const cookies = new Map<string, string>();
+  for (const cookie of cookieHeader.split(';')) {
+    const [name, ...valueParts] = cookie.trim().split('=');
+    if (!name || valueParts.length === 0) {
+      continue;
+    }
+    cookies.set(name, valueParts.join('='));
+  }
+  return cookies;
 }
 
 function mergeHeaders(target: Headers, source?: HeadersInit): void {
@@ -363,4 +433,9 @@ function readRequestId(response: Response, body: unknown): string | undefined {
     return envelope.data.error.request_id;
   }
   return response.headers.get('x-request-id') ?? undefined;
+}
+
+function readErrorRecovery(body: unknown): HttpRecovery | undefined {
+  const envelope = ApiErrorEnvelopeSchema.safeParse(body);
+  return envelope.success ? envelope.data.error?.recovery : undefined;
 }

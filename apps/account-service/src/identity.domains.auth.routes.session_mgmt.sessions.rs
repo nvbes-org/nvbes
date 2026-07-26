@@ -91,7 +91,9 @@ pub(crate) async fn revoke_session(
     Extension(auth): Extension<AuthContext>,
     axum::extract::Path(session_id): axum::extract::Path<uuid::Uuid>,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    if auth.session_id() != session_id {
+        verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    }
     sessions_mgmt::revoke(&state.db, &state.redis, auth.user_id(), session_id).await?;
     Ok(Json(LogoutResult { success: true }))
 }

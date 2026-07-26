@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Cookie_Theft_Mitigation_Cheat_Sheet.html",
+  "reviewCadence": "At every session, cookie, JWT middleware, refresh-token, login, device fingerprint, request-header, risk-scoring, or step-up policy change.",
+  "requirements": [
+    {
+      "id": "CTM_REQ_001",
+      "name": "Capture session establishment context",
+      "owasp": "Store IP address, User-Agent, Accept-Language, Date-adjacent request context, Accept, Accept-Encoding, Sec-Fetch, and client hints when creating a session.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_001",
+          "name": "Server-side session request profile",
+          "description": "Login creates a server-side request profile for the authenticated session and stores it in Redis with the session record.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.cookie_theft.rs",
+              "includes": [
+                "SessionRequestProfile",
+                "Accept-Language",
+                "Sec-Fetch-Site",
+                "UserAgentClientHints::from_headers"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.rs",
+              "includes": ["SessionRequestProfile::from_headers", "request_profile"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "includes": ["request_profile", "apply_profile"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_002",
+      "name": "Persist detection attributes safely",
+      "owasp": "Session attributes must be stored server-side so stolen cookies can be compared against the expected session environment.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_002",
+          "name": "Redis-backed detection baseline",
+          "description": "Redis session JSON stores the cookie theft profile with serde defaults so old sessions remain readable while new sessions get the full baseline.",
+          "evidence": [
+            {
+              "path": "libs/rust/redis/src/redis.session.rs",
+              "includes": [
+                "accept_language",
+                "sec_fetch_site",
+                "sec_ch_ua_platform",
+                "cookie_theft_risk_score",
+                "serde(default)"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_003",
+      "name": "Detect significant environment changes",
+      "owasp": "Compare current request context against the saved session context without relying on exact one-field equality alone.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_003",
+          "name": "Weighted cookie theft assessment",
+          "description": "Session validation scores significant network, user-agent family, language, client hints, accept headers, and cross-site fetch changes.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.cookie_theft.rs",
+              "includes": [
+                "ip_network_changed",
+                "user_agent_family_changed",
+                "accept_language_changed",
+                "cross_site_session_use",
+                "CookieTheftDecision"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_004",
+      "name": "Validate every authenticated request",
+      "owasp": "Cookie theft detection should run in middleware or at protected endpoint boundaries, with tuning for sensitive paths.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_004",
+          "name": "JWT and cookie session validation hook",
+          "description": "The session middleware routes bearer JWTs and opaque browser sessions through request-aware validation before protected handlers run.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "includes": [
+                "authenticate_with_request",
+                "enforce_cookie_theft_mitigation",
+                "SessionRequestProfile::from_headers"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
+              "includes": [
+                "authenticate_session_request",
+                "authenticate_with_request",
+                "authenticate_browser_session",
+                "headers: &HeaderMap"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_005",
+      "name": "Force reauthentication on high suspicion",
+      "owasp": "When hijacking is suspected, invalidate the user's session and require reauthentication for reliable protection.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_005",
+          "name": "Suspicious-session revocation",
+          "description": "High-scoring cookie theft detections revoke the session and refresh tokens, then return a reauthentication-required error.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "includes": [
+                "session_reauthentication_required",
+                "revoke_suspicious_session",
+                "revoke_session_refresh_tokens",
+                "delete_session"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_006",
+      "name": "Record telemetry for investigation",
+      "owasp": "Cookie theft detection has false positives and false negatives, so decisions must be auditable and tunable.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_006",
+          "name": "Risk and audit event trail",
+          "description": "Suspicious session reuse records risk and auth audit events with factors, score, baseline context, and current request context.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "includes": [
+                "cookie_theft_suspected",
+                "cookie_theft_risk_score",
+                "record_auth_event",
+                "risk::record_event"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_007",
+      "name": "Harden bearer cookies",
+      "owasp": "Cookie theft mitigation complements secure cookie attributes; stolen bearer cookies should be harder to obtain and replay.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_007",
+          "name": "Host-scoped strict session cookies",
+          "description": "Session cookies are HttpOnly, SameSite Strict, Secure outside development, and use __Host- names when secure.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.http.cookies.rs",
+              "includes": ["HttpOnly", "SameSite=Strict", "__Host-", "Secure"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTM_REQ_008",
+      "name": "Prevent regressions",
+      "owasp": "Cookie theft controls must stay enforced as session and authentication code evolves.",
+      "controls": [
+        {
+          "id": "CTM_CTRL_008",
+          "name": "Cookie theft mitigation gate",
+          "description": "The repository check path validates OWASP evidence, request-profile persistence, request-aware auth, suspicious-session revocation, cookie attributes, and targeted tests.",
+          "evidence": [
+            {
+              "path": "tools/security/check-cookie-theft-mitigation.mjs",
+              "includes": [
+                "Cookie Theft Mitigation controls",
+                "assertImplementation",
+                "assertCookieAttributes"
+              ]
+            },
+            {
+              "path": "package.json",
+              "includes": [
+                "check:cookie-theft-mitigation",
+                "tools/security/check-cookie-theft-mitigation.mjs"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

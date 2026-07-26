@@ -70,6 +70,10 @@ impl AppConfig {
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
                 .unwrap_or(24 * 30),
+            auth_session_idle_ttl_minutes: std::env::var("NVBES_AUTH_SESSION_IDLE_TTL_MINUTES")
+                .ok()
+                .and_then(|value| value.parse::<i64>().ok())
+                .unwrap_or(12 * 60),
             auth_refresh_token_ttl_hours: std::env::var("NVBES_AUTH_REFRESH_TOKEN_TTL_HOURS")
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
@@ -101,6 +105,7 @@ impl AppConfig {
             auth_password_max_age_days: std::env::var("NVBES_AUTH_PASSWORD_MAX_AGE_DAYS")
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok()),
+            auth_password_pepper: optional_env("NVBES_AUTH_PASSWORD_PEPPER"),
             auth_pow_enabled: std::env::var("NVBES_AUTH_POW_ENABLED")
                 .ok()
                 .and_then(|value| value.parse::<bool>().ok())
@@ -117,6 +122,10 @@ impl AppConfig {
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
                 .unwrap_or(15),
+            auth_device_trust_ttl_days: std::env::var("NVBES_AUTH_DEVICE_TRUST_TTL_DAYS")
+                .ok()
+                .and_then(|value| value.parse::<i64>().ok())
+                .unwrap_or(90),
             stripe_secret_key: billing_provider_env.stripe_secret_key,
             stripe_webhook_secret: billing_provider_env.stripe_webhook_secret,
             stripe_api_base_url: billing_provider_env.stripe_api_base_url,

@@ -15,6 +15,7 @@ export interface TokenResponse {
   expiresIn: number;
   refreshToken?: string;
   scope: string;
+  idToken?: string;
 }
 
 export interface UserInfo {
@@ -38,10 +39,20 @@ export class NvbesIdentity {
    */
   getAuthorizationUrl(
     scope: string = 'openid profile email',
-    state?: string,
-    codeChallenge?: string,
-    codeChallengeMethod: 'plain' | 'S256' = 'S256',
+    state: string,
+    codeChallenge: string,
+    nonce: string,
   ): string {
+    if (!state.trim()) {
+      throw new Error('OAuth state is required.');
+    }
+    if (!codeChallenge.trim()) {
+      throw new Error('PKCE code challenge is required.');
+    }
+    if (!nonce.trim()) {
+      throw new Error('OIDC nonce is required.');
+    }
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
@@ -49,14 +60,10 @@ export class NvbesIdentity {
       scope,
     });
 
-    if (state) {
-      params.append('state', state);
-    }
-
-    if (codeChallenge) {
-      params.append('code_challenge', codeChallenge);
-      params.append('code_challenge_method', codeChallengeMethod);
-    }
+    params.append('state', state);
+    params.append('code_challenge', codeChallenge);
+    params.append('code_challenge_method', 'S256');
+    params.append('nonce', nonce);
 
     return `${this.config.authorizationUrl}?${params.toString()}`;
   }
@@ -64,7 +71,11 @@ export class NvbesIdentity {
   /**
    * Échanger un code d'autorisation contre un token
    */
-  async exchangeCode(code: string, codeVerifier?: string): Promise<TokenResponse> {
+  async exchangeCode(code: string, codeVerifier: string): Promise<TokenResponse> {
+    if (!codeVerifier.trim()) {
+      throw new Error('PKCE code verifier is required.');
+    }
+
     const response = await fetch(this.config.tokenUrl, {
       method: 'POST',
       headers: createRequestHeaders('POST', {
@@ -78,7 +89,7 @@ export class NvbesIdentity {
         ...(this.config.clientSecret && {
           client_secret: this.config.clientSecret,
         }),
-        ...(codeVerifier && { code_verifier: codeVerifier }),
+        code_verifier: codeVerifier,
       }),
     });
 
@@ -93,6 +104,7 @@ export class NvbesIdentity {
       expiresIn: data.expires_in,
       refreshToken: data.refresh_token,
       scope: data.scope,
+      idToken: data.id_token,
     };
 
     return this.token;
@@ -128,6 +140,7 @@ export class NvbesIdentity {
       expiresIn: data.expires_in,
       refreshToken: data.refresh_token,
       scope: data.scope,
+      idToken: data.id_token,
     };
 
     return this.token;
@@ -184,15 +197,24 @@ export class NvbesIdentity {
     return `${this.config.userInfoUrl.replace(/\/oauth\/userinfo$/u, '')}${path}`;
   }
 
-  async listConsents(): Promise<unknown[]> {
+  async listConsents(
+    options: { limit?: number; cursor?: string } = {},
+  ): Promise<{ consents: unknown[]; next_cursor: string | null; has_more: boolean }> {
     if (!this.token) {
       throw new Error('No access token available');
     }
-    const response = await fetch(this.getApiUrl('/legal/consents'), {
-      headers: {
-        Authorization: `Bearer ${this.token.accessToken}`,
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    if (options.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    const response = await fetch(
+      `${this.getApiUrl('/legal/consents')}${query ? `?${query}` : ''}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.token.accessToken}`,
+        },
       },
-    });
+    );
     if (!response.ok) {
       throw new Error(`Failed to list consents: ${response.statusText}`);
     }

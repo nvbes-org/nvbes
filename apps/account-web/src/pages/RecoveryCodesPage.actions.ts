@@ -1,4 +1,4 @@
-export async function generateCodesWithPassword(password: string) {
+export async function generateCodes(password = '') {
   const { generateRecoveryCodes } = await import('@nvbes/identity-sdk-web');
   return generateRecoveryCodes('', password);
 }

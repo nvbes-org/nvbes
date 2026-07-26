@@ -55,6 +55,7 @@ rustc-ice-*.txt
 .nx/polygraph
 
 .nx/self-healing
+.nx/migrate-runs
 
 logs
 *.log

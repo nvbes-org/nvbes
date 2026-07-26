@@ -11,6 +11,32 @@ pub struct PowChallenge {
     pub difficulty: u32,
 }
 
+pub fn compute_progressive_pow_difficulty(
+    base_difficulty: u32,
+    failure_count: u32,
+    risk_score: f64,
+) -> u32 {
+    let failure_bits = if failure_count > 1 {
+        (failure_count - 1) * 2
+    } else {
+        0
+    };
+    let risk_bits = (risk_score / 20.0).floor() as u32;
+    let extra_bits = (failure_bits + risk_bits).min(10);
+    (base_difficulty + extra_bits).min(26)
+}
+
+pub async fn issue_progressive_challenge(
+    db: &PgPool,
+    base_difficulty: u32,
+    failure_count: u32,
+    risk_score: f64,
+    ttl_seconds: i64,
+) -> Result<PowChallenge, AppError> {
+    let difficulty = compute_progressive_pow_difficulty(base_difficulty, failure_count, risk_score);
+    issue_challenge(db, difficulty, ttl_seconds).await
+}
+
 pub async fn issue_challenge(
     db: &PgPool,
     difficulty: u32,
@@ -151,5 +177,13 @@ mod tests {
     #[test]
     fn pow_rejects_wrong_solution() {
         assert!(!check_pow("test", "wrong", 16));
+    }
+
+    #[test]
+    fn test_compute_progressive_pow_difficulty() {
+        assert_eq!(compute_progressive_pow_difficulty(16, 0, 0.0), 16);
+        assert_eq!(compute_progressive_pow_difficulty(16, 2, 0.0), 18);
+        assert_eq!(compute_progressive_pow_difficulty(16, 3, 50.0), 22);
+        assert_eq!(compute_progressive_pow_difficulty(16, 10, 100.0), 26);
     }
 }

@@ -13,11 +13,7 @@ const HOUSEKEEPING_MONITOR_SCHEDULE: WorkerMonitorSchedule = WorkerMonitorSchedu
     max_runtime_minutes: 30,
 };
 
-pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Result<()> {
-    if last_run.elapsed() < HOUSEKEEPING_INTERVAL {
-        return Ok(());
-    }
-
+pub async fn run_once(state: &AppState) -> anyhow::Result<()> {
     let account_check_in = start_worker_monitor_check_in(
         &state.config.environment,
         &worker_monitor_slug("account-worker", "housekeeping-expired-unverified-accounts"),
@@ -52,6 +48,15 @@ pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Res
     run_maxmind_geolite_import_if_due(state).await?;
     run_loyalsoldier_geoip_import_if_due(state).await?;
 
+    Ok(())
+}
+
+pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Result<()> {
+    if last_run.elapsed() < HOUSEKEEPING_INTERVAL {
+        return Ok(());
+    }
+
+    run_once(state).await?;
     *last_run = Instant::now();
     Ok(())
 }

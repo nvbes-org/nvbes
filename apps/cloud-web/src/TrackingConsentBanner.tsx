@@ -7,7 +7,6 @@ export function TrackingConsentBanner() {
       getTrackingConsent={getTrackingConsent}
       setTrackingConsent={setTrackingConsent}
       sourcePrefix="cloud-web"
-      sessionReplayDescription="Relecture masquée, bloquée sur auth, billing et fichiers."
     />
   );
 }

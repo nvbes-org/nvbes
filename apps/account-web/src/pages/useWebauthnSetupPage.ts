@@ -5,7 +5,7 @@ import {
 } from '@nvbes/identity-sdk-web';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { readAuthuser } from '@/identity.authuser';
 import { setupCopy, type WebauthnSetupKind } from './WebauthnSetupPage.shared';
 
 interface WebauthnSupportState {
@@ -16,9 +16,11 @@ interface WebauthnSupportState {
 
 const WEBAUTHN_TIMEOUT_MS = 60_000;
 
+import { isStepUpRequiredError } from '@/identity.step-up';
+
 export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const navigate = useNavigate();
   const copy = setupCopy[kind];
   const [step, setStep] = useState<'stepup' | 'register'>('stepup');
@@ -73,9 +75,12 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
       await registerWebAuthnCredential('', label || undefined, kind, undefined, {
         timeoutMs: WEBAUTHN_TIMEOUT_MS,
       });
-      void navigate({ to: '/account/mfa/recovery-codes', search: authuserSearch(authuser) });
+      void navigate({
+        to: '/account/$accountIndex/mfa/recovery-codes',
+        params: { accountIndex: authuser },
+      });
     } catch (err) {
-      if (err instanceof Error && err.message.includes('step_up_required')) {
+      if (isStepUpRequiredError(err)) {
         setStep('stepup');
       } else if (err instanceof WebauthnBrowserError && err.code === 'webauthn_timeout') {
         setError(copy.timeoutText);
@@ -97,7 +102,10 @@ export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
     support,
     showPlatformWarning: kind === 'passkey' && support?.platformAuthenticatorAvailable === false,
     navigateBack: () =>
-      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
+      void navigate({
+        to: '/account/$accountIndex/security',
+        params: { accountIndex: authuser },
+      }),
     onStepUpSuccess: () => setStep('register'),
     onLabelChange: setLabel,
     onRegister: register,

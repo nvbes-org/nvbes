@@ -1,5 +1,7 @@
 use tonic::Status;
 
+use nvbes_core::pagination::{KeysetCursor, decode_cursor, encode_cursor, page_from_rows};
+
 use crate::grpc::{
     pb::nvbes::{cloud::v1 as cloud, platform::v1},
     service_status::{non_empty, parse_uuid, sql_status, validate_context},
@@ -18,29 +20,62 @@ pub async fn list_invitations(
         .map(|status| status.trim().to_lowercase())
         .filter(|status| !status.is_empty())
         .collect::<Vec<_>>();
+    let limit = request
+        .page
+        .as_ref()
+        .map(|page| page.limit as i64)
+        .unwrap_or(50)
+        .clamp(1, 200);
+    let cursor = request
+        .page
+        .as_ref()
+        .and_then(|page| non_empty(page.cursor.clone(), "cursor").ok())
+        .map(|value| decode_cursor::<KeysetCursor>(&value))
+        .transpose()
+        .map_err(|_| Status::invalid_argument("invalid pagination cursor"))?;
     let invitations = sqlx::query_as::<_, WorkspaceInvitationRow>(
         r#"
         SELECT id AS invitation_id, workspace_id, email, role::text AS role, status::text AS status, expires_at, accepted_at, revoked_at, created_at
         FROM workspace_invitations
         WHERE workspace_id = $1
-          AND (cardinality($2::text[]) = 0 OR status::text = ANY($2))
-        ORDER BY created_at DESC
+          AND (
+            $2::timestamp with time zone IS NULL
+            OR (created_at, id) < ($2, $3)
+          )
+          AND (cardinality($4::text[]) = 0 OR status::text = ANY($4))
+        ORDER BY created_at DESC, id DESC
+        LIMIT $5
         "#,
     )
     .bind(workspace_id)
+    .bind(cursor.as_ref().map(|value| value.created_at))
+    .bind(cursor.as_ref().map(|value| value.id))
     .bind(statuses)
+    .bind(limit + 1)
     .fetch_all(db)
     .await
     .map_err(sql_status)?
-    .into_iter()
-    .map(WorkspaceInvitationRow::into_proto)
-    .collect();
+    ;
+    let page = page_from_rows(invitations, limit as usize, |row| KeysetCursor {
+        created_at: row.created_at,
+        id: row.invitation_id,
+    });
 
     Ok(cloud::ListWorkspaceInvitationsResponse {
-        invitations,
+        invitations: page
+            .items
+            .into_iter()
+            .map(WorkspaceInvitationRow::into_proto)
+            .collect(),
         page: Some(v1::CursorPageResponse {
-            next_cursor: String::new(),
-            has_more: false,
+            next_cursor: page
+                .next_cursor
+                .as_ref()
+                .map(encode_cursor)
+                .transpose()
+                .map_err(|_| Status::internal("pagination cursor could not be encoded"))?
+                .unwrap_or_default(),
+            has_more: page.has_more,
         }),
     })
 }

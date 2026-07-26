@@ -12,6 +12,8 @@ pub mod config;
 pub mod connection;
 #[path = "redis.counter.rs"]
 pub mod counter;
+#[path = "redis.credential_stuffing.rs"]
+pub mod credential_stuffing;
 #[path = "redis.device_code.rs"]
 pub mod device_code;
 #[path = "redis.email_verification.rs"]

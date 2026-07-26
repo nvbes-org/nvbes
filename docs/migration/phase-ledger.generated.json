@@ -125,7 +125,7 @@
         "docs/migration/developer-oauth-tokens.generated.json",
         "docs/migration/developer-signed-webhooks.generated.json",
         "apps/console-web/src/developer.router.tsx",
-        "libs/ts/identity-sdk-core/openapi.json"
+        "apps/developer-service/openapi.json"
       ],
       "decision": "go",
       "proof": "pnpm check:migration-developer-oauth-tokens && pnpm check:migration-developer-signed-webhooks"

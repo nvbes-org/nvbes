@@ -3,6 +3,7 @@ use axum::{
     Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode},
+    middleware::from_fn,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -22,14 +23,19 @@ struct HealthResponse {
 #[derive(Clone)]
 pub struct HttpState {
     pub schema: GatewaySchema,
+    pub gateway: GatewayState,
 }
 
 pub fn router(state: GatewayState) -> Router {
-    let schema = crate::schema::schema(state);
+    let schema = crate::schema::schema(state.clone());
     Router::new()
         .route("/health", get(health))
         .route("/graphql", post(graphql))
-        .with_state(HttpState { schema })
+        .layer(from_fn(nvbes_core::security::security_headers))
+        .with_state(HttpState {
+            schema,
+            gateway: state,
+        })
 }
 
 async fn health() -> Json<HealthResponse> {
@@ -41,7 +47,7 @@ async fn graphql(
     headers: HeaderMap,
     request: GraphQLRequest,
 ) -> Result<GraphQLResponse, StatusCode> {
-    let request_context = request_context(&headers)?;
+    let request_context = request_context(&state.gateway, &headers).await?;
     Ok(state
         .schema
         .execute(

@@ -13,7 +13,7 @@ pub mod mollie;
 #[path = "billing.worker.workspace_updates.rs"]
 pub mod workspace_updates;
 
-pub use loop_::run_loop_until_shutdown;
+pub use loop_::{run_billing_jobs_once, run_loop_until_shutdown};
 
 #[derive(Clone)]
 pub struct BillingWorkerState {

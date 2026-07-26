@@ -16,6 +16,7 @@ use crate::backoffice_authorization::{
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
@@ -76,8 +77,16 @@ async fn workspace_detail_route(
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<Json<WorkspaceDetail>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_workspace_detail(&state.db, workspace_id).await?))
+    let actor_principal_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        load_workspace_detail(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            actor_principal_id,
+            workspace_id,
+        )
+        .await?,
+    ))
 }
 
 async fn suspend_workspace_route(
@@ -132,6 +141,8 @@ async fn reactivate_workspace_route(
 
 async fn load_workspace_detail(
     db: &PgPool,
+    billing_grpc_endpoint: &str,
+    actor_principal_id: Uuid,
     workspace_id: Uuid,
 ) -> Result<WorkspaceDetail, AppError> {
     let row = sqlx::query(
@@ -161,18 +172,6 @@ async fn load_workspace_detail(
             WHERE ae.workspace_id = w.id AND ae.created_at >= NOW() - INTERVAL '24 hours'
           ) AS audit_events_24h,
           (
-            SELECT COUNT(DISTINCT bi.id)
-            FROM billing_invoices bi
-            LEFT JOIN billing_accounts ba ON ba.id = bi.billing_account_id
-            LEFT JOIN billing_subscriptions bs ON bs.id = bi.subscription_id
-            WHERE (ba.workspace_id = w.id OR bs.workspace_id = w.id)
-              AND bi.status::text IN ('issued', 'pro_forma')
-          ) AS open_invoice_count,
-          (
-            SELECT COUNT(*) FROM billing_subscriptions bs
-            WHERE bs.workspace_id = w.id AND bs.status IN ('active', 'trialing')
-          ) AS active_subscription_count,
-          (
             SELECT MAX(ae.created_at) FROM audit_events ae
             WHERE ae.workspace_id = w.id
           ) AS latest_audit_at
@@ -184,10 +183,20 @@ async fn load_workspace_detail(
     .bind(workspace_id)
     .fetch_one(db)
     .await?;
+    let tenant_id: Uuid = row.get(1);
+    let billing_summary = crate::billing_grpc::get_admin_workspace_billing_summary(
+        billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id,
+            actor_principal_id,
+        },
+        workspace_id,
+    )
+    .await?;
 
     Ok(WorkspaceDetail {
         id: row.get(0),
-        tenant_id: row.get(1),
+        tenant_id,
         tenant_name: row.get(2),
         name: row.get(3),
         status: row.get(4),
@@ -201,9 +210,9 @@ async fn load_workspace_detail(
         active_member_count: row.get(12),
         service_account_count: row.get(13),
         audit_events_24h: row.get(14),
-        open_invoice_count: row.get(15),
-        active_subscription_count: row.get(16),
-        latest_audit_at: row.get(17),
+        open_invoice_count: billing_summary.open_invoice_count,
+        active_subscription_count: billing_summary.active_subscription_count,
+        latest_audit_at: row.get(15),
     })
 }
 

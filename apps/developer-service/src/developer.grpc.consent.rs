@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::{Row, postgres::PgRow};
 use tonic::Status;
+use url::Url;
 use uuid::Uuid;
 
 use crate::grpc::{
@@ -33,6 +34,11 @@ pub async fn upsert_consent_screen(
     let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
     let actor_id = actor_id(&request.context)?;
     let client_id = non_empty(request.client_id, "client_id")?;
+    let logo_url = https_url_option(request.logo_url, "logo_url")?;
+    let support_url = https_url_option(request.support_url, "support_url")?;
+    let privacy_url = https_url_option(request.privacy_url, "privacy_url")?;
+    let terms_url = https_url_option(request.terms_url, "terms_url")?;
+    let custom_css = safe_css_option(request.custom_css)?;
 
     sqlx::query(
         r#"
@@ -69,13 +75,13 @@ pub async fn upsert_consent_screen(
     .bind(tenant_id)
     .bind(&client_id)
     .bind(request.product_name)
-    .bind(empty_to_none(request.logo_url))
-    .bind(empty_to_none(request.support_url))
-    .bind(empty_to_none(request.privacy_url))
-    .bind(empty_to_none(request.terms_url))
+    .bind(logo_url)
+    .bind(support_url)
+    .bind(privacy_url)
+    .bind(terms_url)
     .bind(request.description)
     .bind(empty_to_none(request.brand_color))
-    .bind(empty_to_none(request.custom_css))
+    .bind(custom_css)
     .bind(empty_to_none(request.help_text))
     .bind(actor_id)
     .execute(db)
@@ -184,6 +190,79 @@ fn empty_to_none(value: String) -> Option<String> {
     if value.is_empty() { None } else { Some(value) }
 }
 
+fn https_url_option(value: String, field: &str) -> Result<Option<String>, Status> {
+    let Some(value) = empty_to_none(value) else {
+        return Ok(None);
+    };
+    if value.len() > 2048 {
+        return Err(Status::invalid_argument(format!("{field} is too long")));
+    }
+    let url =
+        Url::parse(&value).map_err(|_| Status::invalid_argument(format!("{field} must be URL")))?;
+    if url.scheme() != "https" || url.username() != "" || url.password().is_some() {
+        return Err(Status::invalid_argument(format!(
+            "{field} must be an HTTPS URL without credentials"
+        )));
+    }
+    Ok(Some(value))
+}
+
+fn safe_css_option(value: String) -> Result<Option<String>, Status> {
+    let Some(value) = empty_to_none(value) else {
+        return Ok(None);
+    };
+    let lower = value.to_lowercase();
+    let unsafe_css = [
+        "</style",
+        "@import",
+        "url(",
+        "expression(",
+        "behavior:",
+        "-moz-binding:",
+        "javascript:",
+        "vbscript:",
+        "data:",
+    ];
+    if unsafe_css.iter().any(|needle| lower.contains(needle)) {
+        return Err(Status::invalid_argument("custom_css contains unsafe CSS"));
+    }
+    Ok(Some(value))
+}
+
 fn time_string(value: DateTime<Utc>) -> String {
     value.to_rfc3339()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn https_url_option_rejects_script_and_cleartext_urls() {
+        assert!(super::https_url_option("javascript:alert(1)".to_string(), "logo_url").is_err());
+        assert!(
+            super::https_url_option("http://example.test/logo.png".to_string(), "logo_url")
+                .is_err()
+        );
+        assert!(
+            super::https_url_option("https://user@example.test/logo.png".to_string(), "logo_url")
+                .is_err()
+        );
+        assert!(
+            super::https_url_option("https://example.test/logo.png".to_string(), "logo_url")
+                .expect("https URL should be accepted")
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn safe_css_option_rejects_external_loads_and_style_breakout() {
+        assert!(super::safe_css_option("button { color: red; }".to_string()).is_ok());
+        assert!(
+            super::safe_css_option("@import url(https://evil.test/x.css);".to_string()).is_err()
+        );
+        assert!(super::safe_css_option("</style><script>alert(1)</script>".to_string()).is_err());
+        assert!(
+            super::safe_css_option("body { background: url(https://evil.test/x); }".to_string())
+                .is_err()
+        );
+    }
 }

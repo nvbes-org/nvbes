@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "nvbes",
+      "credentials": [
+        {
+          "accessKey": "nvbes",
+          "secretKey": "nvbes-dev-secret"
+        }
+      ],
+      "actions": ["Read", "Write", "List", "Tagging", "Delete"]
+    }
+  ]
+}

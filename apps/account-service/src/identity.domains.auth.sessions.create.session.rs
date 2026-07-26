@@ -179,6 +179,9 @@ pub async fn create_session_for_principal(
     nvbes_redis::session::set_session(redis, &cached_session, current_session_ttl(&cached_session))
         .await
         .map_err(|err| AppError::internal("session_cache_write_failed", err.to_string()))?;
+    crate::domains::auth::sessions::db::insert_session_db(db, &cached_session)
+        .await
+        .map_err(|err| AppError::internal("session_db_write_failed", err.to_string()))?;
     let _ = risk::record_event(
         db,
         risk::RiskEventInput {

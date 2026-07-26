@@ -7,6 +7,7 @@ pub mod http;
 pub mod idempotency;
 pub mod limiter;
 pub mod mfa;
+pub mod pagination;
 #[path = "pii.logging.rs"]
 pub mod pii_logging;
 #[path = "postgres.runtime.rs"]

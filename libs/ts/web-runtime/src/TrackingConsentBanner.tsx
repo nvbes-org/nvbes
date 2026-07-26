@@ -1,26 +1,32 @@
 import { type ReactNode, useState } from 'react';
+import { TrackingConsentToggle, type TrackingConsentToggleProps } from './TrackingConsentToggle';
 import {
   ACCEPT_ALL_CONSENT,
-  DEFAULT_CONSENT,
-  DECLINE_ALL_CONSENT,
   type CookieConsentState,
+  DECLINE_ALL_CONSENT,
+  DEFAULT_CONSENT,
 } from './tracking-consent';
-import { toggleConsentCategory, toggleConsentVendor } from './tracking-consent.editor';
-import { TrackingConsentToggle, type TrackingConsentToggleProps } from './TrackingConsentToggle';
+import { toggleConsentAnalyticsPurpose, toggleConsentCategory } from './tracking-consent.editor';
 
 export type TrackingConsentToggleComponent = (props: TrackingConsentToggleProps) => ReactNode;
+
+const analyticsPurposeChoices = [
+  {
+    key: 'productAnalytics',
+    label: "Mesure d'audience produit",
+    description: 'Pages et fonctions utilisées, sans contenu utilisateur.',
+  },
+] as const;
 
 export function SharedTrackingConsentBanner({
   getTrackingConsent,
   setTrackingConsent,
   sourcePrefix,
-  sessionReplayDescription,
   ToggleComponent = TrackingConsentToggle,
 }: {
   getTrackingConsent: () => CookieConsentState | null;
   setTrackingConsent: (consent: CookieConsentState, source?: string) => void;
   sourcePrefix: string;
-  sessionReplayDescription: string;
   ToggleComponent?: TrackingConsentToggleComponent;
 }) {
   const currentConsent = getTrackingConsent();
@@ -32,15 +38,7 @@ export function SharedTrackingConsentBanner({
   );
 
   if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 z-50 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-semibold shadow-lg shadow-black/5 backdrop-blur hover:bg-background"
-      >
-        🍪 Préférences Cookies
-      </button>
-    );
+    return null;
   }
 
   return (
@@ -56,8 +54,15 @@ export function SharedTrackingConsentBanner({
           <p className="text-xs leading-relaxed text-muted-foreground">
             Nous respectons votre vie privée. nvbes et ses partenaires utilisent des cookies pour
             faire fonctionner la plateforme, mesurer l&apos;audience et analyser les performances
-            techniques.
+            techniques. Le refus désactive ces usages optionnels sans bloquer le service. Si vous
+            êtes connecté, votre choix est synchronisé avec votre compte.
           </p>
+          <a
+            href="/legal/privacy-policy"
+            className="inline-flex text-xs font-medium text-primary hover:underline"
+          >
+            Politique de confidentialité et informations sur les traceurs
+          </a>
         </div>
 
         {!showCustomize ? (
@@ -102,40 +107,40 @@ export function SharedTrackingConsentBanner({
             )}
           </div>
         ) : (
-          <div className="space-y-4 border-t border-border/60 pt-4">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="space-y-5 border-t border-border/60 pt-5">
+            <div className="max-w-md space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Préférences de confidentialité
               </p>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 Activez uniquement les finalités utiles. Les cookies essentiels restent nécessaires
                 à la sécurité du service.
               </p>
             </div>
 
-            <div className="max-h-[40vh] space-y-3.5 overflow-y-auto pr-1">
-              <div className="space-y-2 rounded-xl border border-border/40 bg-muted/20 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Essentiels et Sécurité</p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <div className="max-h-[40vh] space-y-3 overflow-y-auto pr-1">
+              <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3.5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-foreground">Essentiels et Sécurité</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
                       Nécessaires au fonctionnement et à la sécurité.
                     </p>
                   </div>
-                  <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                  <span className="shrink-0 rounded-md bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700 dark:text-emerald-400">
                     Obligatoire
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/20 pl-5 pt-1">
-                  <span className="text-[10px] text-muted-foreground">nvbes Identity</span>
-                  <span className="text-[10px] text-muted-foreground">
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border/40 pt-3">
+                  <span className="text-[11px] text-muted-foreground">nvbes Identity</span>
+                  <span className="text-[11px] text-muted-foreground">
                     Stripe (Paiement/Fraude)
                   </span>
-                  <span className="text-[10px] text-muted-foreground">Cloudflare (WAF/CDN)</span>
+                  <span className="text-[11px] text-muted-foreground">Cloudflare (WAF/CDN)</span>
                 </div>
-              </div>
+              </section>
 
-              <div className="space-y-2 rounded-xl border border-border/40 bg-muted/10 p-3">
+              <section className="divide-y divide-border/50 rounded-xl border border-border/60 bg-background">
                 <ToggleComponent
                   checked={tempConsent.categories.analytics}
                   onChange={() =>
@@ -145,19 +150,27 @@ export function SharedTrackingConsentBanner({
                   description="Mesure l'utilisation pour améliorer le service."
                   large
                 />
-                <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
-                  <ToggleComponent
-                    checked={tempConsent.vendors.posthog}
-                    onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'posthog', 'analytics'))
-                    }
-                    label="PostHog"
-                    description={`Mesure d'audience produit, heatmaps, feature flags et ${sessionReplayDescription.toLowerCase()}`}
-                  />
+                <div className="space-y-3 px-4 py-3.5">
+                  {analyticsPurposeChoices.map((purpose) => (
+                    <ToggleComponent
+                      key={purpose.key}
+                      checked={tempConsent.analytics[purpose.key]}
+                      onChange={() =>
+                        setTempConsent((previous) =>
+                          toggleConsentAnalyticsPurpose(previous, purpose.key),
+                        )
+                      }
+                      label={purpose.label}
+                      description={purpose.description}
+                    />
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">
+                    Fournisseur de ces finalités : PostHog.
+                  </p>
                 </div>
-              </div>
+              </section>
 
-              <div className="space-y-2 rounded-xl border border-border/40 bg-muted/10 p-3">
+              <section className="divide-y divide-border/50 rounded-xl border border-border/60 bg-background">
                 <ToggleComponent
                   checked={tempConsent.categories.performance}
                   onChange={() =>
@@ -167,25 +180,22 @@ export function SharedTrackingConsentBanner({
                   description="Suivi de la stabilité et des bugs techniques."
                   large
                 />
-                <div className="space-y-2 border-t border-border/20 pl-5 pt-2">
+                <div className="space-y-3 px-4 py-3.5">
                   <ToggleComponent
-                    checked={tempConsent.vendors.sentry}
+                    checked={tempConsent.analytics.errorTracking}
                     onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'sentry', 'performance'))
+                      setTempConsent((previous) =>
+                        toggleConsentAnalyticsPurpose(previous, 'errorTracking'),
+                      )
                     }
-                    label="Sentry"
-                    description="Suivi d'erreurs applicatives côté navigateur."
+                    label="Rapports d'erreurs navigateur"
+                    description="Diagnostics applicatifs minimisés, hors pages sensibles."
                   />
-                  <ToggleComponent
-                    checked={tempConsent.vendors.grafana}
-                    onChange={() =>
-                      setTempConsent((prev) => toggleConsentVendor(prev, 'grafana', 'performance'))
-                    }
-                    label="Grafana Labs"
-                    description="Observabilité technique, métriques et diagnostics de stabilité."
-                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Fournisseurs concernés : Sentry et, selon le déploiement, Grafana Labs.
+                  </p>
                 </div>
-              </div>
+              </section>
             </div>
 
             <div className="flex gap-2 pt-2">

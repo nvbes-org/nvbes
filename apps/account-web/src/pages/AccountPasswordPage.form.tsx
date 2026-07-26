@@ -1,61 +1,54 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import {
   AccountPasswordErrorMessage,
   AccountPasswordSuccessMessage,
 } from '@/pages/AccountPasswordPage.messages';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
+import { PasswordStrengthMeter } from '@/pages/RegisterPage.password';
 
 export function AccountPasswordForm({
+  accountEmail,
   confirmPassword,
-  currentPassword,
   error,
   handleSubmit,
   mutation,
   newPassword,
   setConfirmPassword,
-  setCurrentPassword,
   setNewPassword,
   success,
 }: Pick<
   AccountPasswordPageModel,
+  | 'accountEmail'
   | 'confirmPassword'
-  | 'currentPassword'
   | 'error'
   | 'handleSubmit'
   | 'mutation'
   | 'newPassword'
   | 'setConfirmPassword'
-  | 'setCurrentPassword'
   | 'setNewPassword'
   | 'success'
 >) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="current-password">Mot de passe actuel</Label>
+        <Label htmlFor="password-username">Compte</Label>
         <Input
-          id="current-password"
-          type="password"
-          placeholder="••••••••"
-          value={currentPassword}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setCurrentPassword(event.target.value)
-          }
-          required
-          autoComplete="current-password"
-          autoFocus
+          id="password-username"
+          name="username"
+          type="email"
+          value={accountEmail}
+          readOnly
+          autoComplete="username"
         />
       </div>
-
-      <Separator />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="new-password">Nouveau mot de passe</Label>
         <Input
           id="new-password"
+          name="new-password"
           type="password"
           placeholder="••••••••"
           value={newPassword}
@@ -65,16 +58,16 @@ export function AccountPasswordForm({
           required
           autoComplete="new-password"
           minLength={8}
+          autoFocus
         />
-        <p className="text-xs text-muted-foreground">
-          Minimum 8 caracteres. Incluez des majuscules, minuscules, chiffres et symboles.
-        </p>
+        <PasswordStrengthMeter password={newPassword} />
       </div>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
         <Input
           id="confirm-password"
+          name="confirm-password"
           type="password"
           placeholder="••••••••"
           value={confirmPassword}

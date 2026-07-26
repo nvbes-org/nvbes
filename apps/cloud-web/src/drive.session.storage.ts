@@ -1,10 +1,11 @@
-import { getSafeLocalStorage } from '@nvbes/web-runtime';
+import { getSafeSessionStorage } from '@nvbes/web-runtime';
 import { z } from 'zod';
 import type { AccountSession } from './drive.session.client';
 
 const STORAGE_SESSIONS_KEY = 'nvbes_drive_sessions';
 const STORAGE_ACTIVE_ID_KEY = 'nvbes_drive_active_user_id';
-const SESSION_STORAGE_KEYS = new Set([STORAGE_SESSIONS_KEY, STORAGE_ACTIVE_ID_KEY]);
+const WINDOW_ACTIVE_ID_KEY = 'nvbes_drive_window_user_id';
+const SESSION_STORAGE_KEYS = new Set([STORAGE_SESSIONS_KEY]);
 const AccountSessionSchema = z.object({
   accessToken: z.string(),
   email: z.string(),
@@ -18,7 +19,7 @@ const listeners = new Set<() => void>();
 let storageListenerInstalled = false;
 
 function handleStorageEvent(event: StorageEvent): void {
-  if (event.storageArea !== window.localStorage) {
+  if (event.storageArea !== window.sessionStorage) {
     return;
   }
 
@@ -69,27 +70,32 @@ export function notifySessionChanges(): void {
 }
 
 export function getSessions(): AccountSession[] {
-  return getSafeLocalStorage().getJson(STORAGE_SESSIONS_KEY, AccountSessionsSchema) ?? [];
+  return getSafeSessionStorage().getJson(STORAGE_SESSIONS_KEY, AccountSessionsSchema) ?? [];
 }
 
 export function saveSessions(sessions: AccountSession[]): void {
-  getSafeLocalStorage().setJson(STORAGE_SESSIONS_KEY, sessions);
+  getSafeSessionStorage().setJson(STORAGE_SESSIONS_KEY, sessions);
 }
 
 export function getActiveSessionId(): string | null {
-  return getSafeLocalStorage().getItem(STORAGE_ACTIVE_ID_KEY);
+  return (
+    readSessionIdFromPath(currentPathname()) ??
+    getSafeSessionStorage().getItem(WINDOW_ACTIVE_ID_KEY) ??
+    getSafeSessionStorage().getItem(STORAGE_ACTIVE_ID_KEY)
+  );
 }
 
 export function setActiveSessionId(userId: string): void {
-  getSafeLocalStorage().setItem(STORAGE_ACTIVE_ID_KEY, userId);
+  getSafeSessionStorage().setItem(WINDOW_ACTIVE_ID_KEY, userId);
 }
 
 export function clearActiveSessionId(): void {
-  getSafeLocalStorage().removeItem(STORAGE_ACTIVE_ID_KEY);
+  getSafeSessionStorage().removeItem(WINDOW_ACTIVE_ID_KEY);
+  getSafeSessionStorage().removeItem(STORAGE_ACTIVE_ID_KEY);
 }
 
 export function clearStoredSessions(): void {
-  const storage = getSafeLocalStorage();
+  const storage = getSafeSessionStorage();
   storage.removeItem(STORAGE_ACTIVE_ID_KEY);
   storage.removeItem(STORAGE_SESSIONS_KEY);
 }
@@ -101,4 +107,26 @@ export function getActiveSession(): AccountSession | null {
     return sessions[0] || null;
   }
   return sessions.find((session) => session.userId === activeId) || sessions[0] || null;
+}
+
+export function drivePathForSession(userId: string, pathname = currentPathname()): string {
+  const currentPath = stripSessionPathPrefix(pathname);
+  return `/u/${encodeURIComponent(userId)}${currentPath}`;
+}
+
+function readSessionIdFromPath(pathname: string): string | null {
+  const encoded = pathname.match(/^\/u\/([^/]+)(?:\/|$)/u)?.[1];
+  return encoded ? decodeURIComponent(encoded) : null;
+}
+
+function stripSessionPathPrefix(pathname: string): string {
+  const prefixedPath = pathname.match(/^\/u\/[^/]+(\/.*)?$/u)?.[1];
+  if (prefixedPath) {
+    return prefixedPath;
+  }
+  return pathname === '/callback' ? '/' : pathname || '/';
+}
+
+function currentPathname(): string {
+  return typeof window === 'undefined' ? '/' : (window.location?.pathname ?? '/');
 }

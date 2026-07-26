@@ -17,6 +17,8 @@ const BINDINGS: &str = "bindings.rs";
 
 fn main()
 {
+    native_toolchain::enforce_native_dependency_hardening();
+
     println!("cargo:rustc-check-cfg=cfg(xmlsec_key_load_ex)");
     println!("cargo:rustc-link-lib=xmlsec1-openssl");  // -lxmlsec1-openssl
     println!("cargo:rustc-link-lib=xmlsec1");          // -lxmlsec1
@@ -91,4 +93,73 @@ fn args_from_output(args: Vec<u8>) -> Vec<String>
         .collect::<Vec<String>>();
 
     args
+}
+
+
+mod native_toolchain {
+    use std::env;
+
+    const REQUIRED_C_FLAGS: &[&str] = &[
+        "-Wall",
+        "-Wextra",
+        "-Wformat=2",
+        "-Wformat-security",
+        "-Werror=format-security",
+        "-D_FORTIFY_SOURCE=3",
+        "-fstack-protector-strong",
+        "-fPIE",
+        "-fno-omit-frame-pointer",
+    ];
+
+    const REQUIRED_LINUX_LD_FLAGS: &[&str] = &[
+        "-pie",
+        "-Wl,-z,relro",
+        "-Wl,-z,now",
+        "-Wl,-z,noexecstack",
+    ];
+
+    const REQUIRED_MACOS_LD_FLAGS: &[&str] = &[
+        "-Wl,-dead_strip",
+    ];
+
+    pub fn enforce_native_dependency_hardening() {
+        println!("cargo:rerun-if-env-changed=NVBES_C_TOOLCHAIN_HARDENING");
+        println!("cargo:rerun-if-env-changed=CFLAGS");
+        println!("cargo:rerun-if-env-changed=CXXFLAGS");
+        println!("cargo:rerun-if-env-changed=LDFLAGS");
+
+        if env::var("NVBES_C_TOOLCHAIN_HARDENING").as_deref() != Ok("required") {
+            return;
+        }
+
+        require_flags("CFLAGS", &env::var("CFLAGS").unwrap_or_default(), REQUIRED_C_FLAGS);
+        require_flags(
+            "CXXFLAGS",
+            &env::var("CXXFLAGS").unwrap_or_default(),
+            REQUIRED_C_FLAGS,
+        );
+
+        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+        let required_ld_flags = match target_os.as_str() {
+            "linux" => REQUIRED_LINUX_LD_FLAGS,
+            "macos" => REQUIRED_MACOS_LD_FLAGS,
+            _ => &[][..],
+        };
+        require_flags(
+            "LDFLAGS",
+            &env::var("LDFLAGS").unwrap_or_default(),
+            required_ld_flags,
+        );
+    }
+
+    fn require_flags(variable: &str, actual: &str, expected: &[&str]) {
+        for flag in expected {
+            if !actual.split_whitespace().any(|value| value == *flag) {
+                panic!(
+                    "{variable} is missing required native toolchain hardening flag `{flag}`. \
+                     Source scripts/c-toolchain-hardened-env.sh before building native dependencies."
+                );
+            }
+        }
+    }
 }

@@ -7,18 +7,14 @@ use crate::{
     domains::authz::{WorkspaceAccess, WorkspaceRole},
     http::error::AppError,
 };
-use nvbes_core::config::AppConfig;
 use nvbes_tenancy::role_as_db;
 
 use super::db::*;
 use super::types::*;
-use nvbes_core::auth::{
-    generate_token, log_dev_token, normalize_email, token_hash, validate_email,
-};
+use nvbes_core::auth::{generate_token, normalize_email, token_hash, validate_email};
 
 pub async fn invite_member(
     db: &sqlx::PgPool,
-    config: &AppConfig,
     access: &WorkspaceAccess,
     input: InviteMemberInput,
     ip: Option<String>,
@@ -89,7 +85,6 @@ pub async fn invite_member(
     }
 
     let invitation_token = generate_token("gxi");
-    log_dev_token(&invitation_token, &config.environment, "member_invitation");
     let token_hash = token_hash(&invitation_token);
     let expires_at = Utc::now() + Duration::days(7);
 

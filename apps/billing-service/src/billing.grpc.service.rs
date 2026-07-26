@@ -278,6 +278,33 @@ impl BillingService for BillingGrpcService {
         ))
     }
 
+    async fn get_admin_tenant_billing_summary(
+        &self,
+        request: Request<billing::GetAdminTenantBillingSummaryRequest>,
+    ) -> Result<Response<billing::AdminTenantBillingSummary>, Status> {
+        let request = request.into_inner();
+        validate_context(request.context.as_ref(), None)?;
+        Ok(Response::new(
+            service_admin::tenant_billing_summary(
+                &self.state.db,
+                parse_uuid(&request.tenant_id, "tenant_id")?,
+            )
+            .await?,
+        ))
+    }
+
+    async fn get_admin_workspace_billing_summary(
+        &self,
+        request: Request<billing::GetAdminWorkspaceBillingSummaryRequest>,
+    ) -> Result<Response<billing::AdminWorkspaceBillingSummary>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin::workspace_billing_summary(&self.state.db, workspace_id).await?,
+        ))
+    }
+
     async fn list_admin_provider_event_failures(
         &self,
         request: Request<billing::ListAdminProviderEventFailuresRequest>,
@@ -367,6 +394,24 @@ impl BillingService for BillingGrpcService {
         validate_context(request.context.as_ref(), None)?;
         Ok(Response::new(
             service_admin_entitlements::entitlements_center(&self.state.db).await?,
+        ))
+    }
+
+    async fn run_admin_entitlements_action(
+        &self,
+        request: Request<billing::AdminEntitlementsActionRequest>,
+    ) -> Result<Response<billing::AdminEntitlementsActionResult>, Status> {
+        let request = request.into_inner();
+        let workspace_id = workspace_id(&request.workspace_id)?;
+        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
+        Ok(Response::new(
+            service_admin_entitlements::run_entitlements_action(
+                &self.state.db,
+                request.action_kind(),
+                tenant_id(context)?,
+                request.reason,
+            )
+            .await?,
         ))
     }
 

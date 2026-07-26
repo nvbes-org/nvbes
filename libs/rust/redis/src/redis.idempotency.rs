@@ -36,3 +36,24 @@ pub async fn delete(pool: &RedisPool, key: &str) -> Result<(), RedisError> {
     let _: () = conn.del(key).await?;
     Ok(())
 }
+
+pub async fn delete_if_value(
+    pool: &RedisPool,
+    key: &str,
+    expected_value: &str,
+) -> Result<bool, RedisError> {
+    let mut conn = pool.get().await?;
+    let deleted: i32 = redis::Script::new(
+        r#"
+        if redis.call("GET", KEYS[1]) == ARGV[1] then
+            return redis.call("DEL", KEYS[1])
+        end
+        return 0
+        "#,
+    )
+    .key(key)
+    .arg(expected_value)
+    .invoke_async(&mut *conn)
+    .await?;
+    Ok(deleted > 0)
+}

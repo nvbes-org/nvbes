@@ -58,6 +58,16 @@ impl From<aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::delete_objects::Del
     }
 }
 
+impl From<aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::delete_object::DeleteObjectError>>
+    for StorageError
+{
+    fn from(
+        err: aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::delete_object::DeleteObjectError>,
+    ) -> Self {
+        Self::S3(err.to_string())
+    }
+}
+
 impl From<aws_sdk_s3::presigning::PresigningConfigError> for StorageError {
     fn from(err: aws_sdk_s3::presigning::PresigningConfigError) -> Self {
         Self::Presign(err.to_string())

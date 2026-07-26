@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { readVerifiedFetchCsrfToken } from './verified-fetch.csrf';
+
 export type VerifiedFetchInput = RequestInfo | URL;
 
 export interface VerifiedFetchOptions {
@@ -71,8 +73,11 @@ export async function verifiedFetch(
 
   const method = readRequestMethod(input, init);
   const credentials = init.credentials ?? readRequestCredentials(input) ?? 'include';
+  if (shouldAttachAjaxHeader(method) && !headers.has('X-Requested-With')) {
+    headers.set('X-Requested-With', 'XMLHttpRequest');
+  }
   if (!init.skipCsrf && shouldAttachCsrf(method, credentials) && !headers.has(csrfHeader(init))) {
-    const csrfToken = readCookie(init.csrfCookieName ?? 'csrf_token');
+    const csrfToken = readVerifiedFetchCsrfToken(init);
     if (csrfToken) {
       headers.set(csrfHeader(init), csrfToken);
     }
@@ -206,21 +211,16 @@ function mergeHeaders(target: Headers, source?: HeadersInit): void {
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+function shouldAttachAjaxHeader(method: string): boolean {
+  return MUTATING_METHODS.has(method.toUpperCase());
+}
+
 function shouldAttachCsrf(method: string, credentials: RequestCredentials): boolean {
   return credentials !== 'omit' && MUTATING_METHODS.has(method.toUpperCase());
 }
 
 function csrfHeader(init: VerifiedFetchInit): string {
   return init.csrfHeaderName ?? 'X-CSRF-Token';
-}
-
-function readCookie(name: string): string | undefined {
-  if (typeof document === 'undefined') {
-    return undefined;
-  }
-  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]*)`));
-  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
 
 async function readResponseBody(response: Response): Promise<unknown> {

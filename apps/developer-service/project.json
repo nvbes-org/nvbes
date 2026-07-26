@@ -1,0 +1,7 @@
+{
+  "name": "developer-service",
+  "projectType": "application",
+  "root": "apps/developer-service",
+  "sourceRoot": "apps/developer-service/src",
+  "tags": ["scope:oss", "type:app", "domain:developer", "layer:app"]
+}

@@ -4051,10 +4051,17 @@ dependencies = [
 name = "nvbes-storage"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "async-trait",
  "aws-config",
  "aws-sdk-s3",
+ "base64 0.22.1",
+ "hkdf",
  "nvbes-core",
+ "rand 0.9.4",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
  "thiserror 2.0.18",
  "tokio",
  "tracing",

@@ -35,8 +35,6 @@ export function SecurityMfaCard({
           icon={Key}
           label="Mot de passe"
           description="Modifier votre mot de passe"
-          badgeLabel="Defini"
-          badgeVariant="default"
           onAction={onOpenPassword}
           disabled={disabled}
         />

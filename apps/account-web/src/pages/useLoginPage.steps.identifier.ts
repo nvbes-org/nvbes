@@ -11,6 +11,8 @@ type SubmitIdentifierStepOptions = {
   email: string;
   decoyLinkClicked: boolean;
   powChallenge: PowChallengeProof;
+  deviceFingerprint: import('@nvbes/identity-sdk-web').DeviceProfile;
+  botSignals: import('@nvbes/identity-sdk-web').BotIntegritySignals;
   submitIdentifier: IdentifierMutateAsync;
   resetMfaState: ResetMfaState;
   setLoginStateToken: (value: string | null) => void;
@@ -25,6 +27,8 @@ export async function submitIdentifierStep({
   email,
   decoyLinkClicked,
   powChallenge,
+  deviceFingerprint,
+  botSignals,
   submitIdentifier,
   resetMfaState,
   setLoginStateToken,
@@ -40,6 +44,8 @@ export async function submitIdentifierStep({
     const result = await submitIdentifier({
       email,
       decoy_link_clicked: decoyLinkClicked,
+      device_fingerprint: deviceFingerprint,
+      bot_signals: botSignals,
       ...powChallenge,
     });
 

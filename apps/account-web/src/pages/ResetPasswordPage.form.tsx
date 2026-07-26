@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordStrengthMeter } from './RegisterPage.password';
 import { ResetPasswordErrorMessage } from './ResetPasswordPage.messages';
 import type { ResetPasswordPageModel } from './ResetPasswordPage.types';
 
@@ -56,6 +57,7 @@ export function ResetPasswordForm({
           autoComplete="new-password"
           autoFocus={!!tokenFromUrl}
         />
+        <PasswordStrengthMeter password={password} />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="reset-confirm">Confirmer le mot de passe</Label>

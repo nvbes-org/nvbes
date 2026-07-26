@@ -1,4 +1,4 @@
-import StepUpForm from '@/components/StepUpForm';
+import StepUpModal from '@/components/StepUpModal';
 import { type WebauthnSetupKind, WebauthnSetupRegisterCard } from './WebauthnSetupPage.shared';
 import { useWebauthnSetupPage } from './useWebauthnSetupPage';
 
@@ -18,20 +18,17 @@ export default function WebauthnSetupPage({ kind = 'security_key' }: { kind?: We
     supported,
   } = useWebauthnSetupPage(kind);
 
-  if (step === 'stepup') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <StepUpForm
-          onSuccess={onStepUpSuccess}
-          onCancel={navigateBack}
-          description={copy.stepUpText}
-        />
-      </div>
-    );
-  }
+  const isStepUp = step === 'stepup';
 
-  if (step === 'register') {
-    return (
+  return (
+    <>
+      <StepUpModal
+        open={isStepUp}
+        onSuccess={onStepUpSuccess}
+        onCancel={navigateBack}
+        description={copy.stepUpText}
+      />
+
       <WebauthnSetupRegisterCard
         title={copy.title}
         label={label}
@@ -40,14 +37,12 @@ export default function WebauthnSetupPage({ kind = 'security_key' }: { kind?: We
         supported={supported}
         showPlatformWarning={showPlatformWarning}
         error={error}
-        loading={loading}
+        loading={loading || isStepUp}
         buttonText={copy.buttonText}
         onLabelChange={onLabelChange}
         onCancel={navigateBack}
         onSubmit={onRegister}
       />
-    );
-  }
-
-  return null;
+    </>
+  );
 }

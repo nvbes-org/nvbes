@@ -1,11 +1,12 @@
-import { KeyRound } from 'lucide-react';
+import { Fingerprint, RotateCcw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { StepUpMethod } from './useStepUpForm';
+import type { StepUpMethod, WebAuthnStatus } from './useStepUpForm';
 
 export function StepUpMethodFields({
   method,
+  webauthnStatus = 'idle',
   password,
   totpCode,
   recoveryCode,
@@ -16,6 +17,7 @@ export function StepUpMethodFields({
   onWebAuthnClick,
 }: {
   method: StepUpMethod;
+  webauthnStatus?: WebAuthnStatus;
   password: string;
   totpCode: string;
   recoveryCode: string;
@@ -87,19 +89,52 @@ export function StepUpMethodFields({
     );
   }
 
+  const isPrompting =
+    webauthnStatus === 'prompting' ||
+    webauthnStatus === 'idle' ||
+    (loading && webauthnStatus !== 'error');
+
+  if (isPrompting) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-6 px-4 rounded-xl border bg-muted/20 text-center animate-in fade-in zoom-in-95 duration-200">
+        <div className="relative flex items-center justify-center size-14 rounded-full bg-primary/10 text-primary">
+          <Fingerprint className="size-7 animate-pulse" />
+          <span className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping opacity-75" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-foreground">
+            Détection de votre clé de sécurité...
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+            Veuillez patienter pendant l&apos;ouverture de la fenêtre de votre navigateur ou
+            appareil.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-3">
-      <p className="text-center text-xs text-muted-foreground">
-        Utilisez votre authentification biométrique ou clé de sécurité physique.
-      </p>
+    <div className="flex flex-col items-center justify-center gap-3 py-5 px-4 rounded-xl border bg-destructive/5 border-destructive/20 text-center animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex items-center justify-center size-12 rounded-full bg-destructive/10 text-destructive">
+        <ShieldAlert className="size-6" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold text-destructive">
+          Authentification biométrique interrompue
+        </p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+          La fenêtre a expiré ou la vérification a été annulée.
+        </p>
+      </div>
       <Button
         type="button"
         onClick={onWebAuthnClick}
         disabled={loading}
-        className="w-full gap-2 text-xs"
+        className="w-full gap-2 text-xs mt-1"
       >
-        <KeyRound className="size-4" />
-        {loading ? 'Attente de la clé...' : 'Déclencher la clé de sécurité'}
+        <RotateCcw className="size-3.5" />
+        Réessayer la clé de sécurité
       </Button>
     </div>
   );

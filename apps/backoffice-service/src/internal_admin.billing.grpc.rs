@@ -10,14 +10,15 @@ use crate::{
     error::AppError,
     grpc_pb::nvbes::{
         billing::v1::{
-            AdminRiskActionKind, AdminRiskActionRequest, AdminUsageActionRequest,
-            BuildAdminFinanceExportRequest, GetAdminBillingOverviewRequest,
-            GetAdminBillingPlatformCenterRequest, GetAdminCommandCenterBillingMetricsRequest,
-            GetAdminEntitlementsCenterRequest, GetAdminOperationsCenterRequest,
-            GetAdminRevenueCenterRequest, GetAdminRiskDecisionCenterRequest,
-            GetAdminUsageCenterRequest, ListAdminProviderEventFailuresRequest,
-            SearchAdminBillingRequest, SimulateAdminBillingRoutingRequest,
-            billing_service_client::BillingServiceClient,
+            AdminEntitlementsActionRequest, AdminRiskActionKind, AdminRiskActionRequest,
+            AdminUsageActionRequest, BuildAdminFinanceExportRequest,
+            GetAdminBillingOverviewRequest, GetAdminBillingPlatformCenterRequest,
+            GetAdminCommandCenterBillingMetricsRequest, GetAdminEntitlementsCenterRequest,
+            GetAdminOperationsCenterRequest, GetAdminRevenueCenterRequest,
+            GetAdminRiskDecisionCenterRequest, GetAdminTenantBillingSummaryRequest,
+            GetAdminUsageCenterRequest, GetAdminWorkspaceBillingSummaryRequest,
+            ListAdminProviderEventFailuresRequest, SearchAdminBillingRequest,
+            SimulateAdminBillingRoutingRequest, billing_service_client::BillingServiceClient,
         },
         platform::v1::{RequestContext, TenantContext},
     },
@@ -108,7 +109,7 @@ pub(crate) fn request_context(
             workspace_id: workspace_id
                 .map(|value| value.to_string())
                 .unwrap_or_default(),
-            region_id: "internal-admin".to_string(),
+            region_id: "backoffice-service".to_string(),
             data_residency: "internal".to_string(),
         }),
     }
@@ -295,6 +296,38 @@ pub(crate) async fn get_admin_billing_overview(
     Ok(response.into_inner())
 }
 
+pub(crate) async fn get_admin_tenant_billing_summary(
+    endpoint: &str,
+    access: BackofficeAccess,
+    tenant_id: Uuid,
+) -> Result<crate::grpc_pb::nvbes::billing::v1::AdminTenantBillingSummary, AppError> {
+    let mut client = billing_client(endpoint).await?;
+    let response = client
+        .get_admin_tenant_billing_summary(grpc_request(GetAdminTenantBillingSummaryRequest {
+            context: Some(request_context(access, None)),
+            tenant_id: tenant_id.to_string(),
+        }))
+        .await
+        .map_err(grpc_status)?;
+    Ok(response.into_inner())
+}
+
+pub(crate) async fn get_admin_workspace_billing_summary(
+    endpoint: &str,
+    access: BackofficeAccess,
+    workspace_id: Uuid,
+) -> Result<crate::grpc_pb::nvbes::billing::v1::AdminWorkspaceBillingSummary, AppError> {
+    let mut client = billing_client(endpoint).await?;
+    let response = client
+        .get_admin_workspace_billing_summary(grpc_request(GetAdminWorkspaceBillingSummaryRequest {
+            context: Some(request_context(access, Some(workspace_id))),
+            workspace_id: workspace_id.to_string(),
+        }))
+        .await
+        .map_err(grpc_status)?;
+    Ok(response.into_inner())
+}
+
 pub(crate) async fn list_admin_provider_event_failures(
     endpoint: &str,
     access: BackofficeAccess,
@@ -405,6 +438,23 @@ pub(crate) async fn get_admin_entitlements_center(
         .get_admin_entitlements_center(grpc_request(GetAdminEntitlementsCenterRequest {
             context: Some(request_context(access, None)),
         }))
+        .await
+        .map_err(grpc_status)?;
+    Ok(response.into_inner())
+}
+
+pub(crate) async fn run_entitlements_grpc_action(
+    endpoint: &str,
+    access: BackofficeAccess,
+    workspace_id: Uuid,
+    request: AdminEntitlementsActionRequest,
+) -> Result<crate::grpc_pb::nvbes::billing::v1::AdminEntitlementsActionResult, AppError> {
+    let mut client = billing_client(endpoint).await?;
+    let mut request = request;
+    request.context = Some(request_context(access, Some(workspace_id)));
+    request.workspace_id = workspace_id.to_string();
+    let response = client
+        .run_admin_entitlements_action(grpc_request(request))
         .await
         .map_err(grpc_status)?;
     Ok(response.into_inner())

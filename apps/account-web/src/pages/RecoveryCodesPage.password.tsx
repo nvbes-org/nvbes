@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -15,11 +15,11 @@ export function RecoveryCodesPasswordStep({
   password: string;
   onCancel: () => void;
   onPasswordChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form onSubmit={onSubmit} className="w-full max-w-md space-y-4">
+    <div className="mx-auto w-full max-w-md space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <h1 className="text-2xl font-bold">Codes de récupération</h1>
         <p className="text-sm text-muted-foreground">
           Confirmez votre mot de passe pour générer de nouveaux codes de récupération.

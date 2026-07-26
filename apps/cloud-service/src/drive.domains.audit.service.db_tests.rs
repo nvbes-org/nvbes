@@ -44,7 +44,7 @@ async fn list_events_filters_by_geo_risk_and_network_block_reason() {
         &access,
         ListAuditEventsInput {
             limit: Some(10),
-            before_id: None,
+            cursor: None,
             action: Some("api.request.denied".to_string()),
             actor_user_id: None,
             actor_principal_id: None,

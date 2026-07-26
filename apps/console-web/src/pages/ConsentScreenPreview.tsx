@@ -1,3 +1,8 @@
+import {
+  sanitizeStyleElementCss,
+  sanitizeUrlForAttribute,
+  safeStyleElementCssToString,
+} from '@nvbes/web-runtime';
 import { ShieldCheck } from 'lucide-react';
 
 interface ConsentScreenPreviewProps {
@@ -23,9 +28,14 @@ export function ConsentScreenPreview({
   customCss,
   helpText,
 }: ConsentScreenPreviewProps) {
+  const safeLogoUrl = sanitizeUrlForAttribute(logoUrl, {
+    allowRelative: false,
+    allowedProtocols: ['https:'],
+  });
   // Scope user custom CSS to only affect our preview wrapper
-  const scopedCss = customCss
-    ? customCss.replace(/([^\r\n,{}]+)(?=[^{}]*\{)/g, (match) => {
+  const customCssText = safeStyleElementCssToString(sanitizeStyleElementCss(customCss));
+  const scopedCss = customCssText
+    ? customCssText.replace(/([^\r\n,{}]+)(?=[^{}]*\{)/g, (match) => {
         return match
           .split(',')
           .map((selector) => `.consent-preview-wrapper ${selector.trim()}`)
@@ -56,9 +66,9 @@ export function ConsentScreenPreview({
       <div className="mx-auto max-w-sm rounded-xl border border-border bg-card p-5 shadow-sm">
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
-          {logoUrl ? (
+          {safeLogoUrl ? (
             <img
-              src={logoUrl}
+              src={safeLogoUrl}
               alt="Preview Logo"
               className="size-10 rounded-md border border-border bg-background object-contain p-1"
               onError={(e) => {

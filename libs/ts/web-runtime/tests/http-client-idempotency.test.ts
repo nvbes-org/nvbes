@@ -26,6 +26,26 @@ describe('http-client idempotency headers', () => {
     expect(observed.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]+$/i);
   });
 
+  it('marks mutating requests as XMLHttpRequest AJAX calls', async () => {
+    const observed = new ObservedRequest();
+    const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
+
+    await client.post('/mutations', z.object({ ok: z.boolean() }), {
+      ok: true,
+    });
+
+    expect(observed.headers.get('X-Requested-With')).toBe('XMLHttpRequest');
+  });
+
+  it('does not mark safe reads as XMLHttpRequest AJAX calls', async () => {
+    const observed = new ObservedRequest();
+    const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
+
+    await client.get('/health', z.object({ ok: z.boolean() }));
+
+    expect(observed.headers.get('X-Requested-With')).toBeNull();
+  });
+
   it('preserves an explicit Idempotency-Key header', async () => {
     const observed = new ObservedRequest();
     const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
@@ -72,7 +92,8 @@ class ObservedRequest {
 
 function buildJsonFetch(observed: ObservedRequest): typeof fetch {
   return async (input, init) => {
-    observed.url = input.toString();
+    observed.url =
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const requestHeaders = new Headers(init?.headers);
     requestHeaders.forEach((value, key) => {
       observed.headers.set(key, value);

@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html",
+  "reviewCadence": "At every authorization-sensitive endpoint, role, action, resource, or payload change.",
+  "statusCodes": {
+    "allowed": [200, 201, 204],
+    "denied": [401, 403, 404]
+  },
+  "pointsOfView": [
+    {
+      "id": "anonymous",
+      "role": "anonymous",
+      "authContext": "No access token.",
+      "description": "Unauthenticated caller; all protected workspace APIs must reject this point of view."
+    },
+    {
+      "id": "owner",
+      "role": "owner",
+      "authContext": "Verified user with workspace owner role.",
+      "description": "Workspace owner with full workspace administration except owner-to-owner takeover operations."
+    },
+    {
+      "id": "admin",
+      "role": "admin",
+      "authContext": "Verified user with workspace admin role.",
+      "description": "Workspace administrator without billing, delete-workspace, or owner-target privileges."
+    },
+    {
+      "id": "security_admin",
+      "role": "security_admin",
+      "authContext": "Verified user with workspace security admin role.",
+      "description": "Security operator limited to audit and security-review operations."
+    },
+    {
+      "id": "billing_admin",
+      "role": "billing_admin",
+      "authContext": "Verified user with workspace billing admin role.",
+      "description": "Billing operator limited to billing read/write operations."
+    },
+    {
+      "id": "member",
+      "role": "member",
+      "authContext": "Verified user with workspace member role.",
+      "description": "Standard collaborator; object mutations require resource ownership."
+    },
+    {
+      "id": "viewer",
+      "role": "viewer",
+      "authContext": "Verified user with workspace viewer role.",
+      "description": "Read-only workspace collaborator."
+    },
+    {
+      "id": "unverified_user",
+      "role": "member",
+      "authContext": "Authenticated user without verified email.",
+      "description": "Authenticated but unverified users must be denied before role policy evaluation."
+    },
+    {
+      "id": "machine_missing_scope",
+      "role": "member",
+      "authContext": "Machine token without the action-specific Drive scope.",
+      "description": "Machine credentials must not bypass required scope checks."
+    }
+  ],
+  "services": [
+    {
+      "id": "AUTHZ_AUTO_SVC_001",
+      "name": "List workspace members",
+      "resource": "workspace_members",
+      "action": "view_members",
+      "method": "GET",
+      "uri": "/workspaces/{workspaceId}/members",
+      "allowed": ["owner", "admin", "security_admin"],
+      "denied": [
+        "anonymous",
+        "billing_admin",
+        "member",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.members.routes.manage.rs",
+          "includes": ["WorkspaceAction::ViewMembers", "authorize_workspace_action"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": ["workspace_membership_roles_cover_expected_permission_boundaries"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_002",
+      "name": "Change workspace member role",
+      "resource": "workspace_member",
+      "action": "change_member_role",
+      "method": "PATCH",
+      "uri": "/workspaces/{workspaceId}/members/{memberId}",
+      "allowed": ["owner", "admin"],
+      "denied": [
+        "anonymous",
+        "security_admin",
+        "billing_admin",
+        "member",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.members.routes.manage.rs",
+          "includes": [
+            "WorkspaceAction::ChangeMemberRole",
+            "target_role_for_member",
+            "target_role: Some(target_role)"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "admin_can_only_invite_member_or_viewer",
+            "owner_cannot_invite_or_remove_another_owner"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_003",
+      "name": "Rename owned object",
+      "resource": "storage_object",
+      "action": "rename_object",
+      "method": "PATCH",
+      "uri": "/workspaces/{workspaceId}/objects/{objectId}",
+      "allowed": ["owner", "admin", "member"],
+      "denied": [
+        "anonymous",
+        "security_admin",
+        "billing_admin",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.files.routes.manage.rs",
+          "includes": [
+            "WorkspaceAction::RenameObject",
+            "resource_context_for_object",
+            "authorize_workspace_action"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": ["member_can_only_modify_owned_objects"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_004",
+      "name": "Delete object permanently",
+      "resource": "storage_object",
+      "action": "delete_object_permanently",
+      "method": "DELETE",
+      "uri": "/workspaces/{workspaceId}/objects/{objectId}",
+      "allowed": ["owner", "admin", "member"],
+      "denied": [
+        "anonymous",
+        "security_admin",
+        "billing_admin",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.files.routes.manage.rs",
+          "includes": [
+            "WorkspaceAction::DeleteObjectPermanently",
+            "resource_context_for_object",
+            "authorize_workspace_action"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::DeleteObjectPermanently", "action_requires_step_up"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_005",
+      "name": "Create share link",
+      "resource": "share_link",
+      "action": "create_share_link",
+      "method": "POST",
+      "uri": "/workspaces/{workspaceId}/objects/{objectId}/share-links",
+      "allowed": ["owner", "admin", "member"],
+      "denied": [
+        "anonymous",
+        "security_admin",
+        "billing_admin",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.share_links.routes.manage.rs",
+          "includes": [
+            "WorkspaceAction::CreateShareLink",
+            "resource_context_for_object",
+            "authorize_workspace_action"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": ["member_share_link_requires_policy_and_ownership"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_006",
+      "name": "View audit events",
+      "resource": "audit_log",
+      "action": "view_audit",
+      "method": "GET",
+      "uri": "/workspaces/{workspaceId}/audit/events",
+      "allowed": ["owner", "admin", "security_admin"],
+      "denied": [
+        "anonymous",
+        "billing_admin",
+        "member",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.audit.routes.rs",
+          "includes": ["WorkspaceAction::ViewAudit", "authorize_workspace_action"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "security_admin_can_view_audit_but_cannot_invite_members",
+            "billing_admin_can_manage_billing_but_cannot_view_audit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_AUTO_SVC_007",
+      "name": "Manage billing",
+      "resource": "billing",
+      "action": "manage_billing",
+      "method": "POST",
+      "uri": "/workspaces/{workspaceId}/billing/manage",
+      "allowed": ["owner", "billing_admin"],
+      "denied": [
+        "anonymous",
+        "admin",
+        "security_admin",
+        "member",
+        "viewer",
+        "unverified_user",
+        "machine_missing_scope"
+      ],
+      "expectedAllowedStatus": 200,
+      "expectedDeniedStatus": 403,
+      "evidence": [
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "owner_can_manage_workspace_and_billing",
+            "admin_cannot_manage_billing_or_delete_workspace",
+            "billing_admin_can_manage_billing_but_cannot_view_audit"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["WorkspaceAction::ManageBilling", "action_requires_step_up"]
+        }
+      ]
+    }
+  ],
+  "servicesTesting": [
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_001",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}"
+      },
+      "payload": null
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_002",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}",
+        "memberId": "{target_member_id}"
+      },
+      "payload": {
+        "role": "viewer"
+      }
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_003",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}",
+        "objectId": "{object_owned_by_pov}"
+      },
+      "payload": {
+        "name": "renamed-by-authz-automation"
+      }
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_004",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}",
+        "objectId": "{object_owned_by_pov}"
+      },
+      "payload": null
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_005",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}",
+        "objectId": "{object_owned_by_pov}"
+      },
+      "payload": {
+        "expires_at": null
+      }
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_006",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}"
+      },
+      "payload": null
+    },
+    {
+      "serviceId": "AUTHZ_AUTO_SVC_007",
+      "pathParameters": {
+        "workspaceId": "{workspace_owned_by_pov}"
+      },
+      "payload": {
+        "operation": "manage_billing_requires_step_up"
+      }
+    }
+  ]
+}

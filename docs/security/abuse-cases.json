@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Abuse_Case_Cheat_Sheet.html",
+  "reviewCadence": "At feature design, before release gates, and after every security-significant incident.",
+  "features": [
+    {
+      "id": "FEATURE_001",
+      "name": "Account authentication",
+      "description": "Password, passkey, MFA, session creation, recovery, and account onboarding flows."
+    },
+    {
+      "id": "FEATURE_002",
+      "name": "Tenant and workspace authorization",
+      "description": "Tenant, organization, workspace, role, and delegated actor authorization boundaries."
+    },
+    {
+      "id": "FEATURE_003",
+      "name": "Browser mutating requests",
+      "description": "Cookie-authenticated web requests, AJAX requests, CSRF protections, and browser metadata."
+    },
+    {
+      "id": "FEATURE_004",
+      "name": "Web UI rendering",
+      "description": "React rendering, reviewed HTML escape hatches, CSP, and clickjacking protections."
+    },
+    {
+      "id": "FEATURE_005",
+      "name": "Cloud public access",
+      "description": "Public share resolution, download URL creation, and public API signatures."
+    },
+    {
+      "id": "FEATURE_006",
+      "name": "Billing and developer webhooks",
+      "description": "Inbound Stripe webhooks and outbound developer webhook signing and replay handling."
+    },
+    {
+      "id": "FEATURE_007",
+      "name": "Backoffice operations",
+      "description": "Internal administrative mutation flows and privileged operator actions."
+    },
+    {
+      "id": "FEATURE_008",
+      "name": "Audit, monitoring, and supply chain",
+      "description": "Append-only audit evidence, detection coverage, dependency coverage, and secret scanning."
+    }
+  ],
+  "countermeasures": [
+    {
+      "id": "DEFENSE_001",
+      "name": "Authentication throttling and bot friction",
+      "location": "code",
+      "description": "IP, account, and pair-based rate limits, bot guard signals, and risk event recording."
+    },
+    {
+      "id": "DEFENSE_002",
+      "name": "MFA and step-up abuse controls",
+      "location": "code",
+      "description": "MFA rate limiting, failure auditing, recovery risk blocks, and step-up requirements for sensitive actions."
+    },
+    {
+      "id": "DEFENSE_003",
+      "name": "Workspace and tenant scope enforcement",
+      "location": "code",
+      "description": "Tenant, organization, workspace, delegated actor, role, and ownership boundaries."
+    },
+    {
+      "id": "DEFENSE_004",
+      "name": "CSRF, origin, and AJAX request guards",
+      "location": "code",
+      "description": "CSRF double-submit validation, Origin/Referer checks, Fetch Metadata rejection, and AJAX mutating headers."
+    },
+    {
+      "id": "DEFENSE_005",
+      "name": "Security headers and clickjacking controls",
+      "location": "code",
+      "description": "CSP frame-ancestors, X-Frame-Options, strict content type, referrer, permissions, and cross-origin headers."
+    },
+    {
+      "id": "DEFENSE_006",
+      "name": "Reviewed HTML rendering guardrails",
+      "location": "code",
+      "description": "SafeHtml, VerifiedHtml, and repository checks that block risky DOM sinks and JSONP."
+    },
+    {
+      "id": "DEFENSE_007",
+      "name": "Public API and share abuse controls",
+      "location": "code",
+      "description": "HMAC request signatures, nonce and timestamp validation, public share rate limits, clean-scan checks, and denial audit."
+    },
+    {
+      "id": "DEFENSE_008",
+      "name": "Webhook authenticity and replay controls",
+      "location": "code",
+      "description": "Raw payload signature verification, payload hashing, duplicate handling, fresh outbound signatures, and replay status gates."
+    },
+    {
+      "id": "DEFENSE_009",
+      "name": "Backoffice privileged action gates",
+      "location": "code",
+      "description": "Permission headers, active operator grants, idempotency keys, and strong confirmation gates."
+    },
+    {
+      "id": "DEFENSE_010",
+      "name": "Audit immutability",
+      "location": "database",
+      "description": "Hash-bearing audit events with mutation-prevention triggers in product schemas."
+    },
+    {
+      "id": "DEFENSE_011",
+      "name": "Supply chain and secret scanning",
+      "location": "tooling",
+      "description": "Repository checks for secrets, dependency coverage, SBOM evidence, container checks, and license boundaries."
+    }
+  ],
+  "abuseCases": [
+    {
+      "id": "ABUSE_CASE_001",
+      "featureId": "FEATURE_001",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker automates credential stuffing, password spraying, registration abuse, or bot-driven authentication probes.",
+      "referential": "OWASP A2 Broken Authentication; OWASP Automated Threats",
+      "countermeasures": ["DEFENSE_001", "DEFENSE_002", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier.rs",
+          "includes": ["check_rate_limit"]
+        },
+        {
+          "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+          "includes": ["check_rate_limit_pair", "risk_policy_blocked", "record_auth_event"]
+        },
+        {
+          "path": "apps/account-service/src/identity.domains.auth.bot_guard.tests.rs",
+          "includes": ["bot_honeypot_triggered"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_002",
+      "featureId": "FEATURE_001",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker brute-forces MFA, abuses recovery paths, or keeps retrying failed step-up flows to take over an account.",
+      "referential": "OWASP Multifactor Authentication; OWASP A2 Broken Authentication",
+      "countermeasures": ["DEFENSE_002", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+          "includes": ["check_rate_limit_pair", "record_auth_event", "mfa_failed"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
+        },
+        {
+          "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+          "includes": ["risk_policy_blocked"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_003",
+      "featureId": "FEATURE_002",
+      "kind": "business",
+      "risk": "critical",
+      "decision": "to_address",
+      "attack": "An authenticated actor changes tenant, organization, workspace, or object identifiers to access or mutate another customer's resources.",
+      "referential": "OWASP A5 Broken Access Control; OWASP IDOR",
+      "countermeasures": ["DEFENSE_003", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.db.workspace_scope.rs",
+          "includes": [
+            "validate_workspace_context",
+            "workspace_context_mismatch",
+            "validate_actor_context"
+          ]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "workspace_membership_roles_cover_expected_permission_boundaries",
+            "member_can_only_modify_owned_objects"
+          ]
+        },
+        {
+          "path": "apps/account-service/src/identity.domains.enterprise.db.scope_reads.rs",
+          "includes": ["ensure_workspaces_belong", "invalid_workspace_scope"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_004",
+      "featureId": "FEATURE_003",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker triggers cookie-authenticated mutations through forged browser requests, cross-site forms, or weak AJAX request handling.",
+      "referential": "OWASP CSRF Prevention; OWASP AJAX Security",
+      "countermeasures": ["DEFENSE_004", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/account-service/src/identity.http.middleware.csrf.rs",
+          "includes": ["csrf_guard", "reject_cross_site_fetch_metadata", "cross_site_request"]
+        },
+        {
+          "path": "apps/account-service/src/identity.http.middleware.origin.rs",
+          "includes": ["origin_guard"]
+        },
+        {
+          "path": "scripts/check-ajax-security.mjs",
+          "includes": ["AJAX security guardrails passed."]
+        },
+        {
+          "path": "libs/ts/http-client/src/index.ts",
+          "includes": ["X-Requested-With", "XMLHttpRequest"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_005",
+      "featureId": "FEATURE_004",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker frames privileged UI, clickjacks account actions, or exploits missing browser hardening headers.",
+      "referential": "OWASP Clickjacking Defense; OWASP A6 Security Misconfiguration",
+      "countermeasures": ["DEFENSE_005"],
+      "validation": [
+        {
+          "path": "libs/rust/core/src/security.headers.rs",
+          "includes": ["x-frame-options", "frame-ancestors 'none'", "x-content-type-options"]
+        },
+        {
+          "path": "libs/rust/core/src/security.headers.tests.rs",
+          "includes": ["x-frame-options", "CLICKJACKING_FRAME_ANCESTORS"]
+        },
+        {
+          "path": "apps/console-web/vite.config.ts",
+          "includes": ["X-Frame-Options", "frame-ancestors 'none'"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_006",
+      "featureId": "FEATURE_004",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker turns AJAX-controlled data or generated markup into DOM XSS through unsafe HTML sinks, string execution, or JSONP.",
+      "referential": "OWASP A7 Cross-Site Scripting; OWASP AJAX Security",
+      "countermeasures": ["DEFENSE_006"],
+      "validation": [
+        {
+          "path": "libs/ts/web-runtime/src/safe-html.tsx",
+          "includes": ["export type SafeHtml", "VerifiedHtml", "dangerouslySetInnerHTML"]
+        },
+        {
+          "path": "scripts/check-ajax-security.mjs",
+          "includes": [
+            "dangerouslySetInnerHTML",
+            "jsonp",
+            "Do not evaluate AJAX-controlled data as code."
+          ]
+        },
+        {
+          "path": "scripts/check-web-runtime-guardrails.mjs",
+          "includes": ["VerifiedHtml", "dangerouslySetInnerHTML"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_007",
+      "featureId": "FEATURE_005",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker tampers with public API requests, replays signed calls, or automates public share downloads to abuse bandwidth and data access.",
+      "referential": "OWASP API Security; OWASP Denial of Service",
+      "countermeasures": ["DEFENSE_007", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.public_api.api_key_signatures.rs",
+          "includes": ["X_NONCE", "X_TIMESTAMP", "X_SIGNATURE", "verify_rejects_tampered_path"]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.share_links.public.rs",
+          "includes": ["public_share_resolve", "public_share_download", "log_public_share_denied"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_008",
+      "featureId": "FEATURE_006",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker sends fake, tampered, stale, or duplicate webhook payloads to trigger billing or developer-side effects.",
+      "referential": "OWASP Webhook Security; OWASP A5 Broken Access Control",
+      "countermeasures": ["DEFENSE_008", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "libs/rust/billing/src/stripe_webhook_intake.rs",
+          "includes": ["verify_stripe_signature", "payload_hash", "WebhookRetryDecision::Duplicate"]
+        },
+        {
+          "path": "apps/billing-service/src/billing.domains.webhooks.rs",
+          "includes": ["stripe-signature"]
+        },
+        {
+          "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
+          "includes": [
+            "signature_timestamp_is_fresh",
+            "classify_webhook_replay",
+            "developer_webhook_signature_binds_event_timestamp_and_payload"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_009",
+      "featureId": "FEATURE_007",
+      "kind": "business",
+      "risk": "critical",
+      "decision": "to_address",
+      "attack": "A compromised, confused, or overprivileged operator attempts irreversible backoffice mutations without the right role, grant, idempotency, or confirmation context.",
+      "referential": "OWASP Authorization; OWASP Transaction Authorization",
+      "countermeasures": ["DEFENSE_009", "DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.rs",
+          "includes": [
+            "require_operator_permission_headers",
+            "require_operator_role_grant",
+            "require_idempotency_key",
+            "require_strong_confirmation"
+          ]
+        },
+        {
+          "path": "apps/backoffice-service/src/internal_admin.rate_limit.rs",
+          "includes": ["rate"]
+        },
+        {
+          "path": "apps/backoffice-service/src/internal_admin.security_center.actions.rs",
+          "includes": ["BackofficePermission::SecurityMutate"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_010",
+      "featureId": "FEATURE_008",
+      "kind": "technical",
+      "risk": "critical",
+      "decision": "to_address",
+      "attack": "An attacker alters or deletes audit evidence to hide account, cloud, billing, or administrative abuse.",
+      "referential": "OWASP A10 Insufficient Logging and Monitoring",
+      "countermeasures": ["DEFENSE_010"],
+      "validation": [
+        {
+          "path": "apps/account-service/migrations/0001_initial_schema.sql",
+          "includes": ["CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()", "event_hash"]
+        },
+        {
+          "path": "apps/cloud-service/migrations/0001_initial_schema.sql",
+          "includes": ["CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()", "event_hash"]
+        }
+      ]
+    },
+    {
+      "id": "ABUSE_CASE_011",
+      "featureId": "FEATURE_008",
+      "kind": "technical",
+      "risk": "high",
+      "decision": "to_address",
+      "attack": "An attacker exploits leaked secrets, unknown vulnerable dependencies, missing SBOM evidence, or weak container/dependency hygiene.",
+      "referential": "OWASP A9 Vulnerable Components; OWASP Software Supply Chain Security",
+      "countermeasures": ["DEFENSE_011"],
+      "validation": [
+        {
+          "path": "tools/security/scan-secrets.mjs",
+          "includes": ["secretPatterns", "Secret scan: ok"]
+        },
+        {
+          "path": "tools/security/check-dependencies.mjs",
+          "includes": ["Dependency coverage: ok", "pnpm-lock.yaml", "Cargo.lock"]
+        },
+        {
+          "path": "tools/security/sbom.mjs",
+          "includes": ["SBOM coverage: ok", "docs/migration/sbom.generated.json"]
+        },
+        {
+          "path": "tools/security/check-containers.mjs",
+          "includes": ["Container/deploy manifests: ok"]
+        }
+      ]
+    }
+  ]
+}

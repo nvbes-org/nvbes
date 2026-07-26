@@ -46,6 +46,8 @@ export const EmailAddressSchema = z.object({
 export const EmailAddressesResponseSchema = z.object({
   emails: z.array(EmailAddressSchema),
   primary_min_age_hours: z.number(),
+  next_cursor: NullableStringSchema,
+  has_more: z.boolean(),
 });
 
 export const AddSecondaryEmailResponseSchema = z.object({
@@ -75,11 +77,25 @@ export const AccountSessionSchema = z.object({
   revoked_at: NullableStringSchema,
   ip: NullableStringSchema,
   user_agent: NullableStringSchema,
+  device_id: NullableStringSchema,
+  device_trust_level: NullableStringSchema,
+  device_trust_score: z.number().nullable(),
+  risk_score: z.number().nullable(),
+  risk_decision: NullableStringSchema,
   current: z.boolean(),
 });
 
 export const SessionsResponseSchema = z.object({
   sessions: z.array(AccountSessionSchema),
+  next_cursor: NullableStringSchema,
+  has_more: z.boolean(),
+});
+
+export const DeviceTrustResultSchema = z.object({
+  success: z.boolean(),
+  device_id: z.string(),
+  trust_level: z.string(),
+  trust_score: z.number(),
 });
 
 export const AccountEntrySchema = z.object({
@@ -106,6 +122,12 @@ export const UserConsentSchema = z.object({
   ip_address: NullableStringSchema.optional(),
   granted_at: z.string(),
   revoked_at: NullableStringSchema.optional(),
+});
+
+export const ConsentHistoryResponseSchema = z.object({
+  consents: z.array(UserConsentSchema),
+  next_cursor: NullableStringSchema,
+  has_more: z.boolean(),
 });
 
 export const SuccessSchema = z.object({
@@ -146,8 +168,6 @@ export const CreateWorkspaceResponseSchema = z.object({
 
 export const ForgotPasswordResultSchema = z.object({
   success: z.boolean(),
-  requires_admin_approval: z.boolean(),
-  available_at: NullableStringSchema.optional(),
 });
 
 export const ResetPasswordResultSchema = z.object({
@@ -157,6 +177,7 @@ export const ResetPasswordResultSchema = z.object({
 export type AccountWorkspace = z.infer<typeof AccountWorkspaceSchema>;
 export type AccountMe = z.infer<typeof AccountMeSchema>;
 export type AccountSession = z.infer<typeof AccountSessionSchema>;
+export type DeviceTrustResult = z.infer<typeof DeviceTrustResultSchema>;
 export type AccountPrincipal = z.infer<typeof AccountPrincipalSchema>;
 export type AccountEntry = z.infer<typeof AccountEntrySchema>;
 export type EmailAddress = z.infer<typeof EmailAddressSchema>;
@@ -167,6 +188,7 @@ export type ResendSecondaryEmailVerificationResponse = z.infer<
 >;
 export type PromoteSecondaryEmailResponse = z.infer<typeof PromoteSecondaryEmailResponseSchema>;
 export type UserConsent = z.infer<typeof UserConsentSchema>;
+export type ConsentHistoryResponse = z.infer<typeof ConsentHistoryResponseSchema>;
 export type GpcStatus = z.infer<typeof GpcStatusSchema>;
 export type OAuthClient = z.infer<typeof OAuthClientSchema>;
 export type OAuthClientsResponse = z.infer<typeof OAuthClientsResponseSchema>;

@@ -69,12 +69,13 @@ pub async fn get_quota(
     params(
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
         ("limit" = Option<i64>, Query, description = "Max events to return"),
-        ("before" = Option<Uuid>, Query, description = "Cursor: return events before this ID"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
         ("action" = Option<String>, Query, description = "Filter by action"),
         ("actorUserId" = Option<Uuid>, Query, description = "Filter by actor user ID"),
     ),
     responses(
         (status = 200, description = "Audit events", body = crate::domains::audit::AuditEventsResponse),
+        (status = 400, description = "Invalid pagination cursor", body = ErrorEnvelope),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),

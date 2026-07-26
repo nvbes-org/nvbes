@@ -1,7 +1,8 @@
 use super::{
-    ACCEPT_CH_VALUE, CLEAR_SITE_DATA_VALUE, CRITICAL_CH_VALUE, NEL_VALUE, PERMISSIONS_POLICY_VALUE,
+    ACCEPT_CH_VALUE, CLEAR_SITE_DATA_VALUE, CLICKJACKING_FRAME_ANCESTORS,
+    CLICKJACKING_X_FRAME_OPTIONS_VALUE, CRITICAL_CH_VALUE, NEL_VALUE, PERMISSIONS_POLICY_VALUE,
     REPORT_TO_VALUE, TIMING_ALLOW_ORIGIN_VALUE, insert_clear_site_data_header,
-    insert_security_headers, no_cache_headers,
+    insert_security_headers, no_cache_headers, security_headers,
 };
 use axum::{
     Router,
@@ -13,7 +14,7 @@ use axum::{
 use tower::ServiceExt;
 
 #[test]
-fn security_headers_requests_low_entropy_client_hints() {
+fn security_headers_request_all_user_agent_client_hints() {
     let mut headers = HeaderMap::new();
 
     insert_security_headers(&mut headers);
@@ -26,6 +27,26 @@ fn security_headers_requests_low_entropy_client_hints() {
         headers.get(HeaderName::from_static("critical-ch")),
         Some(&CRITICAL_CH_VALUE)
     );
+
+    let accept_ch = headers
+        .get(HeaderName::from_static("accept-ch"))
+        .and_then(|value| value.to_str().ok())
+        .expect("Accept-CH should be valid ASCII");
+    for hint in [
+        "Sec-CH-UA",
+        "Sec-CH-UA-Arch",
+        "Sec-CH-UA-Bitness",
+        "Sec-CH-UA-Full-Version",
+        "Sec-CH-UA-Full-Version-List",
+        "Sec-CH-UA-Model",
+        "Sec-CH-UA-WoW64",
+        "Sec-CH-UA-Form-Factors",
+        "Sec-CH-UA-Mobile",
+        "Sec-CH-UA-Platform",
+        "Sec-CH-UA-Platform-Version",
+    ] {
+        assert!(accept_ch.split(", ").any(|value| value == hint));
+    }
 }
 
 #[test]
@@ -57,6 +78,87 @@ fn security_headers_disable_browser_capability_apis() {
     assert_eq!(
         headers.get(HeaderName::from_static("permissions-policy")),
         Some(&PERMISSIONS_POLICY_VALUE)
+    );
+}
+
+#[test]
+fn security_headers_deny_clickjacking_with_csp_and_legacy_header() {
+    let mut headers = HeaderMap::new();
+
+    insert_security_headers(&mut headers);
+
+    assert_eq!(
+        headers.get(HeaderName::from_static("x-frame-options")),
+        Some(&CLICKJACKING_X_FRAME_OPTIONS_VALUE)
+    );
+
+    let csp = headers
+        .get(HeaderName::from_static("content-security-policy"))
+        .and_then(|value| value.to_str().ok())
+        .expect("content-security-policy should be present");
+    assert!(csp.contains(CLICKJACKING_FRAME_ANCESTORS));
+}
+
+#[test]
+fn security_headers_apply_explicit_api_csp_denylist() {
+    let mut headers = HeaderMap::new();
+
+    insert_security_headers(&mut headers);
+
+    let csp = headers
+        .get(HeaderName::from_static("content-security-policy"))
+        .and_then(|value| value.to_str().ok())
+        .expect("content-security-policy should be present");
+
+    for directive in [
+        "default-src 'none'",
+        "script-src 'none'",
+        "script-src-attr 'none'",
+        "style-src 'none'",
+        "img-src 'none'",
+        "font-src 'none'",
+        "frame-src 'none'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "report-uri /csp-report",
+        "report-to nvbes-csp-endpoint",
+    ] {
+        assert!(
+            csp.contains(directive),
+            "CSP should include directive: {directive}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn security_headers_middleware_applies_clickjacking_headers_to_responses() {
+    let app = Router::new()
+        .route("/ok", get(|| async { "ok" }))
+        .layer(from_fn(security_headers));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/ok")
+                .body(Body::empty())
+                .expect("request should build"),
+        )
+        .await
+        .expect("request should succeed");
+
+    assert_eq!(
+        response
+            .headers()
+            .get(HeaderName::from_static("x-frame-options")),
+        Some(&CLICKJACKING_X_FRAME_OPTIONS_VALUE)
+    );
+    assert!(
+        response
+            .headers()
+            .get(HeaderName::from_static("content-security-policy"))
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.contains(CLICKJACKING_FRAME_ANCESTORS))
     );
 }
 

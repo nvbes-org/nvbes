@@ -1,21 +1,23 @@
 import { ArrowLeft } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import StepUpModal from '@/components/StepUpModal';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { AccountPasswordForm } from '@/pages/AccountPasswordPage.form';
-import { AccountPasswordRecoveryCard } from '@/pages/AccountPasswordPage.recovery';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
 
 export function AccountPasswordPageContent({
+  accountEmail,
   confirmPassword,
-  currentPassword,
   error,
+  handleStepUpSuccess,
   handleSubmit,
   mutation,
   navigateBack,
   newPassword,
   setConfirmPassword,
-  setCurrentPassword,
   setNewPassword,
+  setShowStepUp,
+  showStepUp,
   success,
 }: AccountPasswordPageModel) {
   return (
@@ -30,34 +32,32 @@ export function AccountPasswordPageContent({
           <ArrowLeft data-icon="inline-start" />
           Retour
         </Button>
-        <h1 className="text-xl font-heading font-semibold">Mot de passe</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Modifier votre mot de passe.</p>
+        <h1 className="text-3xl font-heading font-semibold">Mot de passe</h1>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Changer le mot de passe</CardTitle>
-          <CardDescription>
-            Utilisez un mot de passe fort et unique que vous n&apos;utilisez pas ailleurs.
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <AccountPasswordForm
+            accountEmail={accountEmail}
             confirmPassword={confirmPassword}
-            currentPassword={currentPassword}
             error={error}
             handleSubmit={handleSubmit}
             mutation={mutation}
             newPassword={newPassword}
             setConfirmPassword={setConfirmPassword}
-            setCurrentPassword={setCurrentPassword}
             setNewPassword={setNewPassword}
             success={success}
           />
         </CardContent>
       </Card>
 
-      <AccountPasswordRecoveryCard />
+      <StepUpModal
+        open={showStepUp}
+        onOpenChange={setShowStepUp}
+        onSuccess={handleStepUpSuccess}
+        onCancel={() => setShowStepUp(false)}
+        description="Pour modifier votre mot de passe, veuillez confirmer votre identité."
+      />
     </div>
   );
 }

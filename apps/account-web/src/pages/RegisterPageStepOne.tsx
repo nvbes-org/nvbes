@@ -1,5 +1,5 @@
 import { ArrowRightIcon, CalendarIcon } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SubmitEvent } from 'react';
 import type { Matcher } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -76,6 +76,7 @@ export function RegisterPageStepOne({
   username,
   birthdate,
   email,
+  emailError,
   password,
   minBirthdate,
   maxBirthdate,
@@ -94,6 +95,7 @@ export function RegisterPageStepOne({
   username: string;
   birthdate: string;
   email: string;
+  emailError: boolean;
   password: string;
   minBirthdate: string;
   maxBirthdate: string;
@@ -104,9 +106,10 @@ export function RegisterPageStepOne({
   onBirthdateChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   passwordStrength: ReactNode;
 }) {
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const [birthdatePickerOpen, setBirthdatePickerOpen] = useState(false);
   const [birthdateDisplay, setBirthdateDisplay] = useState(() =>
     displayValueFromInputValue(birthdate),
@@ -132,6 +135,12 @@ export function RegisterPageStepOne({
     setBirthdateDisplay(displayValueFromInputValue(birthdate));
   }, [birthdate]);
 
+  useEffect(() => {
+    if (emailError) {
+      emailInputRef.current?.focus();
+    }
+  }, [emailError]);
+
   const updateBirthdateFromDisplayValue = (value: string, input: HTMLInputElement | null) => {
     const formattedValue = formatBirthdateDisplayValue(value);
     setBirthdateDisplay(formattedValue);
@@ -144,8 +153,8 @@ export function RegisterPageStepOne({
 
     const date = dateFromDisplayValue(formattedValue);
     if (!date) {
-      onBirthdateChange('');
       if (formattedValue.length >= 10) {
+        onBirthdateChange('');
         input?.setCustomValidity('Date de naissance invalide.');
       }
       return;
@@ -197,6 +206,7 @@ export function RegisterPageStepOne({
         </Label>
         <Input
           id="register-email"
+          ref={emailInputRef}
           type="email"
           placeholder="vous@exemple.fr"
           value={email}
@@ -204,7 +214,15 @@ export function RegisterPageStepOne({
           required
           autoComplete="email"
           autoFocus
+          aria-describedby={emailError ? 'register-email-error' : undefined}
+          aria-invalid={emailError}
+          className={emailError ? 'border-destructive focus-visible:ring-destructive' : undefined}
         />
+        {emailError && (
+          <p id="register-email-error" className="text-sm text-destructive" role="alert">
+            Cet email est déjà utilisé. Connectez-vous ou choisissez une autre adresse.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -296,7 +314,7 @@ export function RegisterPageStepOne({
       </div>
 
       <Button type="submit" disabled={!canProceed} className="w-full" size="lg">
-        Continuer
+        Continuer vers la dernière étape
         <ArrowRightIcon data-icon="inline-end" />
       </Button>
     </form>

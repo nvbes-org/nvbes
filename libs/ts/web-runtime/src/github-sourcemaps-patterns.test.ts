@@ -83,6 +83,25 @@ describe('verified fetch', () => {
     expect(headers.get('Nvbes-Verified-Fetch')).toBe('1');
   });
 
+  it('marks mutating verified requests as XMLHttpRequest AJAX calls', async () => {
+    const calls: RequestInit[] = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      calls.push(init ?? {});
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+
+    await verifiedFetch('/mutations', {
+      body: JSON.stringify({ ok: true }),
+      fetchImpl,
+      method: 'POST',
+      sameOrigin: 'https://app.nvbes.test',
+      skipCsrf: true,
+    });
+
+    const headers = new Headers(calls[0]?.headers);
+    expect(headers.get('X-Requested-With')).toBe('XMLHttpRequest');
+  });
+
   it('refuses cross-origin requests unless the origin is allowed', async () => {
     const fetchImpl: typeof fetch = async () => new Response('{}');
 
@@ -161,10 +180,21 @@ describe('version mismatch detector', () => {
 });
 
 describe('session stale detection', () => {
-  it('recognizes unauthorized HTTP errors as stale sessions', () => {
+  it('does not infer a stale session from an unmarked 401 response', () => {
     const response = new Response('{}', { status: 401, statusText: 'Unauthorized' });
     const result = detectSessionStale(new HttpError('Unauthorized', response, {}));
 
-    expect(result).toEqual({ reason: 'unauthorized', stale: true, status: 401 });
+    expect(result).toEqual({ reason: null, stale: false, status: 401 });
+  });
+
+  it('recognizes an explicit backend reauthentication requirement', () => {
+    const response = new Response('{}', { status: 401, statusText: 'Unauthorized' });
+    const result = detectSessionStale(
+      new HttpError('Session expired', response, {
+        error: { recovery: 'reauthenticate' },
+      }),
+    );
+
+    expect(result).toEqual({ reason: 'reauthenticate', stale: true, status: 401 });
   });
 });

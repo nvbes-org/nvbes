@@ -72,7 +72,7 @@ export function UsersPageInvite({
   const [formError, setFormError] = useState<string | null>(null);
   const recipients = useMemo(() => safeRecipients(emailInput), [emailInput]);
 
-  async function submitForm(event: React.FormEvent<HTMLFormElement>) {
+  async function submitForm(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
 

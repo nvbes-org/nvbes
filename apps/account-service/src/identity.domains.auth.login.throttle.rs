@@ -10,19 +10,22 @@ pub const LOGIN_THROTTLE_WINDOW: Duration = Duration::from_secs(300);
 pub struct LoginThrottleKeys {
     pub ip: String,
     pub account: String,
+    pub ip_account_pair: String,
     pub tenant: Option<String>,
 }
 
 impl LoginThrottleKeys {
     pub fn from_parts(ip: Option<&str>, normalized_email: &str, tenant_id: Option<Uuid>) -> Self {
+        let ip_val = ip.unwrap_or("unknown");
         Self {
-            ip: format!("ip:{}", ip.unwrap_or("unknown")),
+            ip: format!("ip:{ip_val}"),
             account: format!("account:{normalized_email}"),
+            ip_account_pair: format!("ip_account:{ip_val}:{normalized_email}"),
             tenant: tenant_id.map(|id| format!("tenant:{id}")),
         }
     }
 
-    pub fn pre_lookup_rules(&self) -> [RateLimitRule<'_>; 2] {
+    pub fn pre_lookup_rules(&self) -> [RateLimitRule<'_>; 3] {
         [
             RateLimitRule {
                 key: &self.ip,
@@ -32,6 +35,11 @@ impl LoginThrottleKeys {
             RateLimitRule {
                 key: &self.account,
                 max_hits: 12,
+                window: LOGIN_THROTTLE_WINDOW,
+            },
+            RateLimitRule {
+                key: &self.ip_account_pair,
+                max_hits: 5,
                 window: LOGIN_THROTTLE_WINDOW,
             },
         ]
@@ -63,9 +71,20 @@ mod tests {
         assert_eq!(keys.ip, "ip:203.0.113.10");
         assert_eq!(keys.account, "account:USER@example.com");
         assert_eq!(
+            keys.ip_account_pair,
+            "ip_account:203.0.113.10:USER@example.com"
+        );
+        assert_eq!(
             keys.tenant,
             Some("tenant:11111111-1111-1111-1111-111111111111".to_string())
         );
+
+        let rules = keys.pre_lookup_rules();
+        assert_eq!(rules.len(), 3);
+        assert_eq!(rules[0].key, "ip:203.0.113.10");
+        assert_eq!(rules[1].key, "account:USER@example.com");
+        assert_eq!(rules[2].key, "ip_account:203.0.113.10:USER@example.com");
+        assert_eq!(rules[2].max_hits, 5);
     }
 
     #[test]
@@ -74,6 +93,7 @@ mod tests {
 
         assert_eq!(keys.ip, "ip:unknown");
         assert_eq!(keys.account, "account:user@example.com");
+        assert_eq!(keys.ip_account_pair, "ip_account:unknown:user@example.com");
         assert_eq!(keys.tenant, None);
     }
 }

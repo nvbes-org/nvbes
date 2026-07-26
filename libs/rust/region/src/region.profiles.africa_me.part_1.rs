@@ -5,7 +5,7 @@ pub const AFRICA_ME_PROFILES_PART_1: &[RegionProfile] = &[
     RegionProfile {
         country_code: "DZ",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Apdp,
         primary_timezone: TZ_AFRICA_ALGIERS,
         timezones: &[TZ_AFRICA_ALGIERS],
         sub_region: None,
@@ -140,7 +140,7 @@ pub const AFRICA_ME_PROFILES_PART_1: &[RegionProfile] = &[
     RegionProfile {
         country_code: "EG",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Edpl,
         primary_timezone: TZ_AFRICA_CAIRO,
         timezones: &[TZ_AFRICA_CAIRO],
         sub_region: None,

@@ -42,6 +42,16 @@ impl DpopNonceStore {
             .await?
             .is_some())
     }
+
+    pub async fn register_jti(
+        &self,
+        jti: &str,
+        jkt: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, DpopNonceStoreError> {
+        let redis_key = format!("nvbes:dpop:jti:{jkt}:{jti}");
+        Ok(nvbes_redis::cache::cache_set_nx(&self.redis, &redis_key, "1", ttl_seconds).await?)
+    }
 }
 
 fn redis_nonce_key(nonce: &str) -> String {

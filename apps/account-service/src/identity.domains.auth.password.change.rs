@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::hash_password;
 use super::history;
-use super::{validate_password, verify_password};
+use super::validate_password;
 use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
 use crate::domains::auth::risk::{self, RiskDecision, RiskEventInput};
 use crate::domains::auth::types::{ChangePasswordInput, ChangePasswordResult};
@@ -27,15 +27,6 @@ pub async fn change(
             "No password is configured for this account.",
         )
     })?;
-
-    if input.current_password == input.new_password {
-        return Err(AppError::bad_request(
-            "validation_failed",
-            "New password must be different from current password.",
-        ));
-    }
-
-    verify_password(stored_hash, &input.current_password)?;
 
     if history::is_password_reused(
         db,
@@ -106,6 +97,7 @@ pub async fn change(
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
         .await
         .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    let _ = crate::domains::auth::device_trust::revoke_all_devices(db, user_id).await;
 
     Ok(ChangePasswordResult { success: true })
 }

@@ -9,9 +9,9 @@
       "libs/rust/billing/src/db.provider_subscriptions.rs",
       "libs/rust/billing/src/stripe_webhook_workspace_effects.rs",
       "libs/rust/billing/src/portal_views.subscriptions.rs",
-      "apps/billing-api/migrations/0002_billing_platform_core.sql",
-      "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
-      "apps/billing-api/migrations/0009_billing_provider_cb.sql",
+      "apps/billing-service/migrations/0002_billing_platform_core.sql",
+      "apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "apps/billing-service/migrations/0009_billing_provider_cb.sql",
       "libs/ts/billing-client/src/billing.provider.ts",
       "contracts/graphql/schema.graphql"
     ],
@@ -88,21 +88,21 @@
     {
       "id": "provider-subscription-primary-column",
       "description": "Provider subscriptions store primary provider ownership",
-      "path": "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "path": "apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql",
       "status": "passed",
       "pattern": "primary_for_subscription BOOLEAN NOT NULL DEFAULT FALSE"
     },
     {
       "id": "provider-subscription-fallback-column",
       "description": "Provider subscriptions store fallback eligibility",
-      "path": "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "path": "apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql",
       "status": "passed",
       "pattern": "fallback_eligible BOOLEAN NOT NULL DEFAULT FALSE"
     },
     {
       "id": "provider-subscription-one-primary-index",
       "description": "Database enforces one primary provider subscription",
-      "path": "apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql",
+      "path": "apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql",
       "status": "passed",
       "pattern": "idx_billing_provider_subscriptions_one_primary"
     },
@@ -151,7 +151,7 @@
     {
       "id": "cb-migration",
       "description": "Billing database enum supports CB provider",
-      "path": "apps/billing-api/migrations/0009_billing_provider_cb.sql",
+      "path": "apps/billing-service/migrations/0009_billing_provider_cb.sql",
       "status": "passed",
       "pattern": "ADD VALUE IF NOT EXISTS 'cb'"
     },

@@ -1,19 +1,20 @@
-import StepUpForm from '@/components/StepUpForm';
+import StepUpModal from '@/components/StepUpModal';
 
 export function RecoveryCodesStepUp({
+  open = true,
   onCancel,
   onSuccess,
 }: {
+  open?: boolean;
   onCancel: () => void;
   onSuccess: () => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <StepUpForm
-        onSuccess={onSuccess}
-        onCancel={onCancel}
-        description="Pour générer des codes de récupération, veuillez confirmer votre identité."
-      />
-    </div>
+    <StepUpModal
+      open={open}
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      description="Pour générer des codes de récupération, veuillez confirmer votre identité."
+    />
   );
 }

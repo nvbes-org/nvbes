@@ -8,6 +8,8 @@ use axum::{
 use crate::app::AppState;
 use crate::http::error::AppError;
 
+use super::PUBLIC_REPORT_PATHS;
+
 const CSRF_SKIP_PATHS: &[&str] = &[
     "/auth/register",
     "/auth/verify-email",
@@ -36,6 +38,10 @@ pub async fn csrf_guard(
     next: Next,
 ) -> Result<Response, AppError> {
     if !is_mutating_method(request.method()) {
+        return Ok(next.run(request).await);
+    }
+
+    if PUBLIC_REPORT_PATHS.contains(&request.uri().path()) {
         return Ok(next.run(request).await);
     }
 
@@ -213,6 +219,12 @@ mod tests {
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/discoverable/finish"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/password/forgot"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/password/reset"));
+    }
+
+    #[test]
+    fn browser_reports_do_not_require_session_csrf() {
+        assert!(super::PUBLIC_REPORT_PATHS.contains(&"/csp-report"));
+        assert!(super::PUBLIC_REPORT_PATHS.contains(&"/observability/network-errors"));
     }
 
     #[test]

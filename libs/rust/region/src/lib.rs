@@ -33,6 +33,22 @@ impl DataRegion {
             Self::MeAfrica => "me_africa",
         }
     }
+
+    pub const fn is_european_exclusive(self) -> bool {
+        matches!(self, Self::Eu | Self::Uk | Self::Ch)
+    }
+
+    pub const fn is_global_multicloud(self) -> bool {
+        !self.is_european_exclusive()
+    }
+
+    pub const fn hosting_strategy(self) -> &'static str {
+        if self.is_european_exclusive() {
+            "exclusive_eu_sovereign"
+        } else {
+            "global_multicloud"
+        }
+    }
 }
 
 impl core::str::FromStr for DataRegion {
@@ -65,6 +81,15 @@ pub enum LegalJurisdiction {
     Pdpa,
     Pipl,
     Global,
+    Ndpa,
+    Appi,
+    Pipa,
+    Nzpa,
+    Cndp,
+    Inpdp,
+    Edpl,
+    Kdpa,
+    Apdp,
 }
 
 impl LegalJurisdiction {
@@ -81,6 +106,15 @@ impl LegalJurisdiction {
             Self::Pdpa => "pdpa",
             Self::Pipl => "pipl",
             Self::Global => "global",
+            Self::Ndpa => "ndpa",
+            Self::Appi => "appi",
+            Self::Pipa => "pipa",
+            Self::Nzpa => "nzpa",
+            Self::Cndp => "cndp",
+            Self::Inpdp => "inpdp",
+            Self::Edpl => "edpl",
+            Self::Kdpa => "kdpa",
+            Self::Apdp => "apdp",
         }
     }
 }
@@ -101,6 +135,15 @@ impl core::str::FromStr for LegalJurisdiction {
             "pdpa" => Ok(Self::Pdpa),
             "pipl" => Ok(Self::Pipl),
             "global" => Ok(Self::Global),
+            "ndpa" => Ok(Self::Ndpa),
+            "appi" => Ok(Self::Appi),
+            "pipa" => Ok(Self::Pipa),
+            "nzpa" => Ok(Self::Nzpa),
+            "cndp" => Ok(Self::Cndp),
+            "inpdp" => Ok(Self::Inpdp),
+            "edpl" => Ok(Self::Edpl),
+            "kdpa" => Ok(Self::Kdpa),
+            "apdp" => Ok(Self::Apdp),
             _ => Err(RegionParseError::UnsupportedLegalJurisdiction),
         }
     }
@@ -165,6 +208,31 @@ pub fn profile_from_data_region(data_region: DataRegion) -> RegionProfile {
 
 pub fn country_code_to_data_region(country_code: &str) -> Option<DataRegion> {
     detect_profile_from_country_code(country_code).map(|profile| profile.data_region)
+}
+
+pub const ALLOWED_COUNTRY_CODES: &[&str] = &[
+    // Europe (EU, EEE, UK, Non-EU Europe)
+    "AD", "AL", "AT", "BA", "BE", "BG", "CH", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FO", "FR",
+    "GB", "GG", "GI", "GR", "HR", "HU", "IE", "IM", "IS", "IT", "JE", "LI", "LT", "LU", "LV", "MC",
+    "MD", "ME", "MK", "MT", "NL", "NO", "PL", "PT", "RO", "RS", "SE", "SI", "SK", "SM", "VA",
+    // North America
+    "CA", "US", // Latin America & Caribbean
+    "AG", "AI", "AR", "AW", "BB", "BL", "BM", "BO", "BR", "BS", "BZ", "CL", "CO", "CR", "CU", "CW",
+    "DM", "DO", "EC", "FK", "GD", "GF", "GP", "GT", "GY", "HN", "HT", "JM", "KN", "KY", "LC", "MF",
+    "MQ", "MX", "NI", "PA", "PE", "PM", "PR", "PY", "SR", "SV", "SX", "TC", "TT", "UY", "VC", "VE",
+    "VG", "VI", // APAC & SE Asia
+    "AU", "BN", "ID", "JP", "KR", "MY", "NZ", "PH", "SG", "TH", "VN", // Middle East
+    "AE", "BH", "IL", "JO", "KW", "LB", "OM", "QA", "SA",
+    // Africa (North, West/Central, East/Southern, NG, ET, DZ)
+    "AO", "BF", "BI", "BJ", "BW", "CD", "CF", "CG", "CI", "CM", "CV", "DJ", "DZ", "EG", "ER", "ET",
+    "GA", "GH", "GM", "GN", "GQ", "GW", "KE", "KM", "LR", "LS", "LY", "MA", "MG", "ML", "MR", "MU",
+    "MW", "MZ", "NA", "NE", "NG", "RW", "SC", "SD", "SL", "SN", "SO", "SS", "ST", "SZ", "TD", "TG",
+    "TN", "TZ", "UG", "ZA", "ZM", "ZW",
+];
+
+pub fn is_country_allowed(country_code: &str) -> bool {
+    let code = country_code.trim().to_ascii_uppercase();
+    ALLOWED_COUNTRY_CODES.iter().any(|&c| c == code)
 }
 
 pub fn supported_data_regions() -> &'static [DataRegion] {

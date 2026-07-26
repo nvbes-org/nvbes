@@ -18,6 +18,7 @@ import {
   setActiveSessionId,
 } from './drive.session.storage';
 export { subscribeToSessionChanges, getSessions } from './drive.session.storage';
+export { drivePathForSession } from './drive.session.storage';
 export { identityClient } from './drive.session.client';
 
 export function saveSession(

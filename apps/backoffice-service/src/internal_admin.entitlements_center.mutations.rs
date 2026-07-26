@@ -5,6 +5,9 @@ use uuid::Uuid;
 
 use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::billing::v1::{
+    AdminEntitlementsActionKind, AdminEntitlementsActionRequest,
+};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct EntitlementActionResult {
@@ -50,32 +53,37 @@ pub(crate) async fn insert_entitlement_action(
 }
 
 pub(crate) async fn publish_changes(
+    billing_grpc_endpoint: &str,
     db: &PgPool,
     access: BackofficeAccess,
     workspace_id: Uuid,
     reason: String,
 ) -> Result<EntitlementActionResult, AppError> {
     validate_reason(&reason)?;
-    let mut tx = db.begin().await?;
-    let published_change_count = sqlx::query(
-        "UPDATE billing_entitlement_changes
-         SET published_at = NOW()
-         WHERE tenant_id = $1 AND published_at IS NULL",
+    let result = crate::billing_grpc::run_entitlements_grpc_action(
+        billing_grpc_endpoint,
+        access,
+        workspace_id,
+        AdminEntitlementsActionRequest {
+            context: None,
+            workspace_id: String::new(),
+            action_kind: AdminEntitlementsActionKind::PublishChanges as i32,
+            reason: reason.clone(),
+        },
     )
-    .bind(access.tenant_id)
-    .execute(tx.as_mut())
-    .await?
-    .rows_affected() as i64;
+    .await?;
+    let metadata = parse_metadata_json(&result.metadata_json)?;
+    let mut tx = db.begin().await?;
     let input = EntitlementActionInput {
         action_kind: "publish_changes",
         feature_code: None,
         quota_code: None,
         quantity: None,
         reason,
-        metadata: json!({ "published_change_count": published_change_count }),
+        metadata,
         audit_action: "entitlements.changes.published",
         status: "published",
-        published_change_count,
+        published_change_count: result.published_change_count,
     };
     let action_id = insert_action_row(&mut tx, access, workspace_id, &input).await?;
     insert_entitlement_audit(
@@ -89,6 +97,11 @@ pub(crate) async fn publish_changes(
     .await?;
     tx.commit().await?;
     Ok(action_result(action_id, input))
+}
+
+fn parse_metadata_json(value: &str) -> Result<Value, AppError> {
+    serde_json::from_str(value)
+        .map_err(|error| AppError::internal("billing_grpc_decode", error.to_string()))
 }
 
 async fn insert_action_row(

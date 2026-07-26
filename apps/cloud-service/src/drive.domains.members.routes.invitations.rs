@@ -1,8 +1,8 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
-    routing::post,
+    routing::{get, post},
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -10,7 +10,8 @@ use uuid::Uuid;
 use nvbes_product_analytics::ProductAnalyticsEvent;
 
 use super::service::{
-    AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
+    AcceptInvitationInput, AcceptInvitationResponse, InvitationListResponse, InviteMemberInput,
+    InviteMemberResponse, list_invitations as load_invitations,
 };
 use crate::{
     app::AppState,
@@ -26,7 +27,10 @@ use crate::{
 
 pub fn router(_state: &AppState) -> Router<AppState> {
     Router::new()
-        .route("/workspaces/{workspaceId}/invitations", post(invite_member))
+        .route(
+            "/workspaces/{workspaceId}/invitations",
+            get(list_workspace_invitations).post(invite_member),
+        )
         .route("/invitations/accept", post(accept_invitation))
 }
 
@@ -34,6 +38,13 @@ pub fn router(_state: &AppState) -> Router<AppState> {
 struct InviteMemberRequest {
     email: String,
     role: String,
+}
+
+#[derive(Deserialize)]
+struct ListInvitationsQuery {
+    limit: Option<i64>,
+    cursor: Option<String>,
+    statuses: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -62,7 +73,6 @@ async fn invite_member(
 
     let result = crate::domains::members::invite_member(
         &state.db,
-        &state.config,
         &access,
         InviteMemberInput {
             email: request.email,
@@ -81,6 +91,33 @@ async fn invite_member(
         )
         .property("member_count", 1_i64),
     );
+
+    Ok(Json(result))
+}
+
+async fn list_workspace_invitations(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(workspace_id): Path<Uuid>,
+    Query(query): Query<ListInvitationsQuery>,
+) -> Result<Json<InvitationListResponse>, AppError> {
+    let access = authorize_workspace_action(
+        &state.db,
+        &headers,
+        workspace_id,
+        WorkspaceAction::ViewMembers,
+        ResourceContext::default(),
+    )
+    .await?;
+
+    let result = load_invitations(
+        &state.db,
+        &access,
+        query.limit,
+        query.cursor,
+        query.statuses.unwrap_or_default(),
+    )
+    .await?;
 
     Ok(Json(result))
 }

@@ -9,15 +9,17 @@ const ResetPasswordResultSchema = z.object({
   success: z.boolean(),
 });
 
-const EmptySchema = z.undefined();
+const ChangePasswordResultSchema = z.object({
+  success: z.boolean(),
+});
 
 export interface ChangePasswordInput {
-  current_password: string;
   new_password: string;
 }
 
 export type ForgotPasswordResult = z.infer<typeof ForgotPasswordResultSchema>;
 export type ResetPasswordResult = z.infer<typeof ResetPasswordResultSchema>;
+export type ChangePasswordResult = z.infer<typeof ChangePasswordResultSchema>;
 
 export function forgotPassword(email: string): Promise<ForgotPasswordResult> {
   return identityHttpClient.post('/auth/password/forgot', ForgotPasswordResultSchema, {
@@ -32,9 +34,8 @@ export function resetPassword(token: string, newPassword: string): Promise<Reset
   });
 }
 
-export function changePassword(input: ChangePasswordInput): Promise<void> {
-  return identityHttpClient.post('/auth/password/change', EmptySchema, {
-    current_password: input.current_password,
+export function changePassword(input: ChangePasswordInput): Promise<ChangePasswordResult> {
+  return identityHttpClient.post('/auth/password/change', ChangePasswordResultSchema, {
     new_password: input.new_password,
   });
 }

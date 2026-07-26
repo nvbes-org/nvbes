@@ -50,6 +50,7 @@ describe('PersonalInfoCard', () => {
         editError={null}
         editSuccess={false}
         loading={false}
+        isPersonalInfoUnchanged={true}
         onFirstnameChange={() => undefined}
         onLastnameChange={() => undefined}
         onUsernameChange={() => undefined}

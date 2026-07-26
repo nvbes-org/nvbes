@@ -6,6 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/test-env.sh"
 source "$SCRIPT_DIR/lib/dev-ports.sh"
 
+# Local development captures transactional emails in MailHog instead of using
+# the in-memory mock or a real SMTP provider.
+export NVBES_EMAIL_PROVIDER="${NVBES_EMAIL_PROVIDER:-smtp}"
+export NVBES_EMAIL_FROM_EMAIL="${NVBES_EMAIL_FROM_EMAIL:-dev@nvbes.local}"
+# The dev process commonly runs in the devcontainer while MailHog publishes
+# its port on the Docker host.
+export NVBES_SMTP_HOST="${NVBES_SMTP_HOST:-host.docker.internal}"
+export NVBES_SMTP_PORT="${NVBES_SMTP_PORT:-1025}"
+export NVBES_SMTP_STARTTLS="${NVBES_SMTP_STARTTLS:-false}"
+
 cd "$ROOT_DIR"
 
 cleanup() {

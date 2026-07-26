@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Trash2, UserRound } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { cn } from './lib/classnames';
@@ -32,6 +32,7 @@ export interface MultiAccountSwitcherProps {
   emptyLabel?: string;
   className?: string;
   density?: 'default' | 'compact';
+  hideCurrentAccountDetailsOnMobile?: boolean;
   footerActions?: ReactNode;
 }
 
@@ -49,6 +50,7 @@ export function MultiAccountSwitcher({
   emptyLabel = 'Aucun compte connecté.',
   className,
   density = 'default',
+  hideCurrentAccountDetailsOnMobile = false,
   footerActions,
 }: MultiAccountSwitcherProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -126,11 +128,33 @@ export function MultiAccountSwitcher({
           <SwitcherAvatar
             className={cn('bg-primary/10 text-primary', compact ? 'size-8' : 'size-10')}
           >
-            <span className={cn('font-medium', compact ? 'text-xs' : 'text-sm')}>
-              {currentAvatarFallback || <UserRound className="size-4" />}
-            </span>
+            {currentAccount?.avatarUrl ? (
+              <>
+                <span className={cn('font-medium', compact ? 'text-xs' : 'text-sm')}>
+                  {currentAvatarFallback || <UserRound className="size-4" />}
+                </span>
+                <img
+                  key={currentAccount.avatarUrl}
+                  src={currentAccount.avatarUrl}
+                  alt=""
+                  className="absolute inset-0 size-full rounded-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+              </>
+            ) : (
+              <span className={cn('font-medium', compact ? 'text-xs' : 'text-sm')}>
+                {currentAvatarFallback || <UserRound className="size-4" />}
+              </span>
+            )}
           </SwitcherAvatar>
-          <div className="flex min-w-0 flex-col">
+          <div
+            className={cn(
+              'min-w-0 flex-col',
+              hideCurrentAccountDetailsOnMobile ? 'hidden md:flex' : 'flex',
+            )}
+          >
             <span className="font-heading truncate text-sm font-medium leading-tight">
               {currentAccount?.displayName ?? 'Compte'}
             </span>
@@ -200,12 +224,30 @@ export function MultiAccountSwitcher({
                               )}
                             >
                               <SwitcherAvatar className={compact ? 'size-8' : 'size-9'}>
-                                <span className={compact ? 'text-xs' : 'text-sm'}>
-                                  {account.avatarFallback ||
-                                    initialsForDisplayName(account.displayName) || (
-                                      <UserRound className="size-4" />
-                                    )}
-                                </span>
+                                {account.avatarUrl ? (
+                                  <>
+                                    <span className={compact ? 'text-xs' : 'text-sm'}>
+                                      {account.avatarFallback ||
+                                        initialsForDisplayName(account.displayName)}
+                                    </span>
+                                    <img
+                                      key={account.avatarUrl}
+                                      src={account.avatarUrl}
+                                      alt=""
+                                      className="absolute inset-0 size-full rounded-full object-cover"
+                                      onError={(event) => {
+                                        event.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                  </>
+                                ) : (
+                                  <span className={compact ? 'text-xs' : 'text-sm'}>
+                                    {account.avatarFallback ||
+                                      initialsForDisplayName(account.displayName) || (
+                                        <UserRound className="size-4" />
+                                      )}
+                                  </span>
+                                )}
                               </SwitcherAvatar>
                               <div className="flex min-w-0 flex-col">
                                 <span className="truncate font-medium">{account.displayName}</span>

@@ -15,6 +15,8 @@ import {
   type WebauthnCreateOptions,
   type WebauthnRegistrationKind,
 } from './webauthn';
+import { readCurrentAuthuser, readScopedCsrfToken } from './csrf';
+import { fetchPowChallenge, solvePowChallenge } from './pow';
 
 export interface TotpSetupRequest {
   password?: string;
@@ -40,22 +42,18 @@ export interface MfaEmailAddress {
   created_at: string;
 }
 
-function readCsrfToken(): string | undefined {
-  if (typeof document === 'undefined') {
-    return undefined;
-  }
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-  return match?.[1] || undefined;
-}
-
 function authHeaders(token?: string, method = 'GET'): Headers {
   const headers = new Headers();
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  const authuser = readCurrentAuthuser();
+  if (authuser) {
+    headers.set('X-Auth-User', authuser);
+  }
   const upperMethod = method.toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(upperMethod)) {
-    const csrfToken = readCsrfToken();
+    const csrfToken = readScopedCsrfToken(authuser);
     if (csrfToken) {
       headers.set('X-CSRF-Token', csrfToken);
     }
@@ -117,8 +115,18 @@ export class MfaError extends Error {
 export async function listMfaFactors(
   baseUrl: string,
   token?: string,
-): Promise<{ factors: MfaFactorView[]; mfa_enabled: boolean }> {
-  const response = await fetch(`${baseUrl}/auth/mfa/factors`, {
+  options: { limit?: number; cursor?: string } = {},
+): Promise<{
+  factors: MfaFactorView[];
+  mfa_enabled: boolean;
+  next_cursor: string | null;
+  has_more: boolean;
+}> {
+  const params = new URLSearchParams();
+  if (options.limit !== undefined) params.set('limit', String(options.limit));
+  if (options.cursor) params.set('cursor', options.cursor);
+  const query = params.toString();
+  const response = await fetch(`${baseUrl}/auth/mfa/factors${query ? `?${query}` : ''}`, {
     headers: authHeaders(token),
     credentials: 'include',
   });
@@ -326,14 +334,14 @@ export async function completeWebAuthnStepUp(
  */
 export async function generateRecoveryCodes(
   baseUrl: string,
-  password: string,
+  password?: string,
   token?: string,
 ): Promise<RecoveryCodesResult> {
   const response = await fetch(`${baseUrl}/auth/mfa/recovery-codes`, {
     method: 'POST',
     headers: jsonAuthHeaders(token, 'POST'),
     credentials: 'include',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ password: password ?? '' }),
   });
 
   if (!response.ok) {
@@ -378,11 +386,15 @@ export async function stepUp(
   },
   token?: string,
 ): Promise<{ success: boolean; valid_until: string }> {
+  const powChallenge = await fetchPowChallenge(baseUrl);
+  const powSolution = await solvePowChallenge(powChallenge.nonce, powChallenge.difficulty);
   const response = await fetch(`${baseUrl}/auth/step-up`, {
     method: 'POST',
     headers: jsonAuthHeaders(token, 'POST'),
     credentials: 'include',
     body: JSON.stringify({
+      pow_nonce: powChallenge.nonce,
+      pow_solution: String(powSolution),
       password: credentials.password ?? null,
       totp_code: credentials.totpCode ?? null,
       webauthn_response: credentials.webauthnResponse ?? null,

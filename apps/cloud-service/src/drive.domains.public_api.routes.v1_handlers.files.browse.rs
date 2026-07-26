@@ -23,9 +23,14 @@ use super::{CreateFolderRequest, ListObjectsQuery};
     params(
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
         ("parentId" = Option<Uuid>, Query, description = "Parent folder ID"),
+        ("limit" = Option<i64>, Query, description = "Maximum objects to return (1-200)"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
+        ("objectType" = Option<crate::domains::files::ObjectTypeFilter>, Query, description = "Filter by object type"),
+        ("namePrefix" = Option<String>, Query, description = "Case-insensitive literal name prefix"),
     ),
     responses(
         (status = 200, description = "List objects", body = crate::domains::files::ListObjectsResponse),
+        (status = 400, description = "Invalid pagination cursor", body = ErrorEnvelope),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
@@ -55,6 +60,10 @@ pub async fn list_objects(
         &authorized.access,
         ListObjectsInput {
             parent_id: query.parent_id,
+            limit: query.limit,
+            cursor: query.cursor,
+            object_type: query.object_type,
+            name_prefix: query.name_prefix,
         },
     )
     .await?;

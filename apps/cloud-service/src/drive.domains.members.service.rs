@@ -5,45 +5,128 @@ use crate::{
     domains::authz::{WorkspaceAccess, WorkspaceRole},
     http::error::AppError,
 };
-use nvbes_core::config::AppConfig;
+use nvbes_core::pagination::page_from_rows;
 use nvbes_tenancy::role_as_db;
 
 use super::db;
 use super::db::AuditEventInput;
 use super::invitations;
+use super::pagination::{InvitationListCursor, MemberListCursor, normalize_email_prefix};
+
+#[cfg(test)]
+#[path = "drive.domains.members.service.db_tests.rs"]
+mod db_tests;
 pub use super::types::{
-    AcceptInvitationInput, AcceptInvitationResponse, InviteMemberInput, InviteMemberResponse,
-    MemberListResponse, RemoveMemberResponse, UpdateMemberInput, UpdateMemberResponse,
+    AcceptInvitationInput, AcceptInvitationResponse, InvitationListResponse, InviteMemberInput,
+    InviteMemberResponse, ListMembersInput, MemberListResponse, RemoveMemberResponse,
+    UpdateMemberInput, UpdateMemberResponse,
 };
 
 pub async fn list_members(
     db: &sqlx::PgPool,
     access: &WorkspaceAccess,
+    input: ListMembersInput,
 ) -> Result<MemberListResponse, AppError> {
-    let members = db::list_members(db, access.workspace_id).await?;
-    let invitations = db::list_pending_invitations(db, access.workspace_id).await?;
-
+    let limit = input.limit.unwrap_or(50).clamp(1, 200);
+    let cursor = input
+        .cursor
+        .as_deref()
+        .map(MemberListCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let email_prefix = normalize_email_prefix(input.email_prefix);
+    let members = db::list_members(
+        db,
+        access.workspace_id,
+        cursor.as_ref(),
+        input.role.map(role_as_db),
+        email_prefix.as_deref(),
+        limit + 1,
+    )
+    .await?;
+    let page = page_from_rows(members, limit as usize, MemberListCursor::from_record);
     Ok(MemberListResponse {
-        members: members
+        members: page
+            .items
             .into_iter()
             .map(db::MemberRecord::into_view)
             .collect(),
-        invitations: invitations
+        members_next_cursor: page
+            .next_cursor
+            .as_ref()
+            .map(MemberListCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        members_has_more: page.has_more,
+    })
+}
+
+pub async fn list_invitations(
+    db: &sqlx::PgPool,
+    access: &WorkspaceAccess,
+    limit: Option<i64>,
+    cursor: Option<String>,
+    statuses: Vec<String>,
+) -> Result<InvitationListResponse, AppError> {
+    let limit = limit.unwrap_or(50).clamp(1, 200);
+    let cursor = cursor
+        .as_deref()
+        .map(InvitationListCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let normalized_statuses = statuses
+        .into_iter()
+        .map(|status| status.trim().to_lowercase())
+        .filter(|status| !status.is_empty())
+        .collect::<Vec<_>>();
+    let invitations = db::list_invitations(
+        db,
+        access.workspace_id,
+        cursor.as_ref(),
+        &normalized_statuses,
+        limit + 1,
+    )
+    .await?;
+    let page = page_from_rows(
+        invitations,
+        limit as usize,
+        InvitationListCursor::from_record,
+    );
+
+    Ok(InvitationListResponse {
+        invitations: page
+            .items
             .into_iter()
             .map(db::InvitationRecord::into_view)
             .collect(),
+        next_cursor: page
+            .next_cursor
+            .as_ref()
+            .map(InvitationListCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
     })
 }
 
 pub async fn invite_member(
     db: &sqlx::PgPool,
-    config: &AppConfig,
     access: &WorkspaceAccess,
     input: InviteMemberInput,
     ip: Option<String>,
     user_agent: Option<String>,
 ) -> Result<InviteMemberResponse, AppError> {
-    invitations::invite_member(db, config, access, input, ip, user_agent).await
+    invitations::invite_member(db, access, input, ip, user_agent).await
 }
 
 pub async fn update_member_role(

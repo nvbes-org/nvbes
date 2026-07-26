@@ -10,6 +10,8 @@ import {
   readPendingOAuthAuthorizeRequest,
 } from '../identity.oauth';
 import { readLoginReturnTo } from '../identity.return-to';
+import { accountPathForAuthuser, readAuthuser } from '../identity.authuser';
+import { resendLoginMfaEmailCodeStep } from '../identity.auth.functions';
 import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
@@ -53,14 +55,14 @@ export function useLoginPage() {
       return;
     }
 
-    const authuser = new URLSearchParams(location.searchStr).get('authuser');
-    if (authuser && authuser !== '0') {
-      window.location.assign(`/account?authuser=${encodeURIComponent(authuser)}`);
+    const authuser = readAuthuser(location.searchStr, location.pathname);
+    if (authuser !== '0') {
+      window.location.assign(accountPathForAuthuser(authuser));
       return;
     }
 
-    void navigate({ to: '/account' });
-  }, [location.searchStr, navigate, returnTo]);
+    void navigate({ to: '/account/$accountIndex', params: { accountIndex: '0' } });
+  }, [location.pathname, location.searchStr, navigate, returnTo]);
 
   const handleHostedDecision = useCallback(
     (decision: HostedLoginDecision) => {
@@ -157,28 +159,51 @@ export function useLoginPage() {
     setError: state.setError,
     navigateToAccount,
   });
-  const conditionalWebAuthnStartedRef = useRef(false);
+  const conditionalWebAuthnAbortRef = useRef<AbortController | null>(null);
+
+  const finishLoginRef = useRef(actions.finishLogin);
+  useEffect(() => {
+    finishLoginRef.current = actions.finishLogin;
+  }, [actions.finishLogin]);
 
   useEffect(() => {
-    if (
-      state.checkingAuth ||
-      state.step !== 'identifier' ||
-      state.connectedAccounts.length > 0 ||
-      conditionalWebAuthnStartedRef.current
-    ) {
+    if (state.checkingAuth || state.step !== 'identifier' || state.connectedAccounts.length > 0) {
+      if (conditionalWebAuthnAbortRef.current) {
+        conditionalWebAuthnAbortRef.current.abort();
+        conditionalWebAuthnAbortRef.current = null;
+      }
       return;
     }
 
-    conditionalWebAuthnStartedRef.current = true;
+    if (conditionalWebAuthnAbortRef.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    conditionalWebAuthnAbortRef.current = controller;
+
     void completeConditionalWebAuthnLogin({
-      finishLogin: actions.finishLogin,
+      finishLogin: (session) => finishLoginRef.current(session),
       setSessionToken: state.setSessionToken,
       setError: state.setError,
-    }).catch(() => {
-      conditionalWebAuthnStartedRef.current = false;
-    });
+      signal: controller.signal,
+    })
+      .catch(() => {
+        // Ignorer l'annulation
+      })
+      .finally(() => {
+        if (conditionalWebAuthnAbortRef.current === controller) {
+          conditionalWebAuthnAbortRef.current = null;
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (conditionalWebAuthnAbortRef.current === controller) {
+        conditionalWebAuthnAbortRef.current = null;
+      }
+    };
   }, [
-    actions.finishLogin,
     state.checkingAuth,
     state.connectedAccounts.length,
     state.setError,
@@ -199,6 +224,11 @@ export function useLoginPage() {
     handleConsentCancel: actions.handleConsentCancel,
     handleIdentifierSubmit: actions.handleIdentifierSubmit,
     handleMfaSubmit: actions.handleMfaSubmit,
+    loginStateToken: state.loginStateToken,
+    resendLoginMfaEmailCode: () =>
+      state.loginStateToken
+        ? resendLoginMfaEmailCodeStep(state.loginStateToken)
+        : Promise.reject(new Error('Session de connexion expirée. Recommencez.')),
     handlePasswordSubmit: actions.handlePasswordSubmit,
     handleUseAnotherAccount: actions.handleUseAnotherAccount,
     hasRecovery: state.hasRecovery,

@@ -46,7 +46,12 @@ function trackMouseEntropy(): {
 } {
   const isTouch = navigator.maxTouchPoints > 0;
   if (isTouch) {
-    return { getCount: () => 0, getVariance: () => 999, getPathLength: () => 0, destroy: () => {} };
+    return {
+      getCount: () => 0,
+      getVariance: () => 999,
+      getPathLength: () => 0,
+      destroy: () => {},
+    };
   }
 
   let count = 0;

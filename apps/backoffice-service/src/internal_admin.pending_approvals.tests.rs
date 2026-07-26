@@ -10,7 +10,7 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 #[tokio::test]
-async fn pending_approvals_lists_work_and_marketplace_action_uses_returned_target() {
+async fn pending_approvals_lists_local_work_and_marketplace_action_uses_returned_target() {
     let Some(pool) = test_pool().await else {
         eprintln!("skipping test: Postgres is not reachable");
         return;
@@ -40,7 +40,7 @@ async fn pending_approvals_lists_work_and_marketplace_action_uses_returned_targe
         .await
         .expect("body should be readable");
     let payload: serde_json::Value = serde_json::from_slice(&body).expect("body should be json");
-    assert_eq!(payload["pending_count"], json!(3));
+    assert_eq!(payload["pending_count"], json!(2));
     assert_eq!(payload["critical_count"], json!(1));
     assert_eq!(payload["overdue_count"], json!(1));
 
@@ -116,13 +116,8 @@ async fn pending_approvals_schema_exists(pool: &PgPool) -> bool {
           AND to_regclass('public.oauth_clients') IS NOT NULL
           AND to_regclass('public.developer_marketplace_apps') IS NOT NULL
           AND to_regclass('public.enterprise_password_recovery_requests') IS NOT NULL
-          AND to_regclass('public.billing_kyc_profiles') IS NOT NULL
           AND to_regclass('public.internal_admin_developer_actions') IS NOT NULL
-          AND EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public' AND table_name = 'billing_kyc_profiles'
-              AND column_name = 'review_status'
-          )",
+        ",
     )
     .fetch_one(pool)
     .await
@@ -135,7 +130,6 @@ async fn seed_pending_approval_sources(pool: &PgPool, actor_id: Uuid) -> Pending
     let principal_id = Uuid::new_v4();
     let marketplace_app_id = Uuid::new_v4();
     let recovery_request_id = Uuid::new_v4();
-    let kyc_profile_id = Uuid::new_v4();
     let client_id = format!("client_{}", Uuid::new_v4());
 
     sqlx::query(
@@ -214,17 +208,6 @@ async fn seed_pending_approval_sources(pool: &PgPool, actor_id: Uuid) -> Pending
     .execute(pool)
     .await
     .expect("recovery request should insert");
-    sqlx::query(
-        "INSERT INTO billing_kyc_profiles (
-           id, tenant_id, company_name, proof_reference, review_status
-         ) VALUES ($1, $2, 'Approvals KYC', 'proof://approvals', 'pending')",
-    )
-    .bind(kyc_profile_id)
-    .bind(tenant_id)
-    .execute(pool)
-    .await
-    .expect("kyc profile should insert");
-
     PendingApprovalSeed {
         marketplace_app_id,
         recovery_request_id,

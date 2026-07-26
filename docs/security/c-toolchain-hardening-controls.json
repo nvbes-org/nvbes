@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/C-Based_Toolchain_Hardening_Cheat_Sheet.html",
+  "reviewCadence": "At every C, C++, Objective-C, bindgen, pkg-config, cc/cmake build script, native dependency, or release-build configuration change.",
+  "nativeSurfaces": [
+    {
+      "path": "vendor/xmlsec/bindings.h",
+      "kind": "c_header",
+      "owner": "account-service",
+      "reason": "Bindgen input for the vendored Rust xmlsec wrapper."
+    },
+    {
+      "path": "vendor/xmlsec/bindings.rs",
+      "kind": "cargo_native_build_script",
+      "owner": "account-service",
+      "reason": "Uses bindgen and pkg-config for xmlsec1 native headers and libraries."
+    }
+  ],
+  "profiles": {
+    "debug": {
+      "requiredCflags": [
+        "-O0",
+        "-g3",
+        "-DDEBUG",
+        "-UNDEBUG",
+        "-Wall",
+        "-Wextra",
+        "-Wformat=2",
+        "-Wformat-security",
+        "-Werror=format-security",
+        "-D_FORTIFY_SOURCE=3",
+        "-fstack-protector-strong",
+        "-fPIE",
+        "-fno-omit-frame-pointer"
+      ]
+    },
+    "release": {
+      "requiredCflags": [
+        "-O2",
+        "-g2",
+        "-DNDEBUG",
+        "-UDEBUG",
+        "-Wall",
+        "-Wextra",
+        "-Wformat=2",
+        "-Wformat-security",
+        "-Werror=format-security",
+        "-D_FORTIFY_SOURCE=3",
+        "-fstack-protector-strong",
+        "-fPIE",
+        "-fno-omit-frame-pointer",
+        "-fvisibility=hidden"
+      ],
+      "requiredLinuxLdflags": ["-pie", "-Wl,-z,relro", "-Wl,-z,now", "-Wl,-z,noexecstack"],
+      "requiredMacosLdflags": ["-Wl,-dead_strip"]
+    },
+    "test": {
+      "requiredCflags": [
+        "-O1",
+        "-g3",
+        "-DDEBUG",
+        "-UNDEBUG",
+        "-fsanitize=address,undefined",
+        "-Wall",
+        "-Wextra",
+        "-Wformat=2",
+        "-Wformat-security",
+        "-Werror=format-security",
+        "-D_FORTIFY_SOURCE=3",
+        "-fstack-protector-strong",
+        "-fPIE",
+        "-fno-omit-frame-pointer"
+      ]
+    }
+  },
+  "requirements": [
+    {
+      "id": "CTH_REQ_001",
+      "name": "Inventory native toolchain surfaces",
+      "owasp": "Configuration, Integration",
+      "controls": [
+        {
+          "id": "CTH_CTRL_001",
+          "name": "Declared C/native surface registry",
+          "description": "Every C-family source, header, bindgen input, or native Cargo build script must be registered with an owner and reason.",
+          "evidence": [
+            {
+              "path": "docs/security/c-toolchain-hardening-controls.json",
+              "includes": [
+                "nativeSurfaces",
+                "vendor/xmlsec/bindings.h",
+                "vendor/xmlsec/bindings.rs"
+              ]
+            },
+            {
+              "path": "tools/security/check-c-toolchain-hardening.mjs",
+              "includes": [
+                "detectNativeSurfaces",
+                "nativeSurfaceKey",
+                "unregistered native surface"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_002",
+      "name": "Separate debug, release, and test configurations",
+      "owasp": "Build Configurations, Debug Builds, Release Builds, Test Builds",
+      "controls": [
+        {
+          "id": "CTH_CTRL_002",
+          "name": "Native hardening environment profiles",
+          "description": "Provide explicit debug, release, and test C/C++ flag profiles instead of relying on compiler defaults.",
+          "evidence": [
+            {
+              "path": "scripts/c-toolchain-hardened-env.sh",
+              "includes": ["profile=\"${1:-release}\"", "debug)", "release)", "test)"]
+            },
+            {
+              "path": "docs/security/c-toolchain-hardening-controls.json",
+              "includes": ["\"debug\"", "\"release\"", "\"test\""]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_003",
+      "name": "Enable aggressive warnings and format diagnostics",
+      "owasp": "GCC/Binutils, Clang/Xcode, Warning Suppression",
+      "controls": [
+        {
+          "id": "CTH_CTRL_003",
+          "name": "Warning baseline for native code",
+          "description": "Require warning, conversion, and format-security diagnostics for all native profile builds.",
+          "evidence": [
+            {
+              "path": "scripts/c-toolchain-hardened-env.sh",
+              "includes": [
+                "-Wall",
+                "-Wextra",
+                "-Wconversion",
+                "-Wformat=2",
+                "-Wformat-security",
+                "-Werror=format-security"
+              ]
+            },
+            {
+              "path": "vendor/xmlsec/bindings.rs",
+              "includes": ["\"-Wall\"", "\"-Wextra\"", "\"-Wformat=2\"", "\"-Wformat-security\""]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_004",
+      "name": "Enable compiler memory hardening",
+      "owasp": "Preprocessor, Additional Macros, Compiler and Linker",
+      "controls": [
+        {
+          "id": "CTH_CTRL_004",
+          "name": "Fortify, stack protector, PIE, and frame pointers",
+          "description": "Require C/C++ builds to define fortify, enable stack protection, produce PIE-compatible objects, and retain frame pointers.",
+          "evidence": [
+            {
+              "path": "scripts/c-toolchain-hardened-env.sh",
+              "includes": [
+                "-D_FORTIFY_SOURCE=3",
+                "-fstack-protector-strong",
+                "-fPIE",
+                "-fno-omit-frame-pointer"
+              ]
+            },
+            {
+              "path": "vendor/xmlsec/bindings.rs",
+              "includes": [
+                "\"-D_FORTIFY_SOURCE=3\"",
+                "\"-fstack-protector-strong\"",
+                "\"-fPIE\"",
+                "\"-fno-omit-frame-pointer\""
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_005",
+      "name": "Enable linker hardening",
+      "owasp": "GCC/Binutils, Distribution Hardening",
+      "controls": [
+        {
+          "id": "CTH_CTRL_005",
+          "name": "PIE, RELRO, NOW, and non-executable stack on Linux",
+          "description": "Use hardened linker flags for Linux native artifacts and a macOS-safe dead-strip profile for local Darwin builds.",
+          "evidence": [
+            {
+              "path": "scripts/c-toolchain-hardened-env.sh",
+              "includes": [
+                "-pie",
+                "-Wl,-z,relro",
+                "-Wl,-z,now",
+                "-Wl,-z,noexecstack",
+                "-Wl,-dead_strip"
+              ]
+            },
+            {
+              "path": "vendor/xmlsec/bindings.rs",
+              "includes": [
+                "\"-pie\"",
+                "\"-Wl,-z,relro\"",
+                "\"-Wl,-z,now\"",
+                "\"-Wl,-z,noexecstack\"",
+                "\"-Wl,-dead_strip\""
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_006",
+      "name": "Fail native dependency builds without hardening",
+      "owasp": "Integration, Compiler and Linker",
+      "controls": [
+        {
+          "id": "CTH_CTRL_006",
+          "name": "Cargo native build-script enforcement",
+          "description": "When NVBES_C_TOOLCHAIN_HARDENING=required, native dependency build scripts fail if required flags are missing.",
+          "evidence": [
+            {
+              "path": "vendor/xmlsec/bindings.rs",
+              "includes": [
+                "enforce_native_dependency_hardening",
+                "NVBES_C_TOOLCHAIN_HARDENING",
+                "require_flags",
+                "CFLAGS",
+                "CXXFLAGS",
+                "LDFLAGS"
+              ]
+            },
+            {
+              "path": "scripts/c-toolchain-hardened-env.sh",
+              "includes": [
+                "export NVBES_C_TOOLCHAIN_HARDENING=required",
+                "export CFLAGS=",
+                "export CXXFLAGS=",
+                "export LDFLAGS="
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CTH_REQ_007",
+      "name": "Preserve CI evidence",
+      "owasp": "Configuration, Integration",
+      "controls": [
+        {
+          "id": "CTH_CTRL_007",
+          "name": "C toolchain hardening gate",
+          "description": "Fail the root check when the hardening registry, native surface inventory, shell wrapper, build-script enforcement, or evidence strings drift.",
+          "evidence": [
+            {
+              "path": "package.json",
+              "includes": [
+                "check:c-toolchain-hardening",
+                "tools/security/check-c-toolchain-hardening.mjs"
+              ]
+            },
+            {
+              "path": "tools/security/check-c-toolchain-hardening.mjs",
+              "includes": [
+                "C toolchain hardening controls",
+                "requiredReleaseCflags",
+                "requiredLinuxLdflags"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

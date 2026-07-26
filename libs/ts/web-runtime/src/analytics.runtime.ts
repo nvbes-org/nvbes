@@ -1,7 +1,7 @@
 import {
   ALLOWED_EVENTS,
-  DEFAULT_BLOCKED_ROUTE_PATTERNS,
   clearAnalyticsStorage,
+  DEFAULT_BLOCKED_ROUTE_PATTERNS,
   hasAnyAnalyticsConsent,
   isUuidLike,
   normalizeAnalyticsError,
@@ -33,6 +33,11 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
       });
     }
 
+    await this.options.transport?.setProductAnalyticsEnabled?.(
+      hasProductAnalyticsConsent(this.consent),
+    );
+    await this.options.transport?.setErrorReportingEnabled?.(this.consent.errorTracking);
+
     if (!hasAnyAnalyticsConsent(this.consent)) {
       await this.disableCapture();
     }
@@ -40,6 +45,8 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
 
   async applyConsent(consent = this.options.getConsent()): Promise<void> {
     this.consent = consent;
+    await this.options.transport?.setProductAnalyticsEnabled?.(hasProductAnalyticsConsent(consent));
+    await this.options.transport?.setErrorReportingEnabled?.(consent.errorTracking);
     if (!hasAnyAnalyticsConsent(consent)) {
       await this.disableCapture();
       return;
@@ -210,6 +217,16 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
     );
     return `${prefix}_${hex(signature).slice(0, 32)}`;
   }
+}
+
+function hasProductAnalyticsConsent(consent: AnalyticsPurposeConsent): boolean {
+  return (
+    consent.productAnalytics ||
+    consent.autocaptureHeatmaps ||
+    consent.sessionReplay ||
+    consent.surveysFeedback ||
+    consent.featureFlags
+  );
 }
 
 function hex(buffer: ArrayBuffer): string {

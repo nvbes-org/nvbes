@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Bot_Management_and_Anti-Automation_Cheat_Sheet.html",
+  "reviewCadence": "At every auth, signup, public API, rate-limit, risk-signal, or anti-automation control change.",
+  "requirements": [
+    {
+      "id": "BOT_REQ_001",
+      "name": "Threat-model sensitive automated abuse flows",
+      "owasp": "Threat Modeling Before Controls, Defending Specific Flows",
+      "controls": [
+        {
+          "id": "BOT_CTRL_001",
+          "name": "Login and signup anti-automation gates",
+          "description": "Protect account creation and login identifier flows with PoW, decoy signals, bot proof, and score-based enforcement.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
+              "includes": [
+                "enforce_identifier_request_guards",
+                "require_pow_solution",
+                "decoy_link_clicked",
+                "bot_detected"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "includes": [
+                "pow_nonce",
+                "pow_solution",
+                "require_pow_solution",
+                "check_dual_rate_limit"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_002",
+      "name": "Layered defense architecture",
+      "owasp": "Layered Defense Architecture",
+      "controls": [
+        {
+          "id": "BOT_CTRL_002",
+          "name": "App, browser, and API-layer bot controls",
+          "description": "Combine browser proof, app scoring, public API request signing, network policy, and business-layer risk events.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_guard.rs",
+              "includes": ["Honeypot", "Time-lock", "JS Dynamic Signature"]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.auth.authenticate.api_key.rs",
+              "includes": [
+                "http_signatures::verify",
+                "consume_nonce",
+                "enforce_network_policy",
+                "enforce_plan_rate_limit"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "includes": ["pub enum RiskDecision", "StepUp", "Deny", "Lock"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_003",
+      "name": "Rate limiting and quotas",
+      "owasp": "Rate Limiting and Quotas",
+      "controls": [
+        {
+          "id": "BOT_CTRL_003",
+          "name": "Independent multi-key rate limits",
+          "description": "Apply independent per-IP, scoped-key, minute, and day buckets instead of a single attacker-tunable bucket.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": [
+                "pub async fn check_dual_rate_limit",
+                "format!(\"ip:{ip_key}\")",
+                "format!(\"key:{scoped_key}\")",
+                "pub async fn check_rate_limit_pair"
+              ]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.auth.authenticate.rs",
+              "includes": [
+                "enforce_plan_rate_limit",
+                "requests_per_minute",
+                "requests_per_day",
+                "Duration::from_secs(86_400)"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "includes": ["check_dual_rate_limit", "auth_forgot_password"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_004",
+      "name": "Privacy-aware device and behavior signals",
+      "owasp": "Device and Network Fingerprinting (Privacy-Aware)",
+      "controls": [
+        {
+          "id": "BOT_CTRL_004",
+          "name": "Scored client signals with hashed device persistence",
+          "description": "Score automation and behavior signals without storing raw device fingerprints in risk metadata.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_scorer.rs",
+              "includes": [
+                "score_client_signals",
+                "auto_webdriver_spoofed",
+                "webgl_headless_renderer",
+                "BotScore"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "includes": [
+                "device_fingerprint_hash",
+                "geo_risk_score",
+                "geo_risk_labels",
+                "risk::record_event"
+              ]
+            },
+            {
+              "path": "libs/ts/identity-sdk-web/src/bot-guard.signals.fingerprint.ts",
+              "includes": ["canvas", "audio", "webgl"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_005",
+      "name": "CAPTCHA alternatives and proof-of-work",
+      "owasp": "CAPTCHA and Its Modern Alternatives",
+      "controls": [
+        {
+          "id": "BOT_CTRL_005",
+          "name": "Stateful proof-of-work challenge",
+          "description": "Issue expiring, single-use PoW nonces and verify leading-zero SHA-256 difficulty before sensitive unauthenticated flows.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.pow.rs",
+              "includes": [
+                "issue_challenge",
+                "pow_challenges",
+                "consumed_at",
+                "pow_solution_invalid",
+                "leading_zero_bits"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.challenge_proof.rs",
+              "includes": ["require_pow_solution", "pow_missing", "verify_solution"]
+            },
+            {
+              "path": "libs/ts/identity-sdk-web/src/pow.ts",
+              "includes": ["solvePow", "difficulty", "nonce"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_006",
+      "name": "Honeypots and tarpits",
+      "owasp": "Honeypots and Tarpits",
+      "controls": [
+        {
+          "id": "BOT_CTRL_006",
+          "name": "Hidden field, decoy link, and time-lock traps",
+          "description": "Detect simple form automation through hidden fields, decoy interactions, suspiciously fast submissions, and stale proofs.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_guard.rs",
+              "includes": [
+                "check_decoy_field",
+                "bot_honeypot_triggered",
+                "check_time_lock",
+                "bot_time_lock_fast",
+                "bot_time_lock_expired"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_guard.tests.rs",
+              "includes": ["bot_honeypot_triggered", "bot_time_lock_fast", "bot_time_lock_expired"]
+            },
+            {
+              "path": "libs/ts/identity-sdk-web/src/bot-guard.decoy.ts",
+              "includes": ["decoy", "website"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_007",
+      "name": "Public API anti-automation",
+      "owasp": "Public APIs",
+      "controls": [
+        {
+          "id": "BOT_CTRL_007",
+          "name": "Signed API requests, per-key quotas, and network risk policy",
+          "description": "Protect public APIs with API keys or HTTP signatures, nonce/replay protection, per-plan quotas, and workspace network policy.",
+          "evidence": [
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.http_signatures.rs",
+              "includes": [
+                "MAX_CLOCK_SKEW_SECS",
+                "validate_required_components",
+                "content-digest",
+                "HttpSignatureExpired"
+              ]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.network_policy.rs",
+              "includes": [
+                "block_vpn",
+                "block_proxy",
+                "block_tor",
+                "high_risk_score_threshold",
+                "MonitorOnly"
+              ]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.db.rs",
+              "includes": ["rate_limits_for_plan", "requests_per_minute", "requests_per_day"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_008",
+      "name": "Graduated response strategy",
+      "owasp": "Response Strategy: Don't Always Block",
+      "controls": [
+        {
+          "id": "BOT_CTRL_008",
+          "name": "Monitor, step-up, deny, and lock decisions",
+          "description": "Use risk decisions, monitor-only network policy, anti-bot metrics, and bounded tarpit delays before hard blocking where appropriate.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "includes": [
+                "RiskDecision::StepUp",
+                "RiskDecision::Deny",
+                "RiskDecision::Lock",
+                "strictest"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
+              "includes": [
+                "bot_score >= 0.80",
+                "bot_score >= 0.60",
+                "elevated risk, monitoring",
+                "record_decision",
+                "apply_tarpit"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_response.rs",
+              "includes": [
+                "identity_bot_guard_decisions_total",
+                "tarpit_delay",
+                "BOT_TARPIT_MAX_MS"
+              ]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.network_policy.rs",
+              "includes": ["MonitorOnly", "Disabled", "Enforce"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_009",
+      "name": "Logging and monitoring",
+      "owasp": "Logging and Monitoring",
+      "controls": [
+        {
+          "id": "BOT_CTRL_009",
+          "name": "Risk and public API abuse telemetry",
+          "description": "Record bot/risk/security decisions with request, identity, geo, network, user-agent, and decision metadata.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "includes": [
+                "event_type",
+                "ip_address",
+                "user_agent",
+                "risk_score",
+                "risk_factors",
+                "decision"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.security.service.risk_events.rs",
+              "includes": ["fetch_risk_events", "geo_risk_score", "geo_risk_labels"]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.metrics.rs",
+              "includes": [
+                "HIGH_RISK_REQUESTS_METRIC",
+                "NETWORK_POLICY_BLOCKS_METRIC",
+                "risk_bucket"
+              ]
+            },
+            {
+              "path": "apps/cloud-service/src/drive.domains.public_api.observability.rs",
+              "includes": ["log_denied", "network_block_reason", "request_id"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BOT_REQ_010",
+      "name": "Credential stuffing defenses",
+      "owasp": "Login (OAT-008), Common Threats and Risks",
+      "controls": [
+        {
+          "id": "BOT_CTRL_010",
+          "name": "Login throttling and breached credential signals",
+          "description": "Combine dual-bucket throttling, breached credential proxy signals, MFA/step-up risk recording, and generic failures.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
+              "includes": [
+                "ExposedCredentialCheck::from_headers",
+                "login_compromised_password",
+                "device_fingerprint"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.exposed_credentials.rs",
+              "includes": ["Exposed-Credential-Check", "password_exposed", "password_compromised"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["LOGIN_THROTTLE_ACTION", "check_rate_limit_pair", "risk_policy_blocked"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

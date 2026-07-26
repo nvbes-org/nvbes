@@ -12,7 +12,8 @@ const REVOKED_SESSION_TTL_SECONDS: u64 = 60 * 60 * 24 * 30;
 pub struct CachedSession {
     pub session_id: String,
     pub principal_id: String,
-    pub token_hash: String,
+    #[serde(default)]
+    pub browser_session_token_hash: Option<String>,
     pub tenant_id: Option<String>,
     pub organization_id: Option<String>,
     pub workspace_id: Option<String>,
@@ -23,20 +24,70 @@ pub struct CachedSession {
     pub auth_time: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub last_seen_at: DateTime<Utc>,
+    #[serde(default)]
+    pub idle_timeout_seconds: Option<i64>,
+    #[serde(default)]
+    pub idle_expires_at: Option<DateTime<Utc>>,
     pub expires_at: DateTime<Utc>,
     pub step_up_verified_at: Option<DateTime<Utc>>,
     pub step_up_expires_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    pub admin_elevation_role: Option<String>,
-    #[serde(default)]
-    pub admin_elevation_tenant_id: Option<String>,
-    #[serde(default)]
-    pub admin_elevation_granted_at: Option<DateTime<Utc>>,
-    #[serde(default)]
-    pub admin_elevation_expires_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
+    #[serde(default)]
+    pub accept_language: Option<String>,
+    #[serde(default)]
+    pub accept: Option<String>,
+    #[serde(default)]
+    pub accept_encoding: Option<String>,
+    #[serde(default)]
+    pub sec_fetch_site: Option<String>,
+    #[serde(default)]
+    pub sec_fetch_mode: Option<String>,
+    #[serde(default)]
+    pub sec_fetch_dest: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_arch: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_bitness: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_full_version: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_full_version_list: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_model: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_wow64: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_form_factors: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_platform: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_platform_version: Option<String>,
+    #[serde(default)]
+    pub sec_ch_ua_mobile: Option<String>,
+    #[serde(default)]
+    pub cookie_theft_risk_score: Option<f64>,
+    #[serde(default)]
+    pub cookie_theft_detected_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub account_device_id: Option<String>,
+    #[serde(default)]
+    pub device_trust_level: Option<String>,
+    #[serde(default)]
+    pub device_trust_score: Option<i16>,
+    #[serde(default)]
+    pub risk_score: Option<f64>,
+    #[serde(default)]
+    pub risk_decision: Option<String>,
+    #[serde(default)]
+    pub activity_window_started_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub activity_request_count: u32,
+    #[serde(default)]
+    pub last_activity_risk_event_at: Option<DateTime<Utc>>,
 }
 
 pub async fn get_session(
@@ -91,19 +142,6 @@ pub async fn touch_session(
     let key = session_key(session_id);
     let mut conn = pool.get().await?;
     let _: bool = conn.expire(&key, ttl_seconds as i64).await?;
-    Ok(())
-}
-
-pub async fn update_session_token_hash(
-    pool: &RedisPool,
-    session_id: &str,
-    token_hash: &str,
-    ttl_seconds: u64,
-) -> Result<(), RedisError> {
-    if let Some(mut session) = get_session(pool, session_id).await? {
-        session.token_hash = token_hash.to_string();
-        set_session(pool, &session, ttl_seconds).await?;
-    }
     Ok(())
 }
 

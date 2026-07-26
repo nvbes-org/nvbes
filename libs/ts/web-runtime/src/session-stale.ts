@@ -1,6 +1,6 @@
 import { HttpError } from '@nvbes/http-client';
 
-export type SessionStaleReason = 'unauthorized' | 'csrf' | 'login-timeout';
+export type SessionStaleReason = 'reauthenticate';
 
 export interface SessionStaleResult {
   stale: boolean;
@@ -10,14 +10,8 @@ export interface SessionStaleResult {
 
 export function detectSessionStale(error: unknown): SessionStaleResult {
   const status = readErrorStatus(error);
-  if (status === 401) {
-    return { reason: 'unauthorized', stale: true, status };
-  }
-  if (status === 419) {
-    return { reason: 'csrf', stale: true, status };
-  }
-  if (status === 440) {
-    return { reason: 'login-timeout', stale: true, status };
+  if (error instanceof HttpError && error.recovery === 'reauthenticate') {
+    return { reason: 'reauthenticate', stale: true, status };
   }
   return { reason: null, stale: false, status };
 }

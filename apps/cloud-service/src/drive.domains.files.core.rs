@@ -1,30 +1,72 @@
 use super::models::StorageObjectRecord;
+use super::pagination::{ObjectListCursor, normalize_name_prefix};
 use super::types::*;
 use super::{db, queries};
 use crate::{
     domains::authz::WorkspaceAccess, domains::files::models::StorageObjectType,
     http::error::AppError,
 };
+use nvbes_core::pagination::page_from_rows;
 use sqlx::PgPool;
 use uuid::Uuid;
+
+#[cfg(test)]
+#[path = "drive.domains.files.core.db_tests.rs"]
+mod db_tests;
 
 pub async fn list_objects(
     db: &PgPool,
     access: &WorkspaceAccess,
     input: ListObjectsInput,
 ) -> Result<ListObjectsResponse, AppError> {
+    let ListObjectsInput {
+        parent_id,
+        limit,
+        cursor,
+        object_type,
+        name_prefix,
+    } = input;
+    let limit = limit.unwrap_or(50).clamp(1, 200);
+    let cursor = cursor
+        .as_deref()
+        .map(ObjectListCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let name_prefix = normalize_name_prefix(name_prefix);
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
 
-    if let Some(parent_id) = input.parent_id {
+    if let Some(parent_id) = parent_id {
         queries::ensure_parent_is_active_folder_tx(&mut tx, access.workspace_id, parent_id).await?;
     }
 
-    let objects = queries::list_objects_tx(&mut tx, access.workspace_id, input.parent_id).await?;
+    let objects = queries::list_objects_tx(
+        &mut tx,
+        access.workspace_id,
+        parent_id,
+        cursor.as_ref(),
+        name_prefix.as_deref(),
+        object_type.map(ObjectTypeFilter::as_str),
+        limit + 1,
+    )
+    .await?;
     tx.commit().await?;
+    let page = page_from_rows(objects, limit as usize, ObjectListCursor::from_record);
 
     Ok(ListObjectsResponse {
-        parent_id: input.parent_id,
-        objects: objects.into_iter().map(|r| r.into()).collect(),
+        parent_id,
+        objects: page.items.into_iter().map(Into::into).collect(),
+        next_cursor: page
+            .next_cursor
+            .as_ref()
+            .map(ObjectListCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
     })
 }
 

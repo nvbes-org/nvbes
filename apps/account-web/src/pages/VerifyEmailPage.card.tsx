@@ -46,7 +46,9 @@ export function VerifyEmailCard({
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Vérifie ton email</CardTitle>
-          <CardDescription>
+          <CardDescription
+            className={verified ? 'text-emerald-600 dark:text-emerald-500' : undefined}
+          >
             {verified ? 'Compte vérifié.' : 'Confirme ton adresse email.'}
           </CardDescription>
           {accountName ? (

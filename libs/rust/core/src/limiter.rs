@@ -131,6 +131,17 @@ pub async fn check_rate_limit_pair(
     Ok(())
 }
 
+pub async fn check_rate_limit_rules(
+    redis: &nvbes_redis::RedisPool,
+    action: &str,
+    rules: &[RateLimitRule<'_>],
+) -> Result<(), AppError> {
+    for rule in rules {
+        check_rate_limit(redis, action, rule.key, rule.max_hits, rule.window).await?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

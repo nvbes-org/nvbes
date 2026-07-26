@@ -131,7 +131,7 @@ export function ScopesPage() {
     return <ScopesUnavailable />;
   }
 
-  const handleCreateSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const scope_key = formString(form, 'scope_key').trim();
@@ -161,7 +161,7 @@ export function ScopesPage() {
     createMutation.mutate(input);
   };
 
-  const handleUpdateSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingScopeKey) return;
     const form = new FormData(event.currentTarget);

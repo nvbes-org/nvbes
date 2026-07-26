@@ -4,6 +4,7 @@ import { z } from 'zod';
 type DeveloperOAuthState = {
   state: string;
   codeVerifier: string;
+  nonce: string;
   returnTo: string;
 };
 
@@ -12,6 +13,7 @@ const DeveloperOAuthStateSchema = z.object({
   codeVerifier: z.string(),
   returnTo: z.string(),
   state: z.string(),
+  nonce: z.string(),
 });
 
 export function readDeveloperOauthState(): DeveloperOAuthState | null {
@@ -29,14 +31,15 @@ export function clearDeveloperOauthState(): void {
 export async function buildDeveloperAuthorizationUrl(returnTo: string): Promise<string> {
   const { codeVerifier, codeChallenge } = await createPkceChallenge();
   const state = createRandomValue(24);
-  getSafeSessionStorage().setJson(OAUTH_STORAGE_KEY, { state, codeVerifier, returnTo });
+  const nonce = createRandomValue(24);
+  getSafeSessionStorage().setJson(OAUTH_STORAGE_KEY, { state, codeVerifier, nonce, returnTo });
 
   const { developerIdentityClient } = await import('./developer.oauth.client');
   return developerIdentityClient.getAuthorizationUrl(
     'openid profile email offline_access',
     state,
     codeChallenge,
-    'S256',
+    nonce,
   );
 }
 

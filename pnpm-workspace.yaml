@@ -3,25 +3,23 @@ packages:
   - libs/ts/*
 
 catalog:
-  react: ^19.2.6
-  react-dom: ^19.2.6
-  '@tanstack/react-query': ^5.90.12
-  '@tanstack/react-query-devtools': ^5.91.0
-  '@tanstack/react-router': ^1.139.10
-  '@tanstack/react-router-devtools': ^1.139.10
-  typescript: ^6.0.3
-  '@typescript/native-preview': npm:@typescript/native-preview@beta
-  vite: npm:@voidzero-dev/vite-plus-core@0.1.24
-  vite-plus: ^0.1.24
-  vitest: npm:@voidzero-dev/vite-plus-test@0.1.24
-  '@vitejs/plugin-react': ^6.0.2
+  react: ^19.2.8
+  react-dom: ^19.2.8
+  '@tanstack/react-query': ^5.101.4
+  '@tanstack/react-query-devtools': ^5.101.4
+  '@tanstack/react-router': ^1.170.18
+  '@tanstack/react-router-devtools': ^1.167.0
+  typescript: ^7.0.2
+  vite: ^8.0.16
+  vite-plus: ^0.2.6
+  '@vitejs/plugin-react': ^6.0.4
   react-router-dom: ^7.15.1
   tsx: ^4.22.1
-  '@tailwindcss/vite': ^4.3.0
-  tailwindcss: ^4.3.0
-  tsup: ^8.3.6
+  '@tailwindcss/vite': ^4.3.3
+  tailwindcss: ^4.3.3
 
 allowBuilds:
+  '@posthog/cli': true
   '@sentry/cli': false
   core-js: true
   esbuild: true
@@ -30,19 +28,30 @@ allowBuilds:
   protobufjs: true
 
 overrides:
+  '@babel/core': 7.29.7
+  '@hono/node-server': 2.0.12
+  axios: 1.18.1
+  brace-expansion: 5.0.8
+  dompurify: 3.4.12
+  esbuild: 0.28.1
+  fast-uri: 3.1.4
+  form-data: 4.0.6
+  js-yaml: 4.3.0
+  postcss: 8.5.23
+  tmp: 0.2.7
   yaml: '>=2.8.3'
 
 minimumReleaseAgeExclude:
-  - '@voidzero-dev/vite-plus-core@0.1.24'
-  - '@voidzero-dev/vite-plus-darwin-arm64@0.1.24'
-  - '@voidzero-dev/vite-plus-darwin-x64@0.1.24'
-  - '@voidzero-dev/vite-plus-linux-arm64-gnu@0.1.24'
-  - '@voidzero-dev/vite-plus-linux-arm64-musl@0.1.24'
-  - '@voidzero-dev/vite-plus-linux-x64-gnu@0.1.24'
-  - '@voidzero-dev/vite-plus-linux-x64-musl@0.1.24'
-  - '@voidzero-dev/vite-plus-test@0.1.24'
-  - '@voidzero-dev/vite-plus-win32-arm64-msvc@0.1.24'
-  - '@voidzero-dev/vite-plus-win32-x64-msvc@0.1.24'
-  - vite-plus@0.1.24
+  - '@voidzero-dev/vite-plus-core@0.2.6'
+  - '@voidzero-dev/vite-plus-darwin-arm64@0.2.6'
+  - '@voidzero-dev/vite-plus-darwin-x64@0.2.6'
+  - '@voidzero-dev/vite-plus-linux-arm64-gnu@0.2.6'
+  - '@voidzero-dev/vite-plus-linux-arm64-musl@0.2.6'
+  - '@voidzero-dev/vite-plus-linux-x64-gnu@0.2.6'
+  - '@voidzero-dev/vite-plus-linux-x64-musl@0.2.6'
+  - '@voidzero-dev/vite-plus-win32-arm64-msvc@0.2.6'
+  - '@voidzero-dev/vite-plus-win32-x64-msvc@0.2.6'
+  - vite-plus@0.2.6
+  - '@hono/node-server@2.0.12'
 
 nodeLinker: hoisted

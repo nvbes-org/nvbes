@@ -6,6 +6,7 @@ import type {
   UserView,
   WorkspaceView,
 } from '@nvbes/identity-sdk-core/src/types';
+import { readCurrentAuthuser, readScopedCsrfToken } from './csrf';
 import {
   completeWebAuthnStepUp,
   confirmTotp,
@@ -82,19 +83,31 @@ export class NvbesIdentityWeb {
   /**
    * Génère l'URL d'autorisation OAuth2
    */
-  getAuthorizationUrl(
-    options: { scope?: string; state?: string; codeChallenge?: string } = {},
-  ): string {
+  getAuthorizationUrl(options: {
+    scope?: string;
+    state: string;
+    codeChallenge: string;
+    nonce: string;
+  }): string {
+    if (!options.state.trim()) {
+      throw new Error('OAuth state is required.');
+    }
+    if (!options.codeChallenge.trim()) {
+      throw new Error('PKCE code challenge is required.');
+    }
+    if (!options.nonce.trim()) {
+      throw new Error('OIDC nonce is required.');
+    }
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       scope: options.scope ?? 'openid profile email',
-      ...(options.state && { state: options.state }),
-      ...(options.codeChallenge && {
-        code_challenge: options.codeChallenge,
-        code_challenge_method: 'S256',
-      }),
+      state: options.state,
+      code_challenge: options.codeChallenge,
+      code_challenge_method: 'S256',
+      nonce: options.nonce,
     });
 
     return `${this.config.baseUrl}/oauth/authorize?${params.toString()}`;
@@ -103,20 +116,14 @@ export class NvbesIdentityWeb {
   /**
    * Redirige vers la page de login (web - utilise cookies)
    */
-  async redirectToLogin(
-    options: { scope?: string; state?: string; usePKCE?: boolean } = {},
-  ): Promise<void> {
-    let codeChallenge: string | undefined;
-
-    if (options.usePKCE ?? true) {
-      const pkce = await this.createPKCEChallenge();
-      codeChallenge = pkce.codeChallenge;
-    }
+  async redirectToLogin(options: { scope?: string; state: string; nonce: string }): Promise<void> {
+    const pkce = await this.createPKCEChallenge();
 
     window.location.href = this.getAuthorizationUrl({
       scope: options.scope,
       state: options.state,
-      codeChallenge,
+      codeChallenge: pkce.codeChallenge,
+      nonce: options.nonce,
     });
   }
 
@@ -124,8 +131,10 @@ export class NvbesIdentityWeb {
    * Récupère les infos utilisateur via cookie de session
    */
   async getCurrentUser(): Promise<UserView> {
+    const authuser = readCurrentAuthuser();
     const response = await fetch(`${this.config.baseUrl}/auth/me`, {
       credentials: 'include',
+      headers: authuser ? { 'X-Auth-User': authuser } : undefined,
     });
 
     if (!response.ok) {
@@ -140,12 +149,13 @@ export class NvbesIdentityWeb {
    */
   async logout(): Promise<void> {
     const headers: Record<string, string> = {};
-    if (typeof document !== 'undefined') {
-      const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
-      const csrfToken = match?.[1];
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
+    const authuser = readCurrentAuthuser();
+    if (authuser) {
+      headers['X-Auth-User'] = authuser;
+    }
+    const csrfToken = readScopedCsrfToken(authuser);
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
     }
 
     await fetch(`${this.config.baseUrl}/auth/logout`, {
@@ -175,8 +185,14 @@ export class NvbesIdentityWeb {
    */
   async listMfaFactors(
     token?: string,
-  ): Promise<{ factors: MfaFactorView[]; mfa_enabled: boolean }> {
-    return listMfaFactors(this.config.baseUrl, token);
+    options: { limit?: number; cursor?: string } = {},
+  ): Promise<{
+    factors: MfaFactorView[];
+    mfa_enabled: boolean;
+    next_cursor: string | null;
+    has_more: boolean;
+  }> {
+    return listMfaFactors(this.config.baseUrl, token, options);
   }
 
   /**
@@ -276,7 +292,7 @@ export class NvbesIdentityWeb {
    * Génère de nouveaux codes de récupération.
    * Le backend requiert un step-up préalable.
    */
-  async generateRecoveryCodes(password: string, token?: string): Promise<RecoveryCodesResult> {
+  async generateRecoveryCodes(password?: string, token?: string): Promise<RecoveryCodesResult> {
     return generateRecoveryCodes(this.config.baseUrl, password, token);
   }
 
@@ -306,6 +322,15 @@ export class NvbesIdentityWeb {
 }
 
 export default NvbesIdentityWeb;
+export { collectBotIntegritySignals } from './bot-integrity';
+export type { BotIntegritySignals } from './bot-integrity';
+export { collectDeviceProfile } from './device-profile';
+export type {
+  DeviceFormFactor,
+  DevicePlatform,
+  DeviceProfile,
+  ScreenBucket,
+} from './device-profile';
 export type { DecoyField, DecoyLinkTracker } from './bot-guard.decoy';
 export { createDecoyField, createDecoyLinks, mountDecoyField } from './bot-guard.decoy';
 export type {
@@ -346,7 +371,9 @@ export {
   isDpopSupported,
   setDpopNonce,
 } from './dpop';
-export type { PowChallenge } from './pow';
+export { DeviceMonitor } from './device-monitor';
+export type { BatteryStatus, DevicePerformanceState } from './device-monitor';
+export type { PowChallenge, PowSolverOptions, PowSolverProgress } from './pow';
 export { fetchPowChallenge, solvePowChallenge } from './pow';
 export type {
   WebauthnCreateOptions,
@@ -372,6 +399,8 @@ export {
   MfaError,
   normalizeWebAuthnError,
   parseRequestOptions,
+  readCurrentAuthuser,
+  readScopedCsrfToken,
   registerWebAuthnCredential,
   removeMfaFactor,
   serializeCredential,

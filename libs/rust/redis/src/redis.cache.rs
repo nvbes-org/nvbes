@@ -21,6 +21,24 @@ pub async fn cache_set(
     Ok(())
 }
 
+pub async fn cache_set_nx(
+    pool: &RedisPool,
+    key: &str,
+    value: &str,
+    ttl_seconds: u64,
+) -> Result<bool, RedisError> {
+    let mut conn = pool.get().await?;
+    let res: Option<String> = redis::cmd("SET")
+        .arg(key)
+        .arg(value)
+        .arg("EX")
+        .arg(ttl_seconds)
+        .arg("NX")
+        .query_async(&mut *conn)
+        .await?;
+    Ok(res.is_some())
+}
+
 pub async fn cache_del(pool: &RedisPool, key: &str) -> Result<(), RedisError> {
     let mut conn = pool.get().await?;
     let _: () = conn.del(key).await?;

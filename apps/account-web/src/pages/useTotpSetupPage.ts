@@ -1,11 +1,13 @@
 import { confirmTotp, setupTotp } from '@nvbes/identity-sdk-web';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { readAuthuser } from '@/identity.authuser';
+
+import { isStepUpRequiredError } from '@/identity.step-up';
 
 export function useTotpSetupPage() {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const navigate = useNavigate();
   const [step, setStep] = useState<'stepup' | 'setup' | 'confirm'>('stepup');
   const [label, setLabel] = useState('');
@@ -27,10 +29,10 @@ export function useTotpSetupPage() {
       setProvisioningUri(result.provisioning_uri);
       setStep('confirm');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'TOTP setup failed';
-      if (message.includes('step_up_required')) {
+      if (isStepUpRequiredError(err)) {
         setStep('stepup');
       } else {
+        const message = err instanceof Error ? err.message : 'TOTP setup failed';
         setError(message);
       }
     } finally {
@@ -38,14 +40,17 @@ export function useTotpSetupPage() {
     }
   };
 
-  const handleConfirm = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleConfirm = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
       await confirmTotp('', factorId, totpCode);
-      void navigate({ to: '/account/mfa/recovery-codes', search: authuserSearch(authuser) });
+      void navigate({
+        to: '/account/$accountIndex/mfa/recovery-codes',
+        params: { accountIndex: authuser },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'TOTP confirmation failed');
     } finally {
@@ -62,7 +67,10 @@ export function useTotpSetupPage() {
     loading,
     qrData: provisioningUri || null,
     navigateBack: () =>
-      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
+      void navigate({
+        to: '/account/$accountIndex/security',
+        params: { accountIndex: authuser },
+      }),
     onStepUpSuccess: () => setStep('setup'),
     onLabelChange: setLabel,
     onTotpCodeChange: setTotpCode,

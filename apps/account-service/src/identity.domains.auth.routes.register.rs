@@ -10,7 +10,8 @@ use axum::{
 use nvbes_core::http::error::ErrorEnvelope;
 use nvbes_product_analytics::ProductAnalyticsEvent;
 use nvbes_region::{
-    country_code_to_data_region, detect_profile_from_country_code, supported_profiles,
+    country_code_to_data_region, detect_profile_from_country_code, is_country_allowed,
+    supported_data_regions, supported_profiles,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -282,6 +283,8 @@ pub(crate) struct SupportedRegionResponse {
     timezones: Vec<&'static str>,
     sub_region: Option<&'static str>,
     display_name: Option<&'static str>,
+    hosting_strategy: &'static str,
+    is_european_exclusive: bool,
 }
 
 struct SupportedRegionsCache {
@@ -290,8 +293,13 @@ struct SupportedRegionsCache {
 }
 
 fn supported_region_catalog() -> Vec<SupportedRegionResponse> {
+    let allowed_data_regions = supported_data_regions();
     let mut regions: Vec<_> = supported_profiles()
         .iter()
+        .filter(|profile| {
+            allowed_data_regions.contains(&profile.data_region)
+                && is_country_allowed(profile.country_code)
+        })
         .map(|profile| SupportedRegionResponse {
             country_code: profile.country_code,
             data_region: profile.data_region.as_str(),
@@ -300,6 +308,8 @@ fn supported_region_catalog() -> Vec<SupportedRegionResponse> {
             timezones: profile.timezones.iter().map(|tz| tz.as_str()).collect(),
             sub_region: profile.sub_region,
             display_name: profile.display_name,
+            hosting_strategy: profile.data_region.hosting_strategy(),
+            is_european_exclusive: profile.data_region.is_european_exclusive(),
         })
         .collect();
 

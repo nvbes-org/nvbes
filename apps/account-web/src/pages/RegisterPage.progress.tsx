@@ -1,12 +1,12 @@
-import { Building2Icon, UserIcon } from 'lucide-react';
+import { CheckCircle2Icon, MapPinIcon, type LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/classnames';
 
 export type RegisterStep = 1 | 2;
 
-const STEPS: { label: string; icon: typeof UserIcon }[] = [
-  { label: 'Identité', icon: UserIcon },
-  { label: 'Espace', icon: Building2Icon },
+const STEPS: { label: string; icon: LucideIcon }[] = [
+  { label: 'Compte', icon: CheckCircle2Icon },
+  { label: 'Région', icon: MapPinIcon },
 ];
 
 export function RegisterProgress({ step }: { step: RegisterStep }) {

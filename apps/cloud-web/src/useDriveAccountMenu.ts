@@ -3,7 +3,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTransition } from 'react';
 import { logoutDriveSession, startDriveLogin } from './drive.auth.functions';
 import { driveQueryKeys } from './drive.queries';
-import { clearDriveSession, getSessions, removeSession, setActiveSession } from './drive.session';
+import {
+  clearDriveSession,
+  drivePathForSession,
+  getSessions,
+  removeSession,
+  setActiveSession,
+} from './drive.session';
 
 export function useDriveAccountMenu({ accessToken }: { accessToken: string }) {
   const navigate = useNavigate();
@@ -23,6 +29,7 @@ export function useDriveAccountMenu({ accessToken }: { accessToken: string }) {
   function handleSwitchAccount(userId: string) {
     queryClient.removeQueries({ queryKey: driveQueryKeys.all });
     setActiveSession(userId);
+    window.location.assign(drivePathForSession(userId));
   }
 
   async function handleAddAccount() {

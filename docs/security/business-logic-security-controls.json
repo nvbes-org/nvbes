@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Business_Logic_Security_Cheat_Sheet.html",
+  "reviewCadence": "At every business workflow, authorization policy, quota, idempotency, billing, signup, login, or sensitive state-transition change.",
+  "requirements": [
+    {
+      "id": "BLS_REQ_001",
+      "name": "Re-derive security-relevant values server-side",
+      "owasp": "Never trust client-side decisions; derive prices, limits, regions, roles, and status from authoritative data.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_001",
+          "name": "Checkout and registration server decisions",
+          "description": "Block client-controlled business outcomes by deriving billing lock state, registration region, data region, and profile acceptance on the server.",
+          "evidence": [
+            {
+              "path": "libs/rust/billing/src/checkout_sessions.rs",
+              "includes": [
+                "enforce_billing_record_can_start_checkout",
+                "subscription_status_requires_lock",
+                "BillingCheckoutSessionError::BillingLocked"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "includes": [
+                "detect_profile_from_country_code",
+                "country_code_to_data_region",
+                "legal_documents_required"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_002",
+      "name": "Model sensitive workflows as server state machines",
+      "owasp": "Enforce expected steps, expiry, and transitions server-side instead of trusting the UI path.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_002",
+          "name": "Authentication state and challenge lifecycle",
+          "description": "Persist short-lived authentication state, require the expected next step, and consume challenges when they are completed.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.state.rs",
+              "includes": ["next_step", "expected_step", "invalid_auth_step", "consume_state"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.login_challenges.state.rs",
+              "includes": [
+                "consumed_at.is_some()",
+                "expires_at <= chrono::Utc::now()",
+                "consume_challenge",
+                "delete_challenge"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_003",
+      "name": "Reject replay and concurrent double execution",
+      "owasp": "Treat replay, duplicate submission, and timing races as business logic attacks.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_003",
+          "name": "In-flight idempotency claim",
+          "description": "Reserve an idempotency key before executing a mutating request, return 409 for a concurrent duplicate, and only release the claim after the response is persisted for replay.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/idempotency.rs",
+              "includes": [
+                "pub enum IdempotencyClaim",
+                "claim_idempotency_request",
+                "idempotency_claim_value",
+                "nvbes:idem:claim"
+              ]
+            },
+            {
+              "path": "libs/rust/redis/src/redis.idempotency.rs",
+              "includes": [
+                "delete_if_value",
+                "redis.call(\"GET\", KEYS[1])",
+                "redis.call(\"DEL\", KEYS[1])"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.http.middleware.idempotency.rs",
+              "includes": [
+                "IdempotencyClaim::InProgress",
+                "idempotency_request_in_progress",
+                "release_idempotency_claim"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.pow.rs",
+              "includes": [
+                "consumed_at",
+                "pow_nonce_consumed",
+                "UPDATE pow_challenges SET consumed_at = NOW()"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_004",
+      "name": "Constrain abuse-friendly features",
+      "owasp": "Rate-limit and monitor workflows attackers can profit from at scale.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_004",
+          "name": "Multi-key rate limits and bot controls",
+          "description": "Apply independent IP and scoped-key rate limits to sensitive flows and keep the anti-automation controls wired into the root security gate.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/limiter.rs",
+              "includes": [
+                "pub async fn check_dual_rate_limit",
+                "format!(\"ip:{ip_key}\")",
+                "format!(\"key:{scoped_key}\")"
+              ]
+            },
+            {
+              "path": "docs/security/bot-management-controls.json",
+              "includes": [
+                "Rate Limiting and Quotas",
+                "Honeypots and Tarpits",
+                "Public API anti-automation"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_005",
+      "name": "Authorize from business context",
+      "owasp": "Avoid implicit permissions; combine actor role, resource ownership, target role, and active policy.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_005",
+          "name": "Contextual workspace authorization",
+          "description": "Evaluate business permissions from action, actor role, ownership, target role, and workspace policy instead of trusting a coarse role check.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/authz.policy.rs",
+              "includes": ["ctx.target_role", "ctx.owns_resource", "ctx.member_share_links_enabled"]
+            },
+            {
+              "path": "libs/rust/core/src/authz.policy.tests.rs",
+              "includes": [
+                "workspace_membership_roles_cover_expected_permission_boundaries",
+                "member_can_only_modify_owned_objects",
+                "member_share_link_requires_policy_and_ownership"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_006",
+      "name": "Validate business meaning, not just type shape",
+      "owasp": "Reject values and combinations that are syntactically valid but invalid for the business process.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_006",
+          "name": "Semantic registration and quota validation",
+          "description": "Validate legal acceptance, profile names, birthdate parsing, supported regions, and quota/spend-cap semantics server-side.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "includes": [
+                "parse_birthdate",
+                "validate_required_profile_name",
+                "region_required",
+                "legal_documents_required"
+              ]
+            },
+            {
+              "path": "libs/rust/billing/src/usage.rs",
+              "includes": [
+                "storage_gb_month_billable_quantity",
+                "saturating_sub",
+                "spend_cap_minor"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_007",
+      "name": "Observe business security decisions",
+      "owasp": "Log and monitor denied, risky, or unusual business-flow decisions.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_007",
+          "name": "Audit and risk event evidence",
+          "description": "Record auth, billing, and bot/security decisions so business-logic abuse is visible to investigation and alerting workflows.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.audit.rs",
+              "includes": ["AuthAuditInput", "record_auth_event", "AuditRecordInput"]
+            },
+            {
+              "path": "libs/rust/billing/src/checkout_sessions.audit.rs",
+              "includes": [
+                "CheckoutRoutingBlockedAudit",
+                "CheckoutStartedAudit",
+                "insert_billing_audit_event_tx"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_response.rs",
+              "includes": ["identity_bot_guard_decisions_total", "record_decision", "apply_tarpit"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BLS_REQ_008",
+      "name": "Regression-test business invariants",
+      "owasp": "Turn abuse-oriented business invariants into automated regression checks.",
+      "controls": [
+        {
+          "id": "BLS_CTRL_008",
+          "name": "Business security registry gate",
+          "description": "Fail the root check when business-logic controls, evidence, or the new in-flight idempotency implementation are removed.",
+          "evidence": [
+            {
+              "path": "docs/security/authorization-regression-tests.json",
+              "includes": [
+                "Actor-resource-action matrix",
+                "Horizontal Escalation",
+                "Vertical Escalation"
+              ]
+            },
+            {
+              "path": "package.json",
+              "includes": [
+                "check:business-logic-security",
+                "tools/security/check-business-logic-security.mjs"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

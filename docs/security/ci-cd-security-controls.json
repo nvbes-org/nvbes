@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html",
+  "reviewCadence": "At every workflow, release gate, CI secret, deployment, dependency installation, action integration, cache, artifact, or branch-protection policy change.",
+  "requirements": [
+    {
+      "id": "CICD_REQ_001",
+      "name": "Secure pipeline configuration",
+      "owasp": "Secure Configuration, Pipeline and Execution Environment",
+      "controls": [
+        {
+          "id": "CICD_CTRL_001",
+          "name": "Strict workflow execution baseline",
+          "description": "Run CI with bounded execution, cancellation, strict bash, and a self-checking security gate before dependency installation.",
+          "evidence": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "concurrency:",
+                "cancel-in-progress: true",
+                "timeout-minutes: 90",
+                "bash --noprofile --norc -euo pipefail {0}",
+                "node tools/security/check-ci-cd-security.mjs"
+              ]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "assertWorkflowBaseline",
+                "CI/CD security controls",
+                "requiredWorkflowIncludes"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_002",
+      "name": "Deny dangerous trust-boundary triggers",
+      "owasp": "Secure SCM Configuration, Pipeline and Execution Environment, Poisoned Pipeline Execution",
+      "controls": [
+        {
+          "id": "CICD_CTRL_002",
+          "name": "Untrusted-code trigger guard",
+          "description": "Block high-risk workflow triggers that can execute unreviewed code with elevated repository context.",
+          "evidence": [
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "forbiddenWorkflowTriggers",
+                "pull_request_target",
+                "workflow_run",
+                "dangerous trigger"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": ["pull_request:", "push:", "branches: ['main']"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_003",
+      "name": "Least-privilege CI token permissions",
+      "owasp": "IAM, Least Privilege",
+      "controls": [
+        {
+          "id": "CICD_CTRL_003",
+          "name": "Read-only default GITHUB_TOKEN",
+          "description": "Default workflow permissions are read-only and write scopes are denied unless explicitly approved in the registry.",
+          "evidence": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": ["permissions:", "actions: read", "contents: read"]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["forbiddenWritePermissions", "permissions:", "write permission"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_004",
+      "name": "Protect credentials and secrets",
+      "owasp": "Secrets Management, Insufficient Credential Hygiene",
+      "controls": [
+        {
+          "id": "CICD_CTRL_004",
+          "name": "Secret usage and checkout credential guard",
+          "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds.",
+          "evidence": [
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "persist-credentials: false",
+                "SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}",
+                "POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}",
+                "GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}",
+                "if: github.event_name == 'push' && github.ref == 'refs/heads/main'"
+              ]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "allowedSecrets",
+                "persist-credentials: false",
+                "secret-bearing step must be restricted"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_005",
+      "name": "Manage third-party code and integrations",
+      "owasp": "Managing Third-Party Code, Dependency Management, Plug-In and Integration Management",
+      "controls": [
+        {
+          "id": "CICD_CTRL_005",
+          "name": "Action and dependency installation policy",
+          "description": "Require third-party workflow actions to be allowlisted and dependency installs to use lockfile-enforced commands.",
+          "evidence": [
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": [
+                "allowedActions",
+                "pnpm install --frozen-lockfile",
+                "unsafe dependency install"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "actions/checkout@v7",
+                "actions/setup-node@v7",
+                "Swatinem/rust-cache@v2",
+                "pnpm install --frozen-lockfile --prefer-offline"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_006",
+      "name": "Assure artifact and dependency integrity",
+      "owasp": "Integrity Assurance",
+      "controls": [
+        {
+          "id": "CICD_CTRL_006",
+          "name": "Repository security gates in CI",
+          "description": "Run supply-chain, secrets, authorization, bot, business-logic, C-toolchain, and CI/CD gates as part of the root check path.",
+          "evidence": [
+            {
+              "path": "package.json",
+              "includes": [
+                "check:secrets",
+                "check:supply-chain",
+                "check:c-toolchain-hardening",
+                "check:ci-cd-security"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci.yml",
+              "includes": [
+                "pnpm format:check",
+                "pnpm check:structure",
+                "pnpm exec nx run rust-workspace:check"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CICD_REQ_007",
+      "name": "Preserve visibility and auditability",
+      "owasp": "Visibility and Monitoring",
+      "controls": [
+        {
+          "id": "CICD_CTRL_007",
+          "name": "Machine-readable CI/CD security evidence",
+          "description": "Keep CI/CD controls, approved integrations, secrets, and evidence strings machine-readable so workflow drift is visible in every CI run.",
+          "evidence": [
+            {
+              "path": "docs/security/ci-cd-security.md",
+              "includes": ["CI/CD Security", "pnpm check:ci-cd-security", "allowed"]
+            },
+            {
+              "path": "tools/security/check-ci-cd-security.mjs",
+              "includes": ["console.log", "workflows", "evidence strings"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "allowedActions": [
+    "actions/cache@v6",
+    "actions/checkout@v7",
+    "actions/setup-node@v7",
+    "dtolnay/rust-toolchain@stable",
+    "nrwl/nx-set-shas@v5",
+    "opentofu/setup-opentofu@v2",
+    "Swatinem/rust-cache@v2"
+  ],
+  "allowedSecrets": ["GRAFANA_FARO_SOURCEMAP_API_KEY", "POSTHOG_CLI_API_KEY", "SENTRY_AUTH_TOKEN"],
+  "allowedWritePermissions": [],
+  "requiredWorkflowIncludes": [
+    "permissions:",
+    "actions: read",
+    "contents: read",
+    "timeout-minutes:",
+    "concurrency:",
+    "cancel-in-progress: true",
+    "persist-credentials: false",
+    "bash --noprofile --norc -euo pipefail {0}"
+  ]
+}

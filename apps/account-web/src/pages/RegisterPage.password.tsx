@@ -1,18 +1,13 @@
-import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core';
-import { adjacencyGraphs, dictionary as commonDictionary } from '@zxcvbn-ts/language-common';
-import { dictionary as frDictionary, translations } from '@zxcvbn-ts/language-fr';
-import { useMemo } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
-zxcvbnOptions.setOptions({
-  dictionary: {
-    ...commonDictionary,
-    ...frDictionary,
-  },
-  graphs: adjacencyGraphs,
-  translations,
-});
+interface PasswordStrength {
+  feedback: {
+    warning: string | null;
+  };
+  score: number;
+}
 
 const strengthLevels = [
   {
@@ -43,19 +38,33 @@ const strengthLevels = [
 ] as const;
 
 export function PasswordStrengthMeter({ password }: { password: string }) {
-  const result = useMemo(() => {
-    if (!password) {
-      return null;
+  const deferredPassword = useDeferredValue(password);
+  const [result, setResult] = useState<PasswordStrength | null>(null);
+
+  useEffect(() => {
+    if (!deferredPassword) {
+      setResult(null);
+      return;
     }
 
-    return zxcvbn(password);
-  }, [password]);
+    let active = true;
+    void import('./RegisterPage.password-strength').then(({ estimatePasswordStrength }) => {
+      if (active) {
+        setResult(estimatePasswordStrength(deferredPassword));
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [deferredPassword]);
 
   if (!result) {
     return null;
   }
 
-  const level = strengthLevels[result.score] ?? strengthLevels[0];
+  const score = Math.min(Math.max(result.score, 0), strengthLevels.length - 1);
+  const level = strengthLevels[score] ?? strengthLevels[0];
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -64,7 +73,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
         aria-label={`Robustesse du mot de passe : ${level.label}`}
         aria-valuemin={0}
         aria-valuemax={4}
-        aria-valuenow={result.score}
+        aria-valuenow={score}
         role="meter"
       >
         {strengthLevels.map((strengthLevel, index) => (
@@ -72,7 +81,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
             key={strengthLevel.color}
             className={cn(
               'h-full rounded-full bg-muted transition-colors',
-              index <= result.score && level.color,
+              index <= score && level.color,
             )}
             aria-hidden="true"
           />

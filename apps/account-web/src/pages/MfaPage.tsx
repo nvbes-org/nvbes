@@ -1,5 +1,5 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { MfaPageAddFactorCard, MfaPageRecoveryCodesCard } from './MfaPageAddFactorCard';
 import { MfaPageFactorList } from './MfaPageFactorList';
 import { MfaPageEmptyState, MfaPageHeader, MfaPageSkeleton } from './MfaPage.layout';
@@ -11,6 +11,9 @@ export default function MfaPage() {
     factors,
     loading,
     error,
+    hasMore,
+    loadMore,
+    loadingMore,
     removingId,
     showStepUp,
     stepUpMethod,
@@ -22,6 +25,7 @@ export default function MfaPage() {
     hasTotp,
     hasWebAuthn,
     hasRecovery,
+    recoveryCreatedAt,
     navigateBack,
     navigateTo,
     handleRemove,
@@ -54,11 +58,37 @@ export default function MfaPage() {
 
       <MfaPageFactorList factors={visibleFactors} removingId={removingId} onRemove={handleRemove} />
 
-      <Separator className="my-2" />
+      {hasMore && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={loadingMore}
+          onClick={() => void loadMore()}
+        >
+          {loadingMore ? 'Chargement…' : 'Charger plus de facteurs'}
+        </Button>
+      )}
+
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-heading font-semibold">Ajouter une nouvelle méthode</h1>
+      </div>
 
       <MfaPageAddFactorCard onNavigate={navigateTo} />
 
-      <MfaPageRecoveryCodesCard hasRecovery={hasRecovery} onNavigate={navigateTo} />
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-heading font-semibold">Codes de récupération</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {hasRecovery
+            ? 'Gardez vos codes dans un endroit sûr et régénérez-les si nécessaire.'
+            : 'Générez des codes de secours pour récupérer votre accès.'}
+        </p>
+      </div>
+
+      <MfaPageRecoveryCodesCard
+        hasRecovery={hasRecovery}
+        recoveryCreatedAt={recoveryCreatedAt}
+        onNavigate={navigateTo}
+      />
 
       <MfaPageStepUpDialog
         open={showStepUp}

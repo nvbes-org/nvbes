@@ -1,4 +1,4 @@
-import { type GpcStatus, type UserConsent } from '@nvbes/identity-client';
+import type { GpcStatus, UserConsent } from '@nvbes/identity-client';
 import { useState } from 'react';
 import { useAccountPrivacyPageActions } from './useAccountPrivacyPage.actions';
 import { useAccountPrivacyPageLoad } from './useAccountPrivacyPage.load';
@@ -15,6 +15,9 @@ export function useAccountPrivacyPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [cookieConsentRevision, setCookieConsentRevision] = useState(0);
+  const handleCookieConsentChange = () => {
+    setCookieConsentRevision((revision) => revision + 1);
+  };
 
   useAccountPrivacyPageLoad({
     setConsents,
@@ -48,6 +51,7 @@ export function useAccountPrivacyPage() {
     deleteConfirmText,
     deleteError,
     cookieConsentRevision,
+    handleCookieConsentChange,
     setShowDeleteDialog,
     setDeleteConfirmText,
     ...actions,

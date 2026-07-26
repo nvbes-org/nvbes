@@ -26,11 +26,27 @@ pub use reset_impl::reset;
 use crate::http::error::AppError;
 
 pub fn hash_password(password: &str) -> Result<String, AppError> {
-    Ok(core::hash_password(password)?)
+    hash_password_with_pepper(password, None)
+}
+
+pub fn hash_password_with_pepper(password: &str, pepper: Option<&str>) -> Result<String, AppError> {
+    Ok(core::hash_password_with_pepper(
+        password,
+        pepper.map(|p| p.as_bytes()),
+    )?)
 }
 
 pub fn verify_password(hash: &str, password: &str) -> Result<(), AppError> {
-    if core::verify_password(password, hash)? {
+    verify_password_with_pepper(hash, password, None)
+}
+
+pub fn verify_password_with_pepper(
+    hash: &str,
+    password: &str,
+    pepper: Option<&str>,
+) -> Result<(), AppError> {
+    let (valid, _) = verify_and_check_rehash(hash, password, pepper)?;
+    if valid {
         Ok(())
     } else {
         Err(AppError::unauthorized(
@@ -38,6 +54,22 @@ pub fn verify_password(hash: &str, password: &str) -> Result<(), AppError> {
             "Invalid email or password.",
         ))
     }
+}
+
+pub fn verify_and_check_rehash(
+    hash: &str,
+    password: &str,
+    pepper: Option<&str>,
+) -> Result<(bool, bool), AppError> {
+    Ok(core::verify_and_check_rehash(
+        password,
+        hash,
+        pepper.map(|p| p.as_bytes()),
+    )?)
+}
+
+pub fn dummy_verify_password(password: &str, pepper: Option<&str>) {
+    core::dummy_verify_password(password, pepper.map(|p| p.as_bytes()));
 }
 
 pub fn generate_random_token() -> String {

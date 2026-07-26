@@ -9,6 +9,8 @@ import {
 } from './useMfaPage.step-up.helpers';
 import { resetMfaStepUpState } from './useMfaPage.step-up.state';
 
+import { isStepUpRequiredError } from '@/identity.step-up';
+
 export function useMfaStepUp({ setFactors }: { setFactors: SetFactors }) {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [showStepUp, setShowStepUp] = useState(false);
@@ -39,13 +41,12 @@ export function useMfaStepUp({ setFactors }: { setFactors: SetFactors }) {
         setFactors((prev) => prev.filter((factor) => factor.id !== factorId));
         setRemovingId(null);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to remove factor';
-
-        if (message.includes('step_up_required')) {
+        if (isStepUpRequiredError(err)) {
           setShowStepUp(true);
           return;
         }
 
+        const message = err instanceof Error ? err.message : 'Failed to remove factor';
         setStepUpError(message);
         setRemovingId(null);
       }
@@ -54,7 +55,7 @@ export function useMfaStepUp({ setFactors }: { setFactors: SetFactors }) {
   );
 
   const handleStepUp = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.SubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
       setStepUpLoading(true);
       setStepUpError(null);

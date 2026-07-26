@@ -5,7 +5,7 @@ pub const AFRICA_ME_PROFILES_PART_3: &[RegionProfile] = &[
     RegionProfile {
         country_code: "TN",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Inpdp,
         primary_timezone: TZ_AFRICA_TUNIS,
         timezones: &[TZ_AFRICA_TUNIS],
         sub_region: None,

@@ -26,8 +26,8 @@ pub async fn verify_primary_credentials(
 ) -> Result<VerifiedPrimaryLogin, AppError> {
     let email = password::normalize_email(&input.email);
     let throttle_keys = LoginThrottleKeys::from_parts(input.ip.as_deref(), &email, None);
-    let [ip_rule, account_rule] = throttle_keys.pre_lookup_rules();
-    nvbes_core::limiter::check_rate_limit_pair(redis, LOGIN_THROTTLE_ACTION, ip_rule, account_rule)
+    let throttle_rules = throttle_keys.pre_lookup_rules();
+    nvbes_core::limiter::check_rate_limit_rules(redis, LOGIN_THROTTLE_ACTION, &throttle_rules)
         .await?;
 
     let Some(row) = sqlx::query(
@@ -55,6 +55,7 @@ pub async fn verify_primary_credentials(
     .fetch_optional(db)
     .await?
     else {
+        password::dummy_verify_password(&input.password, config.auth_password_pepper.as_deref());
         credential_stuffing::record_failed_login(
             db,
             redis,
@@ -131,13 +132,29 @@ pub async fn verify_primary_credentials(
     }
 
     let password_hash: Option<String> = row.get("password_hash");
-    let stored_hash = password_hash.ok_or_else(|| {
-        AppError::unauthorized("invalid_credentials", "Invalid email or password.")
-    })?;
+    let stored_hash = match password_hash {
+        Some(h) => h,
+        None => {
+            password::dummy_verify_password(
+                &input.password,
+                config.auth_password_pepper.as_deref(),
+            );
+            return Err(AppError::unauthorized(
+                "invalid_credentials",
+                "Invalid email or password.",
+            ));
+        }
+    };
 
     crate::domains::auth::login_delay::apply_login_delay(db, principal_id).await?;
 
-    if let Err(err) = password::verify_password(&stored_hash, &input.password) {
+    let (is_valid, needs_rehash) = password::verify_and_check_rehash(
+        &stored_hash,
+        &input.password,
+        config.auth_password_pepper.as_deref(),
+    )?;
+
+    if !is_valid {
         let _ = risk::record_event(
             db,
             risk::RiskEventInput {
@@ -180,7 +197,25 @@ pub async fn verify_primary_credentials(
             "invalid_password",
         )
         .await?;
-        return Err(err);
+        return Err(AppError::unauthorized(
+            "invalid_credentials",
+            "Invalid email or password.",
+        ));
+    }
+
+    if needs_rehash {
+        if let Ok(new_hash) = password::hash_password_with_pepper(
+            &input.password,
+            config.auth_password_pepper.as_deref(),
+        ) {
+            let _ = sqlx::query(
+                "UPDATE users SET password_hash = $2, updated_at = NOW() WHERE principal_id = $1",
+            )
+            .bind(principal_id)
+            .bind(&new_hash)
+            .execute(db)
+            .await;
+        }
     }
 
     let stuffing_score = credential_stuffing::successful_password_risk_score(

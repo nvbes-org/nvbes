@@ -4,6 +4,7 @@ export type SharedAccountOption = {
   displayName: string;
   isActive: boolean;
   avatarFallback?: string;
+  avatarUrl?: string;
 };
 
 const SWITCHER_MENU_MIN_WIDTH = 384;

@@ -6,7 +6,22 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MemberListResponse {
     pub members: Vec<MemberView>,
+    pub members_next_cursor: Option<String>,
+    pub members_has_more: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InvitationListResponse {
     pub invitations: Vec<InvitationView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}
+
+pub struct ListMembersInput {
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub role: Option<WorkspaceRole>,
+    pub email_prefix: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,3 +86,7 @@ pub struct UpdateMemberInput {
 pub struct AcceptInvitationInput {
     pub token: String,
 }
+
+#[cfg(test)]
+#[path = "drive.domains.members.types.tests.rs"]
+mod tests;

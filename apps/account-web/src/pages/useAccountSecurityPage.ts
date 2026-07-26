@@ -6,7 +6,7 @@ import { useTransition } from 'react';
 import { z } from 'zod';
 
 import { accountQueryKeys } from '@/account.queries';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { readAuthuser } from '@/identity.authuser';
 import { identityHttpClient } from '../identity.http';
 
 const SecurityPreferencesSchema = z.object({
@@ -30,7 +30,7 @@ export interface SecurityOverview {
 
 export function useAccountSecurityPage() {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const queryClient = useQueryClient();
@@ -95,19 +95,27 @@ export function useAccountSecurityPage() {
     mutation,
     onOpenMfa: () =>
       startTransition(
-        () => void navigate({ to: '/account/mfa', search: authuserSearch(authuser) }),
+        () =>
+          void navigate({
+            to: '/account/$accountIndex/mfa',
+            params: { accountIndex: authuser },
+          }),
       ),
     onOpenPassword: () =>
       startTransition(
         () =>
           void navigate({
-            to: '/account/security/password',
-            search: authuserSearch(authuser),
+            to: '/account/$accountIndex/security/password',
+            params: { accountIndex: authuser },
           }),
       ),
     onOpenSessions: () =>
       startTransition(
-        () => void navigate({ to: '/account/sessions', search: authuserSearch(authuser) }),
+        () =>
+          void navigate({
+            to: '/account/$accountIndex/sessions',
+            params: { accountIndex: authuser },
+          }),
       ),
     overview,
   };

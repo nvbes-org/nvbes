@@ -7,8 +7,9 @@ use axum::{
 
 use crate::{app::AppState, http::error::AppError};
 
+use super::PUBLIC_REPORT_PATHS;
+
 const ORIGIN_SKIP_PATHS: &[&str] = &[
-    "/csp-report",
     "/oauth/token",
     "/oauth/introspect",
     "/oauth/revoke",
@@ -25,7 +26,9 @@ pub async fn origin_guard(
         return Ok(next.run(request).await);
     }
 
-    if ORIGIN_SKIP_PATHS.contains(&request.uri().path()) {
+    if PUBLIC_REPORT_PATHS.contains(&request.uri().path())
+        || ORIGIN_SKIP_PATHS.contains(&request.uri().path())
+    {
         return Ok(next.run(request).await);
     }
 
@@ -64,7 +67,7 @@ fn is_mutating_method(method: &Method) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::ORIGIN_SKIP_PATHS;
+    use super::PUBLIC_REPORT_PATHS;
     use crate::http::cors::same_origin;
 
     #[test]
@@ -93,6 +96,7 @@ mod tests {
 
     #[test]
     fn csp_reports_skip_origin_validation() {
-        assert!(ORIGIN_SKIP_PATHS.contains(&"/csp-report"));
+        assert!(PUBLIC_REPORT_PATHS.contains(&"/csp-report"));
+        assert!(PUBLIC_REPORT_PATHS.contains(&"/observability/network-errors"));
     }
 }

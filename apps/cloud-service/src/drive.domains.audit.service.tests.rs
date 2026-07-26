@@ -1,7 +1,7 @@
 use chrono::Utc;
 use uuid::Uuid;
 
-use super::{AuditEventView, events_to_csv};
+use super::{AuditEventView, AuditEventsResponse, events_to_csv};
 
 #[test]
 fn events_to_csv_includes_actor_principal_id_column() {
@@ -33,4 +33,18 @@ fn events_to_csv_includes_actor_principal_id_column() {
     assert!(header.contains("network_block_reason"));
     assert!(csv.contains("vpn"));
     assert!(csv.contains("user@example.com"));
+}
+
+#[test]
+fn audit_page_serializes_an_opaque_cursor_and_has_more() {
+    let payload = serde_json::to_value(AuditEventsResponse {
+        workspace_id: Uuid::new_v4(),
+        events: Vec::new(),
+        next_cursor: Some("opaque-cursor".to_string()),
+        has_more: true,
+    })
+    .expect("serializes");
+
+    assert_eq!(payload["next_cursor"], "opaque-cursor");
+    assert_eq!(payload["has_more"], true);
 }

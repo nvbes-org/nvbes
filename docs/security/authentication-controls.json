@@ -1,0 +1,508 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+  "reviewCadence": "At auth-flow design, before identity releases, and after every auth incident.",
+  "requirements": [
+    {
+      "id": "AUTHN_REQ_001",
+      "name": "Identity identifiers and username handling",
+      "owasp": "User IDs, Usernames",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_001",
+          "name": "Non-sequential identifiers and normalized verified email identity",
+          "description": "Use UUID-based principals/session identifiers, normalize email addresses, and keep email verification state explicit.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "includes": ["Uuid::new_v4()", "session_id"]
+            },
+            {
+              "path": "libs/rust/core/src/auth.helpers.validation.rs",
+              "includes": ["normalize_email", "validate_email"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.email_verification.change.rs",
+              "includes": [
+                "email_verified_at",
+                "issue_verification_email_tx",
+                "verification_resend_available_at"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_002",
+      "name": "Password strength and breached credential rejection",
+      "owasp": "Implement Proper Password Strength Controls",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_002",
+          "name": "Password strength validation",
+          "description": "Require a minimum password length and zxcvbn strength score without composition-only rules.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/auth.helpers.validation.rs",
+              "includes": [
+                "validate_password",
+                "password.len() < 8",
+                "zxcvbn::zxcvbn",
+                "weak_password"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_003",
+          "name": "Exposed credential screening",
+          "description": "Reject new exposed passwords and reject login with compromised password signals from a trusted proxy.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.exposed_credentials.rs",
+              "includes": ["Exposed-Credential-Check", "password_exposed", "password_compromised"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
+              "includes": ["ExposedCredentialCheck::from_headers", "login_compromised_password"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "includes": ["exposed_credentials::check_new_password"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_003",
+      "name": "Password storage and comparison",
+      "owasp": "Store Passwords in a Secure Fashion, Compare Password Hashes Using Safe Functions",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_004",
+          "name": "Argon2id password hashing",
+          "description": "Hash passwords with Argon2id, per-password random salts, and explicit memory/time/parallelism parameters.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": [
+                "Algorithm::Argon2id",
+                "SaltString::generate",
+                "Params::new(65536, 3, 4, None)"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_005",
+          "name": "Verifier-backed password comparison",
+          "description": "Compare user input through the password-hash verifier instead of direct string comparison.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/auth.helpers.password.rs",
+              "includes": [
+                "PasswordHash::new",
+                "verify_password(password.as_bytes(), &parsed_hash)"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.rs",
+              "includes": ["invalid_credentials", "Invalid email or password."]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_004",
+      "name": "Password recovery and change",
+      "owasp": "Implement Secure Password Recovery Mechanism, Change Password Feature",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_006",
+          "name": "Generic and risk-aware password recovery",
+          "description": "Keep forgot-password responses generic, rate-limited, risk-gated, and backed by time-limited reset tokens.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "includes": [
+                "auth_forgot_password",
+                "check_dual_rate_limit",
+                "auth_password_reset_ttl_minutes"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.forgot.rs",
+              "includes": [
+                "password_reset_requested",
+                "risk_policy_blocked",
+                "insert_password_reset_token_tx",
+                "success: true"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_007",
+          "name": "Password reset token consumption and session revocation",
+          "description": "Consume reset tokens, enforce expiry, block password reuse, and revoke sessions and refresh tokens after reset.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.reset.rs",
+              "includes": [
+                "reset_token_expired",
+                "is_password_reused",
+                "apply_password_reset",
+                "clear_user_sessions",
+                "revoke_all_user_refresh_tokens"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_008",
+          "name": "Current-password protected password change",
+          "description": "Require the current password, reject reuse, audit the change, and revoke other sessions and refresh tokens.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.change.rs",
+              "includes": [
+                "input.current_password",
+                "verify_password(stored_hash, &input.current_password)",
+                "password_reused",
+                "auth.password_changed",
+                "clear_user_sessions_except",
+                "revoke_all_user_refresh_tokens"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_005",
+      "name": "Transport and cookie protections",
+      "owasp": "Transmit Passwords Only Over TLS or Other Strong Transport",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_009",
+          "name": "Secure session cookies",
+          "description": "Use HttpOnly, SameSite=Strict, Secure in non-development, __Host- cookie names, and dedicated CSRF cookies.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.http.cookies.rs",
+              "includes": [
+                "HttpOnly",
+                "SameSite=Strict",
+                "Secure",
+                "__Host-",
+                "generate_csrf_token"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.rs",
+              "includes": ["auth_cookie", "csrf_cookie"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_010",
+          "name": "HTTP security headers for authenticated surfaces",
+          "description": "Add HSTS and browser isolation headers on authenticated responses.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": [
+                "STRICT_TRANSPORT_SECURITY",
+                "cross-origin-opener-policy",
+                "cross-origin-resource-policy"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_006",
+      "name": "Reauthentication and step-up",
+      "owasp": "Require Re-authentication for Sensitive Features, Reauthentication After Risk Events",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_011",
+          "name": "Recent step-up enforcement",
+          "description": "Require a recent AAL2 step-up for sensitive actions and store bounded step-up state in the session cache.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.verification.rs",
+              "includes": [
+                "require_recent_step_up",
+                "Aal::Aal2",
+                "step_up_expires_at",
+                "apply_step_up"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.session_mgmt.step_up.rs",
+              "includes": ["password", "totp_code", "webauthn_response", "recovery_code"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_012",
+          "name": "Risk-based authentication events",
+          "description": "Evaluate current risk state and contextual signals before login, recovery, and session creation.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["risk::current_state_summary", "login_blocked", "risk_policy_blocked"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "includes": [
+                "evaluate_login_context_signals",
+                "RiskDecision::StepUp",
+                "record_login_geo_signal"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_007",
+      "name": "Generic errors and enumeration resistance",
+      "owasp": "Authentication and Error Messages",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_013",
+          "name": "Generic login and recovery responses",
+          "description": "Return generic invalid-credential errors and generic forgot-password success for unknown accounts.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["invalid_credentials", "Invalid email or password."]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.forgot.rs",
+              "includes": ["principal_data", "success: true"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_014",
+          "name": "Timing discrepancy mitigation",
+          "description": "Apply progressive delay after repeated failures to reduce brute-force and timing discrepancy usefulness.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.login.delay.rs",
+              "includes": ["compute_progressive_delay", "FAILURE_THRESHOLD", "MAX_DELAY_MS"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["apply_login_delay", "login_failed"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_008",
+      "name": "Automated attack protections",
+      "owasp": "Protect Against Automated Attacks, Login Throttling, CAPTCHA",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_015",
+          "name": "Login, MFA, registration, and reset throttling",
+          "description": "Apply IP/account/tenant and challenge-level rate limits across authentication entry points.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["check_rate_limit_pair", "tenant_rule"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+              "includes": ["check_rate_limit_pair", "mfa_failed"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "includes": ["auth_reset_password", "check_dual_rate_limit"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "includes": ["auth_register", "check_dual_rate_limit", "require_pow_solution"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_016",
+          "name": "Bot friction and proof of work",
+          "description": "Require registration proof-of-work and bot guard signals where automation risk is highest.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "includes": ["pow_nonce", "pow_solution", "auth_register_pow_verified"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_guard.rs",
+              "includes": ["bot_honeypot_triggered"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.bot_guard.tests.rs",
+              "includes": ["bot_honeypot_triggered"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_009",
+      "name": "MFA and FIDO/WebAuthn",
+      "owasp": "Multi-Factor Authentication, FIDO",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_017",
+          "name": "MFA factors and recovery codes",
+          "description": "Support TOTP/email/WebAuthn/recovery factors, one-time recovery code consumption, and risk blocks.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+              "includes": [
+                "random_recovery_code",
+                "token_hash(code)",
+                "invalid_recovery_code",
+                "risk_policy_blocked"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.mfa.email.rs",
+              "includes": [
+                "EMAIL_MFA_CODE_TTL_SECONDS",
+                "verified_mfa_eligible_emails",
+                "email_mfa_requires_verified_email"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_018",
+          "name": "WebAuthn challenge binding and consumption",
+          "description": "Bind WebAuthn challenges to principal/session/tenant/workspace, enforce expiry, verify assertions, update credentials, and consume challenges.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.webauthn.authentication.rs",
+              "includes": [
+                "start_passkey_authentication",
+                "finish_passkey_authentication",
+                "challenge.principal_id != user_id",
+                "challenge.session_id != session_id",
+                "consume_auth_challenge"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.finish.rs",
+              "includes": [
+                "finish_passkey_registration",
+                "finish_securitykey_registration",
+                "consume_auth_challenge"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_010",
+      "name": "Token, OAuth, and OIDC authentication",
+      "owasp": "OAuth 2.0 and 2.1, OpenID Connect",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_019",
+          "name": "JWT validation and refresh-token registration",
+          "description": "Validate RS256, issuer, audience, exp/nbf, token type, and refresh-token registration/revocation state.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.jwt.service.validation.rs",
+              "includes": [
+                "Algorithm::RS256",
+                "validation.set_issuer",
+                "validation.set_audience",
+                "validate_exp = true",
+                "invalid_token_type",
+                "validate_refresh_token_registration"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_020",
+          "name": "JWT claim issuance",
+          "description": "Issue tokens with jti, sid, iss, aud, iat, nbf, exp, acr, amr, auth_time, and client binding where applicable.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.jwt.service.issue.rs",
+              "includes": ["jti: Uuid::new_v4()", "sid:", "acr:", "amr:", "auth_time", "cnf"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_021",
+          "name": "OAuth/OIDC discovery and PKCE",
+          "description": "Expose OIDC/OAuth metadata, require PKCE S256 for public clients, and advertise PAR/JWKS/userinfo endpoints.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.oauth.metadata.rs",
+              "includes": [
+                "openid_configuration",
+                "jwks_uri",
+                "userinfo_endpoint",
+                "require_pushed_authorization_requests",
+                "code_challenge_methods_supported"
+              ]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.oauth.validation.pkce.rs",
+              "includes": [
+                "validate_pkce_for_authorize",
+                "validate_pkce_for_exchange",
+                "S256",
+                "URL_SAFE_NO_PAD"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHN_REQ_011",
+      "name": "Logging and monitoring",
+      "owasp": "Logging and Monitoring",
+      "controls": [
+        {
+          "id": "AUTHN_CTRL_022",
+          "name": "Authentication audit and risk event recording",
+          "description": "Record login, failure, password, WebAuthn, recovery, and risk events without logging raw secrets.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.audit.rs",
+              "includes": ["record_auth_event", "AuditRecordInput"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "includes": ["auth.login_success", "risk_score", "risk_decision"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["auth.login_failed", "RiskEventInput"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.password.change.rs",
+              "includes": ["auth.password_changed", "password_changed"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

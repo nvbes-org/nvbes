@@ -16,7 +16,7 @@
     {
       "id": "user-auth-at-gateway-service-auth-internal",
       "severity": "block",
-      "description": "Gateway resolvers enforce user authorization before calling billing; internal service calls use RequestContext and service credentials."
+      "description": "Gateway resolvers authenticate users through Identity token introspection before calling billing; internal service calls use RequestContext and service credentials."
     },
     {
       "id": "grpc-deadline-policy-required",

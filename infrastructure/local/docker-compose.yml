@@ -29,12 +29,32 @@ services:
     volumes:
       - nvbes_redis_data:/data
     environment:
-      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-redis_dev} --maxmemory 256mb --maxmemory-policy volatile-lru"
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:-redis_dev} --maxmemory 256mb --maxmemory-policy volatile-ttl --appendonly yes --appendfsync everysec --save 60 1"
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    profiles: [infra, full]
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: nvbes-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    profiles: [infra, full]
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.80
+    container_name: nvbes-seaweedfs
+    command: ["server", "-dir=/data", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
+    ports:
+      - "8333:8333"
+      - "9333:9333"
+    volumes:
+      - nvbes_seaweedfs_data:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     profiles: [infra, full]
 
   # ── Profile: observability ────────────────────────────────────────────────
@@ -194,6 +214,7 @@ services:
       - /proc:/host/proc:ro
 
 volumes:
+  nvbes_seaweedfs_data:
   nvbes_alloy_data:
   nvbes_mimir_data:
   nvbes_pgdata:

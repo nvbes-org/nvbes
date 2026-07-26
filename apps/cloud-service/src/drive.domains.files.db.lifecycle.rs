@@ -1,3 +1,4 @@
+use nvbes_core::pagination::KeysetCursor;
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
@@ -13,6 +14,10 @@ pub struct DeleteImpact {
 pub async fn list_trash_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,
+    cursor: Option<&KeysetCursor>,
+    name_prefix: Option<&str>,
+    object_type: Option<&str>,
+    limit: i64,
 ) -> Result<Vec<StorageObjectRecord>, AppError> {
     let objects = sqlx::query_as::<_, StorageObjectRecord>(
         r#"
@@ -35,10 +40,19 @@ pub async fn list_trash_tx(
         WHERE so.workspace_id = $1
           AND so.status = 'trashed'
           AND (parent.id IS NULL OR parent.status <> 'trashed')
-        ORDER BY so.trashed_at DESC NULLS LAST, lower(so.name) ASC
+          AND ($2::timestamptz IS NULL OR (so.trashed_at, so.id) < ($2, $3))
+          AND ($4::text IS NULL OR lower(so.name) LIKE $4 || '%' ESCAPE '\')
+          AND ($5::text IS NULL OR so.object_type::text = $5)
+        ORDER BY so.trashed_at DESC, so.id DESC
+        LIMIT $6
         "#,
     )
     .bind(workspace_id)
+    .bind(cursor.map(|value| value.created_at))
+    .bind(cursor.map(|value| value.id))
+    .bind(name_prefix)
+    .bind(object_type)
+    .bind(limit)
     .fetch_all(&mut **tx)
     .await?;
 

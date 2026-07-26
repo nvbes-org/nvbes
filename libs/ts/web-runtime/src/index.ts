@@ -2,6 +2,8 @@ import { QueryClient, keepPreviousData } from '@tanstack/react-query';
 import { DtoValidationError, HttpError } from '@nvbes/http-client';
 import { isSessionStaleError } from './session-stale';
 
+export * from './csp';
+
 export type ClientErrorKind = 'api' | 'dto' | 'unexpected';
 
 export class ClientRuntimeError extends Error {
@@ -139,6 +141,7 @@ export {
   deriveConsentState,
   hasAnyAnalyticsPurpose,
   OPTIONAL_ANALYTICS_PURPOSES,
+  revokeTrackingConsentType,
   toggleConsentCategory,
   toggleConsentAnalyticsPurpose,
   toggleConsentVendor,
@@ -159,6 +162,10 @@ export {
 export type { VerifiedFetchInit, VerifiedFetchInput, VerifiedFetchOptions } from './verified-fetch';
 export { sanitizeHtml, safeHtmlToString, trustSafeHtml, VerifiedHtml } from './safe-html';
 export type { SafeHtml } from './safe-html';
+export { sanitizeStyleElementCss, safeStyleElementCssToString } from './safe-css';
+export type { SafeStyleElementCss } from './safe-css';
+export { sanitizeUrlForAttribute, safeUrlToString } from './safe-url';
+export type { SafeUrl, SafeUrlOptions } from './safe-url';
 export {
   findInvisibleUnicodeCharacters,
   hasInvisibleUnicodeCharacters,
@@ -194,16 +201,9 @@ export { detectSessionStale, isSessionStaleError } from './session-stale';
 export type { SessionStaleReason, SessionStaleResult } from './session-stale';
 
 export function clientErrorMessage(error: unknown, fallback = 'Une erreur est survenue.'): string {
-  if (error instanceof ClientRuntimeError) {
-    const base = clientRuntimeErrorMessage(error, fallback);
-    return error.requestId ? `${base} (ref: ${error.requestId})` : base;
-  }
-
-  if (error instanceof Error) {
-    return error.message || fallback;
-  }
-
-  return fallback;
+  const normalizedError = normalizeClientError(error);
+  const base = clientRuntimeErrorMessage(normalizedError, fallback);
+  return normalizedError.requestId ? `${base} (ref: ${normalizedError.requestId})` : base;
 }
 
 const API_ERROR_MESSAGES: Record<string, string> = {
@@ -221,6 +221,8 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   step_up_expired: 'La vérification a expiré. Recommencez.',
   invalid_totp_code: "Le code d'authentification est incorrect.",
   invalid_recovery_code: 'Le code de récupération est incorrect.',
+  webauthn_auth_failed:
+    "Votre clé d'accès n'a pas pu être vérifiée. Veuillez réessayer ou choisir une autre méthode de connexion.",
   invalid_email_mfa_code: 'Le code reçu par email est incorrect ou a expiré.',
   email_mfa_not_configured: "La vérification par email n'est pas disponible pour ce compte.",
   email_mfa_requires_verified_email: 'Ajoutez un email vérifié avant d’utiliser cette méthode.',

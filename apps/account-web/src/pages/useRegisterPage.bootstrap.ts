@@ -64,7 +64,7 @@ export function useRegisterPageBootstrap() {
         return;
       }
 
-      void navigate({ to: '/account' });
+      void navigate({ to: '/account/$accountIndex', params: { accountIndex: '0' } });
     };
 
     void check();

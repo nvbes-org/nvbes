@@ -66,7 +66,7 @@ export function SwitcherAvatar({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground',
+        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-muted-foreground',
         className,
       )}
       {...props}

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from '@tanstack/react-router';
 import { Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import StepUpForm from '@/components/StepUpForm';
+import StepUpModal from '@/components/StepUpModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { readAuthuser } from '@/identity.authuser';
@@ -45,17 +45,7 @@ export default function EmailMfaSetupPage() {
       params: { accountIndex: authuser },
     });
 
-  if (step === 'stepup') {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <StepUpForm
-          onSuccess={() => setStep('select')}
-          onCancel={navigateBack}
-          description="Pour activer la MFA par email, veuillez confirmer votre identite."
-        />
-      </div>
-    );
-  }
+  const isStepUp = step === 'stepup';
 
   if (step === 'done') {
     return (
@@ -71,6 +61,13 @@ export default function EmailMfaSetupPage() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
+      <StepUpModal
+        open={isStepUp}
+        onSuccess={() => setStep('select')}
+        onCancel={navigateBack}
+        description="Pour activer la MFA par email, veuillez confirmer votre identite."
+      />
+
       <div>
         <h1 className="text-xl font-heading font-semibold">MFA par email</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -91,7 +88,7 @@ export default function EmailMfaSetupPage() {
             type="button"
             variant="outline"
             className="h-auto justify-start gap-3 py-3"
-            disabled={loading}
+            disabled={loading || isStepUp}
             onClick={async () => {
               setLoading(true);
               setError(null);
@@ -116,7 +113,7 @@ export default function EmailMfaSetupPage() {
         ))}
       </div>
 
-      {!loading && emails.length === 0 ? (
+      {!loading && !isStepUp && emails.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Aucun email secondaire eligible. Verifiez un email secondaire et attendez la fenetre de
           securite requise.

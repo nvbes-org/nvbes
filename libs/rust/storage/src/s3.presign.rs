@@ -9,23 +9,16 @@ pub(super) async fn presign_upload(
     store: &S3ObjectStore,
     key: &str,
     content_type: Option<&str>,
-    expected_size_bytes: i64,
+    _expected_size_bytes: i64,
     expires: std::time::Duration,
 ) -> Result<PresignedUrl, StorageError> {
     let presign_config = PresigningConfig::expires_in(expires)?;
 
-    let mut req = store
-        .client
-        .put_object()
-        .bucket(&store.bucket)
-        .key(key)
-        .content_length(expected_size_bytes);
+    let mut req = store.client.put_object().bucket(&store.bucket).key(key);
 
     if let Some(ct) = content_type {
         req = req.content_type(ct);
     }
-    req = req.content_encoding("identity");
-
     let presigned = req.presigned(presign_config).await?;
 
     tracing::debug!(key, bucket = %store.bucket, expires_secs = expires.as_secs(), "S3 presigned upload URL generated");

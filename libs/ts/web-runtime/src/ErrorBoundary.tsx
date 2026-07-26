@@ -102,7 +102,7 @@ function DefaultErrorFallback({
 }) {
   const sessionStale = isSessionStaleError(error);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-8">
+    <div className="flex min-h-screen items-center justify-center p-8">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-foreground">

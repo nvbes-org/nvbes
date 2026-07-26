@@ -31,12 +31,6 @@ pub fn token_hash_b64(token: &str) -> String {
     URL_SAFE_NO_PAD.encode(digest)
 }
 
-pub fn log_dev_token(token: &str, environment: &str, purpose: &str) {
-    if environment == "development" {
-        tracing::info!(token = %token, %purpose, "Dev token generated (logged, not returned in response)");
-    }
-}
-
 pub fn unique_slug(seed: &str) -> String {
     let base = seed
         .split('@')

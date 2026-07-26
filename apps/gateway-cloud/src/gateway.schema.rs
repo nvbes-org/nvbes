@@ -1,9 +1,10 @@
-use async_graphql::{Context, EmptySubscription, Error, InputObject, Object, Result, Schema};
+use async_graphql::{Context, EmptySubscription, InputObject, Object, Result, Schema};
 
 use crate::{
     billing_client::billing_client,
     pb::nvbes::billing::v1::{
-        CreateCheckoutRequest, GetBillingOverviewRequest, GetBillingPortalRequest,
+        CreateCheckoutRequest, CreatePortalRequest, GetBillingOverviewRequest,
+        GetBillingPortalRequest,
     },
     schema_types::{
         BillingOverview, BillingPortal, CheckoutSession, PortalSession, ProductEntitlements,
@@ -102,12 +103,23 @@ impl MutationRoot {
 
     async fn create_billing_portal_session(
         &self,
-        _ctx: &Context<'_>,
-        _input: CreateBillingPortalSessionInput,
+        ctx: &Context<'_>,
+        input: CreateBillingPortalSessionInput,
     ) -> Result<PortalSession> {
-        Err(Error::new(
-            "Billing gRPC CreatePortalSession is not implemented yet",
-        ))
+        let state = ctx.data::<GatewayState>()?;
+        let request_context = ctx
+            .data::<GatewayRequestContext>()?
+            .for_workspace(&input.workspace_id);
+        let mut client = billing_client(&state.billing_grpc_endpoint).await?;
+        let response = client
+            .create_portal(CreatePortalRequest {
+                context: Some(request_context),
+                workspace_id: input.workspace_id,
+                return_url: input.return_url.unwrap_or_default(),
+            })
+            .await?
+            .into_inner();
+        PortalSession::from_grpc(response)
     }
 }
 

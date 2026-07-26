@@ -4,6 +4,8 @@ use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+use super::pagination::{InvitationListCursor, MemberListCursor};
+
 #[derive(Debug, FromRow)]
 pub struct MemberRecord {
     pub user_id: Uuid,
@@ -100,9 +102,13 @@ pub async fn revoke_user_sessions(
         .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))
 }
 
-pub async fn list_members(
+pub(super) async fn list_members(
     pool: &sqlx::PgPool,
     workspace_id: Uuid,
+    cursor: Option<&MemberListCursor>,
+    role: Option<&str>,
+    email_prefix: Option<&str>,
+    limit: i64,
 ) -> Result<Vec<MemberRecord>, AppError> {
     sqlx::query_as::<_, MemberRecord>(
         r#"
@@ -117,25 +123,53 @@ pub async fn list_members(
         FROM workspace_memberships wm
         INNER JOIN users u ON u.id = wm.user_id
         WHERE wm.workspace_id = $1
+          AND (
+            $2::smallint IS NULL
+            OR (
+              CASE wm.role
+                WHEN 'owner' THEN 0
+                WHEN 'admin' THEN 1
+                WHEN 'member' THEN 4
+                WHEN 'viewer' THEN 5
+                ELSE 6
+              END,
+              lower(u.email),
+              wm.user_id
+            ) > ($2, $3, $4)
+          )
+          AND ($5::text IS NULL OR wm.role::text = $5)
+          AND ($6::text IS NULL OR lower(u.email) LIKE $6 || '%' ESCAPE '\')
         ORDER BY
           CASE wm.role
             WHEN 'owner' THEN 0
             WHEN 'admin' THEN 1
-            WHEN 'member' THEN 2
-            WHEN 'viewer' THEN 3
+            WHEN 'member' THEN 4
+            WHEN 'viewer' THEN 5
+            ELSE 6
           END,
-          u.email ASC
+          lower(u.email) ASC,
+          wm.user_id ASC
+        LIMIT $7
         "#,
     )
     .bind(workspace_id)
+    .bind(cursor.map(|value| value.role_rank))
+    .bind(cursor.map(|value| value.normalized_email.as_str()))
+    .bind(cursor.map(|value| value.user_id))
+    .bind(role)
+    .bind(email_prefix)
+    .bind(limit)
     .fetch_all(pool)
     .await
     .map_err(Into::into)
 }
 
-pub async fn list_pending_invitations(
+pub(super) async fn list_invitations(
     pool: &sqlx::PgPool,
     workspace_id: Uuid,
+    cursor: Option<&InvitationListCursor>,
+    statuses: &[String],
+    limit: i64,
 ) -> Result<Vec<InvitationRecord>, AppError> {
     sqlx::query_as::<_, InvitationRecord>(
         r#"
@@ -150,11 +184,20 @@ pub async fn list_pending_invitations(
           created_at
         FROM workspace_invitations
         WHERE workspace_id = $1
-          AND status IN ('pending', 'accepted')
-        ORDER BY created_at DESC
+          AND (
+            $2::timestamp with time zone IS NULL
+            OR (created_at, id) < ($2, $3)
+          )
+          AND (cardinality($4::text[]) = 0 OR status::text = ANY($4))
+        ORDER BY created_at DESC, id DESC
+        LIMIT $5
         "#,
     )
     .bind(workspace_id)
+    .bind(cursor.map(|value| value.created_at))
+    .bind(cursor.map(|value| value.id))
+    .bind(statuses)
+    .bind(limit)
     .fetch_all(pool)
     .await
     .map_err(Into::into)

@@ -1,4 +1,5 @@
 import { BoxIcon, CircleOffIcon, ShieldIcon, UsersIcon } from 'lucide-react';
+import { AuthBrandWordmark } from './AuthBrandWordmark';
 
 export function RegisterBrandPanel() {
   return (
@@ -18,9 +19,7 @@ export function RegisterBrandPanel() {
           <div className="mb-16 inline-flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <CircleOffIcon className="size-5 stroke-[2.5]" aria-hidden="true" />
           </div>
-          <h2 className="text-4xl font-bold leading-tight tracking-tight text-foreground/85">
-            nvbes
-          </h2>
+          <AuthBrandWordmark />
           <p className="mt-4 max-w-xs text-base leading-relaxed text-muted-foreground">
             Votre cloud, sans dispersion, prêt à grandir avec votre équipe.
           </p>

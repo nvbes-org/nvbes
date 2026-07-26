@@ -1,16 +1,8 @@
-import type {
-  AccountEntry,
-  AccountMe,
-  AccountPrincipal,
-  AccountWorkspace,
-} from '@nvbes/identity-client';
+import type { AccountEntry, AccountMe, AccountPrincipal } from '@nvbes/identity-client';
 import { accountQueryKeys } from '@/account.queries';
 
 export interface AccountPersonalInfoQueryData {
   user: AccountPrincipal;
-  current_workspace_region: string | null;
-  current_workspace_id: string | null;
-  workspaces: AccountWorkspace[];
 }
 
 export function getAccountPersonalInfoQueryKey(authuser: string) {
@@ -22,7 +14,6 @@ export function getAccountPersonalInfoContextUpdate(data: { user: AccountPrincip
     current:
       | {
           me: AccountMe | null;
-          workspaces: AccountWorkspace[];
           accounts: AccountEntry[];
         }
       | undefined,

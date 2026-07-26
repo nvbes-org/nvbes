@@ -1,54 +1,20 @@
-import type { CookieConsentState } from './tracking-consent';
+import {
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
+  CATEGORY_ANALYTICS_PURPOSES_MAP,
+  type CookieConsentState,
+  consentStateFromPurposes,
+} from './tracking-consent.storage';
 
 export type AnalyticsPurpose = keyof CookieConsentState['analytics'];
 
-export const OPTIONAL_ANALYTICS_PURPOSES: AnalyticsPurpose[] = [
-  'productAnalytics',
-  'autocaptureHeatmaps',
-  'sessionReplay',
-  'surveysFeedback',
-  'featureFlags',
-];
+export const OPTIONAL_ANALYTICS_PURPOSES: AnalyticsPurpose[] = ['productAnalytics'];
 
 export function hasAnyAnalyticsPurpose(analytics: CookieConsentState['analytics']): boolean {
   return Object.values(analytics).some((value) => value);
 }
 
-function analyticsConsentForState(consent: CookieConsentState): CookieConsentState['analytics'] {
-  const analyticsGranted = consent.categories.analytics || consent.vendors.posthog;
-  const performanceGranted =
-    consent.categories.performance || consent.vendors.sentry || consent.vendors.grafana;
-
-  return {
-    productAnalytics: analyticsGranted,
-    autocaptureHeatmaps: analyticsGranted,
-    sessionReplay: analyticsGranted,
-    surveysFeedback: analyticsGranted,
-    featureFlags: analyticsGranted,
-    errorTracking: performanceGranted,
-  };
-}
-
 export function deriveConsentState(consent: CookieConsentState): CookieConsentState {
-  const vendors = {
-    stripe: true,
-    identity: true,
-    cloudflare: true,
-    posthog: consent.vendors.posthog,
-    sentry: consent.vendors.sentry,
-    grafana: consent.vendors.grafana,
-  };
-  const categories = {
-    essentials: true,
-    analytics: consent.categories.analytics || vendors.posthog,
-    performance: consent.categories.performance || vendors.sentry || vendors.grafana,
-  };
-
-  return {
-    categories,
-    vendors,
-    analytics: analyticsConsentForState({ ...consent, categories, vendors }),
-  };
+  return consentStateFromPurposes(consent.analytics);
 }
 
 export function toggleConsentCategory(
@@ -59,21 +25,13 @@ export function toggleConsentCategory(
     return consent;
   }
 
+  const nextAnalytics = { ...consent.analytics };
   const nextValue = !consent.categories[category];
-  const nextVendors = { ...consent.vendors };
-
-  if (category === 'analytics') {
-    nextVendors.posthog = nextValue;
-  } else {
-    nextVendors.sentry = nextValue;
-    nextVendors.grafana = nextValue;
+  for (const purpose of CATEGORY_ANALYTICS_PURPOSES_MAP[category]) {
+    nextAnalytics[purpose] = nextValue;
   }
 
-  return deriveConsentState({
-    categories: { ...consent.categories, [category]: nextValue },
-    vendors: nextVendors,
-    analytics: { ...consent.analytics },
-  });
+  return consentStateFromPurposes(nextAnalytics);
 }
 
 export function toggleConsentVendor(
@@ -87,20 +45,58 @@ export function toggleConsentVendor(
     return consent;
   }
 
-  const nextValue = !consent.vendors[vendor];
-  const nextVendors = { ...consent.vendors, [vendor]: nextValue };
+  if (vendor === 'posthog') {
+    return toggleConsentCategory(consent, 'analytics');
+  }
 
-  return deriveConsentState({
-    categories: { ...consent.categories },
-    vendors: nextVendors,
-    analytics: { ...consent.analytics },
-  });
+  return toggleConsentCategory(consent, 'performance');
 }
 
 export function toggleConsentAnalyticsPurpose(
   consent: CookieConsentState,
   purpose: AnalyticsPurpose,
 ): CookieConsentState {
-  void purpose;
-  return deriveConsentState(consent);
+  return consentStateFromPurposes({
+    ...consent.analytics,
+    [purpose]: !consent.analytics[purpose],
+  });
+}
+
+export function revokeTrackingConsentType(
+  consent: CookieConsentState,
+  consentType: string,
+): CookieConsentState {
+  const purpose = Object.entries(ANALYTICS_PURPOSE_CONSENT_TYPES).find(
+    ([, mappedConsentType]) => mappedConsentType === consentType,
+  )?.[0] as AnalyticsPurpose | undefined;
+
+  if (purpose) {
+    return consent.analytics[purpose]
+      ? toggleConsentAnalyticsPurpose(consent, purpose)
+      : deriveConsentState(consent);
+  }
+
+  const revokesAnalytics =
+    consentType === 'cookie_consent' ||
+    consentType === 'cookie_consent_analytics' ||
+    consentType === 'cookie_consent_vendor_analytics' ||
+    consentType === 'cookie_consent_vendor_posthog';
+  const revokesPerformance =
+    consentType === 'cookie_consent' ||
+    consentType === 'cookie_consent_performance' ||
+    consentType === 'cookie_consent_vendor_error_reporting' ||
+    consentType === 'cookie_consent_vendor_sentry' ||
+    consentType === 'cookie_consent_vendor_grafana';
+
+  const analytics = { ...consent.analytics };
+  if (revokesAnalytics) {
+    for (const analyticsPurpose of CATEGORY_ANALYTICS_PURPOSES_MAP.analytics) {
+      analytics[analyticsPurpose] = false;
+    }
+  }
+  if (revokesPerformance) {
+    analytics.errorTracking = false;
+  }
+
+  return consentStateFromPurposes(analytics);
 }

@@ -2,6 +2,7 @@ use axum::http::{HeaderMap, Method, Uri};
 use sha2::{Digest, Sha256};
 const IDEMPOTENCY_KEY_MAX_LEN: usize = 255;
 const DEFAULT_TTL_HOURS: i32 = 24;
+const IN_FLIGHT_TTL_SECONDS: u64 = 120;
 
 #[derive(Debug, Clone)]
 pub struct IdempotencyScope(pub String);
@@ -73,6 +74,12 @@ pub struct StoredIdempotencyResponse {
     pub request_hash: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IdempotencyClaim {
+    Acquired { release_token: String },
+    InProgress { request_hash: String },
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 struct StoredIdempotencyResponseWire {
     response_status: i32,
@@ -113,7 +120,7 @@ pub async fn fetch_idempotency_response(
     key: &str,
     scope: &IdempotencyScope,
 ) -> Result<Option<StoredIdempotencyResponse>, sqlx::Error> {
-    let redis_key = format!("nvbes:idem:{}:{}", scope.as_str(), key);
+    let redis_key = idempotency_response_key(key, scope);
     let wire: Option<StoredIdempotencyResponseWire> =
         nvbes_redis::cache::cache_get_json(redis, &redis_key)
             .await
@@ -136,7 +143,7 @@ pub async fn insert_idempotency_response(
     response_status: i32,
     response_body: &[u8],
 ) -> Result<(), sqlx::Error> {
-    let redis_key = format!("nvbes:idem:{}:{}", scope.as_str(), key);
+    let redis_key = idempotency_response_key(key, scope);
     let stored = StoredIdempotencyResponse {
         response_status,
         response_body: response_body.to_vec(),
@@ -147,6 +154,65 @@ pub async fn insert_idempotency_response(
     nvbes_redis::cache::cache_set_json(redis, &redis_key, &wire, ttl)
         .await
         .map_err(|e| sqlx::Error::Protocol(format!("Redis error: {e}")))
+}
+
+pub async fn claim_idempotency_request(
+    redis: &nvbes_redis::RedisPool,
+    key: &str,
+    scope: &IdempotencyScope,
+    request_hash: &str,
+) -> Result<IdempotencyClaim, sqlx::Error> {
+    let claim_key = idempotency_claim_key(key, scope);
+    let release_token = idempotency_claim_value(request_hash);
+    let (acquired, existing_hash) = nvbes_redis::idempotency::check_and_set(
+        redis,
+        &claim_key,
+        &release_token,
+        IN_FLIGHT_TTL_SECONDS,
+    )
+    .await
+    .map_err(|e| sqlx::Error::Protocol(format!("Redis error: {e}")))?;
+
+    if acquired {
+        return Ok(IdempotencyClaim::Acquired { release_token });
+    }
+
+    Ok(IdempotencyClaim::InProgress {
+        request_hash: existing_hash
+            .as_deref()
+            .map(idempotency_claim_request_hash)
+            .unwrap_or_default()
+            .to_string(),
+    })
+}
+
+pub async fn release_idempotency_claim(
+    redis: &nvbes_redis::RedisPool,
+    key: &str,
+    scope: &IdempotencyScope,
+    release_token: &str,
+) -> Result<(), sqlx::Error> {
+    let claim_key = idempotency_claim_key(key, scope);
+    nvbes_redis::idempotency::delete_if_value(redis, &claim_key, release_token)
+        .await
+        .map(|_| ())
+        .map_err(|e| sqlx::Error::Protocol(format!("Redis error: {e}")))
+}
+
+fn idempotency_response_key(key: &str, scope: &IdempotencyScope) -> String {
+    format!("nvbes:idem:{}:{}", scope.as_str(), key)
+}
+
+fn idempotency_claim_key(key: &str, scope: &IdempotencyScope) -> String {
+    format!("nvbes:idem:claim:{}:{}", scope.as_str(), key)
+}
+
+fn idempotency_claim_value(request_hash: &str) -> String {
+    format!("{request_hash}:{}", uuid::Uuid::new_v4())
+}
+
+fn idempotency_claim_request_hash(value: &str) -> &str {
+    value.split_once(':').map_or(value, |(hash, _)| hash)
 }
 
 #[cfg(test)]
@@ -206,6 +272,28 @@ mod tests {
             signature.len(),
             "POST:/v1/workspaces/abc/objects:".len() + 64
         );
+    }
+
+    #[test]
+    fn idempotency_keys_partition_claims_from_stored_responses() {
+        let scope = IdempotencyScope("scope-a".to_string());
+
+        assert_eq!(
+            idempotency_response_key("key-a", &scope),
+            "nvbes:idem:scope-a:key-a"
+        );
+        assert_eq!(
+            idempotency_claim_key("key-a", &scope),
+            "nvbes:idem:claim:scope-a:key-a"
+        );
+    }
+
+    #[test]
+    fn idempotency_claim_value_preserves_request_hash() {
+        let request_hash = "request-hash-123";
+        let value = idempotency_claim_value(request_hash);
+
+        assert_eq!(idempotency_claim_request_hash(&value), request_hash);
     }
 
     #[test]

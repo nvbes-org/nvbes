@@ -4,15 +4,16 @@
     "command": "node tools/migration/developer-oauth-tokens.mjs --write",
     "sources": [
       "apps/account-service/openapi.json",
+      "apps/developer-service/openapi.json",
       "apps/account-service/src/identity.http.openapi.rs",
+      "apps/developer-service/src/developer.http.openapi.rs",
       "apps/account-service/src/identity.domains.oauth.routes.clients.rs",
       "apps/account-service/src/identity.domains.oauth.clients.create.rs",
       "apps/account-service/src/identity.domains.oauth.clients.revoke.rs",
       "apps/account-service/src/identity.domains.oauth.flows.client_credentials.tests.rs",
-      "apps/account-service/src/identity.domains.developer.tokens.routes.rs",
-      "apps/account-service/src/identity.domains.developer.routes.tokens.rs",
-      "apps/account-service/src/identity.domains.developer.routes.tokens.tests.rs",
-      "apps/account-service/src/identity.domains.developer.routes.oauth.clients.rs",
+      "apps/developer-service/src/developer.http.routes.tools.rs",
+      "apps/developer-service/src/developer.http.routes.oauth.rs",
+      "apps/developer-service/src/developer.http.types.rs",
       "libs/ts/identity-sdk-core/src/types.gen.ts",
       "libs/ts/identity-client/src/index.ts",
       "apps/console-web/src/developer.api.ts",
@@ -21,7 +22,7 @@
       "apps/console-web/src/__tests__/developer.token-health.test.ts"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-account-service token_access_decision --locked",
+      "cargo test -p nvbes-developer-service token_decision_prioritizes_tenant_mismatch --locked",
       "cargo test -p nvbes-account-service machine_token_audit_metadata_records_grant_client_scope_audience_and_jti --locked",
       "pnpm --dir apps/console-web test -- --run developer.schemas.test.ts developer.token-health.test.ts"
     ]
@@ -35,52 +36,52 @@
   "checks": [
     {
       "id": "openapi-oauth-clients-list",
-      "description": "OpenAPI exposes OAuth client listing",
+      "description": "Identity OpenAPI exposes OAuth client listing",
       "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/oauth/clients'].get"
     },
     {
       "id": "openapi-oauth-clients-create",
-      "description": "OpenAPI exposes OAuth client creation",
+      "description": "Identity OpenAPI exposes OAuth client creation",
       "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/oauth/clients'].post"
     },
     {
       "id": "openapi-oauth-clients-revoke",
-      "description": "OpenAPI exposes OAuth client revocation",
+      "description": "Identity OpenAPI exposes OAuth client revocation",
       "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/oauth/clients/{clientId}'].delete"
     },
     {
       "id": "openapi-oauth-policies",
-      "description": "OpenAPI exposes OAuth client policy creation",
+      "description": "Identity OpenAPI exposes OAuth client policy creation",
       "path": "apps/account-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/oauth/clients/{clientId}/policies'].post"
     },
     {
       "id": "openapi-token-inspect",
-      "description": "OpenAPI exposes developer token inspection",
-      "path": "apps/account-service/openapi.json",
+      "description": "Developer OpenAPI exposes token inspection",
+      "path": "apps/developer-service/openapi.json",
       "status": "passed",
       "pattern": "paths['/developer/tokens/inspect'].post"
     },
     {
       "id": "openapi-export-oauth",
-      "description": "OpenAPI export includes OAuth client handlers",
+      "description": "Identity OpenAPI export includes OAuth client handlers",
       "path": "apps/account-service/src/identity.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::oauth::routes::clients::create_client"
     },
     {
       "id": "openapi-export-token-inspect",
-      "description": "OpenAPI export includes token inspection handler",
-      "path": "apps/account-service/src/identity.http.openapi.rs",
+      "description": "Developer OpenAPI export includes token inspection handler",
+      "path": "apps/developer-service/src/developer.http.openapi.rs",
       "status": "passed",
-      "pattern": "crate::domains::developer::tokens_routes::inspect_token"
+      "pattern": "crate::http::routes::tools::inspect_token"
     },
     {
       "id": "oauth-route-create",
@@ -141,30 +142,30 @@
     {
       "id": "developer-token-inspect-permission",
       "description": "Developer token inspection requires permission",
-      "path": "apps/account-service/src/identity.domains.developer.tokens.routes.rs",
+      "path": "apps/developer-service/src/developer.http.routes.tools.rs",
       "status": "passed",
       "pattern": "DeveloperPermission::TokensInspect"
     },
     {
       "id": "developer-token-debug-route",
       "description": "Developer console token debug records hash prefix only",
-      "path": "apps/account-service/src/identity.domains.developer.routes.tokens.rs",
+      "path": "apps/developer-service/src/developer.http.routes.tools.rs",
       "status": "passed",
       "pattern": "token_hash_prefix"
     },
     {
       "id": "developer-token-debug-test",
-      "description": "Backend token debug unit tests cover allowed, expired, and tenant mismatch",
-      "path": "apps/account-service/src/identity.domains.developer.routes.tokens.tests.rs",
+      "description": "Backend token debug unit test covers tenant mismatch precedence",
+      "path": "apps/developer-service/src/developer.http.routes.tools.rs",
       "status": "passed",
-      "pattern": "token_access_decision_prioritizes_tenant_mismatch"
+      "pattern": "token_decision_prioritizes_tenant_mismatch"
     },
     {
       "id": "developer-oauth-list-route",
       "description": "Developer console lists OAuth clients with consent and health status",
-      "path": "apps/account-service/src/identity.domains.developer.routes.oauth.clients.rs",
+      "path": "apps/developer-service/src/developer.http.routes.oauth.rs",
       "status": "passed",
-      "pattern": "list_oauth_client_summaries"
+      "pattern": "DeveloperOAuthClientSummary"
     },
     {
       "id": "sdk-oauth-path",
@@ -181,9 +182,9 @@
       "pattern": "CreateOAuthClientResult"
     },
     {
-      "id": "sdk-token-inspect-types",
-      "description": "Generated SDK core includes token inspection result types",
-      "path": "libs/ts/identity-sdk-core/src/types.gen.ts",
+      "id": "developer-token-inspect-types",
+      "description": "Developer service owns token inspection result types",
+      "path": "apps/developer-service/src/developer.http.types.rs",
       "status": "passed",
       "pattern": "InspectDeveloperTokenResponse"
     },

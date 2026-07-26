@@ -17,9 +17,9 @@ export function SecurityActionRow({
   icon: ComponentType<{ className?: string }>;
   iconColor?: string;
   label: string;
-  description: string;
-  badgeLabel: string;
-  badgeVariant: 'default' | 'secondary';
+  description?: string;
+  badgeLabel?: string;
+  badgeVariant?: 'default' | 'secondary';
   onAction: () => void;
   disabled?: boolean;
 }) {
@@ -37,13 +37,17 @@ export function SecurityActionRow({
         </div>
         <div className="flex min-w-0 flex-col">
           <span className="text-sm font-medium">{label}</span>
-          <span className="truncate text-xs text-muted-foreground">{description}</span>
+          {description && (
+            <span className="truncate text-xs text-muted-foreground">{description}</span>
+          )}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Badge variant={badgeVariant} className="shrink-0">
-          {badgeLabel}
-        </Badge>
+        {badgeLabel && (
+          <Badge variant={badgeVariant} className="shrink-0">
+            {badgeLabel}
+          </Badge>
+        )}
         <ChevronRight className="size-4" />
       </div>
     </Button>

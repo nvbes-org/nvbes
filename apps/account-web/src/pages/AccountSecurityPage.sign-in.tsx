@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import type { SecurityOverview } from './useAccountSecurityPage';
 
@@ -15,10 +15,6 @@ export function SecuritySignInOptionsCard({
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Options de connexion</CardTitle>
-        <CardDescription>Personnalisez la facon dont vous vous authentifiez.</CardDescription>
-      </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">

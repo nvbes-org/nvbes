@@ -59,14 +59,30 @@ pub async fn dpop_auth_middleware(
         ));
     }
 
-    if let Some(ref nonce) = dpop_proof.claims.nonce
-        && let Some(ref store) = state.dpop_nonce
-        && !store
-            .consume(nonce)
+    if let Some(ref store) = state.dpop_nonce {
+        // Enforce jti anti-replay in Redis
+        let is_fresh_jti = store
+            .register_jti(&dpop_proof.claims.jti, &jkt, 300)
             .await
-            .map_err(|error| AppError::internal("dpop_nonce_store_error", error.to_string()))?
-    {
-        return Err(dpop_bad_nonce_error(&state));
+            .map_err(|error| AppError::internal("dpop_jti_store_error", error.to_string()))?;
+
+        if !is_fresh_jti {
+            return Err(AppError::unauthorized(
+                "dpop_jti_reused",
+                "DPoP proof jti has already been used",
+            ));
+        }
+
+        // Enforce Server Nonce
+        let nonce = dpop_proof.claims.nonce.as_deref().unwrap_or("");
+        if nonce.is_empty()
+            || !store
+                .consume(nonce)
+                .await
+                .map_err(|error| AppError::internal("dpop_nonce_store_error", error.to_string()))?
+        {
+            return Err(dpop_bad_nonce_error(&state));
+        }
     }
 
     let dpop_ctx = DpopContext { jkt };
@@ -125,7 +141,10 @@ fn build_htu(headers: &HeaderMap, uri: &str) -> String {
         format!("/{}", uri)
     };
 
-    format!("{}://{}{}", scheme, host, path_and_query)
+    // RFC 9449 §4.3: htu must NOT contain query string or fragment
+    let path = path_and_query.split('?').next().unwrap_or(&path_and_query);
+
+    format!("{}://{}{}", scheme, host, path)
 }
 
 fn dpop_verification_response(_state: &AppState, error: &str, description: &str) -> Response {

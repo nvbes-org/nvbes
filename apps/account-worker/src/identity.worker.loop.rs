@@ -100,7 +100,11 @@ async fn run_access_review_reminders_if_due(
     if last_run.elapsed() < ACCESS_REVIEW_REMINDER_INTERVAL {
         return Ok(());
     }
-    let claim = super::enterprise_grpc::claim_access_review_reminder_candidates().await?;
+    let Some(claim) = super::enterprise_grpc::claim_access_review_reminder_candidates().await?
+    else {
+        *last_run = Instant::now();
+        return Ok(());
+    };
     for candidate in &claim.candidates {
         let payload = reminder_email_payload(&state.config, candidate);
         nvbes_product_account::email::jobs::enqueue_email_job_tx(
@@ -165,7 +169,10 @@ async fn run_access_review_schedules_if_due(last_run: &mut Instant) -> anyhow::R
     if last_run.elapsed() < ACCESS_REVIEW_SCHEDULE_INTERVAL {
         return Ok(());
     }
-    let run = super::enterprise_grpc::materialize_due_access_review_schedules().await?;
+    let Some(run) = super::enterprise_grpc::materialize_due_access_review_schedules().await? else {
+        *last_run = Instant::now();
+        return Ok(());
+    };
     if run.campaigns_created > 0 || run.empty_schedules > 0 {
         tracing::info!(
             campaigns_created = run.campaigns_created,

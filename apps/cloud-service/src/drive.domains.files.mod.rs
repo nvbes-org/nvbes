@@ -10,6 +10,8 @@ pub mod etag;
 pub mod lifecycle;
 #[path = "drive.domains.files.models.rs"]
 pub mod models;
+#[path = "drive.domains.files.pagination.rs"]
+mod pagination;
 #[path = "drive.domains.files.db.queries.rs"]
 pub mod queries;
 #[path = "drive.domains.files.routes.rs"]
@@ -28,5 +30,5 @@ pub use service::{
 };
 pub use types::{
     CreateFolderInput, DownloadUrlResponse, ListObjectsInput, ListObjectsResponse, MoveObjectInput,
-    ObjectResponse, RenameObjectInput,
+    ObjectResponse, ObjectTypeFilter, RenameObjectInput,
 };

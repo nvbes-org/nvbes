@@ -1,8 +1,8 @@
 {
   "name": "@nvbes/identity-sdk-core",
   "version": "0.1.0",
-  "license": "AGPL-3.0-only",
   "description": "OpenAPI specification for nvbes Identity - cross-language SDK generation",
+  "license": "AGPL-3.0-only",
   "files": [
     "openapi.json",
     "README.md"

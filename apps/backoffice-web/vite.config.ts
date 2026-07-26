@@ -3,23 +3,27 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import { defineConfig, loadEnv, type Plugin } from 'vite-plus';
-
-const permissionsPolicy =
-  'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
+import { observabilitySourceMapPlugins } from '../../tools/web-build/vite-observability-sourcemaps';
+import {
+  buildWebCsp,
+  cspMetaFromHeader,
+  permissionsPolicy,
+  uaClientHintsHeaders,
+} from '../../libs/ts/web-runtime/src/csp';
 
 function cspFor(mode: string): string {
-  const connectSrc =
-    mode === 'development'
-      ? "connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:*;"
-      : "connect-src 'self';";
-  return `default-src 'self'; script-src 'self' ${mode === 'development' ? "'unsafe-inline' 'unsafe-eval'" : ''}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; ${connectSrc} object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;`;
+  return buildWebCsp({
+    mode,
+    imgSrc: [],
+    fontSrc: [],
+  });
 }
 
 function cspPlugin(mode: string): Plugin {
   return {
     name: 'backoffice-service-csp',
     transformIndexHtml(html: string) {
-      const csp = cspFor(mode).replace("; frame-ancestors 'none'", '');
+      const csp = cspMetaFromHeader(cspFor(mode));
       return html.replace(
         '<!-- %CSP_META% -->',
         `<meta http-equiv="Content-Security-Policy" content="${csp}" />`,
@@ -31,6 +35,7 @@ function cspPlugin(mode: string): Plugin {
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
+  const envSources = [process.env, localEnv, rootEnv];
   const backofficeServiceBaseUrl =
     process.env.VITE_BACKOFFICE_SERVICE_BASE_URL ||
     localEnv.VITE_BACKOFFICE_SERVICE_BASE_URL ||
@@ -39,10 +44,16 @@ export default defineConfig(({ mode }) => {
   const cspHeader = cspFor(mode);
 
   return {
-    plugins: [tailwindcss(), react(), devtoolsJson(), cspPlugin(mode)],
+    plugins: [
+      tailwindcss(),
+      react(),
+      devtoolsJson(),
+      cspPlugin(mode),
+      ...observabilitySourceMapPlugins({ appName: 'backoffice-web', envSources }),
+    ],
     build: {
       target: 'esnext',
-      sourcemap: true,
+      sourcemap: 'hidden',
       minify: true,
       cssMinify: 'esbuild',
       manifest: true,
@@ -62,6 +73,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '127.0.0.1',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',
@@ -78,6 +90,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '127.0.0.1',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',

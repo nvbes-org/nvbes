@@ -115,9 +115,13 @@ services:
       - --maxmemory-policy
       - volatile-lru
       - --save
-      - ""
+      - "60 1"
       - --appendonly
-      - "no"
+      - "yes"
+      - --appendfsync
+      - "everysec"
+    volumes:
+      - nvbes_redis_data:/data
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_REDIS_PORT:-16379}:6379"
     healthcheck:
@@ -165,6 +169,7 @@ services:
     logging: *limited-logging
 
 volumes:
+  nvbes_redis_data:
   nvbes_seaweedfs_data:
   nvbes_cargo_registry:
   nvbes_cargo_git:

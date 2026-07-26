@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Regression_Testing_Cheat_Sheet.html",
+  "reviewCadence": "At every authorization-sensitive route, policy, OpenAPI, tenant-boundary, or data-access change.",
+  "commands": [
+    {
+      "id": "AUTHZ_REG_CMD_001",
+      "name": "Core policy regression suite",
+      "command": "cargo test -p nvbes-core authz --locked",
+      "purpose": "Run the fast actor-resource-action matrix, horizontal ownership, vertical role boundary, and step-up policy tests.",
+      "evidence": [
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "workspace_membership_roles_cover_expected_permission_boundaries",
+            "member_can_only_modify_owned_objects",
+            "sensitive_actions_require_step_up"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_CMD_002",
+      "name": "Authorization regression registry gate",
+      "command": "pnpm check:authorization-regression",
+      "purpose": "Fail CI when an authorization regression suite, negative assertion, command, or evidence marker is removed.",
+      "evidence": [
+        {
+          "path": "package.json",
+          "includes": [
+            "check:authorization-regression",
+            "tools/security/check-authorization-regression-tests.mjs"
+          ]
+        }
+      ]
+    }
+  ],
+  "suites": [
+    {
+      "id": "AUTHZ_REG_001",
+      "name": "Actor-resource-action matrix",
+      "owasp": "Authorization Test Matrix Design, Define the Access Policy Model",
+      "pattern": "Central machine-readable matrix covering who acts on which workspace resource with which action.",
+      "regressionRisk": "A new role, action, or target role silently receives broader access than intended.",
+      "evidence": [
+        {
+          "path": "libs/rust/core/src/authz.action.rs",
+          "includes": ["pub enum WorkspaceAction", "ViewWorkspace", "DeleteWorkspace"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.role.rs",
+          "includes": ["pub enum WorkspaceRole", "Owner", "Viewer"]
+        },
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "workspace_membership_roles_cover_expected_permission_boundaries",
+            "assert_eq!",
+            "WorkspaceRole::Viewer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_002",
+      "name": "Horizontal escalation and IDOR replay",
+      "owasp": "Horizontal Escalation (IDOR) Validation",
+      "pattern": "Replay object-level actions against resources not owned by the same-privilege actor.",
+      "regressionRisk": "A member can read, rename, delete, or share another member's object by guessing its identifier.",
+      "evidence": [
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "member_can_only_modify_owned_objects",
+            "member_share_link_requires_policy_and_ownership",
+            "owns_resource: true"
+          ]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.db.context.rs",
+          "includes": [
+            "resource_context_for_object",
+            "WHERE id = $1 AND workspace_id = $2",
+            "resource_context_for_share_link",
+            "sl.id = $1 AND sl.workspace_id = $2"
+          ]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.files.routes.trash.rs",
+          "includes": [
+            "resource_context_for_object",
+            "WorkspaceAction::TrashObject",
+            "authorize_workspace_action"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_003",
+      "name": "Vertical escalation role demotion",
+      "owasp": "Vertical Escalation Validation",
+      "pattern": "Exercise privileged actions with lower-privileged roles and assert explicit denial.",
+      "regressionRisk": "Admin, member, viewer, or support roles gain privileged mutation capabilities through refactor drift.",
+      "evidence": [
+        {
+          "path": "libs/rust/core/src/authz.policy.tests.rs",
+          "includes": [
+            "admin_cannot_manage_billing_or_delete_workspace",
+            "viewer_is_read_only",
+            "owner_cannot_invite_or_remove_another_owner"
+          ]
+        },
+        {
+          "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.tests.rs",
+          "includes": [
+            "viewer_cannot_mutate",
+            "specialized_roles_are_limited_to_their_centers",
+            "support_agent_cannot_execute_critical_mutations"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_004",
+      "name": "Tenant and workspace isolation",
+      "owasp": "Tenant Isolation Breakage",
+      "pattern": "Reject tokens, delegated actors, and database access outside their tenant or workspace boundary.",
+      "regressionRisk": "A cross-tenant or cross-workspace token can load data because context validation or RLS was bypassed.",
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.db.tests.access.rs",
+          "includes": [
+            "load_workspace_access_rejects_workspace_mismatch_for_service_account",
+            "workspace_context_mismatch",
+            "load_workspace_access_reduces_effective_role_for_delegated_actor"
+          ]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.db.workspace_scope.rs",
+          "includes": [
+            "validate_workspace_context",
+            "validate_actor_context",
+            "DelegatedContextMismatch"
+          ]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.rls.rs",
+          "includes": ["begin_workspace_transaction", "set_transaction_rls_context", "workspace_id"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_005",
+      "name": "Token scope and session-switching regression",
+      "owasp": "Automated Testing Framework Integration, Session Switching",
+      "pattern": "Swap user, machine, delegated, and scoped tokens through the same authorization path.",
+      "regressionRisk": "Machine or delegated tokens bypass missing-scope denial or inherit a stronger role than intended.",
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
+          "includes": [
+            "ensure_scope_allowed_accepts_matching_machine_scope",
+            "ensure_scope_allowed_rejects_missing_machine_scope",
+            "required_scope_for_action"
+          ]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.public_api.routes.access.rs",
+          "includes": ["WorkspaceScopeMismatch", "authorize_scoped_action", "scoped_object_access"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_006",
+      "name": "Contract-driven authorization validation",
+      "owasp": "Contract-Driven Authorization Validation",
+      "pattern": "Keep public authorization endpoints and policy simulations tied to API contract checks.",
+      "regressionRisk": "OpenAPI or gRPC contract changes remove authorization semantics without failing tests.",
+      "evidence": [
+        {
+          "path": "scripts/test-openapi-contract.mjs",
+          "includes": ["POST /authz/decision", "SAFE_PROTECTED_MUTATING_OPERATIONS"]
+        },
+        {
+          "path": "apps/enterprise-service/src/enterprise.grpc.service.contract_tests.rs",
+          "includes": [
+            "policy_simulation_allows_owner_and_reports_step_up",
+            "policy_simulation_denies_unverified_user_before_role_policy",
+            "PermissionDenied"
+          ]
+        },
+        {
+          "path": "apps/enterprise-service/src/enterprise.grpc.policy_evaluation.rs",
+          "includes": ["evaluate_policy", "is_allowed", "requires_step_up"]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_007",
+      "name": "Denied outcome and fail-closed regression",
+      "owasp": "Regression Testing Patterns",
+      "pattern": "Assert denied requests fail closed with explicit forbidden or not-found outcomes, not accidental success.",
+      "regressionRisk": "A missing authorization branch returns success, or a not-found branch leaks resource existence.",
+      "evidence": [
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.service.rs",
+          "includes": ["AppError::forbidden", "permission_denied", "email_not_verified"]
+        },
+        {
+          "path": "apps/cloud-service/src/drive.domains.authz.db.context.rs",
+          "includes": ["object_not_found", "share_link_not_found"]
+        },
+        {
+          "path": "apps/backoffice-service/src/internal_admin.backoffice_authorization.rs",
+          "includes": [
+            "backoffice_permission_denied",
+            "record_permission_denied",
+            "AppError::forbidden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTHZ_REG_008",
+      "name": "CI/CD authorization gate",
+      "owasp": "CI/CD Gating and SDLC Integration",
+      "pattern": "Run a dedicated authorization regression gate from the root check pipeline.",
+      "regressionRisk": "Authorization tests become optional local knowledge and stop blocking vulnerable pull requests.",
+      "evidence": [
+        {
+          "path": "package.json",
+          "includes": [
+            "pnpm check:authorization",
+            "pnpm check:authorization-regression",
+            "node tools/security/check-authorization-regression-tests.mjs"
+          ]
+        },
+        {
+          "path": "tools/security/check-authorization-regression-tests.mjs",
+          "includes": ["Authorization regression tests", "AUTHZ_REG_", "evidence strings"]
+        }
+      ]
+    }
+  ]
+}

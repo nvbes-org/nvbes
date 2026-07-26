@@ -1,11 +1,12 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
-import { type FormEvent } from 'react';
+import { type SubmitEvent } from 'react';
 import { identityAuthMutationKeys, submitRegisterMutationFn } from '../identity.auth.queries';
 import { resolvePowChallenge } from '../identity.auth.pow';
 import { accountServiceBaseUrl } from '../identity.http';
 import { savePendingOAuthAuthorizeRequest } from '../identity.oauth';
 import { trackEvent } from '../identity.analytics';
+import { isEmailAlreadyExistsError } from './RegisterPage.errors';
 
 interface RegisterSubmitArgs {
   oauthRequest: ReturnType<typeof import('../identity.oauth').readOAuthAuthorizeRequest>;
@@ -17,7 +18,6 @@ interface RegisterSubmitArgs {
   birthdate: string;
   email: string;
   password: string;
-  workspaceName: string;
   canProceedFromStep1: boolean;
   legalDocumentsAccepted: boolean;
   marketingEmailsAccepted: boolean;
@@ -38,7 +38,6 @@ export function useRegisterPageSubmit({
   birthdate,
   email,
   password,
-  workspaceName,
   canProceedFromStep1,
   legalDocumentsAccepted,
   marketingEmailsAccepted,
@@ -49,7 +48,7 @@ export function useRegisterPageSubmit({
     mutationFn: submitRegisterMutationFn,
   });
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canProceedFromStep1 || !legalDocumentsAccepted) {
@@ -69,7 +68,6 @@ export function useRegisterPageSubmit({
           username,
           birthdate: birthdate || undefined,
           password,
-          workspace_name: workspaceName,
           region: selectedRegion || undefined,
           legal_documents_accepted: legalDocumentsAccepted,
           marketing_emails_accepted: marketingEmailsAccepted,
@@ -97,10 +95,12 @@ export function useRegisterPageSubmit({
   };
 
   return {
+    emailAlreadyExists: isEmailAlreadyExistsError(registerMutation.error),
     error: registerMutation.error
       ? clientErrorMessage(registerMutation.error, "Échec de l'inscription.")
       : null,
     handleSubmit,
     loading: registerMutation.isPending,
+    resetError: registerMutation.reset,
   };
 }

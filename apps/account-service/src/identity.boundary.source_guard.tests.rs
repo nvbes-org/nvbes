@@ -57,6 +57,7 @@ const AUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.auth.password.db.rs",
     "identity.domains.auth.sessions.context.rs",
     "identity.domains.auth.sessions.context.workspace_switch.rs",
+    "identity.domains.auth.sessions.db.rs",
     "identity.domains.authz.db.rs",
 ];
 

@@ -1,6 +1,6 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
     routing::{get, patch},
 };
@@ -8,7 +8,8 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use super::service::{
-    MemberListResponse, RemoveMemberResponse, UpdateMemberInput, UpdateMemberResponse,
+    ListMembersInput, MemberListResponse, RemoveMemberResponse, UpdateMemberInput,
+    UpdateMemberResponse,
 };
 use crate::{
     app::AppState,
@@ -36,10 +37,19 @@ struct UpdateMemberRequest {
     role: String,
 }
 
+#[derive(Deserialize)]
+struct ListMembersQuery {
+    limit: Option<i64>,
+    cursor: Option<String>,
+    role: Option<String>,
+    email_prefix: Option<String>,
+}
+
 async fn list_members(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
+    Query(query): Query<ListMembersQuery>,
 ) -> Result<Json<MemberListResponse>, AppError> {
     let access = authorize_workspace_action(
         &state.db,
@@ -50,7 +60,18 @@ async fn list_members(
     )
     .await?;
 
-    let result = crate::domains::members::list_members(&state.db, &access).await?;
+    let role = query.role.as_deref().map(parse_role).transpose()?;
+    let result = crate::domains::members::list_members(
+        &state.db,
+        &access,
+        ListMembersInput {
+            limit: query.limit,
+            cursor: query.cursor,
+            role,
+            email_prefix: query.email_prefix,
+        },
+    )
+    .await?;
 
     Ok(Json(result))
 }

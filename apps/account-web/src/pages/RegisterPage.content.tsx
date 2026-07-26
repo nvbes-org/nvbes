@@ -11,10 +11,12 @@ export function RegisterPageContent({
   detectedRegion,
   detectedReliability,
   email,
+  emailAlreadyExists,
   error,
   firstname,
   handleStep1Next,
   handleStep2Back,
+  handleEditEmail,
   handleSubmit,
   lastname,
   legalDocumentsAccepted,
@@ -34,11 +36,9 @@ export function RegisterPageContent({
   setPassword,
   setSelectedRegion,
   setUsername,
-  setWorkspaceName,
   step,
   supportedRegions,
   username,
-  workspaceName,
 }: RegisterPageContentProps) {
   if (step === 1) {
     return (
@@ -48,6 +48,7 @@ export function RegisterPageContent({
         username={username}
         birthdate={birthdate}
         email={email}
+        emailError={emailAlreadyExists}
         password={password}
         minBirthdate={minBirthdate}
         maxBirthdate={maxBirthdate}
@@ -69,21 +70,21 @@ export function RegisterPageContent({
 
   return (
     <RegisterPageStepTwo
-      workspaceName={workspaceName}
       selectedRegion={selectedRegion}
       detectedRegion={detectedRegion}
       detectedReliability={detectedReliability}
       regionLoading={regionLoading}
       supportedRegions={supportedRegions}
       error={error}
+      emailAlreadyExists={emailAlreadyExists}
       legalDocumentsAccepted={legalDocumentsAccepted}
       loading={loading}
       marketingEmailsAccepted={marketingEmailsAccepted}
-      onWorkspaceNameChange={setWorkspaceName}
       onLegalDocumentsAcceptedChange={setLegalDocumentsAccepted}
       onMarketingEmailsAcceptedChange={setMarketingEmailsAccepted}
       onRegionChange={setSelectedRegion}
       onBack={handleStep2Back}
+      onEditEmail={handleEditEmail}
       onSubmit={handleSubmit}
       regionSelect={(props) => <RegionSelect {...props} />}
     />

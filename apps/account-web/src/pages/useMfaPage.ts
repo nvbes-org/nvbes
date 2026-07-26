@@ -1,19 +1,22 @@
 import { useLocation, useNavigate } from '@tanstack/react-router';
-import { authuserSearch, readAuthuser } from '@/identity.authuser';
+import { accountPathForAuthuser, readAuthuser } from '@/identity.authuser';
 import { useMfaFactors } from './useMfaPage.factors';
 import { useMfaStepUp } from './useMfaPage.step-up';
 
 export function useMfaPage() {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const navigate = useNavigate();
-  const { factors, loading, error, setFactors } = useMfaFactors();
+  const { factors, loading, error, setFactors, hasMore, loadMore, loadingMore } = useMfaFactors();
   const stepUp = useMfaStepUp({ setFactors });
 
   return {
     factors,
     loading,
     error,
+    hasMore,
+    loadMore,
+    loadingMore,
     removingId: stepUp.removingId,
     showStepUp: stepUp.showStepUp,
     stepUpMethod: stepUp.stepUpMethod,
@@ -27,9 +30,17 @@ export function useMfaPage() {
     hasRecovery: factors.some(
       (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
     ),
+    recoveryCreatedAt: factors.find(
+      (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
+    )?.created_at,
     navigateBack: () =>
-      void navigate({ to: '/account/security', search: authuserSearch(authuser) }),
-    navigateTo: (path: string) => void navigate({ to: path, search: authuserSearch(authuser) }),
+      void navigate({
+        to: '/account/$accountIndex/security',
+        params: { accountIndex: authuser },
+      }),
+    navigateTo: (path: string) => {
+      window.location.assign(accountPathForAuthuser(authuser, path));
+    },
     handleRemove: stepUp.handleRemove,
     handleStepUp: stepUp.handleStepUp,
     cancelStepUp: stepUp.cancelStepUp,

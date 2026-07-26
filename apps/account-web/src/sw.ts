@@ -15,7 +15,7 @@ const worker = self as unknown as IdentityWorkerGlobal;
 const precacheManifest = (self as unknown as IdentityWorkerGlobal).__WB_MANIFEST;
 void precacheManifest;
 
-const defaultNotificationUrl = '/account/notifications';
+const defaultNotificationUrl = '/account/0/notifications';
 const defaultNotificationTitle = 'nvbes Identity';
 
 function readPushPayload(event: PushEvent): PushPayload {

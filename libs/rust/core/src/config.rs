@@ -34,6 +34,7 @@ pub struct AppConfig {
     pub billing_database_url: String,
     pub database_max_connections: u32,
     pub auth_session_ttl_hours: i64,
+    pub auth_session_idle_ttl_minutes: i64,
     pub auth_refresh_token_ttl_hours: i64,
     pub auth_verification_ttl_hours: i64,
     pub auth_verification_resend_cooldown_seconds: i64,
@@ -41,10 +42,13 @@ pub struct AppConfig {
     pub auth_password_reset_ttl_minutes: i64,
     pub auth_password_history_size: usize,
     pub auth_password_max_age_days: Option<i64>,
+    #[serde(skip_serializing)]
+    pub auth_password_pepper: Option<String>,
     pub auth_pow_enabled: bool,
     pub auth_pow_difficulty: u32,
     pub auth_pow_ttl_seconds: i64,
     pub auth_step_up_ttl_minutes: i64,
+    pub auth_device_trust_ttl_days: i64,
     #[serde(skip_serializing)]
     pub stripe_secret_key: Option<String>,
     #[serde(skip_serializing)]

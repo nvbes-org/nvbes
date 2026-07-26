@@ -2,8 +2,9 @@ use sqlx::Row;
 use tonic::Status;
 
 use crate::grpc::pb::nvbes::billing::v1::{
-    AdminEntitlementPlan, AdminEntitlementsCenterSnapshot, AdminExpiringEntitlement,
-    AdminOverQuotaBalance, AdminUnpublishedEntitlementChange,
+    AdminEntitlementPlan, AdminEntitlementsActionKind, AdminEntitlementsActionResult,
+    AdminEntitlementsCenterSnapshot, AdminExpiringEntitlement, AdminOverQuotaBalance,
+    AdminUnpublishedEntitlementChange,
 };
 
 pub async fn entitlements_center(
@@ -83,6 +84,60 @@ async fn load_active_plans(db: &sqlx::PgPool) -> Result<Vec<AdminEntitlementPlan
             feature_count: row.get("feature_count"),
         })
         .collect())
+}
+
+pub async fn run_entitlements_action(
+    db: &sqlx::PgPool,
+    kind: AdminEntitlementsActionKind,
+    tenant_id: uuid::Uuid,
+    reason: String,
+) -> Result<AdminEntitlementsActionResult, Status> {
+    validate_reason(&reason)?;
+    match kind {
+        AdminEntitlementsActionKind::PublishChanges => publish_changes(db, tenant_id, reason).await,
+        AdminEntitlementsActionKind::Unspecified => Err(Status::invalid_argument(
+            "admin entitlements action kind is required",
+        )),
+    }
+}
+
+async fn publish_changes(
+    db: &sqlx::PgPool,
+    tenant_id: uuid::Uuid,
+    _reason: String,
+) -> Result<AdminEntitlementsActionResult, Status> {
+    let published_change_count = sqlx::query(
+        "UPDATE billing_entitlement_changes
+         SET published_at = NOW()
+         WHERE tenant_id = $1 AND published_at IS NULL",
+    )
+    .bind(tenant_id)
+    .execute(db)
+    .await
+    .map_err(crate::grpc::service_status::sql_status)?
+    .rows_affected() as i64;
+
+    Ok(AdminEntitlementsActionResult {
+        object_id: uuid::Uuid::nil().to_string(),
+        action_kind: "publish_changes".to_string(),
+        status: "published".to_string(),
+        audit_action: "entitlements.changes.published".to_string(),
+        published_change_count,
+        metadata_json: serde_json::json!({
+            "published_change_count": published_change_count
+        })
+        .to_string(),
+    })
+}
+
+fn validate_reason(value: &str) -> Result<(), Status> {
+    let len = value.trim().len();
+    if (8..=500).contains(&len) {
+        return Ok(());
+    }
+    Err(Status::invalid_argument(
+        "invalid_entitlement_reason: Entitlement action reason must contain between 8 and 500 characters.",
+    ))
 }
 
 async fn load_over_quota_balances(db: &sqlx::PgPool) -> Result<Vec<AdminOverQuotaBalance>, Status> {

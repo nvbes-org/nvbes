@@ -17,5 +17,5 @@ export type MfaPageStepUpDialogProps = {
   onTotpCodeChange: (value: string) => void;
   onRecoveryCodeChange: (value: string) => void;
   onBack: () => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: React.SubmitEvent<HTMLFormElement>) => void;
 };

@@ -28,7 +28,7 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `dev-cloud-worker.sh`: lance le worker Cloud en isolation.
 - `dev-cloud-db-reset.sh`: recree la base Cloud locale `nvbes_cloud` quand les checksums SQLx dev ne correspondent plus.
 - `dev-worker.sh`: alias historique vers le worker Account.
-- `generate-openapi.sh`: regenere les specs OpenAPI et republie `libs/ts/identity-sdk-core/openapi.json`.
+- `generate-openapi.sh`: regenere les specs OpenAPI Account, Developer, Cloud et Backoffice, puis republie les SDK generes.
 
 Variables attendues pour les tests deployes:
 

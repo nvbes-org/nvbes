@@ -24,6 +24,11 @@ impl RedisClient {
         Ok(conn.get(key).await?)
     }
 
+    pub async fn get_del(&self, key: &str) -> RedisResult<Option<String>> {
+        let mut conn = self.pool.get().await?;
+        Ok(conn.get_del(key).await?)
+    }
+
     pub async fn set(&self, key: &str, value: &str) -> RedisResult<()> {
         let mut conn = self.pool.get().await?;
         let _: () = conn.set(key, value).await?;
@@ -72,6 +77,13 @@ impl RedisClient {
 
     pub async fn cache_get_json<T: DeserializeOwned>(&self, key: &str) -> RedisResult<Option<T>> {
         match self.get(key).await? {
+            Some(json) => Ok(Some(serde_json::from_str(&json)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn cache_take_json<T: DeserializeOwned>(&self, key: &str) -> RedisResult<Option<T>> {
+        match self.get_del(key).await? {
             Some(json) => Ok(Some(serde_json::from_str(&json)?)),
             None => Ok(None),
         }

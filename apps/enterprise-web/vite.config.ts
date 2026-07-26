@@ -1,33 +1,38 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite-plus';
-
-const permissionsPolicy =
-  'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
-const integrityPolicyStyles = 'blocked-destinations=(style)';
+import { observabilitySourceMapPlugins } from '../../tools/web-build/vite-observability-sourcemaps';
+import { sriPlugin } from '../../tools/web-build/vite-sri';
+import {
+  buildWebCsp,
+  cspMetaFromHeader,
+  integrityPolicyScripts,
+  permissionsPolicy,
+  uaClientHintsHeaders,
+} from '../../libs/ts/web-runtime/src/csp';
 
 function getCsp(mode: string, stripeJsUrl: string, stripeApiUrl: string): string {
   const isDev = mode === 'development';
 
-  const stripeScript = stripeJsUrl ? ` ${stripeJsUrl}` : '';
-  const stripeFrame = stripeJsUrl ? ` ${stripeJsUrl}` : '';
-  const stripeConnect = stripeApiUrl ? ` ${stripeApiUrl}` : '';
-
-  if (isDev) {
-    return `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' ${stripeScript}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws://localhost:* http://localhost:* ${stripeConnect} http://localhost:8080; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
-  }
-  return `default-src 'self'; script-src 'self' ${stripeScript}; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${stripeConnect}; frame-src 'self' ${stripeFrame}; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; upgrade-insecure-requests;`;
+  return buildWebCsp({
+    mode,
+    scriptSrc: stripeJsUrl ? [stripeJsUrl] : [],
+    styleSrc: ['https://fonts.googleapis.com'],
+    imgSrc: ['https:'],
+    fontSrc: ['https://fonts.gstatic.com'],
+    connectSrc: [
+      ...(stripeApiUrl ? [stripeApiUrl] : []),
+      ...(isDev ? ['http://localhost:8080'] : []),
+    ],
+    frameSrc: stripeJsUrl ? [stripeJsUrl] : [],
+  });
 }
 
 function getMetaCsp(mode: string, stripeJsUrl: string, stripeApiUrl: string): string {
-  return getCsp(mode, stripeJsUrl, stripeApiUrl)
-    .replace("; frame-ancestors 'none'", '')
-    .replace('; report-uri /csp-report', '');
+  return cspMetaFromHeader(getCsp(mode, stripeJsUrl, stripeApiUrl));
 }
 
 function pluginList(plugin: unknown): PluginOption[] {
@@ -45,62 +50,10 @@ function cspPlugin(mode: string, stripeJsUrl: string, stripeApiUrl: string): Plu
   };
 }
 
-function sriPlugin(): Plugin {
-  let outDir: string;
-  const hashes = new Map<string, string>();
-
-  return {
-    name: 'vite-plugin-sri',
-    enforce: 'post',
-    configResolved(config) {
-      outDir = config.build.outDir;
-    },
-    generateBundle(_opts, bundle) {
-      for (const [name, info] of Object.entries(bundle)) {
-        const source = info.type === 'chunk' ? info.code : info.source;
-        if (!source) continue;
-        const input = typeof source === 'string' ? source : Buffer.from(source).toString('utf-8');
-        const hash = crypto.createHash('sha384').update(input, 'utf-8').digest('base64');
-        hashes.set(name, `sha384-${hash}`);
-      }
-    },
-    closeBundle() {
-      const htmlPath = path.resolve(outDir, 'index.html');
-      if (!fs.existsSync(htmlPath)) return;
-      let html = fs.readFileSync(htmlPath, 'utf-8');
-
-      for (const [name, integrity] of hashes) {
-        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        // Add integrity to <script> tags for this chunk
-        html = html.replace(
-          new RegExp(`(<script[^>]*src="[^"]*${escaped}"[^>]*)(>)`, 'g'),
-          (match) => {
-            if (match.includes('integrity=')) return match;
-            return match.includes('crossorigin')
-              ? match.replace('>', ` integrity="${integrity}">`)
-              : match.replace('>', ` integrity="${integrity}" crossorigin="anonymous">`);
-          },
-        );
-        // Add integrity to <link> tags for this asset
-        html = html.replace(
-          new RegExp(`(<link[^>]*href="[^"]*${escaped}"[^>]*)(>)`, 'g'),
-          (match) => {
-            if (match.includes('integrity=')) return match;
-            return match.includes('crossorigin')
-              ? match.replace('>', ` integrity="${integrity}">`)
-              : match.replace('>', ` integrity="${integrity}" crossorigin="anonymous">`);
-          },
-        );
-      }
-
-      fs.writeFileSync(htmlPath, html);
-    },
-  };
-}
-
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
+  const envSources = [process.env, localEnv, rootEnv];
 
   const stripeEnabled =
     process.env.VITE_STRIPE_ENABLED === 'true' ||
@@ -138,7 +91,6 @@ export default defineConfig(({ mode }) => {
       ...pluginList(react()),
       devtoolsJson(),
       cspPlugin(mode, stripeJsUrl, stripeApiUrl),
-      sriPlugin(),
       ...(process.env.ANALYZE
         ? [
             visualizer({
@@ -148,10 +100,12 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
+      ...observabilitySourceMapPlugins({ appName: 'enterprise-web', envSources }),
+      sriPlugin(),
     ].filter(Boolean),
     build: {
       target: 'esnext',
-      sourcemap: true,
+      sourcemap: 'hidden',
       minify: true,
       cssMinify: 'esbuild',
       manifest: true,
@@ -209,8 +163,9 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: 'localhost',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
-        'Integrity-Policy-Report-Only': integrityPolicyStyles,
+        'Integrity-Policy-Report-Only': integrityPolicyScripts,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',
@@ -253,9 +208,9 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: 'localhost',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
-        'Integrity-Policy': integrityPolicyStyles,
-        'Integrity-Policy-Report-Only': integrityPolicyStyles,
+        'Integrity-Policy-Report-Only': integrityPolicyScripts,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',

@@ -16,7 +16,7 @@ pub async fn logout(
     session_id: Uuid,
     user_id: Uuid,
 ) -> Result<(), AppError> {
-    let _ = db;
+    let _ = crate::domains::auth::sessions::db::revoke_session_db(db, session_id).await;
     revoke_logout_session_state(redis, session_id, user_id).await?;
     let _ = record_auth_event(
         db,
@@ -117,10 +117,10 @@ pub async fn revoke(
     user_id: Uuid,
     session_id: Uuid,
 ) -> Result<(), AppError> {
+    let _ = crate::domains::auth::sessions::db::revoke_session_db(db, session_id).await;
     let _ =
         nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
             .await;
-    let _ = db;
     nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, user_id, session_id)
         .await
         .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;

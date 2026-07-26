@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+  "reviewCadence": "At every rendering, consent-screen branding, HTML sanitizer, dynamic URL, custom CSS, CSP, email template, or frontend escape-hatch change.",
+  "requirements": [
+    {
+      "id": "XSS_REQ_001",
+      "name": "Keep framework auto-escaping as the default",
+      "owasp": "Modern frameworks reduce XSS when variables are rendered as text and dangerous escape hatches are controlled.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_001",
+          "name": "Verified HTML escape hatch",
+          "description": "React raw HTML rendering is isolated behind a SafeHtml-branded VerifiedHtml component.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/safe-html.tsx",
+              "includes": ["export type SafeHtml", "VerifiedHtml", "dangerouslySetInnerHTML"]
+            },
+            {
+              "path": "tools/security/check-cross-site-scripting-prevention.mjs",
+              "includes": ["assertNoUnsafeDomSinks", "libs/ts/web-runtime/src/safe-html.tsx"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_002",
+      "name": "Sanitize authored HTML before rendering",
+      "owasp": "HTML sanitization is required when user-authored markup must be rendered rather than encoded as text.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_002",
+          "name": "SafeHtml sanitizer",
+          "description": "HTML sanitization strips executable tags, event handlers, style/srcdoc/action attributes, HTML comments, and unsafe URL attributes.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/safe-html.tsx",
+              "includes": [
+                "BLOCKED_CONTENT_TAGS",
+                "EVENT_HANDLER_ATTRIBUTES",
+                "DANGEROUS_ATTRIBUTES",
+                "UNSAFE_URL_ATTRIBUTES",
+                "HTML_COMMENTS"
+              ]
+            },
+            {
+              "path": "libs/ts/web-runtime/src/xss-prevention.test.ts",
+              "includes": ["sanitizes executable HTML before branding safe HTML"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_003",
+      "name": "Validate URLs before href and src sinks",
+      "owasp": "React does not sanitize javascript: or data: URLs, so dynamic URL attributes require specialized validation.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_003",
+          "name": "SafeUrl attribute primitive",
+          "description": "Dynamic URL attributes use a SafeUrl brand that rejects scriptable protocols, encoded controls, and disallowed schemes.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/safe-url.ts",
+              "includes": [
+                "export type SafeUrl",
+                "sanitizeUrlForAttribute",
+                "javascript:",
+                "data:",
+                "containsEncodedControlChars"
+              ]
+            },
+            {
+              "path": "apps/account-web/src/pages/LoginPageConsent.tsx",
+              "includes": ["safeLogoUrl", "safePrivacyUrl", "safeTermsUrl", "safeSupportUrl"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_004",
+      "name": "Avoid dangerous CSS contexts",
+      "owasp": "Variables in style elements and CSS contexts must be sanitized and should not be allowed to load active or remote content.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_004",
+          "name": "Safe style element CSS",
+          "description": "Custom CSS is branded after rejecting style breakouts, imports, URL loads, legacy expressions, and scriptable protocols.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/safe-css.ts",
+              "includes": ["UNSAFE_STYLE_ELEMENT_PATTERNS", "sanitizeStyleElementCss", "@import"]
+            },
+            {
+              "path": "apps/console-web/src/pages/ConsentScreenPreview.tsx",
+              "includes": ["sanitizeStyleElementCss", "safeStyleElementCssToString"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_005",
+      "name": "Reject dangerous client branding at the server boundary",
+      "owasp": "Validation before storage helps preserve perfect injection resistance when data is later displayed in multiple contexts.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_005",
+          "name": "Consent screen input validation",
+          "description": "Developer consent screen URLs must be HTTPS without credentials and custom CSS with external loads or style breakouts is rejected.",
+          "evidence": [
+            {
+              "path": "apps/developer-service/src/developer.grpc.consent.rs",
+              "includes": ["https_url_option", "safe_css_option", "custom_css contains unsafe CSS"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_006",
+      "name": "Encode server-generated HTML templates",
+      "owasp": "Variables rendered into HTML and attributes must be contextually encoded to avoid interpreting data as markup.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_006",
+          "name": "Email template escaping",
+          "description": "Account email templates HTML-escape replacement values and test script, tag, and attribute injection payloads.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.email.templates.rs",
+              "includes": ["html_escape", "render_template"]
+            },
+            {
+              "path": "apps/account-service/src/identity.email.tests.rs",
+              "includes": ["test_html_escape_prevents_injection_in_name"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_007",
+      "name": "Use CSP only as defense in depth",
+      "owasp": "CSP can limit impact but must not replace contextual encoding, sanitization, and safe sinks.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_007",
+          "name": "Shared CSP defense layer",
+          "description": "Web and API responses use centralized CSP with script attribute blocking, object denial, base-uri/form-action/frame-ancestors restrictions, and CSP reporting.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/csp.ts",
+              "includes": ["script-src-attr", "object-src", "base-uri", "form-action"]
+            },
+            {
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": ["script-src 'none'", "script-src-attr 'none'", "report-uri /csp-report"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "XSS_REQ_008",
+      "name": "Prevent regressions",
+      "owasp": "XSS controls should be enforced continuously because new sinks and framework escape hatches are easy to introduce.",
+      "controls": [
+        {
+          "id": "XSS_CTRL_008",
+          "name": "XSS prevention gate",
+          "description": "The root check validates registry evidence, safe primitives, consent screen usage, dangerous sink bans, tests, and package wiring.",
+          "evidence": [
+            {
+              "path": "tools/security/check-cross-site-scripting-prevention.mjs",
+              "includes": ["Cross Site Scripting Prevention controls", "assertImplementation"]
+            },
+            {
+              "path": "package.json",
+              "includes": ["check:cross-site-scripting-prevention"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

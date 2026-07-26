@@ -56,6 +56,8 @@ pub(crate) async fn change_password(
 ) -> Result<Json<crate::domains::auth::types::ChangePasswordResult>, AppError> {
     exposed_credentials::check_new_password(&headers)?;
 
+    crate::domains::auth::verification::require_recent_step_up(&state.redis, &auth, None).await?;
+
     crate::domains::auth::check_rate_limit(
         &state.redis,
         "auth_change_password",

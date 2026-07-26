@@ -1,7 +1,11 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 
 import type { MfaMethod } from './LoginPage.mfa';
-import { isInvalidSignatureError, isPasswordExpiredError } from './LoginPage.errors';
+import {
+  isInvalidSignatureError,
+  isPasswordExpiredError,
+  isPrimaryEmailVerificationRequiredError,
+} from './LoginPage.errors';
 import { normalizeMfaMethods } from './LoginPage.mfa';
 import { preferredMfaMethod, requestsMfa } from './useLoginPage.shared';
 import type { PasswordMutateAsync } from './useLoginPage.steps.shared';
@@ -78,6 +82,11 @@ export async function submitPasswordStep({
     }
     await finishLogin(result.session_token ?? null);
   } catch (err) {
+    if (isPrimaryEmailVerificationRequiredError(err)) {
+      navigateToVerifyEmail(email, null, null);
+      return;
+    }
+
     if (isInvalidSignatureError(err)) {
       setLoginStateToken(null);
       setSessionToken(null);

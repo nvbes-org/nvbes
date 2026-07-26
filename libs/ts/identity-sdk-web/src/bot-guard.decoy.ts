@@ -268,7 +268,7 @@ export function createDecoyLinks(container: HTMLElement, count: number): DecoyLi
       return () => decoyRef.current?.destroy();
     }, []);
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: SubmitEvent) => {
       e.preventDefault();
       const website = decoyRef.current?.getValue() ?? ""; // "" pour un humain
 

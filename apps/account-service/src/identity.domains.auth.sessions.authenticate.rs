@@ -48,7 +48,7 @@ async fn authenticate_impl(
         .map_err(|e| AppError::unauthorized("invalid_subject", format!("{}", e)))?;
     let session_id = Uuid::parse_str(&claims.sid)
         .map_err(|e| AppError::unauthorized("invalid_session", format!("{}", e)))?;
-    let mut session = get_cached_session(redis, session_id)
+    let mut session = get_cached_session(db, redis, session_id)
         .await?
         .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found."))?;
     if session.principal_id != principal_id.to_string() {
@@ -238,12 +238,27 @@ pub async fn authenticate_verified_bearer(
 }
 
 pub(super) async fn get_cached_session(
+    db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     session_id: Uuid,
 ) -> Result<Option<cache::CachedSession>, AppError> {
-    nvbes_redis::session::get_session(redis, &session_id.to_string())
+    if let Some(session) = nvbes_redis::session::get_session(redis, &session_id.to_string())
         .await
-        .map_err(|err| AppError::internal("redis_session_cache_read_failed", err.to_string()))
+        .map_err(|err| AppError::internal("redis_session_cache_read_failed", err.to_string()))?
+    {
+        return Ok(Some(session));
+    }
+
+    let db_session = super::db::fetch_session_db(db, session_id)
+        .await
+        .map_err(|err| AppError::internal("db_session_cache_read_failed", err.to_string()))?;
+
+    if let Some(ref session) = db_session {
+        let ttl = current_session_ttl(session);
+        let _ = nvbes_redis::session::set_session(redis, session, ttl).await;
+    }
+
+    Ok(db_session)
 }
 
 pub(super) async fn build_user_record_from_cache(

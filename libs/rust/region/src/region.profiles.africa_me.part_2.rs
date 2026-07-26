@@ -5,7 +5,7 @@ pub const AFRICA_ME_PROFILES_PART_2: &[RegionProfile] = &[
     RegionProfile {
         country_code: "KE",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Kdpa,
         primary_timezone: TZ_AFRICA_NAIROBI,
         timezones: &[TZ_AFRICA_NAIROBI],
         sub_region: None,
@@ -86,7 +86,7 @@ pub const AFRICA_ME_PROFILES_PART_2: &[RegionProfile] = &[
     RegionProfile {
         country_code: "MA",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Cndp,
         primary_timezone: TZ_AFRICA_CASABLANCA,
         timezones: &[TZ_AFRICA_CASABLANCA],
         sub_region: None,
@@ -122,7 +122,7 @@ pub const AFRICA_ME_PROFILES_PART_2: &[RegionProfile] = &[
     RegionProfile {
         country_code: "NG",
         data_region: DataRegion::MeAfrica,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Ndpa,
         primary_timezone: TZ_AFRICA_LAGOS,
         timezones: &[TZ_AFRICA_LAGOS],
         sub_region: None,

@@ -7,6 +7,7 @@ interface OAuthStateRecord {
   flow: OAuthFlow;
   state: string;
   codeVerifier: string;
+  nonce: string;
 }
 
 const OAUTH_STORAGE_KEY = 'nvbes_drive_oauth_state';
@@ -14,6 +15,7 @@ const OAuthStateRecordSchema = z.object({
   codeVerifier: z.string(),
   flow: z.enum(['login', 'register']),
   state: z.string(),
+  nonce: z.string(),
 });
 
 function oauthStorage(): OAuthStateRecord | null {
@@ -59,14 +61,15 @@ export async function buildAuthorizationUrl(flow: OAuthFlow): Promise<string> {
   const client = createIdentityClient(flow);
   const { codeVerifier, codeChallenge } = await createPkceChallenge();
   const state = createState();
+  const nonce = createState();
 
-  setOauthStorage({ flow, state, codeVerifier });
+  setOauthStorage({ flow, state, codeVerifier, nonce });
 
   return client.getAuthorizationUrl(
     'openid profile email offline_access drive:read drive:write',
     state,
     codeChallenge,
-    'S256',
+    nonce,
   );
 }
 

@@ -4,6 +4,8 @@ pub mod db;
 pub mod invitations;
 #[path = "drive.domains.members.models.rs"]
 pub mod models;
+#[path = "drive.domains.members.pagination.rs"]
+mod pagination;
 #[path = "drive.domains.members.routes.rs"]
 pub mod routes;
 #[path = "drive.domains.members.service.rs"]

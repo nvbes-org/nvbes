@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "source": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
+  "reviewCadence": "At every frontend resource, API header, third-party script, iframe, style, telemetry endpoint, or reporting endpoint change.",
+  "requirements": [
+    {
+      "id": "CSP_REQ_001",
+      "name": "Deliver CSP through HTTP headers",
+      "owasp": "CSP is implemented via a response header and applied to all application responses.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_001",
+          "name": "Centralized web CSP header builder",
+          "description": "All web applications build Content-Security-Policy headers from the shared web runtime helper instead of local string literals.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/csp.ts",
+              "includes": ["buildWebCsp", "default-src", "cspMetaFromHeader"]
+            },
+            {
+              "path": "apps/cloud-web/vite.config.ts",
+              "includes": ["buildWebCsp", "Content-Security-Policy"]
+            },
+            {
+              "path": "apps/account-web/vite.config.ts",
+              "includes": ["Content-Security-Policy", "permissionsPolicy"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_002",
+      "name": "Restrict script execution",
+      "owasp": "Prevent inline script execution, script attribute handlers, and unsafe JavaScript execution in production.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_002",
+          "name": "Production script execution baseline",
+          "description": "Production web CSP allows scripts only from self and explicitly registered third-party origins; unsafe-inline and unsafe-eval are development-only.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/csp.ts",
+              "includes": [
+                "directive('script-src'",
+                "script-src-attr",
+                "isDev ? [\"'unsafe-inline'\", \"'unsafe-eval'\"] : []"
+              ]
+            },
+            {
+              "path": "tools/security/check-content-security-policy.mjs",
+              "includes": ["assertNoProductionUnsafeScriptSources", "unsafe-inline", "unsafe-eval"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_003",
+      "name": "Constrain resource loading",
+      "owasp": "Restrict remote resources, connections, frames, workers, fonts, and images to application-approved sources.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_003",
+          "name": "Explicit resource source registry",
+          "description": "Web CSP directives cover default, worker, style elements, React style attributes, images, fonts, connections, and frames. Inline style attributes are isolated from the stricter style element policy, while product-specific external sources remain allowlisted in each Vite config.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/csp.ts",
+              "includes": [
+                "default-src",
+                "worker-src",
+                "style-src",
+                "style-src-elem",
+                "style-src-attr",
+                "img-src",
+                "font-src",
+                "connect-src",
+                "frame-src"
+              ]
+            },
+            {
+              "path": "apps/enterprise-web/vite.config.ts",
+              "includes": ["https://js.stripe.com", "https://api.stripe.com", "frameSrc"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_004",
+      "name": "Block injection primitives and clickjacking",
+      "owasp": "Deny object embedding, constrain base URI and form destinations, and prevent framing.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_004",
+          "name": "Navigation and embedding restrictions",
+          "description": "Web and API CSP policies define object-src none, base-uri self, form-action self, and frame-ancestors none.",
+          "evidence": [
+            {
+              "path": "libs/ts/web-runtime/src/csp.ts",
+              "includes": ["object-src", "base-uri", "form-action", "frame-ancestors"]
+            },
+            {
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": [
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "frame-ancestors 'none'"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_005",
+      "name": "Apply a deny-by-default API policy",
+      "owasp": "Non-document API responses should not load active content and should still emit a strict CSP.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_005",
+          "name": "API denylist CSP",
+          "description": "Rust services emit a deny-by-default CSP that blocks scripts, styles, images, fonts, workers, frames, objects, media, and manifests.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/security.headers.rs",
+              "includes": [
+                "CSP_VALUE",
+                "default-src 'none'",
+                "script-src 'none'",
+                "style-src 'none'",
+                "manifest-src 'none'"
+              ]
+            },
+            {
+              "path": "libs/rust/core/src/security.headers.tests.rs",
+              "includes": [
+                "security_headers_apply_explicit_api_csp_denylist",
+                "script-src 'none'",
+                "report-to nvbes-csp-endpoint"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_006",
+      "name": "Collect CSP violation telemetry",
+      "owasp": "Use CSP reporting to detect policy bypasses, rollout regressions, and attempted injection.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_006",
+          "name": "CSP reporting endpoint",
+          "description": "Policies report violations to /csp-report and the account service logs blocked URI, document URI, violated directive, effective directive, and source file.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.http.routes.rs",
+              "includes": ["/csp-report", "csp_report_handler"]
+            },
+            {
+              "path": "apps/account-service/src/identity.http.routes.csp_report.rs",
+              "includes": [
+                "blocked-uri",
+                "violated-directive",
+                "effective-directive",
+                "CSP violation reported"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSP_REQ_007",
+      "name": "Prevent CSP regressions",
+      "owasp": "CSP controls must be reviewed and enforced as part of the repository security gate.",
+      "controls": [
+        {
+          "id": "CSP_CTRL_007",
+          "name": "CSP regression check",
+          "description": "The root check path validates registry evidence, shared CSP usage, required directives, no legacy CSP headers, and no unsafe production script sources.",
+          "evidence": [
+            {
+              "path": "tools/security/check-content-security-policy.mjs",
+              "includes": [
+                "Content Security Policy controls",
+                "assertRequiredWebDirectives",
+                "assertNoLegacyCspHeaders"
+              ]
+            },
+            {
+              "path": "package.json",
+              "includes": [
+                "check:content-security-policy",
+                "tools/security/check-content-security-policy.mjs"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

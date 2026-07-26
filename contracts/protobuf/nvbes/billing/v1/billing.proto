@@ -20,12 +20,15 @@ service BillingService {
   rpc GetAdminCommandCenterBillingMetrics(GetAdminCommandCenterBillingMetricsRequest) returns (AdminCommandCenterBillingMetrics);
   rpc GetAdminOperationsCenter(GetAdminOperationsCenterRequest) returns (AdminOperationsCenterSnapshot);
   rpc GetAdminBillingOverview(GetAdminBillingOverviewRequest) returns (AdminBillingOverview);
+  rpc GetAdminTenantBillingSummary(GetAdminTenantBillingSummaryRequest) returns (AdminTenantBillingSummary);
+  rpc GetAdminWorkspaceBillingSummary(GetAdminWorkspaceBillingSummaryRequest) returns (AdminWorkspaceBillingSummary);
   rpc ListAdminProviderEventFailures(ListAdminProviderEventFailuresRequest) returns (AdminProviderEventFailures);
   rpc SearchAdminBilling(SearchAdminBillingRequest) returns (AdminBillingSearchResults);
   rpc BuildAdminFinanceExport(BuildAdminFinanceExportRequest) returns (AdminFinanceExport);
   rpc GetAdminUsageCenter(GetAdminUsageCenterRequest) returns (AdminUsageCenterSnapshot);
   rpc RunAdminUsageAction(AdminUsageActionRequest) returns (AdminUsageActionResult);
   rpc GetAdminEntitlementsCenter(GetAdminEntitlementsCenterRequest) returns (AdminEntitlementsCenterSnapshot);
+  rpc RunAdminEntitlementsAction(AdminEntitlementsActionRequest) returns (AdminEntitlementsActionResult);
   rpc RunAdminOperationsAction(AdminOperationsActionRequest) returns (AdminOperationsActionResult);
   rpc GetAdminBillingPlatformCenter(GetAdminBillingPlatformCenterRequest) returns (AdminBillingPlatformCenterSnapshot);
   rpc SimulateAdminBillingRouting(SimulateAdminBillingRoutingRequest) returns (AdminBillingRoutingSimulationResult);
@@ -165,6 +168,26 @@ message AdminBillingOverview {
   int64 active_subscription_count = 6;
   int64 captured_payment_total_minor_30d = 7;
   string last_billing_audit_at = 8;
+}
+
+message GetAdminTenantBillingSummaryRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+}
+
+message AdminTenantBillingSummary {
+  int64 open_invoice_count = 1;
+  int64 provider_failure_count = 2;
+}
+
+message GetAdminWorkspaceBillingSummaryRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+}
+
+message AdminWorkspaceBillingSummary {
+  int64 open_invoice_count = 1;
+  int64 active_subscription_count = 2;
 }
 
 message ListAdminProviderEventFailuresRequest {
@@ -363,6 +386,27 @@ message AdminUnpublishedEntitlementChange {
   string created_at = 5;
 }
 
+message AdminEntitlementsActionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string workspace_id = 2;
+  AdminEntitlementsActionKind action_kind = 3;
+  string reason = 4;
+}
+
+enum AdminEntitlementsActionKind {
+  ADMIN_ENTITLEMENTS_ACTION_KIND_UNSPECIFIED = 0;
+  ADMIN_ENTITLEMENTS_ACTION_KIND_PUBLISH_CHANGES = 1;
+}
+
+message AdminEntitlementsActionResult {
+  string object_id = 1;
+  string action_kind = 2;
+  string status = 3;
+  string audit_action = 4;
+  int64 published_change_count = 5;
+  string metadata_json = 6;
+}
+
 message AdminOperationsCenterSnapshot {
   int64 provider_event_failure_count = 1;
   int64 provider_event_backlog_count = 2;
@@ -532,7 +576,8 @@ message KycProfile {
   string vat_id = 6;
   string proof_reference = 7;
   string review_status = 8;
-  string updated_at = 9;
+  string created_at = 9;
+  string updated_at = 10;
 }
 
 message RegionPolicy {

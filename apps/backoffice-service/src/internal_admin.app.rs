@@ -57,7 +57,9 @@ pub fn build_router(state: AppState) -> Router {
             state.clone(),
             crate::rate_limit::backoffice_rate_limit,
         ))
-        .layer(axum::middleware::from_fn(crate::routes::security_headers))
+        .layer(axum::middleware::from_fn(
+            nvbes_core::security::security_headers,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             state.config.clone(),
             nvbes_core::http::client_ip::trusted_client_ip_middleware,

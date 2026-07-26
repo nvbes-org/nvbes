@@ -15,10 +15,10 @@ const sources = {
   providerSubscriptions: 'libs/rust/billing/src/db.provider_subscriptions.rs',
   workspaceEffects: 'libs/rust/billing/src/stripe_webhook_workspace_effects.rs',
   portalSubscriptions: 'libs/rust/billing/src/portal_views.subscriptions.rs',
-  billingMigration: 'apps/billing-api/migrations/0002_billing_platform_core.sql',
+  billingMigration: 'apps/billing-service/migrations/0002_billing_platform_core.sql',
   primaryFallbackMigration:
-    'apps/billing-api/migrations/0004_billing_provider_subscription_primary_fallback.sql',
-  cbMigration: 'apps/billing-api/migrations/0009_billing_provider_cb.sql',
+    'apps/billing-service/migrations/0004_billing_provider_subscription_primary_fallback.sql',
+  cbMigration: 'apps/billing-service/migrations/0009_billing_provider_cb.sql',
   billingClientProvider: 'libs/ts/billing-client/src/billing.provider.ts',
   graphqlSchema: 'contracts/graphql/schema.graphql',
 };

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use nvbes_core::pagination::{KeysetCursor, page_from_rows};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use uuid::Uuid;
 
@@ -17,17 +17,32 @@ pub async fn list_events(
     input: ListAuditEventsInput,
 ) -> Result<AuditEventsResponse, AppError> {
     let limit = normalize_limit(input.limit);
-    let rows = fetch_events(db, access.workspace_id, input, limit).await?;
-    let next_before = if rows.len() == limit as usize {
-        rows.last().map(|event| event.id)
-    } else {
-        None
-    };
+    let cursor = input
+        .cursor
+        .as_deref()
+        .map(KeysetCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let rows = fetch_events(db, access.workspace_id, input, cursor, limit + 1).await?;
+    let page = page_from_rows(rows, limit as usize, |event| KeysetCursor {
+        created_at: event.created_at,
+        id: event.id,
+    });
 
     Ok(AuditEventsResponse {
         workspace_id: access.workspace_id,
-        events: rows,
-        next_before,
+        events: page.items,
+        next_cursor: page
+            .next_cursor
+            .map(KeysetCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
     })
 }
 
@@ -40,7 +55,7 @@ pub async fn export_events(
         access.workspace_id,
         ListAuditEventsInput {
             limit: Some(EXPORT_LIMIT),
-            before_id: None,
+            cursor: None,
             action: None,
             actor_user_id: None,
             actor_principal_id: None,
@@ -49,6 +64,7 @@ pub async fn export_events(
             geo_risk_label: None,
             network_block_reason: None,
         },
+        None,
         EXPORT_LIMIT,
     )
     .await?;
@@ -117,20 +133,9 @@ async fn fetch_events(
     db: &PgPool,
     workspace_id: Uuid,
     input: ListAuditEventsInput,
+    cursor: Option<KeysetCursor>,
     limit: i64,
 ) -> Result<Vec<AuditEventView>, AppError> {
-    let before_created_at = if let Some(before_id) = input.before_id {
-        sqlx::query_scalar::<_, DateTime<Utc>>(
-            "SELECT created_at FROM audit_events WHERE id = $1 AND workspace_id = $2",
-        )
-        .bind(before_id)
-        .bind(workspace_id)
-        .fetch_optional(db)
-        .await?
-    } else {
-        None
-    };
-
     let rows = sqlx::query(
         r#"
         SELECT
@@ -156,26 +161,27 @@ async fn fetch_events(
         FROM audit_events ae
         LEFT JOIN users u ON u.id = ae.actor_user_id
         WHERE ae.workspace_id = $1
-          AND ($2::timestamptz IS NULL OR ae.created_at < $2)
-          AND ($3::text IS NULL OR ae.action = $3)
-          AND ($4::uuid IS NULL OR ae.actor_user_id = $4)
-          AND ($5::uuid IS NULL OR ae.actor_principal_id = $5)
-          AND ($6::text IS NULL OR ae.metadata #>> '{geo,geo_network_kind}' = $6)
-          AND ($7::bigint IS NULL OR COALESCE(NULLIF(ae.metadata #>> '{geo,geo_risk_score}', '')::bigint, 0) >= $7)
+          AND ($2::timestamptz IS NULL OR (ae.created_at, ae.id) < ($2, $3))
+          AND ($4::text IS NULL OR ae.action = $4)
+          AND ($5::uuid IS NULL OR ae.actor_user_id = $5)
+          AND ($6::uuid IS NULL OR ae.actor_principal_id = $6)
+          AND ($7::text IS NULL OR ae.metadata #>> '{geo,geo_network_kind}' = $7)
+          AND ($8::bigint IS NULL OR COALESCE(NULLIF(ae.metadata #>> '{geo,geo_risk_score}', '')::bigint, 0) >= $8)
           AND (
-            $8::text IS NULL OR EXISTS (
+            $9::text IS NULL OR EXISTS (
               SELECT 1
               FROM jsonb_array_elements_text(COALESCE(ae.metadata #> '{geo,geo_risk_labels}', '[]'::jsonb)) AS label(value)
-              WHERE lower(label.value) = $8
+              WHERE lower(label.value) = $9
             )
           )
-          AND ($9::text IS NULL OR ae.metadata->>'network_block_reason' = $9)
+          AND ($10::text IS NULL OR ae.metadata->>'network_block_reason' = $10)
         ORDER BY ae.created_at DESC, ae.id DESC
-        LIMIT $10
+        LIMIT $11
         "#,
     )
     .bind(workspace_id)
-    .bind(before_created_at)
+    .bind(cursor.map(|value| value.created_at))
+    .bind(cursor.map(|value| value.id))
     .bind(normalize_optional_text(input.action))
     .bind(input.actor_user_id)
     .bind(input.actor_principal_id)

@@ -9,8 +9,8 @@ output "api_public_ip" {
 }
 
 output "worker_public_ip" {
-  description = "Worker instance public IPv4 address."
-  value       = scaleway_instance_ip.worker.address
+  description = "Legacy Worker instance public IPv4 address (if enabled)."
+  value       = try(scaleway_instance_ip.worker[0].address, null)
 }
 
 output "postgres_endpoint" {

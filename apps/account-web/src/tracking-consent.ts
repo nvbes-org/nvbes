@@ -1,14 +1,15 @@
 import { identityClient } from '@nvbes/identity-client';
 import {
   ACCEPT_ALL_CONSENT,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
+  type CookieConsentState,
   createTrackingConsentApi,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  ANALYTICS_PURPOSE_CONSENT_TYPES,
+  revokeTrackingConsentType,
   TRACKING_CONSENT_CHANGED_EVENT,
-  type CookieConsentState,
   type TrackingConsentStoredValue,
 } from '@nvbes/web-runtime';
 
@@ -45,13 +46,14 @@ const trackingConsentApi = createTrackingConsentApi({
 
 export {
   ACCEPT_ALL_CONSENT,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
+  type CookieConsentState,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  ANALYTICS_PURPOSE_CONSENT_TYPES,
+  revokeTrackingConsentType,
   TRACKING_CONSENT_CHANGED_EVENT,
-  type CookieConsentState,
   type TrackingConsentStoredValue,
 };
 

@@ -1,25 +1,78 @@
+import { DeviceMonitor, DevicePerformanceState } from './device-monitor';
+
 export interface PowChallenge {
   nonce: string;
   difficulty: number;
 }
 
-export async function solvePowChallenge(nonce: string, difficulty: number): Promise<number> {
+export interface PowSolverProgress {
+  solution?: number;
+  hashesComputed: number;
+  hashesPerSecond: number;
+  estimatedCpuDutyCycle: number;
+  deviceState: DevicePerformanceState;
+}
+
+export interface PowSolverOptions {
+  targetCpuLoad?: number;
+  onProgress?: (progress: PowSolverProgress) => void;
+}
+
+export async function solvePowChallenge(
+  nonce: string,
+  difficulty: number,
+  options?: PowSolverOptions,
+): Promise<number> {
+  const monitor = new DeviceMonitor(options?.targetCpuLoad ?? 0.2);
+  const deviceState = monitor.getPerformanceState();
+
   try {
-    const worker = new Worker(new URL('./worker.pow.ts', import.meta.url), { type: 'module' });
-    const solution = await new Promise<number>((resolve, reject) => {
-      worker.onmessage = (event: MessageEvent<{ solution: number }>) => {
-        resolve(event.data.solution);
-        worker.terminate();
+    const worker = new Worker(new URL('./worker.pow.ts', import.meta.url), {
+      type: 'module',
+    });
+
+    return await new Promise<number>((resolve, reject) => {
+      worker.onmessage = (
+        event: MessageEvent<{
+          type: string;
+          solution?: number;
+          hashesComputed: number;
+          hashesPerSecond: number;
+          estimatedDutyCycle: number;
+        }>,
+      ) => {
+        const { type, solution, hashesComputed, hashesPerSecond, estimatedDutyCycle } = event.data;
+
+        if (options?.onProgress) {
+          options.onProgress({
+            solution,
+            hashesComputed,
+            hashesPerSecond,
+            estimatedCpuDutyCycle: estimatedDutyCycle ?? deviceState.targetCpuLoad,
+            deviceState: monitor.getPerformanceState(),
+          });
+        }
+
+        if (type === 'complete' && typeof solution === 'number') {
+          resolve(solution);
+          worker.terminate();
+        }
       };
+
       worker.onerror = (err) => {
         reject(err);
         worker.terminate();
       };
-      worker.postMessage({ nonce, difficulty });
+
+      worker.postMessage({
+        nonce,
+        difficulty,
+        batchSize: deviceState.recommendedBatchSize,
+        yieldDelayMs: deviceState.recommendedYieldDelayMs,
+      });
     });
-    return solution;
   } catch {
-    return solveMainThread(nonce, difficulty);
+    return solveMainThreadAdaptive(nonce, difficulty, monitor, options);
   }
 }
 
@@ -42,16 +95,64 @@ function leadingZeroBits(hash: Uint8Array): number {
 
 const encoder = new TextEncoder();
 
-async function solveMainThread(nonce: string, difficulty: number): Promise<number> {
+async function solveMainThreadAdaptive(
+  nonce: string,
+  difficulty: number,
+  monitor: DeviceMonitor,
+  options?: PowSolverOptions,
+): Promise<number> {
   let solution = 0;
+  let hashesComputed = 0;
+  const startTime = performance.now();
+  let lastProgressTime = startTime;
+  let hashesInSample = 0;
+
   while (true) {
-    for (let i = 0; i < 5000; i++) {
+    const state = monitor.getPerformanceState();
+    const batchSize = Math.min(state.recommendedBatchSize, 300); // Smaller batch for main thread 60fps safety
+    const yieldDelayMs = Math.max(10, state.recommendedYieldDelayMs);
+
+    for (let i = 0; i < batchSize; i++) {
       const input = `${nonce}:${solution}`;
-      const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(input)));
-      if (leadingZeroBits(hash) >= difficulty) return solution;
+      const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(input));
+      const hash = new Uint8Array(hashBuffer);
+
+      if (leadingZeroBits(hash) >= difficulty) {
+        if (options?.onProgress) {
+          options.onProgress({
+            solution,
+            hashesComputed: hashesComputed + i + 1,
+            hashesPerSecond: Math.round(
+              ((hashesComputed + i + 1) / (performance.now() - startTime)) * 1000,
+            ),
+            estimatedCpuDutyCycle: 0,
+            deviceState: state,
+          });
+        }
+        return solution;
+      }
       solution++;
     }
-    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    hashesComputed += batchSize;
+    hashesInSample += batchSize;
+
+    const now = performance.now();
+    if (now - lastProgressTime >= 400) {
+      if (options?.onProgress) {
+        options.onProgress({
+          hashesComputed,
+          hashesPerSecond: Math.round((hashesInSample / (now - lastProgressTime)) * 1000),
+          estimatedCpuDutyCycle: state.targetCpuLoad,
+          deviceState: state,
+        });
+      }
+      lastProgressTime = now;
+      hashesInSample = 0;
+    }
+
+    // Yield to main UI thread using setTimeout to ensure 60fps responsiveness
+    await new Promise((resolve) => setTimeout(resolve, yieldDelayMs));
   }
 }
 

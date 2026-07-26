@@ -344,6 +344,7 @@ async fn main() -> anyhow::Result<()> {
         start_continuous_profiling(&config, "backoffice-service").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
+    sqlx::migrate!("./migrations").run(&db).await?;
     let app = app::build_router(app::AppState::new(config.clone(), db));
     let http_address = SocketAddr::from(([0, 0, 0, 0], config.api_port));
     let http_listener = keep_alive::bind_listener_with_keepalive(http_address, 4096)?;

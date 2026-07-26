@@ -8,7 +8,8 @@ use super::transfer;
 pub use super::types::{
     CreateFolderInput, DeleteObjectResponse, DownloadObjectInput, DownloadObjectResponse,
     DownloadObjectStatus, DownloadUrlResponse, ListObjectsInput, ListObjectsResponse,
-    MoveObjectInput, ObjectResponse, RenameObjectInput, TrashListResponse,
+    MoveObjectInput, ObjectResponse, ObjectTypeFilter, RenameObjectInput, TrashListInput,
+    TrashListResponse,
 };
 
 pub async fn list_objects(
@@ -32,8 +33,9 @@ pub async fn create_folder(
 pub async fn list_trash(
     db: &sqlx::PgPool,
     access: &WorkspaceAccess,
+    input: TrashListInput,
 ) -> Result<TrashListResponse, AppError> {
-    lifecycle::list_trash(db, access).await
+    lifecycle::list_trash(db, access, input).await
 }
 
 pub async fn rename_object(

@@ -46,7 +46,7 @@ export function MfaPageHeader({ onBack }: { onBack: () => void }) {
         <ArrowLeft data-icon="inline-start" />
         Retour
       </Button>
-      <h1 className="text-xl font-heading font-semibold">Authentification multi-facteurs</h1>
+      <h1 className="text-3xl font-heading font-semibold">Authentification multi-facteurs</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Gérez les méthodes de vérification de votre compte.
       </p>

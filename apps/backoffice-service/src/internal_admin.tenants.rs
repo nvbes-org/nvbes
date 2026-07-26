@@ -16,6 +16,7 @@ use crate::backoffice_authorization::{
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::actor_principal_id;
+use crate::billing_admin_types::BackofficeAccess;
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
@@ -67,8 +68,16 @@ async fn tenant_detail_route(
     headers: HeaderMap,
     Path(tenant_id): Path<Uuid>,
 ) -> Result<Json<TenantDetail>, AppError> {
-    let _actor_id = actor_principal_id(&headers)?;
-    Ok(Json(load_tenant_detail(&state.db, tenant_id).await?))
+    let actor_principal_id = actor_principal_id(&headers)?;
+    Ok(Json(
+        load_tenant_detail(
+            &state.db,
+            &state.billing_grpc_endpoint,
+            actor_principal_id,
+            tenant_id,
+        )
+        .await?,
+    ))
 }
 
 async fn suspend_tenant_route(
@@ -121,7 +130,12 @@ async fn reactivate_tenant_route(
     ))
 }
 
-async fn load_tenant_detail(db: &PgPool, tenant_id: Uuid) -> Result<TenantDetail, AppError> {
+async fn load_tenant_detail(
+    db: &PgPool,
+    billing_grpc_endpoint: &str,
+    actor_principal_id: Uuid,
+    tenant_id: Uuid,
+) -> Result<TenantDetail, AppError> {
     let row = sqlx::query(
         r#"
         SELECT
@@ -136,21 +150,22 @@ async fn load_tenant_detail(db: &PgPool, tenant_id: Uuid) -> Result<TenantDetail
           (
             SELECT COUNT(*) FROM audit_events ae
             WHERE ae.tenant_id = t.id AND ae.created_at >= NOW() - INTERVAL '24 hours'
-          ) AS audit_events_24h,
-          (
-            SELECT COUNT(*) FROM billing_invoices bi
-            WHERE bi.tenant_id = t.id AND bi.status::text IN ('issued', 'pro_forma')
-          ) AS open_invoice_count,
-          (
-            SELECT COUNT(*) FROM billing_provider_events bpe
-            WHERE bpe.tenant_id = t.id AND bpe.status::text IN ('failed', 'rejected')
-          ) AS provider_failure_count
+          ) AS audit_events_24h
         FROM tenants t
         WHERE t.id = $1
         "#,
     )
     .bind(tenant_id)
     .fetch_one(db)
+    .await?;
+    let billing_summary = crate::billing_grpc::get_admin_tenant_billing_summary(
+        billing_grpc_endpoint,
+        BackofficeAccess {
+            tenant_id,
+            actor_principal_id,
+        },
+        tenant_id,
+    )
     .await?;
 
     Ok(TenantDetail {
@@ -165,8 +180,8 @@ async fn load_tenant_detail(db: &PgPool, tenant_id: Uuid) -> Result<TenantDetail
         workspace_count: row.get(8),
         user_count: row.get(9),
         audit_events_24h: row.get(10),
-        open_invoice_count: row.get(11),
-        provider_failure_count: row.get(12),
+        open_invoice_count: billing_summary.open_invoice_count,
+        provider_failure_count: billing_summary.provider_failure_count,
     })
 }
 

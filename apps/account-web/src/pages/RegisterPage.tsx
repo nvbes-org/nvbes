@@ -14,14 +14,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)]">
+    <div className="flex min-h-screen">
       <RegisterBrandPanel />
       <RegisterPageShell
-        title={page.step === 1 ? 'Créer un compte' : 'Espace de travail'}
+        title={page.step === 1 ? 'Créer votre compte' : 'Finaliser votre inscription'}
         description={
           page.step === 1
             ? 'Renseignez vos informations personnelles.'
-            : 'Configurez votre espace de travail.'
+            : 'Choisissez votre région de données et vos préférences.'
         }
         searchStr={location.searchStr}
       >

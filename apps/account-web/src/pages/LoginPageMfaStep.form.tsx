@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,8 @@ export function LoginPageMfaMethodForm({
   const [resending, setResending] = useState(false);
   const [resendInSeconds, setResendInSeconds] = useState(0);
   const [resendError, setResendError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const webauthnAutoSubmittedRef = useRef(false);
 
   useEffect(() => {
     if (resendInSeconds <= 0) return;
@@ -47,6 +49,18 @@ export function LoginPageMfaMethodForm({
     }, 1000);
     return () => window.clearInterval(timer);
   }, [resendInSeconds]);
+
+  useEffect(() => {
+    if (mfaMethod !== 'webauthn') {
+      webauthnAutoSubmittedRef.current = false;
+      return;
+    }
+
+    if (loading || webauthnAutoSubmittedRef.current) return;
+
+    webauthnAutoSubmittedRef.current = true;
+    formRef.current?.requestSubmit();
+  }, [loading, mfaMethod]);
 
   async function handleResendEmailCode() {
     if (!loginStateToken || resending || resendInSeconds > 0) return;
@@ -63,7 +77,7 @@ export function LoginPageMfaMethodForm({
   }
 
   return (
-    <form onSubmit={onMfaSubmit} className="flex flex-col gap-5">
+    <form ref={formRef} onSubmit={onMfaSubmit} className="flex flex-col gap-5">
       {mfaMethod === 'totp' && (
         <div className="flex flex-col gap-2">
           <Label htmlFor="totp-code">Code d&apos;authentification</Label>
@@ -131,7 +145,7 @@ export function LoginPageMfaMethodForm({
 
       {mfaMethod === 'webauthn' && (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          Cliquez sur Valider pour utiliser votre clé de sécurité.
+          La vérification avec votre clé de sécurité va démarrer automatiquement.
         </p>
       )}
 

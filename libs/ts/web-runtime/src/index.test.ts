@@ -2,6 +2,7 @@ import { DtoValidationError, HttpError } from '@nvbes/http-client';
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
   ClientRuntimeError,
+  clientErrorMessage,
   createErrorReportingFeedbackOptions,
   installBrowserErrorReportingSmoke,
   isBrowserErrorReportingSmokeEnabled,
@@ -15,6 +16,22 @@ import {
 import { z } from 'zod';
 
 describe('web-runtime client errors', () => {
+  it('translates WebAuthn authentication failures into a user-facing message', () => {
+    const response = new Response(
+      JSON.stringify({
+        error: { code: 'webauthn_auth_failed', message: 'WebAuthn assertion failed.' },
+      }),
+      { status: 403, statusText: 'Forbidden' },
+    );
+    const error = new HttpError('WebAuthn assertion failed.', response, {
+      error: { code: 'webauthn_auth_failed', message: 'WebAuthn assertion failed.' },
+    });
+
+    expect(clientErrorMessage(error)).toBe(
+      "Votre clé d'accès n'a pas pu être vérifiée. Veuillez réessayer ou choisir une autre méthode de connexion.",
+    );
+  });
+
   it('normalizes HttpError', () => {
     const response = new Response(JSON.stringify({ error: { message: 'Nope' } }), {
       status: 401,

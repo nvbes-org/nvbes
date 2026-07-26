@@ -54,8 +54,19 @@ pub async fn apply_geo_security_signal(
         score += 12.0;
         geo_factors.push("elevated_risk_network");
     }
-    let decision = geo_policy_decision(&resolution);
-    if matches!(decision, super::RiskDecision::StepUp) {
+
+    let current_country = resolution
+        .location
+        .as_ref()
+        .map(|l| l.country_code.as_str());
+    let impossible_travel = check_impossible_travel(db, principal_id, current_country).await;
+    let mut decision = geo_policy_decision(&resolution);
+
+    if impossible_travel {
+        score += 40.0;
+        geo_factors.push("impossible_geographic_travel");
+        decision = super::RiskDecision::StepUp;
+    } else if matches!(decision, super::RiskDecision::StepUp) {
         geo_factors.push("geo_policy_step_up");
     }
 
@@ -170,4 +181,36 @@ async fn resolve_and_record(
     .await;
     let _ = tx.commit().await;
     Some(resolution)
+}
+
+async fn check_impossible_travel(
+    db: &PgPool,
+    principal_id: Uuid,
+    current_country: Option<&str>,
+) -> bool {
+    let Some(current) = current_country else {
+        return false;
+    };
+    let row: Option<(chrono::DateTime<chrono::Utc>, Option<String>)> = sqlx::query_as(
+        r#"
+        SELECT created_at, metadata->'geo'->>'geo_country_code'
+        FROM risk_events
+        WHERE principal_id = $1
+          AND metadata->'geo'->>'geo_country_code' IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_optional(db)
+    .await
+    .ok()
+    .flatten();
+
+    if let Some((last_time, Some(prev_country))) = row {
+        if prev_country != current && last_time + chrono::Duration::hours(2) >= chrono::Utc::now() {
+            return true;
+        }
+    }
+    false
 }

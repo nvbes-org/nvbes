@@ -8,7 +8,7 @@ import { listLinkedApps, revokeLinkedApp, type LinkedApp } from '@/pages/Account
 
 export function useAccountLinkedAppsPage() {
   const location = useLocation();
-  const authuser = readAuthuser(location.searchStr);
+  const authuser = readAuthuser(location.searchStr, location.pathname);
   const [revoking, setRevoking] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();

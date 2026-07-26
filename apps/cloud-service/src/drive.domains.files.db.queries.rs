@@ -2,6 +2,7 @@ use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use super::models::{DownloadMetadata, StorageObjectRecord};
+use super::pagination::ObjectListCursor;
 use crate::domains::files::models::{StorageObjectStatus, StorageObjectType};
 use crate::http::error::AppError;
 
@@ -105,10 +106,14 @@ pub async fn ensure_name_available_tx(
     Ok(())
 }
 
-pub async fn list_objects_tx(
+pub(super) async fn list_objects_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,
     parent_id: Option<Uuid>,
+    cursor: Option<&ObjectListCursor>,
+    name_prefix: Option<&str>,
+    object_type: Option<&str>,
+    limit: i64,
 ) -> Result<Vec<StorageObjectRecord>, AppError> {
     let objects = sqlx::query_as::<_, StorageObjectRecord>(
         r#"
@@ -130,17 +135,34 @@ pub async fn list_objects_tx(
         WHERE workspace_id = $1
           AND parent_id IS NOT DISTINCT FROM $2
           AND status IN ('pending', 'active')
+          AND (
+            $3::smallint IS NULL
+            OR (
+              CASE object_type WHEN 'folder' THEN 0 ELSE 1 END,
+              lower(name),
+              id
+            ) > ($3, $4, $5)
+          )
+          AND ($6::text IS NULL OR lower(name) LIKE $6 || '%' ESCAPE '\')
+          AND ($7::text IS NULL OR object_type::text = $7)
         ORDER BY
           CASE object_type
             WHEN 'folder' THEN 0
             ELSE 1
           END,
           lower(name) ASC,
-          created_at ASC
+          id ASC
+        LIMIT $8
         "#,
     )
     .bind(workspace_id)
     .bind(parent_id)
+    .bind(cursor.map(|value| value.object_type_rank))
+    .bind(cursor.map(|value| value.normalized_name.as_str()))
+    .bind(cursor.map(|value| value.id))
+    .bind(name_prefix)
+    .bind(object_type)
+    .bind(limit)
     .fetch_all(&mut **tx)
     .await?;
 

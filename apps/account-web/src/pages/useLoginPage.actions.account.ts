@@ -121,11 +121,14 @@ export function useLoginPageAccountActions({
 
     try {
       setError(null);
-      if (account.status === 'expired') {
-        await identityClient.forgetAccount(account.authuser);
-      } else {
-        await identityClient.revokeSession(account.session.id);
+      if (account.status !== 'expired') {
+        try {
+          await identityClient.revokeSession(account.session.id);
+        } catch {
+          // Ignore revocation errors (e.g. session already expired or unauthorized)
+        }
       }
+      await identityClient.forgetAccount(account.authuser);
       setConnectedAccounts((previous) => previous.filter((entry) => entry.authuser !== authuser));
       if (connectedAccounts.length <= 1) {
         setStep('identifier');
@@ -146,11 +149,14 @@ export function useLoginPageAccountActions({
     try {
       setError(null);
       for (const account of sessionsToRevoke) {
-        if (account.status === 'expired') {
-          await identityClient.forgetAccount(account.authuser);
-        } else {
-          await identityClient.revokeSession(account.session.id);
+        if (account.status !== 'expired') {
+          try {
+            await identityClient.revokeSession(account.session.id);
+          } catch {
+            // Ignore revocation errors
+          }
         }
+        await identityClient.forgetAccount(account.authuser);
       }
       setConnectedAccounts([]);
       setStep('identifier');

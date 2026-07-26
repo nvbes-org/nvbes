@@ -1,4 +1,4 @@
-import { createQueryClient, ErrorBoundary, VersionMismatchBanner } from '@nvbes/web-runtime';
+import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
@@ -9,8 +9,6 @@ import { TooltipProvider } from './components/ui/tooltip';
 import { router } from './drive.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
 
-const DRIVE_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
-const DRIVE_HEALTH_URL = `${import.meta.env.VITE_CLOUD_SERVICE_BASE_URL || '/api'}/health`;
 const REACT_QUERY_DEVTOOLS_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS_ENABLED !== 'false';
 const TANSTACK_ROUTER_DEVTOOLS_ENABLED =
@@ -48,11 +46,6 @@ export function App() {
         <TooltipProvider>
           <NetworkQualityInit />
           <TrackingConsentBanner />
-          <VersionMismatchBanner
-            appName="cloud-web"
-            frontendBuildId={DRIVE_WEB_BUILD_ID}
-            healthUrl={DRIVE_HEALTH_URL}
-          />
           {import.meta.env.DEV ? (
             <Profiler id="cloud-web" onRender={handleRenderProfiler}>
               <RouterProvider router={router} />

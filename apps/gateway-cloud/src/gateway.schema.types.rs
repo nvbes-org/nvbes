@@ -3,7 +3,8 @@ use async_graphql::{Error, Result, SimpleObject};
 use crate::{
     pb::nvbes::billing::v1::{
         BillingOverview as GrpcBillingOverview, BillingPortal as GrpcBillingPortal,
-        CheckoutSession as GrpcCheckoutSession, ProductEntitlements as GrpcProductEntitlements,
+        CheckoutSession as GrpcCheckoutSession, PortalSession as GrpcPortalSession,
+        ProductEntitlements as GrpcProductEntitlements,
     },
     schema_enums::{
         BillingInvoiceStatus, BillingProvider, BillingProviderReferenceStatus,
@@ -30,9 +31,17 @@ impl CheckoutSession {
 
 #[derive(SimpleObject)]
 pub struct PortalSession {
-    pub portal_session_id: String,
     pub portal_url: String,
     pub provider: BillingProvider,
+}
+
+impl PortalSession {
+    pub fn from_grpc(value: GrpcPortalSession) -> Result<Self> {
+        Ok(Self {
+            portal_url: value.portal_url,
+            provider: BillingProvider::parse(&value.provider)?,
+        })
+    }
 }
 
 #[derive(SimpleObject)]

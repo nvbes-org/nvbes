@@ -274,6 +274,7 @@ export async function getWebAuthnCredential(
 
 export async function getConditionalWebAuthnCredential(
   publicKey: PublicKeyCredentialRequestOptions,
+  options: { signal?: AbortSignal } = {},
 ): Promise<PublicKeyCredential | null> {
   if (!(await isConditionalMediationSupported())) {
     return null;
@@ -282,6 +283,7 @@ export async function getConditionalWebAuthnCredential(
     const credential = await navigator.credentials.get({
       publicKey,
       mediation: 'conditional',
+      ...(options.signal ? { signal: options.signal } : {}),
     } as CredentialRequestOptions);
     if (!credential || !isPublicKeyCredential(credential)) {
       return null;

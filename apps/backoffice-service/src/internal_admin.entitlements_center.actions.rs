@@ -197,9 +197,15 @@ async fn publish_entitlement_changes_route(
     .await?;
     validate_reason(&request.reason)?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    publish_changes(&state.db, access, workspace_id, request.reason)
-        .await
-        .map(Json)
+    publish_changes(
+        &state.billing_grpc_endpoint,
+        &state.db,
+        access,
+        workspace_id,
+        request.reason,
+    )
+    .await
+    .map(Json)
 }
 
 async fn require_entitlements_mutation(

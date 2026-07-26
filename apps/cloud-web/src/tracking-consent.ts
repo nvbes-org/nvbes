@@ -23,7 +23,8 @@ const trackingConsentApi = createTrackingConsentApi({
   identityClient: {
     listConsents: async (options?: { signal?: AbortSignal }) => {
       void options;
-      return asBackendConsents(await identityClient.listConsents());
+      const response = await identityClient.listConsents();
+      return asBackendConsents(response.consents);
     },
     grantConsent: (consentType, documentVersion) =>
       identityClient.grantConsent(consentType, documentVersion),

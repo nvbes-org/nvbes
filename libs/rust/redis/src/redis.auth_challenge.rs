@@ -47,6 +47,16 @@ pub async fn get_auth_challenge(
         .map_err(Into::into)
 }
 
+pub async fn take_auth_challenge(
+    pool: &RedisPool,
+    challenge_id: Uuid,
+) -> Result<Option<CachedAuthChallenge>, RedisError> {
+    let client = crate::RedisClient::new(pool.clone());
+    client
+        .cache_take_json(&auth_challenge_key(&challenge_id))
+        .await
+}
+
 pub async fn consume_auth_challenge(
     pool: &RedisPool,
     challenge_id: Uuid,
@@ -82,7 +92,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stores_and_consumes_auth_challenge() {
+    async fn takes_auth_challenge_once() {
         let redis = test_redis_pool().await;
         let challenge_id = Uuid::new_v4();
         let challenge = CachedAuthChallenge {
@@ -107,16 +117,12 @@ mod tests {
             .await
             .expect("challenge should store");
 
-        let stored = get_auth_challenge(&redis, challenge_id)
+        let stored = take_auth_challenge(&redis, challenge_id)
             .await
-            .expect("challenge lookup should work")
+            .expect("challenge take should work")
             .expect("challenge should exist");
         assert_eq!(stored.id, challenge_id);
         assert_eq!(stored.purpose, "webauthn_step_up");
-
-        consume_auth_challenge(&redis, challenge_id)
-            .await
-            .expect("challenge should be consumable");
 
         let stored = get_auth_challenge(&redis, challenge_id)
             .await

@@ -1,12 +1,13 @@
-import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { HttpError } from '@nvbes/http-client';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import {
   ACCEPT_ALL_CONSENT,
-  DECLINE_ALL_CONSENT,
   createTrackingConsentApi,
+  DECLINE_ALL_CONSENT,
 } from './tracking-consent';
 
-const STORAGE_KEY_V3 = 'nvbes.tracking-consent.v3';
+const STORAGE_KEY_V4 = 'nvbes.tracking-consent.v4';
+const NOTICE_VERSION = 'cookie-notice-2026-07-20';
 
 type MemoryStorage = {
   getItem: (key: string) => string | null;
@@ -46,9 +47,9 @@ function installTestWindow() {
 function installStoredConsent(consent = ACCEPT_ALL_CONSENT, savedAt = new Date().toISOString()) {
   const expiresAt = new Date(Date.parse(savedAt) + 1_000_000).toISOString();
   window.localStorage.setItem(
-    STORAGE_KEY_V3,
+    STORAGE_KEY_V4,
     JSON.stringify({
-      version: 3,
+      version: 4,
       savedAt,
       expiresAt,
       source: 'test',
@@ -62,6 +63,17 @@ afterEach(() => {
 });
 
 describe('tracking consent sync', () => {
+  it('accepts only purposes implemented by the current products', () => {
+    expect(ACCEPT_ALL_CONSENT.analytics).toEqual({
+      productAnalytics: true,
+      autocaptureHeatmaps: false,
+      sessionReplay: false,
+      surveysFeedback: false,
+      errorTracking: true,
+      featureFlags: false,
+    });
+  });
+
   it('skips backend sync when the session is not authenticated', async () => {
     installTestWindow();
     installStoredConsent();
@@ -132,12 +144,19 @@ describe('tracking consent sync', () => {
     expect(grantedConsentTypes).toContain('cookie_consent_vendor_posthog');
     expect(grantedConsentTypes).toContain('cookie_consent_vendor_sentry');
     expect(grantedConsentTypes).toContain('cookie_consent_vendor_grafana');
-    expect(grantedConsentTypes.some((consentType) => consentType.startsWith('analytics_'))).toBe(
-      false,
-    );
+    expect(grantedConsentTypes).toContain('analytics_product_analytics');
+    expect(grantedConsentTypes).toContain('analytics_error_tracking');
+    expect(grantedConsentTypes).not.toContain('analytics_autocapture_heatmaps');
+    expect(grantedConsentTypes).not.toContain('analytics_session_replay');
+    expect(grantedConsentTypes).not.toContain('analytics_surveys_feedback');
+    expect(grantedConsentTypes).not.toContain('analytics_feature_flags');
+    expect(grantedConsentTypes).not.toContain('cookie_consent_essentials');
+    expect(grantedConsentTypes).not.toContain('cookie_consent_vendor_stripe');
+    expect(grantedConsentTypes).not.toContain('cookie_consent_vendor_identity');
+    expect(grantedConsentTypes).not.toContain('cookie_consent_vendor_cloudflare');
   });
 
-  it('revokes legacy feature consent rows instead of granting them again', async () => {
+  it('revokes unavailable purpose consent rows during synchronization', async () => {
     installTestWindow();
     installStoredConsent(ACCEPT_ALL_CONSENT);
 
@@ -148,13 +167,13 @@ describe('tracking consent sync', () => {
         listConsents: async () => [
           {
             consent_type: 'analytics_session_replay',
-            document_version: 'v3',
+            document_version: NOTICE_VERSION,
             granted_at: new Date(Date.now() - 60_000).toISOString(),
             revoked_at: null,
           },
           {
             consent_type: 'cookie_consent_vendor_analytics',
-            document_version: 'v3',
+            document_version: NOTICE_VERSION,
             granted_at: new Date(Date.now() - 60_000).toISOString(),
             revoked_at: null,
           },
@@ -175,6 +194,98 @@ describe('tracking consent sync', () => {
     expect(revokedConsentTypes).toContain('cookie_consent_vendor_analytics');
   });
 
+  it('restores only the purposes explicitly granted by the backend', async () => {
+    installTestWindow();
+
+    const grantedAt = new Date().toISOString();
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [
+          {
+            consent_type: 'analytics_product_analytics',
+            document_version: NOTICE_VERSION,
+            granted_at: grantedAt,
+            revoked_at: null,
+          },
+        ],
+        grantConsent: async () => ({}),
+        revokeConsent: async () => ({}),
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    await api.syncTrackingConsent();
+
+    expect(api.getAnalyticsConsent()).toEqual({
+      productAnalytics: true,
+      autocaptureHeatmaps: false,
+      sessionReplay: false,
+      surveysFeedback: false,
+      errorTracking: false,
+      featureFlags: false,
+    });
+  });
+
+  it('requires a new choice after a legacy binary acceptance', () => {
+    installTestWindow();
+    window.localStorage.setItem('nvbes.tracking-consent.v1', 'accepted');
+
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [],
+        grantConsent: async () => ({}),
+        revokeConsent: async () => ({}),
+      },
+      defaultSource: 'test',
+    });
+
+    expect(api.getTrackingConsent()).toBeNull();
+  });
+
+  it('treats explicit current purposes as authoritative over stale categories', () => {
+    installTestWindow();
+    installStoredConsent({
+      ...ACCEPT_ALL_CONSENT,
+      analytics: { ...DECLINE_ALL_CONSENT.analytics },
+    });
+
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [],
+        grantConsent: async () => ({}),
+        revokeConsent: async () => ({}),
+      },
+      defaultSource: 'test',
+    });
+
+    expect(api.getAnalyticsConsent()).toEqual(DECLINE_ALL_CONSENT.analytics);
+  });
+
+  it('does not restore consent from an obsolete backend notice version', async () => {
+    installTestWindow();
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [
+          {
+            consent_type: 'analytics_product_analytics',
+            document_version: 'v3',
+            granted_at: new Date().toISOString(),
+            revoked_at: null,
+          },
+        ],
+        grantConsent: async () => ({}),
+        revokeConsent: async () => ({}),
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    await api.syncTrackingConsent();
+
+    expect(api.getTrackingConsent()).toBeNull();
+  });
+
   it('updates the front when the backend consent change is newer', async () => {
     installTestWindow();
     const localSavedAt = new Date(Date.now() - 60_000).toISOString();
@@ -189,7 +300,7 @@ describe('tracking consent sync', () => {
         listConsents: async () => [
           {
             consent_type: 'cookie_consent_analytics',
-            document_version: 'v3',
+            document_version: NOTICE_VERSION,
             granted_at: localSavedAt,
             revoked_at: backendRevokedAt,
           },
@@ -213,7 +324,7 @@ describe('tracking consent sync', () => {
     expect(revokeConsentCalls).toBe(0);
     expect(api.getTrackingConsent()).toEqual(DECLINE_ALL_CONSENT);
 
-    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY_V3) ?? '{}') as {
+    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY_V4) ?? '{}') as {
       savedAt?: string;
       consent?: unknown;
     };

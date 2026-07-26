@@ -1,12 +1,10 @@
-import * as Sentry from '@sentry/browser';
-import posthog from 'posthog-js';
+import type { AnalyticsTransport, FeatureFlagResult, JsonType } from './analytics.types';
 import {
   getErrorReportingReplaysOnErrorSampleRate,
   getErrorReportingTracesSampleRate,
   scrubErrorReportingBreadcrumb,
   scrubErrorReportingEvent,
 } from './error-reporting-privacy';
-import type { AnalyticsTransport, FeatureFlagResult, JsonType } from './analytics.types';
 
 export interface BrowserAnalyticsTransportOptions {
   appName: string;
@@ -20,77 +18,144 @@ export interface BrowserAnalyticsTransportOptions {
 export function createBrowserAnalyticsTransport(
   options: BrowserAnalyticsTransportOptions,
 ): AnalyticsTransport {
-  const sentryEnabled = initSentry(options);
+  type PostHog = typeof import('posthog-js').default;
+
+  let sentry: typeof import('@sentry/browser') | null = null;
+  let posthog: PostHog | null = null;
+  let posthogInitializationPromise: Promise<PostHog | null> | null = null;
   let posthogInitialized = false;
   let posthogOptedOut = false;
+  let productAnalyticsEnabled = false;
 
-  function ensurePostHog(): boolean {
+  async function setErrorReportingEnabled(enabled: boolean): Promise<void> {
+    if (!enabled) {
+      if (sentry) {
+        await sentry.close(2_000);
+        sentry = null;
+      }
+      return;
+    }
+
+    if (sentry || !normalizedOptional(options.sentryDsn) || typeof window === 'undefined') {
+      return;
+    }
+
+    const loadedSentry = await import('@sentry/browser');
+    initSentry(loadedSentry, options);
+    sentry = loadedSentry;
+  }
+
+  async function ensurePostHog(): Promise<PostHog | null> {
     if (posthogInitialized) {
-      if (posthogOptedOut) {
+      if (posthogOptedOut && posthog) {
         posthog.opt_in_capturing();
         posthogOptedOut = false;
       }
-      return true;
+      return posthog;
     }
-    posthogInitialized = initPostHog(options);
-    return posthogInitialized;
+
+    if (
+      !productAnalyticsEnabled ||
+      !normalizedOptional(options.posthogKey) ||
+      typeof window === 'undefined'
+    ) {
+      return null;
+    }
+
+    posthogInitializationPromise ??= import('posthog-js')
+      .then((module) => {
+        if (!productAnalyticsEnabled) {
+          return null;
+        }
+
+        const loadedPostHog = module.default;
+        posthogInitialized = initPostHog(loadedPostHog, options);
+        posthog = posthogInitialized ? loadedPostHog : null;
+        return posthog;
+      })
+      .finally(() => {
+        if (!posthogInitialized) {
+          posthogInitializationPromise = null;
+        }
+      });
+    return posthogInitializationPromise;
+  }
+
+  async function setProductAnalyticsEnabled(enabled: boolean): Promise<void> {
+    productAnalyticsEnabled = enabled;
+    if (enabled) {
+      await ensurePostHog();
+      return;
+    }
+
+    if (!posthogInitialized || !posthog) {
+      return;
+    }
+
+    posthog.stopSessionRecording();
+    posthog.opt_out_capturing();
+    posthog.reset(true);
+    posthogOptedOut = true;
   }
 
   return {
-    trackProductEvent(name, properties) {
-      if (!ensurePostHog()) {
+    async trackProductEvent(name, properties) {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
         return;
       }
-      posthog.capture(name, properties);
+      loadedPostHog.capture(name, properties);
     },
-    identifyProductUser(userId, traits) {
-      if (!ensurePostHog()) {
+    async identifyProductUser(userId, traits) {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
         return;
       }
-      posthog.identify(userId, traits);
+      loadedPostHog.identify(userId, traits);
     },
-    setWorkspaceGroup(workspaceId, traits) {
-      if (!ensurePostHog()) {
+    async setWorkspaceGroup(workspaceId, traits) {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
         return;
       }
-      posthog.group('workspace', workspaceId, traits);
+      loadedPostHog.group('workspace', workspaceId, traits);
     },
-    getFeatureFlag(key) {
-      if (!ensurePostHog()) {
+    async getFeatureFlag(key) {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
         return undefined;
       }
-      return normalizeFeatureFlagResult(posthog.getFeatureFlag(key));
+      return normalizeFeatureFlagResult(loadedPostHog.getFeatureFlag(key));
     },
-    getFeatureFlagPayload(key) {
-      if (!ensurePostHog()) {
+    async getFeatureFlagPayload(key) {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
         return undefined;
       }
-      return normalizeJson(posthog.getFeatureFlagPayload(key));
+      return normalizeJson(loadedPostHog.getFeatureFlagPayload(key));
     },
     captureException(error, properties) {
-      if (!sentryEnabled) {
+      if (!sentry) {
         return;
       }
-      Sentry.captureException(error, { extra: properties });
+      sentry.captureException(error, { extra: properties });
     },
-    startPrivacySafeReplay() {
-      if (ensurePostHog()) {
-        posthog.startSessionRecording();
+    async startPrivacySafeReplay() {
+      const loadedPostHog = await ensurePostHog();
+      if (loadedPostHog) {
+        loadedPostHog.startSessionRecording();
       }
     },
     stopPrivacySafeReplay() {
-      if (posthogInitialized) {
+      if (posthogInitialized && posthog) {
         posthog.stopSessionRecording();
       }
     },
-    disableCapture() {
-      if (!posthogInitialized) {
-        return;
-      }
-      posthog.stopSessionRecording();
-      posthog.opt_out_capturing();
-      posthog.reset(true);
-      posthogOptedOut = true;
+    setProductAnalyticsEnabled,
+    setErrorReportingEnabled,
+    async disableCapture() {
+      await setErrorReportingEnabled(false);
+      await setProductAnalyticsEnabled(false);
     },
   };
 }
@@ -110,14 +175,17 @@ export function createBrowserAnalyticsTransportFromEnv(options: {
   });
 }
 
-function initSentry(options: BrowserAnalyticsTransportOptions): boolean {
+function initSentry(
+  sentry: typeof import('@sentry/browser'),
+  options: BrowserAnalyticsTransportOptions,
+): void {
   const dsn = normalizedOptional(options.sentryDsn);
-  if (!dsn || typeof window === 'undefined') {
-    return false;
+  if (!dsn) {
+    return;
   }
 
   const isProduction = options.environment === 'production';
-  Sentry.init({
+  sentry.init({
     dsn,
     environment: options.environment,
     tracesSampleRate:
@@ -132,11 +200,12 @@ function initSentry(options: BrowserAnalyticsTransportOptions): boolean {
       },
     },
   });
-
-  return true;
 }
 
-function initPostHog(options: BrowserAnalyticsTransportOptions): boolean {
+function initPostHog(
+  posthog: typeof import('posthog-js').default,
+  options: BrowserAnalyticsTransportOptions,
+): boolean {
   const token = normalizedOptional(options.posthogKey);
   if (!token || typeof window === 'undefined') {
     return false;

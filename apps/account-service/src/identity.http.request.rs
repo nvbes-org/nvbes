@@ -183,9 +183,12 @@ pub fn data_region_from_headers(headers: &HeaderMap) -> Option<String> {
 pub fn supported_data_regions() -> Vec<String> {
     [
         DataRegion::Eu,
-        DataRegion::Us,
+        DataRegion::Uk,
         DataRegion::Ch,
+        DataRegion::Us,
         DataRegion::Apac,
+        DataRegion::Latam,
+        DataRegion::MeAfrica,
     ]
     .into_iter()
     .map(|region| region.as_str().to_string())

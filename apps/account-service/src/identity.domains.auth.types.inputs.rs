@@ -108,7 +108,6 @@ pub struct RecoveryCodesGenerateInput {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ChangePasswordInput {
-    pub current_password: String,
     pub new_password: String,
 }
 

@@ -23,10 +23,9 @@ async fn main() -> anyhow::Result<()> {
     install_safe_panic_hook();
     init_tracing(&config);
 
-    if matches!(
-        std::env::args().nth(1).as_deref(),
-        Some("error-reporting-smoke")
-    ) {
+    let arg1 = std::env::args().nth(1);
+
+    if matches!(arg1.as_deref(), Some("error-reporting-smoke")) {
         let result = capture_error_reporting_smoke(
             "account-worker",
             &config.environment,
@@ -45,6 +44,12 @@ async fn main() -> anyhow::Result<()> {
     run_migrations(&db).await?;
 
     let state = app::AppState::bootstrap(&config, db).await?;
+
+    if matches!(arg1.as_deref(), Some("run-housekeeping")) {
+        tracing::info!("running account-worker in Serverless Job mode: housekeeping");
+        return worker::run_housekeeping_job(&state).await;
+    }
+
     let metrics_bind_addr = identity_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,

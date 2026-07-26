@@ -26,7 +26,7 @@ window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
 
 const clientErrorReporter: ClientErrorReporter = {
   captureException: (error, context) => {
-    captureErrorReportingException(error, context);
+    void captureErrorReportingException(error, context);
     captureFaroException(error, context);
 
     void captureAnalyticsException(error, {

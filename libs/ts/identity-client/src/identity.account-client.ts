@@ -1,36 +1,41 @@
 import { createHttpClient, type HttpClient } from '@nvbes/http-client';
+import { z } from 'zod';
 import {
+  type AccountEntry,
+  type AccountMe,
   AccountMeSchema,
+  type AccountSession,
   AccountsResponseSchema,
+  type AccountWorkspace,
+  type AddSecondaryEmailResponse,
   AddSecondaryEmailResponseSchema,
+  ConsentHistoryResponseSchema,
+  type ConsentHistoryResponse,
+  type CreateWorkspaceInput,
   CreateWorkspaceResponseSchema,
+  type DeviceTrustResult,
+  DeviceTrustResultSchema,
+  type EmailAddressesResponse,
   EmailAddressesResponseSchema,
   EmptySchema,
+  type ForgotPasswordResult,
   ForgotPasswordResultSchema,
+  type GpcStatus,
   GpcStatusSchema,
+  type OAuthClient,
+  type OAuthClientsResponse,
   OAuthClientsResponseSchema,
+  type PromoteSecondaryEmailResponse,
   PromoteSecondaryEmailResponseSchema,
+  type ResendSecondaryEmailVerificationResponse,
   ResendSecondaryEmailVerificationResponseSchema,
+  type ResetPasswordResult,
   ResetPasswordResultSchema,
   SessionsResponseSchema,
   SuccessSchema,
+  type UserConsent,
   UserConsentSchema,
   WorkspacesResponseSchema,
-  type AccountEntry,
-  type AccountMe,
-  type AccountSession,
-  type AccountWorkspace,
-  type AddSecondaryEmailResponse,
-  type CreateWorkspaceInput,
-  type EmailAddressesResponse,
-  type ForgotPasswordResult,
-  type GpcStatus,
-  type OAuthClient,
-  type OAuthClientsResponse,
-  type PromoteSecondaryEmailResponse,
-  type ResendSecondaryEmailVerificationResponse,
-  type ResetPasswordResult,
-  type UserConsent,
 } from './account.schemas';
 
 export type RequestOptions = { signal?: AbortSignal };
@@ -60,8 +65,24 @@ export class AccountIdentityClient {
     return this.http.get('/auth/me/emails', EmailAddressesResponseSchema, options);
   }
 
+  listEmailsPage(
+    options: { limit?: number; cursor?: string; signal?: AbortSignal } = {},
+  ): Promise<EmailAddressesResponse> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    if (options.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    return this.http.get(
+      `/auth/me/emails${query ? `?${query}` : ''}`,
+      EmailAddressesResponseSchema,
+      { signal: options.signal },
+    );
+  }
+
   addSecondaryEmail(email: string): Promise<AddSecondaryEmailResponse> {
-    return this.http.post('/auth/me/emails', AddSecondaryEmailResponseSchema, { email });
+    return this.http.post('/auth/me/emails', AddSecondaryEmailResponseSchema, {
+      email,
+    });
   }
 
   promoteSecondaryEmail(emailId: string): Promise<PromoteSecondaryEmailResponse> {
@@ -106,6 +127,18 @@ export class AccountIdentityClient {
       .then((response) => response.sessions);
   }
 
+  listSessionsPage(
+    options: { limit?: number; cursor?: string; signal?: AbortSignal } = {},
+  ): Promise<z.infer<typeof SessionsResponseSchema>> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    if (options.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    return this.http.get(`/auth/sessions${query ? `?${query}` : ''}`, SessionsResponseSchema, {
+      signal: options.signal,
+    });
+  }
+
   revokeSession(sessionId: string): Promise<void> {
     return this.http.delete(`/auth/sessions/${sessionId}`, SuccessSchema).then(() => undefined);
   }
@@ -120,12 +153,43 @@ export class AccountIdentityClient {
     return this.http.post('/auth/sessions/revoke-others', SuccessSchema, {}).then(() => undefined);
   }
 
+  trustDevice(deviceId: string): Promise<DeviceTrustResult> {
+    return this.http.post(
+      `/auth/devices/${encodeURIComponent(deviceId)}/trust`,
+      DeviceTrustResultSchema,
+      {},
+    );
+  }
+
+  revokeDevice(deviceId: string): Promise<DeviceTrustResult> {
+    return this.http.delete(
+      `/auth/devices/${encodeURIComponent(deviceId)}`,
+      DeviceTrustResultSchema,
+    );
+  }
+
   logout(): Promise<void> {
     return this.http.post('/auth/logout', SuccessSchema, {}).then(() => undefined);
   }
 
   listConsents(options?: { signal?: AbortSignal }): Promise<UserConsent[]> {
-    return this.http.get('/legal/consents', UserConsentSchema.array(), options);
+    return this.http
+      .get('/legal/consents', ConsentHistoryResponseSchema, options)
+      .then((response) => response.consents);
+  }
+
+  listConsentsPage(
+    options: { limit?: number; cursor?: string; signal?: AbortSignal } = {},
+  ): Promise<ConsentHistoryResponse> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    if (options.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    return this.http.get(
+      `/legal/consents${query ? `?${query}` : ''}`,
+      ConsentHistoryResponseSchema,
+      { signal: options.signal },
+    );
   }
 
   grantConsent(consentType: string, documentVersion: string): Promise<UserConsent> {

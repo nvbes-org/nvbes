@@ -20,7 +20,8 @@ use crate::{
 };
 
 use crate::domains::files::service::{
-    CreateFolderInput, ListObjectsInput, ListObjectsResponse, ObjectResponse, TrashListResponse,
+    CreateFolderInput, ListObjectsInput, ListObjectsResponse, ObjectResponse, ObjectTypeFilter,
+    TrashListInput, TrashListResponse,
 };
 
 pub fn router(_state: &AppState) -> Router<AppState> {
@@ -34,6 +35,10 @@ pub fn router(_state: &AppState) -> Router<AppState> {
 #[serde(rename_all = "snake_case")]
 struct ListObjectsQuery {
     parent_id: Option<Uuid>,
+    limit: Option<i64>,
+    cursor: Option<String>,
+    object_type: Option<ObjectTypeFilter>,
+    name_prefix: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -43,16 +48,34 @@ struct CreateFolderRequest {
     name: String,
 }
 
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+struct TrashListQuery {
+    limit: Option<i64>,
+    cursor: Option<String>,
+    object_type: Option<ObjectTypeFilter>,
+    name_prefix: Option<String>,
+}
+
 #[utoipa::path(
     get,
     path = "/workspaces/{workspaceId}/objects",
     tag = "files",
     params(
         ("workspaceId" = Uuid, Path, description = "Workspace ID"),
+        ("limit" = Option<i64>, Query, description = "Maximum objects to return (1-200)"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
+        ("objectType" = Option<ObjectTypeFilter>, Query, description = "Filter by object type"),
+        ("namePrefix" = Option<String>, Query, description = "Case-insensitive literal name prefix"),
         ("parentId" = Option<Uuid>, Query, description = "Parent folder ID to list children of"),
+        ("limit" = Option<i64>, Query, description = "Maximum objects to return (1-200)"),
+        ("cursor" = Option<String>, Query, description = "Opaque pagination cursor"),
+        ("objectType" = Option<ObjectTypeFilter>, Query, description = "Filter by object type"),
+        ("namePrefix" = Option<String>, Query, description = "Case-insensitive literal name prefix"),
     ),
     responses(
         (status = 200, description = "List objects in workspace", body = ListObjectsResponse),
+        (status = 400, description = "Invalid pagination cursor", body = ErrorEnvelope),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
@@ -77,6 +100,10 @@ async fn list_objects(
         &access,
         ListObjectsInput {
             parent_id: query.parent_id,
+            limit: query.limit,
+            cursor: query.cursor,
+            object_type: query.object_type,
+            name_prefix: query.name_prefix,
         },
     )
     .await?;
@@ -138,6 +165,7 @@ async fn create_folder(
     ),
     responses(
         (status = 200, description = "List trashed objects", body = TrashListResponse),
+        (status = 400, description = "Invalid pagination cursor", body = ErrorEnvelope),
         (status = 401, description = "Unauthorized", body = ErrorEnvelope),
         (status = 500, description = "Internal server error", body = ErrorEnvelope),
     ),
@@ -146,6 +174,7 @@ async fn list_trash(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(workspace_id): Path<Uuid>,
+    Query(query): Query<TrashListQuery>,
 ) -> Result<Json<TrashListResponse>, AppError> {
     let access = authorize_workspace_action(
         &state.db,
@@ -156,7 +185,17 @@ async fn list_trash(
     )
     .await?;
 
-    let result = crate::domains::files::list_trash(&state.db, &access).await?;
+    let result = crate::domains::files::list_trash(
+        &state.db,
+        &access,
+        TrashListInput {
+            limit: query.limit,
+            cursor: query.cursor,
+            object_type: query.object_type,
+            name_prefix: query.name_prefix,
+        },
+    )
+    .await?;
 
     Ok(Json(result))
 }

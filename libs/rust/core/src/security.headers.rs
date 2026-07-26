@@ -4,12 +4,16 @@ use axum::{
     response::Response,
 };
 
-const ACCEPT_CH_VALUE: HeaderValue =
-    HeaderValue::from_static("Sec-CH-UA, Sec-CH-UA-Platform, Sec-CH-UA-Mobile");
+const ACCEPT_CH_VALUE: HeaderValue = HeaderValue::from_static(
+    "Sec-CH-UA, Sec-CH-UA-Arch, Sec-CH-UA-Bitness, Sec-CH-UA-Full-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Model, Sec-CH-UA-WoW64, Sec-CH-UA-Form-Factors, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version",
+);
 const CLEAR_SITE_DATA_VALUE: HeaderValue =
     HeaderValue::from_static("\"cache\", \"cookies\", \"storage\", \"executionContexts\"");
 const CRITICAL_CH_VALUE: HeaderValue =
     HeaderValue::from_static("Sec-CH-UA, Sec-CH-UA-Platform, Sec-CH-UA-Mobile");
+#[cfg(test)]
+const CLICKJACKING_FRAME_ANCESTORS: &str = "frame-ancestors 'none'";
+const CLICKJACKING_X_FRAME_OPTIONS_VALUE: HeaderValue = HeaderValue::from_static("DENY");
 const DOCUMENT_POLICY_VALUE: HeaderValue =
     HeaderValue::from_static("oversized-images=2.0, unsized-media=2.0, force-load-at-top");
 const EXPECT_CT_VALUE: HeaderValue = HeaderValue::from_static("max-age=86400, enforce");
@@ -24,6 +28,9 @@ const REPORT_TO_VALUE: HeaderValue = HeaderValue::from_static(
 );
 const CSP_REPORT_TO_VALUE: HeaderValue = HeaderValue::from_static(
     r#"{"group":"nvbes-csp-endpoint","max_age":10886400,"endpoints":[{"url":"/csp-report"}],"include_subdomains":true}"#,
+);
+const CSP_VALUE: HeaderValue = HeaderValue::from_static(
+    "default-src 'none'; script-src 'none'; script-src-attr 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'self'; worker-src 'none'; child-src 'none'; frame-src 'none'; object-src 'none'; manifest-src 'none'; media-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; report-uri /csp-report; report-to nvbes-csp-endpoint",
 );
 const REQUIRED_VARY_HEADERS: [&str; 2] = ["Accept-Encoding", "Authorization"];
 const TIMING_ALLOW_ORIGIN_VALUE: HeaderValue = HeaderValue::from_static("*");
@@ -52,7 +59,7 @@ fn insert_security_headers(headers: &mut HeaderMap) {
     headers.insert(HeaderName::from_static("expect-ct"), EXPECT_CT_VALUE);
     headers.insert(
         HeaderName::from_static("x-frame-options"),
-        HeaderValue::from_static("DENY"),
+        CLICKJACKING_X_FRAME_OPTIONS_VALUE,
     );
     headers.insert(
         HeaderName::from_static("referrer-policy"),
@@ -64,9 +71,7 @@ fn insert_security_headers(headers: &mut HeaderMap) {
     );
     headers.insert(
         HeaderName::from_static("content-security-policy"),
-        HeaderValue::from_static(
-            "default-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; report-uri /csp-report; report-to nvbes-csp-endpoint",
-        ),
+        CSP_VALUE,
     );
     headers.insert(
         HeaderName::from_static("permissions-policy"),

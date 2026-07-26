@@ -1,6 +1,6 @@
 import { HttpError } from '@nvbes/http-client';
 import { completeWebAuthnStepUp, stepUp } from '@nvbes/identity-sdk-web';
-import { type FormEvent, useCallback, useState } from 'react';
+import { type SubmitEvent, useCallback, useState } from 'react';
 import { enterpriseClient } from '../enterprise.api';
 import { AdminElevationDialog, type StepUpMethod } from './UsersPage.admin-elevation.dialog';
 
@@ -67,7 +67,7 @@ export function useAdminElevation({
     [requestElevation],
   );
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);

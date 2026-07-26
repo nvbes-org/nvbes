@@ -1,6 +1,5 @@
-import { createHttpClient } from '@nvbes/http-client';
 import { z } from 'zod';
-import { accountServiceBaseUrl, identityHttpClient, identityVerifiedFetch } from './identity.http';
+import { developerHttpClient } from './identity.http';
 import {
   CreateDeveloperAppResponseSchema,
   CreateDeveloperWebhookEndpointResponseSchema,
@@ -55,11 +54,6 @@ import {
 import type { SecretRotationForm } from './pages/SecretsPage.helpers';
 import { buildSecretRotationPayload } from './pages/SecretsPage.helpers';
 
-const developerHttpClient = createHttpClient({
-  baseUrl: accountServiceBaseUrl,
-  credentials: 'include',
-  fetchImpl: identityVerifiedFetch,
-});
 const EmptyResponseSchema = z.undefined();
 
 export function getDeveloperMe(options?: { signal?: AbortSignal }) {
@@ -169,13 +163,13 @@ export function hasDeveloperPermission(
 }
 
 export function getDeveloperContext(signal?: AbortSignal): Promise<DeveloperContext> {
-  return identityHttpClient.get('/developer/console/context', DeveloperContextSchema, {
+  return developerHttpClient.get('/developer/console/context', DeveloperContextSchema, {
     signal: withTimeoutSignal(signal, 4_000),
   });
 }
 
 export function getDeveloperOverview(signal?: AbortSignal): Promise<DeveloperOverview> {
-  return identityHttpClient.get('/developer/console/overview', DeveloperOverviewSchema, {
+  return developerHttpClient.get('/developer/console/overview', DeveloperOverviewSchema, {
     signal: withTimeoutSignal(signal, 4_000),
   });
 }
@@ -183,7 +177,7 @@ export function getDeveloperOverview(signal?: AbortSignal): Promise<DeveloperOve
 export async function listDeveloperOAuthClients(
   signal?: AbortSignal,
 ): Promise<DeveloperOAuthClient[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/oauth-clients',
     DeveloperOAuthClientsSchema,
     {
@@ -196,7 +190,7 @@ export async function listDeveloperOAuthClients(
 export async function listDeveloperMarketplaceApps(
   signal?: AbortSignal,
 ): Promise<DeveloperMarketplaceApp[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/marketplace/apps',
     DeveloperMarketplaceAppsSchema,
     {
@@ -207,7 +201,7 @@ export async function listDeveloperMarketplaceApps(
 }
 
 export function submitDeveloperMarketplaceApp(clientId: string): Promise<DeveloperMarketplaceApp> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     `/developer/console/marketplace/apps/${encodeURIComponent(clientId)}/submit`,
     DeveloperMarketplaceAppSchema,
     {},
@@ -219,7 +213,7 @@ export function reviewDeveloperMarketplaceApp(
   status: string,
   reviewReason?: string,
 ): Promise<DeveloperMarketplaceApp> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     `/developer/console/marketplace/apps/${encodeURIComponent(clientId)}/review`,
     DeveloperMarketplaceAppSchema,
     {
@@ -232,7 +226,7 @@ export function reviewDeveloperMarketplaceApp(
 export async function listDeveloperScopes(
   signal?: AbortSignal,
 ): Promise<DeveloperScopeRegistryEntry[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/scopes',
     DeveloperScopeRegistrySchema,
     {
@@ -246,7 +240,7 @@ export function getDeveloperConsentScreen(
   clientId: string,
   signal?: AbortSignal,
 ): Promise<DeveloperConsentScreen> {
-  return identityHttpClient.get(
+  return developerHttpClient.get(
     `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/consent-screen`,
     DeveloperConsentScreenSchema,
     {
@@ -259,7 +253,7 @@ export function upsertDeveloperConsentScreen(
   clientId: string,
   form: DeveloperConsentScreenForm,
 ): Promise<DeveloperConsentScreen> {
-  return identityHttpClient.request(
+  return developerHttpClient.request(
     `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/consent-screen`,
     DeveloperConsentScreenSchema,
     {
@@ -272,7 +266,7 @@ export function upsertDeveloperConsentScreen(
 export async function listDeveloperServiceAccounts(
   signal?: AbortSignal,
 ): Promise<DeveloperServiceAccount[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/service-accounts',
     DeveloperServiceAccountsSchema,
     {
@@ -317,7 +311,7 @@ export async function listDeveloperSecretVersions(
   clientId: string,
   signal?: AbortSignal,
 ): Promise<DeveloperSecretVersion[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/secrets`,
     DeveloperSecretVersionsSchema,
     {
@@ -331,7 +325,7 @@ export function rotateDeveloperSecret(
   clientId: string,
   form: SecretRotationForm,
 ): Promise<RotateDeveloperSecret> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/secrets/rotation`,
     RotateDeveloperSecretSchema,
     buildSecretRotationPayload(form),
@@ -342,7 +336,7 @@ export async function revokeDeveloperSecretVersion(
   clientId: string,
   versionId: string,
 ): Promise<DeveloperSecretVersion[]> {
-  const response = await identityHttpClient.post(
+  const response = await developerHttpClient.post(
     `/developer/console/oauth-clients/${encodeURIComponent(clientId)}/secrets/${encodeURIComponent(versionId)}/revoke`,
     DeveloperSecretVersionsSchema,
     {},
@@ -353,7 +347,7 @@ export async function revokeDeveloperSecretVersion(
 export async function listDeveloperConsoleWebhooks(
   signal?: AbortSignal,
 ): Promise<DeveloperWebhookEndpoint[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/webhooks',
     DeveloperWebhookEndpointsSchema,
     {
@@ -364,14 +358,14 @@ export async function listDeveloperConsoleWebhooks(
 }
 
 export async function listDeveloperConsoleLogs(signal?: AbortSignal): Promise<DeveloperLogEntry[]> {
-  const response = await identityHttpClient.get('/developer/console/logs', DeveloperLogsSchema, {
+  const response = await developerHttpClient.get('/developer/console/logs', DeveloperLogsSchema, {
     signal: withTimeoutSignal(signal, 4_000),
   });
   return response.logs;
 }
 
 export function debugDeveloperToken(accessToken: string): Promise<DebugDeveloperToken> {
-  return identityHttpClient.post('/developer/console/tokens/debug', DebugDeveloperTokenSchema, {
+  return developerHttpClient.post('/developer/console/tokens/debug', DebugDeveloperTokenSchema, {
     access_token: accessToken,
   });
 }
@@ -379,7 +373,7 @@ export function debugDeveloperToken(accessToken: string): Promise<DebugDeveloper
 export async function getDeveloperSandbox(
   signal?: AbortSignal,
 ): Promise<DeveloperSandboxTenant | null> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/sandbox',
     DeveloperSandboxSchema,
     {
@@ -392,7 +386,7 @@ export async function getDeveloperSandbox(
 export function upsertDeveloperSandbox(
   dataProfile: DeveloperSandboxDataProfile,
 ): Promise<DeveloperSandboxTenant> {
-  return identityHttpClient.request('/developer/console/sandbox', DeveloperSandboxTenantSchema, {
+  return developerHttpClient.request('/developer/console/sandbox', DeveloperSandboxTenantSchema, {
     method: 'PUT',
     body: {
       data_profile: dataProfile,
@@ -401,7 +395,7 @@ export function upsertDeveloperSandbox(
 }
 
 export function resetDeveloperSandbox(): Promise<DeveloperSandboxTenant> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     '/developer/console/sandbox/reset',
     DeveloperSandboxTenantSchema,
     {},
@@ -411,7 +405,7 @@ export function resetDeveloperSandbox(): Promise<DeveloperSandboxTenant> {
 export async function listDeveloperHealthChecks(
   signal?: AbortSignal,
 ): Promise<DeveloperHealthCheck[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     '/developer/console/health-checks',
     DeveloperHealthChecksSchema,
     {
@@ -422,7 +416,7 @@ export async function listDeveloperHealthChecks(
 }
 
 export async function runDeveloperHealthChecks(): Promise<DeveloperHealthCheck[]> {
-  const response = await identityHttpClient.post(
+  const response = await developerHttpClient.post(
     '/developer/console/health-checks',
     DeveloperHealthChecksSchema,
     {},
@@ -433,7 +427,7 @@ export async function runDeveloperHealthChecks(): Promise<DeveloperHealthCheck[]
 export function createDeveloperScope(
   input: CreateScopeInput,
 ): Promise<DeveloperScopeRegistryEntry> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     '/developer/console/scopes',
     DeveloperScopeRegistryEntrySchema,
     input,
@@ -444,7 +438,7 @@ export function updateDeveloperScope(
   scopeKey: string,
   input: UpdateScopeInput,
 ): Promise<DeveloperScopeRegistryEntry> {
-  return identityHttpClient.request(
+  return developerHttpClient.request(
     `/developer/console/scopes/${encodeURIComponent(scopeKey)}`,
     DeveloperScopeRegistryEntrySchema,
     {
@@ -455,7 +449,7 @@ export function updateDeveloperScope(
 }
 
 export function deleteDeveloperScope(scopeKey: string): Promise<void> {
-  return identityHttpClient.delete(
+  return developerHttpClient.delete(
     `/developer/console/scopes/${encodeURIComponent(scopeKey)}`,
     EmptyResponseSchema,
   );
@@ -465,7 +459,7 @@ export async function listDeveloperConsoleWebhookDeliveries(
   endpointId: string,
   signal?: AbortSignal,
 ): Promise<DeveloperWebhookDelivery[]> {
-  const response = await identityHttpClient.get(
+  const response = await developerHttpClient.get(
     `/developer/console/webhooks/${encodeURIComponent(endpointId)}/deliveries`,
     DeveloperWebhookDeliveriesSchema,
     {
@@ -478,7 +472,7 @@ export async function listDeveloperConsoleWebhookDeliveries(
 export async function replayDeveloperConsoleWebhookDelivery(
   deliveryId: string,
 ): Promise<DeveloperWebhookDelivery> {
-  return identityHttpClient.post(
+  return developerHttpClient.post(
     `/developer/console/webhooks/deliveries/${encodeURIComponent(deliveryId)}/replay`,
     DeveloperWebhookDeliverySchema,
     {},

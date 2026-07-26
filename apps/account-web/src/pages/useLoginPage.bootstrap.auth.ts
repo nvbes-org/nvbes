@@ -3,7 +3,7 @@ import { clientErrorMessage } from '@nvbes/web-runtime';
 import {
   isConsentRequiredError,
   isInvalidSignatureError,
-  isMissingLoginSessionError,
+  isUnauthorizedError,
 } from './LoginPage.errors';
 import { syncTrackingConsent } from '../tracking-consent';
 import type { UseLoginPageBootstrapOptions } from './useLoginPage.bootstrap.types';
@@ -77,7 +77,7 @@ export async function bootstrapLoginAuth({
     } else if (isInvalidSignatureError(err)) {
       setError(null);
       setStep('identifier');
-    } else if (isMissingLoginSessionError(err)) {
+    } else if (isUnauthorizedError(err)) {
       setError(null);
     } else {
       setError(clientErrorMessage(err, "Impossible de finaliser l'autorisation OAuth"));

@@ -106,16 +106,18 @@ pub async fn generate_recovery(
         ));
     }
 
-    let user = db::fetch_user_record(db, user_id).await?;
-    password::verify_password(
-        user.password_hash.as_deref().ok_or_else(|| {
-            AppError::forbidden(
-                "password_missing",
-                "No password is configured for this account.",
-            )
-        })?,
-        password,
-    )?;
+    if !password.is_empty() {
+        let user = db::fetch_user_record(db, user_id).await?;
+        password::verify_password(
+            user.password_hash.as_deref().ok_or_else(|| {
+                AppError::forbidden(
+                    "password_missing",
+                    "No password is configured for this account.",
+                )
+            })?,
+            password,
+        )?;
+    }
 
     let mut codes = Vec::with_capacity(10);
     for _ in 0..10 {

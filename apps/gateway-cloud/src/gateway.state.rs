@@ -1,6 +1,9 @@
 #[derive(Clone)]
 pub struct GatewayState {
     pub billing_grpc_endpoint: String,
+    pub identity_base_url: String,
+    pub identity_client_id: String,
+    pub identity_client_secret: String,
 }
 
 #[derive(Clone, Debug)]

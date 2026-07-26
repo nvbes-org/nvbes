@@ -1,23 +1,23 @@
+import { Button } from '@/components/ui/button';
 import {
   CurrentSessionCard,
   EmptySessionsCard,
-  OtherSessionsCard,
+  OtherDevicesSection,
+  RecognizedDevicesSection,
   SessionsSkeleton,
 } from './AccountSessionsPage.shared';
 import { useAccountSessionsPage } from './useAccountSessionsPage';
 
 export default function AccountSessionsPage() {
   const {
-    currentSession,
+    currentDevice,
     isPending,
-    listRef,
-    otherSessions,
+    otherDevices,
+    recognizedDevices,
     revoking,
     sessions,
-    totalSize,
-    virtualItems,
-    virtualizer,
     onRevoke,
+    onRevokeDevice,
     onRevokeOthers,
   } = useAccountSessionsPage();
 
@@ -25,27 +25,44 @@ export default function AccountSessionsPage() {
     return <SessionsSkeleton />;
   }
 
+  const hasOtherDevices = recognizedDevices.length > 0 || otherDevices.length > 0;
+
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
-      <div>
-        <h1 className="text-xl font-heading font-semibold">Appareils & sessions</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerer vos sessions actives sur tous vos appareils.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-heading font-semibold">Appareils & sessions</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gérez et révoquez vos sessions actives groupées par appareil.
+          </p>
+        </div>
+
+        {hasOtherDevices && (
+          <Button variant="outline" size="sm" onClick={onRevokeOthers} className="shrink-0">
+            Déconnecter les autres
+          </Button>
+        )}
       </div>
 
-      {currentSession && <CurrentSessionCard session={currentSession} />}
+      {currentDevice && (
+        <CurrentSessionCard device={currentDevice} revoking={revoking} onRevoke={onRevoke} />
+      )}
 
-      {otherSessions.length > 0 && (
-        <OtherSessionsCard
-          sessions={otherSessions}
-          listRef={listRef}
-          totalSize={totalSize}
-          virtualItems={virtualItems}
-          measureElement={virtualizer.measureElement}
+      {recognizedDevices.length > 0 && (
+        <RecognizedDevicesSection
+          devices={recognizedDevices}
           revoking={revoking}
           onRevoke={onRevoke}
-          onRevokeOthers={onRevokeOthers}
+          onRevokeDevice={onRevokeDevice}
+        />
+      )}
+
+      {otherDevices.length > 0 && (
+        <OtherDevicesSection
+          devices={otherDevices}
+          revoking={revoking}
+          onRevoke={onRevoke}
+          onRevokeDevice={onRevokeDevice}
         />
       )}
 

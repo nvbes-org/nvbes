@@ -54,6 +54,7 @@ pub async fn reset(
     let mut tx = db.begin().await?;
     db::reset::apply_password_reset(&mut tx, principal_id, &token_hash, &new_hash).await?;
     crate::domains::auth::sessions_mgmt::revoke_all_user_sessions_tx(&mut tx, principal_id).await?;
+    crate::domains::auth::device_trust::revoke_all_devices_tx(&mut tx, principal_id).await?;
     tx.commit().await?;
 
     nvbes_redis::session::clear_user_sessions(redis, &principal_id.to_string())

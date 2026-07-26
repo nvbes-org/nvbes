@@ -1,5 +1,5 @@
-import { zxcvbn } from '@zxcvbn-ts/core';
 import { useMemo, useState } from 'react';
+import { estimatePasswordStrength } from './RegisterPage.password-strength';
 import type { RegisterStep } from './RegisterPage.shared';
 
 function birthdateBounds() {
@@ -22,29 +22,15 @@ export function useRegisterPageState() {
   const [birthdate, setBirthdate] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [workspaceNameEdited, setWorkspaceNameEdited] = useState(false);
   const [legalDocumentsAccepted, setLegalDocumentsAccepted] = useState(false);
   const [marketingEmailsAccepted, setMarketingEmailsAccepted] = useState(false);
-
-  const defaultWorkspaceName = useMemo(() => {
-    const trimmedUsername = username.trim();
-    return trimmedUsername ? `Espace de travail de ${trimmedUsername}` : '';
-  }, [username]);
-
-  const currentWorkspaceName = workspaceNameEdited ? workspaceName : defaultWorkspaceName;
-
-  const updateWorkspaceName = (value: string) => {
-    setWorkspaceNameEdited(true);
-    setWorkspaceName(value);
-  };
 
   const passwordResult = useMemo(() => {
     if (!password) {
       return null;
     }
 
-    return zxcvbn(password);
+    return estimatePasswordStrength(password);
   }, [password]);
 
   return {
@@ -68,9 +54,7 @@ export function useRegisterPageState() {
     setPassword,
     setStep,
     setUsername,
-    setWorkspaceName: updateWorkspaceName,
     step,
     username,
-    workspaceName: currentWorkspaceName,
   };
 }

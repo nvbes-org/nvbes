@@ -4,21 +4,76 @@ use crate::{
     domains::authz::WorkspaceAccess, domains::files::models::StorageObjectStatus,
     domains::quotas::StorageReleasedUsageInput, http::error::AppError,
 };
+use nvbes_core::pagination::{KeysetCursor, page_from_rows};
 use sqlx::PgPool;
 
-use super::types::{DeleteObjectResponse, ObjectResponse, TrashListResponse};
+use super::pagination::normalize_name_prefix;
+use super::types::{DeleteObjectResponse, ObjectResponse, TrashListInput, TrashListResponse};
 use super::{db_lifecycle as db, queries};
+
+#[cfg(test)]
+#[path = "drive.domains.files.lifecycle.db_tests.rs"]
+mod db_tests;
 
 pub async fn list_trash(
     db: &PgPool,
     access: &WorkspaceAccess,
+    input: TrashListInput,
 ) -> Result<TrashListResponse, AppError> {
+    let limit = input.limit.unwrap_or(50).clamp(1, 200);
+    let cursor = input
+        .cursor
+        .as_deref()
+        .map(KeysetCursor::decode)
+        .transpose()
+        .map_err(|_| AppError::bad_request("invalid_cursor", "Pagination cursor is invalid."))?;
+    let name_prefix = normalize_name_prefix(input.name_prefix);
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
-    let objects = db::list_trash_tx(&mut tx, access.workspace_id).await?;
+    let objects = db::list_trash_tx(
+        &mut tx,
+        access.workspace_id,
+        cursor.as_ref(),
+        name_prefix.as_deref(),
+        input.object_type.map(|value| value.as_str()),
+        limit + 1,
+    )
+    .await?;
     tx.commit().await?;
+    let objects_with_cursors = objects
+        .into_iter()
+        .map(|object| {
+            let created_at = object.trashed_at.ok_or_else(|| {
+                AppError::internal(
+                    "invalid_trash_state",
+                    "Trashed object is missing its trash timestamp.",
+                )
+            })?;
+            let cursor = KeysetCursor {
+                created_at,
+                id: object.id,
+            };
+            Ok((object, cursor))
+        })
+        .collect::<Result<Vec<_>, AppError>>()?;
+    let page = page_from_rows(objects_with_cursors, limit as usize, |(_, cursor)| *cursor);
 
     Ok(TrashListResponse {
-        objects: objects.into_iter().map(Into::into).collect(),
+        objects: page
+            .items
+            .into_iter()
+            .map(|(object, _)| object.into())
+            .collect(),
+        next_cursor: page
+            .next_cursor
+            .map(KeysetCursor::encode)
+            .transpose()
+            .map_err(|_| {
+                AppError::internal(
+                    "cursor_encoding_failed",
+                    "Pagination cursor could not be encoded.",
+                )
+            })?,
+        has_more: page.has_more,
     })
 }
 

@@ -24,6 +24,12 @@ pub async fn apply_login_delay(db: &PgPool, principal_id: Uuid) -> Result<(), Ap
         FROM risk_events
         WHERE principal_id = $1
           AND event_type = 'login_failed'
+          AND created_at > COALESCE((
+            SELECT MAX(created_at)
+            FROM risk_events successful_logins
+            WHERE successful_logins.principal_id = $1
+              AND successful_logins.event_type = 'login_success'
+          ), '-infinity'::timestamptz)
           AND created_at > NOW() - INTERVAL '15 minutes'
         "#,
     )

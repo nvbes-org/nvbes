@@ -8,3 +8,7 @@ pub mod jobs;
 pub mod loop_;
 
 pub use loop_::run_loop_until_shutdown;
+
+pub async fn run_housekeeping_job(state: &crate::app::AppState) -> anyhow::Result<()> {
+    housekeeping::run_once(state).await
+}

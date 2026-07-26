@@ -179,7 +179,7 @@ async fn load_kyc_profiles(db: &sqlx::PgPool) -> Result<Vec<KycProfile>, Status>
         r#"
         SELECT kyc.id, kyc.tenant_id, t.name AS tenant_name, kyc.company_name,
           kyc.company_domain, kyc.vat_id, kyc.proof_reference,
-          kyc.review_status, kyc.updated_at
+          kyc.review_status, kyc.created_at, kyc.updated_at
         FROM billing_kyc_profiles kyc
         JOIN tenants t ON t.id = kyc.tenant_id
         ORDER BY (kyc.review_status = 'pending') DESC, kyc.updated_at DESC
@@ -207,6 +207,9 @@ async fn load_kyc_profiles(db: &sqlx::PgPool) -> Result<Vec<KycProfile>, Status>
                 .get::<Option<String>, _>("proof_reference")
                 .unwrap_or_default(),
             review_status: row.get("review_status"),
+            created_at: row
+                .get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+                .to_rfc3339(),
             updated_at: row
                 .get::<chrono::DateTime<chrono::Utc>, _>("updated_at")
                 .to_rfc3339(),

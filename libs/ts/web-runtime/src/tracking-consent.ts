@@ -1,26 +1,26 @@
+import { HttpError } from '@nvbes/http-client';
 import {
   ACCEPT_ALL_CONSENT,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
+  type CookieConsentState,
+  cloneConsent,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  ANALYTICS_PURPOSE_CONSENT_TYPES,
-  LEGACY_VENDOR_CONSENT_TYPES,
-  TRACKING_CONSENT_CHANGED_EVENT,
-  VENDOR_CONSENT_TYPES,
-  cloneConsent,
   getAnalyticsConsent,
   getTrackingConsent,
   hasAnyOptionalConsent,
-  isCategoryAccepted,
   isAnalyticsPurposeAccepted,
+  isCategoryAccepted,
   isVendorAccepted,
+  LEGACY_VENDOR_CONSENT_TYPES,
   persistTrackingConsent,
   readTrackingConsentStoredValue,
-  type CookieConsentState,
+  TRACKING_CONSENT_CHANGED_EVENT,
   type TrackingConsentStoredValue,
+  VENDOR_CONSENT_TYPES,
 } from './tracking-consent.storage';
-import { HttpError } from '@nvbes/http-client';
 
 export type BackendConsent = {
   consent_type: string;
@@ -37,6 +37,7 @@ export type TrackingConsentClient = {
 };
 
 const BACKEND_SYNC_SOURCE = 'account-web:sync:backend';
+export const TRACKING_CONSENT_DOCUMENT_VERSION = 'cookie-notice-2026-07-20';
 
 function activeVersionsByConsentType(consents: BackendConsent[]): Map<string, Set<string>> {
   const active = new Map<string, Set<string>>();
@@ -79,27 +80,44 @@ function hasActiveConsent(activeVersions: Map<string, Set<string>>, consentType:
 
 function backendConsentState(consents: BackendConsent[]): CookieConsentState {
   const activeVersions = activeVersionsByConsentType(consents);
-  const analyticsGranted =
+  const hasPurposeRecords = consents.some((consent) =>
+    Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES).includes(
+      consent.consent_type as (typeof ANALYTICS_PURPOSE_CONSENT_TYPES)[keyof typeof ANALYTICS_PURPOSE_CONSENT_TYPES],
+    ),
+  );
+  const legacyAnalyticsGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_analytics') ||
     hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.posthog) ||
-    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.analytics) ||
-    Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES).some((consentType) =>
-      hasActiveConsent(activeVersions, consentType),
-    );
-  const performanceGranted =
+    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.analytics);
+  const legacyPerformanceGranted =
     hasActiveConsent(activeVersions, 'cookie_consent_performance') ||
     hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.sentry) ||
     hasActiveConsent(activeVersions, VENDOR_CONSENT_TYPES.grafana) ||
-    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.errorReporting) ||
-    hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking);
+    hasActiveConsent(activeVersions, LEGACY_VENDOR_CONSENT_TYPES.errorReporting);
   const analytics = {
-    productAnalytics: analyticsGranted,
-    autocaptureHeatmaps: analyticsGranted,
-    sessionReplay: analyticsGranted,
-    surveysFeedback: analyticsGranted,
-    errorTracking: performanceGranted,
-    featureFlags: analyticsGranted,
+    productAnalytics: hasPurposeRecords
+      ? hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.productAnalytics)
+      : legacyAnalyticsGranted,
+    autocaptureHeatmaps:
+      hasPurposeRecords &&
+      hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.autocaptureHeatmaps),
+    sessionReplay:
+      hasPurposeRecords &&
+      hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.sessionReplay),
+    surveysFeedback:
+      hasPurposeRecords &&
+      hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.surveysFeedback),
+    errorTracking: hasPurposeRecords
+      ? hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.errorTracking)
+      : legacyPerformanceGranted,
+    featureFlags:
+      hasPurposeRecords &&
+      hasActiveConsent(activeVersions, ANALYTICS_PURPOSE_CONSENT_TYPES.featureFlags),
   };
+  const analyticsGranted = Object.entries(analytics).some(
+    ([purpose, granted]) => purpose !== 'errorTracking' && granted,
+  );
+  const performanceGranted = analytics.errorTracking;
 
   return {
     categories: {
@@ -136,12 +154,12 @@ function queueConsentSync(
 ): void {
   const versions = activeVersions.get(consentType) ?? new Set<string>();
 
-  if (granted && !versions.has('v3')) {
-    promises.push(client.grantConsent(consentType, 'v3'));
+  if (granted && !versions.has(TRACKING_CONSENT_DOCUMENT_VERSION)) {
+    promises.push(client.grantConsent(consentType, TRACKING_CONSENT_DOCUMENT_VERSION));
   }
 
   for (const version of versions) {
-    if (!granted || version !== 'v3') {
+    if (!granted || version !== TRACKING_CONSENT_DOCUMENT_VERSION) {
       promises.push(client.revokeConsent(consentType, version));
     }
   }
@@ -156,32 +174,43 @@ async function syncLocalConsentToBackend(
   const promises: Promise<unknown>[] = [];
 
   const categoryMapping = {
-    essentials: 'cookie_consent_essentials',
     analytics: 'cookie_consent_analytics',
     performance: 'cookie_consent_performance',
-  } as const satisfies Record<keyof CookieConsentState['categories'], string>;
+  } as const;
 
   for (const [category, consentType] of Object.entries(categoryMapping)) {
     queueConsentSync(
       promises,
       activeVersions,
       consentType,
-      consent.categories[category as keyof CookieConsentState['categories']],
+      consent.categories[category as keyof typeof categoryMapping],
       client,
     );
   }
 
   for (const [vendor, consentType] of Object.entries(VENDOR_CONSENT_TYPES)) {
+    if (vendor === 'stripe' || vendor === 'identity' || vendor === 'cloudflare') {
+      queueConsentSync(promises, activeVersions, consentType, false, client);
+      continue;
+    }
     const granted = consent.vendors[vendor as keyof CookieConsentState['vendors']];
     queueConsentSync(promises, activeVersions, consentType, granted, client);
   }
 
-  for (const consentType of [
-    ...Object.values(ANALYTICS_PURPOSE_CONSENT_TYPES),
-    ...Object.values(LEGACY_VENDOR_CONSENT_TYPES),
-  ]) {
+  for (const [purpose, consentType] of Object.entries(ANALYTICS_PURPOSE_CONSENT_TYPES)) {
+    queueConsentSync(
+      promises,
+      activeVersions,
+      consentType,
+      consent.analytics[purpose as keyof CookieConsentState['analytics']],
+      client,
+    );
+  }
+
+  for (const consentType of Object.values(LEGACY_VENDOR_CONSENT_TYPES)) {
     queueConsentSync(promises, activeVersions, consentType, false, client);
   }
+  queueConsentSync(promises, activeVersions, 'cookie_consent_essentials', false, client);
 
   queueConsentSync(
     promises,
@@ -223,8 +252,11 @@ async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<
     throw error;
   }
 
-  const backendChangedAt = latestBackendConsentChangeAt(backendConsents);
-  const backendConsent = backendConsentState(backendConsents);
+  const currentBackendConsents = backendConsents.filter(
+    (consent) => consent.document_version === TRACKING_CONSENT_DOCUMENT_VERSION,
+  );
+  const backendChangedAt = latestBackendConsentChangeAt(currentBackendConsents);
+  const backendConsent = backendConsentState(currentBackendConsents);
   const storedValue = readTrackingConsentStoredValue();
   const localConsent = getTrackingConsent();
   const localChangedAt = storedValue ? Date.parse(storedValue.savedAt) : Number.NaN;
@@ -245,22 +277,22 @@ async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<
 
 export {
   ACCEPT_ALL_CONSENT,
+  ANALYTICS_PURPOSE_CONSENT_TYPES,
   CATEGORY_ANALYTICS_PURPOSES_MAP,
   CATEGORY_VENDORS_MAP,
+  type CookieConsentState,
+  cloneConsent,
   DECLINE_ALL_CONSENT,
   DEFAULT_CONSENT,
-  ANALYTICS_PURPOSE_CONSENT_TYPES,
-  LEGACY_VENDOR_CONSENT_TYPES,
-  TRACKING_CONSENT_CHANGED_EVENT,
-  VENDOR_CONSENT_TYPES,
-  cloneConsent,
   getAnalyticsConsent,
   getTrackingConsent,
-  isCategoryAccepted,
   isAnalyticsPurposeAccepted,
+  isCategoryAccepted,
   isVendorAccepted,
-  type CookieConsentState,
+  LEGACY_VENDOR_CONSENT_TYPES,
+  TRACKING_CONSENT_CHANGED_EVENT,
   type TrackingConsentStoredValue,
+  VENDOR_CONSENT_TYPES,
 };
 
 export function createTrackingConsentApi({

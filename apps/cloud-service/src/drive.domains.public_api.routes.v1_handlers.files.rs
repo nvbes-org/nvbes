@@ -1,3 +1,4 @@
+use crate::domains::files::ObjectTypeFilter;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -13,6 +14,10 @@ mod mutations;
 #[serde(rename_all = "snake_case")]
 pub struct ListObjectsQuery {
     pub parent_id: Option<Uuid>,
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub object_type: Option<ObjectTypeFilter>,
+    pub name_prefix: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]

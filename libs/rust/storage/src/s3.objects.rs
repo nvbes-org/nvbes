@@ -1,5 +1,4 @@
 use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::types::{Delete, ObjectIdentifier};
 
 use crate::error::StorageError;
 use crate::trait_def::{ByteRange, ObjectMeta};
@@ -87,38 +86,10 @@ pub(super) async fn delete_objects(
         return Ok(());
     }
 
-    let mut builder = Delete::builder();
     for key in keys {
-        builder =
-            builder.objects(ObjectIdentifier::builder().key(key).build().map_err(|e| {
-                StorageError::S3(format!("failed to build object identifier: {e}"))
-            })?);
-    }
-
-    let delete = builder
-        .build()
-        .map_err(|e| StorageError::S3(format!("failed to build delete request: {e}")))?;
-
-    let response = traced_s3_request!(
-        store
-            .client
-            .delete_objects()
-            .bucket(&store.bucket)
-            .delete(delete)
-    )
-    .send()
-    .await?;
-
-    let errors = response.errors();
-    if !errors.is_empty() {
-        let first_error = errors
-            .first()
-            .and_then(|error| error.code())
-            .unwrap_or("S3");
-        return Err(StorageError::S3(format!(
-            "failed to delete {} S3 object(s); first error code: {first_error}",
-            errors.len()
-        )));
+        traced_s3_request!(store.client.delete_object().bucket(&store.bucket).key(key))
+            .send()
+            .await?;
     }
 
     tracing::debug!(count = keys.len(), bucket = %store.bucket, "S3 objects deleted");

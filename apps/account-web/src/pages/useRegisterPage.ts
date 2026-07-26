@@ -27,10 +27,8 @@ export function useRegisterPage() {
     setPassword,
     setStep,
     setUsername,
-    setWorkspaceName,
     step,
     username,
-    workspaceName,
   } = useRegisterPageState();
   const {
     detectedRegion,
@@ -52,7 +50,7 @@ export function useRegisterPage() {
     setStep(1);
   };
 
-  const { error, handleSubmit, loading } = useRegisterPageSubmit({
+  const { emailAlreadyExists, error, handleSubmit, loading, resetError } = useRegisterPageSubmit({
     oauthRequest,
     detectedRegion,
     selectedRegion,
@@ -62,7 +60,6 @@ export function useRegisterPage() {
     birthdate,
     email,
     password,
-    workspaceName,
     canProceedFromStep1,
     legalDocumentsAccepted,
     marketingEmailsAccepted,
@@ -79,6 +76,11 @@ export function useRegisterPage() {
     },
   });
 
+  const handleEditEmail = () => {
+    resetError();
+    setStep(1);
+  };
+
   return {
     birthdate,
     canProceedFromStep1,
@@ -86,10 +88,12 @@ export function useRegisterPage() {
     detectedRegion,
     detectedReliability,
     email,
+    emailAlreadyExists,
     error,
     firstname,
     handleStep1Next,
     handleStep2Back,
+    handleEditEmail,
     handleSubmit,
     lastname,
     legalDocumentsAccepted,
@@ -109,10 +113,8 @@ export function useRegisterPage() {
     setPassword,
     setSelectedRegion,
     setUsername,
-    setWorkspaceName,
     step,
     supportedRegions,
     username,
-    workspaceName,
   };
 }

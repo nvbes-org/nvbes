@@ -1,8 +1,4 @@
-import {
-  ALL_ANALYTICS_CONSENT,
-  EMPTY_ANALYTICS_CONSENT,
-  type AnalyticsPurposeConsent,
-} from './analytics';
+import { type AnalyticsPurposeConsent, EMPTY_ANALYTICS_CONSENT } from './analytics';
 import { getSafeLocalStorage } from './safe-storage';
 
 export interface CookieConsentState {
@@ -23,7 +19,7 @@ export interface CookieConsentState {
 }
 
 export interface TrackingConsentStoredValue {
-  version: 3;
+  version: 4;
   savedAt: string;
   expiresAt: string;
   source: string;
@@ -52,6 +48,7 @@ type StoredConsentCandidate = {
 
 export const TRACKING_CONSENT_CHANGED_EVENT = 'nvbes:tracking-consent-changed';
 const CONSENT_TTL_DAYS = 183;
+const STORAGE_KEY_V4 = 'nvbes.tracking-consent.v4';
 const STORAGE_KEY_V3 = 'nvbes.tracking-consent.v3';
 const STORAGE_KEY_V2 = 'nvbes.tracking-consent.v2';
 const STORAGE_KEY_V1 = 'nvbes.tracking-consent.v1';
@@ -64,13 +61,7 @@ export const CATEGORY_VENDORS_MAP = {
 
 export const CATEGORY_ANALYTICS_PURPOSES_MAP = {
   essentials: [],
-  analytics: [
-    'productAnalytics',
-    'autocaptureHeatmaps',
-    'sessionReplay',
-    'surveysFeedback',
-    'featureFlags',
-  ],
+  analytics: ['productAnalytics'],
   performance: ['errorTracking'],
 } as const satisfies Record<ConsentCategory, readonly AnalyticsPurpose[]>;
 
@@ -97,20 +88,35 @@ export const LEGACY_VENDOR_CONSENT_TYPES = {
   errorReporting: 'cookie_consent_vendor_error_reporting',
 } as const;
 
-function analyticsConsentForState(
-  categories: CookieConsentState['categories'],
-  vendors: CookieConsentState['vendors'],
-): AnalyticsPurposeConsent {
-  const analyticsGranted = categories.analytics || vendors.posthog;
-  const performanceGranted = categories.performance || vendors.sentry || vendors.grafana;
+function hasProductAnalyticsPurpose(analytics: AnalyticsPurposeConsent): boolean {
+  return (
+    analytics.productAnalytics ||
+    analytics.autocaptureHeatmaps ||
+    analytics.sessionReplay ||
+    analytics.surveysFeedback ||
+    analytics.featureFlags
+  );
+}
+
+export function consentStateFromPurposes(analytics: AnalyticsPurposeConsent): CookieConsentState {
+  const analyticsGranted = hasProductAnalyticsPurpose(analytics);
+  const performanceGranted = analytics.errorTracking;
 
   return {
-    productAnalytics: analyticsGranted,
-    autocaptureHeatmaps: analyticsGranted,
-    sessionReplay: analyticsGranted,
-    surveysFeedback: analyticsGranted,
-    featureFlags: analyticsGranted,
-    errorTracking: performanceGranted,
+    categories: {
+      essentials: true,
+      analytics: analyticsGranted,
+      performance: performanceGranted,
+    },
+    vendors: {
+      stripe: true,
+      identity: true,
+      cloudflare: true,
+      posthog: analyticsGranted,
+      sentry: performanceGranted,
+      grafana: performanceGranted,
+    },
+    analytics: { ...analytics },
   };
 }
 
@@ -145,7 +151,11 @@ export const ACCEPT_ALL_CONSENT: CookieConsentState = {
     sentry: true,
     grafana: true,
   },
-  analytics: ALL_ANALYTICS_CONSENT,
+  analytics: {
+    ...EMPTY_ANALYTICS_CONSENT,
+    productAnalytics: true,
+    errorTracking: true,
+  },
 };
 
 export const DECLINE_ALL_CONSENT: CookieConsentState = {
@@ -185,7 +195,7 @@ function createStoredConsent(
   savedAt = new Date(),
 ): TrackingConsentStoredValue {
   return {
-    version: 3,
+    version: 4,
     savedAt: savedAt.toISOString(),
     expiresAt: consentExpiry(savedAt),
     source,
@@ -205,20 +215,30 @@ function normalizeAnalyticsConsent(
   candidate: LegacyConsentCandidate,
   legacyProductOnly: boolean,
 ): AnalyticsPurposeConsent {
-  const legacyAnalyticsVendor = booleanValue(candidate.vendors?.analytics, false);
+  const legacyAnalyticsGranted =
+    booleanValue(candidate.categories?.analytics, false) ||
+    booleanValue(candidate.vendors?.posthog, false) ||
+    booleanValue(candidate.vendors?.analytics, false);
+  const legacyErrorReportingGranted =
+    booleanValue(candidate.categories?.performance, false) ||
+    booleanValue(candidate.vendors?.sentry, false) ||
+    booleanValue(candidate.vendors?.grafana, false) ||
+    booleanValue(candidate.vendors?.errorReporting, false);
+
   if (legacyProductOnly) {
     return {
       ...EMPTY_ANALYTICS_CONSENT,
-      productAnalytics: legacyAnalyticsVendor,
+      productAnalytics: legacyAnalyticsGranted,
+      errorTracking: legacyErrorReportingGranted,
     };
   }
 
   return {
-    productAnalytics: booleanValue(candidate.analytics?.productAnalytics, legacyAnalyticsVendor),
+    productAnalytics: booleanValue(candidate.analytics?.productAnalytics, legacyAnalyticsGranted),
     autocaptureHeatmaps: booleanValue(candidate.analytics?.autocaptureHeatmaps, false),
     sessionReplay: booleanValue(candidate.analytics?.sessionReplay, false),
     surveysFeedback: booleanValue(candidate.analytics?.surveysFeedback, false),
-    errorTracking: booleanValue(candidate.analytics?.errorTracking, false),
+    errorTracking: booleanValue(candidate.analytics?.errorTracking, legacyErrorReportingGranted),
     featureFlags: booleanValue(candidate.analytics?.featureFlags, false),
   };
 }
@@ -229,43 +249,7 @@ function normalizeConsent(value: unknown, legacyProductOnly: boolean): CookieCon
   }
 
   const candidate = value as LegacyConsentCandidate;
-  const legacyAnalytics = normalizeAnalyticsConsent(candidate, legacyProductOnly);
-
-  const analyticsGranted =
-    booleanValue(candidate.categories?.analytics, false) ||
-    booleanValue(candidate.vendors?.posthog, false) ||
-    booleanValue(candidate.vendors?.analytics, false) ||
-    legacyAnalytics.productAnalytics ||
-    legacyAnalytics.autocaptureHeatmaps ||
-    legacyAnalytics.sessionReplay ||
-    legacyAnalytics.surveysFeedback ||
-    legacyAnalytics.featureFlags;
-  const performanceGranted =
-    booleanValue(candidate.categories?.performance, false) ||
-    booleanValue(candidate.vendors?.sentry, false) ||
-    booleanValue(candidate.vendors?.grafana, false) ||
-    booleanValue(candidate.vendors?.errorReporting, false) ||
-    legacyAnalytics.errorTracking;
-
-  const categories = {
-    essentials: true,
-    analytics: analyticsGranted,
-    performance: performanceGranted,
-  };
-  const vendors = {
-    stripe: booleanValue(candidate.vendors?.stripe, true),
-    identity: booleanValue(candidate.vendors?.identity, true),
-    cloudflare: booleanValue(candidate.vendors?.cloudflare, true),
-    posthog: booleanValue(candidate.vendors?.posthog, analyticsGranted),
-    sentry: booleanValue(candidate.vendors?.sentry, performanceGranted),
-    grafana: booleanValue(candidate.vendors?.grafana, performanceGranted),
-  };
-
-  return {
-    categories,
-    vendors,
-    analytics: analyticsConsentForState(categories, vendors),
-  };
+  return consentStateFromPurposes(normalizeAnalyticsConsent(candidate, legacyProductOnly));
 }
 
 function parseStoredConsent(value: string, legacyProductOnly: boolean): CookieConsentState | null {
@@ -285,39 +269,9 @@ function parseStoredConsent(value: string, legacyProductOnly: boolean): CookieCo
   return normalizeConsent(parsed, legacyProductOnly);
 }
 
-function legacyV1Consent(accepted: boolean): CookieConsentState {
-  if (!accepted) {
-    return cloneConsent(DECLINE_ALL_CONSENT);
-  }
-
-  return {
-    categories: {
-      essentials: true,
-      analytics: true,
-      performance: true,
-    },
-    vendors: {
-      stripe: true,
-      identity: true,
-      cloudflare: true,
-      posthog: true,
-      sentry: true,
-      grafana: true,
-    },
-    analytics: ALL_ANALYTICS_CONSENT,
-  };
-}
-
-function persistMigratedConsent(consent: CookieConsentState, source: string): void {
-  getSafeLocalStorage().setItem(
-    STORAGE_KEY_V3,
-    JSON.stringify(createStoredConsent(consent, source)),
-  );
-}
-
 export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | null {
   const storage = getSafeLocalStorage();
-  const value = storage.getItem(STORAGE_KEY_V3);
+  const value = storage.getItem(STORAGE_KEY_V4);
   if (!value) {
     return null;
   }
@@ -332,7 +286,7 @@ export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | n
 
     return parsed;
   } catch {
-    storage.removeItem(STORAGE_KEY_V3);
+    storage.removeItem(STORAGE_KEY_V4);
     return null;
   }
 }
@@ -340,33 +294,13 @@ export function readTrackingConsentStoredValue(): TrackingConsentStoredValue | n
 export function getTrackingConsent(): CookieConsentState | null {
   const storage = getSafeLocalStorage();
 
-  const valueV3 = storage.getItem(STORAGE_KEY_V3);
-  if (valueV3) {
+  const valueV4 = storage.getItem(STORAGE_KEY_V4);
+  if (valueV4) {
     try {
-      return parseStoredConsent(valueV3, false);
+      return parseStoredConsent(valueV4, false);
     } catch {
-      storage.removeItem(STORAGE_KEY_V3);
+      storage.removeItem(STORAGE_KEY_V4);
     }
-  }
-
-  const valueV2 = storage.getItem(STORAGE_KEY_V2);
-  if (valueV2) {
-    try {
-      const migrated = parseStoredConsent(valueV2, true);
-      if (migrated) {
-        persistMigratedConsent(migrated, 'legacy-v2-migration');
-        return migrated;
-      }
-    } catch {
-      storage.removeItem(STORAGE_KEY_V2);
-    }
-  }
-
-  const valueV1 = storage.getItem(STORAGE_KEY_V1);
-  if (valueV1 === 'accepted' || valueV1 === 'declined') {
-    const migrated = legacyV1Consent(valueV1 === 'accepted');
-    persistMigratedConsent(migrated, 'legacy-v1-migration');
-    return migrated;
   }
 
   return null;
@@ -394,13 +328,7 @@ export function isCategoryAccepted(category: ConsentCategory): boolean {
 }
 
 export function hasAnyOptionalConsent(consent: CookieConsentState): boolean {
-  return (
-    consent.categories.analytics ||
-    consent.categories.performance ||
-    consent.vendors.posthog ||
-    consent.vendors.sentry ||
-    consent.vendors.grafana
-  );
+  return Object.values(consent.analytics).some(Boolean);
 }
 
 export function persistTrackingConsent(
@@ -410,13 +338,12 @@ export function persistTrackingConsent(
 ): void {
   const storage = getSafeLocalStorage();
 
-  storage.setItem(STORAGE_KEY_V3, JSON.stringify(createStoredConsent(consent, source, savedAt)));
-
-  storage.setItem(STORAGE_KEY_V1, hasAnyOptionalConsent(consent) ? 'accepted' : 'declined');
+  storage.setItem(STORAGE_KEY_V4, JSON.stringify(createStoredConsent(consent, source, savedAt)));
 }
 
 function clearStoredTrackingConsentVersions(): void {
   const storage = getSafeLocalStorage();
+  storage.removeItem(STORAGE_KEY_V4);
   storage.removeItem(STORAGE_KEY_V3);
   storage.removeItem(STORAGE_KEY_V2);
   storage.removeItem(STORAGE_KEY_V1);

@@ -95,11 +95,18 @@ pub async fn evaluate_principal_risk(
         r#"
         SELECT
           COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '15 minutes') AS recent_events,
-          COUNT(*) FILTER (WHERE event_type IN ('login_failed', 'password_reset_requested', 'webauthn_failed')
+          COUNT(*) FILTER (WHERE event_type IN ('password_reset_requested', 'webauthn_failed')
                            AND created_at >= NOW() - INTERVAL '15 minutes') AS recent_security_events,
           COUNT(*) FILTER (WHERE decision IN ('deny', 'lock')
+                           AND event_type <> 'login_blocked'
                            AND created_at >= NOW() - INTERVAL '24 hours') AS recent_denials,
           COUNT(*) FILTER (WHERE event_type = 'login_failed'
+                           AND created_at > COALESCE((
+                             SELECT MAX(created_at)
+                             FROM risk_events successful_logins
+                             WHERE successful_logins.principal_id = $1
+                               AND successful_logins.event_type = 'login_success'
+                           ), '-infinity'::timestamptz)
                            AND created_at >= NOW() - INTERVAL '30 minutes') AS recent_login_failures,
           COUNT(*) FILTER (WHERE event_type = 'password_reset_requested'
                            AND created_at >= NOW() - INTERVAL '24 hours') AS recent_reset_requests
@@ -117,51 +124,46 @@ pub async fn evaluate_principal_risk(
     let recent_reset_requests: i64 = row.get("recent_reset_requests");
     let recent_events: i64 = row.get("recent_events");
 
-    let mut score = 0.0_f64;
+    let (score, decision) = risk_decision_from_counts(
+        recent_login_failures,
+        recent_security_events,
+        recent_denials,
+        recent_reset_requests,
+        recent_events,
+    );
     let mut factors = serde_json::Map::new();
 
     if recent_login_failures > 0 {
-        score += (recent_login_failures as f64).min(10.0) * 8.0;
+        let score_contribution = (recent_login_failures as f64).min(4.0) * 5.0;
         factors.insert(
             "login_failures".to_string(),
-            serde_json::json!(recent_login_failures),
+            serde_json::json!({
+                "count": recent_login_failures,
+                "score_contribution": score_contribution,
+            }),
         );
     }
     if recent_reset_requests > 2 {
-        score += 18.0;
         factors.insert(
             "reset_burst".to_string(),
             serde_json::json!(recent_reset_requests),
         );
     }
     if recent_security_events > 3 {
-        score += 20.0;
         factors.insert(
             "security_event_burst".to_string(),
             serde_json::json!(recent_security_events),
         );
     }
     if recent_denials > 0 {
-        score += (recent_denials as f64) * 25.0;
         factors.insert(
             "recent_denials".to_string(),
             serde_json::json!(recent_denials),
         );
     }
     if recent_events > 40 {
-        score += 10.0;
         factors.insert("event_volume".to_string(), serde_json::json!(recent_events));
     }
-
-    let decision = if score >= 80.0 {
-        RiskDecision::Lock
-    } else if score >= 50.0 {
-        RiskDecision::Deny
-    } else if score >= 25.0 {
-        RiskDecision::StepUp
-    } else {
-        RiskDecision::Allow
-    };
 
     factors.insert("risk_score".to_string(), serde_json::json!(score));
     factors.insert("decision".to_string(), serde_json::json!(decision.as_str()));
@@ -174,6 +176,40 @@ pub async fn evaluate_principal_risk(
     );
 
     Ok((score, decision, serde_json::Value::Object(factors)))
+}
+
+fn risk_decision_from_counts(
+    recent_login_failures: i64,
+    recent_security_events: i64,
+    recent_denials: i64,
+    recent_reset_requests: i64,
+    recent_events: i64,
+) -> (f64, RiskDecision) {
+    let mut score = (recent_login_failures as f64).min(4.0) * 5.0;
+    if recent_reset_requests > 2 {
+        score += 18.0;
+    }
+    if recent_security_events > 3 {
+        score += 20.0;
+    }
+    if recent_denials > 0 {
+        score += (recent_denials as f64) * 25.0;
+    }
+    if recent_events > 40 {
+        score += 10.0;
+    }
+
+    let decision = if score >= 80.0 {
+        RiskDecision::Lock
+    } else if score >= 50.0 {
+        RiskDecision::Deny
+    } else if score >= 20.0 {
+        RiskDecision::StepUp
+    } else {
+        RiskDecision::Allow
+    };
+
+    (score, decision)
 }
 
 pub async fn should_lock_password_reset(db: &PgPool, principal_id: Uuid) -> Result<bool, AppError> {
@@ -203,4 +239,17 @@ pub async fn current_state_summary(
         score = 0.0;
     }
     Ok((score, decision, factors))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repeated_password_failures_require_step_up_without_denying_the_account() {
+        let (score, decision) = risk_decision_from_counts(4, 0, 0, 0, 0);
+
+        assert_eq!(score, 20.0);
+        assert_eq!(decision, RiskDecision::StepUp);
+    }
 }

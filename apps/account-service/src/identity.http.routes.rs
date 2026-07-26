@@ -9,7 +9,8 @@ use axum::{
 use serde::Serialize;
 
 use super::csp_report;
-use super::middleware::{csrf, dpop, idempotency, origin};
+use super::middleware::{csrf, dpop, idempotency, origin, region};
+
 use super::observability;
 use super::openapi;
 use super::well_known;
@@ -117,6 +118,7 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
         .layer(axum::middleware::from_fn(
             nvbes_core::http::content_digest::content_digest_guard,
         ))
+        .layer(axum::middleware::from_fn(region::region_restriction_guard))
         .merge(crate::email::webhooks::webhook_router(state))
         .merge(docs)
 }

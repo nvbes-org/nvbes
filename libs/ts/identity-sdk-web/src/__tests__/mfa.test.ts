@@ -1,4 +1,10 @@
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite-plus/test';
+
+vi.mock('../pow', () => ({
+  fetchPowChallenge: vi.fn().mockResolvedValue({ nonce: 'pow-nonce', difficulty: 16 }),
+  solvePowChallenge: vi.fn().mockResolvedValue(42),
+}));
+
 import {
   confirmTotp,
   generateRecoveryCodes,
@@ -13,15 +19,48 @@ import {
 const mockToken = 'test-jwt-token';
 const mockBaseUrl = 'https://account.nvbes.fr';
 
+function installBrowserContext({
+  cookie,
+  pathname = '/',
+  search = '',
+}: {
+  cookie: string;
+  pathname?: string;
+  search?: string;
+}) {
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      location: { pathname, search },
+    },
+  });
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: { cookie },
+  });
+}
+
 describe('MFA API functions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'window');
+    Reflect.deleteProperty(globalThis, 'document');
+  });
+
   describe('listMfaFactors', () => {
     it('should return factors on success', async () => {
       const mockFactors = {
-        factors: [{ id: 'factor-1', factor_type: 'totp', status: 'active', label: 'My TOTP' }],
+        factors: [
+          {
+            id: 'factor-1',
+            factor_type: 'totp',
+            status: 'active',
+            label: 'My TOTP',
+          },
+        ],
         mfa_enabled: true,
       };
 
@@ -34,6 +73,29 @@ describe('MFA API functions', () => {
       expect(result.mfa_enabled).toBe(true);
       expect(result.factors).toHaveLength(1);
       expect(result.factors[0].factor_type).toBe('totp');
+    });
+
+    it('passes pagination parameters to the factors endpoint', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            factors: [],
+            mfa_enabled: true,
+            next_cursor: null,
+            has_more: false,
+          }),
+      });
+
+      await listMfaFactors(mockBaseUrl, mockToken, {
+        limit: 25,
+        cursor: 'opaque-cursor',
+      });
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${mockBaseUrl}/auth/mfa/factors?limit=25&cursor=opaque-cursor`,
+        expect.objectContaining({ credentials: 'include' }),
+      );
     });
 
     it('should work with cookie auth when token is absent', async () => {
@@ -59,7 +121,10 @@ describe('MFA API functions', () => {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: () => Promise.resolve({ error: { code: 'step_up_required', message: '...' } }),
+        json: () =>
+          Promise.resolve({
+            error: { code: 'step_up_required', message: '...' },
+          }),
       });
 
       await expect(listMfaFactors(mockBaseUrl, mockToken)).rejects.toThrow(MfaError);
@@ -94,6 +159,23 @@ describe('MFA API functions', () => {
       await setupTotp(mockBaseUrl, 'Phone');
       const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
       expect(body.label).toBe('Phone');
+    });
+
+    it('should send scoped csrf and authuser headers with cookie auth', async () => {
+      installBrowserContext({
+        cookie: 'csrf_token=base; csrf_token_1=one',
+        search: '?authuser=1',
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      await setupTotp(mockBaseUrl, 'Phone');
+      const headers = (globalThis.fetch as Mock).mock.calls[0][1].headers as Headers;
+
+      expect(headers.get('X-Auth-User')).toBe('1');
+      expect(headers.get('X-CSRF-Token')).toBe('one');
     });
 
     it('should send label in request body', async () => {
@@ -196,7 +278,10 @@ describe('MFA API functions', () => {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: () => Promise.resolve({ error: { code: 'step_up_required', message: '...' } }),
+        json: () =>
+          Promise.resolve({
+            error: { code: 'step_up_required', message: '...' },
+          }),
       });
 
       await expect(removeMfaFactor(mockBaseUrl, 'invalid-id', mockToken)).rejects.toThrow(MfaError);
@@ -215,6 +300,9 @@ describe('MFA API functions', () => {
       const result = await stepUp(mockBaseUrl, { password: 'pass123' }, mockToken);
       expect(result.success).toBe(true);
       expect(result.valid_until).toBe('2024-12-31T23:59:59Z');
+      const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
+      expect(body.pow_nonce).toBe('pow-nonce');
+      expect(body.pow_solution).toBe('42');
     });
 
     it('should send totp_code when provided', async () => {
@@ -249,7 +337,10 @@ describe('MFA API functions', () => {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
-        json: () => Promise.resolve({ error: { code: 'invalid_credentials', message: '...' } }),
+        json: () =>
+          Promise.resolve({
+            error: { code: 'invalid_credentials', message: '...' },
+          }),
       });
 
       await expect(stepUp(mockBaseUrl, { password: 'wrong' }, mockToken)).rejects.toThrow(MfaError);

@@ -11,39 +11,46 @@ use crate::grpc_pb::nvbes::{
 };
 
 const ENTERPRISE_GRPC_ENDPOINT_ENV: &str = "NVBES_ENTERPRISE_GRPC_ENDPOINT";
-const DEFAULT_ENTERPRISE_GRPC_ENDPOINT: &str = "http://127.0.0.1:4031";
 const DUE_SCHEDULE_LIMIT: i32 = 25;
 const REMINDER_LIMIT: i32 = 100;
 
-pub async fn materialize_due_access_review_schedules() -> anyhow::Result<AccessReviewScheduleRun> {
-    let mut client = enterprise_client().await?;
+pub async fn materialize_due_access_review_schedules()
+-> anyhow::Result<Option<AccessReviewScheduleRun>> {
+    let Some(mut client) = enterprise_client().await? else {
+        return Ok(None);
+    };
     let response = client
         .materialize_due_access_review_schedules(MaterializeDueAccessReviewSchedulesRequest {
             context: Some(request_context()),
             limit: DUE_SCHEDULE_LIMIT,
         })
         .await?;
-    Ok(response.into_inner())
+    Ok(Some(response.into_inner()))
 }
 
-pub async fn claim_access_review_reminder_candidates() -> anyhow::Result<AccessReviewReminderClaim>
-{
-    let mut client = enterprise_client().await?;
+pub async fn claim_access_review_reminder_candidates()
+-> anyhow::Result<Option<AccessReviewReminderClaim>> {
+    let Some(mut client) = enterprise_client().await? else {
+        return Ok(None);
+    };
     let response = client
         .claim_access_review_reminder_candidates(ClaimAccessReviewReminderCandidatesRequest {
             context: Some(request_context()),
             limit: REMINDER_LIMIT,
         })
         .await?;
-    Ok(response.into_inner())
+    Ok(Some(response.into_inner()))
 }
 
-async fn enterprise_client() -> anyhow::Result<EnterpriseServiceClient<Channel>> {
-    let endpoint = std::env::var(ENTERPRISE_GRPC_ENDPOINT_ENV)
+async fn enterprise_client() -> anyhow::Result<Option<EnterpriseServiceClient<Channel>>> {
+    let Some(endpoint) = std::env::var(ENTERPRISE_GRPC_ENDPOINT_ENV)
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_ENTERPRISE_GRPC_ENDPOINT.to_string());
-    Ok(EnterpriseServiceClient::connect(endpoint).await?)
+    else {
+        return Ok(None);
+    };
+
+    Ok(Some(EnterpriseServiceClient::connect(endpoint).await?))
 }
 
 fn request_context() -> RequestContext {

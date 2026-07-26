@@ -5,15 +5,36 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig, loadEnv, type PluginOption } from 'vite-plus';
+import { observabilitySourceMapPlugins } from '../../tools/web-build/vite-observability-sourcemaps';
+import { sriPlugin } from '../../tools/web-build/vite-sri';
 import {
   cspPlugin,
   getCsp,
-  integrityPolicyStyles,
+  integrityPolicyScripts,
   originFromUrl,
   permissionsPolicy,
+  uaClientHintsHeaders,
 } from './identity.vite.csp';
-import { identitySentryBuildSourcemap, identitySentryPlugins } from './identity.vite.sentry';
-import { sriPlugin } from './identity.vite.sri';
+
+const reactRuntimeAliases = [
+  { find: /^react$/, replacement: path.resolve(__dirname, '../../node_modules/react/index.js') },
+  {
+    find: /^react\/jsx-runtime$/,
+    replacement: path.resolve(__dirname, '../../node_modules/react/jsx-runtime.js'),
+  },
+  {
+    find: /^react\/jsx-dev-runtime$/,
+    replacement: path.resolve(__dirname, '../../node_modules/react/jsx-dev-runtime.js'),
+  },
+  {
+    find: /^react-dom$/,
+    replacement: path.resolve(__dirname, '../../node_modules/react-dom/index.js'),
+  },
+  {
+    find: /^react-dom\/client$/,
+    replacement: path.resolve(__dirname, '../../node_modules/react-dom/client.js'),
+  },
+];
 
 function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
@@ -58,7 +79,6 @@ export default defineConfig(({ mode }) => {
       ...pluginList(react()),
       devtoolsJson(),
       cspPlugin(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl),
-      sriPlugin(),
       ...pluginList(
         VitePWA({
           registerType: 'autoUpdate',
@@ -67,6 +87,13 @@ export default defineConfig(({ mode }) => {
           srcDir: 'src',
           filename: 'sw.ts',
           injectManifest: {
+            globIgnores: [
+              '**/account.avatar-upload.worker-*.js',
+              '**/analytics-posthog-*.js',
+              '**/analytics-sentry-*.js',
+              '**/password-strength-*.js',
+            ],
+            rollupFormat: 'iife',
             sourcemap: false,
           },
           includeAssets: ['icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'],
@@ -82,17 +109,49 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      ...identitySentryPlugins(...envSources),
+      ...observabilitySourceMapPlugins({ appName: 'account-web', envSources }),
+      sriPlugin(),
     ].filter(Boolean),
     build: {
       target: 'esnext',
-      sourcemap: identitySentryBuildSourcemap(...envSources),
+      sourcemap: 'hidden',
       minify: true,
       cssMinify: 'esbuild',
       manifest: true,
       modulePreload: { polyfill: false },
       rolldownOptions: {
         output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react-runtime',
+                test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/,
+                priority: 40,
+              },
+              {
+                name: 'tanstack-runtime',
+                test: /node_modules[\\/]@tanstack[\\/]/,
+                priority: 30,
+              },
+              {
+                name: 'analytics-sentry',
+                test: /node_modules[\\/]@sentry[\\/]/,
+                priority: 25,
+              },
+              {
+                name: 'analytics-posthog',
+                test: /node_modules[\\/]posthog-js[\\/]/,
+                priority: 25,
+              },
+              {
+                name: 'password-strength',
+                test: /node_modules[\\/]@zxcvbn-ts[\\/]/,
+                minSize: 20_000,
+                maxSize: 450_000,
+                priority: 20,
+              },
+            ],
+          },
           minify: {
             compress: {
               dropConsole: mode === 'production',
@@ -106,6 +165,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       alias: [
+        ...reactRuntimeAliases,
         {
           find: '@',
           replacement: path.resolve(__dirname, './src'),
@@ -145,8 +205,9 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '0.0.0.0',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
-        'Integrity-Policy-Report-Only': integrityPolicyStyles,
+        'Integrity-Policy-Report-Only': integrityPolicyScripts,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',
@@ -188,9 +249,9 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       host: '0.0.0.0',
       headers: {
+        ...uaClientHintsHeaders,
         'Content-Security-Policy': cspHeader,
-        'Integrity-Policy': integrityPolicyStyles,
-        'Integrity-Policy-Report-Only': integrityPolicyStyles,
+        'Integrity-Policy-Report-Only': integrityPolicyScripts,
         'Expect-CT': 'max-age=86400, enforce',
         'X-Frame-Options': 'DENY',
         'X-Content-Type-Options': 'nosniff',

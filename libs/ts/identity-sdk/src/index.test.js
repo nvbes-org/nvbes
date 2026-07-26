@@ -22,13 +22,16 @@ afterEach(() => {
 
 describe('NvbesIdentity', () => {
   it('builds authorization-code URLs with S256 PKCE', () => {
-    const url = new URL(identity().getAuthorizationUrl('openid email', 'state-1', 'challenge-1'));
+    const url = new URL(
+      identity().getAuthorizationUrl('openid email', 'state-1', 'challenge-1', 'nonce-1'),
+    );
 
     expect(url.searchParams.get('response_type')).toBe('code');
     expect(url.searchParams.get('client_id')).toBe('cloud-web');
     expect(url.searchParams.get('redirect_uri')).toBe('https://drive.example/callback');
     expect(url.searchParams.get('code_challenge')).toBe('challenge-1');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(url.searchParams.get('nonce')).toBe('nonce-1');
   });
 
   it('refreshes tokens through the refresh_token grant', async () => {

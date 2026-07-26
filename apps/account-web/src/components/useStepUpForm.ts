@@ -1,6 +1,6 @@
 import { completeWebAuthnStepUp, listMfaFactors, stepUp } from '@nvbes/identity-sdk-web';
 import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
-import { useEffect, useState, type SubmitEvent } from 'react';
+import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
 
 import { identityHttpClient } from '../identity.http';
@@ -12,21 +12,43 @@ const PreferencesSchema = z.object({
 });
 
 export type StepUpMethod = 'password' | 'webauthn' | 'totp' | 'recovery';
+export type WebAuthnStatus = 'idle' | 'prompting' | 'error' | 'success';
 
-export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
-  const [method, setMethod] = useState<StepUpMethod>('password');
+export function useStepUpForm({
+  open = true,
+  onSuccess,
+}: {
+  open?: boolean;
+  onSuccess: () => void;
+}) {
+  const [method, setMethodState] = useState<StepUpMethod>('password');
   const [factors, setFactors] = useState<MfaFactorView[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [webauthnStatus, setWebauthnStatus] = useState<WebAuthnStatus>('idle');
 
   const hasTotp = factors.some((factor) => factor.factor_type === 'totp');
   const hasWebAuthn = factors.some((factor) => factor.factor_type === 'webauthn');
   const hasRecovery = factors.some((factor) => factor.factor_type === 'recovery');
 
+  const setMethod = useCallback((newMethod: StepUpMethod) => {
+    setMethodState(newMethod);
+    setError(null);
+    if (newMethod === 'webauthn') {
+      setWebauthnStatus('idle');
+    }
+  }, []);
+
   useEffect(() => {
+    if (!open) {
+      setWebauthnStatus('idle');
+      setError(null);
+      return;
+    }
+
     let active = true;
 
     async function load() {
@@ -57,7 +79,48 @@ export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [open, setMethod]);
+
+  const handleWebAuthnClick = useCallback(async () => {
+    setWebauthnStatus('prompting');
+    setLoading(true);
+    setError(null);
+    try {
+      await completeWebAuthnStepUp('');
+      setWebauthnStatus('success');
+      onSuccess();
+    } catch (err) {
+      setWebauthnStatus('error');
+      let errMsg = 'Authentification WebAuthn échouée';
+      if (err instanceof Error) {
+        const lowerMsg = err.message.toLowerCase();
+        if (
+          err.name === 'NotAllowedError' ||
+          lowerMsg.includes('cancel') ||
+          lowerMsg.includes('annul')
+        ) {
+          errMsg = "L'authentification a été annulée.";
+        } else if (
+          err.name === 'TimeoutError' ||
+          lowerMsg.includes('timeout') ||
+          lowerMsg.includes('expir')
+        ) {
+          errMsg = "Le délai d'attente pour la clé de sécurité a expiré.";
+        } else {
+          errMsg = err.message;
+        }
+      }
+      setError(errMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (open && method === 'webauthn' && webauthnStatus === 'idle' && !loading) {
+      void handleWebAuthnClick();
+    }
+  }, [open, method, webauthnStatus, loading, handleWebAuthnClick]);
 
   const submitStepUp = async () => {
     if (method === 'password') {
@@ -72,11 +135,15 @@ export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
       await stepUp('', { recoveryCode });
       return;
     }
-    await completeWebAuthnStepUp('');
+    await handleWebAuthnClick();
   };
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (method === 'webauthn') {
+      await handleWebAuthnClick();
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -84,19 +151,6 @@ export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Vérification échouée');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWebAuthnClick = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await completeWebAuthnStepUp('');
-      onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentification WebAuthn échouée');
     } finally {
       setLoading(false);
     }
@@ -118,5 +172,6 @@ export function useStepUpForm({ onSuccess }: { onSuccess: () => void }) {
     setRecoveryCode,
     setTotpCode,
     totpCode,
+    webauthnStatus,
   };
 }

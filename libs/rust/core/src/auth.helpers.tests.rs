@@ -1,4 +1,7 @@
-use super::{hash_password, validate_birthdate, validate_password, verify_password};
+use super::{
+    dummy_verify_password, hash_password, hash_password_with_pepper, validate_birthdate,
+    validate_password, verify_and_check_rehash, verify_password, verify_password_with_pepper,
+};
 use axum::http::StatusCode;
 use chrono::{Datelike, NaiveDate, TimeDelta, Utc};
 
@@ -15,6 +18,44 @@ fn test_argon2id_hashing_owasp_params() {
 
     let not_ok = verify_password("wrong_password", &hash).expect("verification should run");
     assert!(!not_ok);
+}
+
+#[test]
+fn test_argon2id_pepper_and_rehash() {
+    let password = "SuperSecretPassword123!";
+    let pepper = b"kms_secret_pepper_key_2026";
+
+    // 1. Hash with pepper
+    let hash_peppered = hash_password_with_pepper(password, Some(pepper)).expect("peppered hash");
+    let (valid, needs_rehash) =
+        verify_and_check_rehash(password, &hash_peppered, Some(pepper)).expect("check");
+    assert!(valid);
+    let ok_pepper = verify_password_with_pepper(password, &hash_peppered, Some(pepper))
+        .expect("verify with pepper");
+    assert!(ok_pepper);
+    assert!(!needs_rehash);
+
+    // 2. Hash without pepper (legacy)
+    let hash_unpeppered = hash_password(password).expect("unpeppered hash");
+    let (valid_legacy, needs_rehash_legacy) =
+        verify_and_check_rehash(password, &hash_unpeppered, Some(pepper)).expect("check legacy");
+    assert!(valid_legacy);
+    assert!(
+        needs_rehash_legacy,
+        "legacy hash should trigger re-hash with pepper"
+    );
+
+    // 3. Wrong pepper should fail or require rehash
+    let wrong_pepper = b"wrong_pepper_key";
+    let (valid_wrong, _) = verify_and_check_rehash(password, &hash_peppered, Some(wrong_pepper))
+        .expect("check wrong pepper");
+    assert!(!valid_wrong);
+}
+
+#[test]
+fn test_dummy_verify_password_does_not_panic() {
+    dummy_verify_password("Password123!", Some(b"pepper"));
+    dummy_verify_password("Password123!", None);
 }
 
 #[test]

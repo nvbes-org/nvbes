@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -7,11 +7,22 @@ use uuid::Uuid;
 pub struct ListObjectsResponse {
     pub parent_id: Option<Uuid>,
     pub objects: Vec<StorageObjectView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TrashListResponse {
     pub objects: Vec<StorageObjectView>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}
+
+pub struct TrashListInput {
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub object_type: Option<ObjectTypeFilter>,
+    pub name_prefix: Option<String>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -53,6 +64,26 @@ pub enum DownloadObjectStatus {
 
 pub struct ListObjectsInput {
     pub parent_id: Option<Uuid>,
+    pub limit: Option<i64>,
+    pub cursor: Option<String>,
+    pub object_type: Option<ObjectTypeFilter>,
+    pub name_prefix: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ObjectTypeFilter {
+    File,
+    Folder,
+}
+
+impl ObjectTypeFilter {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::File => "file",
+            Self::Folder => "folder",
+        }
+    }
 }
 
 pub struct CreateFolderInput {
@@ -111,3 +142,7 @@ impl From<crate::domains::files::models::StorageObjectRecord> for StorageObjectV
         }
     }
 }
+
+#[cfg(test)]
+#[path = "drive.domains.files.types.tests.rs"]
+mod tests;

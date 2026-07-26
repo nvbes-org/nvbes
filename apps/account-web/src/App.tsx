@@ -1,16 +1,13 @@
-import { createQueryClient, ErrorBoundary, VersionMismatchBanner } from '@nvbes/web-runtime';
+import { createQueryClient, ErrorBoundary } from '@nvbes/web-runtime';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Profiler, useState } from 'react';
 import { router } from './identity.router';
-import { accountServiceBaseUrl } from './identity.http';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
 import { ToastProvider } from './components/ui/toast';
 
-const IDENTITY_WEB_BUILD_ID = import.meta.env.VITE_NVBES_BUILD_ID || '0.1.0';
-const IDENTITY_HEALTH_URL = `${accountServiceBaseUrl}/health`;
 const REACT_QUERY_DEVTOOLS_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS_ENABLED !== 'false';
 const TANSTACK_ROUTER_DEVTOOLS_ENABLED =
@@ -50,11 +47,6 @@ function App() {
             <Profiler id="account-web" onRender={handleRenderProfiler}>
               <RouterProvider router={router} />
               <TrackingConsentBanner />
-              <VersionMismatchBanner
-                appName="account-web"
-                frontendBuildId={IDENTITY_WEB_BUILD_ID}
-                healthUrl={IDENTITY_HEALTH_URL}
-              />
               {REACT_QUERY_DEVTOOLS_ENABLED ? <ReactQueryDevtools initialIsOpen={false} /> : null}
               {TANSTACK_ROUTER_DEVTOOLS_ENABLED ? (
                 <TanStackRouterDevtools router={router} position="bottom-right" />
@@ -64,11 +56,6 @@ function App() {
             <>
               <RouterProvider router={router} />
               <TrackingConsentBanner />
-              <VersionMismatchBanner
-                appName="account-web"
-                frontendBuildId={IDENTITY_WEB_BUILD_ID}
-                healthUrl={IDENTITY_HEALTH_URL}
-              />
             </>
           )}
         </ToastProvider>

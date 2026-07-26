@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/browser';
 import {
   createErrorReportingReplayPrivacyOptions,
   getErrorReportingReplaysOnErrorSampleRate,
@@ -12,13 +11,17 @@ import { isCategoryAccepted, isVendorAccepted } from './tracking-consent';
 const APP_NAME = 'account-web';
 const CLOSE_TIMEOUT_MS = 2_000;
 
+type SentryBrowser = typeof import('@sentry/browser');
+
+let sentry: SentryBrowser | null = null;
+let sentryPromise: Promise<SentryBrowser> | null = null;
 let initialized = false;
 let enabled = false;
 
 export function initErrorReporting(): boolean {
   const configured = isConfigured();
   if (configured && hasErrorReportingConsent()) {
-    enableErrorReporting();
+    void enableErrorReporting();
   }
   return configured;
 }
@@ -29,36 +32,41 @@ export async function syncErrorReportingConsent(): Promise<void> {
   }
 
   if (hasErrorReportingConsent()) {
-    enableErrorReporting();
+    await enableErrorReporting();
     return;
   }
 
   enabled = false;
-  if (initialized) {
-    await Sentry.close(CLOSE_TIMEOUT_MS);
+  if (initialized && sentry) {
+    await sentry.close(CLOSE_TIMEOUT_MS);
     initialized = false;
   }
 }
 
-export function captureErrorReportingException(
+export async function captureErrorReportingException(
   error: Error,
   context: ClientErrorReportContext,
-): void {
+): Promise<void> {
   if (!enabled) {
     return;
   }
 
-  Sentry.withScope((scope) => {
+  const loadedSentry = sentry ?? (await sentryPromise);
+  if (!enabled || !loadedSentry) {
+    return;
+  }
+
+  loadedSentry.withScope((scope) => {
     scope.setTag('feature', context.tags.feature);
     scope.setTag('source', context.tags.source);
     scope.setContext('identity_web', {
       route_path: currentPath(),
     });
-    Sentry.captureException(error);
+    loadedSentry.captureException(error);
   });
 }
 
-function enableErrorReporting(): void {
+async function enableErrorReporting(): Promise<void> {
   if (initialized) {
     enabled = true;
     return;
@@ -69,8 +77,15 @@ function enableErrorReporting(): void {
     return;
   }
 
+  enabled = true;
+  sentryPromise ??= import('@sentry/browser');
+  const loadedSentry = await sentryPromise;
+  if (!enabled || initialized) {
+    return;
+  }
+
   const isProduction = import.meta.env.MODE === 'production';
-  Sentry.init({
+  loadedSentry.init({
     dsn,
     environment: import.meta.env.MODE,
     release: releaseName(),
@@ -82,8 +97,8 @@ function enableErrorReporting(): void {
     sendDefaultPii: false,
     attachStacktrace: true,
     integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(createErrorReportingReplayPrivacyOptions()),
+      loadedSentry.browserTracingIntegration(),
+      loadedSentry.replayIntegration(createErrorReportingReplayPrivacyOptions()),
     ],
     beforeBreadcrumb: scrubErrorReportingBreadcrumb,
     beforeSend: scrubErrorReportingEvent,
@@ -95,8 +110,8 @@ function enableErrorReporting(): void {
     },
   });
 
+  sentry = loadedSentry;
   initialized = true;
-  enabled = true;
 }
 
 function hasErrorReportingConsent(): boolean {

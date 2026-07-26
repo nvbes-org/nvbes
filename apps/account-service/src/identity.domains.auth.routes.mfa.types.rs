@@ -17,7 +17,7 @@ pub(crate) struct WebauthnRegisterFinishRequest {
 
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct RecoveryCodesGenerateRequest {
-    pub(crate) password: String,
+    pub(crate) password: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]

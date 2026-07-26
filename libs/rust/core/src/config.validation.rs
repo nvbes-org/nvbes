@@ -171,6 +171,10 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
     geo::validate_maxmind_geolite(config)?;
     geo::validate_loyalsoldier_geoip(config)?;
     basics::validate_positive_integer(
+        "NVBES_AUTH_SESSION_IDLE_TTL_MINUTES",
+        config.auth_session_idle_ttl_minutes,
+    )?;
+    basics::validate_positive_integer(
         "NVBES_AUTH_VERIFICATION_RESEND_COOLDOWN_SECONDS",
         config.auth_verification_resend_cooldown_seconds,
     )?;

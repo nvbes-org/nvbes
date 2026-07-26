@@ -107,3 +107,9 @@ variable "domain" {
   type        = string
   default     = null
 }
+
+variable "enable_legacy_vm_worker" {
+  description = "Set true only if legacy 24/7 VM worker instance is required. Serverless Jobs/Containers are preferred."
+  type        = bool
+  default     = false
+}

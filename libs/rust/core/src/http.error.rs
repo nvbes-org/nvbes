@@ -17,7 +17,15 @@ pub struct ErrorBody {
     pub code: String,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<ErrorRecovery>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub request_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ErrorRecovery {
+    Reauthenticate,
 }
 
 pub fn public_error_message(status: StatusCode, message: String) -> String {
@@ -41,6 +49,7 @@ pub struct AppError {
     pub status: StatusCode,
     pub code: String,
     pub message: String,
+    pub recovery: Option<ErrorRecovery>,
     pub retry_after_seconds: Option<u64>,
     pub request_id: Option<String>,
     pub rate_limit_info: Option<Box<RateLimitInfo>>,
@@ -52,6 +61,7 @@ impl AppError {
             status,
             code: code.into(),
             message: message.into(),
+            recovery: None,
             retry_after_seconds: None,
             request_id: None,
             rate_limit_info: None,
@@ -64,6 +74,15 @@ impl AppError {
 
     pub fn unauthorized(code: impl Into<String>, message: impl Into<String>) -> Self {
         Self::new(StatusCode::UNAUTHORIZED, code, message)
+    }
+
+    pub fn reauthenticate(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self::unauthorized(code, message).requiring_reauthentication()
+    }
+
+    pub fn requiring_reauthentication(mut self) -> Self {
+        self.recovery = Some(ErrorRecovery::Reauthenticate);
+        self
     }
 
     pub fn forbidden(code: impl Into<String>, message: impl Into<String>) -> Self {
@@ -92,6 +111,7 @@ impl AppError {
             status: StatusCode::TOO_MANY_REQUESTS,
             code: code.into(),
             message: message.into(),
+            recovery: None,
             retry_after_seconds,
             request_id: None,
             rate_limit_info: rate_limit_info.map(Box::new),
@@ -108,6 +128,7 @@ impl IntoResponse for AppError {
         use axum::http::header;
         let status = self.status;
         let code = self.code;
+        let recovery = self.recovery;
         let request_id = self.request_id;
         if status == StatusCode::INTERNAL_SERVER_ERROR {
             tracing::error!(
@@ -125,6 +146,7 @@ impl IntoResponse for AppError {
                 error: ErrorBody {
                     code,
                     message,
+                    recovery,
                     request_id,
                 },
             }),
@@ -152,7 +174,7 @@ macro_rules! impl_app_error {
             http::StatusCode,
             response::{IntoResponse, Response},
         };
-        use $crate::http::error::{ErrorBody, ErrorEnvelope};
+        use $crate::http::error::{ErrorBody, ErrorEnvelope, ErrorRecovery};
         use $crate::limiter::RateLimitInfo;
 
         #[derive(Debug, Clone)]
@@ -160,6 +182,7 @@ macro_rules! impl_app_error {
             pub status: StatusCode,
             pub code: String,
             pub message: String,
+            pub recovery: Option<ErrorRecovery>,
             pub retry_after_seconds: Option<u64>,
             pub request_id: Option<String>,
             pub rate_limit_info: Option<Box<RateLimitInfo>>,
@@ -175,6 +198,7 @@ macro_rules! impl_app_error {
                     status,
                     code: code.into(),
                     message: message.into(),
+                    recovery: None,
                     retry_after_seconds: None,
                     request_id: None,
                     rate_limit_info: None,
@@ -187,6 +211,15 @@ macro_rules! impl_app_error {
 
             pub fn unauthorized(code: impl Into<String>, message: impl Into<String>) -> Self {
                 Self::new(StatusCode::UNAUTHORIZED, code, message)
+            }
+
+            pub fn reauthenticate(code: impl Into<String>, message: impl Into<String>) -> Self {
+                Self::unauthorized(code, message).requiring_reauthentication()
+            }
+
+            pub fn requiring_reauthentication(mut self) -> Self {
+                self.recovery = Some(ErrorRecovery::Reauthenticate);
+                self
             }
 
             pub fn forbidden(code: impl Into<String>, message: impl Into<String>) -> Self {
@@ -218,6 +251,7 @@ macro_rules! impl_app_error {
                     status: StatusCode::TOO_MANY_REQUESTS,
                     code: code.into(),
                     message: message.into(),
+                    recovery: None,
                     retry_after_seconds,
                     request_id: None,
                     rate_limit_info: rate_limit_info.map(Box::new),
@@ -234,6 +268,7 @@ macro_rules! impl_app_error {
                 use axum::http::header;
                 let status = self.status;
                 let code = self.code;
+                let recovery = self.recovery;
                 let request_id = self.request_id;
                 if status == StatusCode::INTERNAL_SERVER_ERROR {
                     tracing::error!(
@@ -251,6 +286,7 @@ macro_rules! impl_app_error {
                         error: ErrorBody {
                             code,
                             message,
+                            recovery,
                             request_id,
                         },
                     }),
@@ -276,6 +312,7 @@ macro_rules! impl_app_error {
                     status: err.status,
                     code: err.code,
                     message: err.message,
+                    recovery: err.recovery,
                     retry_after_seconds: err.retry_after_seconds,
                     request_id: err.request_id,
                     rate_limit_info: err.rate_limit_info,
@@ -298,6 +335,14 @@ mod tests {
         assert_eq!(error.code, "invalid_input");
         assert_eq!(error.message, "Invalid input.");
         assert!(error.request_id.is_none());
+    }
+
+    #[test]
+    fn reauthentication_error_explicitly_requests_reauthentication() {
+        let error = AppError::reauthenticate("session_expired", "Session expired.");
+
+        assert_eq!(error.status, StatusCode::UNAUTHORIZED);
+        assert_eq!(error.recovery, Some(super::ErrorRecovery::Reauthenticate));
     }
 
     #[test]

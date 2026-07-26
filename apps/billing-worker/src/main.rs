@@ -19,10 +19,9 @@ async fn main() -> anyhow::Result<()> {
     install_safe_panic_hook();
     init_tracing(&config);
 
-    if matches!(
-        std::env::args().nth(1).as_deref(),
-        Some("error-reporting-smoke")
-    ) {
+    let arg1 = std::env::args().nth(1);
+
+    if matches!(arg1.as_deref(), Some("error-reporting-smoke")) {
         let result = capture_error_reporting_smoke(
             "billing-worker",
             &config.environment,
@@ -42,6 +41,12 @@ async fn main() -> anyhow::Result<()> {
     let product_analytics = build_product_analytics(&config)?;
     let state =
         worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
+
+    if matches!(arg1.as_deref(), Some("run-billing-jobs")) {
+        tracing::info!("running billing-worker in Serverless Job mode: run-billing-jobs");
+        return worker::run_billing_jobs_once(&state).await;
+    }
+
     let metrics_bind_addr = billing_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,

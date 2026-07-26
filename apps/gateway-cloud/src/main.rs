@@ -21,6 +21,9 @@ mod state;
 
 const GATEWAY_CLOUD_PORT_ENV: &str = "NVBES_GATEWAY_CLOUD_PORT";
 const BILLING_GRPC_ENDPOINT_ENV: &str = "NVBES_BILLING_GRPC_ENDPOINT";
+const ACCOUNT_SERVICE_BASE_URL_ENV: &str = "NVBES_ACCOUNT_SERVICE_BASE_URL";
+const ACCOUNT_SERVICE_CLIENT_ID_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_ID";
+const ACCOUNT_SERVICE_CLIENT_SECRET_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -29,6 +32,9 @@ async fn main() -> anyhow::Result<()> {
     let billing_grpc_endpoint = billing_grpc_endpoint(config.api_port)?;
     let state = state::GatewayState {
         billing_grpc_endpoint,
+        identity_base_url: identity_base_url(),
+        identity_client_id: required_env(ACCOUNT_SERVICE_CLIENT_ID_ENV)?,
+        identity_client_secret: required_env(ACCOUNT_SERVICE_CLIENT_SECRET_ENV)?,
     };
     let app = http::router(state).fallback(http::not_found);
     let addr: SocketAddr = format!("0.0.0.0:{port}").parse()?;
@@ -73,9 +79,22 @@ fn billing_grpc_endpoint(default_api_port: u16) -> anyhow::Result<String> {
     }
 }
 
+fn identity_base_url() -> String {
+    std::env::var(ACCOUNT_SERVICE_BASE_URL_ENV)
+        .unwrap_or_else(|_| "http://localhost:8080".to_string())
+}
+
+fn required_env(name: &'static str) -> anyhow::Result<String> {
+    match std::env::var(name) {
+        Ok(value) if !value.trim().is_empty() => Ok(value),
+        Ok(_) => Err(anyhow::anyhow!("{name} must not be empty")),
+        Err(error) => Err(anyhow::anyhow!("{name} could not be read: {error}")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{billing_grpc_endpoint, gateway_port};
+    use super::{billing_grpc_endpoint, gateway_port, required_env};
 
     #[test]
     fn gateway_port_defaults_after_primary_api_port() {
@@ -88,5 +107,10 @@ mod tests {
             billing_grpc_endpoint(3000).unwrap(),
             "http://127.0.0.1:3021"
         );
+    }
+
+    #[test]
+    fn required_env_rejects_missing_values() {
+        assert!(required_env("NVBES_GATEWAY_CLOUD_TEST_MISSING_ENV").is_err());
     }
 }

@@ -1,12 +1,4 @@
-use axum::{
-    Json, Router,
-    body::Body,
-    extract::Request,
-    http::{HeaderValue, StatusCode},
-    middleware::Next,
-    response::Response,
-    routing::get,
-};
+use axum::{Json, Router, http::StatusCode, routing::get};
 use serde::Serialize;
 
 use crate::app::AppState;
@@ -78,23 +70,4 @@ async fn health() -> (StatusCode, Json<HealthResponse>) {
             status: "ok",
         }),
     )
-}
-
-pub async fn security_headers(req: Request<Body>, next: Next) -> Response {
-    let mut res = next.run(req).await;
-    let headers = res.headers_mut();
-    headers.insert(
-        "x-content-type-options",
-        HeaderValue::from_static("nosniff"),
-    );
-    headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
-    headers.insert(
-        "referrer-policy",
-        HeaderValue::from_static("strict-origin-when-cross-origin"),
-    );
-    headers.insert(
-        "permissions-policy",
-        HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
-    );
-    res
 }

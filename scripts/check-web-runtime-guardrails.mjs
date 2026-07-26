@@ -10,20 +10,17 @@ const RULES = [
   {
     name: 'native fetch',
     pattern: /(?<![\w.])fetch\s*\(/u,
-    message: 'Use @nvbes/web-runtime verifiedFetch/verifiedFetchJson outside approved runtime files.',
-    allowed: [
-      /(^|\/)sw\.ts$/u,
-      /\.sw\./u,
-      /service-worker/u,
-      /api-monitor\.ts$/u,
-      /\.test\./u,
-    ],
+    message:
+      'Use @nvbes/web-runtime verifiedFetch/verifiedFetchJson outside approved runtime files.',
+    allowed: [/(^|\/)sw\.ts$/u, /\.sw\./u, /service-worker/u, /\.test\./u],
   },
   {
     name: 'native XMLHttpRequest',
     pattern: /\bnew\s+XMLHttpRequest\s*\(/u,
-    message: 'Use typed clients or an approved low-level upload transport instead of raw XMLHttpRequest.',
+    message:
+      'Use typed clients or an approved low-level upload transport instead of raw XMLHttpRequest.',
     allowed: [
+      /apps\/account-web\/src\/account\.avatar-upload\.transport\.ts$/u,
       /apps\/cloud-web\/src\/drive\.native-fs\.transport\.ts$/u,
       /\.test\./u,
     ],
@@ -37,13 +34,15 @@ const RULES = [
   {
     name: 'native EventSource',
     pattern: /\bnew\s+EventSource\s*\(/u,
-    message: 'Use a typed streaming client or an approved web-runtime transport instead of raw EventSource.',
+    message:
+      'Use a typed streaming client or an approved web-runtime transport instead of raw EventSource.',
     allowed: [/\.test\./u],
   },
   {
     name: 'native WebSocket',
     pattern: /\bnew\s+WebSocket\s*\(/u,
-    message: 'Use a typed realtime client or an approved web-runtime transport instead of raw WebSocket.',
+    message:
+      'Use a typed realtime client or an approved web-runtime transport instead of raw WebSocket.',
     allowed: [/\.test\./u],
   },
   {
@@ -108,9 +107,7 @@ for (const srcRoot of APP_SRC_ROOTS) {
 if (failures.length > 0) {
   console.error('Web runtime guardrails failed:');
   for (const failure of failures) {
-    console.error(
-      `- ${failure.path}:${failure.line} [${failure.rule}] ${failure.message}`,
-    );
+    console.error(`- ${failure.path}:${failure.line} [${failure.rule}] ${failure.message}`);
   }
   process.exit(1);
 }

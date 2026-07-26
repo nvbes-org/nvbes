@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import {
@@ -58,7 +58,7 @@ export function AdminElevationDialog({
   onTotpCodeChange: (value: string) => void;
   onRecoveryCodeChange: (value: string) => void;
   onBreakGlassReasonChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

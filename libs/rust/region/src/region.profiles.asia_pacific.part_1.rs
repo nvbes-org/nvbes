@@ -111,7 +111,7 @@ pub const ASIA_PACIFIC_PROFILES_PART_1: &[RegionProfile] = &[
     RegionProfile {
         country_code: "JP",
         data_region: DataRegion::Apac,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Appi,
         primary_timezone: TZ_ASIA_TOKYO,
         timezones: &[TZ_ASIA_TOKYO],
         sub_region: None,
@@ -154,7 +154,7 @@ pub const ASIA_PACIFIC_PROFILES_PART_1: &[RegionProfile] = &[
     RegionProfile {
         country_code: "KR",
         data_region: DataRegion::Apac,
-        legal_jurisdiction: LegalJurisdiction::Global,
+        legal_jurisdiction: LegalJurisdiction::Pipa,
         primary_timezone: TZ_ASIA_SEOUL,
         timezones: &[TZ_ASIA_SEOUL],
         sub_region: None,

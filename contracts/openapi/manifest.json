@@ -9,6 +9,14 @@
       "routeCoverage": "utoipa-paths"
     },
     {
+      "name": "developer-service",
+      "surface": "developer",
+      "version": "0.1.0",
+      "document": "apps/developer-service/openapi.json",
+      "routeSource": "apps/developer-service/src",
+      "routeCoverage": "utoipa-paths"
+    },
+    {
       "name": "cloud-public-v1",
       "surface": "cloud-public",
       "version": "0.1.0",

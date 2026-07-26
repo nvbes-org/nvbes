@@ -6,13 +6,23 @@
   "files": [
     "dist"
   ],
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json",
+    "build": "node ../../../node_modules/vite-plus/bin/vp pack",
     "check": "pnpm run typecheck",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --tsconfig tsconfig.json --watch",
+    "dev": "node ../../../node_modules/vite-plus/bin/vp pack --watch",
     "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json vite.config.ts",
     "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
     "typecheck": "node ../../../node_modules/vite-plus/bin/vp check src package.json tsconfig.json vite.config.ts"
@@ -21,7 +31,7 @@
     "@nvbes/http-client": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

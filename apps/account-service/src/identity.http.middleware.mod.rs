@@ -8,3 +8,7 @@ pub mod idempotency;
 pub mod jwt;
 #[path = "identity.http.middleware.origin.rs"]
 pub mod origin;
+#[path = "identity.http.middleware.region.rs"]
+pub mod region;
+
+const PUBLIC_REPORT_PATHS: &[&str] = &["/csp-report", "/observability/network-errors"];

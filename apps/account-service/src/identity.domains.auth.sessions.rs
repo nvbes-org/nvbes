@@ -12,6 +12,8 @@ pub mod cache;
 pub mod cookie_theft;
 #[path = "identity.domains.auth.sessions.create.rs"]
 mod create;
+#[path = "identity.domains.auth.sessions.db.rs"]
+pub mod db;
 #[path = "identity.domains.auth.sessions.token.rs"]
 pub mod token;
 

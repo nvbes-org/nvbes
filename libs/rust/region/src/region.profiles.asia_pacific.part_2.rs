@@ -23,7 +23,7 @@ pub const ASIA_PACIFIC_PROFILES_PART_2: &[RegionProfile] = &[
     RegionProfile {
         country_code: "NZ",
         data_region: DataRegion::Apac,
-        legal_jurisdiction: LegalJurisdiction::App,
+        legal_jurisdiction: LegalJurisdiction::Nzpa,
         primary_timezone: TZ_PACIFIC_AUCKLAND,
         timezones: &[TZ_PACIFIC_AUCKLAND, TZ_PACIFIC_CHATHAM],
         sub_region: None,

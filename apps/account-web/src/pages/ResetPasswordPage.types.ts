@@ -10,5 +10,5 @@ export type ResetPasswordPageModel = {
   setToken: (value: string) => void;
   setPassword: (value: string) => void;
   setConfirmPassword: (value: string) => void;
-  handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  handleSubmit: (event: React.SubmitEvent<HTMLFormElement>) => void;
 };

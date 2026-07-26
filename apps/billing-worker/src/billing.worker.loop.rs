@@ -123,6 +123,43 @@ pub async fn run_once(state: &BillingWorkerState) -> anyhow::Result<bool> {
     Ok(true)
 }
 
+pub async fn run_billing_jobs_once(state: &BillingWorkerState) -> anyhow::Result<()> {
+    let started_at = Instant::now();
+    let run = nvbes_billing::dunning_jobs::process_due_dunning_attempts(
+        &state.db,
+        BILLING_DUNNING_BATCH_SIZE,
+    )
+    .await?;
+    state
+        .observability
+        .record_billing_operation("dunning", "success", started_at.elapsed());
+    if run.attempts_processed > 0 {
+        tracing::info!(
+            attempts_processed = run.attempts_processed,
+            "billing dunning attempts processed"
+        );
+    }
+
+    let rec_run =
+        nvbes_billing::reconciliation_db::run_ledger_reconciliation(&state.db, chrono::Utc::now())
+            .await?;
+    if rec_run.differences_created > 0 {
+        tracing::warn!(
+            run_id = %rec_run.run_id,
+            differences_created = rec_run.differences_created,
+            "billing reconciliation detected ledger differences"
+        );
+    } else {
+        tracing::info!(run_id = %rec_run.run_id, "billing reconciliation completed");
+    }
+
+    while run_once(state).await? {
+        // process any queued billing jobs until queue is drained
+    }
+
+    Ok(())
+}
+
 async fn run_billing_dunning_if_due(
     state: &BillingWorkerState,
     last_run: &mut Instant,

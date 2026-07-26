@@ -4,6 +4,7 @@ resource "scaleway_instance_ip" "api" {
 }
 
 resource "scaleway_instance_ip" "worker" {
+  count      = var.enable_legacy_vm_worker ? 1 : 0
   project_id = var.project_id
   zone       = var.zone
 }
@@ -24,12 +25,13 @@ resource "scaleway_instance_server" "api" {
 }
 
 resource "scaleway_instance_server" "worker" {
+  count             = var.enable_legacy_vm_worker ? 1 : 0
   name              = "${var.name_prefix}-worker"
   project_id        = var.project_id
   zone              = var.zone
   type              = var.worker_instance_type
   image             = var.instance_image
-  ip_id             = scaleway_instance_ip.worker.id
+  ip_id             = scaleway_instance_ip.worker[0].id
   security_group_id = scaleway_instance_security_group.worker.id
   tags              = var.tags
 
@@ -44,6 +46,7 @@ resource "scaleway_instance_private_nic" "api" {
 }
 
 resource "scaleway_instance_private_nic" "worker" {
-  server_id          = scaleway_instance_server.worker.id
+  count              = var.enable_legacy_vm_worker ? 1 : 0
+  server_id          = scaleway_instance_server.worker[0].id
   private_network_id = scaleway_vpc_private_network.main.id
 }

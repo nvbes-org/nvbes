@@ -373,6 +373,80 @@
         ],
         "type": "object"
       },
+      "CreateRoutingRuleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "type": "string"
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fallback_enabled": {
+            "type": "boolean"
+          },
+          "max_amount_minor": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "min_amount_minor": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "payment_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "type": "number"
+          },
+          "provider": {
+            "enum": [
+              "stripe",
+              "mollie"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_code",
+          "country",
+          "currency",
+          "customer_type",
+          "fallback_enabled",
+          "max_amount_minor",
+          "min_amount_minor",
+          "payment_method",
+          "priority",
+          "provider",
+          "reason"
+        ],
+        "type": "object"
+      },
       "CriticalActionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -627,6 +701,35 @@
         ],
         "type": "object"
       },
+      "MatchedRoutingRule": {
+        "additionalProperties": false,
+        "properties": {
+          "fallback_enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "priority": {
+            "type": "number"
+          },
+          "provider": {
+            "enum": [
+              "stripe",
+              "mollie"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "fallback_enabled",
+          "id",
+          "priority",
+          "provider"
+        ],
+        "type": "object"
+      },
       "OperationsActionResult": {
         "additionalProperties": false,
         "properties": {
@@ -809,6 +912,65 @@
           "audit_action",
           "object_id",
           "status"
+        ],
+        "type": "object"
+      },
+      "RoutingRuleSimulationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "additionalProperties": false,
+            "properties": {
+              "amount_minor": {
+                "type": "number"
+              },
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "currency": {
+                "type": "string"
+              },
+              "customer_type": {
+                "type": "string"
+              },
+              "payment_method": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "country",
+              "currency",
+              "customer_type",
+              "payment_method"
+            ],
+            "type": "object"
+          },
+          "matched_rule": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchedRoutingRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "enum": [
+              "matched",
+              "no_matching_rule"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "input",
+          "matched_rule",
+          "outcome"
         ],
         "type": "object"
       },
@@ -2390,6 +2552,159 @@
           }
         },
         "summary": "Reject a KYC profile",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules": {
+      "post": {
+        "operationId": "createBillingRoutingRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverPrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/SecondApproverRole"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoutingRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlatformActionResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Create a billing provider routing rule",
+        "tags": [
+          "billing-platform"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate": {
+      "get": {
+        "operationId": "simulateBillingRoutingRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "payment_method",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "customer_type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "amount_minor",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/BackofficeRole"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingRuleSimulationResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "summary": "Simulate billing provider routing rule matching",
         "tags": [
           "billing-platform"
         ]
