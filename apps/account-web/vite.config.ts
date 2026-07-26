@@ -71,14 +71,22 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_GRAFANA_FARO_URL ||
     '';
   const faroConnectUrl = originFromUrl(faroUrl);
-  const cspHeader = getCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl);
+  const isLocalEnvironment =
+    (process.env.NVBES_ENV || localEnv.NVBES_ENV || rootEnv.NVBES_ENV) === 'development';
+  const cspHeader = getCsp(
+    mode,
+    sentryConnectUrl,
+    posthogConnectUrl,
+    faroConnectUrl,
+    isLocalEnvironment,
+  );
 
   return {
     plugins: [
       ...pluginList(tailwindcss()),
       ...pluginList(react()),
       devtoolsJson(),
-      cspPlugin(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl),
+      cspPlugin(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl, isLocalEnvironment),
       ...pluginList(
         VitePWA({
           registerType: 'autoUpdate',

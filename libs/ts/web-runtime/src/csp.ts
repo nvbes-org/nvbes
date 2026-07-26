@@ -41,11 +41,7 @@ export function buildWebCsp(options: WebCspOptions): string {
       ...(isDev ? ["'unsafe-inline'"] : []),
       ...(options.styleSrc ?? []),
     ]),
-    directive('style-src-elem', [
-      "'self'",
-      ...(isDev ? ["'unsafe-inline'"] : []),
-      ...(options.styleSrc ?? []),
-    ]),
+    directive('style-src-elem', ["'self'", "'unsafe-inline'", ...(options.styleSrc ?? [])]),
     directive('style-src-attr', ["'unsafe-inline'"]),
     directive('img-src', ["'self'", 'data:', 'blob:', ...(options.imgSrc ?? [])]),
     directive('font-src', ["'self'", 'data:', ...(options.fontSrc ?? [])]),
@@ -60,7 +56,6 @@ export function buildWebCsp(options: WebCspOptions): string {
     directive('form-action', ["'self'"]),
     directive('frame-ancestors', ["'none'"]),
     reportUri ? directive('report-uri', [reportUri]) : '',
-    !isDev ? 'upgrade-insecure-requests' : '',
   ].filter(Boolean);
 
   return `${directives.join('; ')};`;

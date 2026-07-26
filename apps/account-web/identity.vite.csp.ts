@@ -13,8 +13,10 @@ export function getCsp(
   sentryConnectUrl: string,
   posthogConnectUrl: string,
   faroConnectUrl: string,
+  allowLocalHttpSources = false,
 ): string {
   const isDev = mode === 'development';
+  const localHttpSourcesAllowed = isDev || allowLocalHttpSources;
 
   const sentryConnect = sentryConnectUrl ? ` ${sentryConnectUrl}` : '';
   const posthogConnect = posthogConnectUrl ? ` ${posthogConnectUrl}` : '';
@@ -23,7 +25,10 @@ export function getCsp(
   return buildWebCsp({
     mode,
     styleSrc: ['https://fonts.googleapis.com'],
-    imgSrc: ['https:', ...(isDev ? ['http://localhost:*', 'http://127.0.0.1:*'] : [])],
+    imgSrc: [
+      'https:',
+      ...(localHttpSourcesAllowed ? ['http://localhost:*', 'http://127.0.0.1:*'] : []),
+    ],
     fontSrc: ['https://fonts.gstatic.com'],
     connectSrc: [
       sentryConnect.trim(),
@@ -39,11 +44,18 @@ export function cspPlugin(
   sentryConnectUrl: string,
   posthogConnectUrl: string,
   faroConnectUrl: string,
+  allowLocalHttpSources = false,
 ): Plugin {
   return {
     name: 'csp-injection-plugin',
     transformIndexHtml(html: string) {
-      const cspString = getMetaCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl);
+      const cspString = getMetaCsp(
+        mode,
+        sentryConnectUrl,
+        posthogConnectUrl,
+        faroConnectUrl,
+        allowLocalHttpSources,
+      );
       const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}" />`;
       return html.replace('<!-- %CSP_META% -->', metaTag);
     },
@@ -55,8 +67,11 @@ function getMetaCsp(
   sentryConnectUrl: string,
   posthogConnectUrl: string,
   faroConnectUrl: string,
+  allowLocalHttpSources: boolean,
 ): string {
-  return cspMetaFromHeader(getCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl));
+  return cspMetaFromHeader(
+    getCsp(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl, allowLocalHttpSources),
+  );
 }
 
 export { integrityPolicyScripts, originFromUrl, permissionsPolicy, uaClientHintsHeaders };

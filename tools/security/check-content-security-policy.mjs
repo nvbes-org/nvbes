@@ -21,7 +21,7 @@ const appHeaderConfigs = [
   'apps/enterprise-web/vite.config.ts',
 ];
 const requiredWebDirectives =
-  'default-src|script-src|script-src-attr|worker-src|style-src|style-src-elem|style-src-attr|img-src|font-src|connect-src|frame-src|object-src|base-uri|form-action|frame-ancestors|report-uri|upgrade-insecure-requests'.split(
+  'default-src|script-src|script-src-attr|worker-src|style-src|style-src-elem|style-src-attr|img-src|font-src|connect-src|frame-src|object-src|base-uri|form-action|frame-ancestors|report-uri'.split(
     '|',
   );
 const requiredApiDirectives =
@@ -173,7 +173,10 @@ function assertRequiredWebDirectives() {
     errors.push(`${webCspPath}: unsafe style source must be development-only`);
   }
   if (!text.includes("directive('style-src-attr', [\"'unsafe-inline'\"])")) {
-    errors.push(`${webCspPath}: React inline styles must be isolated to style-src-attr`);
+    errors.push(`${webCspPath}: React inline style attributes must remain supported`);
+  }
+  if (!/directive\('style-src-elem', \[\s*"'self'",\s*"'unsafe-inline'"/u.test(text)) {
+    errors.push(`${webCspPath}: runtime-generated SPA style elements must remain supported`);
   }
   if (!text.includes('cspMetaFromHeader') || !text.includes('frame-ancestors')) {
     errors.push(`${webCspPath}: CSP meta conversion must strip header-only directives`);

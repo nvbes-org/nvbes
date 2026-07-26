@@ -63,7 +63,7 @@
         {
           "id": "CSP_CTRL_003",
           "name": "Explicit resource source registry",
-          "description": "Web CSP directives cover default, worker, style elements, React style attributes, images, fonts, connections, and frames. Inline style attributes are isolated from the stricter style element policy, while product-specific external sources remain allowlisted in each Vite config.",
+          "description": "Web CSP directives cover default, worker, style elements, React style attributes, images, fonts, connections, and frames. Runtime-generated style elements and attributes are allowed for the SPA component stack, while script execution remains strict and product-specific external sources stay allowlisted in each Vite config.",
           "evidence": [
             {
               "path": "libs/ts/web-runtime/src/csp.ts",
