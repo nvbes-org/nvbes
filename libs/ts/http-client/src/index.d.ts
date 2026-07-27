@@ -8,6 +8,7 @@ export type HttpClientOptions = {
     idempotencyKey?: string | false;
     requestE2ee?: RequestE2eeOptions;
 };
+export type HttpRequestContextHeadersProvider = () => HeadersInit | Promise<HeadersInit | undefined> | undefined;
 export type HttpRequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
     body?: unknown;
     headers?: HeadersInit;
@@ -57,6 +58,7 @@ export declare function encryptRequestBody(input: {
     headers: Headers;
 }>;
 export declare function createHttpClient(options?: HttpClientOptions): HttpClient;
+export declare function configureHttpRequestContextHeaders(provider?: HttpRequestContextHeadersProvider): void;
 export declare function createRequestHeaders(method: string, headers?: HeadersInit, idempotencyKey?: string | false): Headers;
 export declare function applyAjaxRequestHeader(headers: Headers, method: string): void;
 export declare function applyIdempotencyKey(headers: Headers, method: string, idempotencyKey?: string | false): void;

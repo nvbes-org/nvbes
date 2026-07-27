@@ -20,17 +20,28 @@ pub async fn observe_request(
     next: Next,
 ) -> Response {
     let mut req = req;
+    let started_at = Instant::now();
+    let method = req.method().clone();
+    let path_template = request_path_template(
+        req.extensions()
+            .get::<MatchedPath>()
+            .map(|matched_path| matched_path.as_str()),
+    );
 
     // --- W3C Trace Context ---
     let incoming_traceparent = trace_context::extract_traceparent(req.headers());
     let tracestate = trace_context::extract_tracestate(req.headers());
-    let current_traceparent = incoming_traceparent
+    let mut current_traceparent = incoming_traceparent
         .as_ref()
         .map(trace_context::child_traceparent)
         .unwrap_or_else(|| trace_context::new_traceparent(true));
 
     #[cfg(feature = "otlp")]
-    let otel_span = build_otel_span(&incoming_traceparent, &current_traceparent);
+    let otel_span = build_otel_span(&incoming_traceparent, &method, &path_template);
+    #[cfg(feature = "otlp")]
+    if let Some(traceparent) = otel_span.as_ref().and_then(traceparent_from_span) {
+        current_traceparent = traceparent;
+    }
     #[cfg(feature = "otlp")]
     let _span_guard = otel_span.as_ref().map(|s| s.enter());
 
@@ -55,14 +66,7 @@ pub async fn observe_request(
     }
 
     // --- Request ID (keep backward compat) ---
-    let started_at = Instant::now();
     let request_id = inbound_request_id(&req).unwrap_or_else(new_request_id);
-    let method = req.method().clone();
-    let path_template = request_path_template(
-        req.extensions()
-            .get::<MatchedPath>()
-            .map(|matched_path| matched_path.as_str()),
-    );
 
     req.extensions_mut().insert(request_id.clone());
     metrics.start_request();
@@ -88,6 +92,14 @@ pub async fn observe_request(
         status.as_u16(),
         started_at.elapsed(),
     );
+
+    #[cfg(feature = "otlp")]
+    if let Some(span) = &otel_span {
+        span.record("http.response.status_code", status.as_u16());
+        if status.is_server_error() {
+            span.record("otel.status_code", "ERROR");
+        }
+    }
 
     // --- Response headers ---
     if let Ok(value) = HeaderValue::from_str(&request_id) {
@@ -174,28 +186,35 @@ pub async fn observe_request(
 }
 
 #[cfg(feature = "otlp")]
-fn build_otel_span(incoming: &Option<TraceParent>, current: &TraceParent) -> Option<tracing::Span> {
+fn build_otel_span(
+    incoming: &Option<TraceParent>,
+    method: &axum::http::Method,
+    path_template: &str,
+) -> Option<tracing::Span> {
     use opentelemetry::trace::{
         SpanContext, SpanId, TraceContextExt, TraceFlags, TraceId, TraceState,
     };
     use tracing_opentelemetry::OpenTelemetrySpanExt;
 
-    let trace_id = TraceId::from_hex(&current.trace_id).ok()?;
-    let trace_flags = if current.sampled {
-        TraceFlags::SAMPLED
-    } else {
-        TraceFlags::default()
-    };
-
     let span = tracing::info_span!(
         "HTTP request",
-        trace_id = %current.trace_id,
-        span_id = %current.span_id,
+        otel.name = %format!("{} {}", method, path_template),
+        otel.kind = "server",
+        http.request.method = %method,
+        http.route = %path_template,
+        http.response.status_code = tracing::field::Empty,
+        otel.status_code = tracing::field::Empty,
     );
 
     if let Some(parent) = incoming
+        && let Ok(trace_id) = TraceId::from_hex(&parent.trace_id)
         && let Ok(parent_span_id) = SpanId::from_hex(&parent.span_id)
     {
+        let trace_flags = if parent.sampled {
+            TraceFlags::SAMPLED
+        } else {
+            TraceFlags::default()
+        };
         let parent_ctx = SpanContext::new(
             trace_id,
             parent_span_id,
@@ -208,6 +227,21 @@ fn build_otel_span(incoming: &Option<TraceParent>, current: &TraceParent) -> Opt
     }
 
     Some(span)
+}
+
+#[cfg(feature = "otlp")]
+fn traceparent_from_span(span: &tracing::Span) -> Option<TraceParent> {
+    use opentelemetry::trace::TraceContextExt;
+    use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+    let context = span.context();
+    let span = context.span();
+    let span_context = span.span_context();
+    span_context.is_valid().then(|| TraceParent {
+        trace_id: span_context.trace_id().to_string(),
+        span_id: span_context.span_id().to_string(),
+        sampled: span_context.is_sampled(),
+    })
 }
 
 fn request_path_template(path_template: Option<&str>) -> String {

@@ -45,9 +45,19 @@ impl CloudService for CloudGrpcService {
         &self,
         request: Request<cloud::CreateWorkspaceRequest>,
     ) -> Result<Response<cloud::Workspace>, Status> {
-        Ok(Response::new(
-            service_workspace::create_workspace(&self.state.db, request.into_inner()).await?,
-        ))
+        let request = request.into_inner();
+        let workspace = service_workspace::create_workspace(&self.state.db, request).await?;
+        let workspace_id = uuid::Uuid::parse_str(&workspace.workspace_id)
+            .map_err(|_| Status::internal("created workspace has an invalid ID"))?;
+        self.state.product_analytics.capture(
+            nvbes_product_analytics::ProductAnalyticsEvent::workspace(
+                "workspace.created",
+                workspace_id,
+            )
+            .property("workspace_type", workspace.workspace_type.clone())
+            .property("plan_code", workspace.plan_code.clone()),
+        );
+        Ok(Response::new(workspace))
     }
 
     async fn get_workspace(

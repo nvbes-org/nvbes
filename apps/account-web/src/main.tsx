@@ -12,13 +12,24 @@ import {
   initErrorReporting,
   syncErrorReportingConsent,
 } from './identity.error.reporting';
-import { captureFaroException, initFaro, syncFaroConsent } from './identity.faro';
+import {
+  captureFaroException,
+  captureFaroNavigation,
+  initFaro,
+  syncFaroConsent,
+} from './identity.faro';
+import { router } from './identity.router';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
 initErrorReporting();
 initFaro();
 initAnalytics();
+router.subscribe('onResolved', ({ pathChanged, toLocation }) => {
+  if (pathChanged) {
+    captureFaroNavigation(toLocation.pathname);
+  }
+});
 window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, () => {
   void syncErrorReportingConsent();
   syncFaroConsent();

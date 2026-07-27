@@ -31,13 +31,13 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
             tenant_id, organization_id, workspace_id, workspace_region,
             client_id, acr, amr, auth_time, idle_timeout_seconds, idle_expires_at,
             expires_at, step_up_verified_at, step_up_expires_at, revoked_at,
-            ip, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
+            ip, geo_country_code, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
             account_device_id, device_trust_level, device_trust_score,
             risk_score, risk_decision, activity_window_started_at,
             activity_request_count, last_activity_risk_event_at, last_seen_at, created_at
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
         )
         ON CONFLICT (session_id) DO UPDATE SET
             browser_session_token_hash = EXCLUDED.browser_session_token_hash,
@@ -54,6 +54,7 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
             step_up_expires_at = EXCLUDED.step_up_expires_at,
             revoked_at = EXCLUDED.revoked_at,
             ip = EXCLUDED.ip,
+            geo_country_code = EXCLUDED.geo_country_code,
             user_agent = EXCLUDED.user_agent,
             cookie_theft_risk_score = EXCLUDED.cookie_theft_risk_score,
             cookie_theft_detected_at = EXCLUDED.cookie_theft_detected_at,
@@ -86,6 +87,7 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
     .bind(session.step_up_expires_at)
     .bind(session.revoked_at)
     .bind(&session.ip)
+    .bind(&session.geo_country_code)
     .bind(&session.user_agent)
     .bind(session.cookie_theft_risk_score)
     .bind(session.cookie_theft_detected_at)
@@ -116,7 +118,7 @@ pub async fn fetch_session_db(
             tenant_id, organization_id, workspace_id, workspace_region,
             client_id, acr, amr, auth_time, idle_timeout_seconds, idle_expires_at,
             expires_at, step_up_verified_at, step_up_expires_at, revoked_at,
-            ip, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
+            ip, geo_country_code, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
             account_device_id, device_trust_level, device_trust_score,
             risk_score, risk_decision, activity_window_started_at,
             activity_request_count, last_activity_risk_event_at, last_seen_at, created_at
@@ -164,6 +166,7 @@ pub async fn fetch_session_db(
         step_up_expires_at: row.get("step_up_expires_at"),
         revoked_at: row.get("revoked_at"),
         ip: row.get("ip"),
+        geo_country_code: row.get("geo_country_code"),
         user_agent: row.get("user_agent"),
         accept_language: None,
         accept: None,

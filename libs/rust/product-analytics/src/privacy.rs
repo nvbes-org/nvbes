@@ -10,6 +10,9 @@ type HmacSha256 = Hmac<Sha256>;
 const ALLOWED_EVENTS: &[&str] = &[
     "auth.signup_completed",
     "auth.email_verified",
+    "auth.login_completed",
+    "auth.logout_completed",
+    "auth.session_revoked",
     "workspace.created",
     "file.upload_started",
     "file.upload_completed",

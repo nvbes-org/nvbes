@@ -106,6 +106,10 @@ function posthogPlugins(
   release: string | undefined,
   envSources: EnvSource[],
 ): PluginOption[] {
+  if (!envFlag('POSTHOG_SOURCEMAP_UPLOAD_ENABLED', envSources)) {
+    return [];
+  }
+
   const config = completeConfig(
     'PostHog',
     {
@@ -206,6 +210,10 @@ function envValue(key: string, envSources: EnvSource[]): string | undefined {
     }
   }
   return undefined;
+}
+
+function envFlag(key: string, envSources: EnvSource[]): boolean {
+  return envValue(key, envSources)?.toLowerCase() === 'true';
 }
 
 function pluginList(plugin: unknown): PluginOption[] {

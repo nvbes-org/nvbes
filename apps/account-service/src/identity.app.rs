@@ -95,7 +95,7 @@ impl AppState {
             .map_err(|err| anyhow::anyhow!(err.message))?;
 
         state.observability.record_postgres_pool(
-            &state.config.app_name,
+            "account-service",
             &state.config.environment,
             state.db.size(),
             state.db.num_idle(),
@@ -154,14 +154,26 @@ fn build_product_analytics(
         analytics_id_salt: config.analytics_id_salt.clone(),
     };
 
-    if config.product_analytics_enabled {
-        info!("Account product analytics enabled without Cloud adapter; events are dropped");
-    } else {
+    if !config.product_analytics_enabled {
         info!("Account product analytics disabled");
+        return Ok(nvbes_product_analytics::ProductAnalytics::disabled());
     }
 
-    Ok(nvbes_product_analytics::ProductAnalytics::new(
+    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
+        nvbes_analytics_posthog::PostHogAnalyticsConfig {
+            host: config.posthog_host.clone(),
+            project_token: config.product_analytics_token.clone().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "NVBES_PRODUCT_ANALYTICS_TOKEN is required when product analytics is enabled"
+                )
+            })?,
+        },
+    )?;
+    info!("Account product analytics enabled with PostHog");
+
+    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
         analytics_config,
+        std::sync::Arc::new(sink),
     )?)
 }
 

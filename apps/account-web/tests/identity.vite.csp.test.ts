@@ -16,4 +16,13 @@ describe('account-web CSP', () => {
     expect(csp).not.toContain('http://localhost:*');
     expect(csp).not.toContain('http://127.0.0.1:*');
   });
+
+  it('allows the PostHog EU remote-config asset origin', () => {
+    const csp = getCsp('production', '', 'https://eu.i.posthog.com', '', false);
+
+    expect(csp).toContain("script-src 'self' https://eu-assets.i.posthog.com");
+    expect(csp).toContain(
+      "connect-src 'self' https://eu.i.posthog.com https://eu-assets.i.posthog.com",
+    );
+  });
 });

@@ -13,8 +13,10 @@ anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
+nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 nvbes-redis = { path = "../../libs/rust/redis" }
 prost = "0.14.4"
 reqwest.workspace = true

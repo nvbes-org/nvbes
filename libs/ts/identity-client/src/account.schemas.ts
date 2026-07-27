@@ -76,6 +76,7 @@ export const AccountSessionSchema = z.object({
   expires_at: z.string(),
   revoked_at: NullableStringSchema,
   ip: NullableStringSchema,
+  geo_country_code: NullableStringSchema.optional(),
   user_agent: NullableStringSchema,
   device_id: NullableStringSchema,
   device_trust_level: NullableStringSchema,

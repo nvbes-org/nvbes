@@ -1,6 +1,10 @@
-import { createHttpClient } from '@nvbes/http-client';
-import { describe, expect, it } from 'vite-plus/test';
+import { configureHttpRequestContextHeaders, createHttpClient } from '@nvbes/http-client';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { z } from 'zod';
+
+afterEach(() => {
+  configureHttpRequestContextHeaders();
+});
 
 describe('http-client idempotency headers', () => {
   it('preserves a base URL path prefix for absolute request paths', async () => {
@@ -82,6 +86,37 @@ describe('http-client idempotency headers', () => {
     });
 
     expect(observed.headers.get('Idempotency-Key')).toBeNull();
+  });
+
+  it('adds configured analytics correlation headers to existing clients', async () => {
+    const observed = new ObservedRequest();
+    const client = createHttpClient({ fetchImpl: buildJsonFetch(observed) });
+    configureHttpRequestContextHeaders(() => ({
+      'X-PostHog-Distinct-Id': 'distinct_12345678',
+      'X-PostHog-Session-Id': 'session_12345678',
+    }));
+
+    await client.get('/health', z.object({ ok: z.boolean() }));
+
+    expect(observed.headers.get('X-PostHog-Distinct-Id')).toBe('distinct_12345678');
+    expect(observed.headers.get('X-PostHog-Session-Id')).toBe('session_12345678');
+  });
+
+  it('does not expose analytics correlation headers to external origins', async () => {
+    const observed = new ObservedRequest();
+    const client = createHttpClient({
+      baseUrl: 'https://api.nvbes.test',
+      fetchImpl: buildJsonFetch(observed),
+    });
+    configureHttpRequestContextHeaders(() => ({
+      'X-PostHog-Distinct-Id': 'distinct_12345678',
+      'X-PostHog-Session-Id': 'session_12345678',
+    }));
+
+    await client.get('https://uploads.example.test/object', z.object({ ok: z.boolean() }));
+
+    expect(observed.headers.get('X-PostHog-Distinct-Id')).toBeNull();
+    expect(observed.headers.get('X-PostHog-Session-Id')).toBeNull();
   });
 });
 

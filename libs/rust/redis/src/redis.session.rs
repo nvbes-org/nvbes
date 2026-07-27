@@ -33,6 +33,8 @@ pub struct CachedSession {
     pub step_up_expires_at: Option<DateTime<Utc>>,
     pub revoked_at: Option<DateTime<Utc>>,
     pub ip: Option<String>,
+    #[serde(default)]
+    pub geo_country_code: Option<String>,
     pub user_agent: Option<String>,
     #[serde(default)]
     pub accept_language: Option<String>,

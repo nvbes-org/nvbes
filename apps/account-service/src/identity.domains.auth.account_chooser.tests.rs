@@ -39,6 +39,7 @@ fn active_account_preserves_current_session_flag() {
             expires_at: now,
             revoked_at: None,
             ip: None,
+            geo_country_code: None,
             user_agent: None,
             device_id: None,
             device_trust_level: None,

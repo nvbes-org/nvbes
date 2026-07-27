@@ -20,6 +20,30 @@ Depuis la racine:
 pnpm dev:infra:obs
 ```
 
+Pour demarrer en une commande l'infrastructure locale, Account Service,
+Account worker et Account web avec tous les exports actifs:
+
+```bash
+pnpm dev:account:observability
+```
+
+Cette commande configure OTLP, Pyroscope, Faro, les metriques du worker et les
+logs JSON. Les logs backend sont ecrits dans `app-logs/account-service.jsonl`
+et `app-logs/account-worker.jsonl`, puis lus et expurges par Alloy avant Loki.
+
+Pour tester le meme frontend local contre l'application Frontend
+Observability `account-web-dev` de Grafana Cloud:
+
+```bash
+pnpm dev:account:observability:cloud
+```
+
+La commande utilise `VITE_FARO_URL_ACCOUNT_WEB` lorsqu'elle est deja definie.
+Sinon, elle lit la variable GitHub `GRAFANA_FARO_URL_ACCOUNT_WEB` avec `gh`.
+Elle envoie uniquement Faro vers Grafana Cloud avec
+`deployment.environment=development`; elle ne demarre pas un second pipeline
+Faro local.
+
 Endpoints locaux principaux:
 
 - Grafana: `http://localhost:3000`
@@ -49,7 +73,8 @@ Pour activer Faro cote Account web, apres consentement `grafana` ou
 `performance`:
 
 ```bash
-VITE_FARO_URL=http://localhost:12347/collect
+VITE_FARO_URL_ACCOUNT_WEB=http://localhost:12347/collect
+VITE_FARO_ENVIRONMENT=development
 VITE_FARO_TRACING_ORIGINS=http://localhost:4000,http://localhost:3001
 VITE_FARO_SESSION_SAMPLE_RATE=1
 ```
@@ -64,7 +89,11 @@ Grafana est provisionne declarativement:
 - `grafana-datasources.yml` declare Prometheus, Mimir, Tempo, Loki et Pyroscope.
 - `grafana-provisioning/dashboards/nvbes.yml` charge les dashboards JSON.
 - `grafana-provisioning/alerting/nvbes-critical.yml` charge les alertes critiques.
+- `grafana-provisioning/alerting/nvbes-account.yml` surveille le heartbeat et
+  l'age des files Account.
 - `grafana-dashboards/*.json` contient les dashboards versionnes.
+- `nvbes-account-observability.json` regroupe les golden signals Account web,
+  service et worker.
 
 Tempo est provisionne avec traces-to-logs vers Loki, traces-to-profiles vers
 Pyroscope et traces-to-metrics vers Mimir. Le lien span -> profile ne devient
@@ -75,6 +104,22 @@ Les dashboards et alertes doivent rester limites a des labels techniques
 (`job`, `status`, `method`, `path`, `outcome`, `queue`, `environment`) et ne
 doivent jamais introduire email, tenant name, nom de fichier, object key,
 payload ou contenu utilisateur.
+
+## Verification
+
+Une fois les trois runtimes demarres:
+
+```bash
+curl --fail http://localhost:4000/health
+curl --fail http://localhost:4000/metrics
+curl --fail http://localhost:4102/metrics
+curl --fail http://localhost:12345/-/ready
+```
+
+Dans Grafana, ouvrir le dashboard `nvbes Account Observability`. Les requetes
+HTTP doivent apparaitre dans Prometheus, les traces dans Tempo, les logs
+backend et Faro dans Loki, et les profils `account-service`/`account-worker`
+dans Pyroscope.
 
 ## k6
 

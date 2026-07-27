@@ -11,13 +11,17 @@ if (!appName) {
   throw new Error('Usage: upload-grafana-sourcemaps.mjs <app-name> [output-directory]');
 }
 
-const config = completeConfig({
-  endpoint: envValue('GRAFANA_FARO_SOURCEMAP_ENDPOINT'),
-  apiKey: envValue('GRAFANA_FARO_SOURCEMAP_API_KEY'),
-  appId: appEnvValue('GRAFANA_FARO_APP_ID', appName),
-  stackId: envValue('GRAFANA_CLOUD_STACK_ID'),
-  bundleId: envValue('NVBES_RELEASE') ?? envValue('VITE_NVBES_BUILD_ID') ?? envValue('GITHUB_SHA'),
-});
+const uploadEnabled = envValue('GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED') === 'true';
+const config = uploadEnabled
+  ? completeConfig({
+      endpoint: envValue('GRAFANA_FARO_SOURCEMAP_ENDPOINT'),
+      apiKey: envValue('GRAFANA_FARO_SOURCEMAP_API_KEY'),
+      appId: appEnvValue('GRAFANA_FARO_APP_ID', appName),
+      stackId: envValue('GRAFANA_CLOUD_STACK_ID'),
+      bundleId:
+        envValue('NVBES_RELEASE') ?? envValue('VITE_NVBES_BUILD_ID') ?? envValue('GITHUB_SHA'),
+    })
+  : null;
 
 if (config) {
   const appNameSuffix = appName.replaceAll(/[^a-zA-Z0-9]/g, '_').toUpperCase();

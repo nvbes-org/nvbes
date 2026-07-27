@@ -21,7 +21,7 @@ use crate::{
     },
     http::{
         error::AppError,
-        request::{client_ip, user_agent},
+        request::{client_ip, product_analytics_correlation, user_agent},
     },
 };
 
@@ -83,12 +83,14 @@ async fn invite_member(
     )
     .await?;
 
+    let (distinct_id, session_id) = product_analytics_correlation(&headers);
     state.product_analytics.capture(
         ProductAnalyticsEvent::workspace_for_user(
             "member.invited",
             access.auth.user_id,
             workspace_id,
         )
+        .correlation(distinct_id, session_id)
         .property("member_count", 1_i64),
     );
 

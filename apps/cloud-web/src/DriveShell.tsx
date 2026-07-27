@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DriveAccountMenu } from './DriveAccountMenu';
 import { DriveAppLayout } from './DriveAppLayout';
 import { DriveDetailsPanel } from './DriveDetailsPanel';
@@ -9,6 +9,7 @@ import { DriveStarredView } from './DriveStarredView';
 import { DriveTrashView } from './DriveTrashView';
 import { DriveWorkspaceSwitcher } from './DriveWorkspaceSwitcher';
 import type { DriveMeResponse } from './drive.api';
+import { identifyUser, setAnalyticsWorkspaceGroup } from './drive.analytics';
 import { createInitialDriveWorkspace } from './drive.workspace.mock';
 import type { DriveWorkspaceState } from './drive.workspace.types';
 
@@ -29,6 +30,15 @@ export function DriveShell({ accessToken, me }: { accessToken: string; me: Drive
   const currentWorkspace =
     me.workspaces.find((workspace) => workspace.id === me.current_workspace_id) ?? me.workspaces[0];
   const workspaceName = currentWorkspace?.name ?? MOCK_WORKSPACE_NAME;
+
+  useEffect(() => {
+    identifyUser(me.user.id, { status: me.user.status });
+    if (currentWorkspace) {
+      void setAnalyticsWorkspaceGroup(currentWorkspace.id, {
+        workspace_type: currentWorkspace.workspace_type,
+      });
+    }
+  }, [currentWorkspace, me.user.id, me.user.status]);
 
   function handleModuleChange(moduleId: DriveWorkspaceState['activeModuleId']) {
     setWorkspace((current) => ({

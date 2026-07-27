@@ -13,6 +13,7 @@ pub struct BillingAppState {
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub observability: nvbes_observability::metrics::HttpMetrics,
+    pub product_analytics: nvbes_product_analytics::ProductAnalytics,
 }
 
 impl axum::extract::FromRef<BillingAppState> for nvbes_observability::metrics::HttpMetrics {
@@ -30,8 +31,38 @@ impl BillingAppState {
             redis: redis.clone(),
             rate_limiter: nvbes_core::limiter::RateLimiter::new(redis),
             observability: nvbes_observability::metrics::HttpMetrics::default(),
+            product_analytics: build_product_analytics(config)?,
         })
     }
+}
+
+fn build_product_analytics(
+    config: &AppConfig,
+) -> anyhow::Result<nvbes_product_analytics::ProductAnalytics> {
+    if !config.product_analytics_enabled {
+        tracing::info!("Billing product analytics disabled");
+        return Ok(nvbes_product_analytics::ProductAnalytics::disabled());
+    }
+
+    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
+        nvbes_analytics_posthog::PostHogAnalyticsConfig {
+            host: config.posthog_host.clone(),
+            project_token: config.product_analytics_token.clone().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "NVBES_PRODUCT_ANALYTICS_TOKEN is required when product analytics is enabled"
+                )
+            })?,
+        },
+    )?;
+    tracing::info!("Billing product analytics enabled with PostHog");
+
+    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
+        nvbes_product_analytics::ProductAnalyticsConfig {
+            enabled: true,
+            analytics_id_salt: config.analytics_id_salt.clone(),
+        },
+        std::sync::Arc::new(sink),
+    )?)
 }
 
 pub fn build_router(state: BillingAppState) -> axum::Router {

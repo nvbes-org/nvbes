@@ -1,5 +1,6 @@
 use nvbes_product_analytics::{CapturedProductAnalyticsEvent, ProductAnalyticsSink};
 use serde::Serialize;
+use serde_json::{Map, Value};
 use tokio::sync::mpsc;
 
 const BATCH_SIZE: usize = 20;
@@ -55,7 +56,29 @@ impl ProductAnalyticsSink for PostHogAnalyticsSink {
 #[derive(Serialize)]
 struct BatchRequest<'a> {
     api_key: &'a str,
-    batch: &'a [CapturedProductAnalyticsEvent],
+    batch: Vec<PostHogBatchEvent<'a>>,
+}
+
+#[derive(Serialize)]
+struct PostHogBatchEvent<'a> {
+    event: &'a str,
+    properties: Map<String, Value>,
+    timestamp: &'a str,
+}
+
+impl<'a> From<&'a CapturedProductAnalyticsEvent> for PostHogBatchEvent<'a> {
+    fn from(event: &'a CapturedProductAnalyticsEvent) -> Self {
+        let mut properties = event.properties.clone();
+        properties.insert(
+            "distinct_id".to_string(),
+            Value::String(event.distinct_id.clone()),
+        );
+        Self {
+            event: &event.event,
+            properties,
+            timestamp: &event.timestamp,
+        }
+    }
 }
 
 async fn batch_worker(
@@ -99,7 +122,7 @@ async fn flush_batch(
     let payload = std::mem::take(batch);
     let request = BatchRequest {
         api_key: project_token,
-        batch: &payload,
+        batch: payload.iter().map(PostHogBatchEvent::from).collect(),
     };
 
     match client.post(endpoint).json(&request).send().await {
@@ -116,5 +139,29 @@ fn batch_endpoint(host: &str) -> Result<String, PostHogAnalyticsError> {
     match parsed.scheme() {
         "http" | "https" => Ok(format!("{}/batch/", host.trim_end_matches('/'))),
         _ => Err(PostHogAnalyticsError::InvalidHost),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn batch_event_places_distinct_id_inside_properties() {
+        let captured = CapturedProductAnalyticsEvent {
+            event: "workspace.created".to_string(),
+            distinct_id: "wks_12345678".to_string(),
+            properties: Map::new(),
+            timestamp: "2026-07-27T12:00:00Z".to_string(),
+        };
+
+        let serialized = serde_json::to_value(PostHogBatchEvent::from(&captured)).unwrap();
+
+        assert_eq!(
+            serialized["properties"]["distinct_id"],
+            json!("wks_12345678")
+        );
+        assert!(serialized.get("distinct_id").is_none());
     }
 }

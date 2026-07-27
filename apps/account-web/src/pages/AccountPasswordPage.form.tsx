@@ -32,17 +32,7 @@ export function AccountPasswordForm({
 >) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password-username">Compte</Label>
-        <Input
-          id="password-username"
-          name="username"
-          type="email"
-          value={accountEmail}
-          readOnly
-          autoComplete="username"
-        />
-      </div>
+      <input name="username" type="hidden" value={accountEmail} autoComplete="username" readOnly />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="new-password">Nouveau mot de passe</Label>

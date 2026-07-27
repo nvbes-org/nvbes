@@ -14,7 +14,7 @@ use crate::{
     domains::uploads::service::{CreateUploadInput, CreateUploadResponse},
     http::{
         error::AppError,
-        request::{client_ip, user_agent},
+        request::{client_ip, product_analytics_correlation, user_agent},
     },
 };
 use nvbes_core::http::error::ErrorEnvelope;
@@ -98,12 +98,14 @@ pub(super) async fn create_upload(
     }
 
     if result.is_ok() {
+        let (distinct_id, session_id) = product_analytics_correlation(&headers);
         state.product_analytics.capture(
             ProductAnalyticsEvent::workspace_for_user(
                 "file.upload_started",
                 access.auth.user_id,
                 workspace_id,
             )
+            .correlation(distinct_id, session_id)
             .property("file_count", 1_i64)
             .property("upload_count", 1_i64)
             .property("size_bytes_bucket", size_bytes_bucket(expected_size_bytes)),

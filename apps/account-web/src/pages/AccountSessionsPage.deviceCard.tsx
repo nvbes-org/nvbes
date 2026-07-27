@@ -1,13 +1,13 @@
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale/fr';
-import { Clock, Laptop, LogOut, Smartphone, Tablet } from 'lucide-react';
+import { Clock, Laptop, LogOut, MapPin, Smartphone, Tablet } from 'lucide-react';
 import type { AccountSession } from '@nvbes/identity-client';
 import { AsyncStateButton } from '@/components/AsyncStateButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { type DeviceGroup, deviceTrustLabel } from './AccountSessionsPage.device';
+import { type DeviceGroup } from './AccountSessionsPage.device';
 import { BrowserIcon, OsIcon } from './AccountSessionsPage.icons';
 
 function DeviceTypeIcon({ deviceType }: { deviceType: 'desktop' | 'mobile' | 'tablet' }) {
@@ -24,11 +24,23 @@ function formatRelativeDate(iso: string): string {
   }
 }
 
-function trustVariant(level: string | null): 'default' | 'secondary' | 'outline' | 'destructive' {
-  if (level === 'trusted') return 'default';
-  if (level === 'recognized') return 'secondary';
-  if (level === 'restricted') return 'destructive';
-  return 'outline';
+function formatSessionLocation(session: AccountSession): string {
+  if (session.geo_country_code) {
+    try {
+      return (
+        new Intl.DisplayNames(['fr'], { type: 'region' }).of(session.geo_country_code) ??
+        session.geo_country_code
+      );
+    } catch {
+      return session.geo_country_code;
+    }
+  }
+
+  if (session.ip === '127.0.0.1' || session.ip === '::1') {
+    return 'Réseau local';
+  }
+
+  return 'Localisation indisponible';
 }
 
 export function DeviceCard({
@@ -42,7 +54,7 @@ export function DeviceCard({
   onRevoke: (sessionId: string) => void;
   onRevokeDevice?: (device: DeviceGroup) => void;
 }) {
-  const { parsedDevice, trustLevel, sessions, isCurrentDevice } = device;
+  const { parsedDevice, sessions, isCurrentDevice } = device;
   const nonCurrentSessions = sessions.filter((s) => !s.current);
 
   return (
@@ -78,8 +90,6 @@ export function DeviceCard({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={trustVariant(trustLevel)}>{deviceTrustLabel(trustLevel)}</Badge>
-
           {!isCurrentDevice && onRevokeDevice && nonCurrentSessions.length > 1 && (
             <Button
               variant="outline"
@@ -109,6 +119,10 @@ export function DeviceCard({
                 </Badge>
               )}
               {session.ip && <span className="font-mono">{session.ip}</span>}
+              <span className="flex items-center gap-1">
+                <MapPin className="size-3" />
+                {formatSessionLocation(session)}
+              </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3" />
                 {formatRelativeDate(session.last_seen_at)}

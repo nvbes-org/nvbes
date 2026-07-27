@@ -15,6 +15,7 @@ use nvbes_product_account::email::{
     jobs::{EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS},
     templates::html_escape,
 };
+use tracing::Instrument;
 
 use super::jobs::{
     claim_next_job, execute_job, mark_job_failed, mark_job_succeeded, recover_stale_jobs,
@@ -41,9 +42,19 @@ where
     let mut access_review_reminder_last_run = Instant::now() - ACCESS_REVIEW_REMINDER_INTERVAL;
     let mut housekeeping_last_run = Instant::now() - Duration::from_secs(3600);
     let mut worker_heartbeat_last_run = Instant::now() - WORKER_HEARTBEAT_INTERVAL;
+    let mut queue_metrics_last_run = Instant::now() - super::queue_metrics::REFRESH_INTERVAL;
     tokio::pin!(shutdown);
     loop {
         capture_worker_heartbeat_if_due(&state, &mut worker_heartbeat_last_run);
+        if let Err(error) = super::queue_metrics::refresh_if_due(
+            &state,
+            &WORKER_QUEUES,
+            &mut queue_metrics_last_run,
+        )
+        .await
+        {
+            tracing::warn!(%error, "account worker queue metrics refresh failed");
+        }
         if let Err(error) =
             run_access_review_schedules_if_due(&mut access_review_schedule_last_run).await
         {
@@ -195,12 +206,24 @@ pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::
 
     let started_at = Instant::now();
     let job_type = job.job_type.clone();
-    let outcome = execute_job(state, &job).await;
+    let job_span = tracing::info_span!(
+        "worker.job",
+        otel.name = %format!("process {}", job_type),
+        otel.kind = "consumer",
+        otel.status_code = tracing::field::Empty,
+        messaging.system = "redis",
+        messaging.destination.name = %job.queue,
+        messaging.operation.type = "process",
+        job.type = %job_type,
+        job.outcome = tracing::field::Empty,
+    );
+    let outcome = execute_job(state, &job).instrument(job_span.clone()).await;
     let duration = started_at.elapsed();
 
     match outcome {
         Ok(result) => {
             mark_job_succeeded(&state.redis, &job, result).await?;
+            job_span.record("job.outcome", "success");
             observability.record_worker_queue_job(&job_type, "success", duration);
         }
         Err(error) => {
@@ -219,10 +242,27 @@ pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::
             );
             let retryable = should_retry_job(&job_type, &error);
             mark_job_failed(&state.redis, &job, &error.to_string(), retryable).await?;
-            observability.record_worker_queue_job(&job_type, "failure", duration);
+            job_span.record("otel.status_code", "ERROR");
+            job_span.record(
+                "job.outcome",
+                failed_job_outcome(job.attempts, job.max_attempts, retryable),
+            );
+            observability.record_worker_queue_job(
+                &job_type,
+                failed_job_outcome(job.attempts, job.max_attempts, retryable),
+                duration,
+            );
         }
     }
     Ok(true)
+}
+
+fn failed_job_outcome(attempts: u32, max_attempts: u32, retryable: bool) -> &'static str {
+    if retryable && attempts < max_attempts {
+        "retry_scheduled"
+    } else {
+        "dead_letter"
+    }
 }
 
 fn capture_loop_error(
@@ -250,12 +290,15 @@ fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
         &worker_monitor_slug("account-worker", "loop-heartbeat"),
         WORKER_HEARTBEAT_SCHEDULE,
     );
+    state
+        .observability
+        .record_worker_heartbeat("account-worker");
     *last_run = Instant::now();
 }
 
 #[cfg(test)]
 mod tests {
-    use super::WORKER_QUEUES;
+    use super::{WORKER_QUEUES, failed_job_outcome};
     use nvbes_product_account::email::jobs::{
         JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
     };
@@ -272,5 +315,12 @@ mod tests {
                 "account-worker must not claim Billing queue {queue}"
             );
         }
+    }
+
+    #[test]
+    fn failed_job_outcome_matches_retry_budget() {
+        assert_eq!(failed_job_outcome(1, 3, true), "retry_scheduled");
+        assert_eq!(failed_job_outcome(3, 3, true), "dead_letter");
+        assert_eq!(failed_job_outcome(1, 3, false), "dead_letter");
     }
 }

@@ -145,7 +145,14 @@ services:
       pyroscope:
         condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:12345/-/ready"]
+      test:
+        [
+          "CMD",
+          "/bin/alloy",
+          "validate",
+          "--stability.level=public-preview",
+          "/etc/alloy/config.alloy",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -2,7 +2,7 @@ use axum::{Router, extract::State, middleware, response::IntoResponse, routing::
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use nvbes_core::config::AppConfig;
 use std::sync::{Arc, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::{net::TcpListener, task::JoinHandle};
 
 #[derive(Clone)]
@@ -148,6 +148,15 @@ impl HttpMetrics {
         metrics::counter!("worker_queue_recovered_jobs_total", &labels).increment(1);
     }
 
+    pub fn record_worker_heartbeat(&self, worker: &str) {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs_f64();
+        metrics::gauge!("worker_heartbeat_timestamp_seconds", "worker" => worker.to_owned())
+            .set(timestamp);
+    }
+
     pub fn record_worker_queue_depth(
         &self,
         queue_name: &str,
@@ -161,9 +170,8 @@ impl HttpMetrics {
         ];
 
         metrics::gauge!("worker_queue_depth", &labels).set(depth as f64);
-        if let Some(oldest_age_seconds) = oldest_age_seconds {
-            metrics::gauge!("worker_queue_oldest_age_seconds", &labels).set(oldest_age_seconds);
-        }
+        metrics::gauge!("worker_queue_oldest_age_seconds", &labels)
+            .set(oldest_age_seconds.unwrap_or_default());
     }
 
     pub fn record_object_storage_operation(

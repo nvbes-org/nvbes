@@ -167,6 +167,31 @@ Validation:
 - les audits conservent `metadata.geo` et `network_block_reason`;
 - l'allowlist temporaire a une date d'expiration.
 
+## Worker Jobs
+
+Signaux:
+
+- `Account worker heartbeat stale`;
+- `Account worker queue is stale`;
+- `up{job="account-worker"} == 0`;
+- hausse de `worker_queue_jobs_total` avec `outcome=~"retry_scheduled|dead_letter"`.
+
+Actions:
+
+- Verifier le statut du worker, puis ses logs correles par `trace_id` et `job.type`.
+- Inspecter `worker_queue_depth` et `worker_queue_oldest_age_seconds` par queue et statut.
+- Verifier PostgreSQL et Redis avant de redemarrer le worker.
+- Identifier la cause du dernier echec avant tout reenqueuing.
+- Reenqueuer une dead letter seulement avec la meme cle d'idempotence et apres correction.
+
+Validation:
+
+- `up{job="account-worker"} == 1`;
+- le heartbeat a moins de sept minutes;
+- l'age de la plus vieille entree diminue jusqu'a zero;
+- les nouveaux jobs terminent avec `outcome="success"`;
+- aucun doublon metier n'a ete cree.
+
 ## Jobs RGPD Bloques
 
 Signaux:

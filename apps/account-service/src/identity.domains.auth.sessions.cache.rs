@@ -53,6 +53,7 @@ pub fn cached_session_from_login(
         expires_at,
         revoked_at: None,
         ip,
+        geo_country_code: None,
         user_agent,
         accept_language: None,
         accept: None,
@@ -105,6 +106,7 @@ pub fn session_view_from_cached_session(session: &CachedSession, current: bool) 
         expires_at: session.expires_at,
         revoked_at: session.revoked_at,
         ip: session.ip.clone(),
+        geo_country_code: session.geo_country_code.clone(),
         user_agent: session.user_agent.clone(),
         device_id: session
             .account_device_id
@@ -282,5 +284,16 @@ mod idle_timeout_tests {
 
         assert_eq!(session.idle_timeout_seconds, None);
         assert_eq!(session.idle_expires_at, None);
+    }
+
+    #[test]
+    fn session_view_includes_resolved_country() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::hours(1));
+        session.geo_country_code = Some("FR".to_string());
+
+        let view = session_view_from_cached_session(&session, true);
+
+        assert_eq!(view.geo_country_code.as_deref(), Some("FR"));
     }
 }

@@ -112,7 +112,7 @@ groups:
                 type: prometheus
                 uid: Prometheus
               editorMode: code
-              expr: sum(increase(worker_queue_jobs_total{outcome=~"failure|dead_letter"}[10m]))
+              expr: sum(increase(worker_queue_jobs_total{outcome=~"failure|retry_scheduled|dead_letter"}[10m]))
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

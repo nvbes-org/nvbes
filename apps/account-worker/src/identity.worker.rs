@@ -6,6 +6,8 @@ pub mod housekeeping;
 pub mod jobs;
 #[path = "identity.worker.loop.rs"]
 pub mod loop_;
+#[path = "identity.worker.queue.metrics.rs"]
+pub mod queue_metrics;
 
 pub use loop_::run_loop_until_shutdown;
 

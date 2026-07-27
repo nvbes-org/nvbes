@@ -38,16 +38,7 @@ export function RegionSelect({
   value: string;
   onValueChange: (value: string) => void;
 }) {
-  const currentRegion = regions.find((entry) => entry.country_code === value);
-  const fallbackRegion =
-    value && !currentRegion
-      ? {
-          country_code: value,
-          display_name: value,
-          sub_region: null,
-        }
-      : null;
-  const renderedRegions = fallbackRegion ? [fallbackRegion, ...regions] : regions;
+  const selectValue = regionSelectValue(value, regions);
 
   return (
     <div className="flex flex-col gap-2">
@@ -62,13 +53,13 @@ export function RegionSelect({
           </span>
         )}
       </div>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={selectValue} onValueChange={onValueChange}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Sélectionnez votre pays..." />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            {renderedRegions.map((entry) => (
+            {regions.map((entry) => (
               <SelectItem key={entry.country_code} value={entry.country_code}>
                 <span className="flex items-center gap-2">
                   <span className="text-base leading-none">
@@ -91,4 +82,8 @@ export function RegionSelect({
       )}
     </div>
   );
+}
+
+function regionSelectValue(value: string, regions: SupportedRegion[]): string {
+  return regions.some((entry) => entry.country_code === value) ? value : '';
 }

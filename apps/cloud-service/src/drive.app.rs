@@ -152,11 +152,25 @@ fn build_product_analytics(
         analytics_id_salt: config.analytics_id_salt.clone(),
     };
 
-    if config.product_analytics_enabled {
-        tracing::info!("Cloud product analytics enabled without adapter; events are dropped");
+    if !config.product_analytics_enabled {
+        tracing::info!("Cloud product analytics disabled");
+        return Ok(nvbes_product_analytics::ProductAnalytics::disabled());
     }
 
-    Ok(nvbes_product_analytics::ProductAnalytics::new(
+    let sink = nvbes_analytics_posthog::PostHogAnalyticsSink::new(
+        nvbes_analytics_posthog::PostHogAnalyticsConfig {
+            host: config.posthog_host.clone(),
+            project_token: config.product_analytics_token.clone().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "NVBES_PRODUCT_ANALYTICS_TOKEN is required when product analytics is enabled"
+                )
+            })?,
+        },
+    )?;
+    tracing::info!("Cloud product analytics enabled with PostHog");
+
+    Ok(nvbes_product_analytics::ProductAnalytics::with_sink(
         analytics_config,
+        std::sync::Arc::new(sink),
     )?)
 }

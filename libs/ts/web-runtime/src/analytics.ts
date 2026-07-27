@@ -1,3 +1,4 @@
+import { configureHttpRequestContextHeaders } from '@nvbes/http-client';
 import { hasAnyAnalyticsConsent } from './analytics.privacy';
 import { RuntimeAnalytics } from './analytics.runtime';
 import type {
@@ -11,6 +12,7 @@ let runtimeSingleton: RuntimeAnalytics | null = null;
 
 export function initAnalyticsRuntime(options: AnalyticsRuntimeOptions): AnalyticsRuntime {
   runtimeSingleton = new RuntimeAnalytics(options);
+  configureHttpRequestContextHeaders(getAnalyticsRequestHeaders);
   void runtimeSingleton.init();
   return runtimeSingleton;
 }
@@ -56,6 +58,18 @@ export async function trackExperimentExposure(key: string, variant: string): Pro
   await runtimeSingleton?.trackExperimentExposure(key, variant);
 }
 
+export async function getAnalyticsRequestHeaders(): Promise<Record<string, string>> {
+  const context = await runtimeSingleton?.getCorrelationContext();
+  if (!context) {
+    return {};
+  }
+
+  return {
+    'X-PostHog-Distinct-Id': context.distinctId,
+    'X-PostHog-Session-Id': context.sessionId,
+  };
+}
+
 export async function captureAnalyticsException(
   error: unknown,
   properties?: Record<string, unknown>,
@@ -80,6 +94,7 @@ export type { BrowserAnalyticsTransportOptions } from './analytics.browser-trans
 export {
   ALL_ANALYTICS_CONSENT,
   EMPTY_ANALYTICS_CONSENT,
+  type AnalyticsCorrelationContext,
   type AnalyticsPurposeConsent,
   type AnalyticsRuntime,
   type AnalyticsRuntimeOptions,

@@ -98,9 +98,10 @@ pub(crate) async fn list_sessions(
 pub(crate) async fn revoke_session(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    headers: axum::http::HeaderMap,
     Path(session_id): Path<uuid::Uuid>,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, crate::http::error::AppError> {
-    sessions::revoke_session(State(state), Extension(auth), Path(session_id)).await
+    sessions::revoke_session(State(state), Extension(auth), headers, Path(session_id)).await
 }
 
 #[utoipa::path(
@@ -115,8 +116,9 @@ pub(crate) async fn revoke_session(
 pub(crate) async fn revoke_all_other_sessions(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, crate::http::error::AppError> {
-    sessions::revoke_all_other_sessions(State(state), Extension(auth)).await
+    sessions::revoke_all_other_sessions(State(state), Extension(auth), headers).await
 }
 
 pub(crate) async fn me_emails_get(

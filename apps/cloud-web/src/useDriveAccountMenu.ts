@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useTransition } from 'react';
+import { trackEvent } from './drive.analytics';
 import { logoutDriveSession, startDriveLogin } from './drive.auth.functions';
 import { driveQueryKeys } from './drive.queries';
 import {
@@ -20,6 +21,7 @@ export function useDriveAccountMenu({ accessToken }: { accessToken: string }) {
 
   async function handleLogout() {
     await logoutDriveSession(accessToken);
+    trackEvent('auth.logout_completed', { status: 'single' });
     queryClient.removeQueries({ queryKey: driveQueryKeys.all });
     startTransition(() => {
       void navigate({ to: '/', replace: true });
@@ -44,6 +46,7 @@ export function useDriveAccountMenu({ accessToken }: { accessToken: string }) {
   async function handleLogoutAll() {
     queryClient.removeQueries({ queryKey: driveQueryKeys.all });
     await logoutDriveSession(accessToken);
+    trackEvent('auth.logout_completed', { status: 'all' });
     clearDriveSession();
     startTransition(() => {
       void navigate({ to: '/', replace: true });

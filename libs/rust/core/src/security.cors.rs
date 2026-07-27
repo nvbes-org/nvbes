@@ -7,6 +7,9 @@ const CSRF_TOKEN_HEADER_NAME: &str = "x-csrf-token";
 const BAGGAGE_HEADER_NAME: &str = "baggage";
 const TRACEPARENT_HEADER_NAME: &str = "traceparent";
 const TRACESTATE_HEADER_NAME: &str = "tracestate";
+const SERVER_TIMING_HEADER_NAME: &str = "server-timing";
+const POSTHOG_DISTINCT_ID_HEADER_NAME: &str = "x-posthog-distinct-id";
+const POSTHOG_SESSION_ID_HEADER_NAME: &str = "x-posthog-session-id";
 
 pub fn cors_layer(config: &AppConfig) -> CorsLayer {
     let origins = cors_allowed_origins(config);
@@ -35,6 +38,8 @@ pub fn cors_layer(config: &AppConfig) -> CorsLayer {
             HeaderName::from_static("idempotency-key"),
             HeaderName::from_static(REQUEST_ID_HEADER_NAME),
             HeaderName::from_static(CSRF_TOKEN_HEADER_NAME),
+            HeaderName::from_static(POSTHOG_DISTINCT_ID_HEADER_NAME),
+            HeaderName::from_static(POSTHOG_SESSION_ID_HEADER_NAME),
             HeaderName::from_static(BAGGAGE_HEADER_NAME),
             HeaderName::from_static(TRACEPARENT_HEADER_NAME),
             HeaderName::from_static(TRACESTATE_HEADER_NAME),
@@ -43,6 +48,7 @@ pub fn cors_layer(config: &AppConfig) -> CorsLayer {
             HeaderName::from_static(REQUEST_ID_HEADER_NAME),
             HeaderName::from_static(TRACEPARENT_HEADER_NAME),
             HeaderName::from_static(TRACESTATE_HEADER_NAME),
+            HeaderName::from_static(SERVER_TIMING_HEADER_NAME),
         ]))
         .allow_credentials(true)
 }

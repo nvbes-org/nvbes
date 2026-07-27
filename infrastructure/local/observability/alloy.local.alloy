@@ -147,8 +147,16 @@ faro.receiver "identity_web" {
 local.file_match "nvbes_logs" {
   path_targets = [
     {
-      "__path__" = "/var/log/nvbes/*.jsonl",
-      "job"      = "nvbes-app",
+      "__path__"    = "/var/log/nvbes/account-service.jsonl",
+      "job"         = "account-service",
+      "service"     = "account-service",
+      "environment" = "development",
+    },
+    {
+      "__path__"    = "/var/log/nvbes/account-worker.jsonl",
+      "job"         = "account-worker",
+      "service"     = "account-worker",
+      "environment" = "development",
     },
   ]
 }
@@ -189,6 +197,22 @@ loki.process "privacy" {
     drop_counter_reason = "oversized_log_line"
   }
 
+  stage.json {
+    expressions = {
+      event_name = "event_name",
+      kind       = "kind",
+      level      = "level",
+    }
+  }
+
+  stage.labels {
+    values = {
+      event_name = "",
+      kind       = "",
+      level      = "",
+    }
+  }
+
   stage.static_labels {
     values = {
       environment = "development",
@@ -197,7 +221,7 @@ loki.process "privacy" {
   }
 
   stage.label_keep {
-    values = ["job", "environment", "platform", "service"]
+    values = ["job", "environment", "platform", "service", "kind", "event_name", "level"]
   }
 
   forward_to = [loki.write.local.receiver]

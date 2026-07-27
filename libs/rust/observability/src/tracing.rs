@@ -2,25 +2,24 @@ use nvbes_core::config::AppConfig;
 use tracing_subscriber::prelude::*;
 
 pub fn init_tracing(config: &AppConfig) {
+    init_tracing_for_service(config, &config.app_name);
+}
+
+pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
     let default_filter = "info";
 
-    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| default_filter.into());
+    let env_filter = std::env::var("RUST_LOG")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .and_then(|value| tracing_subscriber::EnvFilter::try_new(value).ok())
+        .unwrap_or_else(|| default_filter.into());
 
     let registry = tracing_subscriber::registry().with(env_filter);
 
     #[cfg(feature = "otlp")]
-    let registry = registry.with(otlp_layer(config));
+    let registry = registry.with(otlp_layer(config, service_name));
 
-    if config.environment == "development" {
-        registry
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_target(false)
-                    .compact(),
-            )
-            .init();
-    } else {
+    if use_json_logs(&config.environment) {
         registry
             .with(
                 tracing_subscriber::fmt::layer()
@@ -29,16 +28,36 @@ pub fn init_tracing(config: &AppConfig) {
                     .flatten_event(true),
             )
             .init();
+    } else {
+        registry
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_target(false)
+                    .compact(),
+            )
+            .init();
+    }
+}
+
+fn use_json_logs(environment: &str) -> bool {
+    match std::env::var("NVBES_LOG_FORMAT").ok().as_deref() {
+        Some("json") => true,
+        Some("compact") => false,
+        _ => environment != "development",
     }
 }
 
 #[cfg(feature = "otlp")]
-fn otlp_layer<S>(config: &AppConfig) -> Option<impl tracing_subscriber::Layer<S>>
+fn otlp_layer<S>(
+    config: &AppConfig,
+    service_name: &str,
+) -> Option<impl tracing_subscriber::Layer<S>>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
     let endpoint = config.otlp_endpoint.as_ref()?;
 
+    use opentelemetry::KeyValue;
     use opentelemetry::trace::TracerProvider;
     use opentelemetry_otlp::{WithExportConfig, WithTonicConfig};
     use opentelemetry_sdk::Resource;
@@ -58,7 +77,13 @@ where
         .with_batch_exporter(exporter)
         .with_resource(
             Resource::builder()
-                .with_service_name(config.app_name.clone())
+                .with_service_name(service_name.to_owned())
+                .with_attributes([
+                    KeyValue::new("service.namespace", "nvbes"),
+                    KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+                    KeyValue::new("deployment.environment", config.environment.clone()),
+                    KeyValue::new("deployment.environment.name", config.environment.clone()),
+                ])
                 .build(),
         )
         .build();

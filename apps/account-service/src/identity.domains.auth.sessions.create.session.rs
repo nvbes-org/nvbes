@@ -174,6 +174,10 @@ pub async fn create_session_for_principal(
         &mut factors,
     )
     .await;
+    cached_session.geo_country_code = geo_resolution
+        .as_ref()
+        .and_then(|resolution| resolution.location.as_ref())
+        .map(|location| location.country_code.clone());
     cached_session.risk_score = Some(score);
     cached_session.risk_decision = Some(decision.as_str().to_string());
     nvbes_redis::session::set_session(redis, &cached_session, current_session_ttl(&cached_session))

@@ -152,21 +152,38 @@ pub async fn create_checkout_session(
         "checkout",
     )
     .await?;
-    Ok(Json(
-        nvbes_billing::checkout_sessions::create_billing_checkout_session(
-            &state.db,
-            &state.config,
-            nvbes_billing::checkout_sessions::CreateBillingCheckoutSessionInput {
-                workspace_id,
-                actor_principal_id: auth.principal_id,
-                checkout: input,
-                ip: nvbes_core::http::client_ip::client_ip(&headers),
-                trusted_country_header: country_header(&headers).map(ToOwned::to_owned),
-                user_agent: user_agent(&headers),
-            },
+    let plan_code = input.plan_code.clone();
+    let response = nvbes_billing::checkout_sessions::create_billing_checkout_session(
+        &state.db,
+        &state.config,
+        nvbes_billing::checkout_sessions::CreateBillingCheckoutSessionInput {
+            workspace_id,
+            actor_principal_id: auth.principal_id,
+            checkout: input,
+            ip: nvbes_core::http::client_ip::client_ip(&headers),
+            trusted_country_header: country_header(&headers).map(ToOwned::to_owned),
+            user_agent: user_agent(&headers),
+        },
+    )
+    .await?;
+
+    state.product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::workspace(
+            "billing.checkout_started",
+            workspace_id,
         )
-        .await?,
-    ))
+        .correlation(
+            headers
+                .get("X-PostHog-Distinct-Id")
+                .and_then(|value| value.to_str().ok()),
+            headers
+                .get("X-PostHog-Session-Id")
+                .and_then(|value| value.to_str().ok()),
+        )
+        .property("plan_code", plan_code),
+    );
+
+    Ok(Json(response))
 }
 
 pub async fn create_portal_session(

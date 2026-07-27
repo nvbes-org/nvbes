@@ -118,7 +118,19 @@ pub(crate) fn login_response(
     secure_cookie: bool,
     session_expires_in: i64,
     csrf_secret: &str,
+    product_analytics: &nvbes_product_analytics::ProductAnalytics,
+    request_headers: &HeaderMap,
 ) -> Result<Response, AppError> {
+    let (distinct_id, session_id) =
+        crate::http::request::product_analytics_correlation(request_headers);
+    product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::user(
+            "auth.login_completed",
+            result.user.id,
+        )
+        .correlation(distinct_id, session_id),
+    );
+
     let session_cookie_name = auth_cookie_name_with_user("session", authuser, secure_cookie);
     let session_cookie_value = result.browser_session_token.clone();
     let device_cookie_token = result.device_cookie_token.clone();

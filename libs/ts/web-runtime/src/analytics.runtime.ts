@@ -8,6 +8,7 @@ import {
   sanitizeAnalyticsProperties,
 } from './analytics.privacy';
 import type {
+  AnalyticsCorrelationContext,
   AnalyticsPurposeConsent,
   AnalyticsRuntime,
   AnalyticsRuntimeOptions,
@@ -133,6 +134,23 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
     });
   }
 
+  async getCorrelationContext(): Promise<AnalyticsCorrelationContext | undefined> {
+    if (!this.consent.productAnalytics || this.isSensitiveRoute()) {
+      return undefined;
+    }
+
+    const context = await this.options.transport?.getCorrelationContext?.();
+    if (
+      !context ||
+      !isSafeCorrelationIdentifier(context.distinctId) ||
+      !isSafeCorrelationIdentifier(context.sessionId)
+    ) {
+      return undefined;
+    }
+
+    return context;
+  }
+
   async captureAnalyticsException(
     error: unknown,
     properties?: Record<string, unknown>,
@@ -219,12 +237,17 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
   }
 }
 
+function isSafeCorrelationIdentifier(value: string): boolean {
+  return value.length >= 8 && value.length <= 200 && /^[a-zA-Z0-9_-]+$/u.test(value);
+}
+
 function hasProductAnalyticsConsent(consent: AnalyticsPurposeConsent): boolean {
   return (
     consent.productAnalytics ||
     consent.autocaptureHeatmaps ||
     consent.sessionReplay ||
     consent.surveysFeedback ||
+    consent.errorTracking ||
     consent.featureFlags
   );
 }

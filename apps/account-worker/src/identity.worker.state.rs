@@ -18,7 +18,7 @@ impl AppState {
         let observability = nvbes_observability::metrics::HttpMetrics::default();
 
         observability.record_postgres_pool(
-            &config.app_name,
+            "account-worker",
             &config.environment,
             db.size(),
             db.num_idle(),

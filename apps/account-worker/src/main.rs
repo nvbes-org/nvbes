@@ -1,6 +1,6 @@
 use nvbes_core::config::AppConfig;
 use nvbes_observability::{
-    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing,
+    capture_error_reporting_smoke, init_error_reporting_for_service, init_tracing_for_service,
     install_safe_panic_hook, start_continuous_profiling,
 };
 
@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
 
     let _error_reporting_guard = init_error_reporting_for_service(&config, "account-worker");
     install_safe_panic_hook();
-    init_tracing(&config);
+    init_tracing_for_service(&config, "account-worker");
 
     let arg1 = std::env::args().nth(1);
 

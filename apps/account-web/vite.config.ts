@@ -15,6 +15,9 @@ import {
   permissionsPolicy,
   uaClientHintsHeaders,
 } from './identity.vite.csp';
+import { resolveFaroUrl } from './identity.vite.observability';
+
+const workspaceRoot = path.resolve(__dirname, '../..');
 
 const reactRuntimeAliases = [
   { find: /^react$/, replacement: path.resolve(__dirname, '../../node_modules/react/index.js') },
@@ -42,7 +45,7 @@ function pluginList(plugin: unknown): PluginOption[] {
 
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
-  const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
+  const rootEnv = loadEnv(mode, workspaceRoot, '');
   const envSources = [process.env, localEnv, rootEnv];
 
   const accountServiceBaseUrl =
@@ -62,14 +65,7 @@ export default defineConfig(({ mode }) => {
     rootEnv.VITE_POSTHOG_HOST ||
     (posthogKey ? 'https://eu.i.posthog.com' : '');
   const posthogConnectUrl = originFromUrl(posthogHost);
-  const faroUrl =
-    process.env.VITE_FARO_URL ||
-    localEnv.VITE_FARO_URL ||
-    rootEnv.VITE_FARO_URL ||
-    process.env.VITE_GRAFANA_FARO_URL ||
-    localEnv.VITE_GRAFANA_FARO_URL ||
-    rootEnv.VITE_GRAFANA_FARO_URL ||
-    '';
+  const faroUrl = resolveFaroUrl(envSources);
   const faroConnectUrl = originFromUrl(faroUrl);
   const isLocalEnvironment =
     (process.env.NVBES_ENV || localEnv.NVBES_ENV || rootEnv.NVBES_ENV) === 'development';
@@ -82,6 +78,7 @@ export default defineConfig(({ mode }) => {
   );
 
   return {
+    envDir: workspaceRoot,
     plugins: [
       ...pluginList(tailwindcss()),
       ...pluginList(react()),

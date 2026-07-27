@@ -67,13 +67,6 @@ export function parseUserAgent(ua: string): ParsedDevice {
   return { browser, browserKey, os, osKey, deviceType };
 }
 
-export function deviceTrustLabel(level: string | null): string {
-  if (level === 'trusted') return 'Appareil fiable';
-  if (level === 'recognized') return 'Appareil reconnu';
-  if (level === 'restricted') return 'À vérifier';
-  return 'Nouvel appareil';
-}
-
 export function trustScoreColor(score: number | null): string {
   if (score === null) return 'text-muted-foreground';
   if (score >= 70) return 'text-emerald-600';

@@ -48,9 +48,9 @@ const dashboards = [
       graph("OAuth token exchange", "rate(identity_oauth_token_exchange_total[5m])"),
       graph("OAuth client credentials", "rate(identity_oauth_client_credentials_total[5m])"),
       graph("OAuth policy denied", "sum by (reason) (rate(identity_oauth_policy_denied_total[5m]))"),
-      graph("Auth risk and login failures", 'sum by (event) (rate(identity_auth_security_events_total{event=~"login_failed|risk_policy_blocked|lockout|step_up_failed"}[5m]))'),
-      graph("MFA and WebAuthn failures", 'sum by (factor, outcome) (rate(identity_mfa_events_total{outcome!="success"}[5m]))'),
-      stat("Recovery review backlog", 'max(identity_recovery_review_backlog{status="pending"})'),
+      graph("Bot guard decisions", "sum by (decision, reason) (rate(identity_bot_guard_decisions_total[5m]))"),
+      graph("Authentication outcomes by route", 'sum by (path, status) (rate(http_requests_total{job="account-service",path=~"/auth/.*"}[5m]))'),
+      graph("MFA and WebAuthn errors", 'sum by (path, status) (rate(http_requests_total{job="account-service",path=~"/auth/.*(mfa|webauthn).*",status=~"4..|5.."}[5m]))'),
     ],
   },
   {
@@ -159,13 +159,40 @@ const dashboards = [
     log("Redaction drops", 'sum by (service) (count_over_time({platform="nvbes"} |= "redaction" [5m]))'),
     log("Log volume", 'sum by (environment, service) (bytes_rate({platform="nvbes"}[5m]))'),
   ]),
-  simple("nvbes-frontend-rum-faro.json", "nvbes Frontend RUM and Faro", "p1", [
-    graph("Web vitals p75", "histogram_quantile(0.75, sum by (le, app, metric) (rate(faro_web_vitals_duration_seconds_bucket[5m])))", "s"),
-    graph("Frontend errors", "sum by (app, route) (rate(faro_frontend_errors_total[5m]))"),
-    graph("Route load p95", "histogram_quantile(0.95, sum by (le, app, route) (rate(faro_route_load_duration_seconds_bucket[5m])))", "s"),
-    graph("Browser API latency", "histogram_quantile(0.95, sum by (le, app, target_service) (rate(faro_api_request_duration_seconds_bucket[5m])))", "s"),
-    stat("Consented sessions", "sum(faro_consented_sessions_total)"),
-  ]),
+  {
+    file: "nvbes-frontend-rum-faro.json",
+    title: "nvbes Frontend RUM and Faro",
+    tags: ["nvbes", "p1", "frontend", "faro"],
+    panels: [
+      graph("Faro measurements ingested", "sum(rate(faro_receiver_measurements_total[5m]))"),
+      graph("Faro exceptions ingested", "sum(rate(faro_receiver_exceptions_total[5m]))"),
+      logGraph("Frontend signal volume", 'sum by (kind) (count_over_time({job="account-web"}[5m]))'),
+      logGraph("Frontend exceptions", 'sum(count_over_time({job="account-web",kind="exception"}[5m]))'),
+      logGraph("Route changes", 'sum(count_over_time({job="account-web",kind="event",event_name=~"view_changed|route_change"}[5m]))'),
+      logGraph("Consented session starts", 'sum(count_over_time({job="account-web",kind="event",event_name="session_start"}[5m]))'),
+      table("Recent frontend traces", '{ resource.service.name = "account-web" }', DS.tempo, "traceql"),
+      log("Recent frontend errors", '{job="account-web",kind="exception"}'),
+    ],
+  },
+  {
+    file: "nvbes-account-observability.json",
+    title: "nvbes Account Observability",
+    tags: ["nvbes", "p0", "account", "golden-signals"],
+    panels: [
+      stat("Account runtime health", 'min by (job) (up{job=~"account-service|account-worker"})'),
+      graph("Account API request rate", 'sum by (method, status) (rate(http_requests_total{job="account-service"}[5m]))'),
+      graph("Account API p95 latency", 'histogram_quantile(0.95, sum by (le, path) (rate(http_request_duration_seconds_bucket{job="account-service"}[5m])))', "s"),
+      graph("Account API errors by route", 'sum by (path, status) (rate(http_requests_total{job="account-service",status=~"4..|5.."}[5m]))'),
+      graph("Authentication traffic", 'sum by (path, status) (rate(http_requests_total{job="account-service",path=~"/auth/.*"}[5m]))'),
+      graph("Bot guard decisions", "sum by (decision, reason) (rate(identity_bot_guard_decisions_total[5m]))"),
+      graph("Account worker queue depth", 'sum by (queue, status) (worker_queue_depth{job="account-worker"})'),
+      graph("Account worker outcomes", 'sum by (job_type, outcome) (rate(worker_queue_jobs_total{job="account-worker"}[5m]))'),
+      stat("Account worker heartbeat age", 'time() - max(worker_heartbeat_timestamp_seconds{job="account-worker"})', "s"),
+      logGraph("Account web signals", 'sum by (kind) (count_over_time({job="account-web"}[5m]))'),
+      log("Account runtime errors", '{service=~"account-(service|worker)"} | json | level=~"ERROR|error"'),
+      table("Recent Account traces", '{ resource.service.name =~ "account-(service|worker|web)" }', DS.tempo, "traceql"),
+    ],
+  },
   simple("nvbes-security-abuse.json", "nvbes Security and Abuse", "p1", [
     graph("Drive authz denied", "sum by (reason) (rate(drive_authz_denied_total[5m]))"),
     graph("Public API geo requests", "sum by (status, network_kind, risk_bucket) (rate(drive_public_api_geo_requests_total[5m]))"),
@@ -294,6 +321,9 @@ function table(title, expr, datasource, kind = "prometheus") {
 }
 function log(title, expr) {
   return { title, expr, type: "logs", datasource: DS.loki, kind: "logs" };
+}
+function logGraph(title, expr, unit) {
+  return { title, expr, unit, type: "timeseries", datasource: DS.loki, kind: "logs" };
 }
 function simple(file, title, priority, panels) {
   return { file, title, tags: ["nvbes", priority], panels };

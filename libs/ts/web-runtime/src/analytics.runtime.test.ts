@@ -28,7 +28,7 @@ describe('RuntimeAnalytics consent lifecycle', () => {
     expect(states).toEqual([true, false]);
   });
 
-  it('disables product analytics when only error reporting remains', async () => {
+  it('keeps the PostHog transport active when error tracking remains', async () => {
     const states: boolean[] = [];
     const runtime = new RuntimeAnalytics({
       appName: 'account-web',
@@ -49,7 +49,7 @@ describe('RuntimeAnalytics consent lifecycle', () => {
       errorTracking: true,
     });
 
-    expect(states).toEqual([true, false]);
+    expect(states).toEqual([true, true]);
   });
 
   it('disables capture on init when analytics consent is empty', async () => {
@@ -91,5 +91,26 @@ describe('RuntimeAnalytics consent lifecycle', () => {
     await runtime.init();
 
     expect(replayStops).toBe(1);
+  });
+
+  it('exposes safe correlation identifiers only with product analytics consent', async () => {
+    const runtime = new RuntimeAnalytics({
+      appName: 'account-web',
+      getConsent: () => ({
+        ...EMPTY_ANALYTICS_CONSENT,
+        productAnalytics: true,
+      }),
+      transport: {
+        getCorrelationContext: () => ({
+          distinctId: 'distinct_12345678',
+          sessionId: 'session_12345678',
+        }),
+      },
+    });
+
+    await expect(runtime.getCorrelationContext()).resolves.toEqual({
+      distinctId: 'distinct_12345678',
+      sessionId: 'session_12345678',
+    });
   });
 });

@@ -1,6 +1,9 @@
 global:
   scrape_interval: 5s
   evaluation_interval: 5s
+  external_labels:
+    environment: development
+    platform: nvbes
 
 remote_write:
   - url: http://mimir:9009/api/v1/push
@@ -12,6 +15,7 @@ scrape_configs:
       - targets: ['host.docker.internal:4000']
         labels:
           service: 'account-service'
+          environment: 'development'
 
   - job_name: 'cloud-service'
     static_configs:
@@ -30,6 +34,7 @@ scrape_configs:
       - targets: ['host.docker.internal:4102']
         labels:
           service: 'account-worker'
+          environment: 'development'
 
   - job_name: 'grafana-stack'
     static_configs:

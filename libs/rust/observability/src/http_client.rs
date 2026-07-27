@@ -6,8 +6,8 @@ use crate::trace_context::{self, TraceParent, TraceStateValue};
 /// reading the incoming trace context from request Extensions.
 ///
 /// Retrieves the current `TraceParent` from the request's Extensions (set by
-/// `observe_request` middleware). Generates a child traceparent from it and
-/// injects `traceparent` + optional `tracestate` into `headers`.
+/// `observe_request` middleware) and injects it as the parent context for the
+/// downstream service.
 ///
 /// Falls back to generating a fresh traceparent when no context is registered
 /// (useful for background jobs, workers, or code outside the middleware).
@@ -15,10 +15,9 @@ pub fn propagate_trace_context(extensions: &axum::http::Extensions, headers: &mu
     let parent = extensions.get::<TraceParent>();
     let tracestate_snapshot = extensions.get::<TraceStateValue>();
 
-    let outgoing = match parent {
-        Some(parent_tp) => trace_context::child_traceparent(parent_tp),
-        None => trace_context::new_traceparent(true),
-    };
+    let outgoing = parent
+        .cloned()
+        .unwrap_or_else(|| trace_context::new_traceparent(true));
 
     trace_context::inject_traceparent_into(
         headers,
@@ -32,7 +31,7 @@ pub fn propagate_trace_context(extensions: &axum::http::Extensions, headers: &mu
 ///
 /// This variant is for handlers that receive `HeaderMap` directly rather than
 /// `Request` with extensions. It parses `traceparent`/`tracestate` from
-/// `request_headers` and injects a child into `outgoing_headers`.
+/// `request_headers` and injects that context into `outgoing_headers`.
 pub fn propagate_headers_trace_context(
     request_headers: &HeaderMap,
     outgoing_headers: &mut HeaderMap,
@@ -40,10 +39,7 @@ pub fn propagate_headers_trace_context(
     let incoming = trace_context::extract_traceparent(request_headers);
     let tracestate = trace_context::extract_tracestate(request_headers);
 
-    let outgoing = incoming
-        .as_ref()
-        .map(trace_context::child_traceparent)
-        .unwrap_or_else(|| trace_context::new_traceparent(true));
+    let outgoing = incoming.unwrap_or_else(|| trace_context::new_traceparent(true));
 
     trace_context::inject_traceparent_into(outgoing_headers, &outgoing, tracestate.as_deref());
 }

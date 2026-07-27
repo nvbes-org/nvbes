@@ -5,6 +5,7 @@ import {
   integrityPolicyScripts,
   originFromUrl,
   permissionsPolicy,
+  posthogAssetsOriginFromHost,
   uaClientHintsHeaders,
 } from '../../libs/ts/web-runtime/src/csp';
 
@@ -20,10 +21,12 @@ export function getCsp(
 
   const sentryConnect = sentryConnectUrl ? ` ${sentryConnectUrl}` : '';
   const posthogConnect = posthogConnectUrl ? ` ${posthogConnectUrl}` : '';
+  const posthogAssetsUrl = posthogAssetsOriginFromHost(posthogConnectUrl);
   const faroConnect = faroConnectUrl ? ` ${faroConnectUrl}` : '';
 
   return buildWebCsp({
     mode,
+    scriptSrc: [posthogAssetsUrl],
     styleSrc: ['https://fonts.googleapis.com'],
     imgSrc: [
       'https:',
@@ -33,6 +36,7 @@ export function getCsp(
     connectSrc: [
       sentryConnect.trim(),
       posthogConnect.trim(),
+      posthogAssetsUrl,
       faroConnect.trim(),
       ...(isDev ? ['http://localhost:8080', 'http://localhost:*', 'http://127.0.0.1:*'] : []),
     ],

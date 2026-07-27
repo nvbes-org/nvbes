@@ -4,6 +4,11 @@ export type JsonType = string | number | boolean | null | JsonType[] | { [key: s
 
 export type AnalyticsProperties = Record<string, string | number | boolean | null>;
 
+export interface AnalyticsCorrelationContext {
+  distinctId: string;
+  sessionId: string;
+}
+
 export interface AnalyticsPurposeConsent {
   productAnalytics: boolean;
   autocaptureHeatmaps: boolean;
@@ -21,6 +26,10 @@ export interface AnalyticsTransport {
     key: string,
   ) => Promise<FeatureFlagResult | undefined> | FeatureFlagResult | undefined;
   getFeatureFlagPayload?: (key: string) => Promise<JsonType | undefined> | JsonType | undefined;
+  getCorrelationContext?: () =>
+    | Promise<AnalyticsCorrelationContext | undefined>
+    | AnalyticsCorrelationContext
+    | undefined;
   captureException?: (error: unknown, properties: AnalyticsProperties) => Promise<void> | void;
   startPrivacySafeReplay?: () => Promise<void> | void;
   stopPrivacySafeReplay?: () => Promise<void> | void;
@@ -50,6 +59,7 @@ export interface AnalyticsRuntime {
   getFeatureFlagPayload(key: string): Promise<JsonType | undefined>;
   isFeatureEnabled(key: string): Promise<boolean>;
   trackExperimentExposure(key: string, variant: string): Promise<void>;
+  getCorrelationContext(): Promise<AnalyticsCorrelationContext | undefined>;
   captureAnalyticsException(error: unknown, properties?: Record<string, unknown>): Promise<void>;
   startPrivacySafeReplay(): Promise<void>;
   stopPrivacySafeReplay(): Promise<void>;

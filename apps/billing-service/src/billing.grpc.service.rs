@@ -93,6 +93,7 @@ impl BillingService for BillingGrpcService {
         let workspace_id = workspace_id(&request.workspace_id)?;
         let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
         let actor_principal_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
+        let plan_code = request.plan_code.clone();
         let checkout = nvbes_billing::checkout_sessions::create_billing_checkout_session(
             &self.state.db,
             &self.state.config,
@@ -111,6 +112,13 @@ impl BillingService for BillingGrpcService {
         )
         .await
         .map_err(checkout_status)?;
+        self.state.product_analytics.capture(
+            nvbes_product_analytics::ProductAnalyticsEvent::workspace(
+                "billing.checkout_started",
+                workspace_id,
+            )
+            .property("plan_code", plan_code),
+        );
         Ok(Response::new(
             service_conversions::checkout_session_response(checkout),
         ))

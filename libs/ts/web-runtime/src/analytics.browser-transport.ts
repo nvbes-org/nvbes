@@ -54,11 +54,11 @@ export function createBrowserAnalyticsTransport(
       return posthog;
     }
 
-    if (
-      !productAnalyticsEnabled ||
-      !normalizedOptional(options.posthogKey) ||
-      typeof window === 'undefined'
-    ) {
+    if (!productAnalyticsEnabled || typeof window === 'undefined') {
+      return null;
+    }
+    if (!normalizedOptional(options.posthogKey)) {
+      reportMissingDevelopmentConfig(options);
       return null;
     }
 
@@ -134,11 +134,20 @@ export function createBrowserAnalyticsTransport(
       }
       return normalizeJson(loadedPostHog.getFeatureFlagPayload(key));
     },
-    captureException(error, properties) {
-      if (!sentry) {
-        return;
+    async getCorrelationContext() {
+      const loadedPostHog = await ensurePostHog();
+      if (!loadedPostHog) {
+        return undefined;
       }
-      sentry.captureException(error, { extra: properties });
+
+      const distinctId = loadedPostHog.get_distinct_id();
+      const sessionId = loadedPostHog.get_session_id();
+      return distinctId && sessionId ? { distinctId, sessionId } : undefined;
+    },
+    async captureException(error, properties) {
+      sentry?.captureException(error, { extra: properties });
+      const loadedPostHog = await ensurePostHog();
+      loadedPostHog?.captureException(error, properties);
     },
     async startPrivacySafeReplay() {
       const loadedPostHog = await ensurePostHog();
@@ -173,6 +182,16 @@ export function createBrowserAnalyticsTransportFromEnv(options: {
     posthogKey: stringEnv(options.env, 'VITE_POSTHOG_KEY'),
     posthogHost: stringEnv(options.env, 'VITE_POSTHOG_HOST'),
   });
+}
+
+function reportMissingDevelopmentConfig(options: BrowserAnalyticsTransportOptions): void {
+  if (options.environment !== 'development') {
+    return;
+  }
+
+  console.error(
+    `PostHog is enabled for ${options.appName}, but VITE_POSTHOG_KEY is missing or unconfigured. Product analytics events will be silently missed.`,
+  );
 }
 
 function initSentry(

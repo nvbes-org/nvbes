@@ -28,6 +28,14 @@ pub(crate) async fn logout(
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
     sessions::logout_browser_sessions(&state.db, &state.redis, &auth, &headers).await?;
+    let (distinct_id, session_id) = crate::http::request::product_analytics_correlation(&headers);
+    state.product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::user(
+            "auth.logout_completed",
+            auth.user_id(),
+        )
+        .correlation(distinct_id, session_id),
+    );
     let result = LogoutResult { success: true };
 
     let mut response = (StatusCode::OK, Json(result)).into_response();
@@ -89,12 +97,23 @@ pub(crate) struct ListSessionsQuery {
 pub(crate) async fn revoke_session(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    headers: HeaderMap,
     axum::extract::Path(session_id): axum::extract::Path<uuid::Uuid>,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, AppError> {
     if auth.session_id() != session_id {
         verification::require_recent_step_up(&state.redis, &auth, None).await?;
     }
     sessions_mgmt::revoke(&state.db, &state.redis, auth.user_id(), session_id).await?;
+    let (distinct_id, analytics_session_id) =
+        crate::http::request::product_analytics_correlation(&headers);
+    state.product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::user(
+            "auth.session_revoked",
+            auth.user_id(),
+        )
+        .correlation(distinct_id, analytics_session_id)
+        .property("status", "single"),
+    );
     Ok(Json(LogoutResult { success: true }))
 }
 
@@ -110,8 +129,18 @@ pub(crate) async fn revoke_session(
 pub(crate) async fn revoke_all_other_sessions(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
+    headers: HeaderMap,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, AppError> {
     sessions_mgmt::revoke_all_others(&state.db, &state.redis, auth.user_id(), auth.session_id())
         .await?;
+    let (distinct_id, session_id) = crate::http::request::product_analytics_correlation(&headers);
+    state.product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::user(
+            "auth.session_revoked",
+            auth.user_id(),
+        )
+        .correlation(distinct_id, session_id)
+        .property("status", "others"),
+    );
     Ok(Json(LogoutResult { success: true }))
 }

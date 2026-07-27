@@ -29,3 +29,14 @@ pub fn user_agent(headers: &HeaderMap) -> Option<String> {
         .and_then(|value| value.to_str().ok())
         .map(ToOwned::to_owned)
 }
+
+pub fn product_analytics_correlation(headers: &HeaderMap) -> (Option<&str>, Option<&str>) {
+    (
+        headers
+            .get("X-PostHog-Distinct-Id")
+            .and_then(|value| value.to_str().ok()),
+        headers
+            .get("X-PostHog-Session-Id")
+            .and_then(|value| value.to_str().ok()),
+    )
+}

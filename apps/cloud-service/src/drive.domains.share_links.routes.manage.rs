@@ -20,7 +20,7 @@ use crate::{
     },
     http::{
         error::AppError,
-        request::{client_ip, user_agent},
+        request::{client_ip, product_analytics_correlation, user_agent},
     },
 };
 
@@ -149,12 +149,14 @@ async fn create_share_link(
     )
     .await?;
 
+    let (distinct_id, session_id) = product_analytics_correlation(&headers);
     state.product_analytics.capture(
         ProductAnalyticsEvent::workspace_for_user(
             "share_link.created",
             access.auth.user_id,
             result.share_link.workspace_id,
         )
+        .correlation(distinct_id, session_id)
         .property("share_link_count", 1_i64),
     );
 

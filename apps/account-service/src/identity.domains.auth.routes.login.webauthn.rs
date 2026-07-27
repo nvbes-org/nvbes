@@ -178,5 +178,7 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
         secure_cookie,
         session_expires_in,
         &state.config.jwt_secret,
+        &state.product_analytics,
+        &headers,
     )
 }

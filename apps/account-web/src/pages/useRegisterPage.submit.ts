@@ -75,10 +75,6 @@ export function useRegisterPageSubmit({
         ...(await resolvePowChallenge(accountServiceBaseUrl)),
       });
 
-      trackEvent('auth.signup_completed', {
-        country: selectedRegion || detectedRegion || undefined,
-      });
-
       if (oauthRequest) {
         savePendingOAuthAuthorizeRequest(oauthRequest);
       }

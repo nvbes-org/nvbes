@@ -240,15 +240,18 @@ async fn register_inner(
     .await?;
     info!("auth_register_onboarding_completed");
 
+    let (distinct_id, session_id) = crate::http::request::product_analytics_correlation(&headers);
     state.product_analytics.capture(
-        ProductAnalyticsEvent::user("auth.signup_completed", result.user.id).property(
-            "country",
-            result
-                .user
-                .region
-                .clone()
-                .unwrap_or_else(|| "unknown".to_string()),
-        ),
+        ProductAnalyticsEvent::user("auth.signup_completed", result.user.id)
+            .correlation(distinct_id, session_id)
+            .property(
+                "country",
+                result
+                    .user
+                    .region
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string()),
+            ),
     );
     info!("auth_register_analytics_captured");
 
@@ -412,10 +415,11 @@ pub(crate) async fn verify_email(
     )
     .await?;
 
-    state.product_analytics.capture(ProductAnalyticsEvent::user(
-        "auth.email_verified",
-        result.user.id,
-    ));
+    let (distinct_id, session_id) = crate::http::request::product_analytics_correlation(&headers);
+    state.product_analytics.capture(
+        ProductAnalyticsEvent::user("auth.email_verified", result.user.id)
+            .correlation(distinct_id, session_id),
+    );
 
     Ok(Json(result))
 }

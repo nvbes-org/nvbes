@@ -1806,6 +1806,7 @@ export interface components {
             device_trust_score?: number | null;
             /** Format: date-time */
             expires_at: string;
+            geo_country_code?: string | null;
             /** Format: uuid */
             id: string;
             ip?: string | null;

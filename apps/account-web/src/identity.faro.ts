@@ -52,6 +52,14 @@ export function captureFaroException(error: Error, context: ClientErrorReportCon
   });
 }
 
+export function captureFaroNavigation(pathname: string): void {
+  if (!enabled || !faroInstance) {
+    return;
+  }
+
+  faroInstance.api.setView({ name: normalizedRoutePath(pathname) });
+}
+
 function enableFaro(): void {
   if (faroInstance) {
     enabled = true;
@@ -71,7 +79,7 @@ function enableFaro(): void {
       name: APP_NAME,
       version: releaseName(),
       release: releaseName(),
-      environment: import.meta.env.MODE,
+      environment: environmentName(),
     },
     beforeSend: consentGuard,
     trackGeolocation: false,
@@ -91,7 +99,9 @@ function enableFaro(): void {
       new TracingInstrumentation({
         resourceAttributes: {
           'service.name': APP_NAME,
-          'deployment.environment': import.meta.env.MODE,
+          'service.namespace': 'nvbes',
+          'deployment.environment': environmentName(),
+          'deployment.environment.name': environmentName(),
         },
         instrumentationOptions: {
           propagateTraceHeaderCorsUrls: tracingOrigins(),
@@ -99,6 +109,7 @@ function enableFaro(): void {
       }),
     ],
   });
+  faroInstance.api.setView({ name: currentPath() });
 }
 
 const consentGuard: BeforeSendHook = (item) => {
@@ -118,6 +129,7 @@ function isConfigured(): boolean {
 
 function faroUrl(): string | undefined {
   return (
+    normalizedOptional(import.meta.env.VITE_FARO_URL_ACCOUNT_WEB) ??
     normalizedOptional(import.meta.env.VITE_FARO_URL) ??
     normalizedOptional(import.meta.env.VITE_GRAFANA_FARO_URL)
   );
@@ -146,7 +158,15 @@ function currentPath(): string {
   if (typeof window === 'undefined') {
     return '/';
   }
-  return window.location.pathname || '/';
+  return normalizedRoutePath(window.location.pathname || '/');
+}
+
+function normalizedRoutePath(pathname: string): string {
+  return pathname.replace(/^\/account\/\d{1,3}(?=\/|$)/u, '/account/:accountIndex');
+}
+
+function environmentName(): string {
+  return normalizedOptional(import.meta.env.VITE_FARO_ENVIRONMENT) ?? import.meta.env.MODE;
 }
 
 function normalizedOptional(value: string | undefined): string | undefined {

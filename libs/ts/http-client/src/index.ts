@@ -22,6 +22,11 @@ export type HttpClientOptions = {
   requestE2ee?: RequestE2eeOptions;
 };
 
+export type HttpRequestContextHeadersProvider = () =>
+  | HeadersInit
+  | Promise<HeadersInit | undefined>
+  | undefined;
+
 export type HttpRequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
   body?: unknown;
   headers?: HeadersInit;
@@ -121,6 +126,9 @@ export class HttpClient {
 
   private async buildInit(url: string, options: HttpRequestOptions): Promise<RequestInit> {
     const headers = new Headers(this.headers);
+    if (sameOrigin(url, this.baseUrl)) {
+      mergeHeaders(headers, await requestContextHeadersProvider?.());
+    }
     mergeHeaders(headers, options.headers);
 
     const credentials = options.credentials ?? this.credentials;
@@ -201,6 +209,10 @@ function isAbsoluteUrl(value: string): boolean {
   return /^[a-z][a-z\d+\-.]*:\/\//iu.test(value);
 }
 
+function sameOrigin(url: string, baseUrl: string): boolean {
+  return new URL(url).origin === new URL(baseUrl).origin;
+}
+
 export async function encryptRequestBody(input: {
   body: string;
   keyId: string;
@@ -243,6 +255,14 @@ export async function encryptRequestBody(input: {
 
 export function createHttpClient(options?: HttpClientOptions): HttpClient {
   return new HttpClient(options);
+}
+
+let requestContextHeadersProvider: HttpRequestContextHeadersProvider | undefined;
+
+export function configureHttpRequestContextHeaders(
+  provider?: HttpRequestContextHeadersProvider,
+): void {
+  requestContextHeadersProvider = provider;
 }
 
 export function createRequestHeaders(

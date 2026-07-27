@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn worker_monitor_slug_normalizes_to_stable_ascii_slug() {
         assert_eq!(
-            worker_monitor_slug("Nvbes Identity Worker", "housekeeping.expired accounts"),
+            worker_monitor_slug("Nvbes Account Worker", "housekeeping.expired accounts"),
             "nvbes-account-worker-housekeeping-expired-accounts"
         );
     }
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn worker_monitor_slug_collapses_repeated_separators() {
         assert_eq!(
-            worker_monitor_slug("drive_worker", "loop::heartbeat"),
+            worker_monitor_slug("cloud_worker", "loop::heartbeat"),
             "cloud-worker-loop-heartbeat"
         );
     }

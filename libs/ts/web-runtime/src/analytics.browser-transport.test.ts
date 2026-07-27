@@ -3,8 +3,11 @@ import { createBrowserAnalyticsTransport } from './analytics.browser-transport';
 
 const posthog = vi.hoisted(() => ({
   capture: vi.fn(),
+  captureException: vi.fn(),
+  get_distinct_id: vi.fn(() => 'distinct_12345678'),
   getFeatureFlag: vi.fn(),
   getFeatureFlagPayload: vi.fn(),
+  get_session_id: vi.fn(() => 'session_12345678'),
   group: vi.fn(),
   identify: vi.fn(),
   init: vi.fn(),
@@ -57,5 +60,35 @@ describe('createBrowserAnalyticsTransport', () => {
 
     expect(posthog.init).not.toHaveBeenCalled();
     expect(posthog.opt_out_capturing).not.toHaveBeenCalled();
+  });
+
+  it('exposes the PostHog correlation context only after initialization', async () => {
+    vi.stubGlobal('window', {});
+    const transport = createBrowserAnalyticsTransport({
+      appName: 'account-web',
+      environment: 'test',
+      posthogKey: 'ph_test',
+    });
+
+    await transport.setProductAnalyticsEnabled?.(true);
+
+    await expect(transport.getCorrelationContext?.()).resolves.toEqual({
+      distinctId: 'distinct_12345678',
+      sessionId: 'session_12345678',
+    });
+  });
+
+  it('reports captured exceptions to PostHog when product analytics is active', async () => {
+    vi.stubGlobal('window', {});
+    const transport = createBrowserAnalyticsTransport({
+      appName: 'account-web',
+      environment: 'test',
+      posthogKey: 'ph_test',
+    });
+
+    await transport.setProductAnalyticsEnabled?.(true);
+    await transport.captureException?.(new Error('boom'), { error_name: 'Error' });
+
+    expect(posthog.captureException).toHaveBeenCalledOnce();
   });
 });

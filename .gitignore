@@ -59,6 +59,7 @@ rustc-ice-*.txt
 
 logs
 *.log
+infrastructure/local/observability/app-logs/*.jsonl
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

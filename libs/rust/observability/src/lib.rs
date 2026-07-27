@@ -28,7 +28,7 @@ pub use trace_context::{
     TRACEPARENT_HEADER, TRACESTATE_HEADER, TraceParent, TraceStateValue, extract_traceparent,
     extract_tracestate, inject_traceparent_into, new_traceparent, parse_traceparent,
 };
-pub use tracing::init_tracing;
+pub use tracing::{init_tracing, init_tracing_for_service};
 pub use worker_error_reporting::{
     ErrorReportingSmokeResult, WorkerJobContext, WorkerMonitorSchedule, WorkerOperationContext,
     capture_error_reporting_smoke, capture_worker_heartbeat, capture_worker_job_error,

@@ -11,35 +11,45 @@ import {
   buildWebCsp,
   cspMetaFromHeader,
   integrityPolicyScripts,
+  originFromUrl,
   permissionsPolicy,
+  posthogAssetsOriginFromHost,
   uaClientHintsHeaders,
 } from '../../libs/ts/web-runtime/src/csp';
 
-function getCsp(mode: string): string {
+const workspaceRoot = path.resolve(__dirname, '../..');
+
+function getCsp(mode: string, posthogConnectUrl: string): string {
   const isDev = mode === 'development';
+  const posthogAssetsUrl = posthogAssetsOriginFromHost(posthogConnectUrl);
 
   return buildWebCsp({
     mode,
+    scriptSrc: [posthogAssetsUrl],
     styleSrc: ['https://fonts.googleapis.com'],
     imgSrc: ['https:'],
     fontSrc: ['https://fonts.gstatic.com'],
-    connectSrc: isDev ? ['http://localhost:8080', 'http://127.0.0.1:8080'] : [],
+    connectSrc: [
+      ...(isDev ? ['http://localhost:8080', 'http://127.0.0.1:8080'] : []),
+      posthogConnectUrl,
+      posthogAssetsUrl,
+    ],
   });
 }
 
-function getMetaCsp(mode: string): string {
-  return cspMetaFromHeader(getCsp(mode));
+function getMetaCsp(mode: string, posthogConnectUrl: string): string {
+  return cspMetaFromHeader(getCsp(mode, posthogConnectUrl));
 }
 
 function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
-function cspPlugin(mode: string): Plugin {
+function cspPlugin(mode: string, posthogConnectUrl: string): Plugin {
   return {
     name: 'csp-injection-plugin',
     transformIndexHtml(html: string) {
-      const cspString = getMetaCsp(mode);
+      const cspString = getMetaCsp(mode, posthogConnectUrl);
       const metaTag = `<meta http-equiv="Content-Security-Policy" content="${cspString}" />`;
       return html.replace('<!-- %CSP_META% -->', metaTag);
     },
@@ -48,8 +58,16 @@ function cspPlugin(mode: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
-  const rootEnv = loadEnv(mode, path.resolve(process.cwd(), '../../'), '');
+  const rootEnv = loadEnv(mode, workspaceRoot, '');
   const envSources = [process.env, localEnv, rootEnv];
+  const posthogKey =
+    process.env.VITE_POSTHOG_KEY || localEnv.VITE_POSTHOG_KEY || rootEnv.VITE_POSTHOG_KEY || '';
+  const posthogHost =
+    process.env.VITE_POSTHOG_HOST ||
+    localEnv.VITE_POSTHOG_HOST ||
+    rootEnv.VITE_POSTHOG_HOST ||
+    (posthogKey ? 'https://eu.i.posthog.com' : '');
+  const posthogConnectUrl = originFromUrl(posthogHost);
 
   const configuredCloudServiceBaseUrl =
     process.env.VITE_CLOUD_SERVICE_BASE_URL ||
@@ -66,14 +84,15 @@ export default defineConfig(({ mode }) => {
     (configuredCloudServiceBaseUrl.startsWith('http') ? configuredCloudServiceBaseUrl : '') ||
     'http://localhost:4002';
 
-  const cspHeader = getCsp(mode);
+  const cspHeader = getCsp(mode, posthogConnectUrl);
 
   return {
+    envDir: workspaceRoot,
     plugins: [
       ...pluginList(react()),
       ...pluginList(tailwindcss()),
       devtoolsJson(),
-      cspPlugin(mode),
+      cspPlugin(mode, posthogConnectUrl),
       ...pluginList(
         VitePWA({
           registerType: 'autoUpdate',

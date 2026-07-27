@@ -184,6 +184,8 @@ pub(crate) async fn challenge_mfa(
         secure_cookie,
         session_expires_in,
         &state.config.jwt_secret,
+        &state.product_analytics,
+        &headers,
     )?;
     delete_state(&state.redis, request.state_token).await?;
     Ok(response)

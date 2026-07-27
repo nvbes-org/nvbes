@@ -16,7 +16,7 @@ use crate::{
     },
     http::{
         error::AppError,
-        request::{client_ip, user_agent},
+        request::{client_ip, product_analytics_correlation, user_agent},
     },
 };
 
@@ -113,21 +113,33 @@ async fn create_workspace(
         }
     };
 
-    workspace_response(
-        crate::domains::workspaces::create_workspace(
-            &state.db,
-            &auth,
-            CreateWorkspaceInput {
-                id: workspace_id,
-                tenant_id,
-                name: request.name,
-                workspace_type: request.workspace_type,
-            },
-            client_ip(&headers),
-            user_agent(&headers),
-        )
-        .await?,
+    let result = crate::domains::workspaces::create_workspace(
+        &state.db,
+        &auth,
+        CreateWorkspaceInput {
+            id: workspace_id,
+            tenant_id,
+            name: request.name,
+            workspace_type: request.workspace_type,
+        },
+        client_ip(&headers),
+        user_agent(&headers),
     )
+    .await?;
+
+    let (distinct_id, session_id) = product_analytics_correlation(&headers);
+    state.product_analytics.capture(
+        nvbes_product_analytics::ProductAnalyticsEvent::workspace_for_user(
+            "workspace.created",
+            auth.user_id,
+            result.workspace.id,
+        )
+        .correlation(distinct_id, session_id)
+        .property("workspace_type", result.workspace.workspace_type.clone())
+        .property("plan_code", result.workspace.plan_code.clone()),
+    );
+
+    workspace_response(result)
 }
 
 async fn get_workspace(

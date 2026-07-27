@@ -146,6 +146,17 @@ pub fn user_agent(headers: &HeaderMap) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+pub fn product_analytics_correlation(headers: &HeaderMap) -> (Option<&str>, Option<&str>) {
+    (
+        headers
+            .get("X-PostHog-Distinct-Id")
+            .and_then(|value| value.to_str().ok()),
+        headers
+            .get("X-PostHog-Session-Id")
+            .and_then(|value| value.to_str().ok()),
+    )
+}
+
 pub fn gpc_enabled(headers: &HeaderMap) -> bool {
     headers
         .get("Sec-GPC")

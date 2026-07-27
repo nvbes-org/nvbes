@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from '@tanstack/react-router';
+import { useEffect } from 'react';
 import { accountContextQueryOptions } from '@/account.queries';
+import { identifyUser, setAnalyticsWorkspaceGroup } from '@/identity.analytics';
 import { readAuthuser } from '@/identity.authuser';
 import type { AccountEntry, AccountMe } from '@/lib/account-context';
 
@@ -19,6 +21,21 @@ export function useAccountContext() {
   const { data, error, isFetching, isPending, refetch } = useQuery(
     accountContextQueryOptions(authuser),
   );
+
+  useEffect(() => {
+    const me = data?.me;
+    if (!me) {
+      return;
+    }
+
+    identifyUser(me.user.id, {
+      country: me.user.region ?? 'unknown',
+      status: 'authenticated',
+    });
+    if (me.current_workspace_id) {
+      void setAnalyticsWorkspaceGroup(me.current_workspace_id);
+    }
+  }, [data?.me]);
 
   return {
     me: data?.me ?? null,

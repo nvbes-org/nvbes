@@ -76,6 +76,28 @@ export function originFromUrl(value: string): string {
   }
 }
 
+export function posthogAssetsOriginFromHost(value: string): string {
+  try {
+    if (!value) {
+      return '';
+    }
+
+    const url = new URL(value);
+    const cloudAssetsHost = {
+      'eu.i.posthog.com': 'eu-assets.i.posthog.com',
+    }[url.hostname];
+
+    if (cloudAssetsHost) {
+      url.hostname = cloudAssetsHost;
+      url.port = '';
+    }
+
+    return url.origin;
+  } catch {
+    return '';
+  }
+}
+
 function directive(name: string, values: string[]): string {
   const uniqueValues = [...new Set(values.filter(Boolean))];
   return `${name} ${uniqueValues.join(' ')}`;
