@@ -21,6 +21,7 @@ export const DEFAULT_BLOCKED_ROUTE_PATTERNS = [
 ] as const;
 
 export const ALLOWED_EVENTS = new Set([
+  '$pageview',
   'marketing.page_viewed',
   'marketing.cta_clicked',
   'marketing.pricing_viewed',

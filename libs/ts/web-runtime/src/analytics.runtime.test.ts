@@ -113,4 +113,47 @@ describe('RuntimeAnalytics consent lifecycle', () => {
       sessionId: 'session_12345678',
     });
   });
+
+  it('does not capture product events on sensitive routes', async () => {
+    const capturedEvents: string[] = [];
+    const runtime = new RuntimeAnalytics({
+      appName: 'account-web',
+      getConsent: () => ({
+        ...EMPTY_ANALYTICS_CONSENT,
+        productAnalytics: true,
+      }),
+      getRoutePath: () => '/account/privacy',
+      transport: {
+        trackProductEvent: (name) => {
+          capturedEvents.push(name);
+        },
+      },
+    });
+
+    await runtime.trackProductEvent('$pageview');
+    await runtime.trackProductEvent('marketing.page_viewed');
+
+    expect(capturedEvents).toEqual([]);
+  });
+
+  it('captures the PostHog system pageview event on safe routes', async () => {
+    const capturedEvents: string[] = [];
+    const runtime = new RuntimeAnalytics({
+      appName: 'account-web',
+      getConsent: () => ({
+        ...EMPTY_ANALYTICS_CONSENT,
+        productAnalytics: true,
+      }),
+      getRoutePath: () => '/dashboard',
+      transport: {
+        trackProductEvent: (name) => {
+          capturedEvents.push(name);
+        },
+      },
+    });
+
+    await runtime.trackProductEvent('$pageview');
+
+    expect(capturedEvents).toEqual(['$pageview']);
+  });
 });

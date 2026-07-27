@@ -233,6 +233,7 @@ function initPostHog(
   posthog.init(token, {
     api_host: normalizedOptional(options.posthogHost) ?? 'https://eu.i.posthog.com',
     autocapture: false,
+    capture_pageleave: true,
     capture_pageview: false,
     disable_session_recording: true,
     persistence: 'localStorage+cookie',

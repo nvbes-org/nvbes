@@ -45,6 +45,13 @@ describe('createBrowserAnalyticsTransport', () => {
     ]);
 
     expect(posthog.init).toHaveBeenCalledOnce();
+    expect(posthog.init).toHaveBeenCalledWith(
+      'ph_test',
+      expect.objectContaining({
+        capture_pageleave: true,
+        capture_pageview: false,
+      }),
+    );
     expect(posthog.capture).toHaveBeenCalledWith('marketing.page_viewed', {});
   });
 

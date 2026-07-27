@@ -24,6 +24,10 @@ export function captureCurrentPageView(): void {
   }
 
   lastTrackedPath = routePath;
+  void trackProductEvent('$pageview', {
+    event_source: 'router',
+    source: 'cloud-web',
+  });
   void trackProductEvent('marketing.page_viewed', {
     event_source: 'router',
     source: 'cloud-web',

@@ -54,6 +54,10 @@ let deferredPrompt: (() => Promise<void>) | null = null;
 const installPromptListeners = new Set<InstallPromptCallback>();
 
 function handleBeforeInstallPrompt(event: Event) {
+  if (installPromptListeners.size === 0) {
+    return;
+  }
+
   event.preventDefault();
   deferredPrompt = async () => {
     const ev = event as Event & {

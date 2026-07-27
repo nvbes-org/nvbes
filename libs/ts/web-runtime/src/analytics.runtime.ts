@@ -59,7 +59,7 @@ export class RuntimeAnalytics implements AnalyticsRuntime {
   }
 
   async trackProductEvent(name: string, properties?: Record<string, unknown>): Promise<void> {
-    if (!this.consent.productAnalytics || !ALLOWED_EVENTS.has(name)) {
+    if (!this.consent.productAnalytics || !ALLOWED_EVENTS.has(name) || this.isSensitiveRoute()) {
       return;
     }
 
