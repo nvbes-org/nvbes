@@ -6,7 +6,7 @@ import { IdentityTopBar } from '@/components/IdentityTopBar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccountContext } from '@/hooks/useAccountContext';
-import { captureAnalyticsException } from '@/identity.analytics';
+import { captureAnalyticsException, identifyUser } from '@/identity.analytics';
 import {
   DEFAULT_CONSENT,
   TRACKING_CONSENT_CHANGED_EVENT,
@@ -76,6 +76,15 @@ export default function AccountLayout() {
   );
   const isReporterAccepted =
     (isPosthogActive && posthogAccepted) || (isSentryActive && sentryAccepted);
+
+  useEffect(() => {
+    if (!me) return;
+    identifyUser(me.user.id, {
+      name: me.user.display_name,
+      email: me.user.email,
+      mfa_enabled: me.user.mfa_enabled,
+    });
+  }, [me?.user.id]);
 
   const enableConsent = () => {
     const baseConsent = consentState ?? DEFAULT_CONSENT;

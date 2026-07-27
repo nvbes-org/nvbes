@@ -1,3 +1,4 @@
+import { trackEvent } from '../identity.analytics';
 import { deleteAccount, exportAccountData } from './AccountPrivacyPage.shared';
 
 export function buildAccountPrivacyRightsActions({
@@ -25,6 +26,7 @@ export function buildAccountPrivacyRightsActions({
     setExportSuccess(false);
     try {
       await exportAccountData();
+      trackEvent('account.data_exported');
       setExportSuccess(true);
     } catch {
       setExportError("L'export de vos donnees a echoue. Veuillez reessayer.");
@@ -42,6 +44,7 @@ export function buildAccountPrivacyRightsActions({
     setDeleteError(null);
     try {
       await deleteAccount();
+      trackEvent('account.deletion_requested');
       window.location.href = '/login';
     } catch {
       setDeleteError('La suppression du compte a echoue. Veuillez reessayer.');

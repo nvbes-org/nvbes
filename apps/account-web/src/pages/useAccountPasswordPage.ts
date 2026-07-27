@@ -1,4 +1,5 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
+import { trackEvent } from '@/identity.analytics';
 import { storePasswordCredential } from '@nvbes/identity-sdk-web';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from '@tanstack/react-router';
@@ -35,6 +36,7 @@ export function useAccountPasswordPage() {
       if (me?.user.email) {
         await storePasswordCredential(me.user.email, input.new_password, me.user.email);
       }
+      trackEvent('account.password_changed');
       setSuccess(true);
       setNewPassword('');
       setConfirmPassword('');

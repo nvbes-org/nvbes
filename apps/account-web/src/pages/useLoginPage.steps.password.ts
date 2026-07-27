@@ -1,4 +1,5 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
+import { trackEvent } from '../identity.analytics';
 
 import type { MfaMethod } from './LoginPage.mfa';
 import {
@@ -80,6 +81,7 @@ export async function submitPasswordStep({
     if (result.session_token) {
       setSessionToken(result.session_token);
     }
+    trackEvent('auth.login_completed', { mfa_used: false });
     await finishLogin(result.session_token ?? null);
   } catch (err) {
     if (isPrimaryEmailVerificationRequiredError(err)) {

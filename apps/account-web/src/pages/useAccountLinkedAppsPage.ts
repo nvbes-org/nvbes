@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useState } from 'react';
 import { accountQueryKeys } from '@/account.queries';
 import { readAuthuser } from '@/identity.authuser';
+import { trackEvent } from '@/identity.analytics';
 import { listLinkedApps, revokeLinkedApp, type LinkedApp } from '@/pages/AccountLinkedAppsPage.api';
 
 export function useAccountLinkedAppsPage() {
@@ -39,6 +40,7 @@ export function useAccountLinkedAppsPage() {
     setRevoking(clientId);
     try {
       await revokeLinkedApp(clientId);
+      trackEvent('account.linked_app_revoked');
     } catch {
       queryClient.setQueryData(linkedAppsQueryKey, previous);
     } finally {

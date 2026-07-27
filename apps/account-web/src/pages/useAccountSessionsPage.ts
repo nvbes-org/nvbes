@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { accountQueryKeys } from '@/account.queries';
 import { readAuthuser } from '@/identity.authuser';
+import { trackEvent } from '@/identity.analytics';
 import { type DeviceGroup, groupSessionsByDevice } from './AccountSessionsPage.device';
 
 export function useAccountSessionsPage() {
@@ -42,6 +43,7 @@ export function useAccountSessionsPage() {
 
     try {
       await identityClient.revokeSession(sessionId);
+      trackEvent('account.session_revoked');
       await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
     } catch {
       queryClient.setQueryData(sessionsQueryKey, previous);
@@ -59,6 +61,7 @@ export function useAccountSessionsPage() {
 
   const handleRevokeOthers = async () => {
     await identityClient.revokeOtherSessions();
+    trackEvent('account.all_other_sessions_revoked');
     await queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
     await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
   };
