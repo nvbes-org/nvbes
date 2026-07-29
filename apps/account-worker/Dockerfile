@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for account-worker (Scaleway Serverless compatible)
-FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
+FROM rust:1.97.1-slim-bookworm@sha256:99e09cb2284e2ddbb73a995deee3e91783fd04d177602ccf6eab326d778ee777 AS builder
 
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
