@@ -88,7 +88,7 @@ export function clearPendingOAuthAuthorizeRequest(): void {
 }
 
 export async function authorizeIdentitySession(
-  sessionToken: string | null | undefined,
+  _legacySessionToken: string | null | undefined,
   request: OAuthAuthorizeRequest,
 ): Promise<void> {
   const parBody = new URLSearchParams({
@@ -115,15 +115,10 @@ export async function authorizeIdentitySession(
     parBody.set('consent_action', request.consentAction);
   }
 
-  const parHeaders: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-  };
-  if (sessionToken) {
-    parHeaders.Authorization = `Bearer ${sessionToken}`;
-  }
-
   const parData = await identityHttpClient.post('/oauth/par', ParResponseSchema, parBody, {
-    headers: parHeaders,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
   });
 
   const url = new URL(oauthApiUrl(), window.location.origin);
@@ -131,13 +126,8 @@ export async function authorizeIdentitySession(
   url.searchParams.set('client_id', request.clientId);
   url.searchParams.set('request_uri', parData.request_uri);
 
-  const authorizeHeaders: Record<string, string> = {};
-  if (sessionToken) {
-    authorizeHeaders.Authorization = `Bearer ${sessionToken}`;
-  }
-
   const data = await identityHttpClient.get(url.toString(), OAuthAuthorizeResponseSchema, {
-    headers: authorizeHeaders,
+    headers: {},
   });
   window.location.assign(buildRedirectUrl(data.redirect_uri, data.code, data.state));
 }

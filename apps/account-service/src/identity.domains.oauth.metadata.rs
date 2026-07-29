@@ -158,7 +158,7 @@ fn mtls_endpoint(state: &AppState, path: &str) -> String {
     endpoint(base.trim_end_matches('/'), path)
 }
 
-fn supported_scopes() -> Vec<&'static str> {
+pub(crate) fn supported_scopes() -> Vec<&'static str> {
     let mut scopes = vec![
         "openid",
         "profile",

@@ -1,12 +1,7 @@
 import type { SupportedRegion } from '../identity.auth.api';
 
 export function regionSearchValue(region: SupportedRegion): string {
-  return [
-    region.display_name,
-    region.country_code,
-    region.sub_region,
-    region.data_region,
-  ]
+  return [region.display_name, region.country_code, region.sub_region, region.data_region]
     .filter((part): part is string => Boolean(part))
     .join(' ');
 }

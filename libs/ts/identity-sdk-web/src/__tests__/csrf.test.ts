@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vite-plus/test';
-import { readScopedCsrfToken } from '../csrf';
+import { readCurrentAuthuser, readScopedCsrfToken } from '../csrf';
 
 function installBrowserContext({
   cookie,
@@ -52,5 +52,37 @@ describe('readScopedCsrfToken', () => {
     });
 
     expect(readScopedCsrfToken()).toBe('two');
+  });
+
+  it('reads a csrf token scoped by the canonical account route', () => {
+    installBrowserContext({
+      cookie: 'csrf_token_1=one; csrf_token_2=two',
+      pathname: '/account/2/security',
+      search: '?authuser=1',
+    });
+
+    expect(readScopedCsrfToken()).toBe('two');
+  });
+});
+
+describe('readCurrentAuthuser', () => {
+  it('reads the canonical account route before the legacy query parameter', () => {
+    installBrowserContext({
+      cookie: '',
+      pathname: '/account/12/preferences',
+      search: '?authuser=3',
+    });
+
+    expect(readCurrentAuthuser()).toBe('12');
+  });
+
+  it('keeps supporting the legacy query parameter', () => {
+    installBrowserContext({
+      cookie: '',
+      pathname: '/account/preferences',
+      search: '?authuser=3',
+    });
+
+    expect(readCurrentAuthuser()).toBe('3');
   });
 });

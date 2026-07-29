@@ -27,7 +27,7 @@ pub async fn reset(
     let (principal_id, expires_at, consumed_at) =
         db::reset::find_token_for_reset(redis, &token_hash)
             .await?
-            .ok_or_else(|| AppError::not_found("reset_token_not_found", "Invalid reset token."))?;
+            .ok_or_else(reset_token_expired)?;
 
     if consumed_at.is_some() || expires_at <= Utc::now() {
         return Err(AppError::forbidden(

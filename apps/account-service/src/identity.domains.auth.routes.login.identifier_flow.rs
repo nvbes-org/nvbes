@@ -3,6 +3,8 @@ use uuid::Uuid;
 use crate::domains::auth::mfa_policy::MfaPolicyDecision;
 use crate::http::error::AppError;
 
+const RISK_STEP_UP_THRESHOLD: f64 = 50.0;
+
 pub(crate) struct IdentifierChallenge {
     pub principal_id: Option<Uuid>,
     pub next_step: String,
@@ -45,8 +47,15 @@ pub(crate) async fn resolve_post_password_challenge(
     principal_id: Uuid,
     risk_score: f64,
 ) -> Result<Option<Vec<String>>, AppError> {
-    if risk_score > 0.0 {
-        return Ok(Some(resolve_mfa_challenge_methods(db, principal_id).await?));
+    if risk_score >= RISK_STEP_UP_THRESHOLD {
+        let methods = resolve_mfa_challenge_methods(db, principal_id).await?;
+        if methods.is_empty() {
+            return Err(AppError::forbidden(
+                "mfa_enrollment_required",
+                "Multi-factor authentication is required before this account can sign in.",
+            ));
+        }
+        return Ok(Some(methods));
     }
 
     let has_active_factor = crate::domains::auth::mfa::has_active_factor(db, principal_id).await?;

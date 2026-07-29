@@ -141,11 +141,17 @@ export class AccountIdentityClient {
   }
 
   revokeSession(sessionId: string): Promise<void> {
-    return this.http.delete(`/auth/sessions/${sessionId}`, SuccessSchema).then(() => undefined);
+    return this.http
+      .delete(`/auth/sessions/${encodeURIComponent(sessionId)}`, SuccessSchema)
+      .then(() => undefined);
   }
 
   confirmHighRiskSession(sessionId: string): Promise<AccountSession> {
-    return this.http.post(`/auth/sessions/${sessionId}/confirm`, AccountSessionSchema, {});
+    return this.http.post(
+      `/auth/sessions/${encodeURIComponent(sessionId)}/confirm`,
+      AccountSessionSchema,
+      {},
+    );
   }
 
   forgetAccount(authuser: string): Promise<void> {
@@ -228,7 +234,9 @@ export class AccountIdentityClient {
   }
 
   revokeOAuthClient(clientId: string): Promise<void> {
-    return this.http.delete(`/oauth/clients/${clientId}`, SuccessSchema).then(() => undefined);
+    return this.http
+      .delete(`/oauth/clients/${encodeURIComponent(clientId)}`, SuccessSchema)
+      .then(() => undefined);
   }
 
   createWorkspace(input: CreateWorkspaceInput): Promise<AccountWorkspace> {

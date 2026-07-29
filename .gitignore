@@ -32,6 +32,8 @@ rustc-ice-*.txt
 .*rustup*/
 
 .playwright-mcp/
+**/playwright-report/
+**/test-results/
 .devcontainer/.vendor/
 
 .terraform/

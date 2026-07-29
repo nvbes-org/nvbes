@@ -10,15 +10,12 @@ mod seed;
 mod state_support;
 
 use seed::{cleanup, seed_exchange_context};
-use state_support::{basic_auth_header, db_supports_current_oauth_schema, test_pool, test_state};
+use state_support::{assert_current_oauth_schema, basic_auth_header, test_pool, test_state};
 
 #[tokio::test]
 async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
     let pool = test_pool();
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
 
     let state = test_state(&pool).await;
     let (
@@ -129,10 +126,7 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
 #[tokio::test]
 async fn http_token_exchange_preserves_user_subject_and_sets_machine_actor() {
     let pool = test_pool();
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
 
     let state = test_state(&pool).await;
     let (

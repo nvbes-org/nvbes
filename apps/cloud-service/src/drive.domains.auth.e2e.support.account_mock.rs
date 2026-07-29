@@ -161,7 +161,7 @@ async fn introspect_token(
         .get("token")
         .and_then(serde_json::Value::as_str)
         .ok_or(StatusCode::BAD_REQUEST)?;
-    let claims = decode_test_claims(&state.key, token)?;
+    let claims = decode_test_claims(&state.key, &state.issuer, token)?;
     let token_row =
         account_client_row(&state.pool, claims.client_id.as_deref().unwrap_or_default())
             .await
@@ -234,9 +234,13 @@ fn sign_claims(key: &MockSigningKey, claims: &TestTokenClaims) -> Result<String,
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
-fn decode_test_claims(key: &MockSigningKey, token: &str) -> Result<TestTokenClaims, StatusCode> {
+fn decode_test_claims(
+    key: &MockSigningKey,
+    issuer: &str,
+    token: &str,
+) -> Result<TestTokenClaims, StatusCode> {
     let mut validation = Validation::new(Algorithm::PS256);
-    validation.set_issuer(&[&state.issuer]);
+    validation.set_issuer(&[issuer]);
     validation.set_audience(&[TEST_CLOUD_AUDIENCE]);
     decode::<TestTokenClaims>(
         token,
@@ -277,3 +281,6 @@ impl MockSigningKey {
         }
     }
 }
+
+#[path = "drive.domains.auth.e2e.support.account_mock.tests.rs"]
+mod tests;

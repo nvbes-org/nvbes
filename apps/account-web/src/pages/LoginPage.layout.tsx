@@ -63,7 +63,9 @@ export function LoginPageCard({
       }
     >
       <CardHeader>
-        <CardTitle>{titleForStep(step)}</CardTitle>
+        <CardTitle role="heading" aria-level={1}>
+          {titleForStep(step)}
+        </CardTitle>
         <CardDescription>{descriptionForStep(step)}</CardDescription>
       </CardHeader>
       <CardContent>{children}</CardContent>

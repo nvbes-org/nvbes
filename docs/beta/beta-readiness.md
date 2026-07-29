@@ -33,7 +33,9 @@ La beta ne doit pas demarrer tant que les points `Go/No-Go` ne sont pas verts ou
 - [ ] Staging deploye avec API, worker, web, PostgreSQL et bucket separes.
 - [ ] Migrations appliquees via `pnpm db:migrate:staging`.
 - [ ] Workers Identity et Drive lances via `pnpm dev:account-worker` / `pnpm dev:cloud-worker` ou leurs unites de deploiement.
-- [ ] Donnees de test creees via `pnpm beta:seed:staging`.
+- [ ] Identite synthetique staging provisionnee par le control plane avec un
+      audit lie au release; aucun script local ne recoit un acces direct a la
+      base ou a Redis staging.
 - [ ] `pnpm release:gate:staging` vert avec URLs staging.
 - [ ] `pnpm test:smoke:staging` vert apres deploiement.
 - [ ] Logs JSON actifs en staging.
@@ -98,48 +100,29 @@ Voir aussi `.env.example`.
 | Variable                          | Obligatoire | Usage                                                                  |
 | --------------------------------- | ----------- | ---------------------------------------------------------------------- |
 | `NVBES_WEB_BASE_URL`            | Oui         | `pnpm test:smoke`, `pnpm test:e2e:critical`.                           |
-| `NVBES_API_BASE_URL`            | Oui         | `pnpm test:smoke`, `pnpm test:e2e:critical`, fallback `pnpm beta:seed:staging`. |
-| `NVBES_ACCOUNT_SERVICE_BASE_URL` | Non        | Account Service explicite pour `pnpm beta:seed:staging` si separe de Cloud. |
-| `NVBES_CLOUD_SERVICE_BASE_URL`   | Non        | Cloud Service explicite pour `pnpm beta:seed:staging` si separe d'Account. |
+| `NVBES_API_BASE_URL`            | Oui         | `pnpm test:smoke`, `pnpm test:e2e:critical`. |
 | `NVBES_SMOKE_WEB_MARKER`        | Non         | Marqueur HTML attendu par `pnpm test:smoke`, defaut `nvbes`. |
-| `NVBES_DATABASE_URL`            | Oui         | `pnpm beta:seed:staging`, `pnpm test:e2e:critical`, preflight Stripe.   |
+| `NVBES_DATABASE_URL`            | Oui         | `pnpm test:e2e:critical` hermetique et preflight Stripe; jamais pour provisionner staging. |
 | `NVBES_STAGING_WEB_BASE_URL`    | Oui         | `pnpm test:smoke:staging`, `pnpm release:gate:staging`.                |
 | `NVBES_STAGING_API_BASE_URL`    | Oui         | `pnpm test:smoke:staging`, `pnpm release:gate:staging`.                |
 | `NVBES_STAGING_DATABASE_URL`    | Oui         | `pnpm db:migrate:staging`, `pnpm test:smoke:staging`, `pnpm release:gate:staging`. |
 | `NVBES_ALLOW_STAGING_MIGRATION` | Oui         | Doit valoir `yes` pour migrer staging.                                 |
-| `NVBES_BETA_SEED_EMAIL`         | Oui         | Compte owner cree par le seed beta.                                    |
-| `NVBES_BETA_SEED_PASSWORD`      | Oui         | Mot de passe du compte beta.                                           |
-| `NVBES_BETA_SEED_WORKSPACE`     | Non         | Nom workspace beta.                                                    |
+| `NVBES_BETA_SEED_EMAIL`         | Oui local   | Identite synthetique des tests hermetiques uniquement.                 |
+| `NVBES_BETA_SEED_PASSWORD`      | Oui local   | Secret injecte par environnement, jamais passe en argument de processus. |
+| `NVBES_BETA_SEED_WORKSPACE`     | Non local   | Nom workspace de la fixture hermetique.                                |
 
 ## Donnees de Test Beta
 
-Script:
+La commande historique `beta:seed:staging` a ete retiree. Elle combinait des
+appels HTTP avec un acces direct a PostgreSQL/Redis staging et pouvait exposer
+un secret dans les arguments de processus. Une identite staging doit etre
+provisionnee par le control plane, avec audit, rotation, expiration et secret
+stocke dans l'environnement GitHub protege.
 
-```bash
-NVBES_DATABASE_URL="$NVBES_STAGING_DATABASE_URL" \
-NVBES_API_BASE_URL="$NVBES_STAGING_API_BASE_URL" \
-NVBES_ACCOUNT_SERVICE_BASE_URL="$NVBES_STAGING_ACCOUNT_SERVICE_BASE_URL" \
-NVBES_CLOUD_SERVICE_BASE_URL="$NVBES_STAGING_CLOUD_SERVICE_BASE_URL" \
-NVBES_BETA_SEED_EMAIL="beta-owner+staging@example.com" \
-NVBES_BETA_SEED_PASSWORD="ReplaceMe123!" \
-NVBES_BETA_SEED_WORKSPACE="Beta Staging Workspace" \
-pnpm beta:seed:staging
-```
-
-Le script cree:
-
-- un compte owner beta;
-- un workspace trial;
-- un dossier `Beta validation`;
-- un objet fichier active via upload metadata;
-- un lien public avec limite de telechargement;
-- une verification que la creation de cle API legacy retourne `410 Gone`.
-
-Important:
-
-- Le seed lit le dernier email transactionnel dans la queue Redis `email.send` via un helper interne, puis extrait le token sans exposition API.
-- Les donnees doivent etre supprimees ou reinitialisees avant une nouvelle vague beta si elles polluent la queue Redis ou les metriques.
-- Ne pas utiliser de vrais fichiers client pour la beta interne.
+Les tests hermetiques locaux gardent un helper strictement test-only. Il refuse
+les hôtes non loopback, les environnements staging/production, les noms de base
+sans segment `test` exact et toute execution sans opt-in destructif explicite.
+Ne pas utiliser de vrais fichiers client pour la beta interne.
 
 ## Scripts de Migration
 

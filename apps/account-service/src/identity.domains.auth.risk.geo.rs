@@ -207,10 +207,11 @@ async fn check_impossible_travel(
     .ok()
     .flatten();
 
-    if let Some((last_time, Some(prev_country))) = row {
-        if prev_country != current && last_time + chrono::Duration::hours(2) >= chrono::Utc::now() {
-            return true;
-        }
+    if let Some((last_time, Some(prev_country))) = row
+        && prev_country != current
+        && last_time + chrono::Duration::hours(2) >= chrono::Utc::now()
+    {
+        return true;
     }
     false
 }

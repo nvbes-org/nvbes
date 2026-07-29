@@ -10,6 +10,10 @@ use nvbes_redis::refresh_token as refresh_store;
 use super::{ClientAuthentication, TokenView};
 
 /// Refresh an access token.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the OAuth refresh boundary keeps storage, signer, client authentication, security profile, and sender binding explicit"
+)]
 pub async fn refresh_token(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -305,6 +309,18 @@ fn validate_refresh_sender_binding(
     }
 }
 
+/// Revoke a refresh token family.
+pub async fn revoke_refresh_family(
+    redis: &nvbes_redis::RedisPool,
+    user_id: Uuid,
+    session_id: Uuid,
+    jti: &str,
+) -> Result<(), AppError> {
+    refresh_store::revoke_refresh_family(redis, user_id, session_id, jti)
+        .await
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::validate_refresh_sender_binding;
@@ -329,16 +345,4 @@ mod tests {
             .expect_err("another certificate must not replay a refresh token");
         assert_eq!(error.code, "sender_constraint_mismatch");
     }
-}
-
-/// Revoke a refresh token family.
-pub async fn revoke_refresh_family(
-    redis: &nvbes_redis::RedisPool,
-    user_id: Uuid,
-    session_id: Uuid,
-    jti: &str,
-) -> Result<(), AppError> {
-    refresh_store::revoke_refresh_family(redis, user_id, session_id, jti)
-        .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))
 }

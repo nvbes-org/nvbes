@@ -1,7 +1,7 @@
-use redis::AsyncCommands;
-
 use super::{QueuedJob, keys::queue_key};
 use crate::connection::{RedisError, RedisPool};
+
+const SCAN_BATCH_SIZE: usize = 250;
 
 pub async fn find_latest_job<F>(
     pool: &RedisPool,
@@ -11,27 +11,16 @@ pub async fn find_latest_job<F>(
 where
     F: FnMut(&QueuedJob) -> bool,
 {
-    let mut conn = pool.get().await?;
-    let job_keys: Vec<String> = redis::cmd("KEYS")
-        .arg(queue_key(queue, "job:*"))
-        .query_async(&mut *conn)
-        .await?;
-
     let mut latest: Option<QueuedJob> = None;
-    for key in job_keys {
-        let raw: String = match conn.get(&key).await {
-            Ok(raw) => raw,
-            Err(_) => continue,
-        };
-        let Ok(job) = serde_json::from_str::<QueuedJob>(&raw) else {
-            continue;
-        };
+    for job in scan_jobs(pool, queue).await? {
         if !matches(&job) {
             continue;
         }
 
         match latest {
-            Some(ref current) if current.created_at >= job.created_at => {}
+            Some(ref current)
+                if (current.created_at, current.updated_at, current.id)
+                    >= (job.created_at, job.updated_at, job.id) => {}
             _ => latest = Some(job),
         }
     }
@@ -47,21 +36,8 @@ pub async fn find_matching_jobs<F>(
 where
     F: FnMut(&QueuedJob) -> bool,
 {
-    let mut conn = pool.get().await?;
-    let job_keys: Vec<String> = redis::cmd("KEYS")
-        .arg(queue_key(queue, "job:*"))
-        .query_async(&mut *conn)
-        .await?;
-
     let mut jobs = Vec::new();
-    for key in job_keys {
-        let raw: String = match conn.get(&key).await {
-            Ok(raw) => raw,
-            Err(_) => continue,
-        };
-        let Ok(job) = serde_json::from_str::<QueuedJob>(&raw) else {
-            continue;
-        };
+    for job in scan_jobs(pool, queue).await? {
         if matches(&job) {
             jobs.push(job);
         }
@@ -76,4 +52,37 @@ where
     });
 
     Ok(jobs)
+}
+
+async fn scan_jobs(pool: &RedisPool, queue: &str) -> Result<Vec<QueuedJob>, RedisError> {
+    let mut conn = pool.get().await?;
+    let pattern = queue_key(queue, "job:*");
+    let mut cursor = 0_u64;
+    let mut jobs = Vec::new();
+    loop {
+        let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+            .arg(cursor)
+            .arg("MATCH")
+            .arg(&pattern)
+            .arg("COUNT")
+            .arg(SCAN_BATCH_SIZE)
+            .query_async(&mut *conn)
+            .await?;
+        if !keys.is_empty() {
+            let values: Vec<Option<String>> = redis::cmd("MGET")
+                .arg(&keys)
+                .query_async(&mut *conn)
+                .await?;
+            jobs.extend(
+                values
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|raw| serde_json::from_str(&raw).ok()),
+            );
+        }
+        if next_cursor == 0 {
+            return Ok(jobs);
+        }
+        cursor = next_cursor;
+    }
 }

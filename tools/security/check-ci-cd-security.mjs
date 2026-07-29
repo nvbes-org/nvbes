@@ -32,6 +32,7 @@ const dangerousRunPatterns = [
 ];
 const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
 const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
+const githubExpression = (value) => `\${{ ${value} }}`;
 
 function readJson(path) {
 	if (!existsSync(path)) {
@@ -193,22 +194,90 @@ function assertActions(path, text, allowedActions) {
 }
 
 function assertSecrets(path, text, allowedSecrets) {
-	for (const secret of extractSecrets(text)) {
+	const referencedSecrets = extractSecrets(text);
+	const protectedSecretWorkflows = new Map([
+		[
+			"ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_PEM",
+			new Set([
+				".github/workflows/account-acceptance-ingest.yml",
+				".github/workflows/account-release.yml",
+			]),
+		],
+		[
+			"ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_PEM",
+			new Set([
+				".github/workflows/account-acceptance-ingest.yml",
+				".github/workflows/account-release.yml",
+			]),
+		],
+		[
+			"NVBES_STAGING_ACCOUNT_PASSWORD",
+			new Set([".github/workflows/account-release.yml"]),
+		],
+	]);
+	for (const secret of referencedSecrets) {
 		if (!allowedSecrets.includes(secret)) {
 			errors.push(`${path}: secret ${secret} is not allowlisted`);
+		}
+		const allowedWorkflows = protectedSecretWorkflows.get(secret);
+		if (allowedWorkflows && !allowedWorkflows.has(path)) {
+			errors.push(
+				`${path}: protected release secret ${secret} is not allowed here`,
+			);
 		}
 	}
 
 	const secretIndex = text.indexOf("secrets.");
 	if (secretIndex >= 0) {
 		const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
+		const isValidatedDastWorkflow =
+			path === ".github/workflows/dast.yml" &&
+			/^\s+schedule:\s*$/mu.test(text) &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			text.includes("name: account-dast-staging") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("node tools/security/validate-dast-targets.mjs") &&
+			text.includes("DAST_ALLOWED_ORIGINS");
+		const isValidatedAccountReleaseWorkflow =
+			path === ".github/workflows/account-release.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!text.includes("inputs.") &&
+			text.includes("name: production-account") &&
+			text.includes("verify-account-release-ref.mjs") &&
+			text.includes(`ref: ${githubExpression("github.ref")}`) &&
+			text.includes(`NVBES_RELEASE_SHA: ${githubExpression("github.sha")}`) &&
+			text.includes("RELEASE_APPROVED: production") &&
+			text.includes("scripts/release-gate.sh production");
+		const isValidatedAcceptanceIngestWorkflow =
+			path === ".github/workflows/account-acceptance-ingest.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!text.includes("inputs.") &&
+			text.includes("name: account-acceptance") &&
+			text.includes("verify-account-release-ref.mjs") &&
+			text.includes(`ref: ${githubExpression("github.ref")}`) &&
+			text.includes(`NVBES_RELEASE_SHA: ${githubExpression("github.sha")}`) &&
+			text.includes(
+				'run.path !== ".github/workflows/account-acceptance-source.yml"',
+			) &&
+			text.includes(
+				"node tools/account-quality/verify-acceptance-evidence.mjs",
+			) &&
+			text.includes("prepare-account-acceptance-publication.mjs") &&
+			text.includes(
+				`name: account-acceptance-${githubExpression("github.sha")}`,
+			);
 		if (
 			!preceding.includes(
 				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
-			)
+			) &&
+			!isValidatedDastWorkflow &&
+			!isValidatedAccountReleaseWorkflow &&
+			!isValidatedAcceptanceIngestWorkflow
 		) {
 			errors.push(
-				`${path}: secret-bearing step must be restricted to trusted push on main`,
+				`${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,
 			);
 		}
 	}
@@ -232,6 +301,60 @@ function assertRunSafety(path, text) {
 				);
 			}
 		}
+	}
+}
+
+function assertContinueOnError(
+	path,
+	text,
+	allowedContinueOnError,
+	usedAllowances,
+) {
+	const lines = text.split("\n");
+	for (const [index, line] of lines.entries()) {
+		const match = /^(\s*)continue-on-error\s*:/u.exec(line);
+		if (!match) continue;
+
+		const fieldIndent = match[1].length;
+		const stepIndent = fieldIndent - 2;
+		let stepStart = -1;
+		for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+			const candidate = lines[cursor];
+			if (candidate.trim().length === 0) continue;
+			const candidateIndent = /^\s*/u.exec(candidate)?.[0].length ?? 0;
+			if (
+				candidateIndent === stepIndent &&
+				/^\s*-\s+(?:name|id|uses|run)\s*:/u.test(candidate)
+			) {
+				stepStart = cursor;
+				break;
+			}
+			if (candidateIndent < stepIndent) break;
+		}
+
+		let stepId;
+		if (stepStart >= 0) {
+			const idPattern = new RegExp(
+				`^\\s{${fieldIndent}}id\\s*:\\s*([A-Za-z0-9_-]+)\\s*$`,
+				"u",
+			);
+			for (let cursor = stepStart; cursor <= index; cursor += 1) {
+				const idMatch = idPattern.exec(lines[cursor]);
+				if (idMatch) {
+					stepId = idMatch[1];
+					break;
+				}
+			}
+		}
+
+		const allowance = stepId ? `${path}#${stepId}` : undefined;
+		if (allowance && allowedContinueOnError.has(allowance)) {
+			usedAllowances.add(allowance);
+			continue;
+		}
+		errors.push(
+			`${path}:${index + 1}: continue-on-error is forbidden without an exact workflow#step-id allowlist entry`,
+		);
 	}
 }
 
@@ -270,6 +393,31 @@ if (registry) {
 		registry.allowedWritePermissions,
 		`${registryPath}.allowedWritePermissions`,
 	);
+	const allowedContinueOnError = requireArray(
+		registry.allowedContinueOnError,
+		`${registryPath}.allowedContinueOnError`,
+	);
+	const allowedContinueOnErrorSet = new Set();
+	for (const [index, allowance] of allowedContinueOnError.entries()) {
+		const value = requireString(
+			allowance,
+			`${registryPath}.allowedContinueOnError[${index}]`,
+		);
+		if (
+			value &&
+			!/^\.github\/workflows\/[^#\s]+\.ya?ml#[A-Za-z0-9_-]+$/u.test(value)
+		) {
+			errors.push(
+				`${registryPath}.allowedContinueOnError[${index}]: must be an exact .github/workflows/*.yml#step-id entry`,
+			);
+		}
+		requireUnique(
+			value,
+			allowedContinueOnErrorSet,
+			`${registryPath}.allowedContinueOnError`,
+		);
+	}
+	const usedContinueOnErrorAllowances = new Set();
 
 	const requirements = requireArray(
 		registry.requirements,
@@ -346,7 +494,21 @@ if (registry) {
 		assertActions(path, text, allowedActions);
 		assertSecrets(path, text, allowedSecrets);
 		assertRunSafety(path, text);
+		assertContinueOnError(
+			path,
+			text,
+			allowedContinueOnErrorSet,
+			usedContinueOnErrorAllowances,
+		);
 		assertCheckout(path, text);
+	}
+
+	for (const allowance of allowedContinueOnErrorSet) {
+		if (!usedContinueOnErrorAllowances.has(allowance)) {
+			errors.push(
+				`${registryPath}.allowedContinueOnError: unused allowance ${allowance}`,
+			);
+		}
 	}
 
 	if (errors.length === 0) {

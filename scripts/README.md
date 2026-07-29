@@ -13,15 +13,22 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 
 - `test-unit.sh`: typecheck web et tests unitaires Rust.
 - `test-integration.sh`: tests d'integration Rust et validation IaC development/staging.
+- `test-account-portfolio.sh`: portefeuille bloquant Account complet (applications,
+  bibliotheques TS associees, contrats, migrations, securite, worker, image et
+  couverture HTTP) utilise par le release gate.
+- `lint-account-rust.sh`: Clippy bloquant `all-targets`/`all-features` avec
+  `-D warnings` pour Account Service, Account Worker et les crates Rust
+  associees declarees dans le manifeste.
 - `test-openapi-contract.sh`: smoke contractuel OpenAPI sur les routes publiques et proxifiées.
 - `test-openapi-contract-seeded-auth.sh`: smoke contractuel OpenAPI avec seed/login auth pour couvrir aussi une partie des routes protegées/stateful.
 - `test-e2e-critical.sh`: parcours critiques navigateur contre un environnement deploye.
 - `test-smoke.sh`: checks rapides post-deploiement web/API.
-- `smoke-staging.sh`: wrapper staging qui lance smoke + E2E critiques avec les URLs staging.
-- `seed-beta-data.sh`: cree un workspace beta, un dossier, un objet, un lien public et une cle API sur un environnement non-production.
+- `smoke-staging.sh`: wrapper staging qui lance le smoke public puis une acceptation Account authentifiée avec une identité synthétique.
 - `check-stripe-mappings.sh`: preflight staging pour valider les mappings Stripe actifs.
 - `migrate-staging.sh`: applique les migrations PostgreSQL sur staging apres confirmation explicite.
-- `release-gate.sh`: gates staging et production, avec build, preflight Stripe et E2E critiques pour staging.
+- `release-gate.sh`: gate staging et gate production post-déploiement; ce dernier exige
+  le paquet d'acceptation Account signé, l'attestation control-plane du release et le
+  smoke sur les URLs de production.
 - `check-llm-structure.sh`: verifie la platitude de `src/`, et les seuils de taille des fichiers Rust.
 - `dev-account-worker.sh`: lance le worker Account en isolation.
 - `dev-account-db-reset.sh`: recree la base Account locale `nvbes` quand les checksums SQLx dev ne correspondent plus.
@@ -37,17 +44,29 @@ Variables attendues pour les tests deployes:
 - `NVBES_SMOKE_WEB_MARKER` (optionnel, defaut `nvbes`) pour verifier le HTML web attendu
 - `NVBES_SMOKE_INCLUDE_SEEDED_AUTH=1` pour activer le smoke contract seeded-auth depuis `test-smoke.sh`
 - `NVBES_SMOKE_AUTH_EMAIL` et `NVBES_SMOKE_AUTH_PASSWORD` (optionnels) pour reutiliser un compte existant au lieu d'en seeder un nouveau
+- `NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE=account-quality-v1` pour toute lane
+  Account autorisee a creer, migrer ou supprimer des ressources PostgreSQL;
+  la base doit etre loopback, avoir un segment `test` exact et aucun segment
+  production-like.
 
 Variables attendues par les gates:
 
 - `NVBES_STAGING_WEB_BASE_URL`
 - `NVBES_STAGING_API_BASE_URL`
-- `NVBES_STAGING_DATABASE_URL` pour `smoke-staging.sh`, `release-gate.sh` et les E2E critiques
+- `NVBES_STAGING_ACCOUNT_EMAIL` et `NVBES_STAGING_ACCOUNT_PASSWORD` pour l'acceptation navigateur authentifiée des release gates
+- `NVBES_STAGING_ALLOWED_WEB_ORIGINS` et
+  `NVBES_STAGING_ALLOWED_API_ORIGINS` pour l'allowlist exacte, HTTPS et
+  resolue publiquement des cibles staging avant toute mutation
+- `ACCOUNT_PRODUCTION_DENIED_ORIGINS` pour la denylist protegee des alias de
+  production, appliquee au preflight Node et a nouveau dans le runtime k6
 - `NVBES_STAGING_BILLING_DATABASE_URL` pour le preflight Stripe du release gate staging
 - `NVBES_BILLING_DATABASE_URL` pour `check-stripe-mappings.sh` hors release gate
 - `RELEASE_APPROVED=production` pour le gate production
 - `NVBES_PRODUCTION_WEB_BASE_URL` et `NVBES_PRODUCTION_API_BASE_URL` pour le smoke production post-deploiement
 - `NVBES_STAGING_DATABASE_URL` et `NVBES_ALLOW_STAGING_MIGRATION=yes` pour `db:migrate:staging`
-- `NVBES_DATABASE_URL` pour `test-e2e-critical.sh` et `beta:seed:staging`
-- `NVBES_ACCOUNT_SERVICE_BASE_URL` et `NVBES_CLOUD_SERVICE_BASE_URL` pour `beta:seed:staging` quand Identity et Drive ne sont pas agreges derriere `NVBES_API_BASE_URL`
-- `NVBES_BETA_SEED_EMAIL`, `NVBES_BETA_SEED_PASSWORD`, `NVBES_BETA_SEED_WORKSPACE` pour `beta:seed:staging`
+- `NVBES_DATABASE_URL` pour `test-e2e-critical.sh`; ce point d'entree
+  refuse staging/production et exige une base loopback jetable.
+- `NVBES_BETA_SEED_EMAIL`, `NVBES_BETA_SEED_PASSWORD`,
+  `NVBES_BETA_SEED_WORKSPACE` pour les fixtures hermetiques locales. Les
+  identites staging sont provisionnees hors de ce repo par le control plane et
+  fournies aux gates via des secrets proteges.

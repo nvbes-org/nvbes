@@ -51,7 +51,7 @@ export function SharedTrackingConsentBanner({
               Gestion des cookies & traceurs
             </p>
           </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="text-xs leading-relaxed text-foreground/80">
             Nous respectons votre vie privée. nvbes et ses partenaires utilisent des cookies pour
             faire fonctionner la plateforme, mesurer l&apos;audience et analyser les performances
             techniques. Le refus désactive ces usages optionnels sans bloquer le service. Si vous
@@ -112,7 +112,7 @@ export function SharedTrackingConsentBanner({
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Préférences de confidentialité
               </p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-xs leading-relaxed text-foreground/80">
                 Activez uniquement les finalités utiles. Les cookies essentiels restent nécessaires
                 à la sécurité du service.
               </p>
@@ -123,7 +123,7 @@ export function SharedTrackingConsentBanner({
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-0.5">
                     <p className="text-sm font-semibold text-foreground">Essentiels et Sécurité</p>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
+                    <p className="text-xs leading-relaxed text-foreground/80">
                       Nécessaires au fonctionnement et à la sécurité.
                     </p>
                   </div>

@@ -2,7 +2,7 @@ export const MIN_PASSWORD_LENGTH = 15;
 export const MAX_PASSWORD_LENGTH = 128;
 
 export function passwordCharacterCount(password: string): number {
-  return [...password].length;
+  return Array.from(password).length;
 }
 
 export function passwordHasSupportedLength(password: string): boolean {

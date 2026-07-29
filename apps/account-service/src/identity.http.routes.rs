@@ -19,7 +19,7 @@ use crate::app::AppState;
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
 struct HealthResponse {
-    release_id: &'static str,
+    release_id: String,
     status: &'static str,
 }
 
@@ -132,9 +132,27 @@ async fn health(State(state): State<crate::app::AppState>) -> Json<HealthRespons
     );
 
     Json(HealthResponse {
-        release_id: env!("CARGO_PKG_VERSION"),
+        release_id: health_release_id(
+            &state.config.environment,
+            std::env::var("NVBES_RELEASE_SHA").ok().as_deref(),
+        ),
         status: "ok",
     })
+}
+
+fn health_release_id(environment: &str, configured: Option<&str>) -> String {
+    let configured = configured.filter(|release| {
+        (40..=64).contains(&release.len())
+            && release
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    });
+    configured
+        .map(str::to_owned)
+        .unwrap_or_else(|| match environment {
+            "production" => "unconfigured-production-release".to_string(),
+            _ => env!("CARGO_PKG_VERSION").to_string(),
+        })
 }
 
 async fn dashboards() -> Json<observability::DashboardsResponse> {
@@ -178,4 +196,23 @@ async fn dpop_nonce_handler(State(state): State<crate::app::AppState>) -> axum::
         .status(axum::http::StatusCode::OK)
         .body(axum::body::Body::empty())
         .unwrap()
+}
+
+#[cfg(test)]
+mod health_release_tests {
+    use super::health_release_id;
+
+    #[test]
+    fn production_health_exposes_only_an_immutable_release_sha() {
+        let release = "a".repeat(40);
+        assert_eq!(health_release_id("production", Some(&release)), release);
+        assert_eq!(
+            health_release_id("production", Some("latest")),
+            "unconfigured-production-release"
+        );
+        assert_eq!(
+            health_release_id("production", None),
+            "unconfigured-production-release"
+        );
+    }
 }

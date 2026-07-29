@@ -78,7 +78,7 @@
       },
       "configurations": {},
       "parallelism": true,
-      "cache": true
+      "cache": false
     }
   }
 }

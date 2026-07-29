@@ -45,6 +45,9 @@ jobs:
           persist-credentials: false
       - name: CI/CD security gate
         run: node tools/security/check-ci-cd-security.mjs
+      - name: Validate Account worker image contract
+        if: matrix.image == 'nvbes-account-worker'
+        run: node --test apps/account-worker/tests/container-contract.test.mjs
       - name: Set deterministic build metadata
         run: |
           echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"

@@ -7,9 +7,11 @@ import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-q
 import { Bell, Mail, Megaphone, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
+import { accountQueryKeys } from '@/account.queries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { identityHttpClient } from '../identity.http';
 
 const NotificationsSchema = z.object({
@@ -64,8 +66,16 @@ function updateNotifications(prefs: NotificationPrefs) {
   });
 }
 
+export function getAccountNotificationsQueryKey(
+  authuser: string,
+): readonly ['identity', 'account', string, 'notifications'] {
+  return [...accountQueryKeys.byAuthuser(authuser), 'notifications'] as const;
+}
+
 export default function AccountNotificationsPage() {
+  const authuser = useAuthuser();
   const queryClient = useQueryClient();
+  const notificationsQueryKey = getAccountNotificationsQueryKey(authuser);
   const [webPushSupport, setWebPushSupport] = useState<WebPushSupport>(() => getWebPushSupport());
 
   useEffect(() => {
@@ -79,7 +89,7 @@ export default function AccountNotificationsPage() {
   }, []);
 
   const { data } = useSuspenseQuery({
-    queryKey: ['notifications'],
+    queryKey: notificationsQueryKey,
     queryFn: fetchNotifications,
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -89,7 +99,7 @@ export default function AccountNotificationsPage() {
   const mutation = useMutation({
     mutationFn: (prefs: NotificationPrefs) => updateNotifications(prefs),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ exact: true, queryKey: notificationsQueryKey });
     },
   });
 

@@ -1,12 +1,64 @@
 {
-  "name": "account-worker",
-  "projectType": "application",
-  "root": "apps/account-worker",
+	"name": "account-worker",
+	"projectType": "application",
+	"root": "apps/account-worker",
   "sourceRoot": "apps/account-worker/src",
-  "tags": [
-    "scope:oss",
-    "type:app",
-    "domain:account",
-    "layer:app"
-  ]
+  "tags": ["scope:oss", "type:app", "domain:account", "layer:app"],
+  "namedInputs": {
+    "rustSources": [
+      "{projectRoot}/Cargo.toml",
+      "{projectRoot}/src/**/*",
+      "{workspaceRoot}/Cargo.toml",
+      "{workspaceRoot}/Cargo.lock",
+      "{workspaceRoot}/.cargo/**/*",
+      "{workspaceRoot}/apps/account-service/migrations/**/*",
+      "{workspaceRoot}/libs/rust/**/Cargo.toml",
+      "{workspaceRoot}/libs/rust/**/src/**/*",
+      {
+        "runtime": "rustc --version --verbose"
+      },
+      {
+        "runtime": "cargo --version"
+      }
+    ]
+  },
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["rustSources"],
+      "outputs": [],
+      "options": {
+        "command": "cargo check --package nvbes-account-worker --all-targets --locked",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "inputs": ["rustSources"],
+      "outputs": [],
+      "options": {
+        "command": "cargo test --package nvbes-account-worker --locked -- --test-threads=1",
+        "cwd": "."
+      }
+    },
+    "test-container-contract": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/Cargo.toml",
+				"{projectRoot}/Dockerfile",
+				"{projectRoot}/src/main.rs",
+				"{projectRoot}/tests/*.mjs",
+				"{workspaceRoot}/Cargo.toml",
+				"{workspaceRoot}/Cargo.lock"
+			],
+			"options": {
+				"command": "node --test apps/account-worker/tests/container-contract.test.mjs",
+				"cwd": "."
+			}
+		}
+	}
 }

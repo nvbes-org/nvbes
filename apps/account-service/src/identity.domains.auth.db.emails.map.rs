@@ -17,7 +17,7 @@ pub fn email_address_view(row: sqlx::postgres::PgRow) -> EmailAddressView {
 
 pub fn email_constraint_error(error: sqlx::Error) -> AppError {
     if let sqlx::Error::Database(ref db_err) = error {
-        return email_constraint_error_for(db_err.constraint());
+        email_constraint_error_for(db_err.constraint())
     } else {
         error.into()
     }

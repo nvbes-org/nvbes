@@ -33,18 +33,56 @@ require_env() {
   fi
 }
 
+require_destructive_account_test_database() {
+  require_env NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE
+  node "$ROOT_DIR/scripts/lib/validate-destructive-test-database.mjs"
+}
+
+require_account_test_redis() {
+  require_env NVBES_REDIS_URL
+  node "$ROOT_DIR/scripts/lib/validate-test-redis-target.mjs"
+}
+
+validate_staging_account_targets() {
+  require_cmd node
+  require_env NVBES_STAGING_WEB_BASE_URL
+  require_env NVBES_STAGING_API_BASE_URL
+  require_env NVBES_STAGING_ALLOWED_WEB_ORIGINS
+  require_env NVBES_STAGING_ALLOWED_API_ORIGINS
+  require_env ACCOUNT_PRODUCTION_DENIED_ORIGINS
+
+  NVBES_TARGET_ENV=staging \
+    NVBES_WEB_BASE_URL="$NVBES_STAGING_WEB_BASE_URL" \
+    ACCOUNT_WEB_ALLOWED_ORIGINS="$NVBES_STAGING_ALLOWED_WEB_ORIGINS" \
+    ACCOUNT_PRODUCTION_DENIED_ORIGINS="$ACCOUNT_PRODUCTION_DENIED_ORIGINS" \
+    node "$ROOT_DIR/tools/account-quality/validate-load-target.mjs" web
+  NVBES_TARGET_ENV=staging \
+    ACCOUNT_SERVICE_BASE_URL="$NVBES_STAGING_API_BASE_URL" \
+    ACCOUNT_LOAD_ALLOWED_ORIGINS="$NVBES_STAGING_ALLOWED_API_ORIGINS" \
+    ACCOUNT_PRODUCTION_DENIED_ORIGINS="$ACCOUNT_PRODUCTION_DENIED_ORIGINS" \
+    node "$ROOT_DIR/tools/account-quality/validate-load-target.mjs" service
+}
+
 normalize_url() {
   printf '%s' "${1%/}"
 }
 
 http_body() {
   local url="$1"
-  curl --fail --silent --show-error --location --max-time 15 "$url"
+  local -a redirect_args=(--location)
+  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+    redirect_args=()
+  fi
+  curl --fail --silent --show-error "${redirect_args[@]}" --max-time 15 "$url"
 }
 
 http_status() {
   local url="$1"
-  curl --silent --show-error --location --max-time 15 --output /dev/null --write-out '%{http_code}' "$url"
+  local -a redirect_args=(--location)
+  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+    redirect_args=()
+  fi
+  curl --silent --show-error "${redirect_args[@]}" --max-time 15 --output /dev/null --write-out '%{http_code}' "$url"
 }
 
 assert_http_status() {
@@ -64,6 +102,11 @@ assert_http_not_5xx() {
 
   status="$(http_status "$url")"
   case "$status" in
+    3*)
+      if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+        fail "expected non-redirect for $url, got $status"
+      fi
+      ;;
     5*) fail "expected non-5xx for $url, got $status" ;;
   esac
 }
@@ -80,6 +123,10 @@ assert_header_contains() {
   local expected="$2"
   local headers
 
-  headers="$(curl --silent --show-error --location --max-time 15 --head "$url")"
+  local -a redirect_args=(--location)
+  if [ "${NVBES_SMOKE_FORBID_REDIRECTS:-}" = "1" ]; then
+    redirect_args=()
+  fi
+  headers="$(curl --silent --show-error "${redirect_args[@]}" --max-time 15 --head "$url")"
   printf '%s' "$headers" | grep -iF "$expected" >/dev/null || fail "expected headers from $url to contain: $expected"
 }

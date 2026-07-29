@@ -30,14 +30,13 @@ pub(crate) async fn enforce_identifier_request_guards(
         ));
     }
 
-    if let Some(proof) = &request.bot_guard {
-        if let Err(error) =
+    if let Some(proof) = &request.bot_guard
+        && let Err(error) =
             crate::domains::auth::bot_guard::verify(proof, "login_identifier", &config.jwt_secret)
-        {
-            crate::domains::auth::bot_response::record_decision("block", "bot_guard_proof");
-            crate::domains::auth::bot_response::apply_tarpit(1.0).await;
-            return Err(error);
-        }
+    {
+        crate::domains::auth::bot_response::record_decision("block", "bot_guard_proof");
+        crate::domains::auth::bot_response::apply_tarpit(1.0).await;
+        return Err(error);
     }
 
     enforce_bot_score(headers, meta, request).await?;

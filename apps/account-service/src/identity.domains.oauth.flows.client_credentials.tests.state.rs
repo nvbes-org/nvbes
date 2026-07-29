@@ -40,13 +40,16 @@ pub(super) async fn test_state(pool: &PgPool) -> AppState {
 
     crate::test_support::ensure_test_redis().await;
     crate::test_support::ensure_test_database(pool).await;
+    crate::test_support::cloud_mock::ensure_cloud_mock(pool);
 
     AppState::bootstrap(&config, pool.clone())
         .await
         .expect("app state bootstrap should succeed")
 }
 
-pub(super) async fn db_supports_current_oauth_schema(pool: &PgPool) -> bool {
+pub(super) async fn assert_current_oauth_schema(pool: &PgPool) {
+    crate::test_support::ensure_test_database(pool).await;
+
     let client_assertion_supported = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
@@ -59,7 +62,7 @@ pub(super) async fn db_supports_current_oauth_schema(pool: &PgPool) -> bool {
     )
     .fetch_one(pool)
     .await
-    .unwrap_or(false);
+    .expect("oauth client-assertion schema capability query should succeed");
     let client_usage_supported = sqlx::query_scalar::<_, bool>(
         r#"
         SELECT EXISTS (
@@ -72,9 +75,12 @@ pub(super) async fn db_supports_current_oauth_schema(pool: &PgPool) -> bool {
     )
     .fetch_one(pool)
     .await
-    .unwrap_or(false);
+    .expect("oauth client-usage schema capability query should succeed");
 
-    client_assertion_supported && client_usage_supported
+    assert!(
+        client_assertion_supported && client_usage_supported,
+        "test database must include the current OAuth client assertion and usage migrations"
+    );
 }
 
 pub(super) fn basic_auth_header(client_id: &str, client_secret: &str) -> String {

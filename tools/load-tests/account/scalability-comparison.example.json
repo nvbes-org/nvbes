@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "metadata": "replicas-1.metadata.json",
+      "summary": "replicas-1.json"
+    },
+    {
+      "metadata": "replicas-2.metadata.json",
+      "summary": "replicas-2.json"
+    },
+    {
+      "metadata": "replicas-4.metadata.json",
+      "summary": "replicas-4.json"
+    },
+    {
+      "metadata": "replicas-8.metadata.json",
+      "summary": "replicas-8.json"
+    }
+  ]
+}

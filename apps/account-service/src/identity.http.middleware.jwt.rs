@@ -23,7 +23,7 @@ pub(crate) mod session_refresh;
 #[derive(Clone, Debug)]
 pub enum CredentialSource {
     BrowserSession,
-    OAuthBearer(OAuthBearerCredential),
+    OAuthBearer(Box<OAuthBearerCredential>),
 }
 
 #[derive(Clone, Debug)]
@@ -197,6 +197,7 @@ pub(crate) async fn authenticate_request(
         .transpose()?
         .map(OAuthBearerCredential::from_claims)
         .transpose()?
+        .map(Box::new)
         .map(CredentialSource::OAuthBearer)
         .unwrap_or(CredentialSource::BrowserSession);
     let auth = session_refresh::authenticate_session_request(state, headers, &authuser).await?;

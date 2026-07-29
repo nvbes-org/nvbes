@@ -52,6 +52,10 @@ fn workspace_role_rank(role: &str) -> i32 {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "workspace switching keeps persistence, cache, WebAuthn policy, authenticated subject, and rotation intent explicit"
+)]
 pub async fn switch_workspace(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

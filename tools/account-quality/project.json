@@ -1,0 +1,103 @@
+{
+  "name": "account-quality",
+  "projectType": "library",
+  "root": "tools/account-quality",
+  "sourceRoot": "tools/account-quality",
+  "tags": ["scope:oss", "type:tooling", "domain:account", "layer:tooling"],
+  "implicitDependencies": [
+    "account-service",
+    "account-worker",
+    "account-web",
+    "http-client",
+    "identity-client",
+    "identity-sdk",
+    "identity-sdk-core",
+    "identity-sdk-web",
+    "rust-workspace",
+    "web-runtime",
+    "web-ui"
+  ],
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/.github/workflows/account-quality.yml",
+        "{workspaceRoot}/.github/workflows/dast.yml",
+        "{workspaceRoot}/apps/account-service/src/identity.tools.beta.rs",
+        "{workspaceRoot}/apps/account-web/e2e/critical.spec.ts",
+        "{workspaceRoot}/docs/security/dast-authenticated-staging.md",
+        "{workspaceRoot}/docs/testing/account-test-manifest.json",
+        "{workspaceRoot}/docs/testing/account-test-strategy.md",
+        "{workspaceRoot}/docs/testing/account-acceptance-charters.md",
+        "{workspaceRoot}/package.json",
+        "{workspaceRoot}/scripts/lib/test-env.sh",
+        "{workspaceRoot}/scripts/release-gate.sh",
+        "{workspaceRoot}/scripts/test-account-portfolio.sh",
+        "{workspaceRoot}/scripts/lib/openapi-response-contract.mjs",
+        "{workspaceRoot}/scripts/lib/openapi-probe-plan.mjs",
+        "{workspaceRoot}/scripts/lib/openapi-seeded-auth.mjs",
+        "{workspaceRoot}/scripts/lib/validate-destructive-test-database.mjs",
+        "{workspaceRoot}/scripts/lib/validate-test-redis-target.mjs",
+        "{workspaceRoot}/scripts/test-account-service-migrations.sh",
+        "{workspaceRoot}/scripts/test-openapi-contract.mjs",
+        "{workspaceRoot}/tools/load-tests/account/**/*"
+      ],
+      "outputs": [],
+      "options": {
+        "commands": [
+          "node tools/account-quality/check-test-manifest.mjs",
+          "node tools/account-quality/check-load-suite.mjs",
+          "node --test tools/account-quality/*.test.mjs"
+        ],
+        "parallel": false
+      }
+    },
+    "test-nightly": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/tools/load-tests/account/**/*",
+        "{workspaceRoot}/docs/testing/account-test-manifest.json"
+      ],
+      "options": {
+        "command": "bash tools/account-quality/run-account-nightly.sh",
+        "cwd": "."
+      }
+    },
+    "lint-rust": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/apps/account-service/**/*",
+        "{workspaceRoot}/apps/account-worker/**/*",
+        "{workspaceRoot}/libs/rust/**/*",
+        "{workspaceRoot}/scripts/lint-account-rust.sh"
+      ],
+      "outputs": [],
+      "options": {
+        "command": "bash scripts/lint-account-rust.sh",
+        "cwd": "."
+      }
+    },
+    "test-resilience": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "parallelism": false,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/tools/load-tests/account/**/*",
+        "{workspaceRoot}/docs/testing/account-test-manifest.json"
+      ],
+      "options": {
+        "command": "bash tools/account-quality/run-account-resilience.sh",
+        "cwd": "."
+      }
+    }
+  }
+}

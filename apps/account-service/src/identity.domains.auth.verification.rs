@@ -42,7 +42,7 @@ pub async fn step_up(
     let mut session = nvbes_redis::session::get_session(redis, &auth.session_id().to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
-        .ok_or_else(|| nvbes_core::auth::step_up_required_error())?;
+        .ok_or_else(nvbes_core::auth::step_up_required_error)?;
     if session.principal_id != auth.user_id().to_string()
         || session.revoked_at.is_some()
         || session.expires_at <= now
@@ -158,7 +158,7 @@ pub async fn require_recent_phishing_resistant_step_up(
     let session = nvbes_redis::session::get_session(redis, &auth.session_id().to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
-        .ok_or_else(|| nvbes_core::auth::step_up_required_error())?;
+        .ok_or_else(nvbes_core::auth::step_up_required_error)?;
     let current_aal = session
         .acr
         .as_deref()

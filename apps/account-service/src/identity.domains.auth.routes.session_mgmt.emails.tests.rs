@@ -32,6 +32,7 @@ async fn store_session(
     redis: &nvbes_redis::RedisPool,
     subject: &TestStepUpSubject,
     aal: &str,
+    amr: &[&str],
     step_up_expires_at: Option<chrono::DateTime<Utc>>,
 ) {
     let now = Utc::now();
@@ -45,7 +46,7 @@ async fn store_session(
         None,
         format!("session-token-{}", subject.session_id),
         Some(aal.to_string()),
-        vec!["pwd".to_string()],
+        amr.iter().map(|method| (*method).to_string()).collect(),
         now,
         now,
         None,
@@ -60,32 +61,7 @@ async fn store_session(
 }
 
 #[tokio::test]
-async fn email_mutation_rejects_aal1_session() {
-    let redis = crate::test_support::test_redis_pool().await;
-    let subject = TestStepUpSubject {
-        principal_id: Uuid::new_v4(),
-        session_id: Uuid::new_v4(),
-    };
-    store_session(
-        &redis,
-        &subject,
-        "aal1",
-        Some(Utc::now() + chrono::Duration::minutes(10)),
-    )
-    .await;
-
-    let error = require_email_mutation_step_up(&redis, &subject)
-        .await
-        .expect_err("AAL1 must not authorize an email mutation");
-
-    assert_eq!(error.status, axum::http::StatusCode::UNAUTHORIZED);
-    assert_eq!(error.code, "step_up_required");
-    let _ =
-        nvbes_redis::session::clear_user_sessions(&redis, &subject.principal_id.to_string()).await;
-}
-
-#[tokio::test]
-async fn email_mutation_accepts_recent_aal2_session() {
+async fn email_mutation_rejects_aal2_password_session() {
     let redis = crate::test_support::test_redis_pool().await;
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
@@ -95,20 +71,73 @@ async fn email_mutation_accepts_recent_aal2_session() {
         &redis,
         &subject,
         "aal2",
+        &["pwd"],
+        Some(Utc::now() + chrono::Duration::minutes(10)),
+    )
+    .await;
+
+    let error = require_email_mutation_step_up(&redis, &subject)
+        .await
+        .expect_err("AAL2 password authentication must not authorize an email mutation");
+
+    assert_eq!(error.status, axum::http::StatusCode::FORBIDDEN);
+    assert_eq!(error.code, "phishing_resistant_step_up_required");
+    let _ =
+        nvbes_redis::session::clear_user_sessions(&redis, &subject.principal_id.to_string()).await;
+}
+
+#[tokio::test]
+async fn email_mutation_rejects_aal2_totp_session() {
+    let redis = crate::test_support::test_redis_pool().await;
+    let subject = TestStepUpSubject {
+        principal_id: Uuid::new_v4(),
+        session_id: Uuid::new_v4(),
+    };
+    store_session(
+        &redis,
+        &subject,
+        "aal2",
+        &["otp"],
+        Some(Utc::now() + chrono::Duration::minutes(10)),
+    )
+    .await;
+
+    let error = require_email_mutation_step_up(&redis, &subject)
+        .await
+        .expect_err("AAL2 TOTP authentication must not authorize an email mutation");
+
+    assert_eq!(error.status, axum::http::StatusCode::FORBIDDEN);
+    assert_eq!(error.code, "phishing_resistant_step_up_required");
+    let _ =
+        nvbes_redis::session::clear_user_sessions(&redis, &subject.principal_id.to_string()).await;
+}
+
+#[tokio::test]
+async fn email_mutation_accepts_recent_webauthn_session() {
+    let redis = crate::test_support::test_redis_pool().await;
+    let subject = TestStepUpSubject {
+        principal_id: Uuid::new_v4(),
+        session_id: Uuid::new_v4(),
+    };
+    store_session(
+        &redis,
+        &subject,
+        "aal2",
+        &["webauthn"],
         Some(Utc::now() + chrono::Duration::minutes(10)),
     )
     .await;
 
     require_email_mutation_step_up(&redis, &subject)
         .await
-        .expect("recent AAL2 should authorize an email mutation");
+        .expect("recent WebAuthn authentication should authorize an email mutation");
 
     let _ =
         nvbes_redis::session::clear_user_sessions(&redis, &subject.principal_id.to_string()).await;
 }
 
 #[tokio::test]
-async fn email_mutation_rejects_expired_aal2_session() {
+async fn email_mutation_rejects_expired_webauthn_session() {
     let redis = crate::test_support::test_redis_pool().await;
     let subject = TestStepUpSubject {
         principal_id: Uuid::new_v4(),
@@ -118,16 +147,17 @@ async fn email_mutation_rejects_expired_aal2_session() {
         &redis,
         &subject,
         "aal2",
+        &["webauthn"],
         Some(Utc::now() - chrono::Duration::seconds(1)),
     )
     .await;
 
     let error = require_email_mutation_step_up(&redis, &subject)
         .await
-        .expect_err("expired AAL2 must not authorize an email mutation");
+        .expect_err("expired WebAuthn authentication must not authorize an email mutation");
 
-    assert_eq!(error.status, axum::http::StatusCode::UNAUTHORIZED);
-    assert_eq!(error.code, "step_up_required");
+    assert_eq!(error.status, axum::http::StatusCode::FORBIDDEN);
+    assert_eq!(error.code, "phishing_resistant_step_up_required");
     let _ =
         nvbes_redis::session::clear_user_sessions(&redis, &subject.principal_id.to_string()).await;
 }

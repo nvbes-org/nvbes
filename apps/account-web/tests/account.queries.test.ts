@@ -24,7 +24,7 @@ describe('authuser search helpers', () => {
   });
 
   it('keeps default account URLs clean', () => {
-    expect(authuserSearch('0')).toBeUndefined();
+    expect(authuserSearch('0')).toEqual({});
     expect(authuserSearch('2')).toEqual({ authuser: '2' });
   });
 });

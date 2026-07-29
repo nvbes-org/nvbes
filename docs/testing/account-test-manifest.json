@@ -1,0 +1,597 @@
+{
+	"schemaVersion": 3,
+	"scope": {
+		"applications": ["account-service", "account-worker", "account-web"],
+		"typescriptLibraries": [
+			"http-client",
+			"identity-client",
+			"identity-sdk",
+			"identity-sdk-core",
+			"identity-sdk-web",
+			"web-runtime",
+			"web-ui"
+		],
+		"rustLibraries": [
+			"audit",
+			"core",
+			"dpop",
+			"email",
+			"identity-sdk-backend",
+			"observability",
+			"product-account",
+			"product-analytics",
+			"redis",
+			"region",
+			"storage",
+			"tenancy"
+		]
+	},
+	"automation": {
+		"workflow": ".github/workflows/account-quality.yml",
+		"scheduledDailyCron": "17 1 * * *",
+		"scheduledWeeklyCron": "31 1 * * 0",
+		"dastWorkflow": ".github/workflows/dast.yml",
+		"dastWeeklyCron": "41 2 * * 3"
+	},
+	"lanes": {
+		"pullRequest": {
+			"mode": "automated",
+			"trigger": "repository CI for affected projects"
+		},
+		"scheduledDaily": {
+			"mode": "automated",
+			"trigger": "daily account-quality workflow"
+		},
+		"scheduledWeekly": {
+			"mode": "automated",
+			"trigger": "weekly account-quality workflow"
+		},
+		"trustedHermetic": {
+			"mode": "manual-command",
+			"trigger": "trusted runner with isolated PostgreSQL, Redis, Account and Cloud gRPC runtimes"
+		},
+		"preRelease": {
+			"mode": "human",
+			"trigger": "release owner approval"
+		},
+		"gap": {
+			"mode": "gap",
+			"trigger": "not yet implemented"
+		}
+	},
+	"coverage": [
+		{
+			"category": "unit",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx affected -t test",
+			"artifact": "Nx and framework test reports"
+		},
+		{
+			"category": "component-integration",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx affected -t test",
+			"artifact": "Nx and framework test reports"
+		},
+		{
+			"category": "interface",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx affected -t test,typecheck",
+			"artifact": "Nx test and typecheck reports"
+		},
+		{
+			"category": "api-esb",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx run account-service:test-contract",
+			"artifact": "Cargo contract test report"
+		},
+		{
+			"category": "data-migration",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx run account-service:test-migrations",
+			"artifact": "Cargo migration test report",
+			"coverageDetail": [
+				"complete migration chain on a fresh ephemeral loopback PostgreSQL database",
+				"N-1 to latest upgrade with existing data preservation",
+				"N-1 writer compatibility after the latest schema is applied",
+				"forced cleanup with no test database residue",
+				"cluster-wide role snapshot restored exactly; nvbes_system is removed only when the migration test introduced it and a pre-existing role is never deleted",
+				"process-boundary recovery fixture proving the EXIT cleanup restores persisted database and role state"
+			],
+			"limitation": "No versioned down migrations exist; database rollback and restore remain a signed pre-release recovery campaign."
+		},
+		{
+			"category": "authentication-authorization-rbac",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx run account-service:test-security",
+			"artifact": "Cargo security test report"
+		},
+		{
+			"category": "access-control",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "Application RBAC and OAuth scopes are automated under authentication-authorization-rbac, but the Account production runtime role and migrations do not yet enforce the documented tenant RLS contract end to end."
+		},
+		{
+			"category": "cookies",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "pnpm nx run account-web:test:e2e:compatibility",
+			"artifact": "account-browser-<run-id>",
+			"coverageDetail": "Public consent rejection and absence of analytics cookies across the browser matrix.",
+			"limitation": "The exact authenticated session/CSRF cookie contract is exercised only by the trusted Chromium critical lane and the staging acceptance gate."
+		},
+		{
+			"category": "accessibility",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "pnpm nx run account-web:test:e2e:compatibility",
+			"artifact": "account-browser-<run-id>",
+			"coverageDetail": "Automated WCAG checks, keyboard navigation, zoom and reduced-motion checks on public Account routes.",
+			"limitation": "Authenticated Account pages do not yet run through the full cross-browser accessibility matrix."
+		},
+		{
+			"category": "white-box",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx affected -t test",
+			"artifact": "Nx and framework test reports",
+			"limitation": "Quantitative coverage thresholds are currently enforced for http-client only, not for the complete Account Rust and TypeScript scope."
+		},
+		{
+			"category": "contract",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx run account-service:test-contract",
+			"artifact": "Cargo contract test report"
+		},
+		{
+			"category": "smoke",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "K6_PROFILE=smoke K6_SUITE=account-api bash tools/account-quality/run-account-k6.sh",
+			"artifact": ".temp/account-quality/k6/account-api-smoke.json"
+		},
+		{
+			"category": "sanity",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "K6_PROFILE=smoke K6_SUITE=account-api bash tools/account-quality/run-account-k6.sh",
+			"artifact": ".temp/account-quality/k6/account-api-smoke.json"
+		},
+		{
+			"category": "maintainability",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx affected -t format:check,lint,typecheck && pnpm nx run account-quality:lint-rust",
+			"artifact": "Nx format, lint and typecheck logs plus fail-closed Account Rust Clippy"
+		},
+		{
+			"category": "compatibility",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "pnpm nx run account-web:test:e2e:compatibility",
+			"artifact": "account-browser-<run-id>",
+			"coverageDetail": "Public routes and consent UI on desktop/mobile browser projects.",
+			"limitation": "Authenticated Account screens are covered in Chromium release acceptance, not in this daily matrix."
+		},
+		{
+			"category": "ui",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "pnpm nx run account-web:test:e2e:compatibility",
+			"artifact": "account-browser-<run-id>",
+			"coverageDetail": "Public Account routes on Chromium, Firefox, WebKit and mobile emulation.",
+			"limitation": "Authenticated screens are not yet part of the daily cross-browser matrix."
+		},
+		{
+			"category": "cross-browser",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "pnpm nx run account-web:test:e2e:compatibility",
+			"artifact": "account-browser-<run-id>",
+			"coverageDetail": "Browser-engine and viewport compatibility for public Account routes.",
+			"limitation": "This is not an operating-system or CPU-architecture matrix and does not cover authenticated routes."
+		},
+		{
+			"category": "performance",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "K6_PROFILE=load K6_SUITE=account-api bash tools/account-quality/run-account-k6.sh",
+			"artifact": "account-load-<run-id>",
+			"limitation": "Latency and error budgets cover four public Account HTTP reads only; authenticated writes, worker execution, Redis queues, SMTP delivery and large datasets are not measured."
+		},
+		{
+			"category": "load",
+			"lane": "scheduledDaily",
+			"execution": "automated",
+			"command": "K6_PROFILE=load K6_SUITE=account-api bash tools/account-quality/run-account-k6.sh",
+			"artifact": "account-load-<run-id>",
+			"limitation": "The scheduled load lane does not exercise authenticated mutations or the Account-worker/Redis/SMTP delivery chain."
+		},
+		{
+			"category": "volume",
+			"lane": "scheduledWeekly",
+			"execution": "automated",
+			"command": "K6_PROFILE=volume K6_SUITE=account-api bash tools/account-quality/run-account-resilience.sh",
+			"artifact": "account-volume-<run-id>",
+			"coverageDetail": "Request-volume campaign of 100,000 public Account metadata requests.",
+			"limitation": "Large tenant/session/email datasets, pagination depth and Account-worker queue backlog are not covered."
+		},
+		{
+			"category": "spike",
+			"lane": "scheduledWeekly",
+			"execution": "automated",
+			"command": "K6_PROFILE=spike K6_SUITE=account-api bash tools/account-quality/run-account-resilience.sh",
+			"artifact": "account-spike-<run-id>",
+			"limitation": "The scheduled spike targets public Account HTTP reads; Redis, SMTP and worker backlog spikes remain untested."
+		},
+		{
+			"category": "stress",
+			"lane": "scheduledWeekly",
+			"execution": "automated",
+			"command": "K6_PROFILE=stress K6_SUITE=account-api bash tools/account-quality/run-account-resilience.sh",
+			"artifact": "account-stress-<run-id>",
+			"coverageDetail": "Arrival-rate stress schedules 191,100 requests and requires at least 90% completion with no more than 10% dropped iterations.",
+			"limitation": "The scheduled stress profile targets public Account HTTP reads, not worker/Redis/SMTP capacity."
+		},
+		{
+			"category": "system-integration",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "pnpm nx run account-quality:test-nightly",
+			"artifact": "trusted-runner Nx, Cargo, Playwright and k6 reports"
+		},
+		{
+			"category": "end-to-end-integration",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "pnpm nx run account-quality:test-nightly",
+			"artifact": "trusted-runner Nx, Cargo, Playwright and k6 reports"
+		},
+		{
+			"category": "end-to-end",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "pnpm nx run account-quality:test-nightly",
+			"artifact": "trusted-runner Playwright report"
+		},
+		{
+			"category": "security",
+			"lane": "pullRequest",
+			"execution": "automated",
+			"command": "pnpm nx run account-service:test-security",
+			"artifact": "Cargo security report plus weekly zap-dast-<run-id>",
+			"coverageDetail": [
+				"deterministic Account security tests in pull requests",
+				"weekly authenticated ZAP baseline/client-spider web scans and active OpenAPI API scan after fail-closed identity canaries"
+			],
+			"limitation": "DAST is not an independent penetration test and does not prove every SPA state or credential validity for an entire long-running scan."
+		},
+		{
+			"category": "black-box",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#black-box-validation",
+			"artifact": "signed black-box release report"
+		},
+		{
+			"category": "grey-box",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "pnpm nx run account-quality:test-nightly",
+			"artifact": "trusted-runner integration reports"
+		},
+		{
+			"category": "global-regression",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "pnpm nx run account-quality:test-nightly",
+			"artifact": "trusted-runner regression packet"
+		},
+		{
+			"category": "monkey",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "A deterministic bounded public-route random walk exists, but no model-state login/register/MFA/OAuth monkey harness with invariants and scenario shrinking is wired."
+		},
+		{
+			"category": "reliability",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "Worker retries, stable Message-ID and local ledger deduplication are tested, but SMTP acceptance followed by a failed database commit remains at-least-once and can deliver a duplicate without provider idempotency."
+		},
+		{
+			"category": "endurance",
+			"lane": "trustedHermetic",
+			"execution": "manual-command",
+			"command": "K6_PROFILE=soak K6_SUITE=account-api ACCOUNT_K6_DURATION=4h pnpm nx run account-quality:test-resilience",
+			"artifact": ".temp/account-quality/k6/account-api-soak.json",
+			"limitation": "The four-hour soak covers public Account HTTP reads; worker memory growth, Redis backlog, SMTP stability and long-lived authenticated sessions are not covered."
+		},
+		{
+			"category": "scalability",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "The 1/2/4/8 workload comparator is fail-closed, but no trusted control-plane adapter verifies deployment identity, immutable release and ready replicas before and after each run."
+		},
+		{
+			"category": "acceptance-alpha",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#alpha-interne",
+			"artifact": "signed Alpha report"
+		},
+		{
+			"category": "acceptance-beta",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#beta-fermee",
+			"artifact": "signed closed-Beta report"
+		},
+		{
+			"category": "beta",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#beta-ouverte",
+			"artifact": "signed open-Beta report"
+		},
+		{
+			"category": "user-acceptance",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#user-acceptance-testing",
+			"artifact": "signed UAT report"
+		},
+		{
+			"category": "usability",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#usability-testing",
+			"artifact": "signed usability report"
+		},
+		{
+			"category": "exploratory",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#exploratory-testing",
+			"artifact": "signed exploratory session reports"
+		},
+		{
+			"category": "penetration",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#penetration-et-conformite",
+			"artifact": "independent signed penetration report"
+		},
+		{
+			"category": "compliance",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#penetration-et-conformite",
+			"artifact": "signed compliance control matrix"
+		},
+		{
+			"category": "recovery",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#recovery-et-drp",
+			"artifact": "signed recovery exercise report with RPO and RTO"
+		},
+		{
+			"category": "drp-failover",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#recovery-et-drp",
+			"artifact": "signed DRP/failover report with RPO and RTO"
+		},
+		{
+			"category": "localization",
+			"lane": "preRelease",
+			"execution": "human",
+			"runbook": "docs/testing/account-acceptance-charters.md#localization",
+			"artifact": "signed locale and RTL compatibility report"
+		},
+		{
+			"category": "fuzz",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "No cargo-fuzz or equivalent parser harness is wired into Account CI."
+		},
+		{
+			"category": "cross-platform",
+			"lane": "gap",
+			"execution": "gap",
+			"blocker": "No Linux arm64, macOS or Windows Account execution matrix is wired."
+		}
+	],
+	"knownGaps": [
+		{
+			"categories": ["access-control"],
+			"description": "Application RBAC and OAuth scopes are automated, but Account tenant isolation/RLS is not a satisfied production access-control contract until migrations and the runtime role enforce it end to end.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": [
+				"accessibility",
+				"compatibility",
+				"cookies",
+				"cross-browser",
+				"ui"
+			],
+			"description": "Authenticated Account pages are not covered by the daily cross-browser/accessibility/UI/cookie matrix; authenticated release acceptance is Chromium-only.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["security"],
+			"description": "Weekly authenticated DAST uses a fixed credential for each scan and does not replace exhaustive SPA traversal or independent penetration work.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["cross-platform", "fuzz"],
+			"description": "Fuzz and cross-platform execution are not wired into Account CI.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["monkey"],
+			"description": "The current monkey test is a bounded public-route random walk; model-based authenticated monkey testing with shrinking is absent.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["white-box"],
+			"description": "Only http-client has quantitative coverage thresholds; global Account Rust/TypeScript coverage gates are absent.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": [
+				"endurance",
+				"load",
+				"performance",
+				"spike",
+				"stress",
+				"volume"
+			],
+			"description": "Public HTTP request campaigns exist, but large datasets and worker/Redis/SMTP backlog capacity are not covered.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["reliability"],
+			"description": "SMTP remains at-least-once across provider acceptance plus database commit ambiguity; stable Message-ID does not guarantee provider deduplication.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["drp-failover", "recovery"],
+			"control": "Fresh recovery and DRP decision records are mandatory in the release-board-signed acceptance manifest.",
+			"description": "DRP/failover is a human exercise rather than a scheduled automated campaign; its attribution is not yet an independent cryptographic signature.",
+			"releaseBlocking": false
+		},
+		{
+			"categories": [
+				"acceptance-alpha",
+				"acceptance-beta",
+				"beta",
+				"black-box",
+				"compliance",
+				"drp-failover",
+				"exploratory",
+				"localization",
+				"penetration",
+				"recovery",
+				"usability",
+				"user-acceptance"
+			],
+			"description": "The release board signs one root manifest, but individual human reports lack detached signatures and category-specific trusted signer allowlists; signedBy alone cannot prove separation of duties or an independent pentest.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": [
+				"accessibility",
+				"compatibility",
+				"cookies",
+				"cross-browser",
+				"end-to-end",
+				"end-to-end-integration",
+				"endurance",
+				"global-regression",
+				"grey-box",
+				"load",
+				"performance",
+				"sanity",
+				"security",
+				"smoke",
+				"spike",
+				"stress",
+				"system-integration",
+				"ui",
+				"volume"
+			],
+			"description": "The production gate has no exact-SHA automated-evidence manifest that verifies producer workflow provenance, freshness and digests for trusted-hermetic, browser, k6 and DAST artifacts; manual-command capability claims are not release evidence.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": [
+				"acceptance-alpha",
+				"acceptance-beta",
+				"beta",
+				"black-box",
+				"compliance",
+				"drp-failover",
+				"exploratory",
+				"localization",
+				"penetration",
+				"recovery",
+				"security",
+				"usability",
+				"user-acceptance"
+			],
+			"description": "No externally pinned evidence importer with an ephemeral least-privilege credential, confidential ACL or encryption boundary, exact-SHA attestation, and redirect-safe DNS connection binding exists. Candidate-controlled code must not read the private evidence store, raw reports must not be published as application-repository Actions artifacts, and a preflight DNS result must be bound to the actual TLS connection to eliminate rebinding and resolution-to-connect TOCTOU.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["data-migration"],
+			"description": "Fresh and N-1 upgrades are automated, but backup/PITR restoration and forward-fix remain to be proven.",
+			"releaseBlocking": true
+		},
+		{
+			"categories": ["scalability"],
+			"description": "The workload comparator lacks a trusted control-plane adapter for deployment identity, immutable release and ready replicas.",
+			"releaseBlocking": true
+		}
+	],
+	"releaseReadiness": {
+		"blockingCategories": [
+			"acceptance-alpha",
+			"acceptance-beta",
+			"access-control",
+			"accessibility",
+			"beta",
+			"black-box",
+			"compatibility",
+			"compliance",
+			"cookies",
+			"cross-browser",
+			"cross-platform",
+			"data-migration",
+			"drp-failover",
+			"end-to-end",
+			"end-to-end-integration",
+			"endurance",
+			"exploratory",
+			"fuzz",
+			"global-regression",
+			"grey-box",
+			"load",
+			"localization",
+			"monkey",
+			"penetration",
+			"performance",
+			"recovery",
+			"reliability",
+			"sanity",
+			"scalability",
+			"security",
+			"smoke",
+			"spike",
+			"stress",
+			"system-integration",
+			"ui",
+			"usability",
+			"user-acceptance",
+			"volume",
+			"white-box"
+		],
+		"status": "blocked"
+	},
+	"policy": {
+		"silentSkipsAllowed": false,
+		"retryCanMakeGateGreen": false,
+		"productionLoadTestingAllowed": false,
+		"testDataMustBeSynthetic": true,
+		"secretsInArtifactsAllowed": false
+	}
+}

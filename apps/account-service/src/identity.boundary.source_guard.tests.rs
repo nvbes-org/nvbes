@@ -53,6 +53,7 @@ const SECURITY_CLOUD_CONTEXT_FILES: &[&str] = &[
 const AUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.auth.account_deletion.rs",
     "identity.domains.auth.audit.rs",
+    "identity.domains.auth.mfa.rs",
     "identity.domains.auth.mfa.policy.rs",
     "identity.domains.auth.password.db.rs",
     "identity.domains.auth.sessions.context.rs",
@@ -198,6 +199,22 @@ fn auth_workspace_context_reads_go_through_cloud_boundary() {
         violations.is_empty(),
         "Auth runtime helpers must read workspace context through the Cloud boundary, not Account SQL.\nViolations:\n{}",
         violations.join("\n")
+    );
+}
+
+#[test]
+fn workspace_membership_projection_casts_every_enum_parameter() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src")
+        .join("identity.cloud_boundary.workspace_projection.rs");
+    let source = fs::read_to_string(path).expect("workspace projection should be readable");
+    let normalized = normalize_sql_source(&source);
+
+    assert!(
+        normalized.contains(
+            "values ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5::membership_source)"
+        ),
+        "Account's compatibility projection must cast membership source explicitly"
     );
 }
 

@@ -10,7 +10,7 @@ mod seed;
 mod state_support;
 
 use seed::{cleanup, seed_service_client};
-use state_support::{basic_auth_header, db_supports_current_oauth_schema, test_pool, test_state};
+use state_support::{assert_current_oauth_schema, basic_auth_header, test_pool, test_state};
 
 #[test]
 fn machine_token_audit_metadata_records_grant_client_scope_audience_and_jti() {
@@ -31,10 +31,7 @@ fn machine_token_audit_metadata_records_grant_client_scope_audience_and_jti() {
 #[tokio::test]
 async fn client_credentials_token_introspection_exposes_service_account_context() {
     let pool = test_pool();
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
     let state = test_state(&pool).await;
     let (tenant_id, client_id, client_secret, principal_id, workspace_id, _) =
         seed_service_client(&pool).await;
@@ -90,10 +87,7 @@ async fn client_credentials_token_introspection_exposes_service_account_context(
 async fn client_credentials_records_last_used_and_machine_token_audit() {
     let pool = test_pool();
     let state = test_state(&pool).await;
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
     let (tenant_id, client_id, client_secret, principal_id, workspace_id, client_uuid) =
         seed_service_client(&pool).await;
 
@@ -158,10 +152,7 @@ async fn client_credentials_records_last_used_and_machine_token_audit() {
 async fn introspection_rejects_machine_token_after_client_revocation() {
     let pool = test_pool();
     let state = test_state(&pool).await;
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
     let (tenant_id, client_id, client_secret, _, _, client_uuid) = seed_service_client(&pool).await;
 
     let token = client_credentials_grant(
@@ -206,10 +197,7 @@ async fn introspection_rejects_machine_token_after_client_revocation() {
 #[tokio::test]
 async fn http_client_credentials_and_introspection_expose_service_account_context() {
     let pool = test_pool();
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
 
     let state = test_state(&pool).await;
     let (tenant_id, client_id, client_secret, principal_id, workspace_id, _) =

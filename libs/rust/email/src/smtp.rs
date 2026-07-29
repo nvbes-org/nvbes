@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use lettre::message::{Mailbox, MultiPart, SinglePart};
+use lettre::message::{
+    Mailbox, Message as LettreMessage, MultiPart, SinglePart,
+    header::{HeaderName, HeaderValue},
+};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use tracing::{debug, error};
@@ -43,52 +46,164 @@ impl SmtpEmailSender {
 #[async_trait]
 impl EmailSender for SmtpEmailSender {
     async fn send_message(&self, message: &EmailMessage) -> Result<SendResult, EmailError> {
-        let mut builder = Message::builder()
-            .from(mailbox(&message.from)?)
-            .subject(&message.subject);
+        let email = build_message(message)?;
 
-        for recipient in &message.to {
-            builder = builder.to(mailbox(recipient)?);
-        }
+        debug!(recipient_count = message.to.len(), "SMTP email: sending");
 
-        for (name, value) in &message.headers {
-            if name.eq_ignore_ascii_case("reply-to") {
-                let reply_to = EmailAddress {
-                    email: value.clone(),
-                    name: None,
-                };
-                builder = builder.reply_to(mailbox(&reply_to)?);
+        let response = match self.mailer.send(email).await {
+            Ok(response) => response,
+            Err(error) => {
+                let classified = EmailError::Smtp(error);
+                error!(
+                    error_code = classified.safe_code(),
+                    error_class = ?classified.failure_class(),
+                    "SMTP email: send failed"
+                );
+                return Err(classified);
             }
-        }
-
-        let email = match (&message.text_body, &message.html_body) {
-            (Some(text), Some(html)) => builder.multipart(
-                MultiPart::alternative()
-                    .singlepart(SinglePart::plain(text.clone()))
-                    .singlepart(SinglePart::html(html.clone())),
-            )?,
-            (Some(text), None) => builder.singlepart(SinglePart::plain(text.clone()))?,
-            (None, Some(html)) => builder.singlepart(SinglePart::html(html.clone()))?,
-            (None, None) => builder.singlepart(SinglePart::plain(String::new()))?,
         };
+        let provider_email_id = effective_message_id(message)
+            .unwrap_or_else(|| response.message().collect::<Vec<_>>().join(" "));
 
-        debug!(
-            to = ?message.to.iter().map(|address| &address.email).collect::<Vec<_>>(),
-            subject = %message.subject,
-            "SMTP email: sending"
-        );
-
-        let response = self.mailer.send(email).await.map_err(|error| {
-            error!(error = %error, "SMTP email: send failed");
-            error
-        })?;
-
-        Ok(SendResult {
-            provider_email_id: response.message().collect::<Vec<_>>().join(" "),
-        })
+        Ok(SendResult { provider_email_id })
     }
+}
+
+fn build_message(message: &EmailMessage) -> Result<LettreMessage, EmailError> {
+    let mut builder = Message::builder()
+        .from(mailbox(&message.from)?)
+        .subject(&message.subject);
+
+    if header_value(message, "message-id").is_none()
+        && let Some(message_id) = effective_message_id(message)
+    {
+        builder = builder.message_id(Some(message_id));
+    }
+
+    for recipient in &message.to {
+        builder = builder.to(mailbox(recipient)?);
+    }
+
+    for (name, value) in &message.headers {
+        if name.eq_ignore_ascii_case("reply-to") {
+            let reply_to = EmailAddress {
+                email: value.clone(),
+                name: None,
+            };
+            builder = builder.reply_to(mailbox(&reply_to)?);
+        } else if name.eq_ignore_ascii_case("message-id") {
+            builder = builder.message_id(Some(value.clone()));
+        } else if name.to_ascii_lowercase().starts_with("x-") {
+            let name = HeaderName::new_from_ascii(name.clone())
+                .map_err(|_| EmailError::Config("invalid custom email header name".to_string()))?;
+            builder = builder.raw_header(HeaderValue::new(name, value.clone()));
+        } else {
+            return Err(EmailError::Config(format!(
+                "unsupported email header: {name}"
+            )));
+        }
+    }
+
+    match (&message.text_body, &message.html_body) {
+        (Some(text), Some(html)) => Ok(builder.multipart(
+            MultiPart::alternative()
+                .singlepart(SinglePart::plain(text.clone()))
+                .singlepart(SinglePart::html(html.clone())),
+        )?),
+        (Some(text), None) => Ok(builder.singlepart(SinglePart::plain(text.clone()))?),
+        (None, Some(html)) => Ok(builder.singlepart(SinglePart::html(html.clone()))?),
+        (None, None) => Ok(builder.singlepart(SinglePart::plain(String::new()))?),
+    }
+}
+
+fn header_value<'a>(message: &'a EmailMessage, expected: &str) -> Option<&'a str> {
+    message
+        .headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(expected))
+        .map(|(_, value)| value.as_str())
+}
+
+fn effective_message_id(message: &EmailMessage) -> Option<String> {
+    header_value(message, "message-id")
+        .map(String::from)
+        .or_else(|| {
+            header_value(message, "x-nvbes-email-job-id")
+                .map(|job_id| format!("<account-job-{job_id}@worker.nvbes.fr>"))
+        })
 }
 
 fn mailbox(address: &EmailAddress) -> Result<Mailbox, EmailError> {
     Ok(Mailbox::new(address.name.clone(), address.email.parse()?))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::build_message;
+    use crate::{EmailAddress, EmailMessage};
+
+    fn message(headers: Vec<(String, String)>) -> EmailMessage {
+        EmailMessage {
+            from: EmailAddress {
+                email: "sender@example.test".to_string(),
+                name: Some("Sender".to_string()),
+            },
+            to: vec![EmailAddress {
+                email: "recipient@example.test".to_string(),
+                name: None,
+            }],
+            subject: "Delivery contract".to_string(),
+            text_body: Some("plain text".to_string()),
+            html_body: Some("<p>html</p>".to_string()),
+            headers,
+        }
+    }
+
+    #[test]
+    fn smtp_serializes_stable_message_and_job_identifiers() {
+        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@worker.nvbes.fr>";
+        let formatted = build_message(&message(vec![
+            ("Message-ID".to_string(), message_id.to_string()),
+            (
+                "X-Nvbes-Email-Job-Id".to_string(),
+                "00000000-0000-0000-0000-000000000001".to_string(),
+            ),
+        ]))
+        .expect("message should build")
+        .formatted();
+        let formatted = String::from_utf8(formatted).expect("message should be UTF-8");
+
+        assert!(formatted.contains(&format!("Message-ID: {message_id}\r\n")));
+        assert!(
+            formatted.contains("X-Nvbes-Email-Job-Id: 00000000-0000-0000-0000-000000000001\r\n")
+        );
+    }
+
+    #[test]
+    fn smtp_rejects_unapproved_standard_headers() {
+        let error = build_message(&message(vec![(
+            "Bcc".to_string(),
+            "hidden@example.test".to_string(),
+        )]))
+        .expect_err("protected headers must not be overridden");
+
+        assert_eq!(error.safe_code(), "email_configuration");
+    }
+
+    #[test]
+    fn smtp_custom_header_values_cannot_inject_a_second_header() {
+        let formatted = build_message(&message(vec![(
+            "X-Nvbes-Email-Job-Id".to_string(),
+            "job-id\r\nBcc: hidden@example.test".to_string(),
+        )]))
+        .expect("safe encoder should build the message")
+        .formatted();
+        let formatted = String::from_utf8(formatted).expect("message should be UTF-8");
+
+        assert!(!formatted.contains("\r\nBcc: hidden@example.test"));
+    }
+}
+
+#[cfg(test)]
+#[path = "smtp.protocol.tests.rs"]
+mod protocol_tests;

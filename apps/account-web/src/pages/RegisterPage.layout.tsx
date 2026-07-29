@@ -25,7 +25,9 @@ export function RegisterPageShell({
       <div className="w-full max-w-sm animate-fade-slide-up [animation-delay:150ms]">
         <Card>
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
+            <CardTitle role="heading" aria-level={1}>
+              {title}
+            </CardTitle>
             <CardDescription>{description}</CardDescription>
           </CardHeader>
 

@@ -63,6 +63,10 @@ pub async fn start_discoverable_login_authentication(
     Ok((challenge_id, super::shape_authentication_options(options)))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "discoverable WebAuthn completion requires explicit stores, policy, ceremony state, credential, and audit signals"
+)]
 pub async fn finish_discoverable_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

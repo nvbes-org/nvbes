@@ -65,7 +65,9 @@ export default function ForgotPasswordPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Mot de passe oublie</CardTitle>
+            <CardTitle role="heading" aria-level={1}>
+              Mot de passe oublie
+            </CardTitle>
             <CardDescription>
               Entrez votre adresse email pour recevoir un lien de reinitialisation.
             </CardDescription>

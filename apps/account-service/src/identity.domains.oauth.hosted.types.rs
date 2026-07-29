@@ -41,7 +41,7 @@ pub enum HostedLoginDecision {
     },
     ConsentRequired {
         state_id: String,
-        client: HostedClientDisplay,
+        client: Box<HostedClientDisplay>,
         scope: String,
     },
     Redirect {

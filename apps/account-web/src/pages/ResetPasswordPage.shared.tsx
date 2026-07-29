@@ -40,7 +40,9 @@ export function ResetPasswordPageCard({
 
       <Card>
         <CardHeader>
-          <CardTitle>Nouveau mot de passe</CardTitle>
+          <CardTitle role="heading" aria-level={1}>
+            Nouveau mot de passe
+          </CardTitle>
           <CardDescription>Choisissez un nouveau mot de passe pour votre compte.</CardDescription>
         </CardHeader>
         <CardContent>

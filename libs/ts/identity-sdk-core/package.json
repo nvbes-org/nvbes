@@ -9,9 +9,11 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "check": "node --test openapi.contract.test.mjs",
     "generate:ts": "openapi-typescript openapi.json -o src/types.gen.ts",
     "generate:rust": "openapi-generator-cli generate -i openapi.json -g rust -o ../identity-sdk-backend",
-    "generate:go": "openapi-generator-cli generate -i openapi.json -g go -o ../../go/identity-sdk"
+    "generate:go": "openapi-generator-cli generate -i openapi.json -g go -o ../../go/identity-sdk",
+    "test": "node --test openapi.contract.test.mjs"
   },
   "devDependencies": {
     "openapi-typescript": "^7.0.0"

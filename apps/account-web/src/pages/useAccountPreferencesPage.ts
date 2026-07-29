@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { z } from 'zod';
+import { accountQueryKeys } from '@/account.queries';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { identityHttpClient } from '../identity.http';
 
 export type Theme = 'system' | 'light' | 'dark';
@@ -35,11 +37,19 @@ function fetchPreferences() {
   });
 }
 
+export function getAccountPreferencesQueryKey(
+  authuser: string,
+): readonly ['identity', 'account', string, 'preferences'] {
+  return [...accountQueryKeys.byAuthuser(authuser), 'preferences'] as const;
+}
+
 export function useAccountPreferencesPage() {
+  const authuser = useAuthuser();
   const queryClient = useQueryClient();
+  const preferencesQueryKey = getAccountPreferencesQueryKey(authuser);
 
   const { data } = useSuspenseQuery({
-    queryKey: ['preferences'],
+    queryKey: preferencesQueryKey,
     queryFn: fetchPreferences,
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -57,7 +67,7 @@ export function useAccountPreferencesPage() {
         },
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['preferences'] });
+      void queryClient.invalidateQueries({ exact: true, queryKey: preferencesQueryKey });
     },
   });
 

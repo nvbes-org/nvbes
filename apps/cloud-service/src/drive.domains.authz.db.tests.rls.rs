@@ -3,6 +3,31 @@ use uuid::Uuid;
 use super::support::*;
 
 const SECURITY_MIGRATION: &str = include_str!("../migrations/0019_storage_security_hardening.sql");
+const CLOUD_FORCED_RLS_TABLES: [&str; 23] = [
+    "api_key_nonces",
+    "api_keys",
+    "api_request_logs",
+    "audit_events",
+    "billing_entitlement_snapshots",
+    "organization_memberships",
+    "organizations",
+    "privacy_requests",
+    "quota_usage",
+    "sessions",
+    "share_links",
+    "storage_object_key_envelopes",
+    "storage_objects",
+    "tenant_memberships",
+    "tenants",
+    "upload_parts",
+    "upload_sessions",
+    "usage_events",
+    "workspace_invitations",
+    "workspace_members",
+    "workspace_memberships",
+    "workspace_policies",
+    "workspaces",
+];
 
 #[test]
 fn migration_defines_non_owner_roles_and_forced_rls() {
@@ -85,30 +110,36 @@ async fn application_role_cannot_read_or_write_another_workspace() {
 }
 
 #[tokio::test]
-async fn tenant_tables_force_rls_even_for_their_owner() {
+async fn cloud_tenant_tables_force_rls_even_in_a_shared_schema() {
     let pool = test_pool();
     if !application_role_exists(&pool).await {
         eprintln!("skipping test: current RLS migration is not installed");
         return;
     }
 
-    let forced_tables = sqlx::query_scalar::<_, String>(
+    let missing_or_unforced_tables = sqlx::query_scalar::<_, String>(
         r#"
-        SELECT relname::text
-        FROM pg_class
-        WHERE relnamespace = 'public'::regnamespace
-          AND relrowsecurity
-          AND NOT relforcerowsecurity
-        ORDER BY relname
+        SELECT expected.table_name
+        FROM unnest($1::text[]) AS expected(table_name)
+        LEFT JOIN pg_class AS class
+          ON class.relname = expected.table_name
+         AND class.relnamespace = 'public'::regnamespace
+         AND class.relkind IN ('r', 'p')
+        WHERE class.oid IS NULL
+           OR NOT class.relrowsecurity
+           OR NOT class.relforcerowsecurity
+        ORDER BY expected.table_name
         "#,
     )
+    .bind(CLOUD_FORCED_RLS_TABLES.as_slice())
     .fetch_all(&pool)
     .await
     .expect("RLS metadata query should succeed");
 
     assert!(
-        forced_tables.is_empty(),
-        "all RLS tables must use FORCE ROW LEVEL SECURITY: {forced_tables:?}"
+        missing_or_unforced_tables.is_empty(),
+        "Cloud contract tables must exist and use FORCE ROW LEVEL SECURITY: \
+         {missing_or_unforced_tables:?}"
     );
 }
 

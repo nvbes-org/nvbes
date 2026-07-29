@@ -6,8 +6,12 @@ pub mod service;
 pub mod service_status;
 #[path = "drive.grpc.workspace.rs"]
 pub mod service_workspace;
+#[path = "drive.grpc.workspace.context.rs"]
+pub mod service_workspace_context;
 #[path = "drive.grpc.workspace.invitations.rs"]
 pub mod service_workspace_invitations;
+#[path = "drive.grpc.workspace.members.rs"]
+pub mod service_workspace_members;
 #[path = "drive.grpc.workspace.persistence.rs"]
 pub mod service_workspace_persistence;
 #[path = "drive.grpc.workspace.principals.rs"]

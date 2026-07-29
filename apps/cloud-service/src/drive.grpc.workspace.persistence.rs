@@ -4,8 +4,9 @@ use tonic::Status;
 use uuid::Uuid;
 
 use crate::grpc::{
-    pb::nvbes::{cloud::v1 as cloud, platform::v1},
+    pb::nvbes::cloud::v1 as cloud,
     service_status::{optional_uuid, sql_status},
+    service_workspace_context::ValidatedRequestContext,
     service_workspace_rows::{WorkspaceMemberRow, WorkspaceRow},
 };
 
@@ -92,7 +93,7 @@ pub(crate) async fn upsert_membership(
     sqlx::query(
         r#"
         INSERT INTO workspace_memberships (workspace_id, user_id, role, status, source)
-        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5)
+        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5::membership_source)
         ON CONFLICT (workspace_id, user_id)
         DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status, source = EXCLUDED.source, updated_at = NOW()
         "#,
@@ -121,7 +122,7 @@ pub(crate) async fn update_membership(
         UPDATE workspace_memberships
         SET role = COALESCE($3::workspace_member_role, role),
             status = COALESCE($4::workspace_member_status, status),
-            source = COALESCE($5, source),
+            source = COALESCE($5::membership_source, source),
             updated_at = NOW()
         WHERE workspace_id = $1 AND user_id = $2
         "#,
@@ -142,13 +143,13 @@ pub(crate) async fn update_membership(
 }
 
 pub(crate) async fn fetch_workspace(
-    db: &sqlx::PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     workspace_id: Uuid,
 ) -> Result<cloud::Workspace, Status> {
     let query = workspace_select("WHERE w.id = $1 AND w.deleted_at IS NULL");
     sqlx::query_as::<_, WorkspaceRow>(&query)
         .bind(workspace_id)
-        .fetch_optional(db)
+        .fetch_optional(&mut **tx)
         .await
         .map_err(sql_status)?
         .ok_or_else(|| Status::not_found("cloud workspace was not found"))
@@ -156,20 +157,21 @@ pub(crate) async fn fetch_workspace(
 }
 
 pub(crate) async fn fetch_member(
-    db: &sqlx::PgPool,
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     workspace_id: Uuid,
     principal_id: Uuid,
 ) -> Result<cloud::WorkspaceMember, Status> {
     sqlx::query_as::<_, WorkspaceMemberRow>(
         r#"
-        SELECT workspace_id, user_id AS principal_id, role::text AS role, status::text AS status, source, created_at AS joined_at, updated_at
+        SELECT workspace_id, user_id AS principal_id, role::text AS role, status::text AS status,
+               source::text AS source, created_at AS joined_at, updated_at
         FROM workspace_memberships
         WHERE workspace_id = $1 AND user_id = $2
         "#,
     )
     .bind(workspace_id)
     .bind(principal_id)
-    .fetch_optional(db)
+    .fetch_optional(&mut **tx)
     .await
     .map_err(sql_status)?
     .ok_or_else(|| Status::not_found("cloud workspace member was not found"))
@@ -206,35 +208,17 @@ pub(crate) fn workspace_select(filter: &str) -> String {
     )
 }
 
-pub(crate) fn request_tenant_id(value: &str, context: &v1::RequestContext) -> Result<Uuid, Status> {
+pub(crate) fn request_tenant_id(
+    value: &str,
+    context: ValidatedRequestContext,
+) -> Result<Uuid, Status> {
     let requested = optional_uuid(value, "tenant_id")?;
-    let context_tenant_id = context.tenant.as_ref().and_then(|tenant| {
-        optional_uuid(&tenant.tenant_id, "context.tenant_id")
-            .ok()
-            .flatten()
-    });
-    match (requested, context_tenant_id) {
+    match (requested, context.tenant_id) {
         (Some(requested), Some(context)) if requested != context => Err(Status::permission_denied(
             "request tenant does not match context tenant",
         )),
         (Some(requested), _) => Ok(requested),
         (None, Some(context)) => Ok(context),
         (None, None) => Err(Status::invalid_argument("tenant_id is required")),
-    }
-}
-
-pub(crate) fn ensure_context_workspace(
-    context: &v1::RequestContext,
-    workspace_id: Uuid,
-) -> Result<(), Status> {
-    let Some(tenant) = context.tenant.as_ref() else {
-        return Ok(());
-    };
-    if tenant.workspace_id.trim().is_empty() || tenant.workspace_id == workspace_id.to_string() {
-        Ok(())
-    } else {
-        Err(Status::permission_denied(
-            "request context workspace does not match the Cloud workspace",
-        ))
     }
 }

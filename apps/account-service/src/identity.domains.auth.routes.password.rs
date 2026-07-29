@@ -8,7 +8,13 @@ use crate::http::middleware::jwt::{
     account_access::{self, AccountAccess, SECURITY_WRITE_SCOPE},
 };
 use crate::http::request::{client_ip, user_agent};
-use axum::{Json, Router, extract::Extension, extract::State, http::HeaderMap, routing::post};
+use axum::{
+    Json, Router,
+    extract::{Extension, State},
+    http::{HeaderMap, StatusCode, header::SET_COOKIE},
+    response::{IntoResponse, Response},
+    routing::post,
+};
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -144,7 +150,7 @@ pub(crate) async fn reset_password(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(request): Json<ResetPasswordRequest>,
-) -> Result<Json<crate::domains::auth::types::ResetPasswordResult>, AppError> {
+) -> Result<Response, AppError> {
     exposed_credentials::check_new_password(&headers)?;
 
     nvbes_core::limiter::check_dual_rate_limit(
@@ -171,5 +177,69 @@ pub(crate) async fn reset_password(
     )
     .await?;
 
-    Ok(Json(result))
+    reset_password_response(result, state.config.environment != "development")
+}
+
+fn reset_password_response(
+    result: crate::domains::auth::types::ResetPasswordResult,
+    secure_cookie: bool,
+) -> Result<Response, AppError> {
+    let mut response = (StatusCode::OK, Json(result)).into_response();
+    for header in [
+        crate::http::cookies::auth_cookie(
+            &crate::http::cookies::auth_cookie_name("session", secure_cookie),
+            "",
+            0,
+            secure_cookie,
+        )?,
+        crate::http::cookies::csrf_cookie(
+            &crate::http::cookies::auth_cookie_name("csrf_token", secure_cookie),
+            "",
+            0,
+            secure_cookie,
+        )?,
+        crate::http::cookies::auth_cookie(
+            &crate::http::cookies::auth_cookie_name("device", secure_cookie),
+            "",
+            0,
+            secure_cookie,
+        )?,
+    ] {
+        response.headers_mut().append(SET_COOKIE, header);
+    }
+    Ok(response)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reset_password_response;
+    use axum::http::header::SET_COOKIE;
+
+    #[test]
+    fn password_reset_response_expires_revoked_browser_credentials() {
+        let response = reset_password_response(
+            crate::domains::auth::types::ResetPasswordResult { success: true },
+            true,
+        )
+        .expect("password reset response should be valid");
+        let cookies = response
+            .headers()
+            .get_all(SET_COOKIE)
+            .iter()
+            .map(|value| value.to_str().expect("cookie should be text"))
+            .collect::<Vec<_>>();
+
+        assert_eq!(cookies.len(), 3);
+        for name in ["__Host-session", "__Host-csrf_token", "__Host-device"] {
+            let cookie = cookies
+                .iter()
+                .find(|cookie| cookie.starts_with(&format!("{name}=;")))
+                .unwrap_or_else(|| panic!("missing expiration cookie for {name}"));
+            assert!(cookie.contains("Max-Age=0"));
+            assert!(cookie.contains("SameSite=Strict"));
+            assert!(cookie.contains("Path=/"));
+            assert!(cookie.contains("Secure"));
+            assert!(!cookie.contains("Domain="));
+        }
+    }
 }

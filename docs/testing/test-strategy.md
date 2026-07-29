@@ -138,7 +138,8 @@ Scripts executables:
 - `pnpm test:smoke`: smoke tests contre `NVBES_WEB_BASE_URL` et `NVBES_API_BASE_URL`.
 - `pnpm test:smoke:staging`: wrapper staging pour smoke + E2E critiques avec les URLs staging.
 - `pnpm release:gate:staging`: gate complet avant ou apres deploiement staging selon pipeline, incluant build, preflight Stripe, smoke et E2E critiques.
-- `pnpm release:gate:production`: gate de promotion production avec approval explicite.
+- `pnpm release:gate:production`: gate post-déploiement avec approval explicite,
+  preuves d'acceptation signées et smoke production obligatoire.
 
 Avant staging:
 

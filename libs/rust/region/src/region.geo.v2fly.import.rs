@@ -136,10 +136,7 @@ async fn insert_import_rows_tx(
     ranges: &[V2flyGeoIpRange],
 ) -> Result<(), sqlx::Error> {
     for batch in ranges.chunks(IMPORT_BATCH_SIZE) {
-        let relation_keys = batch
-            .iter()
-            .map(|range| relation_key(range))
-            .collect::<Vec<_>>();
+        let relation_keys = batch.iter().map(relation_key).collect::<Vec<_>>();
         let country_codes = batch
             .iter()
             .map(|range| range.country_code.clone())

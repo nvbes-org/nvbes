@@ -28,6 +28,18 @@ pub struct AvatarUploadResult {
     pub object_key: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/auth/me/avatar",
+    tag = "auth",
+    request_body = AvatarUploadInput,
+    responses(
+        (status = 200, description = "Profile avatar upload prepared", body = AvatarUploadResult),
+        (status = 400, description = "Unsupported avatar type or size", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 500, description = "Storage error", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
 pub(crate) async fn me_avatar_upload(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -65,6 +77,17 @@ pub(crate) async fn me_avatar_upload(
     }))
 }
 
+#[utoipa::path(
+    get,
+    path = "/auth/me/avatar",
+    tag = "auth",
+    responses(
+        (status = 307, description = "Temporary redirect to the profile avatar"),
+        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 404, description = "Profile avatar not found"),
+        (status = 500, description = "Storage error", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
 pub(crate) async fn me_avatar(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -84,6 +107,16 @@ pub(crate) async fn me_avatar(
         .map_err(|_| AppError::internal("response_error", "Failed to serve profile photo."))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/auth/me/avatar",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Profile avatar deleted"),
+        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 500, description = "Storage error", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
 pub(crate) async fn me_avatar_delete(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,

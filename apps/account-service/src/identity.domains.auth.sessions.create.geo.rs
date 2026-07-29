@@ -9,6 +9,10 @@ use uuid::Uuid;
 
 use crate::domains::auth::risk;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "risk scoring mutates the score, decision, and evidence document while keeping geo dependencies and request signals explicit"
+)]
 pub(super) async fn record_login_geo_signal(
     db: &PgPool,
     config: &AppConfig,

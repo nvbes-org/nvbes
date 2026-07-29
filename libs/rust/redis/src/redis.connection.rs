@@ -2,6 +2,7 @@ use bb8_redis::{RedisConnectionManager, bb8};
 use std::future::Future;
 use std::time::Duration;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::config::RedisConfig;
 
@@ -19,6 +20,8 @@ pub enum RedisError {
     OperationTimeout(&'static str),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("worker queue lease lost for {queue}/{job_id}")]
+    JobLeaseLost { queue: String, job_id: Uuid },
 }
 
 impl RedisError {
@@ -30,6 +33,7 @@ impl RedisError {
             Self::Pool(bb8::RunError::User(error)) => redis_error_is_transient(error),
             Self::OperationTimeout(_) => true,
             Self::Json(_) => false,
+            Self::JobLeaseLost { .. } => false,
         }
     }
 }
@@ -147,6 +151,16 @@ mod tests {
         let error = serde_json::from_str::<serde_json::Value>("not-json").unwrap_err();
 
         assert!(!RedisError::Json(error).is_transient());
+    }
+
+    #[test]
+    fn lost_worker_queue_lease_is_not_transient() {
+        let error = RedisError::JobLeaseLost {
+            queue: "email.send".to_string(),
+            job_id: uuid::Uuid::new_v4(),
+        };
+
+        assert!(!error.is_transient());
     }
 
     #[test]

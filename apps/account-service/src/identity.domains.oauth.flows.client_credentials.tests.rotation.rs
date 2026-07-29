@@ -3,10 +3,7 @@ use super::*;
 #[tokio::test]
 async fn client_credentials_grant_accepts_rotated_primary_secret() {
     let pool = test_pool();
-    if !db_supports_current_oauth_schema(&pool).await {
-        eprintln!("skipping test: local database is missing recent oauth schema migrations");
-        return;
-    }
+    assert_current_oauth_schema(&pool).await;
     let state = test_state(&pool).await;
     let (tenant_id, client_id, client_secret, _principal_id, _workspace_id, _client_uuid) =
         seed_service_client(&pool).await;

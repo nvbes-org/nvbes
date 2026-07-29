@@ -24,6 +24,11 @@ export function readCurrentAuthuser(): string | undefined {
     return undefined;
   }
 
+  const fromAccountPath = window.location.pathname.match(/^\/account\/([^/]+)(?:\/|$)/u)?.[1];
+  if (isAuthuser(fromAccountPath)) {
+    return fromAccountPath;
+  }
+
   const fromSearch = new URLSearchParams(window.location.search).get('authuser');
   if (isAuthuser(fromSearch)) {
     return fromSearch;

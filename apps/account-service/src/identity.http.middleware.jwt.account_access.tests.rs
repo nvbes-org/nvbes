@@ -110,7 +110,7 @@ fn scoped_oauth_token_produces_current_policy_check() {
 
 fn oauth_auth_context(client_id: Option<&str>, audience: &str, scope: &str) -> AuthContext {
     auth_context(
-        CredentialSource::OAuthBearer(OAuthBearerCredential {
+        CredentialSource::OAuthBearer(Box::new(OAuthBearerCredential {
             client_id: client_id.map(str::to_string),
             audience: audience.to_string(),
             tenant_id: Some(Uuid::nil()),
@@ -122,7 +122,7 @@ fn oauth_auth_context(client_id: Option<&str>, audience: &str, scope: &str) -> A
             auth_time: None,
             cnf_jkt: None,
             cnf_x5t_s256: None,
-        }),
+        })),
         scope,
     )
 }

@@ -65,7 +65,7 @@ pub async fn run_once(db: &PgPool) -> anyhow::Result<()> {
     let snapshot = load_chain_snapshot(db).await?;
     let snapshot_bytes = serde_json::to_vec(&snapshot)?;
     let digest = Sha256::digest(&snapshot_bytes);
-    let digest_hex = hex::encode(&digest);
+    let digest_hex = hex::encode(digest);
 
     if anchor_exists(db, &digest_hex).await? {
         tracing::info!(

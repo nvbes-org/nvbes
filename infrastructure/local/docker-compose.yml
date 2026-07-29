@@ -193,16 +193,24 @@ services:
         condition: service_started
 
   k6-identity-smoke:
-    image: grafana/k6:latest
+    image: grafana/k6:2.0.0@sha256:a33a0cfdc4d2483d6b7a3a22e726a499ff2831a671a49239104cd34a9937523c
     container_name: nvbes-k6-identity-smoke
     profiles: [loadtest]
-    command: ["run", "-o", "experimental-prometheus-rw", "/scripts/identity-smoke.js"]
+    command:
+      [
+        "run",
+        "-o",
+        "experimental-prometheus-rw",
+        "/workspace/tools/load-tests/account/account-api.js",
+      ]
     environment:
       K6_PROMETHEUS_RW_SERVER_URL: http://mimir:9009/api/v1/push
       K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99),min,max
+      K6_PROFILE: smoke
+      NVBES_TARGET_ENV: local
       ACCOUNT_SERVICE_BASE_URL: ${ACCOUNT_SERVICE_BASE_URL:-http://host.docker.internal:4000}
     volumes:
-      - ./observability/k6:/scripts:ro
+      - ../..:/workspace:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

@@ -10,6 +10,9 @@ pub mod database;
 #[cfg(test)]
 #[path = "identity.database.migrations.tests.rs"]
 mod database_migrations_tests;
+#[cfg(test)]
+#[path = "identity.database.rls.tests.rs"]
+mod database_rls_tests;
 #[path = "identity.developer.client.rs"]
 pub mod developer_client;
 #[path = "identity.domains.mod.rs"]

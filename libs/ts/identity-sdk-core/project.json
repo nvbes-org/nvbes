@@ -4,7 +4,21 @@
   "root": "libs/ts/identity-sdk-core",
   "sourceRoot": "libs/ts/identity-sdk-core/src",
   "tags": ["scope:oss", "type:lib", "domain:identity", "layer:sdk"],
+  "implicitDependencies": ["account-service"],
   "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "{projectRoot}/openapi.json",
+        "{projectRoot}/openapi.contract.test.mjs",
+        "{projectRoot}/src/types.gen.ts",
+        "{workspaceRoot}/apps/account-service/openapi.json"
+      ],
+      "options": {
+        "command": "pnpm --dir libs/ts/identity-sdk-core check"
+      }
+    },
     "generate:ts": {
       "executor": "nx:run-commands",
       "options": {
@@ -15,6 +29,19 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm --dir libs/ts/identity-sdk-core generate:rust"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "{projectRoot}/openapi.json",
+        "{projectRoot}/openapi.contract.test.mjs",
+        "{projectRoot}/src/types.gen.ts",
+        "{workspaceRoot}/apps/account-service/openapi.json"
+      ],
+      "options": {
+        "command": "pnpm --dir libs/ts/identity-sdk-core test"
       }
     }
   }

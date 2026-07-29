@@ -19,6 +19,10 @@ pub(super) fn job_key(queue: &str, job_id: uuid::Uuid) -> String {
     queue_key(queue, &format!("job:{job_id}"))
 }
 
+pub(super) fn lease_key(queue: &str, job_id: uuid::Uuid) -> String {
+    queue_key(queue, &format!("lease:{job_id}"))
+}
+
 pub(super) fn dedupe_key(queue: &str, job_type: &str, idempotency_key: &str) -> String {
     queue_key(queue, &format!("dedupe:{job_type}:{idempotency_key}"))
 }

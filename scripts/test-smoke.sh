@@ -25,9 +25,12 @@ assert_contains "$health_body" "\"status\":\"ok\""
 log_step "request id propagation"
 assert_header_contains "$API_BASE_URL/health" "x-request-id"
 
-log_step "metrics endpoint"
-metrics_body="$(http_body "$API_BASE_URL/metrics")"
-assert_contains "$metrics_body" "http_requests_total"
+log_step "metrics endpoint is not public"
+metrics_status="$(http_status "$API_BASE_URL/metrics")"
+case "$metrics_status" in
+  401 | 403) ;;
+  *) fail "expected protected metrics endpoint to return 401 or 403, got $metrics_status" ;;
+esac
 
 log_step "public share route is mounted"
 assert_http_not_5xx "$API_BASE_URL/public/shares/smoke-invalid-token"

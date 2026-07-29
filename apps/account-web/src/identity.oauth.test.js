@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-const postMock = vi.fn();
-const getMock = vi.fn();
+const { getMock, postMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  postMock: vi.fn(),
+}));
 
 vi.mock('./identity.http', () => ({
   identityHttpClient: {
@@ -17,6 +19,7 @@ function installTestWindow(search = '') {
     configurable: true,
     value: {
       location: {
+        assign: vi.fn(),
         origin: 'http://localhost:3001',
         search,
       },
@@ -25,7 +28,6 @@ function installTestWindow(search = '') {
         setItem: vi.fn(),
         removeItem: vi.fn(),
       },
-      assign: vi.fn(),
     },
     writable: true,
   });
@@ -37,7 +39,7 @@ afterEach(() => {
 });
 
 describe('authorizeIdentitySession', () => {
-  it('does not send an Authorization bearer header for browser oauth approval', async () => {
+  it('never sends a stale bearer header for browser oauth approval', async () => {
     installTestWindow();
     postMock.mockResolvedValue({
       request_uri: 'urn:ietf:params:oauth:request_uri:gxpar_test',
@@ -81,5 +83,11 @@ describe('authorizeIdentitySession', () => {
         }),
       }),
     );
+
+    for (const options of [postMock.mock.calls[0][3], getMock.mock.calls[0][2]]) {
+      expect(Object.keys(options.headers).map((name) => name.toLowerCase())).not.toContain(
+        'authorization',
+      );
+    }
   });
 });

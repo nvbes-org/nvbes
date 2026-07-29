@@ -49,6 +49,7 @@ async fn test_config(pool: &PgPool) -> AppState {
 
     crate::test_support::ensure_test_redis().await;
     crate::test_support::ensure_test_database(pool).await;
+    crate::test_support::cloud_mock::ensure_cloud_mock(pool);
 
     crate::app::AppState::bootstrap(&config, pool.clone())
         .await
@@ -138,12 +139,60 @@ async fn response_json(response: Response) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("response body should be valid json")
 }
 
+fn session_id_from_body(body: &serde_json::Value) -> Uuid {
+    Uuid::parse_str(
+        body["session"]["id"]
+            .as_str()
+            .expect("login response should include a session id"),
+    )
+    .expect("login response session id should be a UUID")
+}
+
 async fn cleanup_tenant(pool: &PgPool, tenant_id: Uuid) {
     sqlx::query("DELETE FROM tenants WHERE id = $1")
         .bind(tenant_id)
         .execute(pool)
         .await
         .ok();
+}
+
+#[tokio::test]
+async fn challenge_pwd_allows_a_normal_first_device_without_an_mfa_factor() {
+    let pool = test_pool();
+    let state = test_config(&pool).await;
+    let email = format!("login-first-device-{}@example.com", Uuid::new_v4());
+    let password = "Sup3rS3cret!";
+    let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
+    let state_token = create_state(
+        &state.redis,
+        Some(principal_id),
+        &email,
+        "pwd",
+        None,
+        Vec::new(),
+    )
+    .await
+    .expect("auth state should be created");
+
+    let response = challenge_pwd(
+        State(state),
+        Query(LoginQuery { authuser: None }),
+        HeaderMap::new(),
+        Json(PwdRequest {
+            state_token,
+            password: password.to_string(),
+        }),
+    )
+    .await
+    .expect("normal first-device authentication should succeed");
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response_json(response).await;
+    assert_eq!(
+        body["user"]["id"],
+        serde_json::Value::String(principal_id.to_string())
+    );
+    cleanup_tenant(&pool, tenant_id).await;
 }
 
 #[tokio::test]
@@ -228,7 +277,9 @@ async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
     assert_eq!(response.status(), StatusCode::OK);
     assert!(response.headers().get(SET_COOKIE).is_some());
 
-    let session = nvbes_redis::session::get_session(&state.redis, &principal_id.to_string())
+    let body = response_json(response).await;
+    let session_id = session_id_from_body(&body);
+    let session = nvbes_redis::session::get_session(&state.redis, &session_id.to_string())
         .await
         .expect("redis session lookup should succeed")
         .expect("session should exist");
@@ -273,7 +324,9 @@ async fn challenge_pwd_preserves_verified_webauthn_and_creates_aal2_session() {
     assert_eq!(response.status(), StatusCode::OK);
     assert!(response.headers().get(SET_COOKIE).is_some());
 
-    let session = nvbes_redis::session::get_session(&state.redis, &principal_id.to_string())
+    let body = response_json(response).await;
+    let session_id = session_id_from_body(&body);
+    let session = nvbes_redis::session::get_session(&state.redis, &session_id.to_string())
         .await
         .expect("redis session lookup should succeed")
         .expect("session should exist");

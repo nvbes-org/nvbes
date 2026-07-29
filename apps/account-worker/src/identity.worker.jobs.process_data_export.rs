@@ -1,16 +1,20 @@
-use anyhow::Context;
 use nvbes_product_account::{
     auth::{
         data_export::{build_account_export, store_account_export},
         users::fetch_user_record,
     },
-    email::db::record_email_sent_event_tx,
+    email::db::{completed_email_delivery, ensure_email_delivery},
 };
+use nvbes_redis::worker_queue::QueuedJob;
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::email_from_address;
+use super::{
+    email_delivery::{deliver_email, deterministic_message_id},
+    email_from_address,
+};
 use crate::app::AppState;
+use crate::worker::job_failure::JobExecutionError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DataExportJobPayload {
@@ -18,32 +22,52 @@ struct DataExportJobPayload {
     email: String,
 }
 
-pub(super) async fn process_data_export(state: &AppState, payload: &Value) -> anyhow::Result<()> {
-    let payload = parse_data_export_payload(payload)?;
+pub(super) async fn process_data_export(
+    state: &AppState,
+    job: &QueuedJob,
+) -> Result<bool, JobExecutionError> {
+    let payload = parse_data_export_payload(&job.payload)?;
+    ensure_email_delivery(
+        &state.db,
+        job.id,
+        "data_export",
+        &payload.email,
+        &deterministic_message_id(job.id),
+    )
+    .await
+    .map_err(|error| JobExecutionError::from_account(&error))?;
+    if completed_email_delivery(&state.db, job.id)
+        .await
+        .map_err(|error| JobExecutionError::from_account(&error))?
+        .is_some()
+    {
+        return Ok(true);
+    }
 
     let user = fetch_user_record(&state.db, payload.user_id)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to fetch user: {e:?}"))?;
+        .map_err(|error| JobExecutionError::from_account(&error))?;
 
     let export = build_account_export(&state.db, payload.user_id)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to build data export: {e:?}"))?;
+        .map_err(|error| JobExecutionError::from_account(&error))?;
     store_account_export(&state.redis, payload.user_id, &export)
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to store data export: {e:?}"))?;
+        .map_err(|error| JobExecutionError::from_account(&error))?;
 
     let html_body = format!(
         "<p>Bonjour {},</p><p>Votre export de donnees personnelles est pret. Connectez-vous a votre compte nvbes et relancez le telechargement depuis la page de confidentialite. Le fichier expire automatiquement sous 24 heures.</p><p>L'equipe nvbes</p>",
         user.display_name
     );
 
-    let msg = nvbes_email::EmailMessage {
+    let subject = "Export de vos donnees - nvbes";
+    let message = nvbes_email::EmailMessage {
         from: email_from_address(&state.config)?,
         to: vec![nvbes_email::EmailAddress {
             email: payload.email.clone(),
             name: Some(user.display_name.clone()),
         }],
-        subject: "Export de vos donnees - nvbes".to_string(),
+        subject: subject.to_string(),
         html_body: Some(html_body),
         text_body: Some(format!(
             "Bonjour {}, votre export de donnees personnelles est pret. Connectez-vous a votre compte nvbes et relancez le telechargement depuis la page de confidentialite. Le fichier expire automatiquement sous 24 heures.",
@@ -51,38 +75,46 @@ pub(super) async fn process_data_export(state: &AppState, payload: &Value) -> an
         )),
         headers: vec![("Reply-To".to_string(), payload.email.clone())],
     };
-
-    let result = state
-        .email
-        .send_message(&msg)
-        .await
-        .context("Failed to send export email")?;
-
-    let mut tx = state.db.begin().await?;
-    record_email_sent_event_tx(
-        &mut tx,
+    let outcome = deliver_email(
+        &state.db,
+        state.email.as_ref(),
+        job.id,
+        "data_export",
         &payload.email,
-        &result.provider_email_id,
-        "Export de vos donnees - nvbes",
+        subject,
+        message,
     )
-    .await
-    .map_err(|e| anyhow::anyhow!("Failed to record sent event: {e:?}"))?;
-    tx.commit().await?;
+    .await?;
 
-    Ok(())
+    Ok(outcome.deduplicated)
 }
 
-fn parse_data_export_payload(payload: &Value) -> anyhow::Result<DataExportJobPayload> {
+fn parse_data_export_payload(payload: &Value) -> Result<DataExportJobPayload, JobExecutionError> {
     let user_id = payload
         .get("user_id")
         .and_then(Value::as_str)
-        .ok_or_else(|| anyhow::anyhow!("Missing user_id"))?
+        .ok_or_else(|| {
+            JobExecutionError::permanent(
+                "data_export_user_id_missing",
+                "Data export job is missing the user identifier",
+            )
+        })?
         .parse()
-        .map_err(|e| anyhow::anyhow!("Invalid user_id: {e}"))?;
+        .map_err(|_| {
+            JobExecutionError::permanent(
+                "data_export_user_id_invalid",
+                "Data export job user identifier is invalid",
+            )
+        })?;
     let email = payload
         .get("email")
         .and_then(Value::as_str)
-        .ok_or_else(|| anyhow::anyhow!("Missing email"))
+        .ok_or_else(|| {
+            JobExecutionError::permanent(
+                "data_export_email_missing",
+                "Data export job is missing the recipient",
+            )
+        })
         .map(String::from)?;
 
     Ok(DataExportJobPayload { user_id, email })
@@ -114,7 +146,7 @@ mod tests {
         }))
         .expect_err("missing user_id should fail");
 
-        assert!(error.to_string().contains("Missing user_id"));
+        assert_eq!(error.code(), "data_export_user_id_missing");
     }
 
     #[test]
@@ -125,6 +157,6 @@ mod tests {
         }))
         .expect_err("invalid user_id should fail");
 
-        assert!(error.to_string().contains("Invalid user_id"));
+        assert_eq!(error.code(), "data_export_user_id_invalid");
     }
 }

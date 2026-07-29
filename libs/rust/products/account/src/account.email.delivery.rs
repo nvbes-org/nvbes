@@ -42,6 +42,24 @@ pub fn build_email_sender(config: &AppConfig) -> AccountResult<Arc<dyn nvbes_ema
             tracing::info!("Email sender: Mock (development mode)");
             Ok(Arc::new(nvbes_email::MockEmailSender::new()))
         }
+        "test-capture" => {
+            if config.environment != "development" {
+                return Err(AccountError::internal(
+                    "email_test_capture_forbidden",
+                    "Test email capture is forbidden outside development.",
+                ));
+            }
+            let directory = std::env::var("NVBES_EMAIL_TEST_CAPTURE_DIR").map_err(|_| {
+                AccountError::internal(
+                    "email_test_capture_missing",
+                    "NVBES_EMAIL_TEST_CAPTURE_DIR is required for the test capture provider.",
+                )
+            })?;
+            tracing::info!("Email sender: isolated test capture");
+            Ok(Arc::new(nvbes_email::TestCaptureEmailSender::new(
+                directory,
+            )?))
+        }
         provider => Err(AccountError::internal(
             "email_provider_unsupported",
             format!("Unsupported NVBES_EMAIL_PROVIDER={provider}"),

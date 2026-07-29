@@ -41,6 +41,7 @@ export function installDefaultTrustedTypesPolicy(): void {
 
   runtime.__nvbesDefaultTrustedTypesPolicy = factory.createPolicy(DEFAULT_POLICY_NAME, {
     createHTML: allowMarkupFreeHtml,
+    createScriptURL: (value) => normalizeSameOriginScriptUrl(value, 'default script'),
   });
 }
 

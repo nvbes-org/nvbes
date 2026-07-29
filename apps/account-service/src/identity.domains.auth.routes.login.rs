@@ -117,6 +117,10 @@ pub(crate) fn login_session_context(
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the HTTP response boundary explicitly receives cookie lifetimes, CSRF material, analytics, and request correlation"
+)]
 pub(crate) fn login_response(
     result: LoginResult,
     authuser: &str,

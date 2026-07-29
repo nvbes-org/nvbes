@@ -1,6 +1,10 @@
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+#[path = "identity.http.openapi.security.rs"]
+mod security;
+use security::SecurityContract;
+
 #[derive(OpenApi)]
 #[openapi(
     info(
@@ -39,6 +43,10 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::domains::auth::routes::session_mgmt::list_sessions,
         crate::domains::auth::routes::session_mgmt::logout,
         crate::domains::auth::routes::session_mgmt::me,
+        crate::domains::auth::routes::session_mgmt::profile::me_update,
+        crate::domains::auth::routes::session_mgmt::profile::me_avatar,
+        crate::domains::auth::routes::session_mgmt::profile::me_avatar_upload,
+        crate::domains::auth::routes::session_mgmt::profile::me_avatar_delete,
         crate::domains::auth::routes::session_mgmt::profile::me_delete,
         crate::domains::auth::routes::session_mgmt::profile::me_preferences_get,
         crate::domains::auth::routes::session_mgmt::profile::me_preferences_put,
@@ -104,6 +112,7 @@ use utoipa_swagger_ui::SwaggerUi;
         crate::http::well_known::passkey_endpoints_well_known,
         crate::http::well_known::webauthn_well_known,
     ),
+    modifiers(&SecurityContract),
 )]
 pub struct IdentityApiDoc;
 
@@ -112,3 +121,7 @@ pub fn openapi_routes() -> axum::Router<crate::app::AppState> {
         .url("/api/openapi.json", IdentityApiDoc::openapi())
         .into()
 }
+
+#[cfg(test)]
+#[path = "identity.http.openapi.security.tests.rs"]
+mod security_tests;

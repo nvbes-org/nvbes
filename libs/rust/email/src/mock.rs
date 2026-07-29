@@ -57,15 +57,60 @@ impl EmailSender for MockEmailSender {
             headers: message.headers.clone(),
         });
 
-        Ok(SendResult {
-            provider_email_id: format!(
-                "mock-{}",
+        let provider_email_id = message
+            .headers
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case("message-id"))
+            .map(|(_, value)| value.clone())
+            .or_else(|| {
                 message
-                    .to
-                    .first()
-                    .map(|a| &a.email)
-                    .unwrap_or(&"unknown".to_string())
-            ),
-        })
+                    .headers
+                    .iter()
+                    .find(|(name, _)| name.eq_ignore_ascii_case("x-nvbes-email-job-id"))
+                    .map(|(_, value)| format!("<account-job-{value}@worker.nvbes.fr>"))
+            })
+            .unwrap_or_else(|| {
+                format!(
+                    "mock-{}",
+                    message
+                        .to
+                        .first()
+                        .map(|address| address.email.as_str())
+                        .unwrap_or("unknown")
+                )
+            });
+
+        Ok(SendResult { provider_email_id })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MockEmailSender;
+    use crate::{EmailAddress, EmailMessage, EmailSender};
+
+    #[tokio::test]
+    async fn mock_provider_uses_the_stable_message_id() {
+        let sender = MockEmailSender::new();
+        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@worker.nvbes.fr>";
+        let result = sender
+            .send_message(&EmailMessage {
+                from: EmailAddress {
+                    email: "sender@example.test".to_string(),
+                    name: None,
+                },
+                to: vec![EmailAddress {
+                    email: "recipient@example.test".to_string(),
+                    name: None,
+                }],
+                subject: "Subject".to_string(),
+                text_body: Some("Body".to_string()),
+                html_body: None,
+                headers: vec![("Message-ID".to_string(), message_id.to_string())],
+            })
+            .await
+            .expect("mock delivery should succeed");
+
+        assert_eq!(result.provider_email_id, message_id);
     }
 }

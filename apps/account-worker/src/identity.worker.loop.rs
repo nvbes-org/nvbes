@@ -4,25 +4,16 @@ use std::{
 };
 
 use nvbes_observability::{
-    WorkerJobContext, WorkerMonitorSchedule, WorkerOperationContext, capture_worker_heartbeat,
-    capture_worker_job_error, capture_worker_operation_error, metrics::HttpMetrics,
-    worker_monitor_slug,
+    WorkerMonitorSchedule, WorkerOperationContext, capture_worker_heartbeat,
+    capture_worker_operation_error, worker_monitor_slug,
 };
 use tokio::time::{Duration as TokioDuration, sleep};
 
 use crate::app::AppState;
-use nvbes_product_account::email::{
-    jobs::{EmailSendPayload, JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS},
-    templates::html_escape,
-};
-use tracing::Instrument;
+use nvbes_product_account::email::{jobs::EmailSendPayload, templates::html_escape};
 
-use super::jobs::{
-    claim_next_job, execute_job, mark_job_failed, mark_job_succeeded, recover_stale_jobs,
-    should_retry_job,
-};
+use super::job_processor::{WORKER_QUEUES, claim_available_job, process_claimed_job};
 
-const WORKER_QUEUES: [&str; 3] = [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS, JOB_DATA_EXPORT];
 const ACCESS_REVIEW_SCHEDULE_INTERVAL: Duration = Duration::from_secs(900);
 const ACCESS_REVIEW_REMINDER_INTERVAL: Duration = Duration::from_secs(3600);
 const WORKER_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);
@@ -78,19 +69,26 @@ where
                 }
             },
         }
-        let ran = tokio::select! {
+        let claimed_job = tokio::select! {
+            biased;
+            result = claim_available_job(&state, &observability) => result,
             _ = &mut shutdown => return Ok(()),
-            result = run_once(&state, &observability) => {
-                match result {
-                    Ok(ran) => ran,
-                    Err(error) => {
-                        capture_loop_error(&state, "worker_loop", error.as_ref());
-                        tracing::warn!(%error, "account worker loop failed; retrying after backoff");
-                        sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
-                        continue;
-                    }
-                }
-            },
+        };
+        let result = match claimed_job {
+            Ok(Some(job)) => process_claimed_job(&state, &observability, job)
+                .await
+                .map(|()| true),
+            Ok(None) => Ok(false),
+            Err(error) => Err(error),
+        };
+        let ran = match result {
+            Ok(ran) => ran,
+            Err(error) => {
+                capture_loop_error(&state, "worker_loop", error.as_ref());
+                tracing::warn!(%error, "account worker loop failed; retrying after backoff");
+                sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                continue;
+            }
         };
         let sleep_for = if ran {
             TokioDuration::from_secs(1)
@@ -205,76 +203,6 @@ async fn run_access_review_schedules_if_due(
     Ok(())
 }
 
-pub async fn run_once(state: &AppState, observability: &HttpMetrics) -> anyhow::Result<bool> {
-    for queue in WORKER_QUEUES {
-        recover_stale_jobs(&state.redis, queue, observability).await?;
-    }
-
-    let Some(job) = claim_next_job(&state.redis, &WORKER_QUEUES).await? else {
-        return Ok(false);
-    };
-
-    let started_at = Instant::now();
-    let job_type = job.job_type.clone();
-    let job_span = tracing::info_span!(
-        "worker.job",
-        otel.name = %format!("process {}", job_type),
-        otel.kind = "consumer",
-        otel.status_code = tracing::field::Empty,
-        messaging.system = "redis",
-        messaging.destination.name = %job.queue,
-        messaging.operation.type = "process",
-        job.type = %job_type,
-        job.outcome = tracing::field::Empty,
-    );
-    let outcome = execute_job(state, &job).instrument(job_span.clone()).await;
-    let duration = started_at.elapsed();
-
-    match outcome {
-        Ok(result) => {
-            mark_job_succeeded(&state.redis, &job, result).await?;
-            job_span.record("job.outcome", "success");
-            observability.record_worker_queue_job(&job_type, "success", duration);
-        }
-        Err(error) => {
-            tracing::error!(error = %error, job_id = %job.id, job_type = %job_type, "Job failed");
-            capture_worker_job_error(
-                error.as_ref(),
-                &WorkerJobContext {
-                    app_name: "account-worker",
-                    environment: &state.config.environment,
-                    queue: &job.queue,
-                    job_type: &job_type,
-                    job_id: job.id,
-                    attempts: job.attempts,
-                    max_attempts: job.max_attempts,
-                },
-            );
-            let retryable = should_retry_job(&job_type, &error);
-            mark_job_failed(&state.redis, &job, &error.to_string(), retryable).await?;
-            job_span.record("otel.status_code", "ERROR");
-            job_span.record(
-                "job.outcome",
-                failed_job_outcome(job.attempts, job.max_attempts, retryable),
-            );
-            observability.record_worker_queue_job(
-                &job_type,
-                failed_job_outcome(job.attempts, job.max_attempts, retryable),
-                duration,
-            );
-        }
-    }
-    Ok(true)
-}
-
-fn failed_job_outcome(attempts: u32, max_attempts: u32, retryable: bool) -> &'static str {
-    if retryable && attempts < max_attempts {
-        "retry_scheduled"
-    } else {
-        "dead_letter"
-    }
-}
-
 fn capture_loop_error(
     state: &AppState,
     operation: &'static str,
@@ -304,33 +232,4 @@ fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
         .observability
         .record_worker_heartbeat("account-worker");
     *last_run = Instant::now();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{WORKER_QUEUES, failed_job_outcome};
-    use nvbes_product_account::email::jobs::{
-        JOB_DATA_EXPORT, JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS,
-    };
-
-    #[test]
-    fn identity_worker_queues_exclude_billing_runtime() {
-        assert_eq!(
-            WORKER_QUEUES,
-            [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS, JOB_DATA_EXPORT]
-        );
-        for queue in WORKER_QUEUES {
-            assert!(
-                !queue.starts_with("billing."),
-                "account-worker must not claim Billing queue {queue}"
-            );
-        }
-    }
-
-    #[test]
-    fn failed_job_outcome_matches_retry_budget() {
-        assert_eq!(failed_job_outcome(1, 3, true), "retry_scheduled");
-        assert_eq!(failed_job_outcome(3, 3, true), "dead_letter");
-        assert_eq!(failed_job_outcome(1, 3, false), "dead_letter");
-    }
 }

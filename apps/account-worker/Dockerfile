@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for account-worker (Scaleway Serverless compatible)
-FROM rust:1.85-slim-bookworm@sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36 AS builder
+FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
 
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
@@ -31,7 +31,7 @@ COPY libs ./libs
 COPY vendor ./vendor
 
 # Build release binary for account-worker
-RUN cargo build --locked --release --bin account-worker
+RUN cargo build --locked --release --package nvbes-account-worker --bin nvbes-account-worker
 
 # Final minimal runtime image
 FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
@@ -52,12 +52,12 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 
 WORKDIR /app
 
-COPY --from=builder --chown=10001:10001 /usr/src/nvbes/target/release/account-worker /app/account-worker
+COPY --from=builder --chown=10001:10001 /usr/src/nvbes/target/release/nvbes-account-worker /app/nvbes-account-worker
 COPY --from=builder --chown=10001:10001 /usr/src/nvbes/apps/account-service/migrations /app/account-service/migrations
 
 ENV NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR="0.0.0.0:4102"
 
 USER 10001:10001
 
-ENTRYPOINT ["/app/account-worker"]
+ENTRYPOINT ["/app/nvbes-account-worker"]
 CMD ["run-housekeeping"]

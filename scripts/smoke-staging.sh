@@ -8,7 +8,9 @@ source "$SCRIPT_DIR/lib/test-env.sh"
 require_cmd pnpm
 require_env NVBES_STAGING_WEB_BASE_URL
 require_env NVBES_STAGING_API_BASE_URL
-require_env NVBES_STAGING_DATABASE_URL
+require_env NVBES_STAGING_ACCOUNT_EMAIL
+require_env NVBES_STAGING_ACCOUNT_PASSWORD
+validate_staging_account_targets
 
 cd "$ROOT_DIR"
 
@@ -17,8 +19,6 @@ NVBES_WEB_BASE_URL="$NVBES_STAGING_WEB_BASE_URL" \
   NVBES_API_BASE_URL="$NVBES_STAGING_API_BASE_URL" \
   pnpm test:smoke
 
-log_step "staging critical E2E"
+log_step "staging authenticated Account acceptance"
 NVBES_WEB_BASE_URL="$NVBES_STAGING_WEB_BASE_URL" \
-  NVBES_API_BASE_URL="$NVBES_STAGING_API_BASE_URL" \
-  NVBES_DATABASE_URL="$NVBES_STAGING_DATABASE_URL" \
-  pnpm test:e2e:critical
+  pnpm --dir apps/account-web test:e2e:staging-authenticated

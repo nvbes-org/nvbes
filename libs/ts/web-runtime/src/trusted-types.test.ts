@@ -8,21 +8,25 @@ afterEach(() => {
 });
 
 describe('installDefaultTrustedTypesPolicy', () => {
-  it('allows markup-free style text and rejects HTML markup', async () => {
+  it('allows safe fallback values and rejects markup or cross-origin scripts', async () => {
     let createDefaultHtml: ((value: string) => string) | undefined;
+    let createDefaultScriptUrl: ((value: string) => string) | undefined;
+    vi.stubGlobal('location', new URL('https://identity.nvbes.com/register'));
     vi.stubGlobal('trustedTypes', {
       createPolicy: (
         name: string,
         rules: {
           createHTML(value: string): string;
+          createScriptURL?(value: string): string;
         },
       ) => {
         if (name === 'default') {
           createDefaultHtml = (value) => rules.createHTML(value);
+          createDefaultScriptUrl = (value) => rules.createScriptURL?.(value) ?? value;
         }
         return {
           createHTML: (value: string) => rules.createHTML(value),
-          createScriptURL: (value: string) => value,
+          createScriptURL: (value: string) => rules.createScriptURL?.(value) ?? value,
         };
       },
     });
@@ -34,6 +38,12 @@ describe('installDefaultTrustedTypesPolicy', () => {
       '[data-radix-select-viewport]{display:none}',
     );
     expect(() => createDefaultHtml?.('<img src=x onerror=alert(1)>')).toThrow('markup-free');
+    expect(createDefaultScriptUrl?.('/assets/pow.worker.js')).toBe(
+      'https://identity.nvbes.com/assets/pow.worker.js',
+    );
+    expect(() => createDefaultScriptUrl?.('https://attacker.example/pow.worker.js')).toThrow(
+      'default script',
+    );
   });
 });
 

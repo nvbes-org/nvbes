@@ -134,7 +134,7 @@ pub async fn get_hosted_login_decision(
 
     Ok(HostedLoginDecision::ConsentRequired {
         state_id: state.state_id,
-        client: client_display,
+        client: Box::new(client_display),
         scope: state.scope,
     })
 }

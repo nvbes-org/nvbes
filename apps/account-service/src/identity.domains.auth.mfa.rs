@@ -122,6 +122,28 @@ pub async fn get_factor(
 }
 
 pub async fn remove_factor(db: &PgPool, user_id: Uuid, factor_id: Uuid) -> Result<(), AppError> {
+    let requires_privilege_check = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+          SELECT 1
+          FROM mfa_factors
+          WHERE id = $1
+            AND principal_id = $2
+            AND factor_type = 'webauthn'
+            AND status = 'active'
+        )
+        "#,
+    )
+    .bind(factor_id)
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    let privileged = if requires_privilege_check {
+        super::mfa_policy::principal_has_privileged_role(db, user_id).await?
+    } else {
+        false
+    };
+
     let mut tx = db.begin().await?;
     let factor = sqlx::query(
         r#"
@@ -161,29 +183,6 @@ pub async fn remove_factor(db: &PgPool, user_id: Uuid, factor_id: Uuid) -> Resul
         }
 
         if factor_type == "webauthn" {
-            let privileged = sqlx::query_scalar::<_, bool>(
-                r#"
-                SELECT
-                  EXISTS (
-                    SELECT 1 FROM tenant_memberships
-                    WHERE principal_id = $1 AND status = 'active'
-                      AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-                  )
-                  OR EXISTS (
-                    SELECT 1 FROM organization_memberships
-                    WHERE principal_id = $1 AND status = 'active'
-                      AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-                  )
-                  OR EXISTS (
-                    SELECT 1 FROM workspace_memberships
-                    WHERE principal_id = $1 AND status = 'active'
-                      AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-                  )
-                "#,
-            )
-            .bind(user_id)
-            .fetch_one(&mut *tx)
-            .await?;
             let remaining_passkeys = active_factors
                 .iter()
                 .filter(|row| {

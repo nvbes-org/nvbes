@@ -1,0 +1,47 @@
+name: account acceptance source publication
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: account-acceptance-source-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  block-untrusted-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: account-acceptance-source
+    env:
+      CI: 'true'
+      NVBES_RELEASE_REF: ${{ github.ref }}
+      NVBES_RELEASE_REF_NAME: ${{ github.ref_name }}
+      NVBES_RELEASE_REF_TYPE: ${{ github.ref_type }}
+      NVBES_RELEASE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.ref }}
+      - name: Validate immutable Account RC tag
+        env:
+          GH_API_URL: ${{ github.api_url }}
+          GH_REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/account-quality/verify-account-release-ref.mjs
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Block candidate-controlled evidence import
+        run: |
+          echo "Account acceptance import is blocked until an externally pinned importer, ephemeral repository credential, confidential evidence store and exact-SHA attestation are provisioned." >&2
+          exit 1

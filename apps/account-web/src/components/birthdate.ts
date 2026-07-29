@@ -12,7 +12,11 @@ export function dateFromInputValue(value: string): Date | undefined {
   date.setHours(0, 0, 0, 0);
   date.setFullYear(Number(year), Number(month) - 1, Number(day));
 
-  if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 || date.getDate() !== Number(day)) {
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) {
     return undefined;
   }
 

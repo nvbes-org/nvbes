@@ -87,6 +87,9 @@ pub fn sql_status(error: sqlx::Error) -> Status {
         ),
         Some("23505") => Status::already_exists("cloud resource already exists"),
         Some("22P02") => Status::invalid_argument("cloud command contains an invalid enum value"),
+        Some("42501") => {
+            Status::permission_denied("cloud command was denied by the tenant isolation policy")
+        }
         _ => Status::internal(format!("cloud database error: {error}")),
     }
 }

@@ -188,19 +188,19 @@ pub async fn verify_primary_credentials(
         ));
     }
 
-    if needs_rehash {
-        if let Ok(new_hash) = password::hash_password_with_pepper(
+    if needs_rehash
+        && let Ok(new_hash) = password::hash_password_with_pepper(
             &input.password,
             config.auth_password_pepper.as_deref(),
-        ) {
-            let _ = sqlx::query(
-                "UPDATE users SET password_hash = $2, updated_at = NOW() WHERE principal_id = $1",
-            )
-            .bind(principal_id)
-            .bind(&new_hash)
-            .execute(db)
-            .await;
-        }
+        )
+    {
+        let _ = sqlx::query(
+            "UPDATE users SET password_hash = $2, updated_at = NOW() WHERE principal_id = $1",
+        )
+        .bind(principal_id)
+        .bind(&new_hash)
+        .execute(db)
+        .await;
     }
 
     let stuffing_score = credential_stuffing::successful_password_risk_score(

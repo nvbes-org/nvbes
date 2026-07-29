@@ -10,6 +10,12 @@ use super::otp_types::{
 
 pub struct MockOtpProvider;
 
+impl Default for MockOtpProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockOtpProvider {
     pub fn new() -> Self {
         Self

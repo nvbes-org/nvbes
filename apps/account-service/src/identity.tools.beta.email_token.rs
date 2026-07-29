@@ -1,4 +1,15 @@
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
+
 use anyhow::{Context, bail};
+use serde::Deserialize;
+use tokio::time::{Instant, sleep};
+
+const DELIVERY_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
+const DELIVERY_POLL_INTERVAL: Duration = Duration::from_millis(250);
+const MAX_CAPTURE_BYTES: u64 = 1_048_576;
 
 pub async fn extract_latest_email_token(
     pool: &sqlx::PgPool,
@@ -7,47 +18,112 @@ pub async fn extract_latest_email_token(
     business_type: &str,
 ) -> anyhow::Result<String> {
     let marker = email_token_marker(business_type)?;
-    let jobs = nvbes_redis::worker_queue::find_matching_jobs(redis, "email.send", |job| {
-        job.job_type == "email.send"
-            && job
-                .payload
-                .get("to_email")
-                .and_then(serde_json::Value::as_str)
-                == Some(email)
-            && job
-                .payload
-                .get("business_type")
-                .and_then(serde_json::Value::as_str)
-                == Some(business_type)
-    })
-    .await
-    .context("Failed to scan Redis email jobs.")?;
+    let capture_directory = test_capture_directory()?;
+    let deadline = Instant::now() + DELIVERY_WAIT_TIMEOUT;
 
-    for job in jobs {
-        let html_body = job
-            .payload
-            .get("html_body")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        if let Some(token) = extract_token_from_body(html_body, marker)
-            && token_is_active(pool, redis, email, business_type, &token).await?
-        {
-            return Ok(token);
+    loop {
+        for (path, capture) in matching_captures(&capture_directory, email, business_type).await? {
+            if !email_delivery_completed(pool, capture.job_id).await? {
+                continue;
+            }
+
+            for body in [
+                capture.html_body.as_deref().unwrap_or_default(),
+                capture.text_body.as_deref().unwrap_or_default(),
+            ] {
+                if let Some(token) = extract_token_from_body(body, marker)
+                    && token_is_active(pool, redis, email, business_type, &token).await?
+                {
+                    tokio::fs::remove_file(&path)
+                        .await
+                        .context("Failed to consume the test email capture.")?;
+                    return Ok(token);
+                }
+            }
         }
 
-        let text_body = job
-            .payload
-            .get("text_body")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        if let Some(token) = extract_token_from_body(text_body, marker)
-            && token_is_active(pool, redis, email, business_type, &token).await?
-        {
-            return Ok(token);
+        if Instant::now() >= deadline {
+            break;
         }
+        sleep(DELIVERY_POLL_INTERVAL).await;
     }
 
-    bail!("Unable to extract an active {business_type} token for the requested recipient.")
+    bail!(
+        "Timed out waiting for a completed {business_type} email delivery for the requested recipient."
+    )
+}
+
+async fn matching_captures(
+    directory: &Path,
+    email: &str,
+    business_type: &str,
+) -> anyhow::Result<Vec<(PathBuf, TestEmailCapture)>> {
+    let mut entries = tokio::fs::read_dir(directory)
+        .await
+        .context("Failed to read the test email capture directory.")?;
+    let mut captures = Vec::new();
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .context("Failed to enumerate test email captures.")?
+    {
+        let path = entry.path();
+        let Some(file_name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if !file_name.starts_with("capture-") || !file_name.ends_with(".json") {
+            continue;
+        }
+        let metadata = entry
+            .metadata()
+            .await
+            .context("Failed to inspect a test email capture.")?;
+        if !metadata.is_file() || metadata.len() > MAX_CAPTURE_BYTES {
+            bail!("Test email capture is not a bounded regular file.");
+        }
+        let contents = tokio::fs::read(&path)
+            .await
+            .context("Failed to read a test email capture.")?;
+        let capture: TestEmailCapture =
+            serde_json::from_slice(&contents).context("Test email capture is invalid.")?;
+        if capture.business_type == business_type
+            && capture.to.iter().any(|recipient| recipient == email)
+            && file_name == format!("capture-{}.json", capture.job_id)
+        {
+            captures.push((path, capture));
+        }
+    }
+    Ok(captures)
+}
+
+async fn email_delivery_completed(pool: &sqlx::PgPool, job_id: uuid::Uuid) -> anyhow::Result<bool> {
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status::text FROM email_messages WHERE job_id = $1 LIMIT 1")
+            .bind(job_id)
+            .fetch_optional(pool)
+            .await
+            .context("Failed to read the durable email delivery ledger.")?;
+
+    Ok(matches!(status.as_deref(), Some("sent" | "delivered")))
+}
+
+fn test_capture_directory() -> anyhow::Result<PathBuf> {
+    let directory = std::env::var("NVBES_EMAIL_TEST_CAPTURE_DIR")
+        .context("NVBES_EMAIL_TEST_CAPTURE_DIR is required for email token extraction.")?;
+    let directory = PathBuf::from(directory);
+    if !directory.is_absolute() {
+        bail!("NVBES_EMAIL_TEST_CAPTURE_DIR must be absolute.");
+    }
+    Ok(directory)
+}
+
+#[derive(Deserialize)]
+struct TestEmailCapture {
+    job_id: uuid::Uuid,
+    business_type: String,
+    to: Vec<String>,
+    text_body: Option<String>,
+    html_body: Option<String>,
 }
 
 fn email_token_marker(business_type: &str) -> anyhow::Result<&'static str> {

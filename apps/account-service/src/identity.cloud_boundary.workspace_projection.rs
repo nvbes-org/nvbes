@@ -228,7 +228,7 @@ async fn project_upsert_workspace_membership_tx(
     sqlx::query(
         r#"
         INSERT INTO workspace_memberships (workspace_id, principal_id, role, status, source)
-        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5)
+        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5::membership_source)
         ON CONFLICT (workspace_id, principal_id)
         DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status, source = EXCLUDED.source, updated_at = NOW()
         "#,

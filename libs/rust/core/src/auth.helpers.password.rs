@@ -79,33 +79,31 @@ pub fn verify_and_check_rehash(
         .map_err(|_| AppError::internal("password_hash_failed", "Invalid default params"))?;
 
     // Attempt 1: Verify using current pepper and target params builder
-    if let Ok(argon2) = build_argon2(default_params, pepper) {
-        if argon2
+    if let Ok(argon2) = build_argon2(default_params, pepper)
+        && argon2
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_ok()
-        {
-            let params_match = parsed_hash.algorithm.as_str() == "argon2id"
-                && parsed_hash.version == Some(19)
-                && Params::try_from(&parsed_hash)
-                    .map(|p| {
-                        p.m_cost() == TARGET_M_COST
-                            && p.t_cost() == TARGET_T_COST
-                            && p.p_cost() == TARGET_P_COST
-                    })
-                    .unwrap_or(false);
-            return Ok((true, !params_match));
-        }
+    {
+        let params_match = parsed_hash.algorithm.as_str() == "argon2id"
+            && parsed_hash.version == Some(19)
+            && Params::try_from(&parsed_hash)
+                .map(|p| {
+                    p.m_cost() == TARGET_M_COST
+                        && p.t_cost() == TARGET_T_COST
+                        && p.p_cost() == TARGET_P_COST
+                })
+                .unwrap_or(false);
+        return Ok((true, !params_match));
     }
 
     // Attempt 2: If pepper was provided but primary verification failed, attempt legacy unpeppered verification
-    if pepper.is_some() {
-        if Argon2::default()
+    if pepper.is_some()
+        && Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_ok()
-        {
-            // Verified using legacy hash without pepper -> valid, but MUST be re-hashed with pepper!
-            return Ok((true, true));
-        }
+    {
+        // Verified using legacy hash without pepper -> valid, but MUST be re-hashed with pepper!
+        return Ok((true, true));
     }
 
     Ok((false, false))

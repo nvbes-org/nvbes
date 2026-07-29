@@ -137,16 +137,14 @@ async fn forgot_inner(
 
         tx.commit().await?;
 
-        if let Some((request_id, tenant_id)) = approved_review_id {
-            if let Err(error) =
+        if let Some((request_id, tenant_id)) = approved_review_id
+            && let Err(error) =
                 review::mark_token_issued(db, tenant_id, request_id, &hashed_token, expires_at)
                     .await
-            {
-                let _ =
-                    nvbes_redis::password_reset::take_password_reset_token(redis, &hashed_token)
-                        .await;
-                return Err(error);
-            }
+        {
+            let _ =
+                nvbes_redis::password_reset::take_password_reset_token(redis, &hashed_token).await;
+            return Err(error);
         }
         let enqueue_result = crate::email::jobs::enqueue_email_job_tx(
             db,

@@ -28,7 +28,9 @@ describe('birthdate', () => {
       throw new Error('Expected a syntactically valid date.');
     }
 
-    expect(dateIsInRange(date, dateFromInputValue('1906-07-29'), dateFromInputValue('2013-07-29'))).toBe(false);
+    expect(
+      dateIsInRange(date, dateFromInputValue('1906-07-29'), dateFromInputValue('2013-07-29')),
+    ).toBe(false);
   });
 
   it('formats the persisted ISO value for display', () => {
@@ -44,7 +46,13 @@ describe('birthdate', () => {
 
   it('renders an accessible numeric day/month/year field', () => {
     const markup = renderToStaticMarkup(
-      <BirthdateField id="birthdate" value="2000-01-09" min="1906-07-29" max="2013-07-29" onChange={() => undefined} />,
+      <BirthdateField
+        id="birthdate"
+        value="2000-01-09"
+        min="1906-07-29"
+        max="2013-07-29"
+        onChange={() => undefined}
+      />,
     );
 
     expect(markup).toContain('type="text"');

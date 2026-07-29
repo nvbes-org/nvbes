@@ -3,6 +3,15 @@ use serde_json::Value;
 use super::webhooks::EmailProviderEvent;
 use crate::{AccountError, AccountResult};
 
+#[path = "account.email.db.delivery.rs"]
+mod delivery;
+
+pub use delivery::{
+    EmailDeliveryRecord, completed_email_delivery, ensure_email_delivery, lock_email_delivery_tx,
+    mark_email_delivery_attempt_tx, record_email_delivery_failure_tx,
+    record_email_delivery_success_tx,
+};
+
 pub async fn record_email_event_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     event: &EmailProviderEvent,
@@ -147,28 +156,48 @@ pub async fn record_email_message_tx(
     use sha2::{Digest, Sha256};
 
     let recipient_hash = hex::encode(Sha256::digest(recipient_email.as_bytes()));
+    let message_id = format!("<account-job-{job_id}@worker.nvbes.fr>");
 
-    sqlx::query(
+    let rows_affected = sqlx::query(
         r#"
         INSERT INTO email_messages (
             job_id,
             business_type,
             recipient_email,
             recipient_hash,
+            message_id,
             provider_email_id,
-            status
+            status,
+            sent_at
         )
-        VALUES ($1, $2, $3, $4, $5, 'sent')
+        VALUES ($1, $2, $3, $4, $5, $6, 'sent', NOW())
+        ON CONFLICT (job_id) DO UPDATE
+        SET provider_email_id = EXCLUDED.provider_email_id,
+            status = 'sent',
+            sent_at = COALESCE(email_messages.sent_at, NOW()),
+            updated_at = NOW()
+        WHERE email_messages.business_type = EXCLUDED.business_type
+          AND email_messages.recipient_hash = EXCLUDED.recipient_hash
+          AND email_messages.message_id = EXCLUDED.message_id
         "#,
     )
     .bind(job_id)
     .bind(business_type)
     .bind(recipient_email)
     .bind(recipient_hash)
+    .bind(message_id)
     .bind(provider_email_id)
     .execute(&mut **tx)
     .await
-    .map_err(AccountError::from)?;
+    .map_err(AccountError::from)?
+    .rows_affected();
+
+    if rows_affected != 1 {
+        return Err(AccountError::conflict(
+            "email_job_identity_conflict",
+            "Email job identifier is already bound to another delivery",
+        ));
+    }
 
     Ok(())
 }

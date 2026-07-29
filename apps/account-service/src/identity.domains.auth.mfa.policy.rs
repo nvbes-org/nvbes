@@ -1,7 +1,12 @@
 use sqlx::Row;
 use uuid::Uuid;
 
-use crate::http::error::AppError;
+use crate::{
+    cloud_boundary::workspace_port::{self, CloudWorkspaceMemberSummary},
+    http::error::AppError,
+};
+
+const PRIVILEGED_ROLES: &[&str] = &["owner", "admin", "security_admin", "billing_admin"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MfaPolicy {
@@ -81,36 +86,57 @@ pub async fn principal_has_privileged_role(
     db: &sqlx::PgPool,
     principal_id: Uuid,
 ) -> Result<bool, AppError> {
-    sqlx::query_scalar(
+    let account_roles = sqlx::query_scalar::<_, String>(
         r#"
-        SELECT
-          EXISTS (
-            SELECT 1
-            FROM tenant_memberships
-            WHERE principal_id = $1
-              AND status = 'active'
-              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-          )
-          OR EXISTS (
-            SELECT 1
-            FROM organization_memberships
-            WHERE principal_id = $1
-              AND status = 'active'
-              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-          )
-          OR EXISTS (
-            SELECT 1
-            FROM workspace_memberships
-            WHERE principal_id = $1
-              AND status = 'active'
-              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
-          )
+        SELECT role::text
+        FROM tenant_memberships
+        WHERE principal_id = $1
+          AND status = 'active'
+        UNION ALL
+        SELECT role::text
+        FROM organization_memberships
+        WHERE principal_id = $1
+          AND status = 'active'
         "#,
     )
     .bind(principal_id)
-    .fetch_one(db)
-    .await
-    .map_err(Into::into)
+    .fetch_all(db)
+    .await?;
+
+    if account_roles.iter().any(|role| is_privileged_role(role)) {
+        return Ok(true);
+    }
+
+    principal_has_privileged_workspace_role(principal_id).await
+}
+
+async fn principal_has_privileged_workspace_role(principal_id: Uuid) -> Result<bool, AppError> {
+    for workspace in workspace_port::list_workspaces(None, principal_id).await? {
+        let members = workspace_port::list_workspace_members(
+            Some(workspace.tenant_id),
+            workspace.workspace_id,
+            principal_id,
+        )
+        .await?;
+        if members_include_privileged_principal(&members, principal_id) {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn members_include_privileged_principal(
+    members: &[CloudWorkspaceMemberSummary],
+    principal_id: Uuid,
+) -> bool {
+    members.iter().any(|member| {
+        member.principal_id == principal_id && member.active && is_privileged_role(&member.role)
+    })
+}
+
+fn is_privileged_role(role: &str) -> bool {
+    PRIVILEGED_ROLES.contains(&role)
 }
 
 pub fn methods_for_privileged_principal(
@@ -133,6 +159,8 @@ pub fn methods_for_privileged_principal(
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+
     use super::*;
 
     fn context(account_policy: MfaPolicy, has_active_factor: bool) -> MfaPolicyContext {
@@ -141,6 +169,21 @@ mod tests {
             tenant_id: Uuid::nil(),
             account_policy,
             has_active_factor,
+        }
+    }
+
+    fn workspace_member(
+        principal_id: Uuid,
+        role: &str,
+        active: bool,
+    ) -> CloudWorkspaceMemberSummary {
+        CloudWorkspaceMemberSummary {
+            principal_id,
+            role: role.to_string(),
+            status: if active { "active" } else { "removed" }.to_string(),
+            active,
+            joined_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 
@@ -187,4 +230,35 @@ mod tests {
 
         assert_eq!(error.code, "privileged_passkey_required");
     }
+
+    #[test]
+    fn every_privileged_workspace_role_is_recognized() {
+        let principal_id = Uuid::new_v4();
+
+        for role in PRIVILEGED_ROLES {
+            assert!(members_include_privileged_principal(
+                &[workspace_member(principal_id, role, true)],
+                principal_id,
+            ));
+        }
+    }
+
+    #[test]
+    fn inactive_or_unrelated_workspace_members_do_not_grant_privilege() {
+        let principal_id = Uuid::new_v4();
+        let members = vec![
+            workspace_member(principal_id, "owner", false),
+            workspace_member(Uuid::new_v4(), "admin", true),
+            workspace_member(principal_id, "member", true),
+        ];
+
+        assert!(!members_include_privileged_principal(
+            &members,
+            principal_id
+        ));
+    }
 }
+
+#[cfg(test)]
+#[path = "identity.domains.auth.mfa.policy.boundary.tests.rs"]
+mod boundary_tests;

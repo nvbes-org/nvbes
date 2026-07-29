@@ -38,8 +38,10 @@ fn oauth_authentication_uses_signed_token_context() {
         cnf_x5t_s256: None,
     };
 
-    let context =
-        AuthContext::from_authenticated_session(auth, CredentialSource::OAuthBearer(credential));
+    let context = AuthContext::from_authenticated_session(
+        auth,
+        CredentialSource::OAuthBearer(Box::new(credential)),
+    );
 
     assert_eq!(context.tenant_id, Some(token_tenant_id));
     assert_eq!(context.workspace_id, Some(token_workspace_id));

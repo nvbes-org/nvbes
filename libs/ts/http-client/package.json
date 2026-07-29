@@ -15,12 +15,15 @@
     "dev": "node ../../../node_modules/vite-plus/bin/vp pack --watch",
     "format:check": "node ../../../node_modules/vite-plus/bin/vp fmt --check src package.json tsconfig.json",
     "lint": "node ../../../node_modules/vite-plus/bin/vp lint src",
+    "test": "node ../../../node_modules/vite-plus/bin/vp test run",
+    "test:coverage": "node ../../../node_modules/vite-plus/bin/vp test run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.include='src/**/*.ts' --coverage.exclude='src/**/*.test.ts' --coverage.exclude='src/**/*.d.ts' --coverage.thresholds.lines=95 --coverage.thresholds.branches=90 --coverage.thresholds.functions=95 --coverage.thresholds.statements=95",
     "typecheck": "tsc --pretty false --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }

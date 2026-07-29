@@ -60,7 +60,7 @@ impl WebauthnCredentialSignals {
             assurance: classify(declared_kind, result.backup_eligible()),
             backup_eligible: result.backup_eligible(),
             backup_state: result.backup_state(),
-            sign_count: i64::try_from(result.counter()).unwrap_or(i64::MAX),
+            sign_count: i64::from(result.counter()),
             attestation_format,
         }
     }

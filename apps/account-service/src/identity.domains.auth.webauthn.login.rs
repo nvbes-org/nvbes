@@ -20,6 +20,10 @@ pub use discoverable::{
     finish_discoverable_login_authentication, start_discoverable_login_authentication,
 };
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "WebAuthn ceremony start keeps persistence, cache, policy, subject, and audit signals explicit"
+)]
 pub async fn start_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
@@ -108,6 +112,10 @@ pub async fn start_login_authentication(
     Ok((challenge_id, options))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "WebAuthn ceremony completion requires explicit stores, policy, state binding, credential, and audit signals"
+)]
 pub async fn finish_login_authentication(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,

@@ -21,10 +21,21 @@ Yanked transitive crates are warnings until their upstream dependency permits a
 non-yanked replacement; security advisories remain blocking. Workspace-local
 path dependencies are exempt from registry version pinning.
 
-The scheduled DAST job becomes active after configuring the repository
-variables `DAST_ACCOUNT_URL`, `DAST_BACKOFFICE_URL` and `DAST_OPENAPI_URL`.
-Manual dispatch requires the same three HTTPS targets and is available for
-staging verification before a release.
+The scheduled DAST job is blocking and requires the repository variables
+`DAST_ACCOUNT_URL`, `DAST_API_URL`, `DAST_BACKOFFICE_URL`, `DAST_OPENAPI_URL` and
+`DAST_ALLOWED_ORIGINS`, the synthetic fixture variables
+`DAST_EXPECTED_SUBJECT_ID` and `DAST_EXPECTED_TENANT_ID`, plus the staging-only secrets
+`DAST_ACCOUNT_SESSION_COOKIE`, `DAST_API_AUTHORIZATION` and
+`DAST_BACKOFFICE_SESSION_COOKIE`. Targets must belong to the exact HTTPS
+staging-origin allowlist, resolve only to public addresses and must never
+redirect to production or private infrastructure. Manual dispatch uses the same
+controls for pre-release verification. The API scan always overrides every
+server declared by the OpenAPI document with the independently validated
+staging API host. Immediately before and after every ZAP scan, the Account and
+API credentials must prove their synthetic subject/tenant identity, while the
+Backoffice credential must prove authorization to read that exact fixture. The
+six redacted proof artifacts and their limits are documented in
+[`dast-authenticated-staging.md`](dast-authenticated-staging.md).
 
 ## Remediation SLA
 

@@ -1,8 +1,8 @@
 import { Outlet, useNavigate } from '@tanstack/react-router';
-import { isSessionStaleError } from '@nvbes/web-runtime';
 import { useEffect, useState, useTransition } from 'react';
 import { AccountSidebar } from '@/components/AccountSidebar';
 import { IdentityTopBar } from '@/components/IdentityTopBar';
+import { accountAuthenticationDisposition } from '@/components/account-layout.authentication';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAccountContext } from '@/hooks/useAccountContext';
@@ -48,7 +48,8 @@ export default function AccountLayout() {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const { me, loading, error, retry, retrying } = useAccountContext();
-  const reauthenticationRequired = isSessionStaleError(error);
+  const authenticationDisposition = accountAuthenticationDisposition(error);
+  const reauthenticationRequired = authenticationDisposition === 'reauthenticate';
   const blockingError = error && (reauthenticationRequired || !me) ? error : null;
 
   const posthogConfigured = Boolean(import.meta.env.VITE_POSTHOG_KEY);
@@ -67,6 +68,12 @@ export default function AccountLayout() {
     window.addEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
     return () => window.removeEventListener(TRACKING_CONSENT_CHANGED_EVENT, handleConsentChange);
   }, []);
+
+  useEffect(() => {
+    if (!loading && authenticationDisposition === 'redirect-login') {
+      void navigate({ to: '/login', replace: true });
+    }
+  }, [authenticationDisposition, loading, navigate]);
 
   const posthogAccepted = Boolean(
     consentState?.vendors?.posthog || consentState?.categories?.analytics,

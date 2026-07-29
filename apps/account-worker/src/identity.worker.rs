@@ -4,6 +4,10 @@ pub mod audit_anchor;
 pub mod enterprise_grpc;
 #[path = "identity.worker.housekeeping.rs"]
 pub mod housekeeping;
+#[path = "identity.worker.job_failure.rs"]
+mod job_failure;
+#[path = "identity.worker.job_processor.rs"]
+mod job_processor;
 #[path = "identity.worker.jobs.rs"]
 pub mod jobs;
 #[path = "identity.worker.loop.rs"]
