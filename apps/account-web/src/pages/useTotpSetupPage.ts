@@ -1,13 +1,12 @@
 import { confirmTotp, setupTotp } from '@nvbes/identity-sdk-web';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 
 import { isStepUpRequiredError } from '@/identity.step-up';
 
 export function useTotpSetupPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const navigate = useNavigate();
   const [step, setStep] = useState<'stepup' | 'setup' | 'confirm'>('stepup');
   const [label, setLabel] = useState('');

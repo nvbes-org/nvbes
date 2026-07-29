@@ -13,7 +13,7 @@ chrono.workspace = true
 data-encoding.workspace = true
 ed25519-dalek = "2.2.0"
 hmac.workspace = true
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-audit = { path = "../../libs/rust/audit" }
 nvbes-redis = { path = "../../libs/rust/redis" }
@@ -44,6 +44,7 @@ tracing-subscriber = { workspace = true, features = ["json"] }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 uuid.workspace = true
+zip.workspace = true
 aws-config = { version = "1.8.16", default-features = false, features = ["rt-tokio", "credentials-process", "sso", "default-https-client"] }
 aws-sdk-s3 = { version = "1.132.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 
@@ -54,3 +55,4 @@ tonic-prost-build = "0.14.6"
 [dev-dependencies]
 nvbes-product-account = { path = "../../libs/rust/products/account" }
 openssl = { version = "0.10", features = ["vendored"] }
+proptest.workspace = true

@@ -53,7 +53,7 @@ pub(super) async fn verify_tenant_domain(
     let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
     let domain_id = parse_uuid(&request.domain_id, "domain_id")?;
     Ok(Response::new(
-        federation::verify_tenant_domain(db, tenant_id, domain_id).await?,
+        federation::verify_tenant_domain(db, tenant_id, domain_id, &request.dns_txt_token).await?,
     ))
 }
 

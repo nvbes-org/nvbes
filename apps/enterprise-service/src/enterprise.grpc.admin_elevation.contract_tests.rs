@@ -14,6 +14,12 @@ async fn admin_elevation_records_audit_and_break_glass_usage() {
     }
 
     let fixture = seed_enterprise_fixture(&pool, "admin-elevation-audit").await;
+    let authentication = enterprise::PrivilegedAuthenticationContext {
+        acr: "aal3".to_string(),
+        amr: vec!["security_key".to_string()],
+        auth_time: chrono::Utc::now().timestamp(),
+        authentication_event_id: "break-glass-seed-authn-event".to_string(),
+    };
     break_glass::upsert_break_glass(
         &pool,
         fixture.tenant_id,
@@ -21,6 +27,7 @@ async fn admin_elevation_records_audit_and_break_glass_usage() {
         fixture.actor_id,
         "runbook-admin-elevation",
         "incident",
+        &authentication,
     )
     .await
     .expect("break-glass account should be seeded");
@@ -40,6 +47,13 @@ async fn admin_elevation_records_audit_and_break_glass_usage() {
             break_glass: true,
             break_glass_reason: "incident".to_string(),
             break_glass_procedure_reference: "runbook-admin-elevation".to_string(),
+            reason: "incident response".to_string(),
+            authentication: Some(enterprise::PrivilegedAuthenticationContext {
+                acr: "aal3".to_string(),
+                amr: vec!["security_key".to_string()],
+                auth_time: now.timestamp(),
+                authentication_event_id: "break-glass-authn-event".to_string(),
+            }),
         },
     )
     .await

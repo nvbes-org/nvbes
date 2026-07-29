@@ -157,7 +157,8 @@ pub async fn build_signed_public_download_url(
 ) -> Result<SignedPublicDownloadUrlView, AppError> {
     let expires = (expires_at - Utc::now())
         .to_std()
-        .unwrap_or(std::time::Duration::from_secs(300));
+        .unwrap_or(std::time::Duration::from_secs(60))
+        .min(std::time::Duration::from_secs(60));
 
     let presigned = storage
         .presign_download(object_key, expires)

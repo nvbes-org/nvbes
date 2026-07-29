@@ -29,7 +29,6 @@ zxcvbn = "3.1.1"
 sqlx.workspace = true
 tracing.workspace = true
 reqwest.workspace = true
-rustls-pemfile.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["net"] }
 tokio-rustls.workspace = true

@@ -1,11 +1,11 @@
-import { useLocation, useNavigate } from '@tanstack/react-router';
-import { accountPathForAuthuser, readAuthuser } from '@/identity.authuser';
+import { useNavigate } from '@tanstack/react-router';
+import { useAuthuser } from '@/hooks/useAuthuser';
+import { accountPathForAuthuser } from '@/identity.authuser';
 import { useMfaFactors } from './useMfaPage.factors';
 import { useMfaStepUp } from './useMfaPage.step-up';
 
 export function useMfaPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const navigate = useNavigate();
   const { factors, loading, error, setFactors, hasMore, loadMore, loadingMore } = useMfaFactors();
   const stepUp = useMfaStepUp({ setFactors });
@@ -30,6 +30,7 @@ export function useMfaPage() {
     hasRecovery: factors.some(
       (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
     ),
+    canUsePassword: !factors.some((factor) => factor.factor_type !== 'email'),
     recoveryCreatedAt: factors.find(
       (factor) => factor.factor_type === 'recovery' || factor.factor_type === 'recovery_code',
     )?.created_at,

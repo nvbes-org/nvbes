@@ -20,5 +20,4 @@ export const LazyAccountNotificationsPage = lazyPage(
 export const LazyAccountPreferencesPage = lazyPage(() => import('./pages/AccountPreferencesPage'));
 export const LazyMfaPage = lazyPage(() => import('./pages/MfaPage'));
 export const LazyTotpSetupPage = lazyPage(() => import('./pages/TotpSetupPage'));
-export const LazyEmailMfaSetupPage = lazyPage(() => import('./pages/EmailMfaSetupPage'));
 export const LazyRecoveryCodesPage = lazyPage(() => import('./pages/RecoveryCodesPage'));

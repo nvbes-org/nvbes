@@ -1,40 +1,38 @@
-import { describe, expect, it } from 'vite-plus/test';
-import { buildWebCsp, posthogAssetsOriginFromHost } from './csp';
+import { describe, expect, it } from "vitest";
+import { buildWebCsp, strictTransportSecurity } from "./csp";
 
-describe('buildWebCsp', () => {
-  it('allows the runtime style elements required by the SPA component stack', () => {
-    const csp = buildWebCsp({
-      mode: 'production',
-      styleSrc: ['https://fonts.googleapis.com'],
-    });
+describe("buildWebCsp", () => {
+	it("enforces Trusted Types and denies framing", () => {
+		const csp = buildWebCsp({ mode: "production" });
 
-    expect(csp).toContain("style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com");
-    expect(csp).toContain("style-src-attr 'unsafe-inline'");
-    expect(csp).toContain("script-src-attr 'none'");
-  });
+		expect(csp).toContain("frame-ancestors 'none'");
+		expect(csp).toContain("require-trusted-types-for 'script'");
+		expect(csp).toContain("trusted-types nvbes#default default");
+		expect(csp).toContain(
+			"'sha256-MADsBPBvAfzKSGq+N7sBxSyONZL+4BuiYOfl+I7SpAE='",
+		);
+		expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+	});
 
-  it('does not upgrade local HTTP object-storage URLs to HTTPS', () => {
-    const csp = buildWebCsp({ mode: 'production' });
+	it("supports a per-response nonce with strict-dynamic", () => {
+		const csp = buildWebCsp({
+			mode: "production",
+			nonce: "xF7tB5Jm5V8aQ2kLw9cR3g==",
+		});
 
-    expect(csp).not.toContain('upgrade-insecure-requests');
-  });
-});
+		expect(csp).toContain("'nonce-xF7tB5Jm5V8aQ2kLw9cR3g=='");
+		expect(csp).toContain("'strict-dynamic'");
+	});
 
-describe('posthogAssetsOriginFromHost', () => {
-  it('maps the PostHog EU ingestion host to its remote-config asset origin', () => {
-    expect(posthogAssetsOriginFromHost('https://eu.i.posthog.com')).toBe(
-      'https://eu-assets.i.posthog.com',
-    );
-  });
+	it("rejects malformed nonces", () => {
+		expect(() =>
+			buildWebCsp({ mode: "production", nonce: "'unsafe-inline'" }),
+		).toThrow("CSP nonce");
+	});
 
-  it('keeps a self-hosted PostHog origin on the same host', () => {
-    expect(posthogAssetsOriginFromHost('https://analytics.example.com')).toBe(
-      'https://analytics.example.com',
-    );
-  });
-
-  it('returns no source for an invalid or absent host', () => {
-    expect(posthogAssetsOriginFromHost('')).toBe('');
-    expect(posthogAssetsOriginFromHost('not a URL')).toBe('');
-  });
+	it("exports a preload-ready HSTS policy", () => {
+		expect(strictTransportSecurity).toBe(
+			"max-age=63072000; includeSubDomains; preload",
+		);
+	});
 });

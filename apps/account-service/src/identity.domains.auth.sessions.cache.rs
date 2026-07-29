@@ -79,6 +79,8 @@ pub fn cached_session_from_login(
         device_trust_score: None,
         risk_score: None,
         risk_decision: None,
+        risk_confirmed_at: None,
+        risk_confirmed_score: None,
         activity_window_started_at: Some(created_at),
         activity_request_count: 0,
         last_activity_risk_event_at: None,
@@ -108,6 +110,10 @@ pub fn session_view_from_cached_session(session: &CachedSession, current: bool) 
         ip: session.ip.clone(),
         geo_country_code: session.geo_country_code.clone(),
         user_agent: session.user_agent.clone(),
+        client: crate::domains::auth::user_agent::parse(
+            session.user_agent.as_deref(),
+            session.sec_ch_ua.as_deref(),
+        ),
         device_id: session
             .account_device_id
             .as_deref()
@@ -116,6 +122,7 @@ pub fn session_view_from_cached_session(session: &CachedSession, current: bool) 
         device_trust_score: session.device_trust_score,
         risk_score: session.risk_score,
         risk_decision: session.risk_decision.clone(),
+        risk_confirmed_at: session.risk_confirmed_at,
         current,
     }
 }
@@ -221,6 +228,14 @@ pub fn current_session_ttl(session: &CachedSession) -> u64 {
     )
 }
 
+pub fn is_expired(session: &CachedSession, now: DateTime<Utc>) -> bool {
+    session.revoked_at.is_some()
+        || session.expires_at <= now
+        || session
+            .idle_expires_at
+            .is_some_and(|expires_at| expires_at <= now)
+}
+
 pub fn expires_at_from_ttl(ttl_hours: i64) -> DateTime<Utc> {
     Utc::now() + ChronoDuration::hours(ttl_hours)
 }
@@ -276,6 +291,16 @@ mod idle_timeout_tests {
     }
 
     #[test]
+    fn idle_expiration_invalidates_session_before_absolute_deadline() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::days(30));
+        configure_idle_timeout(&mut session, 30, now);
+
+        assert!(!is_expired(&session, now + ChronoDuration::minutes(29)));
+        assert!(is_expired(&session, now + ChronoDuration::minutes(30)));
+    }
+
+    #[test]
     fn non_positive_idle_timeout_disables_idle_expiration() {
         let now = Utc::now();
         let mut session = session(now, ChronoDuration::hours(1));
@@ -295,5 +320,24 @@ mod idle_timeout_tests {
         let view = session_view_from_cached_session(&session, true);
 
         assert_eq!(view.geo_country_code.as_deref(), Some("FR"));
+    }
+
+    #[test]
+    fn session_view_includes_normalized_client() {
+        let now = Utc::now();
+        let mut session = session(now, ChronoDuration::hours(1));
+        session.user_agent = Some(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) \
+             Version/17.5 Mobile/15E148 Safari/604.1"
+                .to_string(),
+        );
+
+        let view = session_view_from_cached_session(&session, true);
+        let client = view.client.expect("client should be parsed");
+
+        assert_eq!(client.browser.as_deref(), Some("Mobile Safari"));
+        assert_eq!(client.os.as_deref(), Some("iOS"));
+        assert_eq!(client.device.as_deref(), Some("iPhone"));
+        assert_eq!(client.device_type, "mobile");
     }
 }

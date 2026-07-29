@@ -10,17 +10,56 @@ import {
   finishDiscoverableLoginWebAuthn,
   startDiscoverableLoginWebAuthn,
 } from '../identity.auth.api';
+import type { LoginPasswordResult } from '../identity.auth.api';
 
 type ConditionalWebAuthnLoginOptions = {
   finishLogin: (session: string | null) => Promise<void>;
   setSessionToken: (value: string | null) => void;
+  setEmail: (value: string) => void;
+  setLoginStateToken: (value: string | null) => void;
+  setStep: (value: 'password') => void;
   setError: (value: string | null) => void;
   signal?: AbortSignal;
 };
 
+type ConditionalWebAuthnResultOptions = Omit<ConditionalWebAuthnLoginOptions, 'signal'>;
+
+export async function applyConditionalWebAuthnResult(
+  result: LoginPasswordResult,
+  {
+    finishLogin,
+    setSessionToken,
+    setEmail,
+    setLoginStateToken,
+    setStep,
+    setError,
+  }: ConditionalWebAuthnResultOptions,
+) {
+  if (result.next_step === 'pwd') {
+    if (!result.state_token || !result.email) {
+      setError('La session de connexion est invalide. Veuillez réessayer.');
+      return;
+    }
+    setEmail(result.email);
+    setLoginStateToken(result.state_token);
+    setStep('password');
+    setError(null);
+    return;
+  }
+
+  if (result.session_token) {
+    setSessionToken(result.session_token);
+  }
+  await finishLogin(result.session_token ?? null);
+  setError(null);
+}
+
 export async function completeConditionalWebAuthnLogin({
   finishLogin,
   setSessionToken,
+  setEmail,
+  setLoginStateToken,
+  setStep,
   setError,
   signal,
 }: ConditionalWebAuthnLoginOptions) {
@@ -31,7 +70,9 @@ export async function completeConditionalWebAuthnLogin({
   const publicKey = parseRequestOptions(
     start.options as WebauthnRequestOptionsJSON | { publicKey: WebauthnRequestOptionsJSON },
   );
-  const credential = await getConditionalWebAuthnCredential(publicKey, { signal });
+  const credential = await getConditionalWebAuthnCredential(publicKey, {
+    signal,
+  });
   if (!credential || signal?.aborted) {
     return;
   }
@@ -49,9 +90,12 @@ export async function completeConditionalWebAuthnLogin({
   if (!result || signal?.aborted) {
     return;
   }
-  if (result.session_token) {
-    setSessionToken(result.session_token);
-  }
-  await finishLogin(result.session_token ?? null);
-  setError(null);
+  await applyConditionalWebAuthnResult(result, {
+    finishLogin,
+    setSessionToken,
+    setEmail,
+    setLoginStateToken,
+    setStep,
+    setError,
+  });
 }

@@ -31,34 +31,58 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 
 impl AppState {
     pub async fn bootstrap(config: &AppConfig, db: PgPool) -> anyhow::Result<Self> {
-        if config.kms_enabled {
-            anyhow::bail!(
-                "NVBES_KMS_ENABLED requires a Cloud KMS adapter. OSS account-service uses local JWT signing keys."
+        let jwt = if config.kms_enabled {
+            let signer = crate::domains::auth::jwt::kms::ScalewayKmsSigner::from_env()
+                .map_err(|error| anyhow::anyhow!(error.message))?;
+            let public_key_pem = signer
+                .public_key_pem()
+                .await
+                .map_err(|error| anyhow::anyhow!(error.message))?;
+            let kid = crate::domains::auth::keys::key_id_from_public_key(&public_key_pem)
+                .map_err(|error| anyhow::anyhow!(error.message))?;
+            crate::domains::auth::keys::activate_kms_key(
+                &db,
+                &kid,
+                signer.key_id(),
+                &public_key_pem,
+            )
+            .await
+            .map_err(|error| anyhow::anyhow!(error.message))?;
+            let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
+                .await
+                .map_err(|error| anyhow::anyhow!(error.message))?;
+            info!(%kid, kms_key_id = signer.key_id(), "JWT signing initialized with Scaleway KMS");
+            crate::domains::auth::jwt::JwtService::new_kms(
+                &kid,
+                signer,
+                public_keys,
+                config.api_base_url.trim_end_matches('/'),
+                "nvbes-account-service",
+                chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
+            )
+        } else {
+            let local_key =
+                crate::domains::auth::keys_local::load_or_create_local_signing_key_material()
+                    .expect("local signing key material should load");
+            crate::domains::auth::keys_local::ensure_local_signing_key(&db, &local_key)
+                .await
+                .expect("local signing key should be synced");
+            let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
+                .await
+                .unwrap_or_default();
+            info!(
+                "JWT signing initialized with local RSA key (kid={})",
+                local_key.kid
             );
-        }
-
-        let local_key =
-            crate::domains::auth::keys_local::load_or_create_local_signing_key_material()
-                .expect("local signing key material should load");
-        crate::domains::auth::keys_local::ensure_local_signing_key(&db, &local_key)
-            .await
-            .expect("local signing key should be synced");
-        let public_keys = crate::domains::auth::keys::get_public_key_pems_for_decoding(&db)
-            .await
-            .unwrap_or_default();
-
-        info!(
-            "JWT signing initialized with local RSA key (kid={})",
-            local_key.kid
-        );
-        let jwt = crate::domains::auth::jwt::JwtService::new_local(
-            &local_key.kid,
-            &local_key.private_key_pem,
-            public_keys,
-            "nvbes-identity",
-            "nvbes-account-service",
-            chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
-        );
+            crate::domains::auth::jwt::JwtService::new_local(
+                &local_key.kid,
+                &local_key.private_key_pem,
+                public_keys,
+                config.api_base_url.trim_end_matches('/'),
+                "nvbes-account-service",
+                chrono::Duration::hours(config.auth_refresh_token_ttl_hours),
+            )
+        };
 
         let redis = nvbes_core::redis_runtime::require_redis_pool(config).await?;
 

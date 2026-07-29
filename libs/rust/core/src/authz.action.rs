@@ -25,6 +25,8 @@ pub enum WorkspaceAction {
     ViewQuota,
     ViewBilling,
     ManageBilling,
+    ManageKeys,
+    ManageAdministration,
     ViewAudit,
     ExportAudit,
     ExportWorkspaceData,
@@ -57,6 +59,8 @@ impl WorkspaceAction {
             WorkspaceAction::ViewQuota => "view_quota",
             WorkspaceAction::ViewBilling => "view_billing",
             WorkspaceAction::ManageBilling => "manage_billing",
+            WorkspaceAction::ManageKeys => "manage_keys",
+            WorkspaceAction::ManageAdministration => "manage_administration",
             WorkspaceAction::ViewAudit => "view_audit",
             WorkspaceAction::ExportAudit => "export_audit",
             WorkspaceAction::ExportWorkspaceData => "export_workspace_data",
@@ -73,6 +77,8 @@ pub fn action_requires_step_up(action: WorkspaceAction) -> bool {
             | WorkspaceAction::ChangeMemberRole
             | WorkspaceAction::RemoveMember
             | WorkspaceAction::ManageBilling
+            | WorkspaceAction::ManageKeys
+            | WorkspaceAction::ManageAdministration
             | WorkspaceAction::ExportWorkspaceData
             | WorkspaceAction::DeleteWorkspace
             | WorkspaceAction::DeleteObjectPermanently
@@ -108,6 +114,10 @@ pub fn parse_action(action: &str) -> Option<WorkspaceAction> {
         "view_quota" | "quota.view" => Some(WorkspaceAction::ViewQuota),
         "view_billing" | "billing.view" => Some(WorkspaceAction::ViewBilling),
         "manage_billing" | "billing.manage" => Some(WorkspaceAction::ManageBilling),
+        "manage_keys" | "keys.manage" => Some(WorkspaceAction::ManageKeys),
+        "manage_administration" | "administration.manage" => {
+            Some(WorkspaceAction::ManageAdministration)
+        }
         "view_audit" | "audit.view" => Some(WorkspaceAction::ViewAudit),
         "export_audit" | "audit.export" => Some(WorkspaceAction::ExportAudit),
         "export_workspace_data" | "workspace.export_data" => {
@@ -116,4 +126,16 @@ pub fn parse_action(action: &str) -> Option<WorkspaceAction> {
         "delete_workspace" | "workspace.delete" => Some(WorkspaceAction::DeleteWorkspace),
         _ => None,
     }
+}
+
+pub fn action_requires_independent_approval(action: WorkspaceAction) -> bool {
+    matches!(
+        action,
+        WorkspaceAction::ManageBilling
+            | WorkspaceAction::ManageKeys
+            | WorkspaceAction::ManageAdministration
+            | WorkspaceAction::ExportAudit
+            | WorkspaceAction::ExportWorkspaceData
+            | WorkspaceAction::DeleteWorkspace
+    )
 }

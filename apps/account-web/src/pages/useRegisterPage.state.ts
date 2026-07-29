@@ -1,18 +1,8 @@
 import { useMemo, useState } from 'react';
+import { birthdateBounds } from '@/components/birthdate';
+import { passwordHasSupportedLength } from '../identity.password.policy';
 import { estimatePasswordStrength } from './RegisterPage.password-strength';
 import type { RegisterStep } from './RegisterPage.shared';
-
-function birthdateBounds() {
-  const today = new Date();
-  return {
-    minBirthdate: new Date(today.getFullYear() - 120, today.getMonth(), today.getDate())
-      .toISOString()
-      .split('T')[0],
-    maxBirthdate: new Date(today.getFullYear() - 13, today.getMonth(), today.getDate())
-      .toISOString()
-      .split('T')[0],
-  };
-}
 
 export function useRegisterPageState() {
   const [step, setStep] = useState<RegisterStep>(1);
@@ -36,7 +26,10 @@ export function useRegisterPageState() {
   return {
     birthdate,
     canProceedFromStep1:
-      firstname.trim() !== '' && lastname.trim() !== '' && (passwordResult?.score ?? 0) >= 3,
+      firstname.trim() !== '' &&
+      lastname.trim() !== '' &&
+      passwordHasSupportedLength(password) &&
+      (passwordResult?.score ?? 0) >= 3,
     email,
     firstname,
     lastname,

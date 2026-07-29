@@ -1,5 +1,7 @@
 /// <reference lib="webworker" />
 
+import { notificationUrl } from './identity.service-worker.notification-url';
+
 type PrecacheManifestEntry = string | { url: string; revision?: string | null };
 type IdentityWorkerGlobal = ServiceWorkerGlobalScope & {
   __WB_MANIFEST: PrecacheManifestEntry[];
@@ -15,7 +17,6 @@ const worker = self as unknown as IdentityWorkerGlobal;
 const precacheManifest = (self as unknown as IdentityWorkerGlobal).__WB_MANIFEST;
 void precacheManifest;
 
-const defaultNotificationUrl = '/account/0/notifications';
 const defaultNotificationTitle = 'nvbes Identity';
 
 function readPushPayload(event: PushEvent): PushPayload {
@@ -29,11 +30,6 @@ function readPushPayload(event: PushEvent): PushPayload {
 
 function textValue(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
-}
-
-function notificationUrl(value: unknown): string {
-  const rawUrl = textValue(value) ?? defaultNotificationUrl;
-  return new URL(rawUrl, worker.location.origin).href;
 }
 
 worker.addEventListener('install', (event) => {
@@ -56,7 +52,7 @@ worker.addEventListener('push', (event) => {
   event.waitUntil(
     worker.registration.showNotification(title, {
       body: textValue(payload.body),
-      data: { url: notificationUrl(payload.url) },
+      data: { url: notificationUrl(payload.url, worker.location.origin) },
       icon: '/icon-192.png',
       badge: '/icon-180.png',
       tag: textValue(payload.tag),
@@ -66,7 +62,10 @@ worker.addEventListener('push', (event) => {
 
 worker.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = notificationUrl((event.notification.data as PushPayload | undefined)?.url);
+  const url = notificationUrl(
+    (event.notification.data as PushPayload | undefined)?.url,
+    worker.location.origin,
+  );
 
   event.waitUntil(
     (async () => {

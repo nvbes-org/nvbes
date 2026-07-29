@@ -1,11 +1,3 @@
-export function isPasswordExpiredError(err: unknown): boolean {
-  return apiErrorCode(err) === 'password_expired';
-}
-
-export function isPrimaryEmailVerificationRequiredError(err: unknown): boolean {
-  return apiErrorCode(err) === 'email_mfa_requires_verified_email';
-}
-
 export function isConsentRequiredError(err: unknown): boolean {
   return apiErrorCode(err) === 'consent_required';
 }

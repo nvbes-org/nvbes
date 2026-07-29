@@ -46,6 +46,8 @@ async fn load_token_workspace_access(
             WorkspaceAccessError::PrincipalRoleMissing.to_string(),
         )
     })?;
+    let mut tx = db.begin().await?;
+    set_auth_context(&mut tx, auth, workspace_id).await?;
     let row = sqlx::query(
         r#"
         SELECT
@@ -60,7 +62,7 @@ async fn load_token_workspace_access(
         "#,
     )
     .bind(workspace_id)
-    .fetch_optional(db)
+    .fetch_optional(&mut *tx)
     .await?;
 
     let row = row.ok_or_else(|| {
@@ -85,7 +87,7 @@ async fn load_token_workspace_access(
         .map(|actor_role| narrow_role(parsed_role, actor_role))
         .unwrap_or(parsed_role);
 
-    Ok(WorkspaceAccess {
+    let access = WorkspaceAccess {
         auth: auth.clone(),
         workspace_id,
         tenant_id,
@@ -94,7 +96,9 @@ async fn load_token_workspace_access(
         policy: WorkspacePolicy::member_share_links_enabled(
             row.get("member_can_create_share_links"),
         ),
-    })
+    };
+    tx.commit().await?;
+    Ok(access)
 }
 
 async fn load_membership_workspace_access(
@@ -102,6 +106,8 @@ async fn load_membership_workspace_access(
     auth: &AuthContext,
     workspace_id: Uuid,
 ) -> Result<WorkspaceAccess, AppError> {
+    let mut tx = db.begin().await?;
+    set_auth_context(&mut tx, auth, workspace_id).await?;
     let row = sqlx::query(
         r#"
         SELECT
@@ -120,7 +126,7 @@ async fn load_membership_workspace_access(
     )
     .bind(workspace_id)
     .bind(auth.user_id()?)
-    .fetch_optional(db)
+    .fetch_optional(&mut *tx)
     .await?;
 
     let row = row.ok_or_else(|| {
@@ -145,7 +151,7 @@ async fn load_membership_workspace_access(
         .map(|actor_role| narrow_role(user_role, actor_role))
         .unwrap_or(user_role);
 
-    Ok(WorkspaceAccess {
+    let access = WorkspaceAccess {
         auth: auth.clone(),
         workspace_id,
         tenant_id,
@@ -154,5 +160,24 @@ async fn load_membership_workspace_access(
         policy: WorkspacePolicy::member_share_links_enabled(
             row.get("member_can_create_share_links"),
         ),
-    })
+    };
+    tx.commit().await?;
+    Ok(access)
+}
+
+async fn set_auth_context(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    auth: &AuthContext,
+    workspace_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    nvbes_tenancy::set_transaction_rls_context(
+        tx,
+        nvbes_tenancy::RlsContext {
+            principal_id: Some(auth.principal_id),
+            user_id: Some(auth.user_id),
+            tenant_id: auth.tenant_id,
+            workspace_id: Some(workspace_id),
+        },
+    )
+    .await
 }

@@ -49,12 +49,8 @@ export async function resendVerificationEmail(email: string): Promise<ResendVeri
   });
 }
 
-export async function changeVerificationEmail(
-  currentEmail: string,
-  email: string,
-): Promise<ResendVerificationResponse> {
+export async function changeVerificationEmail(email: string): Promise<ResendVerificationResponse> {
   return identityHttpClient.post('/auth/verify-email/change', ResendVerificationResponseSchema, {
-    current_email: currentEmail,
     email,
   });
 }

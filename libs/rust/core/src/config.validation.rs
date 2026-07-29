@@ -4,10 +4,14 @@ mod basics;
 mod billing;
 #[path = "config.validation.geo.rs"]
 mod geo;
+#[path = "config.validation.oauth.rs"]
+mod oauth;
 #[path = "config.validation.observability.rs"]
 mod observability;
 #[path = "config.validation.request_e2ee.rs"]
 mod request_e2ee;
+#[path = "config.validation.secrets.rs"]
+mod secrets;
 #[path = "config.validation.urls.rs"]
 mod urls;
 
@@ -25,12 +29,16 @@ pub(crate) use observability::{
 #[cfg(test)]
 pub(crate) use request_e2ee::validate_request_e2ee;
 #[cfg(test)]
+pub(crate) use secrets::validate_auth_factor_encryption;
+#[cfg(test)]
 pub(crate) use urls::{
     validate_jwt_secret, validate_profiling_endpoint, validate_public_url, validate_webauthn_rp_id,
 };
 
 pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(), String> {
     let strict_mode = config.environment != "development";
+
+    oauth::validate_fapi_high_assurance(config)?;
 
     if config.mtls_enabled {
         if config.tls_cert_path.as_deref().unwrap_or("").is_empty() {
@@ -183,6 +191,7 @@ pub(super) fn validate_config_urls_and_secrets(config: &AppConfig) -> Result<(),
         config.auth_unverified_account_ttl_days,
     )?;
     request_e2ee::validate_request_e2ee(config, strict_mode)?;
+    secrets::validate_auth_factor_encryption(config, strict_mode)?;
     geo::validate_ip_intelligence(config, strict_mode)?;
     Ok(())
 }

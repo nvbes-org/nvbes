@@ -1,4 +1,6 @@
-use crate::domains::auth::types::{StepUpInput, StepUpResult};
+use crate::domains::auth::types::{
+    EmailStepUpChallengeResult, StepUpInput, StepUpPurpose, StepUpResult,
+};
 use crate::domains::auth::verification;
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
@@ -23,6 +25,14 @@ pub(crate) struct StepUpRequest {
     webauthn_response: Option<webauthn_rs::prelude::PublicKeyCredential>,
     webauthn_challenge_id: Option<Uuid>,
     recovery_code: Option<String>,
+    purpose: Option<StepUpPurpose>,
+    email_code: Option<String>,
+    email_challenge_id: Option<Uuid>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct EmailStepUpRequest {
+    purpose: StepUpPurpose,
 }
 
 #[utoipa::path(
@@ -48,6 +58,14 @@ pub(crate) async fn step_up(
         Some(request.pow_solution.as_str()),
     )
     .await?;
+    crate::domains::auth::check_rate_limit(
+        &state.redis,
+        "auth_step_up",
+        &format!("user:{}", auth.user_id),
+        10,
+        std::time::Duration::from_secs(300),
+    )
+    .await?;
 
     let webauthn = webauthn::build_webauthn(&state.config)?;
     let browser_authenticated =
@@ -55,15 +73,18 @@ pub(crate) async fn step_up(
     let result = verification::step_up(
         &state.db,
         &state.redis,
-        state.config.auth_step_up_ttl_minutes,
+        &state.config,
         &webauthn,
         &auth,
         StepUpInput {
+            purpose: request.purpose,
             password: request.password,
             totp_code: request.totp_code,
             webauthn_response: request.webauthn_response,
             webauthn_challenge_id: request.webauthn_challenge_id,
             recovery_code: request.recovery_code,
+            email_code: request.email_code,
+            email_challenge_id: request.email_challenge_id,
         },
         browser_authenticated,
     )
@@ -107,4 +128,41 @@ pub(crate) async fn step_up(
     }
 
     Ok(response)
+}
+
+#[utoipa::path(
+    post,
+    path = "/auth/step-up/email/request",
+    tag = "auth",
+    request_body = EmailStepUpRequest,
+    responses(
+        (status = 200, description = "Email step-up code sent", body = EmailStepUpChallengeResult),
+        (status = 400, description = "Email is not allowed for this purpose", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 429, description = "Rate limited", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn request_email_step_up(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Json(request): Json<EmailStepUpRequest>,
+) -> Result<Json<EmailStepUpChallengeResult>, AppError> {
+    crate::domains::auth::check_rate_limit(
+        &state.redis,
+        "auth_email_step_up",
+        &format!("user:{}", auth.user_id),
+        3,
+        std::time::Duration::from_secs(300),
+    )
+    .await?;
+    let result = verification::email::request_password_change_code(
+        &state.db,
+        &state.redis,
+        &state.config,
+        auth.user_id,
+        auth.session_id,
+        request.purpose,
+    )
+    .await?;
+    Ok(Json(result))
 }

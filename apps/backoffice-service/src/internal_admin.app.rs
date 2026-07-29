@@ -11,6 +11,7 @@ use sqlx::PgPool;
 pub struct AppState {
     pub config: AppConfig,
     pub db: PgPool,
+    pub(crate) privileged_identity: crate::privileged_authentication::PrivilegedIdentityClient,
     pub billing_grpc_endpoint: String,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub rate_limiter: crate::rate_limit::BackofficeRateLimiter,
@@ -24,14 +25,23 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
+        Self::try_new(config, db).expect("backoffice identity configuration must be valid")
+    }
+
+    pub fn try_new(config: AppConfig, db: PgPool) -> Result<Self, String> {
         let billing_grpc_endpoint = crate::billing_grpc::billing_grpc_endpoint(config.api_port)
             .unwrap_or_else(|error| {
                 tracing::warn!(%error, "falling back to local Billing gRPC endpoint");
                 "http://127.0.0.1:3021".to_string()
             });
+        let privileged_identity =
+            crate::privileged_authentication::PrivilegedIdentityClient::from_environment(
+                &config.environment,
+            )?;
         let state = Self {
             config,
             db,
+            privileged_identity,
             billing_grpc_endpoint,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),
@@ -42,12 +52,12 @@ impl AppState {
             state.db.size(),
             state.db.num_idle(),
         );
-        state
+        Ok(state)
     }
 }
 
 pub fn build_router(state: AppState) -> Router {
-    crate::routes::router(&state.config)
+    crate::routes::router(&state)
         .layer(CompressionLayer::new())
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

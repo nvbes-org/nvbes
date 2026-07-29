@@ -24,14 +24,35 @@ pub(super) async fn update_policy(
     validate_context(request.context.as_ref())?;
     let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
     let policy_kind = non_empty(request.policy_kind, "policy_kind")?;
-    let policy = policies::update_policy(db, tenant_id, &policy_kind, &request.rules_json).await?;
+    let scope_type = if request.scope_type.trim().is_empty() {
+        "tenant"
+    } else {
+        request.scope_type.trim()
+    };
+    let scope_id = if request.scope_id.trim().is_empty() {
+        tenant_id
+    } else {
+        parse_uuid(&request.scope_id, "scope_id")?
+    };
+    let policy = policies::update_scoped_policy(
+        db,
+        tenant_id,
+        &policy_kind,
+        scope_type,
+        scope_id,
+        &request.rules_json,
+    )
+    .await?;
     Ok(Response::new(policy))
 }
 
 pub(super) async fn evaluate_policy(
+    db: &sqlx::PgPool,
     request: Request<enterprise::EvaluatePolicyRequest>,
 ) -> Result<Response<enterprise::PolicyDecision>, Status> {
     let request = request.into_inner();
     validate_context(request.context.as_ref())?;
-    Ok(Response::new(policy_evaluation::evaluate_policy(request)?))
+    Ok(Response::new(
+        policy_evaluation::evaluate_policy(db, request).await?,
+    ))
 }

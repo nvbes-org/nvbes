@@ -8,8 +8,8 @@ mod inputs;
 
 pub use inputs::{
     AuthContext, ChangePasswordInput, ForgotPasswordInput, LoginInput, RecoveryCodesGenerateInput,
-    RegisterInput, ResetPasswordInput, StepUpInput, StepUpSubject, SwitchWorkspaceInput,
-    TotpConfirmInput, TotpSetupInput, UpdateProfileInput, VerifyEmailInput,
+    RegisterInput, ResetPasswordInput, StepUpInput, StepUpPurpose, StepUpSubject,
+    SwitchWorkspaceInput, TotpConfirmInput, TotpSetupInput, UpdateProfileInput, VerifyEmailInput,
     WebauthnRegisterFinishInput, WebauthnRegisterStartInput,
 };
 
@@ -108,11 +108,13 @@ pub struct SessionView {
     pub ip: Option<String>,
     pub geo_country_code: Option<String>,
     pub user_agent: Option<String>,
+    pub client: Option<crate::domains::auth::user_agent::UserAgentInfo>,
     pub device_id: Option<Uuid>,
     pub device_trust_level: Option<String>,
     pub device_trust_score: Option<i16>,
     pub risk_score: Option<f64>,
     pub risk_decision: Option<String>,
+    pub risk_confirmed_at: Option<DateTime<Utc>>,
     pub current: bool,
 }
 
@@ -120,6 +122,8 @@ pub struct SessionView {
 pub struct RegisterResult {
     pub user: UserView,
     pub verification_resend_available_at: DateTime<Utc>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub registration_enrollment_token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -131,6 +135,8 @@ pub struct LoginResult {
     #[serde(skip_serializing)]
     pub device_cookie_token: Option<String>,
     pub verification_resend_available_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub registration_enrollment_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -170,10 +176,18 @@ pub struct StepUpResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct EmailStepUpChallengeResult {
+    pub challenge_id: Uuid,
+    pub expires_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SwitchWorkspaceResult {
     pub workspace: WorkspaceView,
     pub session: SessionView,
     pub stepped_up: bool,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub browser_session_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -181,6 +195,12 @@ pub struct MfaFactorView {
     pub id: Uuid,
     pub factor_type: String,
     pub kind: Option<String>,
+    pub assurance: Option<String>,
+    pub phishing_resistant: bool,
+    pub backup_eligible: Option<bool>,
+    pub backup_state: Option<bool>,
+    pub sign_count: Option<i64>,
+    pub attestation_format: Option<String>,
     pub status: String,
     pub label: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -279,11 +299,13 @@ mod sessions_tests {
                 ip: None,
                 geo_country_code: None,
                 user_agent: None,
+                client: None,
                 device_id: None,
                 device_trust_level: None,
                 device_trust_score: None,
                 risk_score: None,
                 risk_decision: None,
+                risk_confirmed_at: None,
                 current: true,
             }],
             next_cursor: Some("opaque-cursor".to_string()),

@@ -121,8 +121,14 @@ pub async fn complete_upload(
     crate::domains::quotas::ensure_upload_allowed_tx(&mut tx, access.workspace_id, actual_size)
         .await?;
 
-    let scan_outcome =
-        scan::perform_scan(scanner, &file_data, scan_enabled, scan_fail_open).await?;
+    let scan_outcome = scan::perform_scan(
+        scanner,
+        &file_data,
+        storage_object.mime_type.as_deref(),
+        scan_enabled,
+        scan_fail_open,
+    )
+    .await?;
 
     let scanned_at = Utc::now();
     let storage_object = if scan_outcome.is_quarantined {
@@ -132,6 +138,7 @@ pub async fn complete_upload(
             upload.storage_object_id,
             actual_size,
             Some(&computed_checksum),
+            &scan_outcome.status,
             scan_engine,
             &scan_outcome.quarantine_reason,
             scanned_at,

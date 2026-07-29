@@ -101,7 +101,7 @@ pub(crate) async fn revoke_session(
     axum::extract::Path(session_id): axum::extract::Path<uuid::Uuid>,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, AppError> {
     if auth.session_id() != session_id {
-        verification::require_recent_step_up(&state.redis, &auth, None).await?;
+        verification::require_recent_phishing_resistant_step_up(&state.redis, &auth).await?;
     }
     sessions_mgmt::revoke(&state.db, &state.redis, auth.user_id(), session_id).await?;
     let (distinct_id, analytics_session_id) =
@@ -131,6 +131,7 @@ pub(crate) async fn revoke_all_other_sessions(
     Extension(auth): Extension<AuthContext>,
     headers: HeaderMap,
 ) -> Result<Json<crate::domains::auth::types::LogoutResult>, AppError> {
+    verification::require_recent_account_step_up(&state.db, &state.redis, &auth).await?;
     sessions_mgmt::revoke_all_others(&state.db, &state.redis, auth.user_id(), auth.session_id())
         .await?;
     let (distinct_id, session_id) = crate::http::request::product_analytics_correlation(&headers);
@@ -143,4 +144,57 @@ pub(crate) async fn revoke_all_other_sessions(
         .property("status", "others"),
     );
     Ok(Json(LogoutResult { success: true }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/auth/sessions/revoke-all",
+    tag = "auth",
+    responses(
+        (status = 200, description = "All sessions revoked", body = crate::domains::auth::types::LogoutResult),
+        (status = 401, description = "Recent step-up required", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn revoke_all_sessions(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<Response, AppError> {
+    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    sessions_mgmt::revoke_all_user_sessions(&state.db, &state.redis, auth.user_id()).await?;
+
+    let mut response = (StatusCode::OK, Json(LogoutResult { success: true })).into_response();
+    nvbes_core::security::insert_clear_site_data_header(response.headers_mut());
+    Ok(response)
+}
+
+#[utoipa::path(
+    post,
+    path = "/auth/sessions/{sessionId}/confirm",
+    tag = "auth",
+    responses(
+        (status = 200, description = "High-risk session explicitly confirmed", body = crate::domains::auth::types::SessionView),
+        (status = 401, description = "Recent step-up required", body = nvbes_core::http::error::ErrorEnvelope),
+        (status = 404, description = "Session not found", body = nvbes_core::http::error::ErrorEnvelope),
+    ),
+)]
+pub(crate) async fn confirm_high_risk_session(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    axum::extract::Path(session_id): axum::extract::Path<uuid::Uuid>,
+) -> Result<Json<crate::domains::auth::types::SessionView>, AppError> {
+    if auth.session_id() != session_id {
+        return Err(AppError::forbidden(
+            "session_confirmation_forbidden",
+            "Only the current session can be confirmed.",
+        ));
+    }
+    verification::require_recent_phishing_resistant_step_up(&state.redis, &auth).await?;
+    let session = sessions_mgmt::confirm_high_risk_session(
+        &state.db,
+        &state.redis,
+        auth.user_id(),
+        session_id,
+    )
+    .await?;
+    Ok(Json(session))
 }

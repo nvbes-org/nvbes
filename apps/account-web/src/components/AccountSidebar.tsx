@@ -1,10 +1,12 @@
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { accountNavSections, SidebarNavItem } from '@/components/AccountSidebar.shared';
+import { useAuthuser } from '@/hooks/useAuthuser';
 
 export function AccountSidebar() {
+  const authuser = useAuthuser();
+
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
-      <ScrollArea className="flex-1 overflow-hidden px-2 pt-4">
+      <div className="flex-1 overflow-y-auto px-2 pt-4">
         <nav className="flex min-w-0 flex-col gap-5">
           {accountNavSections.map((section) => (
             <div key={section.title} className="flex min-w-0 flex-col gap-1">
@@ -19,13 +21,14 @@ export function AccountSidebar() {
                     icon={item.icon}
                     label={item.label}
                     end={'end' in item ? item.end : undefined}
+                    authuser={authuser}
                   />
                 ))}
               </div>
             </div>
           ))}
         </nav>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

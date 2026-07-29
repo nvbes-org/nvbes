@@ -29,6 +29,7 @@ fn active_account_preserves_current_session_flag() {
             cnf_jkt: None,
         },
         SessionView {
+            risk_confirmed_at: None,
             id: session_id,
             tenant_id: None,
             organization_id: None,
@@ -41,6 +42,7 @@ fn active_account_preserves_current_session_flag() {
             ip: None,
             geo_country_code: None,
             user_agent: None,
+            client: None,
             device_id: None,
             device_trust_level: None,
             device_trust_score: None,

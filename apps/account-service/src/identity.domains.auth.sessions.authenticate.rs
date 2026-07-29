@@ -62,7 +62,7 @@ async fn authenticate_impl(
         .map_err(|err| {
             AppError::internal("redis_session_revocation_lookup_failed", err.to_string())
         })?
-        || session.expires_at <= Utc::now()
+        || cache::is_expired(&session, Utc::now())
     {
         let _ =
             nvbes_redis::session::delete_session(redis, &session.principal_id, &session.session_id)
@@ -97,7 +97,7 @@ async fn authenticate_impl(
         &user,
         mfa::has_active_factor(db, principal_id).await?,
         claims.scope,
-        claims.cnf.map(|c| c.jkt),
+        claims.cnf.and_then(|confirmation| confirmation.jkt),
     ))
 }
 
@@ -116,6 +116,14 @@ pub(super) async fn enforce_cookie_theft_mitigation(
     }
 
     let assessment = cookie_theft::assess(session, &profile);
+    let baseline_client = crate::domains::auth::user_agent::parse(
+        session.user_agent.as_deref(),
+        session.sec_ch_ua.as_deref(),
+    );
+    let current_client = crate::domains::auth::user_agent::parse(
+        profile.user_agent.as_deref(),
+        profile.ua_client_hints.brands.as_deref(),
+    );
     session.cookie_theft_risk_score = Some(assessment.score);
     session.risk_score = Some(session.risk_score.unwrap_or(0.0).max(assessment.score));
     session.risk_decision = Some(
@@ -126,6 +134,10 @@ pub(super) async fn enforce_cookie_theft_mitigation(
         }
         .to_string(),
     );
+    if assessment.decision != CookieTheftDecision::Allow {
+        session.risk_confirmed_at = None;
+        session.risk_confirmed_score = None;
+    }
     if assessment.decision == CookieTheftDecision::Allow {
         return Ok(());
     }
@@ -157,6 +169,8 @@ pub(super) async fn enforce_cookie_theft_mitigation(
                 "session_id": session_id,
                 "baseline_ip": session.ip.clone(),
                 "baseline_user_agent": session.user_agent.clone(),
+                "baseline_client": baseline_client,
+                "current_client": current_client,
                 "current_accept_language": profile.accept_language,
                 "current_sec_fetch_site": profile.sec_fetch_site,
             }),
@@ -178,7 +192,7 @@ pub(super) async fn enforce_cookie_theft_mitigation(
     .await;
 
     if assessment.decision == CookieTheftDecision::Reauthenticate {
-        revoke_suspicious_session(redis, principal_id, session_id).await?;
+        revoke_suspicious_session(db, redis, principal_id, session_id).await?;
         return Err(AppError::unauthorized(
             "session_reauthentication_required",
             "Session reauthentication is required.",
@@ -189,10 +203,18 @@ pub(super) async fn enforce_cookie_theft_mitigation(
 }
 
 pub(super) async fn revoke_suspicious_session(
+    db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     principal_id: Uuid,
     session_id: Uuid,
 ) -> Result<(), AppError> {
+    crate::domains::oauth::security_events::enqueue_session_revoked(
+        db,
+        redis,
+        principal_id,
+        session_id,
+    )
+    .await?;
     let _ =
         nvbes_redis::refresh_token::revoke_session_refresh_tokens(redis, principal_id, session_id)
             .await;

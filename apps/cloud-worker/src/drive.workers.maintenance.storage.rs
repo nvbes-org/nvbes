@@ -19,11 +19,17 @@ pub async fn purge_quarantined(
 ) -> anyhow::Result<JsonValue> {
     let candidates = sqlx::query_as::<_, StoragePurgeCandidate>(
         r#"
-        SELECT id, object_key
-        FROM storage_objects
-        WHERE status = 'quarantined'
-          AND updated_at < NOW() - ($1::integer * INTERVAL '1 day')
-        ORDER BY updated_at ASC
+        SELECT so.id, so.object_key
+        FROM storage_objects so
+        INNER JOIN data_retention_policies retention
+          ON retention.category = so.retention_category
+        WHERE so.status = 'quarantined'
+          AND COALESCE(
+            so.retention_until,
+            so.updated_at
+              + (LEAST($1::integer, retention.deleted_retention_days) * INTERVAL '1 day')
+          ) <= NOW()
+        ORDER BY so.updated_at ASC
         LIMIT 1000
         "#,
     )
@@ -45,10 +51,16 @@ pub async fn purge_deleted_storage(
 ) -> anyhow::Result<JsonValue> {
     let candidates = sqlx::query_as::<_, StoragePurgeCandidate>(
         r#"
-        SELECT id, object_key
-        FROM storage_objects
-        WHERE status = 'deleted'
-        ORDER BY updated_at ASC
+        SELECT so.id, so.object_key
+        FROM storage_objects so
+        INNER JOIN data_retention_policies retention
+          ON retention.category = so.retention_category
+        WHERE so.status = 'deleted'
+          AND COALESCE(
+            so.retention_until,
+            so.updated_at + (retention.deleted_retention_days * INTERVAL '1 day')
+          ) <= NOW()
+        ORDER BY so.updated_at ASC
         LIMIT 1000
         "#,
     )
@@ -70,11 +82,17 @@ pub async fn purge_workspace_deleted_storage(
 ) -> anyhow::Result<PurgeResult> {
     let candidates = sqlx::query_as::<_, StoragePurgeCandidate>(
         r#"
-        SELECT id, object_key
-        FROM storage_objects
-        WHERE workspace_id = $1
-          AND status = 'deleted'
-        ORDER BY updated_at ASC
+        SELECT so.id, so.object_key
+        FROM storage_objects so
+        INNER JOIN data_retention_policies retention
+          ON retention.category = so.retention_category
+        WHERE so.workspace_id = $1
+          AND so.status = 'deleted'
+          AND COALESCE(
+            so.retention_until,
+            so.updated_at + (retention.deleted_retention_days * INTERVAL '1 day')
+          ) <= NOW()
+        ORDER BY so.updated_at ASC
         LIMIT 1000
         "#,
     )
@@ -108,14 +126,15 @@ async fn purge_candidates(
         .filter_map(|candidate| candidate.object_key.clone())
         .collect::<Vec<_>>();
 
-    for keys in object_keys.chunks(STORAGE_DELETE_BATCH_SIZE) {
-        storage.delete_objects(keys).await?;
-    }
-
     let ids = candidates
         .iter()
         .map(|candidate| candidate.id)
         .collect::<Vec<_>>();
+    cryptographically_erase_candidates(database, &ids).await?;
+
+    for keys in object_keys.chunks(STORAGE_DELETE_BATCH_SIZE) {
+        storage.delete_objects(keys).await?;
+    }
 
     let result = sqlx::query(
         r#"
@@ -133,4 +152,34 @@ async fn purge_candidates(
         deleted_metadata: result.rows_affected(),
         deleted_storage_objects: object_keys.len(),
     })
+}
+
+async fn cryptographically_erase_candidates(
+    database: &Database,
+    storage_object_ids: &[Uuid],
+) -> anyhow::Result<()> {
+    let mut tx = database.begin().await?;
+    sqlx::query(
+        r#"
+        DELETE FROM storage_object_key_envelopes
+        WHERE storage_object_id = ANY($1)
+          AND destroyed_at IS NULL
+        "#,
+    )
+    .bind(storage_object_ids)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        r#"
+        UPDATE storage_objects
+        SET cryptographic_erased_at = COALESCE(cryptographic_erased_at, NOW()),
+            updated_at = NOW()
+        WHERE id = ANY($1)
+        "#,
+    )
+    .bind(storage_object_ids)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }

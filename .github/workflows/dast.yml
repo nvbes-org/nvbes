@@ -1,0 +1,91 @@
+name: dast
+
+on:
+  schedule:
+    - cron: '41 2 * * 3'
+  workflow_dispatch:
+    inputs:
+      account_url:
+        description: Account web URL to scan
+        required: true
+        type: string
+      backoffice_url:
+        description: Backoffice web URL to scan
+        required: true
+        type: string
+      openapi_url:
+        description: Public OpenAPI document URL
+        required: true
+        type: string
+
+concurrency:
+  group: dast-${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  zap-auth-api-backoffice:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (vars.DAST_ACCOUNT_URL != '' &&
+      vars.DAST_BACKOFFICE_URL != '' &&
+      vars.DAST_OPENAPI_URL != '')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ACCOUNT_URL: ${{ inputs.account_url || vars.DAST_ACCOUNT_URL }}
+      BACKOFFICE_URL: ${{ inputs.backoffice_url || vars.DAST_BACKOFFICE_URL }}
+      OPENAPI_URL: ${{ inputs.openapi_url || vars.DAST_OPENAPI_URL }}
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy@sha256:8d387b1a63e3425beef4846e39719f5af2a787753af2d8b6558c6257d7a577a2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: node tools/security/check-ci-cd-security.mjs
+      - name: Validate target configuration
+        run: |
+          test -n "$ACCOUNT_URL"
+          test -n "$BACKOFFICE_URL"
+          test -n "$OPENAPI_URL"
+          case "$ACCOUNT_URL $BACKOFFICE_URL $OPENAPI_URL" in
+            *http://localhost*|*http://127.0.0.1*) exit 1 ;;
+          esac
+          mkdir -p zap-reports
+          chmod 0777 zap-reports
+      - name: Scan authentication surface
+        run: |
+          docker run --rm \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-baseline.py -t "$ACCOUNT_URL" \
+            -J account.json -r account.html -x account.xml -I
+      - name: Scan public API from OpenAPI
+        run: |
+          docker run --rm \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-api-scan.py -t "$OPENAPI_URL" -f openapi \
+            -J api.json -r api.html -x api.xml -I
+      - name: Scan backoffice surface
+        run: |
+          docker run --rm \
+            --volume "$PWD/zap-reports:/zap/wrk" \
+            "$ZAP_IMAGE" \
+            zap-baseline.py -t "$BACKOFFICE_URL" \
+            -J backoffice.json -r backoffice.html -x backoffice.xml -I
+      - name: Upload DAST reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: zap-dast-${{ github.run_id }}
+          path: zap-reports/
+          retention-days: 30
+          if-no-files-found: error

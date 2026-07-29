@@ -1,9 +1,10 @@
 import { HttpError } from '@nvbes/http-client';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
-import type { VerifyEmailApiError, VerifyEmailResultState } from './VerifyEmailResultPage.shared';
+import { clearCapturedAuthUrlToken, readCapturedAuthUrlToken } from '../identity.auth-url-secrets';
 import { verifyEmailToken } from '../identity.email-verification';
+import type { VerifyEmailApiError, VerifyEmailResultState } from './VerifyEmailResultPage.shared';
 
 function errorBody(error: unknown): VerifyEmailApiError {
   if (error instanceof HttpError && typeof error.body === 'object' && error.body !== null) {
@@ -15,15 +16,13 @@ function errorBody(error: unknown): VerifyEmailApiError {
 
 export function useVerifyEmailResultPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.searchStr);
-  const token = searchParams.get('token');
+  const [token] = useState(() => readCapturedAuthUrlToken('/verify-result'));
   const [result, setResult] = useState<VerifyEmailResultState>({
     kind: 'verifying',
   });
 
   useEffect(() => {
-    if (!token) {
+    if (token.length === 0) {
       setResult({ kind: 'token_invalid' });
       return;
     }
@@ -65,6 +64,8 @@ export function useVerifyEmailResultPage() {
             message: message || 'Échec de la vérification.',
           });
         }
+      } finally {
+        clearCapturedAuthUrlToken('/verify-result');
       }
     };
 

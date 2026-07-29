@@ -1,0 +1,147 @@
+version: 1
+review_interval_days: 90
+classification: internal
+
+owners:
+  security_operations:
+    accountable: Security Lead
+    backup: Platform Lead
+    contact: security@nvbes.cloud
+  identity_security:
+    accountable: Account Domain Lead
+    backup: Security Lead
+  platform_security:
+    accountable: Platform Lead
+    backup: Security Lead
+  privacy_security:
+    accountable: Privacy Lead
+    backup: Security Lead
+  payment_security:
+    accountable: Billing Domain Lead
+    backup: Security Lead
+
+critical_assets:
+  - id: identity-provider
+    owner: identity_security
+    classification: restricted
+    repositories:
+      - apps/account-service
+      - apps/account-worker
+      - libs/ts/identity-sdk-web
+    dependencies:
+      - postgresql-account
+      - redis-session-store
+      - scaleway-key-manager
+      - scaleway-secret-manager
+    recovery_priority: 1
+
+  - id: tenant-data-plane
+    owner: platform_security
+    classification: restricted
+    repositories:
+      - apps/cloud-service
+      - apps/cloud-worker
+      - libs/rust/storage
+      - libs/rust/tenancy
+    dependencies:
+      - postgresql-cloud
+      - scaleway-object-storage
+    recovery_priority: 1
+
+  - id: billing-control-plane
+    owner: payment_security
+    classification: confidential
+    repositories:
+      - apps/billing-service
+      - apps/billing-worker
+    dependencies:
+      - postgresql-billing
+      - stripe
+    recovery_priority: 2
+
+  - id: internal-administration
+    owner: security_operations
+    classification: restricted
+    repositories:
+      - apps/backoffice-service
+      - apps/backoffice-web
+      - apps/enterprise-service
+    dependencies:
+      - identity-provider
+      - postgresql-account
+    recovery_priority: 1
+
+  - id: audit-evidence
+    owner: security_operations
+    classification: restricted
+    repositories:
+      - libs/rust/audit
+      - apps/account-worker
+      - infrastructure/modules/scaleway-audit-archive
+      - infrastructure/environments/security-audit-archive
+    dependencies:
+      - scaleway-key-manager
+      - external-worm-archive
+      - grafana-cloud
+    recovery_priority: 1
+
+  - id: software-delivery
+    owner: platform_security
+    classification: restricted
+    repositories:
+      - .github/workflows
+      - infrastructure
+      - tools/security
+    dependencies:
+      - github
+      - scaleway-container-registry
+    recovery_priority: 1
+
+platform_dependencies:
+  - id: postgresql-account
+    kind: data-store
+    network: private-only
+    owner: identity_security
+  - id: postgresql-cloud
+    kind: data-store
+    network: private-only
+    owner: platform_security
+  - id: postgresql-billing
+    kind: data-store
+    network: private-only
+    owner: payment_security
+  - id: redis-session-store
+    kind: ephemeral-security-state
+    network: private-only
+    owner: identity_security
+  - id: scaleway-key-manager
+    kind: cryptographic-root
+    owner: security_operations
+  - id: external-worm-archive
+    kind: immutable-evidence
+    account_boundary: separate-security-account-and-terraform-state
+    owner: security_operations
+  - id: cloudflare-edge
+    kind: dns-waf-ddos
+    owner: platform_security
+  - id: grafana-cloud
+    kind: siem-observability
+    owner: security_operations
+
+subprocessors:
+  source_of_truth: docs/legal/subprocessors.md
+  review_triggers:
+    - new data category
+    - new processing region
+    - new vendor
+    - material contract change
+    - annual renewal
+
+required_evidence:
+  - quarterly access review
+  - quarterly restore exercise
+  - quarterly incident exercise
+  - monthly vulnerability review
+  - annual independent pentest
+  - audit anchor verification
+  - subprocessor review

@@ -19,6 +19,7 @@ pub struct CreateAuthorizationCodeInput {
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub consent_action: Option<String>,
+    pub dpop_jkt: Option<String>,
 }
 
 #[derive(Debug)]
@@ -29,6 +30,7 @@ pub struct ExchangeCodeInput {
     pub client_assertion_verified: bool,
     pub redirect_uri: Option<String>,
     pub code_verifier: Option<String>,
+    pub token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 }
 
 #[derive(Debug, Clone)]

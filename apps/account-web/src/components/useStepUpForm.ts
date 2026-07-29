@@ -1,4 +1,10 @@
-import { completeWebAuthnStepUp, listMfaFactors, stepUp } from '@nvbes/identity-sdk-web';
+import {
+  completeWebAuthnStepUp,
+  listMfaFactors,
+  requestEmailStepUpCode,
+  stepUp,
+  type StepUpPurpose,
+} from '@nvbes/identity-sdk-web';
 import type { MfaFactorView } from '@nvbes/identity-sdk-core/src/types';
 import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
 import { z } from 'zod';
@@ -11,28 +17,37 @@ const PreferencesSchema = z.object({
   skip_password: z.boolean().default(false),
 });
 
-export type StepUpMethod = 'password' | 'webauthn' | 'totp' | 'recovery';
+export type StepUpMethod = 'password' | 'webauthn' | 'totp' | 'recovery' | 'email';
 export type WebAuthnStatus = 'idle' | 'prompting' | 'error' | 'success';
 
 export function useStepUpForm({
   open = true,
   onSuccess,
+  purpose,
 }: {
   open?: boolean;
   onSuccess: () => void;
+  purpose?: StepUpPurpose;
 }) {
   const [method, setMethodState] = useState<StepUpMethod>('password');
   const [factors, setFactors] = useState<MfaFactorView[]>([]);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [prerequisitesLoaded, setPrerequisitesLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailChallengeId, setEmailChallengeId] = useState<string | null>(null);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [webauthnStatus, setWebauthnStatus] = useState<WebAuthnStatus>('idle');
 
   const hasTotp = factors.some((factor) => factor.factor_type === 'totp');
   const hasWebAuthn = factors.some((factor) => factor.factor_type === 'webauthn');
   const hasRecovery = factors.some((factor) => factor.factor_type === 'recovery');
+  const allowEmail = purpose === 'password_change';
+  const canUsePassword = !mfaEnabled;
 
   const setMethod = useCallback((newMethod: StepUpMethod) => {
     setMethodState(newMethod);
@@ -44,8 +59,13 @@ export function useStepUpForm({
 
   useEffect(() => {
     if (!open) {
+      setMethodState('password');
+      setPrerequisitesLoaded(false);
       setWebauthnStatus('idle');
       setError(null);
+      setEmailCode('');
+      setEmailChallengeId(null);
+      setEmailCodeSent(false);
       return;
     }
 
@@ -63,6 +83,20 @@ export function useStepUpForm({
         }
 
         setFactors(factorsRes.factors);
+        setMfaEnabled(factorsRes.mfa_enabled);
+        setPrerequisitesLoaded(true);
+        if (factorsRes.mfa_enabled) {
+          if (factorsRes.factors.some((factor) => factor.factor_type === 'webauthn')) {
+            setMethod('webauthn');
+          } else if (factorsRes.factors.some((factor) => factor.factor_type === 'totp')) {
+            setMethod('totp');
+          } else if (factorsRes.factors.some((factor) => factor.factor_type === 'recovery')) {
+            setMethod('recovery');
+          } else if (purpose === 'password_change') {
+            setMethod('email');
+          }
+          return;
+        }
         const canSkip =
           (prefsRes.skip_password ?? false) &&
           factorsRes.factors.some((factor) => factor.factor_type === 'webauthn');
@@ -79,14 +113,31 @@ export function useStepUpForm({
     return () => {
       active = false;
     };
-  }, [open, setMethod]);
+  }, [open, purpose, setMethod]);
+
+  const sendEmailCode = useCallback(async () => {
+    if (purpose !== 'password_change') {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await requestEmailStepUpCode('', purpose);
+      setEmailChallengeId(result.challenge_id);
+      setEmailCodeSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible d'envoyer le code");
+    } finally {
+      setLoading(false);
+    }
+  }, [purpose]);
 
   const handleWebAuthnClick = useCallback(async () => {
     setWebauthnStatus('prompting');
     setLoading(true);
     setError(null);
     try {
-      await completeWebAuthnStepUp('');
+      await completeWebAuthnStepUp('', undefined, undefined, purpose);
       setWebauthnStatus('success');
       onSuccess();
     } catch (err) {
@@ -114,7 +165,7 @@ export function useStepUpForm({
     } finally {
       setLoading(false);
     }
-  }, [onSuccess]);
+  }, [onSuccess, purpose]);
 
   useEffect(() => {
     if (open && method === 'webauthn' && webauthnStatus === 'idle' && !loading) {
@@ -124,15 +175,22 @@ export function useStepUpForm({
 
   const submitStepUp = async () => {
     if (method === 'password') {
-      await stepUp('', { password });
+      await stepUp('', { password, purpose });
       return;
     }
     if (method === 'totp') {
-      await stepUp('', { totpCode });
+      await stepUp('', { totpCode, purpose });
       return;
     }
     if (method === 'recovery') {
-      await stepUp('', { recoveryCode });
+      await stepUp('', { recoveryCode, purpose });
+      return;
+    }
+    if (method === 'email') {
+      if (!emailChallengeId) {
+        throw new Error("Envoyez d'abord un code de vérification.");
+      }
+      await stepUp('', { purpose, emailCode, emailChallengeId });
       return;
     }
     await handleWebAuthnClick();
@@ -158,6 +216,10 @@ export function useStepUpForm({
 
   return {
     error,
+    allowEmail,
+    canUsePassword,
+    emailCode,
+    emailCodeSent,
     handleSubmit,
     handleWebAuthnClick,
     hasRecovery,
@@ -166,7 +228,10 @@ export function useStepUpForm({
     loading,
     method,
     password,
+    prerequisitesLoaded,
     recoveryCode,
+    sendEmailCode,
+    setEmailCode,
     setMethod,
     setPassword,
     setRecoveryCode,

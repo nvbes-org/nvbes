@@ -4,6 +4,7 @@ use tonic::{Request, Response, Status};
 use crate::grpc::{
     break_glass,
     pb::nvbes::enterprise::v1 as enterprise,
+    privileged_authentication,
     service_status::{non_empty, parse_uuid, validate_context},
 };
 
@@ -13,6 +14,11 @@ pub(super) async fn activate_break_glass(
 ) -> Result<Response<enterprise::BreakGlassGrant>, Status> {
     let request = request.into_inner();
     let context = validate_context(request.context.as_ref())?;
+    privileged_authentication::require(request.authentication.as_ref())?;
+    let authentication = request
+        .authentication
+        .as_ref()
+        .expect("privileged authentication was validated");
     let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
     let principal_id = parse_uuid(&request.principal_id, "principal_id")?;
     let actor_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
@@ -25,6 +31,7 @@ pub(super) async fn activate_break_glass(
         actor_id,
         &procedure_reference,
         &reason,
+        authentication,
     )
     .await?;
     Ok(Response::new(enterprise::BreakGlassGrant {

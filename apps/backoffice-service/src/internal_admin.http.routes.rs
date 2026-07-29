@@ -2,7 +2,6 @@ use axum::{Json, Router, http::StatusCode, routing::get};
 use serde::Serialize;
 
 use crate::app::AppState;
-use nvbes_core::config::AppConfig;
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -11,7 +10,7 @@ struct HealthResponse {
     status: &'static str,
 }
 
-pub fn router(config: &AppConfig) -> Router<AppState> {
+pub fn router(state: &AppState) -> Router<AppState> {
     let private_routes = Router::new()
         .route("/metrics", get(nvbes_observability::metrics_handler))
         .merge(crate::access_center::router())
@@ -36,6 +35,7 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::entitlements_center::router())
         .merge(crate::global_search::router())
         .merge(crate::identity_governance_center::router())
+        .merge(crate::identity_recovery::router())
         .merge(crate::operations_center_actions::router())
         .merge(crate::operations_center::router())
         .merge(crate::openapi::router())
@@ -53,7 +53,11 @@ pub fn router(config: &AppConfig) -> Router<AppState> {
         .merge(crate::users::router())
         .merge(crate::workspaces::router())
         .layer(axum::middleware::from_fn_with_state(
-            config.clone(),
+            state.clone(),
+            crate::privileged_authentication::privileged_authentication_guard,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state.config.clone(),
             nvbes_core::http::internal_observability::internal_observability_guard,
         ));
 

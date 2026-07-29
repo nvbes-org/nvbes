@@ -12,7 +12,6 @@ import {
   submitLoginMfa,
   submitLoginPassword,
   submitRegister,
-  resendLoginMfaEmailCode,
   type SupportedRegion,
   type WebauthnAuthStartResult,
 } from './identity.auth.api';
@@ -137,7 +136,6 @@ export async function startLoginWebauthnStep(stateToken: string): Promise<Webaut
 
 export type LoginMfaStepInput =
   | { stateToken: string; totpCode: string }
-  | { stateToken: string; emailCode: string }
   | { stateToken: string; recoveryCode: string }
   | {
       stateToken: string;
@@ -155,12 +153,6 @@ export async function submitLoginMfaStep(
       });
     }
 
-    if ('emailCode' in variables) {
-      return await submitLoginMfa(variables.stateToken, {
-        email_code: variables.emailCode,
-      });
-    }
-
     if ('recoveryCode' in variables) {
       return await submitLoginMfa(variables.stateToken, {
         recovery_code: variables.recoveryCode,
@@ -171,14 +163,6 @@ export async function submitLoginMfaStep(
       webauthn_response: variables.webauthnResponse,
       webauthn_challenge_id: variables.webauthnChallengeId,
     });
-  } catch (error) {
-    throw normalizeClientError(error);
-  }
-}
-
-export async function resendLoginMfaEmailCodeStep(stateToken: string): Promise<void> {
-  try {
-    await resendLoginMfaEmailCode(stateToken);
   } catch (error) {
     throw normalizeClientError(error);
   }

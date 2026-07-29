@@ -17,6 +17,7 @@ pub async fn exchange_device_code(
     jwt: &JwtService,
     auth_refresh_token_ttl_hours: i64,
     input: ExchangeDeviceCodeInput,
+    token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 ) -> Result<TokenView, AppError> {
     let lock_key = format!("oauth-device-code:{}", input.device_code);
     let locked = nvbes_redis::lock::acquire(redis, &lock_key, 15)
@@ -153,11 +154,12 @@ pub async fn exchange_device_code(
             .await?
             .data_region;
 
-        let token_pair = jwt.generate_token_pair_with_session(
+        let token_pair = jwt.generate_token_pair_with_confirmation(
             principal_id,
             Some(workspace_id),
             workspace_region,
             &scopes,
+            Vec::new(),
             Some(session_id),
             Some(tenant_id),
             organization_id,
@@ -165,8 +167,9 @@ pub async fn exchange_device_code(
             Some(assurance.amr.clone()),
             Some(&code.client_id),
             Some(assurance.auth_time),
-            None,
-        )?;
+            token_confirmation,
+        )
+        .await?;
 
         refresh_store::store_refresh_token(
             redis,

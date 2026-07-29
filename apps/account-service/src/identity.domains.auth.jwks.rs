@@ -29,7 +29,7 @@ impl From<JwkEntry> for JwkKey {
         Self {
             kty: "RSA".to_string(),
             kid: entry.kid,
-            alg: "RS256".to_string(),
+            alg: "PS256".to_string(),
             use_: "sig".to_string(),
             n: entry.n,
             e: entry.e,

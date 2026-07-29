@@ -2,6 +2,9 @@ use crate::http::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+#[path = "auth.assurance.rs"]
+mod assurance;
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Aal {
     #[serde(rename = "aal1")]
@@ -63,6 +66,10 @@ mod tokens;
 #[path = "auth.helpers.validation.rs"]
 mod validation;
 
+pub use assurance::{
+    PRIVILEGED_AUTHENTICATION_MAX_AGE_SECONDS, has_recent_phishing_resistant_authentication,
+    is_phishing_resistant_method,
+};
 pub use birthdate::{parse_birthdate, today_in_region, validate_birthdate};
 pub use password::{
     dummy_verify_password, hash_password, hash_password_with_pepper, verify_and_check_rehash,
@@ -73,5 +80,6 @@ pub use tokens::{
     unique_slug,
 };
 pub use validation::{
-    normalize_email, require_non_empty, slugify, validate_email, validate_password,
+    MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, normalize_email, require_non_empty, slugify,
+    validate_email, validate_password,
 };

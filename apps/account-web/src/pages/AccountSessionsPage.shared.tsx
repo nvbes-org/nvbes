@@ -5,5 +5,5 @@ export {
   OtherDevicesSection,
   DeviceCard,
 } from './AccountSessionsPage.cards';
-export { parseUserAgent } from './AccountSessionsPage.device';
+export { parseSessionClient } from './AccountSessionsPage.device';
 export { SessionsSkeleton } from './AccountSessionsPage.skeleton';

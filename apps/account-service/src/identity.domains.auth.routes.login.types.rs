@@ -22,6 +22,13 @@ pub struct IdentifierResult {
     pub available_methods: Option<Vec<String>>,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct PasswordContinuationResult {
+    pub next_step: String,
+    pub state_token: Uuid,
+    pub email: String,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct PwdRequest {
     pub state_token: Uuid,
@@ -32,16 +39,10 @@ pub struct PwdRequest {
 pub struct MfaRequest {
     pub state_token: Uuid,
     pub totp_code: Option<String>,
-    pub email_code: Option<String>,
     pub recovery_code: Option<String>,
     #[schema(value_type = Object)]
     pub webauthn_response: Option<PublicKeyCredential>,
     pub webauthn_challenge_id: Option<Uuid>,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub struct EmailMfaSendRequest {
-    pub state_token: Uuid,
 }
 
 #[derive(Deserialize, ToSchema)]

@@ -1,171 +1,221 @@
 use crate::app::AppState;
-use axum::Router;
+use crate::http::middleware::jwt::account_access::{
+    self, AccountAccess, DELETE_SCOPE, EMAIL_READ_SCOPE, EMAIL_WRITE_SCOPE, EXPORT_SCOPE,
+    PREFERENCES_READ_SCOPE, PREFERENCES_WRITE_SCOPE, PROFILE_READ_SCOPE, PROFILE_WRITE_SCOPE,
+    SECURITY_WRITE_SCOPE, SESSION_READ_SCOPE, SESSION_WRITE_SCOPE,
+};
+use axum::{
+    Router,
+    routing::{delete, get, patch, post, put},
+};
 
 use super::devices::{revoke_device, trust_device};
 use super::{
-    forget_account_cookie, get_accounts, list_sessions, logout, me, me_delete, me_email_delete,
-    me_email_promote, me_email_resend_verification, me_emails_get, me_emails_post, me_export,
-    me_export_download, me_notifications_get, me_notifications_put, me_preferences_get,
-    me_preferences_put, me_update, profile::me_avatar, profile::me_avatar_delete,
-    profile::me_avatar_upload, revoke_all_other_sessions, revoke_session, step_up,
+    confirm_high_risk_session, forget_account_cookie, get_accounts, list_sessions, logout, me,
+    me_delete, me_email_delete, me_email_promote, me_email_resend_verification, me_emails_get,
+    me_emails_post, me_export, me_export_download, me_notifications_get, me_notifications_put,
+    me_preferences_get, me_preferences_put, me_update, profile::me_avatar,
+    profile::me_avatar_delete, profile::me_avatar_upload, revoke_all_other_sessions,
+    revoke_all_sessions, revoke_session, step_up, step_up::request_email_step_up,
 };
 
 pub(super) fn router(state: &AppState) -> Router<AppState> {
     Router::new()
-        .route(
-            "/logout",
-            axum::routing::post(logout).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
-        .route(
-            "/sessions",
-            axum::routing::get(list_sessions).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
-        )
         .route("/accounts", axum::routing::get(get_accounts))
         .route(
             "/accounts/{authuser}",
             axum::routing::delete(forget_account_cookie),
         )
         .route(
+            "/logout",
+            account_access::protected_method(state, AccountAccess::BrowserSession, post(logout)),
+        )
+        .route(
+            "/sessions",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_READ_SCOPE),
+                get(list_sessions),
+            ),
+        )
+        .route(
             "/sessions/{sessionId}",
-            axum::routing::delete(revoke_session).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_WRITE_SCOPE),
+                delete(revoke_session),
+            ),
+        )
+        .route(
+            "/sessions/{sessionId}/confirm",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_WRITE_SCOPE),
+                post(confirm_high_risk_session),
+            ),
         )
         .route(
             "/sessions/revoke-others",
-            axum::routing::post(revoke_all_other_sessions).layer(
-                axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                ),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_WRITE_SCOPE),
+                post(revoke_all_other_sessions),
+            ),
+        )
+        .route(
+            "/sessions/revoke-all",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_WRITE_SCOPE),
+                post(revoke_all_sessions),
+            ),
+        )
+        .route(
+            "/step-up/email/request",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(request_email_step_up),
             ),
         )
         .route(
             "/devices/{deviceId}/trust",
-            axum::routing::post(trust_device).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(trust_device),
+            ),
         )
         .route(
             "/devices/{deviceId}",
-            axum::routing::delete(revoke_device).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                delete(revoke_device),
+            ),
         )
         .route(
             "/me",
-            axum::routing::get(me).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PROFILE_READ_SCOPE),
+                get(me),
+            ),
         )
         .route(
             "/me/avatar",
-            axum::routing::get(me_avatar)
-                .post(me_avatar_upload)
-                .delete(me_avatar_delete)
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PROFILE_READ_SCOPE),
+                get(me_avatar),
+            ),
+        )
+        .route(
+            "/me/avatar",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PROFILE_WRITE_SCOPE),
+                post(me_avatar_upload).delete(me_avatar_delete),
+            ),
         )
         .route(
             "/me",
-            axum::routing::patch(me_update).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PROFILE_WRITE_SCOPE),
+                patch(me_update),
+            ),
         )
         .route(
             "/me/emails",
-            axum::routing::get(me_emails_get)
-                .post(me_emails_post)
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EMAIL_READ_SCOPE),
+                get(me_emails_get),
+            ),
+        )
+        .route(
+            "/me/emails",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EMAIL_WRITE_SCOPE),
+                post(me_emails_post),
+            ),
         )
         .route(
             "/me/emails/{emailId}/promote",
-            axum::routing::post(me_email_promote).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EMAIL_WRITE_SCOPE),
+                post(me_email_promote),
+            ),
         )
         .route(
             "/me/emails/{emailId}/resend-verification",
-            axum::routing::post(me_email_resend_verification).layer(
-                axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                ),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EMAIL_WRITE_SCOPE),
+                post(me_email_resend_verification),
             ),
         )
         .route(
             "/me/emails/{emailId}",
-            axum::routing::delete(me_email_delete).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EMAIL_WRITE_SCOPE),
+                delete(me_email_delete),
+            ),
         )
         .route(
             "/me/export",
-            axum::routing::post(me_export)
-                .get(me_export_download)
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::http::middleware::jwt::jwt_auth_middleware,
-                )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(EXPORT_SCOPE),
+                post(me_export).get(me_export_download),
+            ),
         )
         .route(
             "/me/delete",
-            axum::routing::post(me_delete).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(DELETE_SCOPE),
+                post(me_delete),
+            ),
         )
         .route(
             "/me/preferences",
-            axum::routing::get(me_preferences_get).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PREFERENCES_READ_SCOPE),
+                get(me_preferences_get),
+            ),
         )
         .route(
             "/me/preferences",
-            axum::routing::put(me_preferences_put).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PREFERENCES_WRITE_SCOPE),
+                put(me_preferences_put),
+            ),
         )
         .route(
             "/me/notifications",
-            axum::routing::get(me_notifications_get).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PREFERENCES_READ_SCOPE),
+                get(me_notifications_get),
+            ),
         )
         .route(
             "/me/notifications",
-            axum::routing::put(me_notifications_put).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(PREFERENCES_WRITE_SCOPE),
+                put(me_notifications_put),
+            ),
         )
         .route(
             "/step-up",
-            axum::routing::post(step_up).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(state, AccountAccess::BrowserSession, post(step_up)),
         )
 }

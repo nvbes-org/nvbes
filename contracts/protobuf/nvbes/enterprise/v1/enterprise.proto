@@ -9,6 +9,9 @@ service EnterpriseService {
   rpc UpdatePolicy(UpdatePolicyRequest) returns (EnterprisePolicy);
   rpc EvaluatePolicy(EvaluatePolicyRequest) returns (PolicyDecision);
   rpc AuthorizeAdminElevation(AuthorizeAdminElevationRequest) returns (AdminElevationAuthorization);
+  rpc RevokeAdminElevation(RevokeAdminElevationRequest) returns (AdminElevationAuthorization);
+  rpc ApprovePrivilegedAction(ApprovePrivilegedActionRequest) returns (PrivilegedActionApproval);
+  rpc ConsumePrivilegedActionApproval(ConsumePrivilegedActionApprovalRequest) returns (PrivilegedActionApproval);
   rpc GetTrustCenter(GetTrustCenterRequest) returns (TrustCenter);
   rpc ListAccessReviews(ListAccessReviewsRequest) returns (ListAccessReviewsResponse);
   rpc GetAccessReview(GetAccessReviewRequest) returns (AccessReviewDetail);
@@ -53,6 +56,8 @@ message UpdatePolicyRequest {
   string policy_kind = 4;
   string rules_json = 5;
   string reason = 6;
+  string scope_type = 7;
+  string scope_id = 8;
 }
 
 message EvaluatePolicyRequest {
@@ -74,6 +79,38 @@ message AuthorizeAdminElevationRequest {
   bool break_glass = 7;
   string break_glass_reason = 8;
   string break_glass_procedure_reference = 9;
+  string reason = 10;
+  PrivilegedAuthenticationContext authentication = 11;
+}
+
+message PrivilegedAuthenticationContext {
+  string acr = 1;
+  repeated string amr = 2;
+  int64 auth_time = 3;
+  string authentication_event_id = 4;
+}
+
+message RevokeAdminElevationRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string grant_id = 3;
+  string reason = 4;
+}
+
+message ApprovePrivilegedActionRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string requested_by = 3;
+  string action = 4;
+  string resource = 5;
+  string reason = 6;
+  int32 duration_minutes = 7;
+}
+
+message ConsumePrivilegedActionApprovalRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string tenant_id = 2;
+  string approval_id = 3;
 }
 
 message ListAccessReviewsRequest {
@@ -167,6 +204,7 @@ message ActivateBreakGlassRequest {
   string role = 4;
   string reason = 5;
   string expires_at = 6;
+  PrivilegedAuthenticationContext authentication = 7;
 }
 
 message RevokeBreakGlassRequest {
@@ -221,6 +259,7 @@ message VerifyTenantDomainRequest {
   nvbes.platform.v1.RequestContext context = 1;
   string tenant_id = 2;
   string domain_id = 3;
+  string dns_txt_token = 4;
 }
 
 message DeleteTenantDomainRequest {
@@ -236,6 +275,7 @@ message ConfigureScimConnectorRequest {
   string provider = 4;
   string status = 5;
   string base_url = 6;
+  int32 credential_ttl_hours = 7;
 }
 
 message DeleteScimConnectorRequest {
@@ -362,6 +402,19 @@ message AdminElevationAuthorization {
   string role = 2;
   string expires_at = 3;
   string step_up_expires_at = 4;
+  string grant_id = 5;
+  string status = 6;
+}
+
+message PrivilegedActionApproval {
+  string approval_id = 1;
+  string tenant_id = 2;
+  string requested_by = 3;
+  string approved_by = 4;
+  string action = 5;
+  string resource = 6;
+  string expires_at = 7;
+  string consumed_at = 8;
 }
 
 message TrustCenter {
@@ -631,6 +684,9 @@ message ScimConnector {
   string status = 4;
   string base_url = 5;
   string created_at = 6;
+  string credential_expires_at = 7;
+  string last_rotated_at = 8;
+  string last_sync_at = 9;
 }
 
 message ScimConnectorDeletion {

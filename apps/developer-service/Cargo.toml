@@ -10,7 +10,7 @@ axum.workspace = true
 chrono.workspace = true
 hmac.workspace = true
 hex.workspace = true
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 nvbes-product-account = { path = "../../libs/rust/products/account" }

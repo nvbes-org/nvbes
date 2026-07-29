@@ -13,6 +13,7 @@ nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 metrics.workspace = true
 prost = "0.14.4"
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

@@ -1,12 +1,12 @@
 import { identityClient } from '@nvbes/identity-client';
 import { listMfaFactors } from '@nvbes/identity-sdk-web';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useTransition } from 'react';
 import { z } from 'zod';
 
 import { accountQueryKeys } from '@/account.queries';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { identityHttpClient } from '../identity.http';
 
 const SecurityPreferencesSchema = z.object({
@@ -19,7 +19,7 @@ export interface SecurityOverview {
   mfa_enabled: boolean;
   email_verified: boolean;
   session_count: number;
-  has_webauthn: boolean;
+  has_passkey: boolean;
   skip_password: boolean;
   raw_prefs: {
     theme: string;
@@ -29,8 +29,7 @@ export interface SecurityOverview {
 }
 
 export function useAccountSecurityPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const queryClient = useQueryClient();
@@ -55,7 +54,9 @@ export function useAccountSecurityPage() {
         mfa_enabled: me?.user.mfa_enabled ?? false,
         email_verified: me?.user.email_verified ?? false,
         session_count: sessions.length,
-        has_webauthn: factors.some((factor) => factor.factor_type === 'webauthn'),
+        has_passkey: factors.some(
+          (factor) => factor.factor_type === 'webauthn' && factor.kind === 'passkey',
+        ),
         skip_password: prefs?.skip_password ?? false,
         raw_prefs: prefs
           ? {
@@ -86,7 +87,9 @@ export function useAccountSecurityPage() {
       });
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
+      void queryClient.invalidateQueries({
+        queryKey: securityOverviewQueryKey,
+      });
     },
   });
 

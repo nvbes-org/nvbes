@@ -20,7 +20,6 @@ type SubmitMfaStepOptions = {
   sessionToken: string | null;
   mfaMethod: MfaMethod | null;
   totpCode: string;
-  emailCode: string;
   recoveryCode: string;
   submitMfa: MfaMutateAsync;
   startWebauthn: WebauthnStartMutateAsync;
@@ -36,7 +35,6 @@ export async function submitMfaStep({
   sessionToken,
   mfaMethod,
   totpCode,
-  emailCode,
   recoveryCode,
   submitMfa,
   startWebauthn,
@@ -64,11 +62,6 @@ export async function submitMfaStep({
       result = await submitMfa({
         stateToken: loginStateToken,
         totpCode,
-      });
-    } else if (mfaMethod === 'email') {
-      result = await submitMfa({
-        stateToken: loginStateToken,
-        emailCode,
       });
     } else if (mfaMethod === 'recovery') {
       result = await submitMfa({

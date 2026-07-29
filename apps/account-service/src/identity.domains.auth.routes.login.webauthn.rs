@@ -1,9 +1,18 @@
 use crate::app::AppState;
+use crate::domains::auth::state::create_state;
 use crate::http::error::AppError;
-use axum::{Json, Router, extract::State, http::HeaderMap, response::Response, routing::post};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
+    routing::post,
+};
 use nvbes_core::http::error::ErrorEnvelope;
 
-use super::types::{WebauthnDiscoverableFinishRequest, WebauthnStartRequest};
+use super::types::{
+    PasswordContinuationResult, WebauthnDiscoverableFinishRequest, WebauthnStartRequest,
+};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -118,6 +127,7 @@ pub(crate) async fn challenge_webauthn_discoverable_start(
     request_body = WebauthnDiscoverableFinishRequest,
     responses(
         (status = 200, description = "Login successful after discoverable WebAuthn", body = crate::domains::auth::types::LoginResult),
+        (status = 202, description = "WebAuthn accepted, password challenge required", body = PasswordContinuationResult),
         (status = 401, description = "Invalid authentication state", body = ErrorEnvelope),
     ),
 )]
@@ -160,6 +170,29 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
         )
         .await?;
 
+    let preferences =
+        crate::domains::auth::db::fetch_user_preferences(&state.db, principal_id).await?;
+    if !preferences.skip_password {
+        let state_token = create_state(
+            &state.redis,
+            Some(principal_id),
+            &email,
+            "pwd",
+            None,
+            vec![method],
+        )
+        .await?;
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(PasswordContinuationResult {
+                next_step: "pwd".to_string(),
+                state_token,
+                email,
+            }),
+        )
+            .into_response());
+    }
+
     let result = crate::domains::auth::sessions::create_session_for_principal(
         &state.db,
         &state.redis,
@@ -172,11 +205,14 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
     let secure_cookie = state.config.environment != "development";
     let authuser = query.authuser()?;
     let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
+    let registration_enrollment_expires_in =
+        (state.config.auth_verification_ttl_hours * 60 * 60).max(0);
     super::login_response(
         result,
         authuser,
         secure_cookie,
         session_expires_in,
+        registration_enrollment_expires_in,
         &state.config.jwt_secret,
         &state.product_analytics,
         &headers,

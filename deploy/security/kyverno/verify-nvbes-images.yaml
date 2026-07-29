@@ -1,0 +1,32 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-nvbes-images
+  annotations:
+    policies.kyverno.io/title: Verify nvbes release images
+    policies.kyverno.io/category: Software Supply Chain
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-keyless-release-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/nvbes-org/nvbes-*"
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    issuer: https://token.actions.githubusercontent.com
+                    subjectRegExp: >-
+                      ^https://github\.com/nvbes-org/nvbes/\.github/workflows/container-release\.yml@refs/tags/v[0-9].*$
+                    rekor:
+                      url: https://rekor.sigstore.dev

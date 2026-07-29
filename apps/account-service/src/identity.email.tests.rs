@@ -1,4 +1,6 @@
-use super::{invitation_email, password_reset_email, verification_email};
+use super::{
+    invitation_email, password_change_code_email, password_reset_email, verification_email,
+};
 use crate::app::AppConfig;
 
 fn mock_config() -> AppConfig {
@@ -48,6 +50,17 @@ async fn test_password_reset_email_substitution() {
     let html = email.html_body.unwrap();
     assert!(html.contains("Shayn"));
     assert!(html.contains("https://nvbes.fr/reset-password?token=abc"));
+}
+
+#[tokio::test]
+async fn password_change_code_email_is_scoped_and_contains_expiry() {
+    let config = mock_config();
+    let email = password_change_code_email(&config, "shayn@nvbes.fr", "Shayn", "123456", 10)
+        .expect("password change code email");
+    let html = email.html_body.expect("html body");
+    assert!(html.contains("123456"));
+    assert!(html.contains("10 minutes"));
+    assert!(html.contains("ne peut être utilisé que pour modifier votre mot de passe"));
 }
 
 #[tokio::test]

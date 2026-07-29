@@ -18,8 +18,13 @@ mod hosted_tests;
 pub mod logic;
 #[path = "identity.domains.oauth.metadata.rs"]
 pub mod metadata;
+#[cfg(test)]
+#[path = "identity.domains.oauth.property.tests.rs"]
+mod property_tests;
 #[path = "identity.domains.oauth.routes.rs"]
 pub mod routes;
+#[path = "identity.domains.oauth.security_events.rs"]
+pub mod security_events;
 #[path = "identity.domains.oauth.service.rs"]
 pub mod service;
 #[path = "identity.domains.oauth.system_clients.rs"]
@@ -57,6 +62,8 @@ pub mod jar;
 pub mod policies;
 #[path = "identity.domains.oauth.policies.eval.rs"]
 pub mod policies_eval;
+#[path = "identity.domains.oauth.profiles.rs"]
+pub mod profiles;
 #[path = "identity.domains.oauth.rar.rs"]
 pub mod rar;
 

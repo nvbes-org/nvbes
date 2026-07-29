@@ -16,21 +16,11 @@ pub fn router() -> Router<AppState> {
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct AuthorizeRequest {
     pub response_type: String,
     pub client_id: String,
-    pub redirect_uri: Option<String>,
-    pub scope: Option<String>,
-    pub state: Option<String>,
-    pub audience: Option<String>,
-    pub resource: Option<Vec<String>>,
-    pub authorization_details: Option<String>,
-    pub code_challenge: Option<String>,
-    pub code_challenge_method: Option<String>,
-    pub consent_action: Option<String>,
     pub request_uri: Option<String>,
-    pub request: Option<String>,
-    pub client_secret: Option<String>,
     #[serde(default)]
     pub authuser: Option<String>,
 }
@@ -48,15 +38,7 @@ struct AuthorizationSubject {
     params(
         ("response_type" = String, Query, description = "Response type"),
         ("client_id" = String, Query, description = "OAuth client ID"),
-        ("redirect_uri" = Option<String>, Query, description = "Redirect URI"),
-        ("scope" = Option<String>, Query, description = "Requested scopes"),
-        ("state" = Option<String>, Query, description = "State parameter"),
-        ("audience" = Option<String>, Query, description = "Audience"),
-        ("code_challenge" = Option<String>, Query, description = "PKCE code challenge"),
-        ("code_challenge_method" = Option<String>, Query, description = "PKCE code challenge method"),
-        ("request_uri" = Option<String>, Query, description = "PAR request_uri (RFC 9126) or JAR request_uri (RFC 9101)"),
-        ("request" = Option<String>, Query, description = "JAR request object JWT (RFC 9101)"),
-        ("client_secret" = Option<String>, Query, description = "Client secret (required for JAR)"),
+        ("request_uri" = Option<String>, Query, description = "One-time PAR request_uri (RFC 9126)"),
         ("authuser" = Option<String>, Query, description = "Auth user index"),
     ),
     responses(
@@ -211,6 +193,7 @@ pub(crate) async fn authorize(
             code_challenge: resolved.code_challenge,
             code_challenge_method: resolved.code_challenge_method,
             consent_action: resolved.consent_action,
+            dpop_jkt: resolved.dpop_jkt,
         },
     )
     .await?;

@@ -7,7 +7,7 @@ use axum::{
 
 use crate::app::AppState;
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::AuthContext;
+use crate::http::request::AccessTokenScheme;
 
 pub const D_POP_HEADER: &str = "DPoP";
 pub const D_POP_NONCE_HEADER: &str = "DPoP-Nonce";
@@ -23,17 +23,10 @@ pub async fn dpop_auth_middleware(
     mut request: axum::http::Request<axum::body::Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let auth_context = request.extensions().get::<AuthContext>().cloned();
-    let token_bound_jkt = auth_context.as_ref().and_then(|ac| ac.cnf_jkt.clone());
-
     let dpop_header = headers
         .get(D_POP_HEADER)
         .and_then(|h| h.to_str().ok())
         .unwrap_or("");
-
-    if dpop_header.is_empty() && token_bound_jkt.is_some() {
-        return Err(missing_dpop_error(&state));
-    }
 
     if dpop_header.is_empty() {
         return Ok(next.run(request).await);
@@ -42,22 +35,13 @@ pub async fn dpop_auth_middleware(
     let access_token = extract_access_token(&headers);
     let method = request.method().to_string();
     let uri = request.uri().to_string();
-    let htu = build_htu(&headers, &uri);
+    let htu = build_htu(&state.config.api_base_url, &uri);
 
     let dpop_proof =
         nvbes_dpop::verify_dpop_proof(dpop_header, &method, &htu, access_token.as_deref(), 300)
             .map_err(|e| dpop_verification_error(&e, &state))?;
 
     let jkt = nvbes_dpop::jwk_thumbprint(&dpop_proof.jwk);
-
-    if let Some(ref bound_jkt) = token_bound_jkt
-        && bound_jkt != &jkt
-    {
-        return Err(AppError::unauthorized(
-            "dpop_key_mismatch",
-            "DPoP key does not match the token-bound key",
-        ));
-    }
 
     if let Some(ref store) = state.dpop_nonce {
         // Enforce jti anti-replay in Redis
@@ -104,6 +88,41 @@ pub async fn dpop_auth_middleware(
     Ok(response)
 }
 
+pub fn enforce_token_binding(
+    expected_jkt: Option<&str>,
+    scheme: Option<AccessTokenScheme>,
+    proof_jkt: Option<&str>,
+) -> Result<(), AppError> {
+    let Some(expected_jkt) = expected_jkt else {
+        if scheme == Some(AccessTokenScheme::Dpop) {
+            return Err(AppError::unauthorized(
+                "dpop_unbound_token",
+                "The DPoP authorization scheme requires a DPoP-bound access token",
+            ));
+        }
+        return Ok(());
+    };
+
+    if scheme != Some(AccessTokenScheme::Dpop) {
+        return Err(AppError::unauthorized(
+            "dpop_scheme_required",
+            "A DPoP-bound access token must use the DPoP authorization scheme",
+        ));
+    }
+
+    let proof_jkt = proof_jkt.ok_or_else(|| {
+        AppError::unauthorized("dpop_missing", "DPoP proof is required for this token")
+    })?;
+    if proof_jkt != expected_jkt {
+        return Err(AppError::unauthorized(
+            "dpop_key_mismatch",
+            "DPoP key does not match the token-bound key",
+        ));
+    }
+
+    Ok(())
+}
+
 fn extract_access_token(headers: &HeaderMap) -> Option<String> {
     if let Some(auth) = headers.get("Authorization")
         && let Ok(auth_str) = auth.to_str()
@@ -118,23 +137,7 @@ fn extract_access_token(headers: &HeaderMap) -> Option<String> {
     None
 }
 
-fn build_htu(headers: &HeaderMap, uri: &str) -> String {
-    let scheme = headers
-        .get("X-Forwarded-Proto")
-        .and_then(|h| h.to_str().ok())
-        .or_else(|| {
-            headers
-                .get("X-Forwarded-Scheme")
-                .and_then(|h| h.to_str().ok())
-        })
-        .unwrap_or("https");
-
-    let host = headers
-        .get("X-Forwarded-Host")
-        .and_then(|h| h.to_str().ok())
-        .or_else(|| headers.get("Host").and_then(|h| h.to_str().ok()))
-        .unwrap_or("localhost");
-
+fn build_htu(api_base_url: &str, uri: &str) -> String {
     let path_and_query = if uri.starts_with('/') {
         uri.to_string()
     } else {
@@ -144,7 +147,7 @@ fn build_htu(headers: &HeaderMap, uri: &str) -> String {
     // RFC 9449 §4.3: htu must NOT contain query string or fragment
     let path = path_and_query.split('?').next().unwrap_or(&path_and_query);
 
-    format!("{}://{}{}", scheme, host, path)
+    format!("{}{}", api_base_url.trim_end_matches('/'), path)
 }
 
 fn dpop_verification_response(_state: &AppState, error: &str, description: &str) -> Response {
@@ -163,15 +166,6 @@ fn dpop_verification_error(e: &nvbes_dpop::proof::DpopError, _state: &AppState) 
     AppError::unauthorized("dpop_invalid", e.to_string())
 }
 
-fn missing_dpop_error(state: &AppState) -> AppError {
-    let _response = dpop_verification_response(
-        state,
-        "use_dpop_nonce",
-        "DPoP proof is required for this token",
-    );
-    AppError::unauthorized("dpop_missing", "DPoP proof is required for this token")
-}
-
 fn dpop_bad_nonce_error(state: &AppState) -> AppError {
     let _response =
         dpop_verification_response(state, "use_dpop_nonce", "Invalid or reused DPoP nonce");
@@ -185,5 +179,69 @@ pub trait DpopContextExtractor {
 impl DpopContextExtractor for Parts {
     fn dpop_context(&self) -> Option<&DpopContext> {
         self.extensions.get::<DpopContext>()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_htu, enforce_token_binding};
+    use crate::http::request::AccessTokenScheme;
+
+    #[test]
+    fn htu_uses_the_configured_external_origin_and_drops_query() {
+        assert_eq!(
+            build_htu("https://identity.example/", "/oauth/token?code=secret"),
+            "https://identity.example/oauth/token"
+        );
+    }
+
+    #[test]
+    fn htu_normalizes_relative_request_targets() {
+        assert_eq!(
+            build_htu("https://identity.example", "oauth/token"),
+            "https://identity.example/oauth/token"
+        );
+    }
+
+    #[test]
+    fn bound_token_requires_dpop_scheme_and_proof() {
+        assert!(
+            enforce_token_binding(Some("bound-key"), Some(AccessTokenScheme::Bearer), None)
+                .is_err()
+        );
+        assert!(
+            enforce_token_binding(Some("bound-key"), Some(AccessTokenScheme::Dpop), None).is_err()
+        );
+    }
+
+    #[test]
+    fn bound_token_rejects_another_proof_key() {
+        assert!(
+            enforce_token_binding(
+                Some("bound-key"),
+                Some(AccessTokenScheme::Dpop),
+                Some("other-key"),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn bound_token_accepts_its_proof_key() {
+        assert!(
+            enforce_token_binding(
+                Some("bound-key"),
+                Some(AccessTokenScheme::Dpop),
+                Some("bound-key"),
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn dpop_scheme_rejects_an_unbound_token() {
+        assert!(
+            enforce_token_binding(None, Some(AccessTokenScheme::Dpop), Some("proof-key")).is_err()
+        );
     }
 }

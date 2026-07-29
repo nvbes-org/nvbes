@@ -12,6 +12,7 @@ pub(super) struct ResolvedParams {
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub consent_action: Option<String>,
+    pub dpop_jkt: Option<String>,
 }
 
 pub(super) fn build_params_from_map(
@@ -67,6 +68,10 @@ pub(super) fn build_params_from_map(
         consent_action: params
             .get("consent_action")
             .and_then(|v| v.as_str())
+            .map(String::from),
+        dpop_jkt: params
+            .get("dpop_jkt")
+            .and_then(|value| value.as_str())
             .map(String::from),
     })
 }

@@ -1,24 +1,54 @@
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale/fr';
-import { Clock, Laptop, LogOut, MapPin, Smartphone, Tablet } from 'lucide-react';
+import {
+  CalendarDays,
+  Clock,
+  Gamepad2,
+  Laptop,
+  LogOut,
+  MapPin,
+  ShieldCheck,
+  Smartphone,
+  Tablet,
+  Watch,
+} from 'lucide-react';
 import type { AccountSession } from '@nvbes/identity-client';
 import { AsyncStateButton } from '@/components/AsyncStateButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { type DeviceGroup } from './AccountSessionsPage.device';
+import {
+  type DeviceGroup,
+  type DeviceType,
+  formatActiveSessionCount,
+  riskLabel,
+  trustLabel,
+} from './AccountSessionsPage.device';
 import { BrowserIcon, OsIcon } from './AccountSessionsPage.icons';
 
-function DeviceTypeIcon({ deviceType }: { deviceType: 'desktop' | 'mobile' | 'tablet' }) {
+function DeviceTypeIcon({ deviceType }: { deviceType: DeviceType }) {
   if (deviceType === 'mobile') return <Smartphone className="size-4 text-muted-foreground" />;
   if (deviceType === 'tablet') return <Tablet className="size-4 text-muted-foreground" />;
+  if (deviceType === 'console') return <Gamepad2 className="size-4 text-muted-foreground" />;
+  if (deviceType === 'wearable') return <Watch className="size-4 text-muted-foreground" />;
   return <Laptop className="size-4 text-muted-foreground" />;
 }
 
 function formatRelativeDate(iso: string): string {
   try {
     return formatDistanceToNow(parseISO(iso), { addSuffix: true, locale: fr });
+  } catch {
+    return iso;
+  }
+}
+
+function formatAbsoluteDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('fr', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(parseISO(iso));
   } catch {
     return iso;
   }
@@ -56,6 +86,8 @@ export function DeviceCard({
 }) {
   const { parsedDevice, sessions, isCurrentDevice } = device;
   const nonCurrentSessions = sessions.filter((s) => !s.current);
+  const browserVersion = parsedDevice.browserVersion ? ` ${parsedDevice.browserVersion}` : '';
+  const osVersion = parsedDevice.osVersion ? ` ${parsedDevice.osVersion}` : '';
 
   return (
     <Card className="overflow-hidden">
@@ -71,7 +103,10 @@ export function DeviceCard({
               browserKey={parsedDevice.browserKey}
               className="size-4 text-foreground shrink-0"
             />
-            <span className="text-sm font-semibold truncate">{parsedDevice.browser}</span>
+            <span className="text-sm font-semibold truncate">
+              {parsedDevice.browser}
+              {browserVersion}
+            </span>
             {parsedDevice.os && (
               <>
                 <span className="text-muted-foreground">·</span>
@@ -79,13 +114,24 @@ export function DeviceCard({
                   osKey={parsedDevice.osKey}
                   className="size-3.5 text-muted-foreground shrink-0"
                 />
-                <span className="text-xs text-muted-foreground truncate">{parsedDevice.os}</span>
+                <span className="text-xs text-muted-foreground truncate">
+                  {parsedDevice.os}
+                  {osVersion}
+                </span>
               </>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-            <span>{sessions.length} session(s) active(s)</span>
+            {parsedDevice.device && <span>{parsedDevice.device}</span>}
+            <span>{formatActiveSessionCount(sessions.length)}</span>
+            {device.trustLevel && (
+              <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+                <ShieldCheck />
+                {trustLabel(device.trustLevel)}
+                {device.trustScore !== null ? ` · ${device.trustScore}/100` : ''}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -125,9 +171,28 @@ export function DeviceCard({
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3" />
-                {formatRelativeDate(session.last_seen_at)}
+                Activité {formatRelativeDate(session.last_seen_at)}
+              </span>
+              <span
+                className="flex items-center gap-1"
+                title={formatAbsoluteDate(session.created_at)}
+              >
+                <CalendarDays className="size-3" />
+                Créée {formatRelativeDate(session.created_at)}
+              </span>
+              <span title={formatAbsoluteDate(session.expires_at)}>
+                Expire {formatRelativeDate(session.expires_at)}
               </span>
               {session.workspace_region && <span>· {session.workspace_region}</span>}
+              {session.risk_decision && (
+                <Badge
+                  variant={session.risk_decision === 'deny' ? 'destructive' : 'outline'}
+                  className="h-4 px-1.5 text-[10px]"
+                >
+                  {riskLabel(session.risk_decision)}
+                  {session.risk_score !== null ? ` · ${Math.round(session.risk_score)}/100` : ''}
+                </Badge>
+              )}
             </div>
 
             {!session.current && (

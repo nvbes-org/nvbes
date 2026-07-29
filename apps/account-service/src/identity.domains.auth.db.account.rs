@@ -30,6 +30,8 @@ pub async fn create_user_account(
     data_region: Option<String>,
     password_hash: String,
     verification_token: String,
+    registration_enrollment_token_hash: String,
+    registration_enrollment_expires_at: DateTime<Utc>,
     ip: Option<String>,
     user_agent: Option<String>,
     legal_documents_accepted: bool,
@@ -100,6 +102,14 @@ pub async fn create_user_account(
     .execute(&mut *tx)
     .await
     .map_err(crate::domains::auth::db::emails::email_constraint_error)?;
+
+    crate::domains::auth::db::registration_enrollment::insert_tx(
+        &mut tx,
+        principal_id,
+        &registration_enrollment_token_hash,
+        registration_enrollment_expires_at,
+    )
+    .await?;
 
     sqlx::query(
         r#"

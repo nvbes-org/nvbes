@@ -37,12 +37,14 @@ impl EnterpriseGrpcService {
 pub async fn serve(
     addr: SocketAddr,
     state: EnterpriseAppState,
+    authenticator: crate::grpc::auth::EnterpriseGrpcAuthenticator,
     shutdown: impl Future<Output = ()>,
 ) -> Result<(), tonic::transport::Error> {
     Server::builder()
-        .add_service(EnterpriseServiceServer::new(EnterpriseGrpcService::new(
-            state,
-        )))
+        .add_service(EnterpriseServiceServer::with_interceptor(
+            EnterpriseGrpcService::new(state),
+            move |request| authenticator.authenticate(request),
+        ))
         .serve_with_shutdown(addr, shutdown)
         .await
 }
@@ -67,7 +69,7 @@ impl EnterpriseService for EnterpriseGrpcService {
         &self,
         request: Request<enterprise::EvaluatePolicyRequest>,
     ) -> Result<Response<enterprise::PolicyDecision>, Status> {
-        service_policies::evaluate_policy(request).await
+        service_policies::evaluate_policy(&self.state.db, request).await
     }
 
     async fn authorize_admin_elevation(
@@ -75,6 +77,27 @@ impl EnterpriseService for EnterpriseGrpcService {
         request: Request<enterprise::AuthorizeAdminElevationRequest>,
     ) -> Result<Response<enterprise::AdminElevationAuthorization>, Status> {
         service_admin::authorize_admin_elevation(&self.state.db, request).await
+    }
+
+    async fn revoke_admin_elevation(
+        &self,
+        request: Request<enterprise::RevokeAdminElevationRequest>,
+    ) -> Result<Response<enterprise::AdminElevationAuthorization>, Status> {
+        service_admin::revoke_admin_elevation(&self.state.db, request).await
+    }
+
+    async fn approve_privileged_action(
+        &self,
+        request: Request<enterprise::ApprovePrivilegedActionRequest>,
+    ) -> Result<Response<enterprise::PrivilegedActionApproval>, Status> {
+        service_admin::approve_privileged_action(&self.state.db, request).await
+    }
+
+    async fn consume_privileged_action_approval(
+        &self,
+        request: Request<enterprise::ConsumePrivilegedActionApprovalRequest>,
+    ) -> Result<Response<enterprise::PrivilegedActionApproval>, Status> {
+        service_admin::consume_privileged_action_approval(&self.state.db, request).await
     }
 
     async fn get_trust_center(

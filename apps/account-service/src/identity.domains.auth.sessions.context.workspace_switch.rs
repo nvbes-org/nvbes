@@ -2,6 +2,7 @@ use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::types::{AuthContext, StepUpInput, StepUpSubject, SwitchWorkspaceInput};
 use crate::domains::auth::verification;
 use crate::http::error::AppError;
+use nvbes_core::config::AppConfig;
 use nvbes_tenancy::workspace::WorkspaceAccessError;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -58,7 +59,7 @@ pub(super) async fn ensure_workspace_switch_assurance(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     webauthn: &webauthn_rs::Webauthn,
-    auth_step_up_ttl_minutes: i64,
+    config: &AppConfig,
     auth: &AuthContext,
     workspace: &WorkspaceSwitchContext,
     input: SwitchWorkspaceInput,
@@ -69,16 +70,7 @@ pub(super) async fn ensure_workspace_switch_assurance(
     }
 
     let input = require_step_up_input(input)?;
-    verification::step_up(
-        db,
-        redis,
-        auth_step_up_ttl_minutes,
-        webauthn,
-        auth,
-        input,
-        false,
-    )
-    .await?;
+    verification::step_up(db, redis, config, webauthn, auth, input, false).await?;
 
     let refreshed = resolve_assurance_context(db, redis, auth, workspace).await?;
     if !refreshed.sufficient {

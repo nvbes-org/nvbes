@@ -152,6 +152,53 @@ pub async fn set_workspace_memberships_status(
     Ok(result.rows_affected())
 }
 
+pub async fn revoke_tenant_sessions(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    principal_id: Uuid,
+) -> Result<u64, Status> {
+    sqlx::query(
+        r#"
+        UPDATE user_sessions
+        SET revoked_at = NOW()
+        WHERE tenant_id = $1
+          AND principal_id = $2
+          AND revoked_at IS NULL
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .execute(&mut **tx)
+    .await
+    .map(|result| result.rows_affected())
+    .map_err(sql_status)
+}
+
+pub async fn enqueue_shared_security_event(
+    tx: &mut Transaction<'_, Postgres>,
+    tenant_id: Uuid,
+    principal_id: Uuid,
+    event_type: &'static str,
+    payload: serde_json::Value,
+) -> Result<(), Status> {
+    sqlx::query(
+        r#"
+        INSERT INTO shared_security_events (
+          tenant_id, subject_principal_id, event_type, event_payload
+        )
+        VALUES ($1, $2, $3, $4)
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(principal_id)
+    .bind(event_type)
+    .bind(payload)
+    .execute(&mut **tx)
+    .await
+    .map_err(sql_status)?;
+    Ok(())
+}
+
 pub async fn ensure_not_last_owner_after_access(
     tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,

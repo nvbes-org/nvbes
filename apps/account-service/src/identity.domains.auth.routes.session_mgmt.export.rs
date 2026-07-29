@@ -59,7 +59,7 @@ pub(crate) async fn me_export_download(
     )
     .await?;
 
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    verification::require_recent_phishing_resistant_step_up(&state.redis, &auth).await?;
 
     let export =
         crate::domains::auth::data_export::load_account_export(&state.redis, auth.user_id())

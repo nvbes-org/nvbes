@@ -119,6 +119,7 @@ async fn grant_operator_role(
 ) -> Result<OperatorGrantActionResult, AppError> {
     let role = validate_operator_role(&role)?.to_string();
     validate_operator_grant_reason(&request.reason)?;
+    require_operator_factor_policy(db, principal_id).await?;
     let tenant_id = principal_tenant_id(db, principal_id).await?;
     let previous_status = current_grant_status(db, principal_id, &role).await?;
     if previous_status.as_deref() == Some("active") {
@@ -168,6 +169,26 @@ async fn grant_operator_role(
         next_status: "active".to_string(),
         audit_action: "internal_admin.identity_governance.operator_grant.granted",
     })
+}
+
+async fn require_operator_factor_policy(db: &PgPool, principal_id: Uuid) -> Result<(), AppError> {
+    let (factor_count, has_phishing_resistant_factor): (i64, bool) = sqlx::query_as(
+        "SELECT
+             COUNT(*) FILTER (WHERE factor_type <> 'email'),
+             COALESCE(BOOL_OR(factor_type = 'webauthn'), FALSE)
+         FROM mfa_factors
+         WHERE principal_id = $1 AND status = 'active'",
+    )
+    .bind(principal_id)
+    .fetch_one(db)
+    .await?;
+    if factor_count < 2 || !has_phishing_resistant_factor {
+        return Err(AppError::forbidden(
+            "operator_factor_policy_required",
+            "Back-office operators must register at least two active factors, including a passkey or hardware security key.",
+        ));
+    }
+    Ok(())
 }
 
 async fn revoke_operator_role(

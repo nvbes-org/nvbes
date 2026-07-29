@@ -27,6 +27,9 @@ export default defineConfig({
       typeAware: true,
       typeCheck: true,
     },
+    rules: {
+      'typescript/no-explicit-any': 'error',
+    },
   },
   run: {
     enablePrePostScripts: true,

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AccountPasswordForm } from '@/pages/AccountPasswordPage.form';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
+import { AccountPasswordSessionDialog } from '@/pages/AccountPasswordPage.sessions-dialog';
 
 export function AccountPasswordPageContent({
   accountEmail,
@@ -19,6 +20,15 @@ export function AccountPasswordPageContent({
   setShowStepUp,
   showStepUp,
   success,
+  handleRevokeOtherSessions,
+  requestResetEmail,
+  resetEmailMutation,
+  resetEmailResendSeconds,
+  resetEmailSent,
+  setShowSessionPrompt,
+  setShowSessionStepUp,
+  showSessionPrompt,
+  showSessionStepUp,
 }: AccountPasswordPageModel) {
   return (
     <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
@@ -47,6 +57,10 @@ export function AccountPasswordPageContent({
             setConfirmPassword={setConfirmPassword}
             setNewPassword={setNewPassword}
             success={success}
+            requestResetEmail={requestResetEmail}
+            resetEmailMutation={resetEmailMutation}
+            resetEmailResendSeconds={resetEmailResendSeconds}
+            resetEmailSent={resetEmailSent}
           />
         </CardContent>
       </Card>
@@ -57,6 +71,24 @@ export function AccountPasswordPageContent({
         onSuccess={handleStepUpSuccess}
         onCancel={() => setShowStepUp(false)}
         description="Pour modifier votre mot de passe, veuillez confirmer votre identité."
+        purpose="password_change"
+      />
+
+      <AccountPasswordSessionDialog
+        open={showSessionPrompt}
+        onKeepSessions={() => setShowSessionPrompt(false)}
+        onRevokeSessions={() => {
+          setShowSessionPrompt(false);
+          setShowSessionStepUp(true);
+        }}
+      />
+
+      <StepUpModal
+        open={showSessionStepUp}
+        onOpenChange={setShowSessionStepUp}
+        onSuccess={() => void handleRevokeOtherSessions()}
+        onCancel={() => setShowSessionStepUp(false)}
+        description="Confirmez votre identité pour déconnecter toutes les autres sessions."
       />
     </div>
   );

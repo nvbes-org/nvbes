@@ -1,10 +1,11 @@
-import type { AnalyticsTransport, FeatureFlagResult, JsonType } from './analytics.types';
 import {
   getErrorReportingReplaysOnErrorSampleRate,
   getErrorReportingTracesSampleRate,
   scrubErrorReportingBreadcrumb,
   scrubErrorReportingEvent,
 } from './error-reporting-privacy';
+import { stripPostHogUrlSecrets } from './analytics.posthog-privacy';
+import type { AnalyticsTransport, FeatureFlagResult, JsonType } from './analytics.types';
 
 export interface BrowserAnalyticsTransportOptions {
   appName: string;
@@ -18,7 +19,7 @@ export interface BrowserAnalyticsTransportOptions {
 export function createBrowserAnalyticsTransport(
   options: BrowserAnalyticsTransportOptions,
 ): AnalyticsTransport {
-  type PostHog = typeof import('posthog-js').default;
+  type PostHog = typeof import('posthog-js/dist/module.full.no-external').default;
 
   let sentry: typeof import('@sentry/browser') | null = null;
   let posthog: PostHog | null = null;
@@ -62,7 +63,7 @@ export function createBrowserAnalyticsTransport(
       return null;
     }
 
-    posthogInitializationPromise ??= import('posthog-js')
+    posthogInitializationPromise ??= import('posthog-js/dist/module.full.no-external')
       .then((module) => {
         if (!productAnalyticsEnabled) {
           return null;
@@ -222,7 +223,7 @@ function initSentry(
 }
 
 function initPostHog(
-  posthog: typeof import('posthog-js').default,
+  posthog: typeof import('posthog-js/dist/module.full.no-external').default,
   options: BrowserAnalyticsTransportOptions,
 ): boolean {
   const token = normalizedOptional(options.posthogKey);
@@ -235,7 +236,11 @@ function initPostHog(
     autocapture: false,
     capture_pageleave: true,
     capture_pageview: false,
+    before_send: stripPostHogUrlSecrets,
+    custom_personal_data_properties: ['token'],
+    disable_capture_url_hashes: true,
     disable_session_recording: true,
+    mask_personal_data_properties: true,
     persistence: 'localStorage+cookie',
     person_profiles: 'identified_only',
   });

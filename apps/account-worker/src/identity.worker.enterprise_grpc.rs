@@ -1,5 +1,9 @@
-use tonic::transport::Channel;
 use uuid::Uuid;
+
+#[path = "identity.worker.enterprise_grpc.config.rs"]
+mod config;
+
+pub use config::EnterpriseGrpcConfig;
 
 use crate::grpc_pb::nvbes::{
     enterprise::v1::{
@@ -10,47 +14,43 @@ use crate::grpc_pb::nvbes::{
     platform::v1::{RequestContext, TenantContext},
 };
 
-const ENTERPRISE_GRPC_ENDPOINT_ENV: &str = "NVBES_ENTERPRISE_GRPC_ENDPOINT";
 const DUE_SCHEDULE_LIMIT: i32 = 25;
 const REMINDER_LIMIT: i32 = 100;
 
-pub async fn materialize_due_access_review_schedules()
--> anyhow::Result<Option<AccessReviewScheduleRun>> {
-    let Some(mut client) = enterprise_client().await? else {
+pub async fn materialize_due_access_review_schedules(
+    config: Option<&EnterpriseGrpcConfig>,
+) -> anyhow::Result<Option<AccessReviewScheduleRun>> {
+    let Some(config) = config else {
         return Ok(None);
     };
+    let mut client = EnterpriseServiceClient::new(config.connect().await?);
     let response = client
-        .materialize_due_access_review_schedules(MaterializeDueAccessReviewSchedulesRequest {
-            context: Some(request_context()),
-            limit: DUE_SCHEDULE_LIMIT,
-        })
+        .materialize_due_access_review_schedules(config.authorize(
+            MaterializeDueAccessReviewSchedulesRequest {
+                context: Some(request_context()),
+                limit: DUE_SCHEDULE_LIMIT,
+            },
+        ))
         .await?;
     Ok(Some(response.into_inner()))
 }
 
-pub async fn claim_access_review_reminder_candidates()
--> anyhow::Result<Option<AccessReviewReminderClaim>> {
-    let Some(mut client) = enterprise_client().await? else {
+pub async fn claim_access_review_reminder_candidates(
+    config: Option<&EnterpriseGrpcConfig>,
+) -> anyhow::Result<Option<AccessReviewReminderClaim>> {
+    let Some(config) = config else {
         return Ok(None);
     };
+    let mut client = EnterpriseServiceClient::new(config.connect().await?);
     let response = client
-        .claim_access_review_reminder_candidates(ClaimAccessReviewReminderCandidatesRequest {
-            context: Some(request_context()),
-            limit: REMINDER_LIMIT,
-        })
+        .claim_access_review_reminder_candidates(config.authorize(
+            ClaimAccessReviewReminderCandidatesRequest {
+                context: Some(request_context()),
+                limit: REMINDER_LIMIT,
+            },
+        ))
         .await?;
     Ok(Some(response.into_inner()))
-}
-
-async fn enterprise_client() -> anyhow::Result<Option<EnterpriseServiceClient<Channel>>> {
-    let Some(endpoint) = std::env::var(ENTERPRISE_GRPC_ENDPOINT_ENV)
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-    else {
-        return Ok(None);
-    };
-
-    Ok(Some(EnterpriseServiceClient::connect(endpoint).await?))
 }
 
 fn request_context() -> RequestContext {

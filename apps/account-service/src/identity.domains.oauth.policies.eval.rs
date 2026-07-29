@@ -97,6 +97,7 @@ async fn resolve_client_uuid(db: &PgPool, client_id: &str) -> Result<Uuid, AppEr
         SELECT id
         FROM oauth_clients
         WHERE client_id = $1
+          AND revoked_at IS NULL
         LIMIT 1
         "#,
     )

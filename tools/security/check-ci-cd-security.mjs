@@ -1,298 +1,365 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 
-const registryPath = 'docs/security/ci-cd-security-controls.json';
-const workflowsDir = '.github/workflows';
+const registryPath = "docs/security/ci-cd-security-controls.json";
+const workflowsDir = ".github/workflows";
 const expectedSchemaVersion = 1;
 const errors = [];
-const forbiddenWorkflowTriggers = ['pull_request_target', 'workflow_run'];
+const forbiddenWorkflowTriggers = ["pull_request_target", "workflow_run"];
 const forbiddenWritePermissions = [
-  'actions',
-  'checks',
-  'contents',
-  'deployments',
-  'discussions',
-  'id-token',
-  'issues',
-  'packages',
-  'pages',
-  'pull-requests',
-  'repository-projects',
-  'security-events',
-  'statuses',
+	"actions",
+	"checks",
+	"contents",
+	"deployments",
+	"discussions",
+	"id-token",
+	"issues",
+	"packages",
+	"pages",
+	"pull-requests",
+	"repository-projects",
+	"security-events",
+	"statuses",
 ];
 const dangerousRunPatterns = [
-  /\|\|\s*true/u,
-  /curl\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
-  /wget\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
-  /\bnpm\s+install\b/u,
-  /\bcargo\s+install\b(?![^\\n]*--locked)/u,
-  /docker\s+run\b[^\\n]*--privileged/u,
+	/\|\|\s*true/u,
+	/curl\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
+	/wget\s+[^|\n]*\|\s*(?:bash|sh)\b/u,
+	/\bnpm\s+install\b/u,
+	/\bcargo\s+install\b(?![^\n]*--locked)/u,
+	/docker\s+run\b[^\n]*--privileged/u,
 ];
-const requiredLockfileInstalls = ['pnpm install --frozen-lockfile'];
+const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
+const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 
 function readJson(path) {
-  if (!existsSync(path)) {
-    errors.push(`${path}: missing`);
-    return undefined;
-  }
+	if (!existsSync(path)) {
+		errors.push(`${path}: missing`);
+		return undefined;
+	}
 
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch (error) {
-    errors.push(`${path}: invalid JSON (${error.message})`);
-    return undefined;
-  }
+	try {
+		return JSON.parse(readFileSync(path, "utf8"));
+	} catch (error) {
+		errors.push(`${path}: invalid JSON (${error.message})`);
+		return undefined;
+	}
 }
 
 function requireArray(value, path) {
-  if (Array.isArray(value)) return value;
-  errors.push(`${path}: must be an array`);
-  return [];
+	if (Array.isArray(value)) return value;
+	errors.push(`${path}: must be an array`);
+	return [];
 }
 
 function requireString(value, path) {
-  if (typeof value === 'string' && value.trim().length > 0) return value;
-  errors.push(`${path}: must be a non-empty string`);
-  return '';
+	if (typeof value === "string" && value.trim().length > 0) return value;
+	errors.push(`${path}: must be a non-empty string`);
+	return "";
 }
 
 function assertId(value, path, pattern) {
-  const id = requireString(value, path);
-  if (id && !pattern.test(id)) {
-    errors.push(`${path}: invalid ID format (${id})`);
-  }
-  return id;
+	const id = requireString(value, path);
+	if (id && !pattern.test(id)) {
+		errors.push(`${path}: invalid ID format (${id})`);
+	}
+	return id;
 }
 
 function requireUnique(id, seen, path) {
-  if (!id) return;
-  if (seen.has(id)) {
-    errors.push(`${path}: duplicate ID ${id}`);
-    return;
-  }
-  seen.add(id);
+	if (!id) return;
+	if (seen.has(id)) {
+		errors.push(`${path}: duplicate ID ${id}`);
+		return;
+	}
+	seen.add(id);
 }
 
 function requireIncludes(path, includes, context) {
-  if (!existsSync(path)) {
-    errors.push(`${context}.path: ${path} is missing`);
-    return 0;
-  }
+	if (!existsSync(path)) {
+		errors.push(`${context}.path: ${path} is missing`);
+		return 0;
+	}
 
-  const text = readFileSync(path, 'utf8');
-  let count = 0;
+	const text = readFileSync(path, "utf8");
+	let count = 0;
 
-  for (const include of requireArray(includes, `${context}.includes`)) {
-    const needle = requireString(include, `${context}.includes[]`);
-    if (!needle) continue;
-    count += 1;
-    if (!text.includes(needle)) {
-      errors.push(`${context}: ${path} does not include ${JSON.stringify(needle)}`);
-    }
-  }
+	for (const include of requireArray(includes, `${context}.includes`)) {
+		const needle = requireString(include, `${context}.includes[]`);
+		if (!needle) continue;
+		count += 1;
+		if (!text.includes(needle)) {
+			errors.push(
+				`${context}: ${path} does not include ${JSON.stringify(needle)}`,
+			);
+		}
+	}
 
-  return count;
+	return count;
 }
 
 function workflowFiles() {
-  if (!existsSync(workflowsDir)) return [];
-  return readdirSync(workflowsDir)
-    .map((name) => join(workflowsDir, name))
-    .filter((path) => statSync(path).isFile() && /\.(ya?ml)$/u.test(path));
+	if (!existsSync(workflowsDir)) return [];
+	return readdirSync(workflowsDir)
+		.map((name) => join(workflowsDir, name))
+		.filter((path) => statSync(path).isFile() && /\.(ya?ml)$/u.test(path));
 }
 
 function extractUses(text) {
-  return [...text.matchAll(/^\s*uses:\s*["']?([^"'\s#]+)["']?/gmu)].map((match) => match[1]);
+	return [...text.matchAll(/^\s*uses:\s*["']?([^"'\s#]+)["']?/gmu)].map(
+		(match) => match[1],
+	);
 }
 
 function extractSecrets(text) {
-  return [...text.matchAll(/secrets\.([A-Z0-9_]+)/gu)].map((match) => match[1]);
+	return [...text.matchAll(/secrets\.([A-Z0-9_]+)/gu)].map((match) => match[1]);
 }
 
 function lineNumberAt(text, index) {
-  return text.slice(0, index).split('\n').length;
+	return text.slice(0, index).split("\n").length;
 }
 
 function assertWorkflowBaseline(path, text, registry) {
-  for (const include of requireArray(
-    registry.requiredWorkflowIncludes,
-    'requiredWorkflowIncludes',
-  )) {
-    if (!text.includes(include)) {
-      errors.push(`${path}: required workflow baseline missing ${JSON.stringify(include)}`);
-    }
-  }
+	for (const include of requireArray(
+		registry.requiredWorkflowIncludes,
+		"requiredWorkflowIncludes",
+	)) {
+		if (!text.includes(include)) {
+			errors.push(
+				`${path}: required workflow baseline missing ${JSON.stringify(include)}`,
+			);
+		}
+	}
 
-  if (!text.includes('node tools/security/check-ci-cd-security.mjs')) {
-    errors.push(`${path}: CI/CD security gate must run before dependency installation`);
-  }
+	if (!text.includes("node tools/security/check-ci-cd-security.mjs")) {
+		errors.push(
+			`${path}: CI/CD security gate must run before dependency installation`,
+		);
+	}
 
-  const securityGateIndex = text.indexOf('node tools/security/check-ci-cd-security.mjs');
-  const installIndex = text.indexOf('pnpm install --frozen-lockfile');
-  if (securityGateIndex >= 0 && installIndex >= 0 && securityGateIndex > installIndex) {
-    errors.push(`${path}: CI/CD security gate must run before dependency installation`);
-  }
+	const securityGateIndex = text.indexOf(
+		"node tools/security/check-ci-cd-security.mjs",
+	);
+	const installIndex = text.indexOf("pnpm install --frozen-lockfile");
+	if (
+		securityGateIndex >= 0 &&
+		installIndex >= 0 &&
+		securityGateIndex > installIndex
+	) {
+		errors.push(
+			`${path}: CI/CD security gate must run before dependency installation`,
+		);
+	}
 }
 
 function assertForbiddenTriggers(path, text) {
-  for (const trigger of forbiddenWorkflowTriggers) {
-    if (new RegExp(`^\\s*${trigger}\\s*:`, 'mu').test(text)) {
-      errors.push(`${path}: dangerous trigger ${trigger} is forbidden`);
-    }
-  }
+	for (const trigger of forbiddenWorkflowTriggers) {
+		if (new RegExp(`^\\s*${trigger}\\s*:`, "mu").test(text)) {
+			errors.push(`${path}: dangerous trigger ${trigger} is forbidden`);
+		}
+	}
 }
 
 function assertPermissions(path, text, allowedWritePermissions) {
-  if (!/^permissions:\s*$/mu.test(text)) {
-    errors.push(`${path}: top-level permissions: block is required`);
-  }
+	if (!/^permissions:\s*$/mu.test(text)) {
+		errors.push(`${path}: top-level permissions: block is required`);
+	}
 
-  for (const permission of forbiddenWritePermissions) {
-    const pattern = new RegExp(`^\\s*${permission}:\\s*write\\s*$`, 'mu');
-    if (pattern.test(text) && !allowedWritePermissions.includes(permission)) {
-      errors.push(`${path}: write permission ${permission}: write is not allowlisted`);
-    }
-  }
+	for (const permission of forbiddenWritePermissions) {
+		const pattern = new RegExp(`^\\s*${permission}:\\s*write\\s*$`, "mu");
+		if (pattern.test(text) && !allowedWritePermissions.includes(permission)) {
+			errors.push(
+				`${path}: write permission ${permission}: write is not allowlisted`,
+			);
+		}
+	}
 }
 
 function assertActions(path, text, allowedActions) {
-  for (const action of extractUses(text)) {
-    if (action.startsWith('./')) continue;
-    if (!allowedActions.includes(action)) {
-      errors.push(`${path}: action ${action} is not allowlisted`);
-    }
-    if (!action.includes('@')) {
-      errors.push(`${path}: action ${action} must include an explicit ref`);
-    }
-  }
+	for (const action of extractUses(text)) {
+		if (action.startsWith("./")) continue;
+		if (!allowedActions.includes(action)) {
+			errors.push(`${path}: action ${action} is not allowlisted`);
+		}
+		const separator = action.lastIndexOf("@");
+		const ref = separator >= 0 ? action.slice(separator + 1) : "";
+		if (!fullCommitShaPattern.test(ref)) {
+			errors.push(
+				`${path}: action ${action} must be pinned to a full commit SHA`,
+			);
+		}
+	}
 }
 
 function assertSecrets(path, text, allowedSecrets) {
-  for (const secret of extractSecrets(text)) {
-    if (!allowedSecrets.includes(secret)) {
-      errors.push(`${path}: secret ${secret} is not allowlisted`);
-    }
-  }
+	for (const secret of extractSecrets(text)) {
+		if (!allowedSecrets.includes(secret)) {
+			errors.push(`${path}: secret ${secret} is not allowlisted`);
+		}
+	}
 
-  const secretIndex = text.indexOf('secrets.');
-  if (secretIndex >= 0) {
-    const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
-    if (!preceding.includes("if: github.event_name == 'push' && github.ref == 'refs/heads/main'")) {
-      errors.push(`${path}: secret-bearing step must be restricted to trusted push on main`);
-    }
-  }
+	const secretIndex = text.indexOf("secrets.");
+	if (secretIndex >= 0) {
+		const preceding = text.slice(Math.max(0, secretIndex - 500), secretIndex);
+		if (
+			!preceding.includes(
+				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
+			)
+		) {
+			errors.push(
+				`${path}: secret-bearing step must be restricted to trusted push on main`,
+			);
+		}
+	}
 }
 
 function assertRunSafety(path, text) {
-  for (const pattern of dangerousRunPatterns) {
-    const match = pattern.exec(text);
-    if (match) {
-      errors.push(`${path}:${lineNumberAt(text, match.index)}: dangerous run pattern ${pattern}`);
-    }
-  }
+	for (const pattern of dangerousRunPatterns) {
+		const match = pattern.exec(text);
+		if (match) {
+			errors.push(
+				`${path}:${lineNumberAt(text, match.index)}: dangerous run pattern ${pattern}`,
+			);
+		}
+	}
 
-  for (const install of requiredLockfileInstalls) {
-    if (!text.includes(install)) {
-      errors.push(`${path}: unsafe dependency install policy, expected ${install}`);
-    }
-  }
+	if (/\bpnpm\s+(?:install|add|update|exec|run)\b/u.test(text)) {
+		for (const install of requiredLockfileInstalls) {
+			if (!text.includes(install)) {
+				errors.push(
+					`${path}: unsafe dependency install policy, expected ${install}`,
+				);
+			}
+		}
+	}
 }
 
 function assertCheckout(path, text) {
-  if (text.includes('actions/checkout') && !text.includes('persist-credentials: false')) {
-    errors.push(`${path}: actions/checkout must use persist-credentials: false`);
-  }
+	if (
+		text.includes("actions/checkout") &&
+		!text.includes("persist-credentials: false")
+	) {
+		errors.push(
+			`${path}: actions/checkout must use persist-credentials: false`,
+		);
+	}
 }
 
 const registry = readJson(registryPath);
 
 if (registry) {
-  if (registry.schemaVersion !== expectedSchemaVersion) {
-    errors.push(`${registryPath}: schemaVersion must be ${expectedSchemaVersion}`);
-  }
+	if (registry.schemaVersion !== expectedSchemaVersion) {
+		errors.push(
+			`${registryPath}: schemaVersion must be ${expectedSchemaVersion}`,
+		);
+	}
 
-  requireString(registry.source, `${registryPath}.source`);
-  requireString(registry.reviewCadence, `${registryPath}.reviewCadence`);
+	requireString(registry.source, `${registryPath}.source`);
+	requireString(registry.reviewCadence, `${registryPath}.reviewCadence`);
 
-  const allowedActions = requireArray(registry.allowedActions, `${registryPath}.allowedActions`);
-  const allowedSecrets = requireArray(registry.allowedSecrets, `${registryPath}.allowedSecrets`);
-  const allowedWritePermissions = requireArray(
-    registry.allowedWritePermissions,
-    `${registryPath}.allowedWritePermissions`,
-  );
+	const allowedActions = requireArray(
+		registry.allowedActions,
+		`${registryPath}.allowedActions`,
+	);
+	const allowedSecrets = requireArray(
+		registry.allowedSecrets,
+		`${registryPath}.allowedSecrets`,
+	);
+	const allowedWritePermissions = requireArray(
+		registry.allowedWritePermissions,
+		`${registryPath}.allowedWritePermissions`,
+	);
 
-  const requirements = requireArray(registry.requirements, `${registryPath}.requirements`);
-  const requirementIds = new Set();
-  const controlIds = new Set();
-  let controlCount = 0;
-  let evidenceCount = 0;
+	const requirements = requireArray(
+		registry.requirements,
+		`${registryPath}.requirements`,
+	);
+	const requirementIds = new Set();
+	const controlIds = new Set();
+	let controlCount = 0;
+	let evidenceCount = 0;
 
-  requirements.forEach((requirement, requirementIndex) => {
-    const requirementContext = `requirements[${requirementIndex}]`;
-    const requirementId = assertId(
-      requirement?.id,
-      `${requirementContext}.id`,
-      /^CICD_REQ_\d{3}$/u,
-    );
-    requireUnique(requirementId, requirementIds, 'requirements');
-    requireString(requirement?.name, `${requirementContext}.name`);
-    requireString(requirement?.owasp, `${requirementContext}.owasp`);
+	requirements.forEach((requirement, requirementIndex) => {
+		const requirementContext = `requirements[${requirementIndex}]`;
+		const requirementId = assertId(
+			requirement?.id,
+			`${requirementContext}.id`,
+			/^CICD_REQ_\d{3}$/u,
+		);
+		requireUnique(requirementId, requirementIds, "requirements");
+		requireString(requirement?.name, `${requirementContext}.name`);
+		requireString(requirement?.owasp, `${requirementContext}.owasp`);
 
-    const controls = requireArray(requirement?.controls, `${requirementContext}.controls`);
-    if (controls.length === 0) {
-      errors.push(`${requirementContext}: must include at least one control`);
-    }
+		const controls = requireArray(
+			requirement?.controls,
+			`${requirementContext}.controls`,
+		);
+		if (controls.length === 0) {
+			errors.push(`${requirementContext}: must include at least one control`);
+		}
 
-    controls.forEach((control, controlIndex) => {
-      const controlContext = `${requirementContext}.controls[${controlIndex}]`;
-      const controlId = assertId(control?.id, `${controlContext}.id`, /^CICD_CTRL_\d{3}$/u);
-      requireUnique(controlId, controlIds, 'controls');
-      requireString(control?.name, `${controlContext}.name`);
-      requireString(control?.description, `${controlContext}.description`);
-      controlCount += 1;
+		controls.forEach((control, controlIndex) => {
+			const controlContext = `${requirementContext}.controls[${controlIndex}]`;
+			const controlId = assertId(
+				control?.id,
+				`${controlContext}.id`,
+				/^CICD_CTRL_\d{3}$/u,
+			);
+			requireUnique(controlId, controlIds, "controls");
+			requireString(control?.name, `${controlContext}.name`);
+			requireString(control?.description, `${controlContext}.description`);
+			controlCount += 1;
 
-      const evidence = requireArray(control?.evidence, `${controlContext}.evidence`);
-      if (evidence.length === 0) {
-        errors.push(`${controlContext}: must include at least one evidence entry`);
-      }
+			const evidence = requireArray(
+				control?.evidence,
+				`${controlContext}.evidence`,
+			);
+			if (evidence.length === 0) {
+				errors.push(
+					`${controlContext}: must include at least one evidence entry`,
+				);
+			}
 
-      evidence.forEach((entry, evidenceIndex) => {
-        const evidenceContext = `${controlContext}.evidence[${evidenceIndex}]`;
-        const path = requireString(entry?.path, `${evidenceContext}.path`);
-        evidenceCount += requireIncludes(path, entry?.includes, evidenceContext);
-      });
-    });
-  });
+			evidence.forEach((entry, evidenceIndex) => {
+				const evidenceContext = `${controlContext}.evidence[${evidenceIndex}]`;
+				const path = requireString(entry?.path, `${evidenceContext}.path`);
+				evidenceCount += requireIncludes(
+					path,
+					entry?.includes,
+					evidenceContext,
+				);
+			});
+		});
+	});
 
-  const workflows = workflowFiles();
-  if (workflows.length === 0) {
-    errors.push(`${workflowsDir}: no workflow files found`);
-  }
+	const workflows = workflowFiles();
+	if (workflows.length === 0) {
+		errors.push(`${workflowsDir}: no workflow files found`);
+	}
 
-  for (const path of workflows) {
-    const text = readFileSync(path, 'utf8');
-    assertWorkflowBaseline(path, text, registry);
-    assertForbiddenTriggers(path, text);
-    assertPermissions(path, text, allowedWritePermissions);
-    assertActions(path, text, allowedActions);
-    assertSecrets(path, text, allowedSecrets);
-    assertRunSafety(path, text);
-    assertCheckout(path, text);
-  }
+	for (const path of workflows) {
+		const text = readFileSync(path, "utf8");
+		assertWorkflowBaseline(path, text, registry);
+		assertForbiddenTriggers(path, text);
+		assertPermissions(path, text, allowedWritePermissions);
+		assertActions(path, text, allowedActions);
+		assertSecrets(path, text, allowedSecrets);
+		assertRunSafety(path, text);
+		assertCheckout(path, text);
+	}
 
-  if (errors.length === 0) {
-    console.log(
-      `CI/CD security controls: ok (${requirements.length} requirements, ${controlCount} controls, ${workflows.length} workflows, ${evidenceCount} evidence strings)`,
-    );
-  }
+	if (errors.length === 0) {
+		console.log(
+			`CI/CD security controls: ok (${requirements.length} requirements, ${controlCount} controls, ${workflows.length} workflows, ${evidenceCount} evidence strings)`,
+		);
+	}
 }
 
 if (errors.length > 0) {
-  console.error('CI/CD security controls failed:');
-  for (const error of errors) {
-    console.error(`- ${error}`);
-  }
-  process.exit(1);
+	console.error("CI/CD security controls failed:");
+	for (const error of errors) {
+		console.error(`- ${error}`);
+	}
+	process.exit(1);
 }

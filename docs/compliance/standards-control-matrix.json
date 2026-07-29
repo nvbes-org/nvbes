@@ -1,0 +1,406 @@
+{
+	"schemaVersion": 1,
+	"owner": "Security and Compliance",
+	"reviewCadence": "Quarterly, before production releases, after material architecture changes, and after security incidents.",
+	"communicationsPolicy": {
+		"allowedClaim": "Controls are internally mapped to the listed standards.",
+		"prohibitedClaims": ["certified", "externally attested", "fully compliant"],
+		"exception": "A prohibited claim requires a current certificate, attestation report, or signed legal applicability opinion referenced from the evidence register."
+	},
+	"profiles": [
+		{
+			"id": "NVBES_BASELINE",
+			"scope": [
+				"all internet-facing applications",
+				"all public and internal APIs"
+			],
+			"asvsLevel": 2,
+			"aal": "risk-based",
+			"phishingResistant": false
+		},
+		{
+			"id": "NVBES_CRITICAL",
+			"scope": ["Account", "Backoffice", "Billing", "privileged operations"],
+			"asvsLevel": 3,
+			"aal": "AAL2",
+			"phishingResistant": true
+		}
+	],
+	"frameworks": [
+		{
+			"id": "OWASP-ASVS-5.0.0",
+			"source": "https://owasp.org/www-project-application-security-verification-standard/",
+			"target": "Level 2 baseline and Level 3 critical profile",
+			"claimStatus": "internal-alignment",
+			"externalAssuranceRequired": false
+		},
+		{
+			"id": "NIST-SP-800-63-4",
+			"source": "https://pages.nist.gov/800-63-4/",
+			"target": "AAL2 default for sensitive account activity and phishing-resistant authentication for privileged activity",
+			"claimStatus": "internal-alignment",
+			"externalAssuranceRequired": false
+		},
+		{
+			"id": "OAUTH-OIDC-FAPI",
+			"source": "https://datatracker.ietf.org/doc/html/rfc9700",
+			"relatedSources": [
+				"https://openid.net/specs/openid-connect-core-1_0.html",
+				"https://datatracker.ietf.org/doc/html/rfc8725",
+				"https://datatracker.ietf.org/doc/html/rfc9126",
+				"https://datatracker.ietf.org/doc/html/rfc9101",
+				"https://datatracker.ietf.org/doc/html/rfc9449",
+				"https://datatracker.ietf.org/doc/html/rfc8705",
+				"https://openid.net/specs/fapi-security-profile-2_0-final.html"
+			],
+			"target": "RFC 9700 baseline with OIDC, JWT BCP, PAR, JAR, DPoP or mTLS and FAPI 2.0 for high assurance",
+			"claimStatus": "internal-alignment",
+			"externalAssuranceRequired": false
+		},
+		{
+			"id": "NIST-CSF-2.0-CIS-8.1",
+			"source": "https://www.nist.gov/cyberframework",
+			"relatedSources": ["https://www.cisecurity.org/controls/v8-1"],
+			"target": "Security governance and operational control baseline",
+			"claimStatus": "internal-alignment",
+			"externalAssuranceRequired": false
+		},
+		{
+			"id": "ISO-27001-27017-27018",
+			"source": "https://www.iso.org/standard/27001",
+			"relatedSources": [
+				"https://www.iso.org/standard/82878.html",
+				"https://www.iso.org/standard/27018"
+			],
+			"target": "ISO/IEC 27001:2022 ISMS with cloud and public-cloud PII control extensions",
+			"claimStatus": "target",
+			"externalAssuranceRequired": true
+		},
+		{
+			"id": "GDPR-CNIL",
+			"source": "https://www.cnil.fr/fr/guide-de-la-securite-des-donnees-personnelles",
+			"relatedSources": ["https://eur-lex.europa.eu/eli/reg/2016/679/oj"],
+			"target": "Applicable privacy, security, data-subject-rights and accountability obligations",
+			"claimStatus": "applicable",
+			"externalAssuranceRequired": false
+		},
+		{
+			"id": "PCI-DSS-4.0.1",
+			"source": "https://www.pcisecuritystandards.org/standards/pci-dss/",
+			"target": "Minimized SAQ A-oriented scope through provider-hosted Checkout and Portal",
+			"claimStatus": "scope-minimized",
+			"externalAssuranceRequired": true
+		},
+		{
+			"id": "SOC2-TYPE-II",
+			"source": "https://www.aicpa-cima.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022",
+			"target": "Type II attestation after a stable control observation period",
+			"claimStatus": "target",
+			"externalAssuranceRequired": true
+		},
+		{
+			"id": "NIS2-CRA",
+			"source": "https://eur-lex.europa.eu/eli/dir/2022/2555/oj",
+			"relatedSources": ["https://eur-lex.europa.eu/eli/reg/2024/2847/oj"],
+			"target": "Documented legal applicability decisions for NIS2 and Regulation (EU) 2024/2847",
+			"claimStatus": "applicability-review",
+			"externalAssuranceRequired": true
+		}
+	],
+	"controls": [
+		{
+			"id": "STD_CTRL_001",
+			"name": "Application security verification profiles",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE", "NVBES_CRITICAL"],
+			"frameworks": ["OWASP-ASVS-5.0.0"],
+			"evidence": [
+				{
+					"path": "docs/security/authentication-controls.json",
+					"includes": ["AUTHN_CTRL_021", "AUTHN_CTRL_022"]
+				},
+				{
+					"path": "docs/security/authorization-controls.json",
+					"includes": ["AUTHZ_CTRL_006", "AUTHZ_CTRL_007"]
+				},
+				{
+					"path": "package.json",
+					"includes": [
+						"check:authentication",
+						"check:authorization",
+						"check:cross-site-scripting-prevention"
+					]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_002",
+			"name": "AAL2 authentication and bounded step-up",
+			"status": "implemented",
+			"profiles": ["NVBES_CRITICAL"],
+			"frameworks": ["NIST-SP-800-63-4", "OWASP-ASVS-5.0.0"],
+			"evidence": [
+				{
+					"path": "apps/account-service/src/identity.domains.auth.verification.rs",
+					"includes": [
+						"require_recent_step_up",
+						"Aal::Aal2",
+						"step_up_expires_at"
+					]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_003",
+			"name": "Phishing-resistant privileged authentication policy",
+			"status": "implemented",
+			"profiles": ["NVBES_CRITICAL"],
+			"frameworks": ["NIST-SP-800-63-4", "OWASP-ASVS-5.0.0"],
+			"target": "Production activation is blocked until live evidence is signed in external-security-assurance.json",
+			"evidence": [
+				{
+					"path": "apps/account-service/src/identity.domains.auth.webauthn.assurance.rs",
+					"includes": [
+						"WebauthnAssurance",
+						"HardwareSecurityKey",
+						"security_key"
+					]
+				},
+				{
+					"path": "apps/backoffice-service/src/internal_admin.privileged_authentication.rs",
+					"includes": [
+						"phishing_resistant_authentication_required",
+						"x-nvbes-authentication-event-id"
+					]
+				},
+				{
+					"path": "apps/enterprise-service/src/enterprise.grpc.privileged_authentication.rs",
+					"includes": [
+						"has_recent_phishing_resistant_authentication",
+						"authentication_event_id"
+					]
+				},
+				{
+					"path": "tools/security/check-production-security-operations.mjs",
+					"includes": [
+						"privileged_phishing_resistant_access",
+						"production release requires signed live evidence"
+					]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_004",
+			"name": "OAuth security BCP baseline",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE", "NVBES_CRITICAL"],
+			"frameworks": ["OAUTH-OIDC-FAPI"],
+			"evidence": [
+				{
+					"path": "apps/account-service/src/identity.domains.oauth.metadata.rs",
+					"includes": [
+						"require_pushed_authorization_requests",
+						"S256",
+						"private_key_jwt",
+						"dpop_signing_alg_values_supported"
+					]
+				},
+				{
+					"path": "apps/account-service/src/identity.domains.oauth.validation.pkce.rs",
+					"includes": ["PKCE code_challenge_method=S256 is required"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_005",
+			"name": "FAPI 2.0 high-assurance client profile",
+			"status": "partial",
+			"profiles": ["NVBES_CRITICAL"],
+			"frameworks": ["OAUTH-OIDC-FAPI"],
+			"gap": "Configuration policy exists; complete asymmetric JAR validation, sender-constrained token verification and conformance-suite evidence remain release gates.",
+			"target": "Before enabling high_assurance clients in production",
+			"evidence": [
+				{
+					"path": "apps/account-service/src/identity.domains.oauth.profiles.rs",
+					"includes": [
+						"HighAssurance",
+						"private_key_jwt",
+						"Dpop",
+						"Mtls",
+						"request-object signing JWKS"
+					]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_006",
+			"name": "Govern, identify, protect, detect, respond and recover lifecycle",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": [
+				"NIST-CSF-2.0-CIS-8.1",
+				"ISO-27001-27017-27018",
+				"SOC2-TYPE-II"
+			],
+			"evidence": [
+				{
+					"path": "docs/compliance/security-privacy-baseline.md",
+					"includes": ["Incident Response Operationnel", "Exigences Audit V1"]
+				},
+				{
+					"path": "docs/compliance/data-classification-policy.md",
+					"includes": ["Data Classification Policy", "RESTRICTED"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_007",
+			"name": "ISMS scope, risk treatment and statement of applicability",
+			"status": "partial",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": ["ISO-27001-27017-27018", "SOC2-TYPE-II"],
+			"gap": "The technical and policy baseline exists; formal ISMS leadership approval, risk treatment, SoA ownership and external audit evidence are not complete.",
+			"target": "Before claiming ISO readiness",
+			"evidence": [
+				{
+					"path": "docs/compliance/enterprise-compliance-summary.md",
+					"includes": ["Statement of Applicability", "objectifs de maturité"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_008",
+			"name": "Privacy records, lawful basis and data-subject rights",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": ["GDPR-CNIL", "ISO-27001-27017-27018", "SOC2-TYPE-II"],
+			"evidence": [
+				{
+					"path": "docs/compliance/records-of-processing.md",
+					"includes": ["Art. 30 RGPD", "Base légale", "Rétention"]
+				},
+				{
+					"path": "docs/compliance/gdpr-request-procedure.md",
+					"includes": ["Accès", "Effacement", "Portabilité", "30 jours"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_009",
+			"name": "Personal data breach handling",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": ["GDPR-CNIL", "NIST-CSF-2.0-CIS-8.1", "NIS2-CRA"],
+			"evidence": [
+				{
+					"path": "docs/compliance/personal-data-breach-procedure.md",
+					"includes": ["72 heures", "registre des violations", "postmortem"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_010",
+			"name": "Provider-hosted payment data boundary",
+			"status": "implemented",
+			"profiles": ["NVBES_CRITICAL"],
+			"frameworks": ["PCI-DSS-4.0.1", "OWASP-ASVS-5.0.0"],
+			"evidence": [
+				{
+					"path": "docs/adr/0001-billing-provider-stripe.md",
+					"includes": [
+						"Checkout",
+						"webhooks Stripe doivent etre signes, idempotents et audites"
+					]
+				},
+				{
+					"path": "libs/rust/billing/src/stripe_webhook_intake.rs",
+					"includes": [
+						"verify_stripe_signature",
+						"payload_hash",
+						"WebhookRetryDecision::Duplicate"
+					]
+				},
+				{
+					"path": "libs/rust/billing/src/portal_actions.rs",
+					"includes": [
+						"create_provider_portal_session",
+						"billing.portal_opened"
+					]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_011",
+			"name": "Immutable and exportable audit evidence",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE", "NVBES_CRITICAL"],
+			"frameworks": [
+				"NIST-CSF-2.0-CIS-8.1",
+				"ISO-27001-27017-27018",
+				"SOC2-TYPE-II"
+			],
+			"evidence": [
+				{
+					"path": "docs/compliance/audit-logs-spec.md",
+					"includes": ["Immuabilité", "Rétention", "SIEM"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_012",
+			"name": "Recovery objectives and tested restoration",
+			"status": "partial",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": [
+				"NIST-CSF-2.0-CIS-8.1",
+				"ISO-27001-27017-27018",
+				"SOC2-TYPE-II",
+				"NIS2-CRA"
+			],
+			"gap": "Backup architecture is documented, but the migration readiness manifest still requires measured production-like restoration evidence.",
+			"target": "Before production go-live",
+			"evidence": [
+				{
+					"path": "docs/migration/backup-restore-manifest.md",
+					"includes": ["RPO", "RTO", "no-go"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_013",
+			"name": "NIS2 and CRA applicability decisions",
+			"status": "partial",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": ["NIS2-CRA"],
+			"gap": "Legal applicability depends on entity size, offered services, distribution model and target markets; counsel sign-off is required.",
+			"target": "Before regulated-market contracting or relevant product distribution",
+			"evidence": [
+				{
+					"path": "docs/compliance/regulatory-applicability-register.md",
+					"includes": ["NIS2", "Cyber Resilience Act", "legal sign-off"]
+				}
+			]
+		},
+		{
+			"id": "STD_CTRL_014",
+			"name": "External assurance claim control",
+			"status": "implemented",
+			"profiles": ["NVBES_BASELINE"],
+			"frameworks": [
+				"ISO-27001-27017-27018",
+				"PCI-DSS-4.0.1",
+				"SOC2-TYPE-II",
+				"NIS2-CRA"
+			],
+			"evidence": [
+				{
+					"path": "docs/compliance/enterprise-compliance-summary.md",
+					"includes": [
+						"pas des certifications ou attestations acquises",
+						"audit externe en cours"
+					]
+				}
+			]
+		}
+	]
+}

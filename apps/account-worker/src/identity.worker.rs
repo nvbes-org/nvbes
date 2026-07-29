@@ -1,3 +1,5 @@
+#[path = "identity.worker.audit_anchor.rs"]
+pub mod audit_anchor;
 #[path = "identity.worker.enterprise_grpc.rs"]
 pub mod enterprise_grpc;
 #[path = "identity.worker.housekeeping.rs"]

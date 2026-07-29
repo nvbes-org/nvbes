@@ -144,6 +144,51 @@ pub async fn get_public_key_pems_for_decoding(
         .collect())
 }
 
+pub async fn activate_kms_key(
+    pool: &PgPool,
+    kid: &str,
+    kms_key_id: &str,
+    public_key_pem: &str,
+) -> Result<(), AppError> {
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "UPDATE signing_keys
+         SET deprecated_at = NOW(), status = 'deprecated'
+         WHERE status = 'active' AND kid <> $1",
+    )
+    .bind(kid)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "INSERT INTO signing_keys (kid, kms_key_id, public_key_pem, status)
+         VALUES ($1, $2, $3, 'active')
+         ON CONFLICT (kid) DO UPDATE
+         SET kms_key_id = EXCLUDED.kms_key_id,
+             public_key_pem = EXCLUDED.public_key_pem,
+             status = 'active',
+             deprecated_at = NULL",
+    )
+    .bind(kid)
+    .bind(kms_key_id)
+    .bind(public_key_pem)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+pub fn key_id_from_public_key(public_key_pem: &str) -> Result<String, AppError> {
+    use sha2::Digest;
+
+    let key = PKey::public_key_from_pem(public_key_pem.as_bytes())
+        .map_err(|error| AppError::internal("kms_public_key_invalid", error.to_string()))?;
+    let der = key
+        .public_key_to_der()
+        .map_err(|error| AppError::internal("kms_public_key_invalid", error.to_string()))?;
+    let digest = sha2::Sha256::digest(der);
+    Ok(format!("kid-kms-{}", hex::encode(&digest[..8])))
+}
+
 pub fn generate_local_key_pair() -> Result<(String, String), AppError> {
     use sha2::Digest;
 

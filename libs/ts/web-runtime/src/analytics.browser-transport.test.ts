@@ -18,7 +18,7 @@ const posthog = vi.hoisted(() => ({
   stopSessionRecording: vi.fn(),
 }));
 
-vi.mock('posthog-js', () => ({ default: posthog }));
+vi.mock('posthog-js/dist/module.full.no-external', () => ({ default: posthog }));
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -48,8 +48,12 @@ describe('createBrowserAnalyticsTransport', () => {
     expect(posthog.init).toHaveBeenCalledWith(
       'ph_test',
       expect.objectContaining({
+        before_send: expect.any(Function),
         capture_pageleave: true,
         capture_pageview: false,
+        custom_personal_data_properties: ['token'],
+        disable_capture_url_hashes: true,
+        mask_personal_data_properties: true,
       }),
     );
     expect(posthog.capture).toHaveBeenCalledWith('marketing.page_viewed', {});

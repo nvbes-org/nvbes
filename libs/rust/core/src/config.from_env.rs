@@ -15,6 +15,8 @@ impl AppConfig {
             false,
         )?;
         let strict_mode = environment != "development";
+        let secret_manager_enabled = env_bool("NVBES_SECRET_MANAGER_ENABLED", false);
+        let secret_bootstrap_mode = strict_mode && !secret_manager_enabled;
 
         let api_port = std::env::var("NVBES_API_PORT")
             .ok()
@@ -54,13 +56,13 @@ impl AppConfig {
                 "NVBES_DATABASE_URL",
                 std::env::var("NVBES_DATABASE_URL").ok(),
                 "postgres://postgres:postgres@localhost:5432/nvbes",
-                strict_mode,
+                secret_bootstrap_mode,
             )?,
             billing_database_url: env_or_default(
                 "NVBES_BILLING_DATABASE_URL",
                 std::env::var("NVBES_BILLING_DATABASE_URL").ok(),
                 "postgres://postgres:postgres@localhost:5432/nvbes_billing",
-                strict_mode,
+                secret_bootstrap_mode,
             )?,
             database_max_connections: std::env::var("NVBES_DATABASE_MAX_CONNECTIONS")
                 .ok()
@@ -102,10 +104,14 @@ impl AppConfig {
                 .ok()
                 .and_then(|value| value.parse::<usize>().ok())
                 .unwrap_or(5),
-            auth_password_max_age_days: std::env::var("NVBES_AUTH_PASSWORD_MAX_AGE_DAYS")
-                .ok()
-                .and_then(|value| value.parse::<i64>().ok()),
             auth_password_pepper: optional_env("NVBES_AUTH_PASSWORD_PEPPER"),
+            auth_factor_encryption_key: optional_env("NVBES_AUTH_FACTOR_ENCRYPTION_KEY"),
+            auth_factor_encryption_key_version: std::env::var(
+                "NVBES_AUTH_FACTOR_ENCRYPTION_KEY_VERSION",
+            )
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(1),
             auth_pow_enabled: std::env::var("NVBES_AUTH_POW_ENABLED")
                 .ok()
                 .and_then(|value| value.parse::<bool>().ok())
@@ -167,7 +173,7 @@ impl AppConfig {
                 "NVBES_JWT_SECRET",
                 std::env::var("NVBES_JWT_SECRET").ok(),
                 "default-secret-change-me",
-                strict_mode,
+                secret_bootstrap_mode,
             )?,
             webauthn_rp_id: env_or_default(
                 "NVBES_WEBAUTHN_RP_ID",
@@ -220,10 +226,7 @@ impl AppConfig {
                 .ok()
                 .map(|v| v == "true")
                 .unwrap_or(false),
-            secret_manager_enabled: std::env::var("NVBES_SECRET_MANAGER_ENABLED")
-                .ok()
-                .map(|v| v == "true")
-                .unwrap_or(false),
+            secret_manager_enabled,
             email_provider: optional_env("NVBES_EMAIL_PROVIDER").unwrap_or_else(|| {
                 if optional_env("NVBES_SMTP_HOST").is_some() {
                     "smtp".to_string()
@@ -272,6 +275,7 @@ impl AppConfig {
                 false,
             )?,
             storage_endpoint: optional_env("STORAGE_ENDPOINT"),
+            storage_public_endpoint: optional_env("STORAGE_PUBLIC_ENDPOINT"),
             storage_region: optional_env("STORAGE_REGION").unwrap_or_else(|| "fr-par".to_string()),
             storage_access_key: optional_env("STORAGE_ACCESS_KEY")
                 .or_else(|| optional_env("AWS_ACCESS_KEY_ID")),
@@ -359,6 +363,10 @@ impl AppConfig {
             mtls_client_cert_path: optional_env("NVBES_MTLS_CLIENT_CERT_PATH"),
             mtls_client_key_path: optional_env("NVBES_MTLS_CLIENT_KEY_PATH"),
             dpop_enabled: env_bool("NVBES_DPOP_ENABLED", false),
+            fapi_high_assurance_enabled: env_bool("NVBES_FAPI_HIGH_ASSURANCE_ENABLED", false),
+            fapi_conformance_evidence_sha256: optional_env(
+                "NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256",
+            ),
             request_e2ee_enabled: env_bool("NVBES_REQUEST_E2EE_ENABLED", false),
             request_e2ee_required: env_bool("NVBES_REQUEST_E2EE_REQUIRED", false),
             request_e2ee_key_id: optional_env("NVBES_REQUEST_E2EE_KEY_ID")
@@ -368,7 +376,7 @@ impl AppConfig {
                 "NVBES_REDIS_URL",
                 std::env::var("NVBES_REDIS_URL").ok(),
                 "redis://localhost:6379",
-                strict_mode,
+                secret_bootstrap_mode,
             )?,
             redis_password: optional_env("NVBES_REDIS_PASSWORD"),
             redis_max_connections: std::env::var("NVBES_REDIS_MAX_CONNECTIONS")
@@ -378,7 +386,9 @@ impl AppConfig {
             security_contact_email: optional_env("NVBES_SECURITY_CONTACT_EMAIL"),
         };
 
-        validate_config_urls_and_secrets(&config)?;
+        if !secret_manager_enabled {
+            validate_config_urls_and_secrets(&config)?;
+        }
         Ok(config)
     }
 }

@@ -7,6 +7,7 @@ import {
 } from '@/pages/AccountPasswordPage.messages';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
 import { PasswordStrengthMeter } from '@/pages/RegisterPage.password';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../identity.password.policy';
 
 export function AccountPasswordForm({
   accountEmail,
@@ -18,6 +19,10 @@ export function AccountPasswordForm({
   setConfirmPassword,
   setNewPassword,
   success,
+  requestResetEmail,
+  resetEmailMutation,
+  resetEmailResendSeconds,
+  resetEmailSent,
 }: Pick<
   AccountPasswordPageModel,
   | 'accountEmail'
@@ -29,6 +34,10 @@ export function AccountPasswordForm({
   | 'setConfirmPassword'
   | 'setNewPassword'
   | 'success'
+  | 'requestResetEmail'
+  | 'resetEmailMutation'
+  | 'resetEmailResendSeconds'
+  | 'resetEmailSent'
 >) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -47,7 +56,9 @@ export function AccountPasswordForm({
           }
           required
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          spellCheck={false}
           autoFocus
         />
         <PasswordStrengthMeter password={newPassword} />
@@ -66,6 +77,9 @@ export function AccountPasswordForm({
           }
           required
           autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          spellCheck={false}
         />
       </div>
 
@@ -77,6 +91,32 @@ export function AccountPasswordForm({
       <Button type="submit" disabled={mutation.isPending} className="w-full">
         {mutation.isPending ? 'Modification...' : 'Modifier le mot de passe'}
       </Button>
+
+      <div className="border-t pt-4 text-center">
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0"
+          disabled={resetEmailMutation.isPending || resetEmailResendSeconds > 0}
+          onClick={requestResetEmail}
+        >
+          <span aria-live="polite">
+            {resetEmailMutation.isPending
+              ? 'Envoi en cours...'
+              : resetEmailResendSeconds > 0
+                ? `Renvoyer dans ${formatCountdown(resetEmailResendSeconds)}`
+                : resetEmailSent
+                  ? "Renvoyer l'email de réinitialisation"
+                  : 'Réinitialiser le mot de passe via email'}
+          </span>
+        </Button>
+      </div>
     </form>
   );
+}
+
+function formatCountdown(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }

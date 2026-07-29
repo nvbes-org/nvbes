@@ -189,6 +189,8 @@ mod identity_governance_operator_grant_actions_tests;
 mod identity_governance_operator_grant_validation;
 #[path = "internal_admin.identity_governance_operator_grants.rs"]
 mod identity_governance_operator_grants;
+#[path = "internal_admin.identity_recovery.rs"]
+mod identity_recovery;
 #[path = "internal_admin.observability.rs"]
 mod observability;
 #[path = "internal_admin.openapi.rs"]
@@ -230,6 +232,8 @@ mod pending_approvals;
 #[cfg(test)]
 #[path = "internal_admin.pending_approvals.tests.rs"]
 mod pending_approvals_tests;
+#[path = "internal_admin.privileged_authentication.rs"]
+mod privileged_authentication;
 #[path = "internal_admin.rate_limit.rs"]
 mod rate_limit;
 #[path = "internal_admin.region_center.rs"]
@@ -336,7 +340,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
@@ -345,7 +353,8 @@ async fn main() -> anyhow::Result<()> {
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
     sqlx::migrate!("./migrations").run(&db).await?;
-    let app = app::build_router(app::AppState::new(config.clone(), db));
+    let state = app::AppState::try_new(config.clone(), db).map_err(anyhow::Error::msg)?;
+    let app = app::build_router(state);
     let http_address = SocketAddr::from(([0, 0, 0, 0], config.api_port));
     let http_listener = keep_alive::bind_listener_with_keepalive(http_address, 4096)?;
 

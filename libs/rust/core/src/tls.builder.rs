@@ -1,26 +1,21 @@
-use std::io::BufReader;
 use std::sync::Arc;
 
 use crate::config::AppConfig;
 use tokio_rustls::rustls;
 use tokio_rustls::rustls::RootCertStore;
-use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
 use tokio_rustls::rustls::server::WebPkiClientVerifier;
 
 fn load_certs(path: &str) -> Result<Vec<CertificateDer<'static>>, String> {
-    let data = std::fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
-    let mut reader = BufReader::new(&*data);
-    rustls_pemfile::certs(&mut reader)
+    CertificateDer::pem_file_iter(path)
+        .map_err(|e| format!("Failed to read certs from {path}: {e}"))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to parse certs from {path}: {e}"))
 }
 
 fn load_private_key(path: &str) -> Result<PrivateKeyDer<'static>, String> {
-    let data = std::fs::read(path).map_err(|e| format!("Failed to read {path}: {e}"))?;
-    let mut reader = BufReader::new(&*data);
-    rustls_pemfile::private_key(&mut reader)
-        .map_err(|e| format!("Failed to parse key from {path}: {e}"))?
-        .ok_or_else(|| format!("No private key found in {path}"))
+    PrivateKeyDer::from_pem_file(path)
+        .map_err(|e| format!("Failed to parse private key from {path}: {e}"))
 }
 
 pub async fn build_mtls_acceptor(

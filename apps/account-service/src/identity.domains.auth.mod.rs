@@ -68,6 +68,8 @@ pub mod otp_types;
 pub mod password;
 #[path = "identity.domains.auth.pow.rs"]
 pub mod pow;
+#[path = "identity.domains.auth.registration_enrollment.rs"]
+pub mod registration_enrollment;
 #[path = "identity.domains.auth.risk.rs"]
 pub mod risk;
 #[path = "identity.domains.auth.routes.rs"]
@@ -88,6 +90,8 @@ pub mod state;
 pub mod types;
 #[path = "identity.domains.auth.ua_client_hints.rs"]
 pub mod ua_client_hints;
+#[path = "identity.domains.auth.user_agent.rs"]
+pub mod user_agent;
 #[path = "identity.domains.auth.verification.rs"]
 pub mod verification;
 #[path = "identity.domains.auth.webauthn.rs"]
@@ -96,6 +100,6 @@ pub mod webauthn;
 pub use nvbes_core::limiter::RateLimiter;
 pub use nvbes_core::limiter::check_rate_limit;
 pub use password::{
-    generate_random_token, hash_password, normalize_email, token_hash, unique_slug, validate_email,
-    validate_password, verify_password,
+    generate_random_token, hash_password, hash_password_with_pepper, normalize_email, token_hash,
+    unique_slug, validate_email, validate_password, verify_password, verify_password_with_pepper,
 };

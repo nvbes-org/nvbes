@@ -5,7 +5,10 @@ use webauthn_rs::prelude::*;
 
 use crate::domains::auth::{
     risk::{self, RiskDecision, RiskEventInput},
-    webauthn::{errors::map_webauthn_registration_error, types::StoredWebauthnRegistration},
+    webauthn::{
+        assurance::WebauthnCredentialSignals, errors::map_webauthn_registration_error,
+        types::StoredWebauthnRegistration,
+    },
 };
 use crate::http::error::AppError;
 
@@ -71,6 +74,25 @@ pub async fn finish_registration(
         })?,
     };
 
+    let signals = WebauthnCredentialSignals::from_registered_credential(&credential, kind);
+    if kind == "security_key" && signals.backup_eligible {
+        sqlx::query(
+            r#"
+            UPDATE mfa_factors
+            SET status = 'revoked', last_used_at = NOW()
+            WHERE id = $1 AND principal_id = $2 AND factor_type = 'webauthn'
+            "#,
+        )
+        .bind(factor_id)
+        .bind(user_id)
+        .execute(db)
+        .await?;
+        return Err(AppError::forbidden(
+            "security_key_not_device_bound",
+            "The selected credential is synchronizable. Register an independent hardware key.",
+        ));
+    }
+
     sqlx::query(
         r#"
         UPDATE mfa_factors
@@ -81,7 +103,12 @@ pub async fn finish_registration(
               $3::jsonb,
               'kind',
               $4::text
-            )
+            ),
+            webauthn_assurance = $5,
+            webauthn_backup_eligible = $6,
+            webauthn_backup_state = $7,
+            webauthn_sign_count = $8,
+            webauthn_attestation_format = $9
         WHERE id = $1 AND principal_id = $2 AND factor_type = 'webauthn'
         "#,
     )
@@ -89,6 +116,11 @@ pub async fn finish_registration(
     .bind(user_id)
     .bind(sqlx::types::Json(credential))
     .bind(kind)
+    .bind(signals.assurance.as_str())
+    .bind(signals.backup_eligible)
+    .bind(signals.backup_state)
+    .bind(signals.sign_count)
+    .bind(signals.attestation_format.as_deref())
     .execute(db)
     .await?;
 
@@ -104,6 +136,11 @@ pub async fn finish_registration(
             risk_score: 5.0,
             risk_factors: json!({
                 "factor_id": factor_id,
+                "assurance": signals.assurance.as_str(),
+                "backup_eligible": signals.backup_eligible,
+                "backup_state": signals.backup_state,
+                "sign_count": signals.sign_count,
+                "attestation_format": signals.attestation_format,
             }),
             decision: RiskDecision::Allow,
             metadata: json!({}),

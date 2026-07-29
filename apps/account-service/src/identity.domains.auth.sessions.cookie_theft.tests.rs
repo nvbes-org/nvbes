@@ -94,3 +94,19 @@ fn browser_and_platform_updates_do_not_rotate_the_device_session() {
 
     assert_eq!(assess(&session, &current).score, 0.0);
 }
+
+#[test]
+fn browser_version_update_keeps_the_same_session_family() {
+    let mut baseline = stable_profile();
+    baseline.user_agent =
+        Some("Mozilla/5.0 (Windows NT 10.0) Chrome/126.0 Safari/537.36".to_string());
+    let mut session = session();
+    apply_profile(&mut session, &baseline);
+
+    let mut current = baseline;
+    current.user_agent =
+        Some("Mozilla/5.0 (Windows NT 10.0) Chrome/127.0 Safari/537.36".to_string());
+
+    let assessment = assess(&session, &current);
+    assert!(!assessment.factors.contains(&"user_agent_family_changed"));
+}

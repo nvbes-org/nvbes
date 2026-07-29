@@ -41,12 +41,6 @@ export function buildPasswordSubmitAction(
           }),
         });
       },
-      navigateToForgotPassword: (forgotEmail) => {
-        void navigate({
-          to: '/forgot-password',
-          state: (state) => ({ ...state, email: forgotEmail }),
-        });
-      },
       finishLogin,
     });
   };

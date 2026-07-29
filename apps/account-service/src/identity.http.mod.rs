@@ -8,6 +8,10 @@ pub mod cors;
 pub mod error;
 #[path = "identity.http.middleware.mod.rs"]
 pub mod middleware;
+#[path = "identity.http.mtls.rs"]
+pub mod mtls;
+#[path = "identity.http.outbound.rs"]
+pub mod outbound;
 #[path = "identity.http.request.rs"]
 pub mod request;
 pub use nvbes_core::security::security_headers;

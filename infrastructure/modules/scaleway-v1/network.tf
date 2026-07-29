@@ -14,26 +14,48 @@ resource "scaleway_instance_security_group" "api" {
   name                    = "${var.name_prefix}-api-sg"
   project_id              = var.project_id
   inbound_default_policy  = "drop"
-  outbound_default_policy = "accept"
+  outbound_default_policy = "drop"
 
-  inbound_rule {
-    action = "accept"
-    port   = 80
-  }
+  dynamic "inbound_rule" {
+    for_each = var.edge_allowed_ipv4_cidrs
 
-  inbound_rule {
-    action = "accept"
-    port   = 443
+    content {
+      action = "accept"
+      port   = 443
+      ip     = inbound_rule.value
+    }
   }
 
   dynamic "inbound_rule" {
-    for_each = var.ssh_allowed_ips
+    for_each = var.enable_jit_ssh ? var.ssh_allowed_ips : []
 
     content {
       action = "accept"
       port   = 22
       ip     = inbound_rule.value
     }
+  }
+
+  dynamic "outbound_rule" {
+    for_each = var.egress_https_allowed_cidrs
+
+    content {
+      action = "accept"
+      port   = 443
+      ip     = outbound_rule.value
+    }
+  }
+
+  outbound_rule {
+    action   = "accept"
+    port     = 53
+    protocol = "UDP"
+  }
+
+  outbound_rule {
+    action = "accept"
+    port   = 5432
+    ip     = var.private_subnet
   }
 }
 
@@ -41,15 +63,37 @@ resource "scaleway_instance_security_group" "worker" {
   name                    = "${var.name_prefix}-worker-sg"
   project_id              = var.project_id
   inbound_default_policy  = "drop"
-  outbound_default_policy = "accept"
+  outbound_default_policy = "drop"
 
   dynamic "inbound_rule" {
-    for_each = var.ssh_allowed_ips
+    for_each = var.enable_jit_ssh ? var.ssh_allowed_ips : []
 
     content {
       action = "accept"
       port   = 22
       ip     = inbound_rule.value
     }
+  }
+
+  dynamic "outbound_rule" {
+    for_each = var.egress_https_allowed_cidrs
+
+    content {
+      action = "accept"
+      port   = 443
+      ip     = outbound_rule.value
+    }
+  }
+
+  outbound_rule {
+    action   = "accept"
+    port     = 53
+    protocol = "UDP"
+  }
+
+  outbound_rule {
+    action = "accept"
+    port   = 5432
+    ip     = var.private_subnet
   }
 }

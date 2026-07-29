@@ -13,7 +13,7 @@ import { ResetPasswordSuccessState } from './ResetPasswordPage.success';
 import type { ResetPasswordPageModel } from './ResetPasswordPage.types';
 
 export function ResetPasswordPageCard({
-  tokenFromUrl,
+  tokenFromLink,
   token,
   password,
   confirmPassword,
@@ -48,7 +48,7 @@ export function ResetPasswordPageCard({
             <ResetPasswordSuccessState navigateToLogin={navigateToLogin} />
           ) : (
             <ResetPasswordForm
-              tokenFromUrl={tokenFromUrl}
+              tokenFromLink={tokenFromLink}
               token={token}
               password={password}
               confirmPassword={confirmPassword}

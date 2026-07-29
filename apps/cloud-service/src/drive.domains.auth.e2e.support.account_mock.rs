@@ -14,13 +14,13 @@ use sqlx::{Row, postgres::PgPool};
 use tokio::net::TcpListener;
 use uuid::Uuid;
 
-const TEST_ACCOUNT_ISSUER: &str = "nvbes-identity";
 const TEST_CLOUD_AUDIENCE: &str = "nvbes-cloud-service";
 
 #[derive(Clone)]
 pub(crate) struct MockAccountState {
     pool: PgPool,
     key: MockSigningKey,
+    issuer: String,
 }
 
 #[derive(Clone)]
@@ -61,15 +61,17 @@ pub(crate) async fn identity_state(pool: &PgPool) -> MockAccountState {
     MockAccountState {
         pool: pool.clone(),
         key: MockSigningKey::generate(),
+        issuer: String::new(),
     }
 }
 
-pub(crate) async fn spawn_identity_server(state: MockAccountState) -> String {
+pub(crate) async fn spawn_identity_server(mut state: MockAccountState) -> String {
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("test server should bind");
     let addr = listener.local_addr().expect("listener addr");
     let base_url = format!("http://{addr}");
+    state.issuer = base_url.clone();
     let router = Router::new()
         .route("/.well-known/jwks.json", get(jwks))
         .route("/oauth/token", post(issue_token))
@@ -88,7 +90,7 @@ async fn jwks(State(state): State<MockAccountState>) -> Json<serde_json::Value> 
         "keys": [{
             "kty": "RSA",
             "kid": state.key.kid,
-            "alg": "RS256",
+            "alg": "PS256",
             "use": "sig",
             "n": state.key.n,
             "e": state.key.e,
@@ -123,7 +125,7 @@ async fn issue_token(
         role: "owner".to_string(),
         amr: vec!["m2m".to_string()],
         client_id: Some(client_id),
-        iss: TEST_ACCOUNT_ISSUER.to_string(),
+        iss: state.issuer.clone(),
         aud: body
             .audience
             .unwrap_or_else(|| TEST_CLOUD_AUDIENCE.to_string()),
@@ -221,7 +223,7 @@ async fn account_client_row(
 }
 
 fn sign_claims(key: &MockSigningKey, claims: &TestTokenClaims) -> Result<String, StatusCode> {
-    let mut header = Header::new(Algorithm::RS256);
+    let mut header = Header::new(Algorithm::PS256);
     header.kid = Some(key.kid.clone());
     encode(
         &header,
@@ -233,8 +235,8 @@ fn sign_claims(key: &MockSigningKey, claims: &TestTokenClaims) -> Result<String,
 }
 
 fn decode_test_claims(key: &MockSigningKey, token: &str) -> Result<TestTokenClaims, StatusCode> {
-    let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[TEST_ACCOUNT_ISSUER]);
+    let mut validation = Validation::new(Algorithm::PS256);
+    validation.set_issuer(&[&state.issuer]);
     validation.set_audience(&[TEST_CLOUD_AUDIENCE]);
     decode::<TestTokenClaims>(
         token,

@@ -2,7 +2,7 @@ use axum::{
     Json, Router,
     body::Body,
     extract::{Path, State},
-    http::{HeaderMap, HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -163,6 +163,18 @@ fn build_download_response(download: DownloadObjectResponse) -> Result<Response,
         header::CONTENT_TYPE.as_str(),
         &download.content_type,
     )?;
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_static("attachment"),
+    );
+    headers.insert(
+        HeaderName::from_static("content-security-policy"),
+        HeaderValue::from_static("default-src 'none'; sandbox"),
+    );
+    headers.insert(
+        HeaderName::from_static("cross-origin-resource-policy"),
+        HeaderValue::from_static("same-site"),
+    );
 
     match download.status {
         DownloadObjectStatus::Full => {
@@ -215,4 +227,34 @@ fn insert_header(headers: &mut HeaderMap, name: &str, value: &str) -> Result<(),
     })?;
     headers.insert(name, value);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn streamed_downloads_are_attachment_only_and_sandboxed() {
+        let response = build_download_response(DownloadObjectResponse {
+            body: b"<script>alert(1)</script>".to_vec(),
+            status: DownloadObjectStatus::Full,
+            size_bytes: 25,
+            content_type: "text/html".to_owned(),
+            served_bytes: 25,
+        })
+        .expect("download response should build");
+
+        assert_eq!(
+            response.headers().get(header::CONTENT_DISPOSITION),
+            Some(&HeaderValue::from_static("attachment"))
+        );
+        assert_eq!(
+            response.headers().get("content-security-policy"),
+            Some(&HeaderValue::from_static("default-src 'none'; sandbox"))
+        );
+        assert_eq!(
+            response.headers().get("cross-origin-resource-policy"),
+            Some(&HeaderValue::from_static("same-site"))
+        );
+    }
 }

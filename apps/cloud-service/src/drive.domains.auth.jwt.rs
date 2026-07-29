@@ -7,7 +7,6 @@ use tokio::sync::RwLock;
 
 use crate::http::error::AppError;
 
-const IDENTITY_ISSUER: &str = "nvbes-identity";
 const DRIVE_AUDIENCE: &str = "nvbes-cloud-service";
 const IDENTITY_API_AUDIENCE: &str = "nvbes-account-service";
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(300);
@@ -70,7 +69,7 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     let header = decode_header(token).map_err(|error| {
         AppError::unauthorized("invalid_token", format!("Invalid token header: {error}"))
     })?;
-    if header.alg != Algorithm::RS256 {
+    if !matches!(header.alg, Algorithm::PS256 | Algorithm::RS256) {
         return Err(AppError::unauthorized(
             "invalid_token_algorithm",
             "Invalid token signing algorithm.",
@@ -85,8 +84,9 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     })?;
     let decoding_key = get_decoding_key(&kid).await?;
 
-    let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[IDENTITY_ISSUER]);
+    let issuer = identity_base_url().trim_end_matches('/').to_string();
+    let mut validation = Validation::new(header.alg);
+    validation.set_issuer(&[&issuer]);
     validation.set_audience(&[DRIVE_AUDIENCE, IDENTITY_API_AUDIENCE]);
     validation.validate_exp = true;
     validation.validate_nbf = true;
@@ -100,7 +100,7 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     let claims = data.claims;
 
     if claims.token_type != "access"
-        || claims.iss != IDENTITY_ISSUER
+        || claims.iss != issuer
         || ![DRIVE_AUDIENCE, IDENTITY_API_AUDIENCE]
             .iter()
             .any(|audience| claims.aud == *audience)

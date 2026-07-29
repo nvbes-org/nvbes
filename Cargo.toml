@@ -40,7 +40,7 @@ license = "AGPL-3.0-only"
 version = "0.1.0"
 
 [workspace.dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.103"
 argon2 = "0.5.3"
 aes-gcm = "0.10.3"
 async-graphql = "7.0.17"
@@ -56,18 +56,18 @@ hkdf = "0.12.4"
 hmac = "0.12.1"
 ipnet = "2.11.0"
 password-hash = { version = "0.5.0", features = ["rand_core"] }
+proptest = "1.9.0"
 prost = "0.13.5"
 rand = "0.9.2"
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
 sentry = { version = "0.48.3", default-features = false, features = ["backtrace", "contexts", "debug-images", "panic", "release-health", "reqwest", "rustls"] }
-rustls-pemfile = "2"
 sha1 = "0.10.6"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 sha2 = "0.10.9"
 socket2 = "0.6"
 roxmltree = "0.20.0"
-sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
 tokio = { version = "1.52.3", features = ["full"] }
 tokio-rustls = "0.26"
 tracing = "0.1.44"

@@ -84,6 +84,8 @@ pub async fn resend_verification_email(
 ) -> Result<ResendVerificationResult, AppError> {
     let email = normalize_email(email);
     validate_email(&email)?;
+    let public_resend_available_at =
+        Utc::now() + ChronoDuration::seconds(config.auth_verification_resend_cooldown_seconds);
 
     let row = sqlx::query(
         r#"
@@ -103,21 +105,13 @@ pub async fn resend_verification_email(
     .await?;
 
     let Some(row) = row else {
-        return Ok(ResendVerificationResult {
-            success: true,
-            email_verified: false,
-            verification_resend_available_at: None,
-        });
+        return Ok(opaque_resend_result(public_resend_available_at));
     };
 
     let principal_id: Uuid = row.get("principal_id");
     let email_verified_at: Option<DateTime<Utc>> = row.get("email_verified_at");
     if email_verified_at.is_some() {
-        return Ok(ResendVerificationResult {
-            success: true,
-            email_verified: true,
-            verification_resend_available_at: None,
-        });
+        return Ok(opaque_resend_result(public_resend_available_at));
     }
 
     let last_token =
@@ -142,11 +136,7 @@ pub async fn resend_verification_email(
         .unwrap_or(now);
 
     if now < resend_available_at {
-        return Ok(ResendVerificationResult {
-            success: true,
-            email_verified: false,
-            verification_resend_available_at: Some(resend_available_at),
-        });
+        return Ok(opaque_resend_result(public_resend_available_at));
     }
 
     nvbes_redis::email_verification::consume_all_email_verification_tokens_for_principal(
@@ -167,7 +157,7 @@ pub async fn resend_verification_email(
         username.as_deref(),
     );
     let verification_token = generate_random_token();
-    let verification_created_at = issue_verification_email_tx(
+    issue_verification_email_tx(
         redis,
         config,
         principal_id,
@@ -186,14 +176,18 @@ pub async fn resend_verification_email(
         &verification_token,
     )
     .await?;
-    Ok(ResendVerificationResult {
+    Ok(opaque_resend_result(public_resend_available_at))
+}
+
+/// Keep the public response independent from account existence and verification state.
+fn opaque_resend_result(
+    verification_resend_available_at: DateTime<Utc>,
+) -> ResendVerificationResult {
+    ResendVerificationResult {
         success: true,
         email_verified: false,
-        verification_resend_available_at: Some(verification_resend_available_at(
-            verification_created_at,
-            config.auth_verification_resend_cooldown_seconds,
-        )),
-    })
+        verification_resend_available_at: Some(verification_resend_available_at),
+    }
 }
 
 pub async fn cleanup_expired_unverified_accounts(
@@ -232,7 +226,7 @@ pub async fn cleanup_expired_unverified_accounts(
 
 #[cfg(test)]
 mod tests {
-    use super::verification_resend_available_at;
+    use super::{opaque_resend_result, verification_resend_available_at};
     use chrono::{TimeZone, Utc};
 
     #[test]
@@ -243,5 +237,15 @@ mod tests {
             available_at,
             Utc.with_ymd_and_hms(2026, 5, 19, 13, 0, 45).unwrap()
         );
+    }
+
+    #[test]
+    fn public_resend_result_does_not_reveal_account_state() {
+        let available_at = Utc.with_ymd_and_hms(2026, 7, 27, 13, 0, 45).unwrap();
+        let result = opaque_resend_result(available_at);
+
+        assert!(result.success);
+        assert!(!result.email_verified);
+        assert_eq!(result.verification_resend_available_at, Some(available_at));
     }
 }

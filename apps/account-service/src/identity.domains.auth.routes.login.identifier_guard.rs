@@ -58,13 +58,22 @@ async fn enforce_bot_score(
         request.bot_signals.as_ref(),
         request.device_fingerprint.as_ref(),
     );
-    let mut bot_score = (http_scores.total() + ua_ch_assessment.score).min(1.0);
+    let ua_assessment = crate::domains::auth::user_agent::risk::assess(
+        meta.user_agent().as_deref(),
+        ua_client_hints.brands.as_deref(),
+        request.bot_signals.as_ref(),
+    );
+    let mut bot_score =
+        (http_scores.total() + ua_ch_assessment.score + ua_assessment.score).min(1.0);
     let mut bot_factors = json!({
         "interval_score": http_scores.interval_score,
         "header_order_score": http_scores.header_order_score,
         "ua_language_score": http_scores.ua_language_score,
         "ua_ch_score": ua_ch_assessment.score,
         "ua_ch_factors": ua_ch_assessment.factors,
+        "ua_score": ua_assessment.score,
+        "ua_factors": ua_assessment.factors,
+        "client": ua_assessment.client,
     });
 
     if let Some(signals) = &request.bot_signals {

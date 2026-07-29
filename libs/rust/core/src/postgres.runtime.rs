@@ -34,15 +34,39 @@ impl PostgresPoolSettings {
 }
 
 pub fn pool_options(settings: PostgresPoolSettings) -> PgPoolOptions {
+    pool_options_with_role(settings, None)
+}
+
+fn pool_options_with_role(
+    settings: PostgresPoolSettings,
+    database_role: Option<String>,
+) -> PgPoolOptions {
     PgPoolOptions::new()
         .max_connections(settings.max_connections)
         .acquire_timeout(settings.acquire_timeout)
         .max_lifetime(settings.max_lifetime)
         .idle_timeout(settings.idle_timeout)
         .test_before_acquire(true)
-        .after_connect(|conn, _meta| {
+        .after_connect(move |conn, _meta| {
+            let database_role = database_role.clone();
             Box::pin(async move {
                 conn.execute("SELECT 1").await?;
+                if let Some(database_role) = database_role {
+                    let statement = format!("SET ROLE \"{database_role}\"");
+                    conn.execute(statement.as_str()).await?;
+                    for setting in [
+                        "nvbes.principal_id",
+                        "nvbes.user_id",
+                        "nvbes.tenant_id",
+                        "nvbes.workspace_id",
+                    ] {
+                        sqlx::query("SELECT set_config($1, $2, false)")
+                            .bind(setting)
+                            .bind(uuid::Uuid::nil().to_string())
+                            .execute(&mut *conn)
+                            .await?;
+                    }
+                }
                 debug!("Postgres connection established and validated");
                 Ok(())
             })
@@ -80,6 +104,26 @@ pub async fn connect_pool_with_url(
     pool_options(settings).connect(database_url).await
 }
 
+pub async fn connect_pool_with_url_and_role(
+    settings: PostgresPoolSettings,
+    database_url: &str,
+    database_role: &str,
+) -> Result<PgPool, sqlx::Error> {
+    if database_role.is_empty()
+        || !database_role
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '_')
+    {
+        return Err(sqlx::Error::Configuration(
+            "Postgres role must contain only ASCII letters, digits, and underscores".into(),
+        ));
+    }
+
+    pool_options_with_role(settings, Some(database_role.to_owned()))
+        .connect(database_url)
+        .await
+}
+
 pub async fn health_check(pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query("SELECT 1").execute(pool).await?;
     Ok(())
@@ -87,7 +131,7 @@ pub async fn health_check(pool: &PgPool) -> Result<(), sqlx::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::PostgresPoolSettings;
+    use super::{PostgresPoolSettings, connect_pool_with_url_and_role};
     use crate::config::AppConfig;
     use std::time::Duration;
 
@@ -112,5 +156,17 @@ mod tests {
             PostgresPoolSettings::from_app_config(&config).max_connections,
             23
         );
+    }
+
+    #[tokio::test]
+    async fn role_connection_rejects_unsafe_identifiers_before_connecting() {
+        let result = connect_pool_with_url_and_role(
+            PostgresPoolSettings::from_max_connections(1),
+            "postgres://localhost/not-used",
+            "nvbes_app\"; RESET ROLE; --",
+        )
+        .await;
+
+        assert!(matches!(result, Err(sqlx::Error::Configuration(_))));
     }
 }

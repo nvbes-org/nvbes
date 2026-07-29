@@ -1,0 +1,35 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-restricted-nvbes-containers
+  annotations:
+    policies.kyverno.io/title: Require restricted nvbes containers
+    policies.kyverno.io/category: Pod Security Standards
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: restricted-container-runtime
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: >-
+          nvbes containers must run as non-root with a read-only root filesystem,
+          no privilege escalation, no Linux capabilities and RuntimeDefault seccomp.
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  runAsNonRoot: true
+                  capabilities:
+                    drop:
+                      - ALL

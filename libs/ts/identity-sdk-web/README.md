@@ -95,3 +95,30 @@ Déconnecte (supprime les cookies côté backend).
 ### `isAuthenticated()`
 
 Vérifie si l'utilisateur a un cookie de session valide.
+
+### Détection d'environnement
+
+Le SDK expose un parseur sans dépendance pour normaliser le navigateur, le système et le type
+d'appareil. Les détecteurs spécialisés (`detectBrowser`, `detectBrowserVersion`, `detectOS`,
+`detectDevice` et `detectDeviceType`) sont également exportés.
+
+```typescript
+import { parseUserAgent } from '@nvbes/identity-sdk-web';
+
+const environment = parseUserAgent(navigator.userAgent, {
+  vendor: navigator.vendor,
+});
+
+// {
+//   browser: 'Mobile Safari',
+//   browserVersion: 17.5,
+//   device: 'iPhone',
+//   deviceType: 'Mobile',
+//   os: 'iOS',
+//   osVersion: '17.5.0',
+// }
+```
+
+`collectDeviceProfile()` continue de produire uniquement des catégories grossières destinées à
+la confiance d'appareil. Les noms et versions détaillés retournés par `parseUserAgent()` n'y sont
+pas ajoutés automatiquement.

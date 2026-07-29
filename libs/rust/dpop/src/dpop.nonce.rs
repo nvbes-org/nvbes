@@ -91,4 +91,24 @@ mod tests {
         let n2 = store.generate().await.expect("nonce");
         assert_ne!(n1, n2);
     }
+
+    #[tokio::test]
+    async fn a_dpop_jti_cannot_be_replayed_with_the_same_key() {
+        let store = DpopNonceStore::new(test_redis_pool().await, 300);
+        let jti = uuid::Uuid::new_v4().to_string();
+        let jkt = uuid::Uuid::new_v4().to_string();
+
+        assert!(
+            store
+                .register_jti(&jti, &jkt, 300)
+                .await
+                .expect("first proof")
+        );
+        assert!(
+            !store
+                .register_jti(&jti, &jkt, 300)
+                .await
+                .expect("replayed proof")
+        );
+    }
 }

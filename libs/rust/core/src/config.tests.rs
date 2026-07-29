@@ -2,10 +2,10 @@ use super::AppConfig;
 use super::env::env_or_default;
 use super::validation::validate_config_urls_and_secrets;
 use super::validation::{
-    validate_grafana_export_path, validate_ip_intelligence, validate_jwt_secret,
-    validate_observability_internal_token, validate_positive_integer, validate_product_analytics,
-    validate_profiling, validate_profiling_endpoint, validate_public_url, validate_request_e2ee,
-    validate_sentry, validate_webauthn_rp_id,
+    validate_auth_factor_encryption, validate_grafana_export_path, validate_ip_intelligence,
+    validate_jwt_secret, validate_observability_internal_token, validate_positive_integer,
+    validate_product_analytics, validate_profiling, validate_profiling_endpoint,
+    validate_public_url, validate_request_e2ee, validate_sentry, validate_webauthn_rp_id,
 };
 
 #[test]
@@ -223,6 +223,33 @@ fn validate_request_e2ee_requires_strong_secret() {
         validate_request_e2ee(&config, false).expect_err("short E2EE secret must be rejected");
 
     assert!(error.contains("32"));
+}
+
+#[test]
+fn validate_auth_factor_encryption_requires_a_production_key() {
+    let config = AppConfig {
+        environment: "production".to_string(),
+        ..AppConfig::default()
+    };
+
+    let error = validate_auth_factor_encryption(&config, true)
+        .expect_err("production must require factor encryption");
+
+    assert!(error.contains("NVBES_AUTH_FACTOR_ENCRYPTION_KEY"));
+}
+
+#[test]
+fn validate_auth_factor_encryption_rejects_short_decoded_keys() {
+    let config = AppConfig {
+        auth_factor_encryption_key: Some("c2hvcnQ=".to_string()),
+        auth_factor_encryption_key_version: 1,
+        ..AppConfig::default()
+    };
+
+    let error = validate_auth_factor_encryption(&config, false)
+        .expect_err("short factor encryption keys must be rejected");
+
+    assert!(error.contains("32 bytes"));
 }
 
 #[test]

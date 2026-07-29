@@ -1,0 +1,13 @@
+title = "nvbes gitleaks policy"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated and vendored trees do not contain repository-owned credentials."
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''^vendor/''',
+  '''^infrastructure/local/observability/app-logs/''',
+]

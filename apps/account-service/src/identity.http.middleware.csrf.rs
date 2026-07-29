@@ -19,7 +19,6 @@ const CSRF_SKIP_PATHS: &[&str] = &[
     "/auth/challenge/identifier",
     "/auth/challenge/pwd",
     "/auth/challenge/mfa",
-    "/auth/challenge/mfa/email/send",
     "/auth/challenge/webauthn/start",
     "/auth/challenge/webauthn/discoverable/start",
     "/auth/challenge/webauthn/discoverable/finish",
@@ -213,7 +212,6 @@ mod tests {
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/identifier"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/pwd"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/mfa"));
-        assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/mfa/email/send"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/start"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/discoverable/start"));
         assert!(super::CSRF_SKIP_PATHS.contains(&"/auth/challenge/webauthn/discoverable/finish"));

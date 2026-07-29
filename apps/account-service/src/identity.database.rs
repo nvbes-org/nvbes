@@ -122,5 +122,30 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
+    // 6. Seed backoffice-service (confidential client for privileged token introspection)
+    let backoffice_service_client_id = std::env::var("NVBES_BACKOFFICE_ACCOUNT_CLIENT_ID")
+        .unwrap_or_else(|_| "backoffice-service".to_string());
+    let backoffice_service_secret = std::env::var("NVBES_BACKOFFICE_ACCOUNT_CLIENT_SECRET")
+        .unwrap_or_else(|_| "development-backoffice-introspection-secret".to_string());
+    let backoffice_service_secret_hash =
+        nvbes_product_account::oauth::hash_client_secret(&backoffice_service_secret)
+            .map_err(anyhow::Error::from)?;
+    sqlx::query(
+        r#"
+        INSERT INTO oauth_clients (
+            client_id, client_secret_hash, name, redirect_uris, tenant_id,
+            owner_scope_type, owner_scope_id, client_type
+        )
+        VALUES ($1, $2, 'Backoffice Service', ARRAY[]::text[], $3, 'tenant', $3, 'confidential')
+        ON CONFLICT (client_id) DO UPDATE
+        SET client_secret_hash = EXCLUDED.client_secret_hash
+        "#,
+    )
+    .bind(backoffice_service_client_id)
+    .bind(backoffice_service_secret_hash)
+    .bind(system_tenant_id)
+    .execute(pool)
+    .await?;
+
     Ok(())
 }

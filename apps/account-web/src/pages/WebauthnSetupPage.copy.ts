@@ -14,19 +14,19 @@ export const setupCopy: Record<
   }
 > = {
   passkey: {
-    title: 'Enregistrer une méthode biométrique',
+    title: 'Ajouter une passkey',
     labelPlaceholder: 'Ex: Touch ID du Mac',
-    stepUpText: 'Pour enregistrer une méthode biométrique, veuillez confirmer votre identité.',
-    successText: 'Votre méthode biométrique est maintenant active.',
-    timeoutText: 'La vérification biométrique a expiré. Réessayez avec Touch ID.',
-    buttonText: 'Enregistrer la méthode biométrique',
+    stepUpText: 'Pour ajouter une passkey, veuillez confirmer votre identité.',
+    successText: 'Votre passkey est maintenant active.',
+    timeoutText: 'L’enregistrement de la passkey a expiré. Réessayez.',
+    buttonText: 'Ajouter la passkey',
     unsupportedText:
       'La biométrie n’est pas disponible dans ce navigateur. Ouvrez cette page dans Chrome, Arc, Safari ou Edge.',
     browserText:
       'Si aucune fenêtre Touch ID ne s’ouvre, quittez le navigateur intégré VS Code/Electron et ouvrez cette page dans Chrome, Arc, Safari ou Edge.',
   },
   security_key: {
-    title: 'Enregistrer une clé de sécurité',
+    title: 'Ajouter une clé de sécurité indépendante',
     labelPlaceholder: 'Ex: YubiKey bleue',
     stepUpText: 'Pour enregistrer une clé de sécurité, veuillez confirmer votre identité.',
     successText: 'Votre clé de sécurité est maintenant active.',

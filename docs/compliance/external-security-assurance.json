@@ -1,0 +1,37 @@
+{
+  "schema": "nvbes.external-security-assurance.v1",
+  "production_activation": "blocked",
+  "privileged_phishing_resistant_access": {
+    "status": "required",
+    "tested_release": null,
+    "completed_at": null,
+    "evidence_reference": null,
+    "scopes": {
+      "backoffice_and_support": "required",
+      "billing_and_secret_management": "required",
+      "production_access": "required",
+      "temporary_elevation": "required",
+      "break_glass": "required"
+    }
+  },
+  "independent_pentest": {
+    "status": "required",
+    "scope": [
+      "identity",
+      "tenant-isolation",
+      "cloud-api",
+      "backoffice",
+      "billing",
+      "edge-network-iam",
+      "ci-cd",
+      "audit-evidence"
+    ],
+    "tested_release": null,
+    "completed_at": null,
+    "valid_until": null,
+    "report_reference": null,
+    "critical_open": null,
+    "high_open": null,
+    "retest_status": null
+  }
+}

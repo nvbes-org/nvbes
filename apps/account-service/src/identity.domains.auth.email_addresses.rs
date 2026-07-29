@@ -14,6 +14,9 @@ use super::{
 };
 use crate::http::error::AppError;
 
+#[path = "identity.domains.auth.email_addresses.notifications.rs"]
+mod notifications;
+
 pub async fn list(
     db: &PgPool,
     principal_id: Uuid,
@@ -76,7 +79,7 @@ pub async fn add_secondary(
 
     enqueue_secondary_verification_email(db, redis, config, &email.email, &verification_token)
         .await?;
-    notify_email_added(db, redis, principal_id, &email.email).await?;
+    notifications::notify_email_added(db, redis, principal_id, &email.email).await?;
     Ok(AddSecondaryEmailResult {
         email,
         verification_resend_available_at: verification_resend_available_at(
@@ -143,15 +146,24 @@ pub async fn mark_secondary_verified(
 
 pub async fn promote_secondary(
     db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
     principal_id: Uuid,
     email_address_id: Uuid,
 ) -> Result<PromoteSecondaryEmailResult, AppError> {
     let min_age_hours = db::emails::primary_email_policy_hours(db, principal_id).await?;
     let mut tx = db.begin().await?;
-    let email =
+    let (email, previous_primary_email) =
         db::emails::promote_secondary_email(&mut tx, principal_id, email_address_id, min_age_hours)
             .await?;
     tx.commit().await?;
+    notifications::notify_primary_email_changed(
+        db,
+        redis,
+        principal_id,
+        &previous_primary_email,
+        &email.email,
+    )
+    .await?;
     let user = db::fetch_user_view(db, principal_id).await?;
     Ok(PromoteSecondaryEmailResult { email, user })
 }
@@ -165,6 +177,24 @@ pub async fn delete_secondary(
     db::emails::delete_secondary_email(&mut tx, principal_id, email_address_id).await?;
     tx.commit().await?;
     Ok(DeleteSecondaryEmailResult { success: true })
+}
+
+pub async fn notify_account_recovered(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+    recovery_event_id: &str,
+) -> Result<(), AppError> {
+    notifications::notify_account_recovered(db, redis, principal_id, recovery_event_id).await
+}
+
+pub async fn notify_recovery_review_requested(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    principal_id: Uuid,
+    request_id: Uuid,
+) -> Result<(), AppError> {
+    notifications::notify_recovery_review_requested(db, redis, principal_id, request_id).await
 }
 
 async fn issue_secondary_verification_token(
@@ -218,35 +248,4 @@ async fn enqueue_secondary_verification_email(
     )
     .await
     .map_err(AppError::from)
-}
-
-async fn notify_email_added(
-    db: &PgPool,
-    redis: &nvbes_redis::RedisPool,
-    principal_id: Uuid,
-    added_email: &str,
-) -> Result<(), AppError> {
-    let recipients = db::emails::active_email_recipients(db, principal_id).await?;
-    for recipient in recipients {
-        crate::email::jobs::enqueue_email_job_tx(
-            db,
-            redis,
-            crate::email::jobs::EmailSendPayload {
-                to_email: recipient.clone(),
-                to_name: None,
-                subject: "New email added to your nvbes account".to_string(),
-                html_body: format!(
-                    "<p>A secondary email address was added to your nvbes account.</p><p><strong>{}</strong></p><p>If this was not you, secure your account immediately.</p>",
-                    crate::email::templates::html_escape(added_email)
-                ),
-                text_body: Some(format!(
-                    "A secondary email address was added to your nvbes account: {added_email}\n\nIf this was not you, secure your account immediately."
-                )),
-                business_type: "account_security".to_string(),
-            },
-            &format!("email-added:{}:{}:{}", principal_id, recipient, added_email),
-        )
-        .await?;
-    }
-    Ok(())
 }

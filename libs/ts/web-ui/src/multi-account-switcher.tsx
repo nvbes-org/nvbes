@@ -136,6 +136,7 @@ export function MultiAccountSwitcher({
                 <img
                   key={currentAccount.avatarUrl}
                   src={currentAccount.avatarUrl}
+                  crossOrigin="anonymous"
                   alt=""
                   className="absolute inset-0 size-full rounded-full object-cover"
                   onError={(event) => {
@@ -233,6 +234,7 @@ export function MultiAccountSwitcher({
                                     <img
                                       key={account.avatarUrl}
                                       src={account.avatarUrl}
+                                      crossOrigin="anonymous"
                                       alt=""
                                       className="absolute inset-0 size-full rounded-full object-cover"
                                       onError={(event) => {

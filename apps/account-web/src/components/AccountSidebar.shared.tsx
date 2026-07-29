@@ -1,7 +1,7 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { Bell, Eye, Link as LinkIcon, Monitor, Settings, Shield, UserCircle } from 'lucide-react';
 
-import { accountPathForAuthuser, readAuthuser } from '@/identity.authuser';
+import { accountPathForAuthuser } from '@/identity.authuser';
 
 export const accountNavSections = [
   {
@@ -33,15 +33,14 @@ export function SidebarNavItem({
   icon: Icon,
   label,
   end,
+  authuser,
 }: {
   to: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   end?: boolean;
+  authuser: string;
 }) {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
-
   return (
     <Link
       to={accountPathForAuthuser(authuser, to)}

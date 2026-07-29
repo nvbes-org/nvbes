@@ -1,14 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useState } from 'react';
 import { accountQueryKeys } from '@/account.queries';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { listLinkedApps, revokeLinkedApp, type LinkedApp } from '@/pages/AccountLinkedAppsPage.api';
 
 export function useAccountLinkedAppsPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const [revoking, setRevoking] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();

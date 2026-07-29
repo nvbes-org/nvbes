@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use super::password::history;
 use super::{
-    db, generate_random_token, hash_password, normalize_email, token_hash, types::*,
-    validate_email, validate_password,
+    db, generate_random_token, hash_password_with_pepper, normalize_email, registration_enrollment,
+    token_hash, types::*, validate_email, validate_password,
 };
 use crate::http::error::AppError;
 
@@ -41,8 +41,11 @@ pub async fn register(
     )
     .await?;
 
-    let password_hash = hash_password(&input.password)?;
+    let password_hash =
+        hash_password_with_pepper(&input.password, config.auth_password_pepper.as_deref())?;
     let verification_token = generate_random_token();
+    let registration_enrollment =
+        registration_enrollment::generate(config.auth_verification_ttl_hours);
     let (principal_id, now) = db::create_user_account(
         db,
         redis,
@@ -56,6 +59,8 @@ pub async fn register(
         input.data_region.clone(),
         password_hash.clone(),
         verification_token.clone(),
+        registration_enrollment.token_hash.clone(),
+        registration_enrollment.expires_at,
         input.ip.clone(),
         input.user_agent.clone(),
         input.legal_documents_accepted,
@@ -99,6 +104,7 @@ pub async fn register(
                 now,
                 config.auth_verification_resend_cooldown_seconds,
             ),
+        registration_enrollment_token: registration_enrollment.token,
     })
 }
 
@@ -181,9 +187,10 @@ pub async fn verify_email(
         });
     }
 
+    let mut tx = db.begin().await?;
     sqlx::query("UPDATE users SET email_verified_at = NOW(), status = 'active', updated_at = NOW() WHERE principal_id = $1")
         .bind(principal_id)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
     sqlx::query(
         r#"
@@ -196,12 +203,14 @@ pub async fn verify_email(
         "#,
     )
     .bind(principal_id)
-    .execute(db)
+    .execute(&mut *tx)
     .await?;
     sqlx::query("UPDATE principals SET status = 'active', updated_at = NOW() WHERE id = $1")
         .bind(principal_id)
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
+    registration_enrollment::delete_all_for_principal_tx(&mut tx, principal_id).await?;
+    tx.commit().await?;
 
     let user_row = sqlx::query(
         "SELECT principal_id, email, firstname, lastname, username, birthdate, region, created_at, email_verified_at FROM users WHERE principal_id = $1"

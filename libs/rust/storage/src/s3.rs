@@ -6,6 +6,9 @@ mod multipart;
 mod objects;
 #[path = "s3.presign.rs"]
 mod presign;
+#[cfg(test)]
+#[path = "s3.tests.rs"]
+mod tests;
 
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
@@ -32,6 +35,7 @@ pub(crate) use traced_s3_request;
 #[derive(Clone)]
 pub struct S3ObjectStore {
     client: S3Client,
+    presign_client: S3Client,
     bucket: String,
 }
 
@@ -39,11 +43,21 @@ impl S3ObjectStore {
     pub async fn new(
         bucket: String,
         endpoint: &str,
+        public_endpoint: Option<&str>,
         region: &str,
         access_key: &str,
         secret_key: &str,
     ) -> Self {
-        client::new_client(bucket, endpoint, region, access_key, secret_key)
+        let client = client::new_client(endpoint, region, access_key, secret_key);
+        let presign_client = public_endpoint.map_or_else(
+            || client.clone(),
+            |public_endpoint| client::new_client(public_endpoint, region, access_key, secret_key),
+        );
+        Self {
+            client,
+            presign_client,
+            bucket,
+        }
     }
 }
 

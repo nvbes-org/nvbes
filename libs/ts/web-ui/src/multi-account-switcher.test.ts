@@ -1,5 +1,8 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vite-plus/test';
 
+import { MultiAccountSwitcher } from './multi-account-switcher';
 import {
   findActiveAccount,
   getSwitcherMenuStyle,
@@ -39,5 +42,26 @@ describe('multi-account switcher utilities', () => {
       left: '52px',
       width: '384px',
     });
+  });
+
+  it('requests CDN avatars with anonymous CORS', () => {
+    const markup = renderToStaticMarkup(
+      createElement(MultiAccountSwitcher, {
+        accounts: [
+          {
+            id: 'account-1',
+            email: 'person@example.test',
+            displayName: 'Person',
+            isActive: true,
+            avatarUrl: 'http://localhost:18333/nvbes/account/profile-avatars/account-1/avatar',
+          },
+        ],
+        loading: false,
+        onSelectAccount: () => undefined,
+        onAddAccount: () => undefined,
+      }),
+    );
+
+    expect(markup).toContain('crossorigin="anonymous"');
   });
 });

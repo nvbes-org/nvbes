@@ -12,6 +12,8 @@ mod preferences;
 mod profile;
 #[path = "identity.domains.auth.db.record.rs"]
 mod record;
+#[path = "identity.domains.auth.db.registration_enrollment.rs"]
+pub mod registration_enrollment;
 
 pub use account::create_user_account;
 pub use avatar::{clear_profile_avatar, fetch_profile_avatar, save_profile_avatar};

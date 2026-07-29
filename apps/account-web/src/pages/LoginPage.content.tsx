@@ -20,11 +20,9 @@ export function LoginPageContent({
   handlePasswordSubmit,
   handleUseAnotherAccount,
   hasRecovery,
-  hasEmail,
   hasTotp,
   hasWebAuthn,
   loading,
-  loginStateToken,
   identifierSubmitting,
   location,
   hostedConsent,
@@ -32,15 +30,12 @@ export function LoginPageContent({
   mfaMethod,
   oauthRequest,
   password,
-  emailCode,
   recoveryCode,
   resetToIdentifier,
-  resendLoginMfaEmailCode,
   setEmail,
   setError,
   setMfaMethod,
   setPassword,
-  setEmailCode,
   setRecoveryCode,
   setTotpCode,
   step,
@@ -82,25 +77,20 @@ export function LoginPageContent({
               handlePasswordSubmit={handlePasswordSubmit}
               handleUseAnotherAccount={handleUseAnotherAccount}
               hasRecovery={hasRecovery}
-              hasEmail={hasEmail}
               hasTotp={hasTotp}
               hasWebAuthn={hasWebAuthn}
               loading={loading}
-              loginStateToken={loginStateToken}
               identifierSubmitting={identifierSubmitting}
               hostedConsent={hostedConsent}
               mfaMethod={mfaMethod}
               oauthRequest={oauthRequest}
               password={password}
-              emailCode={emailCode}
               recoveryCode={recoveryCode}
               resetToIdentifier={resetToIdentifier}
-              resendLoginMfaEmailCode={resendLoginMfaEmailCode}
               setEmail={setEmail}
               setError={setError}
               setMfaMethod={setMfaMethod}
               setPassword={setPassword}
-              setEmailCode={setEmailCode}
               setRecoveryCode={setRecoveryCode}
               setTotpCode={setTotpCode}
               step={step}

@@ -13,6 +13,13 @@ use crate::domains::auth::types::{
 use crate::http::error::AppError;
 use crate::http::middleware::jwt::AuthContext;
 
+async fn require_email_mutation_step_up(
+    redis: &nvbes_redis::RedisPool,
+    auth: &impl crate::domains::auth::types::StepUpSubject,
+) -> Result<(), AppError> {
+    crate::domains::auth::verification::require_recent_phishing_resistant_step_up(redis, auth).await
+}
+
 #[utoipa::path(
     get,
     path = "/auth/me/emails",
@@ -53,6 +60,7 @@ pub(crate) async fn me_emails_post(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<AddSecondaryEmailInput>,
 ) -> Result<Json<AddSecondaryEmailResult>, AppError> {
+    require_email_mutation_step_up(&state.redis, &auth).await?;
     crate::domains::auth::check_rate_limit(
         &state.redis,
         "auth_me_emails_add",
@@ -89,8 +97,9 @@ pub(crate) async fn me_email_promote(
     Extension(auth): Extension<AuthContext>,
     Path(email_id): Path<Uuid>,
 ) -> Result<Json<PromoteSecondaryEmailResult>, AppError> {
+    require_email_mutation_step_up(&state.redis, &auth).await?;
     Ok(Json(
-        email_addresses::promote_secondary(&state.db, auth.user_id, email_id).await?,
+        email_addresses::promote_secondary(&state.db, &state.redis, auth.user_id, email_id).await?,
     ))
 }
 
@@ -146,7 +155,12 @@ pub(crate) async fn me_email_delete(
     Extension(auth): Extension<AuthContext>,
     Path(email_id): Path<Uuid>,
 ) -> Result<Json<DeleteSecondaryEmailResult>, AppError> {
+    require_email_mutation_step_up(&state.redis, &auth).await?;
     Ok(Json(
         email_addresses::delete_secondary(&state.db, auth.user_id, email_id).await?,
     ))
 }
+
+#[cfg(test)]
+#[path = "identity.domains.auth.routes.session_mgmt.emails.tests.rs"]
+mod tests;

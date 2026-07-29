@@ -3,7 +3,10 @@ use crate::domains::auth::exposed_credentials;
 use crate::domains::auth::password;
 use crate::domains::auth::types::ChangePasswordInput;
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::middleware::jwt::{
+    AuthContext,
+    account_access::{self, AccountAccess, SECURITY_WRITE_SCOPE},
+};
 use crate::http::request::{client_ip, user_agent};
 use axum::{Json, Router, extract::Extension, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
@@ -16,10 +19,11 @@ pub fn router(_state: &AppState) -> Router<AppState> {
         .route("/password/reset", post(reset_password))
         .route(
             "/password/change",
-            post(change_password).layer(axum::middleware::from_fn_with_state(
-                _state.clone(),
-                jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                _state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(change_password),
+            ),
         )
 }
 
@@ -56,7 +60,8 @@ pub(crate) async fn change_password(
 ) -> Result<Json<crate::domains::auth::types::ChangePasswordResult>, AppError> {
     exposed_credentials::check_new_password(&headers)?;
 
-    crate::domains::auth::verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    crate::domains::auth::verification::require_password_change_step_up(&state.redis, &auth)
+        .await?;
 
     crate::domains::auth::check_rate_limit(
         &state.redis,
@@ -76,6 +81,7 @@ pub(crate) async fn change_password(
         request,
     )
     .await?;
+    crate::domains::auth::verification::clear_password_change_step_up(&state.redis, &auth).await?;
 
     Ok(Json(result))
 }

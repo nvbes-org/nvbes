@@ -41,9 +41,11 @@ pub struct AppConfig {
     pub auth_unverified_account_ttl_days: i64,
     pub auth_password_reset_ttl_minutes: i64,
     pub auth_password_history_size: usize,
-    pub auth_password_max_age_days: Option<i64>,
     #[serde(skip_serializing)]
     pub auth_password_pepper: Option<String>,
+    #[serde(skip_serializing)]
+    pub auth_factor_encryption_key: Option<String>,
+    pub auth_factor_encryption_key_version: u32,
     pub auth_pow_enabled: bool,
     pub auth_pow_difficulty: u32,
     pub auth_pow_ttl_seconds: i64,
@@ -119,6 +121,7 @@ pub struct AppConfig {
     pub storage_enabled: bool,
     pub storage_bucket: String,
     pub storage_endpoint: Option<String>,
+    pub storage_public_endpoint: Option<String>,
     pub storage_region: String,
     #[serde(skip_serializing)]
     pub storage_access_key: Option<String>,
@@ -162,6 +165,9 @@ pub struct AppConfig {
     #[serde(skip_serializing)]
     pub mtls_client_key_path: Option<String>,
     pub dpop_enabled: bool,
+    pub fapi_high_assurance_enabled: bool,
+    #[serde(skip_serializing)]
+    pub fapi_conformance_evidence_sha256: Option<String>,
     pub request_e2ee_enabled: bool,
     pub request_e2ee_required: bool,
     pub request_e2ee_key_id: String,

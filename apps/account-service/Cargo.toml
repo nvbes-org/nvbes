@@ -32,7 +32,7 @@ nvbes-product-cloud = { path = "../../libs/rust/products/cloud" }
 nvbes-storage = { path = "../../libs/rust/storage" }
 hex = "0.4"
 hmac.workspace = true
-jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 libxml = "0.3.8"
 metrics.workspace = true
 password-hash.workspace = true
@@ -45,6 +45,7 @@ serde_json.workspace = true
 sha2.workspace = true
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
 tokio.workspace = true
+tokio-rustls.workspace = true
 tower = "0.5"
 tower-http = { workspace = true }
 tracing.workspace = true
@@ -68,3 +69,6 @@ urlencoding.workspace = true
 [build-dependencies]
 protoc-bin-vendored = "3.2.0"
 tonic-prost-build = "0.14.6"
+
+[dev-dependencies]
+proptest.workspace = true

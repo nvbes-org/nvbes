@@ -42,6 +42,14 @@ pub(crate) fn require_dual_control(headers: &HeaderMap) -> Result<(), AppError> 
     ))
 }
 
+pub(crate) fn second_approver_principal_id(headers: &HeaderMap) -> Result<Uuid, AppError> {
+    header_uuid(
+        headers,
+        SECOND_APPROVER_PRINCIPAL_HEADER,
+        "invalid_second_approver",
+    )
+}
+
 fn header_uuid(
     headers: &HeaderMap,
     name: &'static str,

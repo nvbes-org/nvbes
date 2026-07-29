@@ -8,6 +8,9 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+#[path = "identity.domains.audit.redaction.rs"]
+mod redaction;
+
 pub struct AuditRecordInput<'a> {
     pub tenant_id: Uuid,
     pub workspace_id: Option<Uuid>,
@@ -37,7 +40,7 @@ pub async fn record_event_tx(
         input.workspace_id,
         input.ip,
         input.action,
-        input.metadata,
+        redaction::redact_audit_metadata(input.metadata),
     )
     .await?;
 

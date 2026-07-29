@@ -5,18 +5,20 @@ use super::types::{JwtService, TokenClaims};
 use crate::http::error::AppError;
 
 const CLOUD_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
+const JWT_CLOCK_SKEW_SECONDS: i64 = 5;
 
 impl JwtService {
     pub fn decode_token(&self, token: &str, expected_type: &str) -> Result<TokenClaims, AppError> {
         let header = jwt::decode_header(token).map_err(|e| {
             AppError::unauthorized("invalid_token", format!("Invalid token header: {}", e))
         })?;
-        if header.alg != Algorithm::RS256 {
+        if !matches!(header.alg, Algorithm::PS256 | Algorithm::RS256) {
             return Err(AppError::unauthorized(
                 "invalid_token_algorithm",
                 "Invalid token signing algorithm",
             ));
         }
+        require_token_type_header(header.typ.as_deref(), expected_type)?;
         let decoding_key = header
             .kid
             .as_ref()
@@ -26,14 +28,31 @@ impl JwtService {
                     .find(|(k, _)| k == kid)
                     .map(|(_, dk)| dk.clone())
             })
-            .or_else(|| self.decoding_keys.first().map(|(_, dk)| dk.clone()))
-            .ok_or_else(|| AppError::internal("no_decoding_key", "No decoding key available"))?;
-        let mut validation = Validation::new(Algorithm::RS256);
+            .ok_or_else(|| {
+                AppError::unauthorized(
+                    "invalid_token_key",
+                    "The token kid is missing or is not an active verification key.",
+                )
+            })?;
+        let mut validation = Validation::new(header.alg);
         let audiences = [self.audience.as_str(), CLOUD_TOKEN_AUDIENCE];
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&audiences);
         validation.validate_exp = true;
         validation.validate_nbf = true;
+        validation.leeway = JWT_CLOCK_SKEW_SECONDS as u64;
+        validation.set_required_spec_claims(&[
+            "jti",
+            "sid",
+            "sub",
+            "token_type",
+            "scope",
+            "iss",
+            "aud",
+            "exp",
+            "iat",
+            "nbf",
+        ]);
         let token_data: TokenData<TokenClaims> = jwt::decode(token, &decoding_key, &validation)
             .map_err(|e| match e.kind() {
                 jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
@@ -63,6 +82,14 @@ impl JwtService {
                 "Invalid token audience",
             ));
         }
+        validate_claim_lifetime(
+            &claims,
+            match expected_type {
+                "access" => self.access_token_expiry.num_seconds(),
+                "refresh" => self.refresh_token_expiry.num_seconds(),
+                _ => 0,
+            },
+        )?;
         Ok(claims)
     }
 
@@ -70,12 +97,13 @@ impl JwtService {
         let header = jwt::decode_header(token).map_err(|e| {
             AppError::unauthorized("invalid_token", format!("Invalid token header: {}", e))
         })?;
-        if header.alg != Algorithm::RS256 {
+        if !matches!(header.alg, Algorithm::PS256 | Algorithm::RS256) {
             return Err(AppError::unauthorized(
                 "invalid_token_algorithm",
                 "Invalid token signing algorithm",
             ));
         }
+        require_token_type_header(header.typ.as_deref(), "access")?;
         let decoding_key = header
             .kid
             .as_ref()
@@ -85,14 +113,31 @@ impl JwtService {
                     .find(|(k, _)| k == kid)
                     .map(|(_, dk)| dk.clone())
             })
-            .or_else(|| self.decoding_keys.first().map(|(_, dk)| dk.clone()))
-            .ok_or_else(|| AppError::internal("no_decoding_key", "No decoding key available"))?;
-        let mut validation = Validation::new(Algorithm::RS256);
+            .ok_or_else(|| {
+                AppError::unauthorized(
+                    "invalid_token_key",
+                    "The token kid is missing or is not an active verification key.",
+                )
+            })?;
+        let mut validation = Validation::new(header.alg);
         let audiences = [self.audience.as_str(), CLOUD_TOKEN_AUDIENCE];
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&audiences);
         validation.validate_exp = false;
         validation.validate_nbf = true;
+        validation.leeway = JWT_CLOCK_SKEW_SECONDS as u64;
+        validation.set_required_spec_claims(&[
+            "jti",
+            "sid",
+            "sub",
+            "token_type",
+            "scope",
+            "iss",
+            "aud",
+            "exp",
+            "iat",
+            "nbf",
+        ]);
         let token_data: TokenData<TokenClaims> = jwt::decode(token, &decoding_key, &validation)
             .map_err(|e| AppError::unauthorized("invalid_token", format!("{}", e)))?;
         let claims = token_data.claims;
@@ -114,6 +159,7 @@ impl JwtService {
                 "Invalid token audience",
             ));
         }
+        validate_claim_lifetime(&claims, self.access_token_expiry.num_seconds())?;
         Ok(claims)
     }
 
@@ -131,6 +177,49 @@ impl JwtService {
         }
         Ok(claims)
     }
+}
+
+fn require_token_type_header(
+    actual: Option<&str>,
+    expected_claim_type: &str,
+) -> Result<(), AppError> {
+    let expected = match expected_claim_type {
+        "access" => "at+jwt",
+        "refresh" => "refresh+jwt",
+        _ => {
+            return Err(AppError::unauthorized(
+                "invalid_token_type",
+                "The expected token type is unsupported.",
+            ));
+        }
+    };
+    if actual == Some(expected) {
+        Ok(())
+    } else {
+        Err(AppError::unauthorized(
+            "invalid_token_type",
+            "The JWT typ header is missing or does not match the token use.",
+        ))
+    }
+}
+
+fn validate_claim_lifetime(claims: &TokenClaims, maximum_ttl: i64) -> Result<(), AppError> {
+    let now = chrono::Utc::now().timestamp();
+    if maximum_ttl <= 0
+        || claims.jti.trim().is_empty()
+        || claims.sid.trim().is_empty()
+        || claims.sub.trim().is_empty()
+        || claims.iat > now + JWT_CLOCK_SKEW_SECONDS
+        || claims.nbf > claims.iat + JWT_CLOCK_SKEW_SECONDS
+        || claims.exp <= claims.iat
+        || claims.exp > claims.iat + maximum_ttl + JWT_CLOCK_SKEW_SECONDS
+    {
+        return Err(AppError::unauthorized(
+            "invalid_token_claims",
+            "The JWT required claims or lifetime are invalid.",
+        ));
+    }
+    Ok(())
 }
 
 async fn validate_refresh_token_registration(redis: &RedisPool, jti: &str) -> Result<(), AppError> {

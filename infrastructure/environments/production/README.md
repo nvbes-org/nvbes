@@ -1,6 +1,6 @@
 # Production
 
-Ce dossier porte la configuration d'observabilite production. Le local garde
+Ce dossier porte l'infrastructure et l'observabilite production. Le local garde
 Prometheus, Tempo et Grafana OSS pour le developpement; la production envoie les
 signaux vers Grafana Cloud via Grafana Alloy.
 
@@ -26,6 +26,12 @@ Profiles/Pyroscope.
 
 ## Fichiers
 
+- `main.tf`: réseau privé, base privée, origine Cloudflare-only, WAF managé,
+  egress contrôlé et archive d’audit WORM externe.
+- `siem.tf`: import des six règles Loki dans Grafana Cloud et routage vers le
+  contact point Security on-call.
+- `variables.tf`, `outputs.tf`, `terraform.tfvars.example`: contrat de
+  déploiement sans valeur réelle.
 - `docker-compose.observability.yml`: service Alloy production.
 - `alloy.config.alloy`: pipeline metrics, traces, logs et profiles vers
   Grafana Cloud, avec dual-export traces/logs vers PostHog.
@@ -35,6 +41,29 @@ Profiles/Pyroscope.
 
 Ne pas committer ces valeurs. Elles doivent venir du secret manager de
 l'environnement.
+
+Le job d’ancrage référence deux secrets Scaleway protégés et indépendants:
+
+- `audit_anchor_kms_auth_token_secret_id`: secret de l’identité du compte
+  production, limitée à la signature et à la vérification KMS;
+- `audit_archive_writer_secret_id`: secret de l’identité du compte Security,
+  limitée à `PutObject` sous `anchors/`, sans lecture ni suppression.
+
+Ces secrets sont injectés respectivement dans
+`NVBES_AUDIT_ANCHOR_KMS_AUTH_TOKEN` et
+`NVBES_AUDIT_ANCHOR_S3_SECRET_KEY`; leurs valeurs n’apparaissent pas dans la
+définition du job. Les access keys non secrètes sont injectées séparément. Le
+job signe toutes les 15 minutes le digest des têtes de chaîne avec Key Manager,
+vérifie la signature, écrit le manifeste dans le bucket Object Lock
+`COMPLIANCE`, puis enregistre le reçu local append-only.
+
+Le bucket et son identité d’écriture sont créés par le stack Terraform
+`../security-audit-archive`, avec un backend d’état et des credentials auxquels
+le compte production n’a pas accès. L’équipe Security transmet uniquement le
+nom du bucket, l’access key d’écriture et place la secret key dans le secret
+protégé référencé par `audit_archive_writer_secret_id`. La production ne doit
+jamais recevoir les credentials Terraform du compte Security. L’accès humain à
+ce compte suit une procédure JIT avec double contrôle.
 
 ```bash
 GRAFANA_CLOUD_PROMETHEUS_URL="https://prometheus-<region>.grafana.net/api/prom/push"
@@ -125,8 +154,8 @@ uniquement dans Alloy.
   conservation prioritaire des erreurs/lenteurs avec baseline sample 20% avant
   export Grafana et PostHog.
 - Les logs applicatifs lus depuis `NVBES_LOGS_DIR` passent par `loki.process`:
-  redaction secrets/email/IP/champs sensibles, drop des lignes > 16KB et
-  sampling baseline 50% avant envoi Loki.
+  redaction secrets/email/IP/champs sensibles et drop des lignes > 16KB.
+  Aucun sampling n’est appliqué aux journaux sécurité utilisés par le SIEM.
 - Le flux PostHog Logs relit les memes fichiers via `otelcol.receiver.filelog`
   et applique une redaction OTLP dediee avant `POSTHOG_OTLP_LOGS_ENDPOINT`.
   Alloy doit etre lance avec `--stability.level=public-preview` pour ce

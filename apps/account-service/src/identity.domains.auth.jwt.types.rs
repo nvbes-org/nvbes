@@ -1,11 +1,31 @@
 use chrono::Duration;
 use jsonwebtoken::EncodingKey;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TokenConfirmation {
-    pub jkt: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jkt: Option<String>,
+    #[serde(rename = "x5t#S256", skip_serializing_if = "Option::is_none")]
+    pub x5t_s256: Option<String>,
+}
+
+impl TokenConfirmation {
+    pub fn dpop(jkt: String) -> Self {
+        Self {
+            jkt: Some(jkt),
+            x5t_s256: None,
+        }
+    }
+
+    pub fn mtls(thumbprint: String) -> Self {
+        Self {
+            jkt: None,
+            x5t_s256: Some(thumbprint),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -54,6 +74,29 @@ pub struct IdTokenClaims {
     pub nonce: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct LogoutTokenClaims {
+    pub iss: String,
+    pub sub: String,
+    pub aud: String,
+    pub iat: i64,
+    pub exp: i64,
+    pub jti: String,
+    pub sid: String,
+    pub events: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SecurityEventTokenClaims {
+    pub iss: String,
+    pub aud: String,
+    pub iat: i64,
+    pub jti: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub_id: Option<serde_json::Value>,
+    pub events: serde_json::Value,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenPair {
     pub access_token: String,
@@ -65,11 +108,18 @@ pub struct TokenPair {
     pub session_id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cnf_jkt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf_x5t_s256: Option<String>,
 }
 
 #[derive(Clone)]
 pub(crate) enum Signer {
-    Local { encoding_key: EncodingKey },
+    Local {
+        encoding_key: EncodingKey,
+    },
+    Kms {
+        signer: Arc<super::kms::ScalewayKmsSigner>,
+    },
 }
 
 #[derive(Clone)]

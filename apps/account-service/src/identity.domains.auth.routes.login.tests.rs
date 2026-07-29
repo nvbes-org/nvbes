@@ -1,8 +1,15 @@
 use super::*;
-use axum::body;
 use axum::http::header::SET_COOKIE;
+use axum::{
+    body,
+    extract::{Query, State},
+};
 use chrono::Utc;
 use sqlx::PgPool;
+
+use super::mfa::challenge_mfa;
+use super::pwd::challenge_pwd;
+use super::types::{MfaRequest, PwdRequest};
 
 fn test_pool() -> PgPool {
     crate::test_support::shared_test_pool()
@@ -149,12 +156,20 @@ async fn challenge_pwd_returns_mfa_step_when_recovery_codes_are_configured() {
     let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
     insert_recovery_codes(&pool, principal_id, recovery_code).await;
 
-    let state_token = create_state(&state.redis, Some(principal_id), &email, "pwd", None)
-        .await
-        .expect("auth state should be created");
+    let state_token = create_state(
+        &state.redis,
+        Some(principal_id),
+        &email,
+        "pwd",
+        None,
+        Vec::new(),
+    )
+    .await
+    .expect("auth state should be created");
 
     let response = challenge_pwd(
         State(state),
+        Query(LoginQuery { authuser: None }),
         HeaderMap::new(),
         Json(PwdRequest {
             state_token,
@@ -184,12 +199,20 @@ async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
     let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
     insert_recovery_codes(&pool, principal_id, recovery_code).await;
 
-    let state_token = create_state(&state.redis, Some(principal_id), &email, "mfa", None)
-        .await
-        .expect("mfa auth state should be created");
+    let state_token = create_state(
+        &state.redis,
+        Some(principal_id),
+        &email,
+        "mfa",
+        None,
+        vec!["pwd".to_string()],
+    )
+    .await
+    .expect("mfa auth state should be created");
 
     let response = challenge_mfa(
-        State(state),
+        State(state.clone()),
+        Query(LoginQuery { authuser: None }),
         HeaderMap::new(),
         Json(MfaRequest {
             state_token,
@@ -212,6 +235,51 @@ async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
 
     assert_eq!(session.acr.as_deref(), Some("aal2"));
     assert_eq!(session.amr, vec!["pwd".to_string(), "recovery".to_string()]);
+
+    cleanup_tenant(&pool, tenant_id).await;
+}
+
+#[tokio::test]
+async fn challenge_pwd_preserves_verified_webauthn_and_creates_aal2_session() {
+    let pool = test_pool();
+    let state = test_config(&pool).await;
+    let email = format!("login-passkey-password-{}@example.com", Uuid::new_v4());
+    let password = "Sup3rS3cret!";
+    let (tenant_id, principal_id) = seed_login_subject(&pool, &email, password).await;
+
+    let state_token = create_state(
+        &state.redis,
+        Some(principal_id),
+        &email,
+        "pwd",
+        None,
+        vec!["webauthn".to_string()],
+    )
+    .await
+    .expect("post-WebAuthn password state should be created");
+
+    let response = challenge_pwd(
+        State(state.clone()),
+        Query(LoginQuery { authuser: None }),
+        HeaderMap::new(),
+        Json(PwdRequest {
+            state_token,
+            password: password.to_string(),
+        }),
+    )
+    .await
+    .expect("password challenge should complete the login");
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(response.headers().get(SET_COOKIE).is_some());
+
+    let session = nvbes_redis::session::get_session(&state.redis, &principal_id.to_string())
+        .await
+        .expect("redis session lookup should succeed")
+        .expect("session should exist");
+
+    assert_eq!(session.acr.as_deref(), Some("aal2"));
+    assert_eq!(session.amr, vec!["webauthn".to_string(), "pwd".to_string()]);
 
     cleanup_tenant(&pool, tenant_id).await;
 }

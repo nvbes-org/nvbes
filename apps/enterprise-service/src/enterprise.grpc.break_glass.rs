@@ -12,7 +12,9 @@ pub async fn upsert_break_glass(
     actor_id: Uuid,
     procedure_reference: &str,
     reason: &str,
+    authentication: &enterprise::PrivilegedAuthenticationContext,
 ) -> Result<(), Status> {
+    let mut tx = db.begin().await.map_err(sql_status)?;
     sqlx::query(
         r#"
         INSERT INTO tenant_break_glass_accounts (
@@ -35,9 +37,38 @@ pub async fn upsert_break_glass(
     .bind(procedure_reference)
     .bind(reason)
     .bind(actor_id)
-    .execute(db)
+    .execute(&mut *tx)
     .await
     .map_err(sql_status)?;
+    sqlx::query(
+        r#"
+        INSERT INTO audit_events (
+          tenant_id, actor_principal_id, action, target_type, target_id,
+          metadata, event_hash, created_at
+        )
+        VALUES (
+          $1, $2, 'enterprise.break_glass.activated', 'principal', $3,
+          $4, gen_random_uuid()::text, NOW()
+        )
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(actor_id)
+    .bind(principal_id)
+    .bind(serde_json::json!({
+        "procedure_reference": procedure_reference,
+        "reason": reason,
+        "authentication": {
+            "acr": authentication.acr,
+            "amr": authentication.amr,
+            "auth_time": authentication.auth_time,
+            "authentication_event_id": authentication.authentication_event_id
+        }
+    }))
+    .execute(&mut *tx)
+    .await
+    .map_err(sql_status)?;
+    tx.commit().await.map_err(sql_status)?;
     Ok(())
 }
 

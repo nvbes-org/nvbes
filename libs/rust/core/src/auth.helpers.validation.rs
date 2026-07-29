@@ -1,5 +1,8 @@
 use crate::http::error::AppError;
 
+pub const MIN_PASSWORD_LENGTH: usize = 15;
+pub const MAX_PASSWORD_LENGTH: usize = 128;
+
 pub fn normalize_email(email: &str) -> String {
     email.trim().to_lowercase()
 }
@@ -44,10 +47,17 @@ pub fn validate_email(email: &str) -> Result<(), AppError> {
 }
 
 pub fn validate_password(password: &str) -> Result<(), AppError> {
-    if password.len() < 8 {
+    let character_count = password.chars().count();
+    if character_count < MIN_PASSWORD_LENGTH {
         return Err(AppError::bad_request(
             "validation_failed",
-            "Password must be at least 8 characters long.",
+            format!("Password must be at least {MIN_PASSWORD_LENGTH} characters long."),
+        ));
+    }
+    if character_count > MAX_PASSWORD_LENGTH {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            format!("Password must not exceed {MAX_PASSWORD_LENGTH} characters."),
         ));
     }
 

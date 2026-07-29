@@ -6,7 +6,20 @@ pub(super) async fn handle_token_grant(
     state: &AppState,
     request: TokenRequest,
     client_auth: crate::domains::oauth::service::ClientAuthentication,
+    security_profile: crate::domains::oauth::profiles::OAuthSecurityProfile,
+    token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 ) -> Result<crate::domains::oauth::service::TokenView, AppError> {
+    if security_profile == crate::domains::oauth::profiles::OAuthSecurityProfile::HighAssurance
+        && !matches!(
+            request.grant_type.as_str(),
+            "authorization_code" | "refresh_token" | "client_credentials"
+        )
+    {
+        return Err(AppError::bad_request(
+            "unsupported_high_assurance_grant",
+            "This grant type is not available to high-assurance OAuth clients.",
+        ));
+    }
     match request.grant_type.as_str() {
         "authorization_code" => {
             let code = request.code.ok_or_else(|| {
@@ -25,6 +38,7 @@ pub(super) async fn handle_token_grant(
                     client_assertion_verified: client_auth.client_assertion_verified,
                     redirect_uri: request.redirect_uri,
                     code_verifier: request.code_verifier,
+                    token_confirmation,
                 },
             )
             .await
@@ -36,6 +50,7 @@ pub(super) async fn handle_token_grant(
                 client_auth,
                 request.scope.as_deref(),
                 request.audience.as_deref(),
+                token_confirmation,
             )
             .await
         }
@@ -51,6 +66,8 @@ pub(super) async fn handle_token_grant(
                 state.config.auth_refresh_token_ttl_hours,
                 &refresh_token,
                 client_auth,
+                security_profile,
+                token_confirmation,
             )
             .await
         }
@@ -68,6 +85,7 @@ pub(super) async fn handle_token_grant(
                     client_id: client_auth.client_id,
                     device_code,
                 },
+                token_confirmation,
             )
             .await
         }
@@ -99,6 +117,7 @@ pub(super) async fn handle_token_grant(
                     resource: None,
                     requested_token_type: request.requested_token_type,
                 },
+                token_confirmation,
             )
             .await
         }

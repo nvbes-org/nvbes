@@ -22,6 +22,7 @@ async fn client_credentials_grant_accepts_rotated_primary_secret() {
         },
         Some("drive.files.read drive.workspace.read"),
         None,
+        None,
     )
     .await;
     assert!(token1.is_ok(), "Initial authentication should succeed");
@@ -50,6 +51,7 @@ async fn client_credentials_grant_accepts_rotated_primary_secret() {
             client_assertion_verified: false,
         },
         Some("drive.files.read drive.workspace.read"),
+        None,
         None,
     )
     .await;

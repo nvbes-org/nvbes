@@ -275,6 +275,11 @@ loki.source.file "nvbes" {
 
 loki.process "privacy" {
   stage.replace {
+    expression = "(?i)\"(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret|access_token|refresh_token|session_token|recovery_code|secret_base32)\"\\s*:\\s*\"[^\"]*\""
+    replace    = "\"redacted_secret\":\"[FilteredSecret]\""
+  }
+
+  stage.replace {
     expression = "(?i)(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\\s]+)"
     replace    = "[FilteredSecret]"
   }
@@ -295,6 +300,11 @@ loki.process "privacy" {
   }
 
   stage.replace {
+    expression = "(?i)\"(query|request_body|response_body|form|headers)\"\\s*:\\s*(\"[^\"]*\"|\\{[^\\n]*\\})"
+    replace    = "\"filtered_payload\":\"[Filtered]\""
+  }
+
+  stage.replace {
     expression = "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b"
     replace    = "[FilteredIp]"
   }
@@ -302,11 +312,6 @@ loki.process "privacy" {
   stage.drop {
     longer_than         = "16KB"
     drop_counter_reason = "oversized_log_line"
-  }
-
-  stage.sampling {
-    rate                = 0.5
-    drop_counter_reason = "baseline_log_sampling"
   }
 
   stage.static_labels {
@@ -360,11 +365,13 @@ otelcol.processor.transform "posthog_logs_privacy" {
   log_statements {
     context = "log"
     statements = [
+      `replace_pattern(body, "(?i)\"(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret|access_token|refresh_token|session_token|recovery_code|secret_base32)\"\\s*:\\s*\"[^\"]*\"", "\"redacted_secret\":\"[FilteredSecret]\"")`,
       `replace_pattern(body, "(?i)(authorization|cookie|token|secret|password|jwt|api[_-]?key|client[_-]?secret)=([^&\\s]+)", "[FilteredSecret]")`,
       `replace_pattern(body, "(?i)(Bearer|Basic)\\s+[A-Za-z0-9._~+/=-]+", "[FilteredAuthorization]")`,
       `replace_pattern(body, "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", "[FilteredEmail]")`,
       `replace_pattern(body, "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", "[FilteredIp]")`,
       `replace_pattern(body, "\"(client_ip|user_agent|object_key|payload|file_name|filename)\":\"[^\"]*\"", "\"filtered\":\"[Filtered]\"")`,
+      `replace_pattern(body, "(?i)\"(query|request_body|response_body|form|headers)\"\\s*:\\s*(\"[^\"]*\"|\\{[^\\n]*\\})", "\"filtered_payload\":\"[Filtered]\"")`,
       `delete_key(attributes, "log.file.name")`,
       `delete_key(attributes, "log.file.path")`,
       `delete_key(attributes, "email")`,

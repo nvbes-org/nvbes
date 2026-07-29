@@ -10,9 +10,11 @@ resource "scaleway_rdb_instance" "postgres" {
   disable_backup            = false
   backup_schedule_frequency = 24
   backup_schedule_retention = var.postgres_backup_retention_days
-  backup_same_region        = true
-  volume_type               = "bssd"
-  volume_size_in_gb         = 10
+  # Keep provider-managed logical backups outside the database region so a
+  # regional control-plane incident does not share the primary failure domain.
+  backup_same_region = false
+  volume_type        = "bssd"
+  volume_size_in_gb  = 10
 
   private_network {
     pn_id       = scaleway_vpc_private_network.main.id

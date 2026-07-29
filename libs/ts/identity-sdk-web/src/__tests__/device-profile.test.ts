@@ -17,5 +17,8 @@ describe('device profile minimization', () => {
   it('distinguishes mobile and tablet without exposing a model', () => {
     expect(classifyFormFactor('Mozilla/5.0 iPhone Mobile', true, 390)).toBe('mobile');
     expect(classifyFormFactor('Mozilla/5.0 iPad', true, 820)).toBe('tablet');
+    expect(classifyFormFactor('Mozilla/5.0 (Linux; Android 13; Pixel C)', true, 1_280)).toBe(
+      'tablet',
+    );
   });
 });

@@ -27,16 +27,18 @@ pub async fn has_active_recovery_codes(db: &PgPool, user_id: Uuid) -> Result<boo
 }
 
 pub async fn verify_recovery(db: &PgPool, user_id: Uuid, code: &str) -> Result<(), AppError> {
+    let mut tx = db.begin().await?;
     let row = sqlx::query(
         r#"
         SELECT id, factor_data
         FROM mfa_factors
         WHERE principal_id = $1 AND factor_type = 'recovery_code' AND status = 'active'
         LIMIT 1
+        FOR UPDATE
         "#,
     )
     .bind(user_id)
-    .fetch_optional(db)
+    .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(|| AppError::forbidden("no_recovery_codes", "No recovery codes configured."))?;
 
@@ -68,8 +70,9 @@ pub async fn verify_recovery(db: &PgPool, user_id: Uuid, code: &str) -> Result<(
     sqlx::query("UPDATE mfa_factors SET factor_data = $2, last_used_at = NOW() WHERE id = $1")
         .bind(factor_id)
         .bind(json!({ "codes": new_codes }))
-        .execute(db)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
 
     Ok(())
 }
@@ -78,6 +81,7 @@ pub async fn generate_recovery(
     db: &PgPool,
     user_id: Uuid,
     password: &str,
+    password_pepper: Option<&str>,
 ) -> Result<RecoveryCodesResult, AppError> {
     let (risk_score, decision, risk_factors) = risk::current_state_summary(db, user_id).await?;
     if matches!(decision, RiskDecision::Deny | RiskDecision::Lock)
@@ -108,7 +112,7 @@ pub async fn generate_recovery(
 
     if !password.is_empty() {
         let user = db::fetch_user_record(db, user_id).await?;
-        password::verify_password(
+        password::verify_password_with_pepper(
             user.password_hash.as_deref().ok_or_else(|| {
                 AppError::forbidden(
                     "password_missing",
@@ -116,6 +120,7 @@ pub async fn generate_recovery(
                 )
             })?,
             password,
+            password_pepper,
         )?;
     }
 

@@ -32,8 +32,8 @@ pub(crate) fn shape_registration_options(
                 }),
                 _ => json!({
                     "authenticatorAttachment": "platform",
-                    "requireResidentKey": false,
-                    "residentKey": "preferred",
+                    "requireResidentKey": true,
+                    "residentKey": "required",
                     "userVerification": "required",
                 }),
             },

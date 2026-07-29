@@ -23,7 +23,11 @@ const DEFAULT_DRIVE_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4101";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
@@ -41,8 +45,10 @@ async fn main() -> anyhow::Result<()> {
     let _profiling_guard =
         start_continuous_profiling(&config, "cloud-worker").map_err(anyhow::Error::msg)?;
 
-    let database = Database::connect(&config).await?;
-    run_migrations(&database).await?;
+    let migration_database = Database::connect(&config).await?;
+    run_migrations(&migration_database).await?;
+    migration_database.close().await;
+    let database = Database::connect_system(&config).await?;
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
     let storage = nvbes_product_cloud::storage::build_storage(&config).await;
 

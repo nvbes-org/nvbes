@@ -1,4 +1,4 @@
-use super::{hash_password, reset, token_hash, verify_password};
+use super::{hash_password, reset, token_hash, verify_password_with_pepper};
 use crate::domains::auth::sessions::cache::cached_session_from_login;
 use crate::domains::auth::sessions::cache::current_session_ttl;
 use crate::domains::auth::types::ResetPasswordInput;
@@ -163,11 +163,15 @@ async fn reset_password_updates_credentials_and_revokes_existing_sessions() {
     let pool = test_pool();
     let redis = test_redis_pool().await;
     let (tenant_id, principal_id, session_id, reset_token) = seed_subject(&pool, &redis).await;
+    let config = AppConfig {
+        auth_password_pepper: Some("test-password-pepper".to_string()),
+        ..AppConfig::default()
+    };
 
     reset(
         &pool,
         &redis,
-        &AppConfig::default(),
+        &config,
         ResetPasswordInput {
             token: reset_token.clone(),
             new_password: "N3w$trongPassw0rd!2026".to_string(),
@@ -184,8 +188,12 @@ async fn reset_password_updates_credentials_and_revokes_existing_sessions() {
         .await
         .expect("user should exist");
     let password_hash: String = user.get("password_hash");
-    verify_password(&password_hash, "N3w$trongPassw0rd!2026")
-        .expect("password should have been updated");
+    verify_password_with_pepper(
+        &password_hash,
+        "N3w$trongPassw0rd!2026",
+        config.auth_password_pepper.as_deref(),
+    )
+    .expect("password should have been updated");
 
     assert!(
         nvbes_redis::session::get_session(&redis, &session_id.to_string())
@@ -210,9 +218,10 @@ async fn reset_password_rejects_reused_token() {
     let redis = test_redis_pool().await;
     let (tenant_id, principal_id, _, reset_token) = seed_subject(&pool, &redis).await;
 
-    password_reset::mark_password_reset_token_consumed(&redis, &token_hash(&reset_token))
+    password_reset::take_password_reset_token(&redis, &token_hash(&reset_token))
         .await
-        .expect("reset token should be markable as used");
+        .expect("reset token should be consumable")
+        .expect("reset token should exist");
 
     let error = reset(
         &pool,

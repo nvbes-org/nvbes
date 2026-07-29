@@ -1,11 +1,7 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 
 import type { MfaMethod } from './LoginPage.mfa';
-import {
-  isInvalidSignatureError,
-  isPasswordExpiredError,
-  isPrimaryEmailVerificationRequiredError,
-} from './LoginPage.errors';
+import { isInvalidSignatureError } from './LoginPage.errors';
 import { normalizeMfaMethods } from './LoginPage.mfa';
 import { preferredMfaMethod, requestsMfa } from './useLoginPage.shared';
 import type { PasswordMutateAsync } from './useLoginPage.steps.shared';
@@ -26,7 +22,6 @@ type SubmitPasswordStepOptions = {
     resendAvailableAt: string | null,
     accountName: string | null,
   ) => void;
-  navigateToForgotPassword: (email: string) => void;
   finishLogin: (sessionToken: string | null) => Promise<void>;
 };
 
@@ -42,7 +37,6 @@ export async function submitPasswordStep({
   setMfaMethod,
   setSessionToken,
   navigateToVerifyEmail,
-  navigateToForgotPassword,
   finishLogin,
 }: SubmitPasswordStepOptions) {
   if (!loginStateToken) {
@@ -82,11 +76,6 @@ export async function submitPasswordStep({
     }
     await finishLogin(result.session_token ?? null);
   } catch (err) {
-    if (isPrimaryEmailVerificationRequiredError(err)) {
-      navigateToVerifyEmail(email, null, null);
-      return;
-    }
-
     if (isInvalidSignatureError(err)) {
       setLoginStateToken(null);
       setSessionToken(null);
@@ -96,10 +85,6 @@ export async function submitPasswordStep({
       return;
     }
 
-    if (isPasswordExpiredError(err)) {
-      navigateToForgotPassword(email);
-      return;
-    }
     setError(clientErrorMessage(err, 'Login failed'));
   }
 }

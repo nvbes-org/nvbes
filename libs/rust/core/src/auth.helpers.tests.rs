@@ -65,15 +65,64 @@ fn validate_password_accepts_strong_password() {
 
 #[test]
 fn validate_password_rejects_short_passwords() {
-    let error = validate_password("1234567").expect_err("expected short password to fail");
+    let error = validate_password("short phrase").expect_err("expected short password to fail");
     assert_eq!(error.status, StatusCode::BAD_REQUEST);
 }
 
 #[test]
 fn validate_password_rejects_weak_passwords() {
-    let error = validate_password("password123").expect_err("expected weak password to fail");
+    let error = validate_password("passwordpassword").expect_err("expected weak password to fail");
     assert_eq!(error.status, StatusCode::BAD_REQUEST);
     assert_eq!(error.code, "weak_password");
+}
+
+#[test]
+fn validate_password_accepts_long_passphrases_without_composition_rules() {
+    assert!(validate_password("rivière nuage cuivre galaxie").is_ok());
+}
+
+#[test]
+fn validate_password_counts_unicode_characters() {
+    let error = validate_password("é".repeat(14).as_str())
+        .expect_err("fourteen Unicode characters should be too short");
+    assert_eq!(error.code, "validation_failed");
+}
+
+#[test]
+fn validate_password_rejects_values_above_supported_limit() {
+    let error =
+        validate_password(&"a".repeat(129)).expect_err("oversized password should be rejected");
+    assert_eq!(error.code, "validation_failed");
+}
+
+#[test]
+#[ignore = "run in release mode to calibrate Argon2id on deployment-class hardware"]
+fn benchmark_argon2id_latency() {
+    let mut samples = Vec::with_capacity(5);
+    for _ in 0..5 {
+        let started = std::time::Instant::now();
+        let hash = hash_password("benchmark passphrase with sufficient entropy")
+            .expect("benchmark password should hash");
+        assert!(
+            verify_password("benchmark passphrase with sufficient entropy", &hash)
+                .expect("benchmark password should verify")
+        );
+        samples.push(started.elapsed());
+    }
+    samples.sort_unstable();
+    let median = samples[samples.len() / 2];
+    eprintln!(
+        "Argon2id benchmark: median={}ms, m=65536KiB, t=3, p=4",
+        median.as_millis()
+    );
+    assert!(
+        median >= std::time::Duration::from_millis(50),
+        "Argon2id is hashing too quickly for the current hardware; increase its work factor"
+    );
+    assert!(
+        median <= std::time::Duration::from_secs(2),
+        "Argon2id exceeds the authentication latency budget; recalibrate its parameters"
+    );
 }
 
 #[test]

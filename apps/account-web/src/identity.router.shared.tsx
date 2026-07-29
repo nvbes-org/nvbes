@@ -1,4 +1,5 @@
 import { AuthErrorBoundary } from '@nvbes/web-runtime';
+import { lazyRouteComponent } from '@tanstack/react-router';
 import { lazy, type ReactElement, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -19,15 +20,18 @@ export function RouteSkeleton() {
 }
 
 export function lazyPage(loader: () => Promise<{ default: () => ReactElement | null }>) {
-  const Component = lazy(loader);
+  const Component = lazyRouteComponent(loader);
 
-  return function LazyPage() {
+  function LazyPage() {
     return (
       <Suspense fallback={<RouteSkeleton />}>
         <Component />
       </Suspense>
     );
-  };
+  }
+
+  LazyPage.preload = () => Component.preload?.() ?? Promise.resolve();
+  return LazyPage;
 }
 
 export function withAuth(Component: () => ReactElement) {

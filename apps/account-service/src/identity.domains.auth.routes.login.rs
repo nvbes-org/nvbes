@@ -4,6 +4,7 @@ use crate::domains::auth::state::{AuthState, create_state, fetch_state};
 use crate::domains::auth::types::LoginResult;
 use crate::http::cookies::{
     auth_cookie, auth_cookie_name, auth_cookie_name_with_user, csrf_cookie, generate_csrf_token,
+    registration_enrollment_cookie,
 };
 use crate::http::error::AppError;
 use axum::{
@@ -32,6 +33,10 @@ pub mod webauthn;
 
 #[path = "identity.domains.auth.routes.login.types.rs"]
 mod types;
+
+#[cfg(test)]
+#[path = "identity.domains.auth.routes.login.tests.rs"]
+mod tests;
 
 #[derive(serde::Deserialize)]
 pub(crate) struct LoginQuery {
@@ -117,6 +122,7 @@ pub(crate) fn login_response(
     authuser: &str,
     secure_cookie: bool,
     session_expires_in: i64,
+    registration_enrollment_expires_in: i64,
     csrf_secret: &str,
     product_analytics: &nvbes_product_analytics::ProductAnalytics,
     request_headers: &HeaderMap,
@@ -134,6 +140,7 @@ pub(crate) fn login_response(
     let session_cookie_name = auth_cookie_name_with_user("session", authuser, secure_cookie);
     let session_cookie_value = result.browser_session_token.clone();
     let device_cookie_token = result.device_cookie_token.clone();
+    let registration_enrollment_token = result.registration_enrollment_token.clone();
     let csrf_token = generate_csrf_token(&session_cookie_value, csrf_secret);
     let csrf_cookie_name = auth_cookie_name_with_user("csrf_token", authuser, secure_cookie);
 
@@ -154,6 +161,16 @@ pub(crate) fn login_response(
                 &auth_cookie_name("device", secure_cookie),
                 &device_cookie_token,
                 60 * 60 * 24 * 180,
+                secure_cookie,
+            )?,
+        );
+    }
+    if let Some(registration_enrollment_token) = registration_enrollment_token {
+        response.headers_mut().append(
+            SET_COOKIE,
+            registration_enrollment_cookie(
+                &registration_enrollment_token,
+                registration_enrollment_expires_in,
                 secure_cookie,
             )?,
         );
@@ -180,8 +197,15 @@ pub(crate) async fn challenge_response(
     device_fingerprint: Option<Value>,
     available_methods: Option<Vec<String>>,
 ) -> Result<Response, AppError> {
-    let state_token =
-        create_state(redis, principal_id, email, next_step, device_fingerprint).await?;
+    let state_token = create_state(
+        redis,
+        principal_id,
+        email,
+        next_step,
+        device_fingerprint,
+        Vec::new(),
+    )
+    .await?;
 
     Ok((
         status,

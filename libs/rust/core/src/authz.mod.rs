@@ -9,7 +9,9 @@ mod policy;
 #[path = "authz.role.rs"]
 mod role;
 
-pub use action::{WorkspaceAction, action_requires_step_up, parse_action};
+pub use action::{
+    WorkspaceAction, action_requires_independent_approval, action_requires_step_up, parse_action,
+};
 pub use context::ResourceContext;
 pub use decision::WorkspaceDecision;
 pub use policy::is_allowed;

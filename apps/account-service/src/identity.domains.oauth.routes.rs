@@ -1,4 +1,10 @@
-use axum::{Router, http::HeaderMap};
+use axum::{
+    Router,
+    body::Body,
+    http::{HeaderMap, Request, StatusCode},
+    middleware::Next,
+    response::Response,
+};
 use base64::Engine;
 
 use crate::{app::AppState, http::error::AppError};
@@ -35,6 +41,30 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .layer(axum::middleware::from_fn(
             nvbes_core::security::no_cache_headers,
         ))
+        .layer(axum::middleware::from_fn(reject_encoded_oauth_request))
+        .layer(axum::extract::DefaultBodyLimit::max(64 * 1024))
+        .layer(tower_http::timeout::TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            std::time::Duration::from_secs(10),
+        ))
+}
+
+async fn reject_encoded_oauth_request(
+    request: Request<Body>,
+    next: Next,
+) -> Result<Response, AppError> {
+    if request
+        .headers()
+        .get(axum::http::header::CONTENT_ENCODING)
+        .is_some_and(|value| value != "identity")
+    {
+        return Err(AppError::new(
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            "encoded_request_body_not_supported",
+            "OAuth endpoints do not accept compressed request bodies.",
+        ));
+    }
+    Ok(next.run(request).await)
 }
 
 pub fn parse_basic_client_auth(headers: &HeaderMap) -> Result<(String, String), AppError> {

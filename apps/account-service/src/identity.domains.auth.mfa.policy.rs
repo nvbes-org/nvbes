@@ -77,6 +77,60 @@ pub async fn fetch_policy_context(
     })
 }
 
+pub async fn principal_has_privileged_role(
+    db: &sqlx::PgPool,
+    principal_id: Uuid,
+) -> Result<bool, AppError> {
+    sqlx::query_scalar(
+        r#"
+        SELECT
+          EXISTS (
+            SELECT 1
+            FROM tenant_memberships
+            WHERE principal_id = $1
+              AND status = 'active'
+              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM organization_memberships
+            WHERE principal_id = $1
+              AND status = 'active'
+              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM workspace_memberships
+            WHERE principal_id = $1
+              AND status = 'active'
+              AND role::text IN ('owner', 'admin', 'security_admin', 'billing_admin')
+          )
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(db)
+    .await
+    .map_err(Into::into)
+}
+
+pub fn methods_for_privileged_principal(
+    methods: Vec<String>,
+    privileged: bool,
+) -> Result<Vec<String>, AppError> {
+    if !privileged {
+        return Ok(methods);
+    }
+
+    if methods.iter().any(|method| method == "webauthn") {
+        return Ok(vec!["webauthn".to_string()]);
+    }
+
+    Err(AppError::forbidden(
+        "privileged_passkey_required",
+        "Privileged accounts must enroll a passkey or hardware security key before signing in.",
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,5 +163,28 @@ mod tests {
         let decision = evaluate_mfa_policy(&context(MfaPolicy::RequiredForEveryone, false));
 
         assert_eq!(decision, MfaPolicyDecision::EnrollmentRequired);
+    }
+
+    #[test]
+    fn privileged_principals_use_webauthn_when_available() {
+        let methods = methods_for_privileged_principal(
+            vec![
+                "totp".to_string(),
+                "webauthn".to_string(),
+                "recovery".to_string(),
+            ],
+            true,
+        )
+        .expect("WebAuthn should satisfy the privileged policy");
+
+        assert_eq!(methods, vec!["webauthn"]);
+    }
+
+    #[test]
+    fn privileged_principals_cannot_fall_back_to_totp() {
+        let error = methods_for_privileged_principal(vec!["totp".to_string()], true)
+            .expect_err("TOTP must not satisfy the privileged policy");
+
+        assert_eq!(error.code, "privileged_passkey_required");
     }
 }

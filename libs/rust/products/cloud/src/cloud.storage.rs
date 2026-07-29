@@ -28,6 +28,7 @@ pub async fn build_storage(config: &AppConfig) -> Arc<dyn ObjectStore> {
             nvbes_storage::S3ObjectStore::new(
                 config.storage_bucket.clone(),
                 endpoint,
+                config.storage_public_endpoint.as_deref(),
                 &config.storage_region,
                 access_key,
                 secret_key,

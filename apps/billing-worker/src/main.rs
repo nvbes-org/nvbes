@@ -13,7 +13,11 @@ const DEFAULT_BILLING_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4104";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
 
     let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-worker");
     install_safe_panic_hook();

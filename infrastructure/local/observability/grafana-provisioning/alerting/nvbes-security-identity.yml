@@ -1,0 +1,142 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: nvbes-security-identity
+    folder: nvbes-security
+    interval: 1m
+    rules:
+      - uid: nvbes-siem-account-takeover
+        title: Suspected account takeover
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: Session theft or high-confidence account takeover signal detected.
+          runbook_url: docs/operations/security-incident-exercises.md#identity-provider-compromise
+        labels:
+          severity: critical
+          owner: identity-security
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(cookie_theft_detected|auth\\.session_risk_confirmed|account_takeover)" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold
+
+      - uid: nvbes-siem-refresh-token-reuse
+        title: Refresh token reuse detected
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: A rotated or revoked refresh token was reused.
+          runbook_url: docs/operations/security-incident-exercises.md#identity-provider-compromise
+        labels:
+          severity: critical
+          owner: identity-security
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(refresh_token_reused|refresh_token_reuse_detected)" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold
+
+      - uid: nvbes-siem-privilege-elevation
+        title: Privileged elevation granted
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: A production administrative elevation or break-glass activation occurred.
+          runbook_url: docs/operations/production-access-jit.md#post-access-review
+        labels:
+          severity: warning
+          owner: security-operations
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(enterprise\\.admin_elevation\\.granted|enterprise\\.break_glass\\.(activated|used))" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold

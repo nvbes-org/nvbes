@@ -9,21 +9,16 @@ export function LoginPageSecondaryStepContent({
   handleConsentCancel,
   handleMfaSubmit,
   hasRecovery,
-  hasEmail,
   hasTotp,
   hasWebAuthn,
   hostedConsent,
   loading,
-  loginStateToken,
   mfaMethod,
   oauthRequest,
-  emailCode,
   recoveryCode,
   resetToIdentifier,
-  resendLoginMfaEmailCode,
   setError,
   setMfaMethod,
-  setEmailCode,
   setRecoveryCode,
   setTotpCode,
   step,
@@ -36,21 +31,16 @@ export function LoginPageSecondaryStepContent({
   | 'handleConsentCancel'
   | 'handleMfaSubmit'
   | 'hasRecovery'
-  | 'hasEmail'
   | 'hasTotp'
   | 'hasWebAuthn'
   | 'hostedConsent'
   | 'loading'
-  | 'loginStateToken'
   | 'mfaMethod'
   | 'oauthRequest'
-  | 'emailCode'
   | 'recoveryCode'
   | 'resetToIdentifier'
-  | 'resendLoginMfaEmailCode'
   | 'setError'
   | 'setMfaMethod'
-  | 'setEmailCode'
   | 'setRecoveryCode'
   | 'setTotpCode'
   | 'step'
@@ -80,18 +70,14 @@ export function LoginPageSecondaryStepContent({
     <LoginPageMfaStep
       error={error}
       loading={loading}
-      loginStateToken={loginStateToken}
       mfaMethod={mfaMethod}
       hasTotp={hasTotp}
-      hasEmail={hasEmail}
       hasWebAuthn={hasWebAuthn}
       hasRecovery={hasRecovery}
       availableCount={availableCount}
       totpCode={totpCode}
-      emailCode={emailCode}
       recoveryCode={recoveryCode}
       onTotpCodeChange={setTotpCode}
-      onEmailCodeChange={setEmailCode}
       onRecoveryCodeChange={setRecoveryCode}
       onMfaMethodSelect={setMfaMethod}
       onMfaSubmit={handleMfaSubmit}
@@ -100,7 +86,6 @@ export function LoginPageSecondaryStepContent({
         setError(null);
       }}
       onResetToIdentifier={resetToIdentifier}
-      onResendEmailCode={resendLoginMfaEmailCode}
     />
   );
 }

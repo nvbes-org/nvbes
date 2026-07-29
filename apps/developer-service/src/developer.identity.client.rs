@@ -34,6 +34,7 @@ pub struct IdentityClaims {
     #[serde(default)]
     pub amr: Vec<String>,
     pub auth_time: Option<i64>,
+    pub sid: Option<String>,
     pub exp: Option<i64>,
     pub iat: Option<i64>,
     pub nbf: Option<i64>,

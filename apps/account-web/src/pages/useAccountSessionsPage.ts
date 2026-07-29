@@ -1,16 +1,18 @@
 import { type AccountSession, identityClient } from '@nvbes/identity-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { accountQueryKeys } from '@/account.queries';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
+import { isStepUpRequiredError } from '@/identity.step-up';
 import { type DeviceGroup, groupSessionsByDevice } from './AccountSessionsPage.device';
 
 export function useAccountSessionsPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [confirmingRisk, setConfirmingRisk] = useState(false);
+  const [showRiskStepUp, setShowRiskStepUp] = useState(false);
+  const [showRevokeOthersStepUp, setShowRevokeOthersStepUp] = useState(false);
   const queryClient = useQueryClient();
   const sessionsQueryKey = accountQueryKeys.sessions(authuser);
   const securityOverviewQueryKey = accountQueryKeys.securityOverview(authuser);
@@ -58,9 +60,31 @@ export function useAccountSessionsPage() {
   };
 
   const handleRevokeOthers = async () => {
-    await identityClient.revokeOtherSessions();
-    await queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
-    await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
+    try {
+      await identityClient.revokeOtherSessions();
+      setShowRevokeOthersStepUp(false);
+      await queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
+    } catch (error) {
+      if (isStepUpRequiredError(error)) {
+        setShowRevokeOthersStepUp(true);
+        return;
+      }
+      throw error;
+    }
+  };
+
+  const handleConfirmRisk = async () => {
+    const current = sessions.find((session) => session.current);
+    if (!current) return;
+    setConfirmingRisk(true);
+    try {
+      await identityClient.confirmHighRiskSession(current.id);
+      await queryClient.invalidateQueries({ queryKey: sessionsQueryKey });
+      setShowRiskStepUp(false);
+    } finally {
+      setConfirmingRisk(false);
+    }
   };
 
   const { currentDevice, recognizedDevices, otherDevices } = groupSessionsByDevice(sessions);
@@ -69,6 +93,7 @@ export function useAccountSessionsPage() {
   return {
     currentDevice,
     currentSession,
+    confirmingRisk,
     isPending,
     otherDevices,
     recognizedDevices,
@@ -77,5 +102,12 @@ export function useAccountSessionsPage() {
     onRevoke: handleRevoke,
     onRevokeDevice: handleRevokeDevice,
     onRevokeOthers: handleRevokeOthers,
+    onRequestRiskConfirmation: () => setShowRiskStepUp(true),
+    onRiskStepUpSuccess: handleConfirmRisk,
+    onCancelRiskConfirmation: () => setShowRiskStepUp(false),
+    onCancelRevokeOthers: () => setShowRevokeOthersStepUp(false),
+    onRevokeOthersStepUpSuccess: handleRevokeOthers,
+    showRevokeOthersStepUp,
+    showRiskStepUp,
   };
 }

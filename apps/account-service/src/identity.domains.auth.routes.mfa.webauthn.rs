@@ -7,7 +7,10 @@ use crate::domains::auth::types::{
 };
 use crate::domains::auth::webauthn as webauthn_mod;
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::middleware::jwt::{
+    AuthContext,
+    account_access::{self, AccountAccess, SECURITY_WRITE_SCOPE},
+};
 use axum::{
     Json, Router,
     extract::{Extension, State},
@@ -16,29 +19,30 @@ use axum::{
 use nvbes_core::http::error::ErrorEnvelope;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = jwt_auth_middleware;
-
     Router::new()
         .route(
             "/webauthn/start",
-            post(webauthn_auth_start).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(webauthn_auth_start),
+            ),
         )
         .route(
             "/webauthn/register/start",
-            post(begin_webauthn_enrollment).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(begin_webauthn_enrollment),
+            ),
         )
         .route(
             "/webauthn/register/finish",
-            post(confirm_webauthn_enrollment).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(confirm_webauthn_enrollment),
+            ),
         )
 }
 
@@ -93,10 +97,10 @@ pub(crate) async fn begin_webauthn_enrollment(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<WebauthnRegisterStartRequest>,
 ) -> Result<Json<WebauthnRegisterStartResult>, AppError> {
-    crate::domains::auth::verification::require_recent_step_up(
+    crate::domains::auth::verification::require_passkey_enrollment_step_up(
+        &state.db,
         &state.redis,
         &auth,
-        Some(nvbes_core::auth::Aal::Aal2),
     )
     .await?;
     let tenant_id = auth.tenant_id.ok_or_else(|| {
@@ -155,9 +159,10 @@ pub(crate) async fn confirm_webauthn_enrollment(
     let factor =
         crate::domains::auth::mfa::get_factor(&state.db, auth.user_id, request.factor_id).await?;
 
-    // Enable skip_password by default when a passkey or security key is added.
-    if let Ok(mut prefs) =
-        crate::domains::auth::db::fetch_user_preferences(&state.db, auth.user_id).await
+    // Only discoverable passkeys can be offered before an account is identified.
+    if factor.kind.as_deref() == Some("passkey")
+        && let Ok(mut prefs) =
+            crate::domains::auth::db::fetch_user_preferences(&state.db, auth.user_id).await
     {
         prefs.skip_password = true;
         let _ = crate::domains::auth::db::update_user_preferences(&state.db, auth.user_id, &prefs)

@@ -20,11 +20,13 @@ export default function AccountPersonalInfoPage() {
     handleAvatarDelete,
     lastname,
     loading,
+    isPersonalInfoInvalid,
     isPersonalInfoUnchanged,
     memberSince,
     region,
     regionLoading,
     regions,
+    personalInfoErrors,
     selectedUser,
     setBirthdate,
     setFirstname,
@@ -58,7 +60,9 @@ export default function AccountPersonalInfoPage() {
           editError={editError}
           editSuccess={editSuccess}
           loading={loading}
+          isPersonalInfoInvalid={isPersonalInfoInvalid}
           isPersonalInfoUnchanged={isPersonalInfoUnchanged}
+          errors={personalInfoErrors}
           onFirstnameChange={setFirstname}
           onLastnameChange={setLastname}
           onUsernameChange={setUsername}

@@ -5,18 +5,20 @@ import {
   readVerificationSnapshot,
   saveVerificationSnapshot,
 } from '../identity.email-verification.state';
+import { readCapturedAuthUrlToken } from '../identity.auth-url-secrets';
 import type { VerificationLocationState, VerificationStatus } from './VerifyEmailPage.shared';
 
 export function useVerifyEmailPageState() {
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.searchStr);
   const locationState = location.state as VerificationLocationState | null;
   const storedState = readVerificationSnapshot();
 
   const accountNameFromState = locationState?.accountName ?? storedState?.accountName ?? null;
   const emailFromState = locationState?.email ?? storedState?.email ?? '';
-  const token = searchParams.get('token') ?? null;
+  const [token] = useState(
+    () => readCapturedAuthUrlToken('/verify') || readCapturedAuthUrlToken('/verify-email') || null,
+  );
   const resendAvailableAtFromState =
     locationState?.resendAvailableAt ?? storedState?.resendAvailableAt ?? null;
 

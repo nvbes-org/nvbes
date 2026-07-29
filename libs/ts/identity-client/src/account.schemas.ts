@@ -65,6 +65,15 @@ export const PromoteSecondaryEmailResponseSchema = z.object({
   user: AccountPrincipalSchema,
 });
 
+export const AccountSessionClientSchema = z.object({
+  browser: NullableStringSchema,
+  browser_version: z.number().nullable(),
+  os: NullableStringSchema,
+  os_version: NullableStringSchema,
+  device: NullableStringSchema,
+  device_type: z.enum(['console', 'desktop', 'mobile', 'tablet', 'unknown', 'wearable']),
+});
+
 export const AccountSessionSchema = z.object({
   id: z.string(),
   tenant_id: NullableStringSchema,
@@ -78,11 +87,13 @@ export const AccountSessionSchema = z.object({
   ip: NullableStringSchema,
   geo_country_code: NullableStringSchema.optional(),
   user_agent: NullableStringSchema,
+  client: AccountSessionClientSchema.nullable(),
   device_id: NullableStringSchema,
   device_trust_level: NullableStringSchema,
   device_trust_score: z.number().nullable(),
   risk_score: z.number().nullable(),
   risk_decision: NullableStringSchema,
+  risk_confirmed_at: NullableStringSchema,
   current: z.boolean(),
 });
 
@@ -152,6 +163,9 @@ export const OAuthClientSchema = z.object({
   owner_scope_type: z.string(),
   owner_scope_id: z.string(),
   client_type: z.string(),
+  backchannel_logout_uri: NullableStringSchema.optional(),
+  backchannel_logout_session_required: z.boolean().optional(),
+  security_event_receiver_uri: NullableStringSchema.optional(),
 });
 
 export const OAuthClientsResponseSchema = z.object({
@@ -178,6 +192,7 @@ export const ResetPasswordResultSchema = z.object({
 export type AccountWorkspace = z.infer<typeof AccountWorkspaceSchema>;
 export type AccountMe = z.infer<typeof AccountMeSchema>;
 export type AccountSession = z.infer<typeof AccountSessionSchema>;
+export type AccountSessionClient = z.infer<typeof AccountSessionClientSchema>;
 export type DeviceTrustResult = z.infer<typeof DeviceTrustResultSchema>;
 export type AccountPrincipal = z.infer<typeof AccountPrincipalSchema>;
 export type AccountEntry = z.infer<typeof AccountEntrySchema>;

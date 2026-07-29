@@ -12,6 +12,7 @@ mod policy;
 pub(crate) use map::email_constraint_error;
 pub use policy::{
     active_email_recipients, primary_email_policy_hours, verified_mfa_eligible_emails,
+    verified_security_notification_recipients,
 };
 
 pub async fn list_email_addresses(
@@ -112,12 +113,64 @@ pub async fn mark_secondary_verified(
     Ok(())
 }
 
+pub async fn change_unverified_primary_email(
+    tx: &mut Transaction<'_, Postgres>,
+    principal_id: Uuid,
+    email: &str,
+) -> Result<(), AppError> {
+    let normalized_email = normalize_email(email);
+    validate_email(&normalized_email)?;
+
+    let primary_update = sqlx::query(
+        r#"
+        UPDATE user_email_addresses
+        SET email = $2,
+            normalized_email = $2,
+            verified_at = NULL,
+            updated_at = NOW()
+        WHERE principal_id = $1
+          AND is_primary = TRUE
+          AND deleted_at IS NULL
+        "#,
+    )
+    .bind(principal_id)
+    .bind(&normalized_email)
+    .execute(&mut **tx)
+    .await
+    .map_err(map::email_constraint_error)?;
+
+    if primary_update.rows_affected() != 1 {
+        return Err(AppError::internal(
+            "primary_email_address_missing",
+            "Primary email address could not be updated.",
+        ));
+    }
+
+    sqlx::query(
+        r#"
+        UPDATE users
+        SET email = $2,
+            email_verified_at = NULL,
+            status = 'pending_verification',
+            updated_at = NOW()
+        WHERE principal_id = $1
+        "#,
+    )
+    .bind(principal_id)
+    .bind(&normalized_email)
+    .execute(&mut **tx)
+    .await
+    .map_err(map::email_constraint_error)?;
+
+    Ok(())
+}
+
 pub async fn promote_secondary_email(
     tx: &mut Transaction<'_, Postgres>,
     principal_id: Uuid,
     email_address_id: Uuid,
     min_age_hours: i32,
-) -> Result<EmailAddressView, AppError> {
+) -> Result<(EmailAddressView, String), AppError> {
     let candidate = fetch_email_address_for_update(tx, principal_id, email_address_id).await?;
     if candidate.is_primary {
         return Err(AppError::bad_request(
@@ -200,7 +253,8 @@ pub async fn promote_secondary_email(
     .await?;
 
     demote_previous_primary(tx, principal_id, &current_primary_email).await?;
-    fetch_email_address_for_update(tx, principal_id, email_address_id).await
+    let promoted = fetch_email_address_for_update(tx, principal_id, email_address_id).await?;
+    Ok((promoted, current_primary_email))
 }
 
 async fn demote_previous_primary(

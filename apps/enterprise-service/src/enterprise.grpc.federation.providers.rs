@@ -13,6 +13,7 @@ pub async fn configure_federation_provider(
     tenant_id: Uuid,
     request: enterprise::ConfigureFederationProviderRequest,
 ) -> Result<enterprise::FederationProvider, Status> {
+    validate_provider(&request)?;
     let provider_id =
         optional_uuid(&request.provider_id, "provider_id")?.unwrap_or_else(Uuid::new_v4);
     let provider_family = if request.provider_family.trim().is_empty() {
@@ -179,4 +180,87 @@ fn attribute_mapping(value: &str) -> Result<serde_json::Value, Status> {
 
 fn default_status(value: &str) -> String {
     empty_to_option(value).unwrap_or_else(|| "active".to_string())
+}
+
+fn validate_provider(
+    request: &enterprise::ConfigureFederationProviderRequest,
+) -> Result<(), Status> {
+    if !matches!(request.status.trim(), "" | "active" | "disabled") {
+        return Err(Status::invalid_argument(
+            "federation provider status must be active or disabled",
+        ));
+    }
+    match request.protocol.trim() {
+        "oidc" => {
+            require_https_url(&request.issuer, "issuer")?;
+            require_https_url(&request.metadata_url, "metadata_url")?;
+            require_value(&request.client_id, "client_id")?;
+        }
+        "saml" => {
+            require_https_url(&request.metadata_url, "metadata_url")?;
+            require_value(&request.sp_entity_id, "sp_entity_id")?;
+            if !request.require_signed_assertions || !request.require_signed_responses {
+                return Err(Status::invalid_argument(
+                    "SAML providers must require signed assertions and responses",
+                ));
+            }
+        }
+        _ => {
+            return Err(Status::invalid_argument(
+                "federation protocol must be oidc or saml",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn require_value(value: &str, field: &'static str) -> Result<(), Status> {
+    if value.trim().is_empty() {
+        Err(Status::invalid_argument(format!("{field} is required")))
+    } else {
+        Ok(())
+    }
+}
+
+fn require_https_url(value: &str, field: &'static str) -> Result<(), Status> {
+    let value = value.trim();
+    if value.starts_with("https://") && !value.contains('@') {
+        Ok(())
+    } else {
+        Err(Status::invalid_argument(format!(
+            "{field} must be an HTTPS URL without userinfo"
+        )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saml_requires_signed_assertions_and_responses() {
+        let request = enterprise::ConfigureFederationProviderRequest {
+            protocol: "saml".to_string(),
+            metadata_url: "https://idp.example.test/metadata".to_string(),
+            sp_entity_id: "urn:nvbes:test".to_string(),
+            require_signed_assertions: true,
+            require_signed_responses: false,
+            ..Default::default()
+        };
+
+        assert!(validate_provider(&request).is_err());
+    }
+
+    #[test]
+    fn oidc_rejects_non_https_issuer() {
+        let request = enterprise::ConfigureFederationProviderRequest {
+            protocol: "oidc".to_string(),
+            issuer: "http://idp.example.test".to_string(),
+            metadata_url: "https://idp.example.test/.well-known/openid-configuration".to_string(),
+            client_id: "client".to_string(),
+            ..Default::default()
+        };
+
+        assert!(validate_provider(&request).is_err());
+    }
 }

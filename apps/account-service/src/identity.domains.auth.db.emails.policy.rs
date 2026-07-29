@@ -40,6 +40,26 @@ pub async fn active_email_recipients(
     Ok(emails)
 }
 
+pub async fn verified_security_notification_recipients(
+    db: &PgPool,
+    principal_id: Uuid,
+) -> Result<Vec<String>, AppError> {
+    let emails = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT email
+        FROM user_email_addresses
+        WHERE principal_id = $1
+          AND deleted_at IS NULL
+          AND verified_at IS NOT NULL
+        ORDER BY is_primary DESC, created_at ASC
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_all(db)
+    .await?;
+    Ok(emails)
+}
+
 pub async fn verified_mfa_eligible_emails(
     db: &PgPool,
     principal_id: Uuid,

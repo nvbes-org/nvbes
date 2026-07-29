@@ -4,6 +4,7 @@ use uuid::Uuid;
 use webauthn_rs::prelude::*;
 
 use super::super::risk::{self, RiskDecision, RiskEventInput};
+use super::assurance::WebauthnCredentialSignals;
 use super::types::StoredPasskeyAuthentication;
 use super::{
     errors::map_webauthn_authentication_error,
@@ -108,7 +109,7 @@ pub async fn finish_authentication(
     workspace_id: Option<Uuid>,
     challenge_id: Uuid,
     credential: &PublicKeyCredential,
-) -> Result<String, AppError> {
+) -> Result<WebauthnCredentialSignals, AppError> {
     let challenge = nvbes_redis::auth_challenge::take_auth_challenge(redis, challenge_id)
         .await
         .map_err(|err| AppError::internal("webauthn_challenge_load_failed", format!("{}", err)))?
@@ -141,7 +142,7 @@ pub async fn finish_authentication(
         .finish_passkey_authentication(credential, &stored.authentication)
         .map_err(map_webauthn_authentication_error)?;
 
-    record_passkey_authentication(db, user_id, &mut passkeys, &result).await?;
+    let signals = record_passkey_authentication(db, user_id, &mut passkeys, &result).await?;
 
     let _ = risk::record_event(
         db,
@@ -155,6 +156,10 @@ pub async fn finish_authentication(
             risk_score: 0.0,
             risk_factors: json!({
                 "cred_id": format!("{:?}", result.cred_id()),
+                "assurance": signals.assurance.as_str(),
+                "backup_eligible": signals.backup_eligible,
+                "backup_state": signals.backup_state,
+                "sign_count": signals.sign_count,
             }),
             decision: RiskDecision::Allow,
             metadata: json!({}),
@@ -162,7 +167,7 @@ pub async fn finish_authentication(
     )
     .await;
 
-    Ok("webauthn".to_string())
+    Ok(signals)
 }
 
 fn shape_authentication_options(mut options: serde_json::Value) -> serde_json::Value {

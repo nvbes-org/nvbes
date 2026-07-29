@@ -1,3 +1,5 @@
+import { detectDeviceType, detectOS } from './user-agent';
+
 export type DevicePlatform = 'android' | 'ios' | 'linux' | 'macos' | 'windows' | 'other';
 export type DeviceFormFactor = 'desktop' | 'mobile' | 'tablet' | 'other';
 export type ScreenBucket = 'compact' | 'medium' | 'large' | 'wide';
@@ -37,13 +39,25 @@ export function collectDeviceProfile(): DeviceProfile {
 }
 
 export function classifyPlatform(userAgent: string): DevicePlatform {
-  const value = userAgent.toLowerCase();
-  if (value.includes('android')) return 'android';
-  if (value.includes('iphone') || value.includes('ipad')) return 'ios';
-  if (value.includes('windows')) return 'windows';
-  if (value.includes('macintosh') || value.includes('mac os')) return 'macos';
-  if (value.includes('linux')) return 'linux';
-  return 'other';
+  const [name] = detectOS(userAgent);
+  switch (name) {
+    case 'Android':
+      return 'android';
+    case 'iOS':
+    case 'watchOS':
+      return 'ios';
+    case 'Windows':
+    case 'Windows Mobile':
+    case 'Windows Phone':
+      return 'windows';
+    case 'Mac OS X':
+      return 'macos';
+    case 'Chrome OS':
+    case 'Linux':
+      return 'linux';
+    default:
+      return 'other';
+  }
 }
 
 export function classifyFormFactor(
@@ -51,13 +65,11 @@ export function classifyFormFactor(
   touchCapable: boolean,
   shortestSide: number,
 ): DeviceFormFactor {
-  const value = userAgent.toLowerCase();
-  if (value.includes('ipad') || (touchCapable && shortestSide >= 600 && shortestSide < 1_100)) {
-    return 'tablet';
-  }
-  if (value.includes('mobile') || value.includes('iphone') || value.includes('android')) {
-    return 'mobile';
-  }
+  const detected = detectDeviceType(userAgent);
+  if (detected === 'Tablet') return 'tablet';
+  if (detected === 'Mobile' || detected === 'Wearable') return 'mobile';
+  if (detected === 'Console') return 'other';
+  if (touchCapable && shortestSide >= 600 && shortestSide < 1_100) return 'tablet';
   return shortestSide >= 600 ? 'desktop' : 'other';
 }
 

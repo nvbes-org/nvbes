@@ -15,7 +15,8 @@ use super::{
 pub async fn verify_private_key_jwt(
     db: &sqlx::PgPool,
     auth: &ClientAuthentication,
-    expected_audience: &str,
+    endpoint_audience: &str,
+    issuer_audience: &str,
 ) -> Result<bool, AppError> {
     let Some(assertion) = auth.client_assertion.as_ref() else {
         return Ok(false);
@@ -32,7 +33,7 @@ pub async fn verify_private_key_jwt(
         r#"
         SELECT
             tenant_id,
-            client_assertion_public_key_jwk,
+            security_profile::text AS security_profile,
             revoked_at
         FROM oauth_clients
         WHERE client_id = $1
@@ -56,23 +57,29 @@ pub async fn verify_private_key_jwt(
         ));
     }
 
-    let tenant_id: Uuid = client.get("tenant_id");
-    let jwk_value: Option<serde_json::Value> = client.get("client_assertion_public_key_jwk");
-    let jwk_value = jwk_value.ok_or_else(|| {
-        AppError::unauthorized(
-            "invalid_client",
-            "This OAuth client is not configured for private_key_jwt.",
-        )
+    let header = decode_header(&assertion.assertion).map_err(|_| {
+        AppError::unauthorized("invalid_client", "The client_assertion is invalid.")
     })?;
-    let jwk: ClientAssertionJwk = serde_json::from_value(jwk_value).map_err(|_| {
+    let tenant_id: Uuid = client.get("tenant_id");
+    let high_assurance = client.get::<String, _>("security_profile") == "high_assurance";
+    let expected_audience = if high_assurance {
+        issuer_audience
+    } else {
+        endpoint_audience
+    };
+    let jwks = crate::domains::oauth::clients::keys::active_jwks(
+        db,
+        tenant_id,
+        &auth.client_id,
+        crate::domains::oauth::clients::keys::OAuthClientKeyPurpose::ClientAuthentication,
+    )
+    .await?;
+    let jwk_value = select_assertion_jwk(&jwks, header.kid.as_deref(), high_assurance)?;
+    let jwk: ClientAssertionJwk = serde_json::from_value(jwk_value.clone()).map_err(|_| {
         AppError::unauthorized(
             "invalid_client",
             "The OAuth client assertion key is invalid.",
         )
-    })?;
-
-    let header = decode_header(&assertion.assertion).map_err(|_| {
-        AppError::unauthorized("invalid_client", "The client_assertion is invalid.")
     })?;
     let algorithm = supported_algorithm(header.alg)?;
     validate_jwk_header_consistency(&jwk, header.kid.as_deref(), algorithm)?;
@@ -94,6 +101,12 @@ pub async fn verify_private_key_jwt(
     .map_err(|_| AppError::unauthorized("invalid_client", "The client_assertion is invalid."))?
     .claims;
 
+    if high_assurance && claims.aud.as_str() != Some(issuer_audience) {
+        return Err(AppError::unauthorized(
+            "invalid_client",
+            "High-assurance client_assertion aud must be the issuer as a JSON string.",
+        ));
+    }
     validate_claims(&claims, &auth.client_id)?;
     record_assertion_jti(
         db,
@@ -105,4 +118,34 @@ pub async fn verify_private_key_jwt(
     .await?;
 
     Ok(true)
+}
+
+fn select_assertion_jwk<'a>(
+    jwks: &'a serde_json::Value,
+    header_kid: Option<&str>,
+    high_assurance: bool,
+) -> Result<&'a serde_json::Value, AppError> {
+    let keys = jwks
+        .get("keys")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| invalid_client_key("The registered client JWKS is invalid."))?;
+    if high_assurance && header_kid.is_none_or(str::is_empty) {
+        return Err(invalid_client_key(
+            "High-assurance client assertions require a kid.",
+        ));
+    }
+    match header_kid {
+        Some(kid) => keys
+            .iter()
+            .find(|jwk| jwk.get("kid").and_then(serde_json::Value::as_str) == Some(kid))
+            .ok_or_else(|| invalid_client_key("The client_assertion kid is not active.")),
+        None if keys.len() == 1 => Ok(&keys[0]),
+        None => Err(invalid_client_key(
+            "The client_assertion kid is required when multiple keys are active.",
+        )),
+    }
+}
+
+fn invalid_client_key(message: &'static str) -> AppError {
+    AppError::unauthorized("invalid_client", message)
 }

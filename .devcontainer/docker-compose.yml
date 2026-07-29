@@ -35,6 +35,7 @@ services:
       STORAGE_ENABLED: "true"
       STORAGE_BUCKET: nvbes
       STORAGE_ENDPOINT: http://seaweedfs:8333
+      STORAGE_PUBLIC_ENDPOINT: http://localhost:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}
       STORAGE_REGION: eu-west-1
       STORAGE_ACCESS_KEY: nvbes
       STORAGE_SECRET_KEY: nvbes-dev-secret
@@ -139,7 +140,14 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:3.80
     container_name: nvbes-devcontainer-seaweedfs
-    command: ["server", "-dir=/data", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
+    command:
+      [
+        "server",
+        "-dir=/data",
+        "-s3",
+        "-s3.config=/etc/seaweedfs/s3.json",
+        "-s3.allowedOrigins=http://localhost:3001,http://127.0.0.1:3001,http://localhost:5173,http://127.0.0.1:5173",
+      ]
     ports:
       - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}:8333"
       - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_MASTER_PORT:-19333}:9333"

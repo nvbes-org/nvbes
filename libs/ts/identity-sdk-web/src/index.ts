@@ -12,16 +12,16 @@ import {
   confirmTotp,
   finishWebAuthnRegistration,
   generateRecoveryCodes,
-  listEmailMfaEligible,
   listMfaFactors,
   MfaError,
   registerWebAuthnCredential,
+  requestEmailStepUpCode,
   removeMfaFactor,
-  setupEmailMfa,
   setupTotp,
   startWebAuthnAuthentication,
   startWebAuthnRegistration,
   stepUp,
+  type StepUpPurpose,
 } from './mfa';
 import { generateCodeChallenge, generateCodeVerifier, type PKCEChallenge } from './pkce';
 import { memoryStorage, type WebStorage } from './storage';
@@ -214,27 +214,6 @@ export class NvbesIdentityWeb {
     return confirmTotp(this.config.baseUrl, factorId, code, token);
   }
 
-  async listEmailMfaEligible(token?: string): Promise<{
-    emails: Array<{
-      id: string;
-      email: string;
-      is_primary: boolean;
-      verified: boolean;
-      verified_at: string | null;
-      created_at: string;
-    }>;
-    primary_min_age_hours: number;
-  }> {
-    return listEmailMfaEligible(this.config.baseUrl, token);
-  }
-
-  async setupEmailMfa(
-    emailId: string,
-    token?: string,
-  ): Promise<{ factor: MfaFactorView; mfa_enabled: boolean }> {
-    return setupEmailMfa(this.config.baseUrl, emailId, token);
-  }
-
   /**
    * Démarre l'enregistrement WebAuthn.
    */
@@ -331,6 +310,26 @@ export type {
   DeviceProfile,
   ScreenBucket,
 } from './device-profile';
+export {
+  detectBrowser,
+  detectBrowserVersion,
+  detectDevice,
+  detectDeviceType,
+  detectOS,
+  parseUserAgent,
+} from './user-agent';
+export type {
+  BrowserDetectionOptions,
+  BrowserHints,
+  BrowserName,
+  DeviceName,
+  DeviceTypeOptions,
+  OperatingSystem,
+  OperatingSystemName,
+  UserAgentDetectionOptions,
+  UserAgentDeviceType,
+  UserAgentInfo,
+} from './user-agent';
 export type { DecoyField, DecoyLinkTracker } from './bot-guard.decoy';
 export { createDecoyField, createDecoyLinks, mountDecoyField } from './bot-guard.decoy';
 export type {
@@ -381,7 +380,7 @@ export type {
   WebauthnSupportReport,
   WebauthnUnsupportedReason,
 } from './webauthn';
-export type { PKCEChallenge, WebStorage };
+export type { PKCEChallenge, StepUpPurpose, WebStorage };
 export {
   completeWebAuthnStepUp,
   confirmTotp,
@@ -394,7 +393,6 @@ export {
   getWebAuthnCredential,
   getWebAuthnSupport,
   isConditionalMediationSupported,
-  listEmailMfaEligible,
   listMfaFactors,
   MfaError,
   normalizeWebAuthnError,
@@ -403,8 +401,8 @@ export {
   readScopedCsrfToken,
   registerWebAuthnCredential,
   removeMfaFactor,
+  requestEmailStepUpCode,
   serializeCredential,
-  setupEmailMfa,
   setupTotp,
   startWebAuthnAuthentication,
   startWebAuthnRegistration,

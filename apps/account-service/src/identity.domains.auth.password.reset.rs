@@ -3,7 +3,7 @@ use nvbes_core::config::AppConfig;
 use sqlx::PgPool;
 
 use super::db;
-use super::hash_password;
+use super::hash_password_with_pepper;
 use super::history;
 use super::token_hash;
 use super::validate_password;
@@ -41,6 +41,7 @@ pub async fn reset(
         principal_id,
         &input.new_password,
         config.auth_password_history_size,
+        config.auth_password_pepper.as_deref(),
     )
     .await?
     {
@@ -50,22 +51,39 @@ pub async fn reset(
         ));
     }
 
-    let new_hash = hash_password(&input.new_password)?;
+    let new_hash =
+        hash_password_with_pepper(&input.new_password, config.auth_password_pepper.as_deref())?;
+    let (consumed_principal_id, consumed_expires_at, consumed_at) =
+        db::reset::take_token_for_reset(redis, &token_hash)
+            .await?
+            .ok_or_else(reset_token_expired)?;
+    if consumed_principal_id != principal_id {
+        return Err(AppError::internal(
+            "password_reset_token_subject_mismatch",
+            "Password reset token ownership changed while it was being consumed.",
+        ));
+    }
+    if consumed_at.is_some() || consumed_expires_at <= Utc::now() {
+        return Err(reset_token_expired());
+    }
+
     let mut tx = db.begin().await?;
-    db::reset::apply_password_reset(&mut tx, principal_id, &token_hash, &new_hash).await?;
+    db::reset::apply_password_reset(&mut tx, principal_id, &new_hash).await?;
+    super::review::mark_consumed_tx(&mut tx, principal_id, &token_hash).await?;
     crate::domains::auth::sessions_mgmt::revoke_all_user_sessions_tx(&mut tx, principal_id).await?;
     crate::domains::auth::device_trust::revoke_all_devices_tx(&mut tx, principal_id).await?;
     tx.commit().await?;
 
+    crate::domains::oauth::security_events::enqueue_all_sessions_revoked(
+        db,
+        redis,
+        principal_id,
+        None,
+    )
+    .await?;
     nvbes_redis::session::clear_user_sessions(redis, &principal_id.to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
-    nvbes_redis::password_reset::mark_password_reset_token_consumed(redis, &token_hash)
-        .await
-        .map_err(|err| {
-            AppError::internal("password_reset_token_consume_failed", err.to_string())
-        })?;
-
     history::insert_password_hash(db, principal_id, &new_hash).await?;
     history::prune_history(db, principal_id, config.auth_password_history_size).await?;
 
@@ -101,6 +119,27 @@ pub async fn reset(
     nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, principal_id)
         .await
         .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    if let Err(error) = crate::domains::auth::email_addresses::notify_account_recovered(
+        db,
+        redis,
+        principal_id,
+        &token_hash,
+    )
+    .await
+    {
+        tracing::error!(
+            principal_id = %principal_id,
+            error = ?error,
+            "failed to enqueue account recovery security notification"
+        );
+    }
 
     Ok(ResetPasswordResult { success: true })
+}
+
+fn reset_token_expired() -> AppError {
+    AppError::forbidden(
+        "reset_token_expired",
+        "Reset token is expired or already used.",
+    )
 }

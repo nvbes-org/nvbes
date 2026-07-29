@@ -2,7 +2,6 @@ use crate::app::AppState;
 use crate::domains::auth::{
     audit::{AuthAuditInput, record_auth_event},
     exposed_credentials::{self, ExposedCredentialCheck},
-    mfa,
     risk::{self, RiskDecision, RiskEventInput},
     sessions,
     state::{create_state, delete_state, fetch_state},
@@ -67,6 +66,15 @@ pub(crate) async fn challenge_pwd(
     let mut verified =
         sessions::verify_primary_credentials(&state.db, &state.redis, &state.config, &login_input)
             .await?;
+    if auth_state
+        .principal_id
+        .is_some_and(|principal_id| principal_id != verified.principal_id)
+    {
+        return Err(AppError::unauthorized(
+            "invalid_credentials",
+            "Invalid email or password.",
+        ));
+    }
     verified.risk_score += crate::domains::auth::device_trust::pre_auth_risk_score(
         &state.db,
         verified.principal_id,
@@ -83,12 +91,17 @@ pub(crate) async fn challenge_pwd(
         return Err(exposed_credentials::login_rejected_error());
     }
 
-    if let Some(available_methods) = super::identifier_flow::resolve_post_password_challenge(
-        &state.db,
-        verified.principal_id,
-        verified.risk_score,
-    )
-    .await?
+    let webauthn_already_verified = auth_state
+        .completed_methods
+        .iter()
+        .any(|method| method == "webauthn");
+    if !webauthn_already_verified
+        && let Some(available_methods) = super::identifier_flow::resolve_post_password_challenge(
+            &state.db,
+            verified.principal_id,
+            verified.risk_score,
+        )
+        .await?
     {
         let mfa_state_token = create_state(
             &state.redis,
@@ -96,18 +109,9 @@ pub(crate) async fn challenge_pwd(
             &auth_state.email,
             "mfa",
             auth_state.device_fingerprint,
+            vec!["pwd".to_string()],
         )
         .await?;
-
-        if available_methods.iter().any(|method| method == "email") {
-            mfa::email::send_login_code(
-                &state.db,
-                &state.redis,
-                mfa_state_token,
-                verified.principal_id,
-            )
-            .await?;
-        }
 
         let response = (
             StatusCode::ACCEPTED,
@@ -123,6 +127,7 @@ pub(crate) async fn challenge_pwd(
         return Ok(response);
     }
 
+    let (amr, acr) = password_session_assurance(auth_state.completed_methods);
     let result = sessions::create_session_for_principal(
         &state.db,
         &state.redis,
@@ -132,8 +137,8 @@ pub(crate) async fn challenge_pwd(
             verified.email,
             &meta,
             auth_state.device_fingerprint,
-            vec!["pwd".to_string()],
-            "aal1",
+            amr,
+            acr,
         ),
     )
     .await?;
@@ -141,17 +146,30 @@ pub(crate) async fn challenge_pwd(
     let secure_cookie = state.config.environment != "development";
     let authuser = query.authuser()?;
     let session_expires_in = (state.config.auth_session_ttl_hours * 60 * 60).max(0);
+    let registration_enrollment_expires_in =
+        (state.config.auth_verification_ttl_hours * 60 * 60).max(0);
     let response = super::login_response(
         result,
         authuser,
         secure_cookie,
         session_expires_in,
+        registration_enrollment_expires_in,
         &state.config.jwt_secret,
         &state.product_analytics,
         &headers,
     )?;
     delete_state(&state.redis, request.state_token).await?;
     Ok(response)
+}
+
+fn password_session_assurance(mut completed_methods: Vec<String>) -> (Vec<String>, &'static str) {
+    let acr = if completed_methods.iter().any(|method| method == "webauthn") {
+        "aal2"
+    } else {
+        "aal1"
+    };
+    completed_methods.push("pwd".to_string());
+    (completed_methods, acr)
 }
 
 async fn record_exposed_login_password(
@@ -199,4 +217,17 @@ async fn record_exposed_login_password(
         },
     )
     .await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::password_session_assurance;
+
+    #[test]
+    fn password_after_webauthn_keeps_aal2_assurance() {
+        let (amr, acr) = password_session_assurance(vec!["webauthn".to_string()]);
+
+        assert_eq!(amr, vec!["webauthn".to_string(), "pwd".to_string()]);
+        assert_eq!(acr, "aal2");
+    }
 }

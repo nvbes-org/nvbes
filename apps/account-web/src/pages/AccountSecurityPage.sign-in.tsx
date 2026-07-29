@@ -24,13 +24,12 @@ export function SecuritySignInOptionsCard({
             <div className="flex min-w-0 flex-col">
               <span className="text-sm font-medium">Passer le mot de passe si possible</span>
               <span className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                Permet de se connecter directement avec la biométrie ou une cle de securite sans
-                saisir de mot de passe.
+                Permet de se connecter directement avec une passkey sans saisir de mot de passe.
               </span>
-              {!overview.has_webauthn ? (
+              {!overview.has_passkey ? (
                 <span className="mt-1 text-xs font-medium text-amber-500">
-                  Ajoutez d&apos;abord la biométrie ou une cle de securite dans la double
-                  authentification pour activer cette option.
+                  Ajoutez d&apos;abord une passkey dans la double authentification pour activer
+                  cette option.
                 </span>
               ) : null}
             </div>
@@ -39,7 +38,7 @@ export function SecuritySignInOptionsCard({
             <Switch
               id="skip-password-toggle"
               aria-label="Passer le mot de passe si possible"
-              disabled={!overview.has_webauthn || pending}
+              disabled={!overview.has_passkey || pending}
               checked={overview.skip_password}
               onCheckedChange={onSkipPasswordChange}
             />

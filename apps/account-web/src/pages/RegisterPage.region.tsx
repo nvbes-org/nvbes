@@ -1,14 +1,19 @@
-import { Label } from '@/components/ui/label';
+import { ChevronsUpDown } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import type { SupportedRegion } from '../identity.auth.api';
+import { filterRegionSearchValue, regionSearchValue } from './RegisterPage.region.search';
 
 function countryCodeToFlag(code: string): string {
   const chars = code.toUpperCase().split('');
@@ -24,6 +29,7 @@ function countryCodeToFlag(code: string): string {
 
 export function RegionSelect({
   detectedRegion,
+  error,
   id = 'register-region',
   loading,
   regions,
@@ -31,6 +37,7 @@ export function RegionSelect({
   onValueChange,
 }: {
   detectedRegion: string | null;
+  error?: string;
   id?: string;
   reliability: 'high' | 'medium' | 'low' | 'none';
   loading: boolean;
@@ -38,7 +45,9 @@ export function RegionSelect({
   value: string;
   onValueChange: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const selectValue = regionSelectValue(value, regions);
+  const selectedRegion = regions.find((entry) => entry.country_code === selectValue);
 
   return (
     <div className="flex flex-col gap-2">
@@ -53,28 +62,48 @@ export function RegionSelect({
           </span>
         )}
       </div>
-      <Select value={selectValue} onValueChange={onValueChange}>
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue placeholder="Sélectionnez votre pays..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {regions.map((entry) => (
-              <SelectItem key={entry.country_code} value={entry.country_code}>
-                <span className="flex items-center gap-2">
-                  <span className="text-base leading-none">
-                    {countryCodeToFlag(entry.country_code)}
-                  </span>
-                  <span>{entry.display_name ?? entry.country_code}</span>
-                  {entry.sub_region && (
-                    <span className="text-xs text-muted-foreground">({entry.sub_region})</span>
-                  )}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            aria-busy={loading}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${id}-error` : undefined}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate">
+              {selectedRegion ? regionOptionLabel(selectedRegion) : 'Sélectionnez votre pays...'}
+            </span>
+            <ChevronsUpDown className="opacity-50" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
+          <Command filter={filterRegionSearchValue}>
+            <CommandInput placeholder="Rechercher un pays..." />
+            <CommandList className="mt-1">
+              <CommandEmpty>Aucun pays trouvé.</CommandEmpty>
+              {regions.map((entry) => (
+                <CommandItem
+                  key={entry.country_code}
+                  value={regionSearchValue(entry)}
+                  data-checked={entry.country_code === selectValue}
+                  onSelect={() => {
+                    onValueChange(entry.country_code);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate">{regionOptionLabel(entry)}</span>
+                </CommandItem>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <FieldError id={`${id}-error`}>{error}</FieldError>
       {!detectedRegion && (
         <p className="text-xs text-muted-foreground">
           Sélectionnez le pays où vos données seront stockées.
@@ -86,4 +115,11 @@ export function RegionSelect({
 
 function regionSelectValue(value: string, regions: SupportedRegion[]): string {
   return regions.some((entry) => entry.country_code === value) ? value : '';
+}
+
+function regionOptionLabel(region: SupportedRegion): string {
+  const flag = countryCodeToFlag(region.country_code);
+  const name = region.display_name ?? region.country_code;
+  const subRegion = region.sub_region ? ` (${region.sub_region})` : '';
+  return `${flag ? `${flag} ` : ''}${name}${subRegion}`;
 }

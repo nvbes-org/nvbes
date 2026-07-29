@@ -12,6 +12,7 @@ import {
   StepUpMethodSelect,
 } from './StepUpForm.shared';
 import { useStepUpForm } from './useStepUpForm';
+import type { StepUpPurpose } from '@nvbes/identity-sdk-web';
 
 export interface StepUpModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ export interface StepUpModalProps {
   onSuccess: () => void;
   onCancel: () => void;
   description?: string;
+  purpose?: StepUpPurpose;
 }
 
 export function StepUpModal({
@@ -27,9 +29,14 @@ export function StepUpModal({
   onSuccess,
   onCancel,
   description,
+  purpose,
 }: StepUpModalProps) {
   const {
     error,
+    allowEmail,
+    canUsePassword,
+    emailCode,
+    emailCodeSent,
     handleSubmit,
     handleWebAuthnClick,
     hasRecovery,
@@ -38,14 +45,17 @@ export function StepUpModal({
     loading,
     method,
     password,
+    prerequisitesLoaded,
     recoveryCode,
+    sendEmailCode,
+    setEmailCode,
     setMethod,
     setPassword,
     setRecoveryCode,
     setTotpCode,
     totpCode,
     webauthnStatus,
-  } = useStepUpForm({ open, onSuccess });
+  } = useStepUpForm({ open, onSuccess, purpose });
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -64,29 +74,41 @@ export function StepUpModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <StepUpMethodSelect
-            method={method}
-            hasWebAuthn={hasWebAuthn}
-            hasTotp={hasTotp}
-            hasRecovery={hasRecovery}
-            onMethodChange={setMethod}
-          />
-          <StepUpMethodFields
-            method={method}
-            webauthnStatus={webauthnStatus}
-            password={password}
-            totpCode={totpCode}
-            recoveryCode={recoveryCode}
-            loading={loading}
-            onPasswordChange={setPassword}
-            onTotpCodeChange={setTotpCode}
-            onRecoveryCodeChange={setRecoveryCode}
-            onWebAuthnClick={handleWebAuthnClick}
-          />
-          {error && method !== 'webauthn' && <StepUpError error={error} />}
-          <StepUpActions method={method} loading={loading} onCancel={onCancel} />
-        </form>
+        {!prerequisitesLoaded ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Chargement des méthodes de vérification...
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <StepUpMethodSelect
+              method={method}
+              hasWebAuthn={hasWebAuthn}
+              hasTotp={hasTotp}
+              hasRecovery={hasRecovery}
+              canUsePassword={canUsePassword}
+              allowEmail={allowEmail}
+              onMethodChange={setMethod}
+            />
+            <StepUpMethodFields
+              method={method}
+              webauthnStatus={webauthnStatus}
+              password={password}
+              totpCode={totpCode}
+              recoveryCode={recoveryCode}
+              emailCode={emailCode}
+              emailCodeSent={emailCodeSent}
+              loading={loading}
+              onPasswordChange={setPassword}
+              onTotpCodeChange={setTotpCode}
+              onRecoveryCodeChange={setRecoveryCode}
+              onEmailCodeChange={setEmailCode}
+              onSendEmailCode={sendEmailCode}
+              onWebAuthnClick={handleWebAuthnClick}
+            />
+            {error && method !== 'webauthn' && <StepUpError error={error} />}
+            <StepUpActions method={method} loading={loading} onCancel={onCancel} />
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

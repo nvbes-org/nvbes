@@ -59,13 +59,21 @@ pub async fn find_token_for_reset(
         .map(|token| token.map(|token| (token.principal_id, token.expires_at, token.consumed_at)))
 }
 
+pub async fn take_token_for_reset(
+    redis: &nvbes_redis::RedisPool,
+    token_hash: &str,
+) -> Result<Option<(Uuid, DateTime<Utc>, Option<DateTime<Utc>>)>, AppError> {
+    nvbes_redis::password_reset::take_password_reset_token(redis, token_hash)
+        .await
+        .map_err(|err| AppError::internal("password_reset_token_consume_failed", err.to_string()))
+        .map(|token| token.map(|token| (token.principal_id, token.expires_at, token.consumed_at)))
+}
+
 pub async fn apply_password_reset(
     tx: &mut Transaction<'_, Postgres>,
     principal_id: Uuid,
-    token_hash: &str,
     password_hash: &str,
 ) -> Result<(), AppError> {
-    let _ = token_hash;
     sqlx::query("UPDATE users SET password_hash = $2, password_last_changed_at = NOW(), updated_at = NOW() WHERE principal_id = $1")
         .bind(principal_id)
         .bind(password_hash)

@@ -52,7 +52,7 @@ pub async fn request_account_export(
     )
     .await?;
 
-    verification::require_recent_step_up(redis, auth, None).await?;
+    verification::require_recent_phishing_resistant_step_up(redis, auth).await?;
 
     let display_name = auth.display_name.as_str();
     let html_body = format!(

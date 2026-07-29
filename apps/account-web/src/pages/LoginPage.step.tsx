@@ -17,25 +17,20 @@ export function LoginPageStepContent({
   handlePasswordSubmit,
   handleUseAnotherAccount,
   hasRecovery,
-  hasEmail,
   hasTotp,
   hasWebAuthn,
   hostedConsent,
   identifierSubmitting,
   loading,
-  loginStateToken,
   mfaMethod,
   oauthRequest,
   password,
-  emailCode,
   recoveryCode,
   resetToIdentifier,
-  resendLoginMfaEmailCode,
   setEmail,
   setError,
   setMfaMethod,
   setPassword,
-  setEmailCode,
   setRecoveryCode,
   setTotpCode,
   step,
@@ -72,21 +67,16 @@ export function LoginPageStepContent({
       handleConsentCancel={handleConsentCancel}
       handleMfaSubmit={handleMfaSubmit}
       hasRecovery={hasRecovery}
-      hasEmail={hasEmail}
       hasTotp={hasTotp}
       hasWebAuthn={hasWebAuthn}
       hostedConsent={hostedConsent}
       loading={loading}
-      loginStateToken={loginStateToken}
       mfaMethod={mfaMethod}
       oauthRequest={oauthRequest}
-      emailCode={emailCode}
       recoveryCode={recoveryCode}
       resetToIdentifier={resetToIdentifier}
-      resendLoginMfaEmailCode={resendLoginMfaEmailCode}
       setError={setError}
       setMfaMethod={setMfaMethod}
-      setEmailCode={setEmailCode}
       setRecoveryCode={setRecoveryCode}
       setTotpCode={setTotpCode}
       step={step}

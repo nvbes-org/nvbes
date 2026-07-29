@@ -10,10 +10,14 @@ export function StepUpMethodFields({
   password,
   totpCode,
   recoveryCode,
+  emailCode,
+  emailCodeSent,
   loading,
   onPasswordChange,
   onTotpCodeChange,
   onRecoveryCodeChange,
+  onEmailCodeChange,
+  onSendEmailCode,
   onWebAuthnClick,
 }: {
   method: StepUpMethod;
@@ -21,10 +25,14 @@ export function StepUpMethodFields({
   password: string;
   totpCode: string;
   recoveryCode: string;
+  emailCode: string;
+  emailCodeSent: boolean;
   loading: boolean;
   onPasswordChange: (value: string) => void;
   onTotpCodeChange: (value: string) => void;
   onRecoveryCodeChange: (value: string) => void;
+  onEmailCodeChange: (value: string) => void;
+  onSendEmailCode: () => void;
   onWebAuthnClick: () => void;
 }) {
   if (method === 'password') {
@@ -35,10 +43,13 @@ export function StepUpMethodFields({
         </Label>
         <Input
           id="stepup-password"
+          name="password"
           type="password"
+          autoComplete="current-password"
           placeholder="Saisissez votre mot de passe"
           value={password}
           onChange={(event) => onPasswordChange(event.target.value)}
+          spellCheck={false}
           className="text-xs"
           required
           autoFocus
@@ -85,6 +96,45 @@ export function StepUpMethodFields({
           required
           autoFocus
         />
+      </div>
+    );
+  }
+
+  if (method === 'email') {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Le code est valable uniquement pour ce changement de mot de passe.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full text-xs"
+          disabled={loading}
+          onClick={onSendEmailCode}
+        >
+          {emailCodeSent ? 'Renvoyer le code' : 'Envoyer un code'}
+        </Button>
+        {emailCodeSent && (
+          <div className="space-y-2">
+            <Label htmlFor="stepup-email-code" className="text-xs">
+              Code reçu par email
+            </Label>
+            <Input
+              id="stepup-email-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              value={emailCode}
+              onChange={(event) => onEmailCodeChange(event.target.value)}
+              className="font-mono text-center text-xs tracking-widest"
+              required
+              autoFocus
+            />
+          </div>
+        )}
       </div>
     );
   }

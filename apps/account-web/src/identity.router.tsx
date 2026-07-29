@@ -40,7 +40,10 @@ const routeTree = rootRoute.addChildren([
   accountRoute.addChildren(accountRoutes),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

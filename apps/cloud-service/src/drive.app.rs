@@ -64,6 +64,7 @@ pub async fn build_app_state(config: AppConfig, db: Database) -> anyhow::Result<
     if config.environment != "development" && config.scan_fail_open {
         panic!("SCAN_FAIL_OPEN is forbidden outside development.");
     }
+    ensure_separate_untrusted_content_origin(&config)?;
 
     let storage = build_storage(&config).await;
     let scanner = build_scanner(&config);
@@ -92,6 +93,28 @@ pub async fn build_app_state(config: AppConfig, db: Database) -> anyhow::Result<
     );
 
     Ok(state)
+}
+
+fn ensure_separate_untrusted_content_origin(config: &AppConfig) -> anyhow::Result<()> {
+    if config.environment == "development" {
+        return Ok(());
+    }
+
+    let Some(storage_endpoint) = config
+        .storage_public_endpoint
+        .as_deref()
+        .or(config.storage_endpoint.as_deref())
+    else {
+        return Ok(());
+    };
+    let web_origin = reqwest::Url::parse(&config.web_base_url)?.origin();
+    let storage_origin = reqwest::Url::parse(storage_endpoint)?.origin();
+    if web_origin == storage_origin {
+        anyhow::bail!(
+            "STORAGE_PUBLIC_ENDPOINT must use an origin distinct from NVBES_WEB_BASE_URL outside development"
+        );
+    }
+    Ok(())
 }
 
 pub fn build_router(state: AppState) -> Router {
@@ -173,4 +196,47 @@ fn build_product_analytics(
         analytics_config,
         std::sync::Arc::new(sink),
     )?)
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::ensure_separate_untrusted_content_origin;
+    use nvbes_core::config::AppConfig;
+
+    #[test]
+    fn production_rejects_storage_on_the_web_origin() {
+        let config = AppConfig {
+            environment: "production".to_owned(),
+            web_base_url: "https://cloud.nvbes.fr".to_owned(),
+            storage_endpoint: Some("https://cloud.nvbes.fr/s3".to_owned()),
+            ..AppConfig::default()
+        };
+
+        assert!(ensure_separate_untrusted_content_origin(&config).is_err());
+    }
+
+    #[test]
+    fn production_accepts_a_dedicated_content_origin() {
+        let config = AppConfig {
+            environment: "production".to_owned(),
+            web_base_url: "https://cloud.nvbes.fr".to_owned(),
+            storage_endpoint: Some("https://content.nvbes.fr".to_owned()),
+            ..AppConfig::default()
+        };
+
+        assert!(ensure_separate_untrusted_content_origin(&config).is_ok());
+    }
+
+    #[test]
+    fn production_validates_the_public_storage_origin() {
+        let config = AppConfig {
+            environment: "production".to_owned(),
+            web_base_url: "https://cloud.nvbes.fr".to_owned(),
+            storage_endpoint: Some("http://storage.internal".to_owned()),
+            storage_public_endpoint: Some("https://cloud.nvbes.fr/s3".to_owned()),
+            ..AppConfig::default()
+        };
+
+        assert!(ensure_separate_untrusted_content_origin(&config).is_err());
+    }
 }

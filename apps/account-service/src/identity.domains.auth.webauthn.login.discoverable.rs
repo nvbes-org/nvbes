@@ -99,7 +99,7 @@ pub async fn finish_discoverable_login_authentication(
         )
         .map_err(map_webauthn_authentication_error)?;
 
-    record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
+    let signals = record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
 
     let email = fetch_user_email(db, principal_id).await?;
 
@@ -112,6 +112,10 @@ pub async fn finish_discoverable_login_authentication(
         json!({
             "cred_id": format!("{:?}", result.cred_id()),
             "challenge_id": challenge_id,
+            "assurance": signals.assurance.as_str(),
+            "backup_eligible": signals.backup_eligible,
+            "backup_state": signals.backup_state,
+            "sign_count": signals.sign_count,
         }),
         "webauthn_discoverable_login_authenticated",
     )

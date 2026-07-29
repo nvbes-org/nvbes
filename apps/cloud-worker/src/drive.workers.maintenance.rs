@@ -247,6 +247,7 @@ pub async fn purge_trash(database: &Database) -> anyhow::Result<JsonValue> {
         r#"
         UPDATE storage_objects
         SET status = 'deleted',
+            retention_until = NOW(),
             updated_at = NOW()
         WHERE status = 'trashed'
           AND trashed_at < NOW() - INTERVAL '30 days'

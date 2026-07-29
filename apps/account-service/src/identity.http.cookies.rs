@@ -4,6 +4,8 @@ use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;
 
+pub const REGISTRATION_ENROLLMENT_COOKIE_BASE: &str = "registration_enrollment";
+
 pub fn auth_cookie(
     name: &str,
     value: &str,
@@ -52,6 +54,25 @@ pub fn auth_cookie_name_with_user(base: &str, authuser: &str, secure: bool) -> S
     } else {
         name
     }
+}
+
+pub fn registration_enrollment_cookie(
+    token: &str,
+    max_age_seconds: i64,
+    secure: bool,
+) -> Result<axum::http::HeaderValue, AppError> {
+    auth_cookie(
+        &auth_cookie_name(REGISTRATION_ENROLLMENT_COOKIE_BASE, secure),
+        token,
+        max_age_seconds,
+        secure,
+    )
+}
+
+pub fn clear_registration_enrollment_cookie(
+    secure: bool,
+) -> Result<axum::http::HeaderValue, AppError> {
+    registration_enrollment_cookie("", 0, secure)
 }
 
 pub fn generate_csrf_token(session_token: &str, secret: &str) -> String {
@@ -111,7 +132,10 @@ fn csrf_mac(session_token: &str, nonce: &str, secret: &str) -> HmacSha256 {
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_csrf_token, verify_csrf_token};
+    use super::{
+        auth_cookie, auth_cookie_name, csrf_cookie, generate_csrf_token,
+        registration_enrollment_cookie, verify_csrf_token,
+    };
 
     #[test]
     fn csrf_token_is_bound_to_session_token() {
@@ -124,5 +148,53 @@ mod tests {
     #[test]
     fn csrf_token_rejects_unsigned_legacy_values() {
         assert!(!verify_csrf_token("plain-random", "session-a", "secret"));
+    }
+
+    #[test]
+    fn registration_enrollment_cookie_is_host_bound_and_http_only() {
+        let cookie = registration_enrollment_cookie("opaque-token", 3600, true)
+            .expect("cookie should be valid")
+            .to_str()
+            .expect("cookie should be text")
+            .to_string();
+
+        assert!(cookie.starts_with("__Host-registration_enrollment=opaque-token;"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(cookie.contains("Secure"));
+        assert!(!cookie.contains("Domain="));
+    }
+
+    #[test]
+    fn production_session_cookies_are_secure_http_only_and_host_only() {
+        let name = auth_cookie_name("session", true);
+        let cookie = auth_cookie(&name, "opaque-token", 3600, true)
+            .expect("cookie should be valid")
+            .to_str()
+            .expect("cookie should be text")
+            .to_string();
+
+        assert!(cookie.starts_with("__Host-session=opaque-token;"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(cookie.contains("Secure"));
+        assert!(cookie.contains("Path=/"));
+        assert!(!cookie.contains("Domain="));
+    }
+
+    #[test]
+    fn csrf_cookie_is_host_only_and_not_http_only_for_double_submit() {
+        let name = auth_cookie_name("csrf_token", true);
+        let cookie = csrf_cookie(&name, "csrf-token", 3600, true)
+            .expect("cookie should be valid")
+            .to_str()
+            .expect("cookie should be text")
+            .to_string();
+
+        assert!(cookie.starts_with("__Host-csrf_token=csrf-token;"));
+        assert!(cookie.contains("SameSite=Strict"));
+        assert!(cookie.contains("Secure"));
+        assert!(!cookie.contains("HttpOnly"));
+        assert!(!cookie.contains("Domain="));
     }
 }

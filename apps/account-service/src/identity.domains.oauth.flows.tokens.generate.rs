@@ -25,20 +25,22 @@ pub async fn generate_tokens(
         .await?
         .data_region;
 
-    let tokens = jwt.generate_token_pair_with_session(
-        user_id,
-        Some(workspace_id),
-        workspace_region,
-        &scope,
-        session_id,
-        tenant_id,
-        organization_id,
-        Some("aal1"),
-        Some(vec!["pwd".to_string()]),
-        None,
-        Some(Utc::now().timestamp()),
-        None,
-    )?;
+    let tokens = jwt
+        .generate_token_pair_with_session(
+            user_id,
+            Some(workspace_id),
+            workspace_region,
+            &scope,
+            session_id,
+            tenant_id,
+            organization_id,
+            Some("aal1"),
+            Some(vec!["pwd".to_string()]),
+            None,
+            Some(Utc::now().timestamp()),
+            None,
+        )
+        .await?;
 
     Ok(TokenView {
         access_token: tokens.access_token,

@@ -56,7 +56,7 @@ where
             tracing::warn!(%error, "account worker queue metrics refresh failed");
         }
         if let Err(error) =
-            run_access_review_schedules_if_due(&mut access_review_schedule_last_run).await
+            run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await
         {
             capture_loop_error(&state, "access_review_schedules", error.as_ref());
             return Err(error);
@@ -111,7 +111,10 @@ async fn run_access_review_reminders_if_due(
     if last_run.elapsed() < ACCESS_REVIEW_REMINDER_INTERVAL {
         return Ok(());
     }
-    let Some(claim) = super::enterprise_grpc::claim_access_review_reminder_candidates().await?
+    let Some(claim) = super::enterprise_grpc::claim_access_review_reminder_candidates(
+        state.enterprise_grpc.as_ref(),
+    )
+    .await?
     else {
         *last_run = Instant::now();
         return Ok(());
@@ -176,11 +179,18 @@ fn reminder_email_payload(
     }
 }
 
-async fn run_access_review_schedules_if_due(last_run: &mut Instant) -> anyhow::Result<()> {
+async fn run_access_review_schedules_if_due(
+    state: &AppState,
+    last_run: &mut Instant,
+) -> anyhow::Result<()> {
     if last_run.elapsed() < ACCESS_REVIEW_SCHEDULE_INTERVAL {
         return Ok(());
     }
-    let Some(run) = super::enterprise_grpc::materialize_due_access_review_schedules().await? else {
+    let Some(run) = super::enterprise_grpc::materialize_due_access_review_schedules(
+        state.enterprise_grpc.as_ref(),
+    )
+    .await?
+    else {
         *last_run = Instant::now();
         return Ok(());
     };

@@ -23,7 +23,7 @@ export function SecurityMfaCard({
         <SecurityActionRow
           icon={overview.mfa_enabled ? ShieldCheck : ShieldOff}
           iconColor={overview.mfa_enabled ? 'size-4 text-primary' : 'size-4 text-muted-foreground'}
-          label="Double authentification (MFA)"
+          label="Passkeys et authentification multifacteur"
           description={overview.mfa_enabled ? 'Configurer et activee' : 'Non configuree'}
           badgeLabel={overview.mfa_enabled ? 'Active' : 'Inactive'}
           badgeVariant={overview.mfa_enabled ? 'default' : 'secondary'}

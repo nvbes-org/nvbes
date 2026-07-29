@@ -18,7 +18,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     let _error_reporting_guard = init_error_reporting_for_service(&config, "developer-service");
     install_safe_panic_hook();
     init_tracing(&config);

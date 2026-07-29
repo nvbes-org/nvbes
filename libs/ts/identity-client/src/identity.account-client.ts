@@ -5,6 +5,7 @@ import {
   type AccountMe,
   AccountMeSchema,
   type AccountSession,
+  AccountSessionSchema,
   AccountsResponseSchema,
   type AccountWorkspace,
   type AddSecondaryEmailResponse,
@@ -143,6 +144,10 @@ export class AccountIdentityClient {
     return this.http.delete(`/auth/sessions/${sessionId}`, SuccessSchema).then(() => undefined);
   }
 
+  confirmHighRiskSession(sessionId: string): Promise<AccountSession> {
+    return this.http.post(`/auth/sessions/${sessionId}/confirm`, AccountSessionSchema, {});
+  }
+
   forgetAccount(authuser: string): Promise<void> {
     return this.http
       .delete(`/auth/accounts/${encodeURIComponent(authuser)}`, SuccessSchema)
@@ -151,6 +156,10 @@ export class AccountIdentityClient {
 
   revokeOtherSessions(): Promise<void> {
     return this.http.post('/auth/sessions/revoke-others', SuccessSchema, {}).then(() => undefined);
+  }
+
+  revokeAllSessions(): Promise<void> {
+    return this.http.post('/auth/sessions/revoke-all', SuccessSchema, {}).then(() => undefined);
   }
 
   trustDevice(deviceId: string): Promise<DeviceTrustResult> {

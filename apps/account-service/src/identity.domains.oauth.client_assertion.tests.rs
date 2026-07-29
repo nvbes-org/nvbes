@@ -6,6 +6,7 @@ use jsonwebtoken::Algorithm;
 fn algorithm_policy_accepts_private_key_jwt_algorithms_only() {
     assert!(supported_algorithm(Algorithm::RS256).is_ok());
     assert!(supported_algorithm(Algorithm::ES256).is_ok());
+    assert!(supported_algorithm(Algorithm::EdDSA).is_ok());
     assert!(supported_algorithm(Algorithm::HS256).is_err());
 }
 

@@ -34,21 +34,27 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     let _error_reporting_guard = init_error_reporting(&config);
     install_safe_panic_hook();
     init_tracing(&config);
 
     let command = std::env::args().nth(1);
-    let database = Database::connect(&config).await?;
+    let migration_database = Database::connect(&config).await?;
 
     if matches!(command.as_deref(), Some("migrate")) {
-        run_migrations(&database).await?;
+        run_migrations(&migration_database).await?;
         tracing::info!("database migrations applied");
         return Ok(());
     }
 
-    run_migrations(&database).await?;
+    run_migrations(&migration_database).await?;
+    migration_database.close().await;
+    let database = Database::connect_runtime(&config).await?;
     let _profiling_guard =
         start_continuous_profiling(&config, "cloud-service").map_err(anyhow::Error::msg)?;
 

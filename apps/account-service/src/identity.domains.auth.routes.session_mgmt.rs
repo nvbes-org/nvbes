@@ -121,6 +121,21 @@ pub(crate) async fn revoke_all_other_sessions(
     sessions::revoke_all_other_sessions(State(state), Extension(auth), headers).await
 }
 
+pub(crate) async fn revoke_all_sessions(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+) -> Result<axum::response::Response, crate::http::error::AppError> {
+    sessions::revoke_all_sessions(State(state), Extension(auth)).await
+}
+
+pub(crate) async fn confirm_high_risk_session(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(session_id): Path<uuid::Uuid>,
+) -> Result<Json<crate::domains::auth::types::SessionView>, crate::http::error::AppError> {
+    sessions::confirm_high_risk_session(State(state), Extension(auth), Path(session_id)).await
+}
+
 pub(crate) async fn me_emails_get(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,

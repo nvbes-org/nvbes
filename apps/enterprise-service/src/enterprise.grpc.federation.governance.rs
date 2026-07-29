@@ -68,7 +68,8 @@ pub async fn federation_governance(
 
     let scim_connectors: Vec<_> = sqlx::query(
         r#"
-        SELECT id, tenant_id, provider, status, base_url, created_at
+        SELECT id, tenant_id, provider, status, base_url, credential_expires_at,
+          last_rotated_at, last_sync_at, created_at
         FROM scim_provisioning_connectors
         WHERE tenant_id = $1
         ORDER BY created_at DESC

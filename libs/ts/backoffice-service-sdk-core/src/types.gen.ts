@@ -4,3519 +4,3510 @@
  */
 
 export interface paths {
-  '/admin/access-center/workspace-memberships/{workspaceId}/{principalId}/suspend': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/access-center/workspace-memberships/{workspaceId}/{principalId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend workspace membership */
+        post: operations["suspendWorkspaceMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Suspend workspace membership */
-    post: operations['suspendWorkspaceMembership'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/audit-evidence-center': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/audit-evidence-center": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load global audit evidence health */
+        get: operations["getAuditEvidenceCenter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Load global audit evidence health */
-    get: operations['getAuditEvidenceCenter'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/command-center': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/command-center": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load enterprise command center */
+        get: operations["getCommandCenter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Load enterprise command center */
-    get: operations['getCommandCenter'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/identity-governance-center/break-glass/{tenantId}/{principalId}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/identity-governance-center/break-glass/{tenantId}/{principalId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a break-glass account */
+        post: operations["revokeBreakGlassAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke a break-glass account */
-    post: operations['revokeBreakGlassAccount'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/identity-governance-center/operator-grants/{principalId}/{role}/grant': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/identity-governance-center/operator-grants/{principalId}/{role}/grant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant a back-office operator role */
+        post: operations["grantOperatorRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Grant a back-office operator role */
-    post: operations['grantOperatorRole'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/identity-governance-center/operator-grants/{principalId}/{role}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/identity-governance-center/operator-grants/{principalId}/{role}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a back-office operator role */
+        post: operations["revokeOperatorRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke a back-office operator role */
-    post: operations['revokeOperatorRole'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/identity-governance-center/recovery-requests/{requestId}/cancel': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/identity-governance-center/recovery-requests/{requestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an enterprise recovery request */
+        post: operations["cancelRecoveryRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Cancel an enterprise recovery request */
-    post: operations['cancelRecoveryRequest'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/pending-approvals': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/pending-approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending dual-control and review work */
+        get: operations["getPendingApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List pending dual-control and review work */
-    get: operations['getPendingApprovals'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/security-center/mfa-factors/{factorId}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/security-center/mfa-factors/{factorId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an MFA factor */
+        post: operations["revokeMfaFactor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke an MFA factor */
-    post: operations['revokeMfaFactor'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/security-center/oauth-consents/{consentId}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/security-center/oauth-consents/{consentId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an OAuth consent */
+        post: operations["revokeOauthConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke an OAuth consent */
-    post: operations['revokeOauthConsent'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/tenants/{tenantId}/reactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/tenants/{tenantId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a tenant */
+        post: operations["reactivateTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Reactivate a tenant */
-    post: operations['reactivateTenant'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/tenants/{tenantId}/suspend': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/tenants/{tenantId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a tenant */
+        post: operations["suspendTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Suspend a tenant */
-    post: operations['suspendTenant'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/users/{principalId}/reactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/users/{principalId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a user */
+        post: operations["reactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Reactivate a user */
-    post: operations['reactivateUser'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/users/{principalId}/suspend': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/users/{principalId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a user */
+        post: operations["suspendUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Suspend a user */
-    post: operations['suspendUser'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/workspaces/{workspaceId}/reactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/workspaces/{workspaceId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivate a workspace */
+        post: operations["reactivateWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Reactivate a workspace */
-    post: operations['reactivateWorkspace'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/admin/workspaces/{workspaceId}/suspend': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/admin/workspaces/{workspaceId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suspend a workspace */
+        post: operations["suspendWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Suspend a workspace */
-    post: operations['suspendWorkspace'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/audit-events': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List enriched audit events for a workspace tenant */
+        get: operations["listAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** List enriched audit events for a workspace tenant */
-    get: operations['listAuditEvents'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/audit-evidence/export': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/audit-evidence/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export enriched audit evidence package for a workspace tenant */
+        get: operations["exportAuditEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Export enriched audit evidence package for a workspace tenant */
-    get: operations['exportAuditEvidence'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/einvoicing-profiles/{profileId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate an e-invoicing profile */
+        post: operations["activateEinvoicingProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Activate an e-invoicing profile */
-    post: operations['activateEinvoicingProfile'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a KYC profile */
+        post: operations["approveKycProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Approve a KYC profile */
-    post: operations['approveKycProfile'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/reject': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/kyc-profiles/{profileId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a KYC profile */
+        post: operations["rejectKycProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Reject a KYC profile */
-    post: operations['rejectKycProfile'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/routing-rules': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a billing provider routing rule */
+        post: operations["createBillingRoutingRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Create a billing provider routing rule */
-    post: operations['createBillingRoutingRule'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Simulate billing provider routing rule matching */
+        get: operations["simulateBillingRoutingRule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Simulate billing provider routing rule matching */
-    get: operations['simulateBillingRoutingRule'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/disable': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable a billing provider routing rule */
+        post: operations["disableBillingRoutingRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Disable a billing provider routing rule */
-    post: operations['disableBillingRoutingRule'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/billing-platform/routing-rules/{ruleId}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable a billing provider routing rule */
+        post: operations["enableBillingRoutingRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Enable a billing provider routing rule */
-    post: operations['enableBillingRoutingRule'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/communications/emails/{messageId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/communications/emails/{messageId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay an email message */
+        post: operations["replayEmailMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay an email message */
-    post: operations['replayEmailMessage'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/communications/suppressions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/communications/suppressions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suppress an email address */
+        post: operations["suppressEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Suppress an email address */
-    post: operations['suppressEmail'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/communications/suppressions/remove': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/communications/suppressions/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unsuppress an email address */
+        post: operations["unsuppressEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Unsuppress an email address */
-    post: operations['unsuppressEmail'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/communications/webhooks/{eventId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/communications/webhooks/{eventId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay a webhook event */
+        post: operations["replayWebhookEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay a webhook event */
-    post: operations['replayWebhookEvent'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/compliance/consents/{consentId}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/compliance/consents/{consentId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a consent */
+        post: operations["revokeConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke a consent */
-    post: operations['revokeConsent'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/compliance/principals/{principalId}/erasure-request': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/compliance/principals/{principalId}/erasure-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request principal erasure */
+        post: operations["requestComplianceErasure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Request principal erasure */
-    post: operations['requestComplianceErasure'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/compliance/suppressions/review': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/compliance/suppressions/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review email suppression */
+        post: operations["reviewComplianceSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Review email suppression */
-    post: operations['reviewComplianceSuppression'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/developer/clients/{clientId}/revoke': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/developer/clients/{clientId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a developer client */
+        post: operations["revokeDeveloperClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke a developer client */
-    post: operations['revokeDeveloperClient'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/developer/clients/{clientId}/rotate-secret': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/developer/clients/{clientId}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate a developer client secret */
+        post: operations["rotateDeveloperSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Rotate a developer client secret */
-    post: operations['rotateDeveloperSecret'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/developer/marketplace-apps/{appId}/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/developer/marketplace-apps/{appId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a marketplace app */
+        post: operations["approveMarketplaceApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Approve a marketplace app */
-    post: operations['approveMarketplaceApp'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/entitlements/grants': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/entitlements/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant an entitlement feature */
+        post: operations["grantEntitlementFeature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Grant an entitlement feature */
-    post: operations['grantEntitlementFeature'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/entitlements/publish': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/entitlements/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish entitlement changes */
+        post: operations["publishEntitlementChanges"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Publish entitlement changes */
-    post: operations['publishEntitlementChanges'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/entitlements/quota-overrides': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/entitlements/quota-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Override an entitlement quota */
+        post: operations["overrideEntitlementQuota"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Override an entitlement quota */
-    post: operations['overrideEntitlementQuota'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/entitlements/revocations': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/entitlements/revocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an entitlement feature */
+        post: operations["revokeEntitlementFeature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Revoke an entitlement feature */
-    post: operations['revokeEntitlementFeature'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/export-runs/{exportRunId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/export-runs/{exportRunId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay an export run */
+        post: operations["replayExportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay an export run */
-    post: operations['replayExportRun'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/incidents/{incidentId}/state': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/incidents/{incidentId}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update an operations incident state */
+        post: operations["updateOperationsIncidentState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Update an operations incident state */
-    post: operations['updateOperationsIncidentState'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/job-runs/{jobRunId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/job-runs/{jobRunId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay an operations job run */
+        post: operations["replayOperationsJobRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay an operations job run */
-    post: operations['replayOperationsJobRun'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/maintenance-windows': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/maintenance-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule an operations maintenance window */
+        post: operations["scheduleMaintenanceWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Schedule an operations maintenance window */
-    post: operations['scheduleMaintenanceWindow'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/provider-events/{eventId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/provider-events/{eventId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay an operations provider event */
+        post: operations["replayOperationsProviderEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay an operations provider event */
-    post: operations['replayOperationsProviderEvent'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/operations/reconciliation-differences/{differenceId}/resolve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/operations/reconciliation-differences/{differenceId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a reconciliation difference */
+        post: operations["resolveReconciliationDifference"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Resolve a reconciliation difference */
-    post: operations['resolveReconciliationDifference'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/exceptions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a data residency exception */
+        post: operations["recordRegionException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Record a data residency exception */
-    post: operations['recordRegionException'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/residency-flag': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/region/workspaces/{targetWorkspaceId}/residency-flag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flag workspace data residency */
+        post: operations["flagWorkspaceResidency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Flag workspace data residency */
-    post: operations['flagWorkspaceResidency'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/resolve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a revenue dispute */
+        post: operations["resolveRevenueDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Resolve a revenue dispute */
-    post: operations['resolveRevenueDispute'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/review': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/disputes/{disputeId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a revenue dispute as under review */
+        post: operations["reviewRevenueDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Mark a revenue dispute as under review */
-    post: operations['reviewRevenueDispute'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/close': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a dunning case */
+        post: operations["closeDunningCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Close a dunning case */
-    post: operations['closeDunningCase'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/reopen': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/dunning-cases/{caseId}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen a dunning case */
+        post: operations["reopenDunningCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Reopen a dunning case */
-    post: operations['reopenDunningCase'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/hold': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hold an invoice */
+        post: operations["holdRevenueInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Hold an invoice */
-    post: operations['holdRevenueInvoice'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/release': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/revenue/invoices/{invoiceId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release an invoice hold */
+        post: operations["releaseRevenueInvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Release an invoice hold */
-    post: operations['releaseRevenueInvoice'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/risk/policies/{policyId}/approve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/risk/policies/{policyId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a risk policy */
+        post: operations["approveRiskPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Approve a risk policy */
-    post: operations['approveRiskPolicy'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/risk/policies/{policyId}/block': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/risk/policies/{policyId}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Block a risk policy */
+        post: operations["blockRiskPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Block a risk policy */
-    post: operations['blockRiskPolicy'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/risk/signals/{signalId}/resolve': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/risk/signals/{signalId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a risk signal */
+        post: operations["resolveRiskSignal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Resolve a risk signal */
-    post: operations['resolveRiskSignal'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/usage/corrections': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/usage/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct usage */
+        post: operations["correctUsage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Correct usage */
-    post: operations['correctUsage'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/usage/meters/freeze': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/usage/meters/freeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Freeze a usage meter */
+        post: operations["freezeUsageMeter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Freeze a usage meter */
-    post: operations['freezeUsageMeter'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/workspaces/{workspaceId}/admin/usage/rollups/{rollupId}/replay': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/workspaces/{workspaceId}/admin/usage/rollups/{rollupId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replay a usage rollup */
+        post: operations["replayUsageRollup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Replay a usage rollup */
-    post: operations['replayUsageRollup'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    AccessActionResult: {
-      audit_action: string;
-      next_status: string;
-      previous_status: string;
-      /** Format: uuid */
-      principal_id: string;
-      /** Format: uuid */
-      tenant_id: string;
-      /** Format: uuid */
-      workspace_id: string;
+    schemas: {
+        AccessActionResult: {
+            audit_action: string;
+            next_status: string;
+            previous_status: string;
+            /** Format: uuid */
+            principal_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            workspace_id: string;
+        };
+        AuditChange: {
+            after: unknown;
+            before: unknown;
+            field: string;
+        };
+        AuditEvent: {
+            action: string;
+            actor_email: string | null;
+            /** Format: uuid */
+            actor_principal_id: string | null;
+            changes: components["schemas"]["AuditChange"][];
+            /** Format: date-time */
+            created_at: string;
+            event_hash: string;
+            /** @enum {string} */
+            hash_chain_status: "linked" | "chain_head" | "hash_anomaly";
+            /** Format: uuid */
+            id: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            previous_event_hash: string | null;
+            /** Format: uuid */
+            target_id: string | null;
+            target_link: components["schemas"]["AuditTargetLink"] | null;
+            target_type: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            workspace_id: string | null;
+        };
+        AuditEvidenceExport: {
+            [key: string]: unknown;
+        };
+        AuditEvidenceSnapshot: {
+            [key: string]: unknown;
+        };
+        AuditTargetLink: {
+            /** @enum {string} */
+            href: "#tenant-detail" | "#workspace-detail" | "#user-detail";
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "tenant" | "workspace" | "user";
+            label: string;
+        };
+        /** @enum {string} */
+        BackofficeRole: "compliance_admin" | "developer_admin" | "finance_admin" | "operations_admin" | "platform_admin" | "product_admin" | "security_admin" | "support_agent" | "viewer";
+        BillingPlatformActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        CommandCenterSnapshot: {
+            [key: string]: unknown;
+        };
+        CommunicationsActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        ComplianceActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        CreateRoutingRuleRequest: {
+            confirm_code: string;
+            country: string | null;
+            currency: string | null;
+            customer_type: string | null;
+            fallback_enabled: boolean;
+            max_amount_minor: number | null;
+            min_amount_minor: number | null;
+            payment_method: string | null;
+            priority: number;
+            /** @enum {string} */
+            provider: "stripe" | "mollie";
+            reason: string;
+        };
+        CriticalActionRequest: {
+            confirm_code: string;
+            reason: string;
+        };
+        DeveloperActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        EntitlementActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            published_change_count: number;
+            status: string;
+        };
+        EntitlementFeatureActionRequest: {
+            confirm_code: string;
+            feature_code: string;
+            reason: string;
+            value: {
+                [key: string]: unknown;
+            };
+        };
+        EntitlementQuotaOverrideRequest: {
+            confirm_code: string;
+            included_quantity: number;
+            quota_code: string;
+            reason: string;
+        };
+        ErrorBody: {
+            code: string;
+            message: string;
+            request_id: string | null;
+        };
+        ErrorEnvelope: {
+            error: components["schemas"]["ErrorBody"];
+        };
+        FreezeMeterRequest: {
+            confirm_code: string;
+            meter_code: string;
+            reason: string;
+        };
+        GovernanceActionResult: {
+            audit_action: string;
+            /** Format: uuid */
+            object_id: string;
+            /** Format: uuid */
+            principal_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+        };
+        IncidentStateRequest: {
+            confirm_code: string;
+            reason: string;
+            /** @enum {string} */
+            status: "open" | "mitigating" | "resolved";
+        };
+        MaintenanceWindowRequest: {
+            confirm_code: string;
+            reason: string;
+            /** Format: date-time */
+            scheduled_end_at: string;
+            /** Format: date-time */
+            scheduled_start_at: string;
+            title: string;
+        };
+        MatchedRoutingRule: {
+            fallback_enabled: boolean;
+            /** Format: uuid */
+            id: string;
+            priority: number;
+            /** @enum {string} */
+            provider: "stripe" | "mollie";
+        };
+        OperationsActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        OperatorGrantActionResult: {
+            audit_action: string;
+            /** @enum {string} */
+            next_status: "active" | "revoked";
+            /** Format: uuid */
+            object_id: string;
+            previous_status: string | null;
+            /** Format: uuid */
+            principal_id: string;
+            role: components["schemas"]["BackofficeRole"];
+        };
+        PendingApprovalsSnapshot: {
+            [key: string]: unknown;
+        };
+        RegionActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        RegionExceptionRequest: {
+            confirm_code: string;
+            exception_kind: string;
+            reason: string;
+        };
+        RegionFlagRequest: {
+            confirm_code: string;
+            data_region: string;
+            jurisdiction: string;
+            reason: string;
+        };
+        RevenueActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        RiskActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        RoutingRuleSimulationResult: {
+            input: {
+                amount_minor: number;
+                country: string | null;
+                currency: string;
+                customer_type: string;
+                payment_method: string;
+            };
+            matched_rule: components["schemas"]["MatchedRoutingRule"] | null;
+            /** @enum {string} */
+            outcome: "matched" | "no_matching_rule";
+        };
+        SecurityActionResult: {
+            audit_action: string;
+            /** Format: uuid */
+            object_id: string;
+            /** Format: uuid */
+            principal_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+        };
+        SuppressionReviewRequest: {
+            confirm_code: string;
+            email: string;
+            reason: string;
+        };
+        TenantLifecycleResult: {
+            audit_action: string;
+            next_status: string;
+            previous_status: string;
+            /** Format: uuid */
+            tenant_id: string;
+        };
+        UsageActionResult: {
+            action_kind: string;
+            audit_action: string;
+            object_id: string;
+            status: string;
+        };
+        UsageCorrectionRequest: {
+            confirm_code: string;
+            meter_code: string;
+            quantity_delta: number;
+            reason: string;
+            usage_event_id: string | null;
+        };
+        UserLifecycleResult: {
+            audit_action: string;
+            next_principal_status: string;
+            next_user_status: string;
+            previous_principal_status: string;
+            previous_user_status: string;
+            /** Format: uuid */
+            principal_id: string;
+            /** Format: uuid */
+            tenant_id: string;
+        };
+        WorkspaceLifecycleResult: {
+            audit_action: string;
+            next_status: string;
+            previous_status: string;
+            /** Format: uuid */
+            tenant_id: string;
+            /** Format: uuid */
+            workspace_id: string;
+        };
     };
-    AuditChange: {
-      after: unknown;
-      before: unknown;
-      field: string;
+    responses: {
+        /** @description Invalid request */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Operator role is not allowed */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Too many requests */
+        RateLimited: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Authentication required */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
     };
-    AuditEvent: {
-      action: string;
-      actor_email: string | null;
-      /** Format: uuid */
-      actor_principal_id: string | null;
-      changes: components['schemas']['AuditChange'][];
-      /** Format: date-time */
-      created_at: string;
-      event_hash: string;
-      /** @enum {string} */
-      hash_chain_status: 'linked' | 'chain_head' | 'hash_anomaly';
-      /** Format: uuid */
-      id: string;
-      metadata: {
-        [key: string]: unknown;
-      };
-      previous_event_hash: string | null;
-      /** Format: uuid */
-      target_id: string | null;
-      target_link: components['schemas']['AuditTargetLink'] | null;
-      target_type: string;
-      /** Format: uuid */
-      tenant_id: string;
-      /** Format: uuid */
-      workspace_id: string | null;
+    parameters: {
+        /** @description Operator role used for center/action RBAC. */
+        BackofficeRole: components["schemas"]["BackofficeRole"];
+        /** @description Required on all back-office mutations. */
+        IdempotencyKey: string;
+        SecondApproverPrincipalId: string;
+        SecondApproverRole: "platform_admin";
     };
-    AuditEvidenceExport: {
-      [key: string]: unknown;
-    };
-    AuditEvidenceSnapshot: {
-      [key: string]: unknown;
-    };
-    AuditTargetLink: {
-      /** @enum {string} */
-      href: '#tenant-detail' | '#workspace-detail' | '#user-detail';
-      /** Format: uuid */
-      id: string;
-      /** @enum {string} */
-      kind: 'tenant' | 'workspace' | 'user';
-      label: string;
-    };
-    /** @enum {string} */
-    BackofficeRole:
-      | 'compliance_admin'
-      | 'developer_admin'
-      | 'finance_admin'
-      | 'operations_admin'
-      | 'platform_admin'
-      | 'product_admin'
-      | 'security_admin'
-      | 'support_agent'
-      | 'viewer';
-    BillingPlatformActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    CommandCenterSnapshot: {
-      [key: string]: unknown;
-    };
-    CommunicationsActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    ComplianceActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    CreateRoutingRuleRequest: {
-      confirm_code: string;
-      country: string | null;
-      currency: string | null;
-      customer_type: string | null;
-      fallback_enabled: boolean;
-      max_amount_minor: number | null;
-      min_amount_minor: number | null;
-      payment_method: string | null;
-      priority: number;
-      /** @enum {string} */
-      provider: 'stripe' | 'mollie';
-      reason: string;
-    };
-    CriticalActionRequest: {
-      confirm_code: string;
-      reason: string;
-    };
-    DeveloperActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    EntitlementActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      published_change_count: number;
-      status: string;
-    };
-    EntitlementFeatureActionRequest: {
-      confirm_code: string;
-      feature_code: string;
-      reason: string;
-      value: {
-        [key: string]: unknown;
-      };
-    };
-    EntitlementQuotaOverrideRequest: {
-      confirm_code: string;
-      included_quantity: number;
-      quota_code: string;
-      reason: string;
-    };
-    ErrorBody: {
-      code: string;
-      message: string;
-      request_id: string | null;
-    };
-    ErrorEnvelope: {
-      error: components['schemas']['ErrorBody'];
-    };
-    FreezeMeterRequest: {
-      confirm_code: string;
-      meter_code: string;
-      reason: string;
-    };
-    GovernanceActionResult: {
-      audit_action: string;
-      /** Format: uuid */
-      object_id: string;
-      /** Format: uuid */
-      principal_id: string;
-      /** Format: uuid */
-      tenant_id: string;
-    };
-    IncidentStateRequest: {
-      confirm_code: string;
-      reason: string;
-      /** @enum {string} */
-      status: 'open' | 'mitigating' | 'resolved';
-    };
-    MaintenanceWindowRequest: {
-      confirm_code: string;
-      reason: string;
-      /** Format: date-time */
-      scheduled_end_at: string;
-      /** Format: date-time */
-      scheduled_start_at: string;
-      title: string;
-    };
-    MatchedRoutingRule: {
-      fallback_enabled: boolean;
-      /** Format: uuid */
-      id: string;
-      priority: number;
-      /** @enum {string} */
-      provider: 'stripe' | 'mollie';
-    };
-    OperationsActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    OperatorGrantActionResult: {
-      audit_action: string;
-      /** @enum {string} */
-      next_status: 'active' | 'revoked';
-      /** Format: uuid */
-      object_id: string;
-      previous_status: string | null;
-      /** Format: uuid */
-      principal_id: string;
-      role: components['schemas']['BackofficeRole'];
-    };
-    PendingApprovalsSnapshot: {
-      [key: string]: unknown;
-    };
-    RegionActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    RegionExceptionRequest: {
-      confirm_code: string;
-      exception_kind: string;
-      reason: string;
-    };
-    RegionFlagRequest: {
-      confirm_code: string;
-      data_region: string;
-      jurisdiction: string;
-      reason: string;
-    };
-    RevenueActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    RiskActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    RoutingRuleSimulationResult: {
-      input: {
-        amount_minor: number;
-        country: string | null;
-        currency: string;
-        customer_type: string;
-        payment_method: string;
-      };
-      matched_rule: components['schemas']['MatchedRoutingRule'] | null;
-      /** @enum {string} */
-      outcome: 'matched' | 'no_matching_rule';
-    };
-    SecurityActionResult: {
-      audit_action: string;
-      /** Format: uuid */
-      object_id: string;
-      /** Format: uuid */
-      principal_id: string;
-      /** Format: uuid */
-      tenant_id: string;
-    };
-    SuppressionReviewRequest: {
-      confirm_code: string;
-      email: string;
-      reason: string;
-    };
-    TenantLifecycleResult: {
-      audit_action: string;
-      next_status: string;
-      previous_status: string;
-      /** Format: uuid */
-      tenant_id: string;
-    };
-    UsageActionResult: {
-      action_kind: string;
-      audit_action: string;
-      object_id: string;
-      status: string;
-    };
-    UsageCorrectionRequest: {
-      confirm_code: string;
-      meter_code: string;
-      quantity_delta: number;
-      reason: string;
-      usage_event_id: string | null;
-    };
-    UserLifecycleResult: {
-      audit_action: string;
-      next_principal_status: string;
-      next_user_status: string;
-      previous_principal_status: string;
-      previous_user_status: string;
-      /** Format: uuid */
-      principal_id: string;
-      /** Format: uuid */
-      tenant_id: string;
-    };
-    WorkspaceLifecycleResult: {
-      audit_action: string;
-      next_status: string;
-      previous_status: string;
-      /** Format: uuid */
-      tenant_id: string;
-      /** Format: uuid */
-      workspace_id: string;
-    };
-  };
-  responses: {
-    /** @description Invalid request */
-    BadRequest: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ErrorEnvelope'];
-      };
-    };
-    /** @description Operator role is not allowed */
-    Forbidden: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ErrorEnvelope'];
-      };
-    };
-    /** @description Too many requests */
-    RateLimited: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ErrorEnvelope'];
-      };
-    };
-    /** @description Authentication required */
-    Unauthorized: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        'application/json': components['schemas']['ErrorEnvelope'];
-      };
-    };
-  };
-  parameters: {
-    /** @description Operator role used for center/action RBAC. */
-    BackofficeRole: components['schemas']['BackofficeRole'];
-    /** @description Required on all back-office mutations. */
-    IdempotencyKey: string;
-    SecondApproverPrincipalId: string;
-    SecondApproverRole: 'platform_admin';
-  };
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  suspendWorkspaceMembership: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        principalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AccessActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  getAuditEvidenceCenter: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AuditEvidenceSnapshot'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  getCommandCenter: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CommandCenterSnapshot'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeBreakGlassAccount: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        tenantId: string;
-        principalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GovernanceActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  grantOperatorRole: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        principalId: string;
-        role: components['schemas']['BackofficeRole'];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperatorGrantActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeOperatorRole: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        principalId: string;
-        role: components['schemas']['BackofficeRole'];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperatorGrantActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  cancelRecoveryRequest: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        requestId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GovernanceActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  getPendingApprovals: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PendingApprovalsSnapshot'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeMfaFactor: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        factorId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SecurityActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeOauthConsent: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        consentId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['SecurityActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reactivateTenant: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        tenantId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TenantLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  suspendTenant: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        tenantId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TenantLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reactivateUser: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        principalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UserLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  suspendUser: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        principalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UserLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reactivateWorkspace: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkspaceLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  suspendWorkspace: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkspaceLifecycleResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  listAuditEvents: {
-    parameters: {
-      query?: {
-        limit?: number;
-        action?: string;
-        target_type?: string;
-        q?: string;
-      };
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AuditEvent'][];
-        };
-      };
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  exportAuditEvidence: {
-    parameters: {
-      query?: {
-        action?: string;
-        target_type?: string;
-        q?: string;
-      };
-      header?: never;
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AuditEvidenceExport'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  activateEinvoicingProfile: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        profileId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  approveKycProfile: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        profileId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  rejectKycProfile: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        profileId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  createBillingRoutingRule: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateRoutingRuleRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  simulateBillingRoutingRule: {
-    parameters: {
-      query?: {
-        country?: string;
-        currency?: string;
-        payment_method?: string;
-        customer_type?: string;
-        amount_minor?: number;
-      };
-      header: {
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RoutingRuleSimulationResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  disableBillingRoutingRule: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        ruleId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  enableBillingRoutingRule: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        ruleId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['BillingPlatformActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayEmailMessage: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        messageId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CommunicationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  suppressEmail: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SuppressionReviewRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CommunicationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  unsuppressEmail: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SuppressionReviewRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CommunicationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayWebhookEvent: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        eventId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CommunicationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeConsent: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        consentId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ComplianceActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  requestComplianceErasure: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        principalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ComplianceActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reviewComplianceSuppression: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['SuppressionReviewRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ComplianceActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeDeveloperClient: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        clientId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['DeveloperActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  rotateDeveloperSecret: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        clientId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['DeveloperActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  approveMarketplaceApp: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        appId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['DeveloperActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  grantEntitlementFeature: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['EntitlementFeatureActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['EntitlementActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  publishEntitlementChanges: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['EntitlementActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  overrideEntitlementQuota: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['EntitlementQuotaOverrideRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['EntitlementActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  revokeEntitlementFeature: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['EntitlementFeatureActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['EntitlementActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayExportRun: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        exportRunId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  updateOperationsIncidentState: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        incidentId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['IncidentStateRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayOperationsJobRun: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        jobRunId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  scheduleMaintenanceWindow: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['MaintenanceWindowRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayOperationsProviderEvent: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        eventId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  resolveReconciliationDifference: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        differenceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OperationsActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  recordRegionException: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        targetWorkspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RegionExceptionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RegionActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  flagWorkspaceResidency: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        targetWorkspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RegionFlagRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RegionActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  resolveRevenueDispute: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        disputeId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reviewRevenueDispute: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        disputeId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  closeDunningCase: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        caseId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  reopenDunningCase: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        caseId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  holdRevenueInvoice: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        invoiceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  releaseRevenueInvoice: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        invoiceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RevenueActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  approveRiskPolicy: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        policyId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RiskActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  blockRiskPolicy: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        policyId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RiskActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  resolveRiskSignal: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        signalId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RiskActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  correctUsage: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UsageCorrectionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UsageActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  freezeUsageMeter: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['FreezeMeterRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UsageActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
-    };
-  };
-  replayUsageRollup: {
-    parameters: {
-      query?: never;
-      header: {
-        /** @description Required on all back-office mutations. */
-        'Idempotency-Key': components['parameters']['IdempotencyKey'];
-        /** @description Operator role used for center/action RBAC. */
-        'x-nvbes-backoffice-role': components['parameters']['BackofficeRole'];
-        'x-nvbes-second-approver-principal-id': components['parameters']['SecondApproverPrincipalId'];
-        'x-nvbes-second-approver-role': components['parameters']['SecondApproverRole'];
-      };
-      path: {
-        workspaceId: string;
-        rollupId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CriticalActionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['UsageActionResult'];
-        };
-      };
-      400: components['responses']['BadRequest'];
-      401: components['responses']['Unauthorized'];
-      403: components['responses']['Forbidden'];
-      429: components['responses']['RateLimited'];
+    suspendWorkspaceMembership: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                principalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getAuditEvidenceCenter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEvidenceSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getCommandCenter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandCenterSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeBreakGlassAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                tenantId: string;
+                principalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    grantOperatorRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                principalId: string;
+                role: components["schemas"]["BackofficeRole"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorGrantActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeOperatorRole: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                principalId: string;
+                role: components["schemas"]["BackofficeRole"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorGrantActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    cancelRecoveryRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernanceActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    getPendingApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingApprovalsSnapshot"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeMfaFactor: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                factorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecurityActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeOauthConsent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                consentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecurityActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reactivateTenant: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    suspendTenant: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reactivateUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                principalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    suspendUser: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                principalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reactivateWorkspace: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    suspendWorkspace: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceLifecycleResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    listAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+                action?: string;
+                target_type?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEvent"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    exportAuditEvidence: {
+        parameters: {
+            query?: {
+                action?: string;
+                target_type?: string;
+                q?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEvidenceExport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    activateEinvoicingProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                profileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    approveKycProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                profileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    rejectKycProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                profileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    createBillingRoutingRule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoutingRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    simulateBillingRoutingRule: {
+        parameters: {
+            query?: {
+                country?: string;
+                currency?: string;
+                payment_method?: string;
+                customer_type?: string;
+                amount_minor?: number;
+            };
+            header: {
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutingRuleSimulationResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    disableBillingRoutingRule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    enableBillingRoutingRule: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                ruleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingPlatformActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayEmailMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                messageId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    suppressEmail: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuppressionReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    unsuppressEmail: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuppressionReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayWebhookEvent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeConsent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                consentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplianceActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    requestComplianceErasure: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                principalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplianceActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reviewComplianceSuppression: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuppressionReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComplianceActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeDeveloperClient: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeveloperActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    rotateDeveloperSecret: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeveloperActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    approveMarketplaceApp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                appId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeveloperActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    grantEntitlementFeature: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementFeatureActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    publishEntitlementChanges: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    overrideEntitlementQuota: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementQuotaOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    revokeEntitlementFeature: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementFeatureActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayExportRun: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                exportRunId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    updateOperationsIncidentState: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                incidentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IncidentStateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayOperationsJobRun: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                jobRunId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    scheduleMaintenanceWindow: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceWindowRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayOperationsProviderEvent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    resolveReconciliationDifference: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                differenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    recordRegionException: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                targetWorkspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegionExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    flagWorkspaceResidency: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                targetWorkspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegionFlagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    resolveRevenueDispute: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reviewRevenueDispute: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                disputeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    closeDunningCase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    reopenDunningCase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    holdRevenueInvoice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    releaseRevenueInvoice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                invoiceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    approveRiskPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    blockRiskPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    resolveRiskSignal: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                signalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RiskActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    correctUsage: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageCorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    freezeUsageMeter: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreezeMeterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
+    };
+    replayUsageRollup: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on all back-office mutations. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Operator role used for center/action RBAC. */
+                "x-nvbes-backoffice-role": components["parameters"]["BackofficeRole"];
+                "x-nvbes-second-approver-principal-id": components["parameters"]["SecondApproverPrincipalId"];
+                "x-nvbes-second-approver-role": components["parameters"]["SecondApproverRole"];
+            };
+            path: {
+                workspaceId: string;
+                rollupId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriticalActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageActionResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["RateLimited"];
+        };
     };
-  };
 }

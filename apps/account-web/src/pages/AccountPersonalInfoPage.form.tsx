@@ -1,44 +1,57 @@
 import type { AccountPrincipal } from '@nvbes/identity-client';
 import { LoaderCircle, Trash2 } from 'lucide-react';
-import { type ChangeEvent, type SubmitEvent, useEffect, useState } from 'react';
+import { type ChangeEvent, type SubmitEvent, useEffect, useMemo, useState } from 'react';
 import { type AsyncButtonState, AsyncStateButton } from '@/components/AsyncStateButton';
+import { BirthdateField } from '@/components/BirthdateField';
+import { birthdateBounds } from '@/components/birthdate';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field';
 import type { SupportedRegion } from '@/identity.auth.api';
 import { PersonalInfoError } from './AccountPersonalInfoPage.feedback';
+import type { PersonalInfoFieldErrors } from './AccountPersonalInfoPage.validation';
 import { RegionSelect } from './RegisterPage.region';
 
 function ProfileField({
   autoComplete,
   id,
   label,
+  error,
+  maxLength,
   onChange,
   placeholder,
-  type = 'text',
   value,
 }: {
   autoComplete?: string;
   id: string;
   label: string;
+  error?: string;
+  maxLength?: number;
   onChange: (value: string) => void;
   placeholder: string;
-  type?: 'date' | 'text';
   value: string;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>
+        {label} <span className="text-destructive">*</span>
+      </Label>
       <Input
         id={id}
-        type={type}
+        type="text"
         value={value}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        required
+        maxLength={maxLength}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id}-error` : undefined}
         onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
       />
+      <FieldError id={`${id}-error`}>{error}</FieldError>
     </div>
   );
 }
@@ -55,7 +68,9 @@ export function PersonalInfoCard({
   editError,
   editSuccess,
   loading,
+  isPersonalInfoInvalid,
   isPersonalInfoUnchanged,
+  errors,
   onFirstnameChange,
   onLastnameChange,
   onUsernameChange,
@@ -80,7 +95,9 @@ export function PersonalInfoCard({
   editError: string | null;
   editSuccess: boolean;
   loading: boolean;
+  isPersonalInfoInvalid: boolean;
   isPersonalInfoUnchanged: boolean;
+  errors: PersonalInfoFieldErrors;
   onFirstnameChange: (value: string) => void;
   onLastnameChange: (value: string) => void;
   onUsernameChange: (value: string) => void;
@@ -94,6 +111,8 @@ export function PersonalInfoCard({
   onAvatarDelete?: () => void;
 }) {
   const [showPending, setShowPending] = useState(false);
+  const [birthdateInputValid, setBirthdateInputValid] = useState(Boolean(birthdate));
+  const { minBirthdate, maxBirthdate } = useMemo(() => birthdateBounds(), []);
 
   useEffect(() => {
     if (!loading) {
@@ -105,7 +124,16 @@ export function PersonalInfoCard({
     return () => window.clearTimeout(timeout);
   }, [loading]);
 
+  useEffect(() => {
+    if (errors.birthdate) {
+      setBirthdateInputValid(false);
+    } else if (birthdate) {
+      setBirthdateInputValid(true);
+    }
+  }, [birthdate, errors.birthdate]);
+
   const submitState = loading && showPending ? 'pending' : editSuccess ? 'success' : 'idle';
+  const formInvalid = isPersonalInfoInvalid || !birthdateInputValid;
   return (
     <Card>
       <CardContent>
@@ -113,7 +141,7 @@ export function PersonalInfoCard({
           <div className="flex flex-col gap-6">
             <section className="flex items-center gap-4">
               <Avatar className="size-16" data-size="xl">
-                <AvatarImage src={avatarUrl} alt="Photo de profil" />
+                <AvatarImage src={avatarUrl} crossOrigin="anonymous" alt="Photo de profil" />
                 <AvatarFallback>{user.display_name.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
@@ -155,7 +183,8 @@ export function PersonalInfoCard({
             <section className="grid gap-4 sm:grid-cols-2">
               <ProfileField
                 id="account-firstname"
-                label="Prenom"
+                label="Prénom"
+                error={errors.firstname}
                 value={firstname}
                 placeholder="Prenom"
                 autoComplete="given-name"
@@ -164,6 +193,7 @@ export function PersonalInfoCard({
               <ProfileField
                 id="account-lastname"
                 label="Nom"
+                error={errors.lastname}
                 value={lastname}
                 placeholder="Nom"
                 autoComplete="family-name"
@@ -173,8 +203,10 @@ export function PersonalInfoCard({
                 <ProfileField
                   id="account-username"
                   label="Nom d'utilisateur"
+                  error={errors.username}
+                  maxLength={100}
                   value={username}
-                  placeholder="nomutilisateur"
+                  placeholder="Nom d'utilisateur"
                   autoComplete="username"
                   onChange={onUsernameChange}
                 />
@@ -182,13 +214,14 @@ export function PersonalInfoCard({
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2">
-              <ProfileField
+              <BirthdateField
                 id="account-birthdate"
-                label="Date de naissance"
-                type="date"
                 value={birthdate}
-                placeholder="Date de naissance"
-                autoComplete="bday"
+                min={minBirthdate}
+                max={maxBirthdate}
+                required
+                externalError={errors.birthdate}
+                onValidityChange={setBirthdateInputValid}
                 onChange={onBirthdateChange}
               />
               <RegionSelect
@@ -198,6 +231,7 @@ export function PersonalInfoCard({
                 loading={regionLoading}
                 regions={regions}
                 value={region}
+                error={errors.region}
                 onValueChange={onRegionChange}
               />
             </section>
@@ -207,7 +241,7 @@ export function PersonalInfoCard({
           <div className="mt-4">
             <AsyncStateButton
               type="submit"
-              disabled={loading || isPersonalInfoUnchanged}
+              disabled={loading || isPersonalInfoUnchanged || formInvalid}
               state={submitState as AsyncButtonState}
               message="Enregistrer"
               className="relative"

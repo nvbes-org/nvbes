@@ -1,4 +1,7 @@
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import StepUpModal from '@/components/StepUpModal';
+import { ShieldAlert } from 'lucide-react';
 import {
   CurrentSessionCard,
   EmptySessionsCard,
@@ -11,6 +14,8 @@ import { useAccountSessionsPage } from './useAccountSessionsPage';
 export default function AccountSessionsPage() {
   const {
     currentDevice,
+    currentSession,
+    confirmingRisk,
     isPending,
     otherDevices,
     recognizedDevices,
@@ -19,6 +24,13 @@ export default function AccountSessionsPage() {
     onRevoke,
     onRevokeDevice,
     onRevokeOthers,
+    onRequestRiskConfirmation,
+    onRiskStepUpSuccess,
+    onCancelRiskConfirmation,
+    showRiskStepUp,
+    showRevokeOthersStepUp,
+    onCancelRevokeOthers,
+    onRevokeOthersStepUpSuccess,
   } = useAccountSessionsPage();
 
   if (isPending) {
@@ -44,6 +56,27 @@ export default function AccountSessionsPage() {
         )}
       </div>
 
+      {currentSession?.risk_decision === 'step_up' && currentSession.risk_confirmed_at === null && (
+        <Alert variant="destructive">
+          <ShieldAlert />
+          <AlertTitle>Session à risque à confirmer</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              Une variation inhabituelle a été détectée. Confirmez explicitement cette session avant
+              de poursuivre des opérations sensibles.
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={confirmingRisk}
+              onClick={onRequestRiskConfirmation}
+            >
+              Confirmer cette session
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {currentDevice && (
         <CurrentSessionCard device={currentDevice} revoking={revoking} onRevoke={onRevoke} />
       )}
@@ -67,6 +100,25 @@ export default function AccountSessionsPage() {
       )}
 
       {sessions.length === 0 && <EmptySessionsCard />}
+
+      <StepUpModal
+        open={showRiskStepUp}
+        onOpenChange={(open) => {
+          if (!open) onCancelRiskConfirmation();
+        }}
+        onSuccess={onRiskStepUpSuccess}
+        onCancel={onCancelRiskConfirmation}
+        description="Confirmez votre identité pour autoriser explicitement cette session à risque."
+      />
+      <StepUpModal
+        open={showRevokeOthersStepUp}
+        onOpenChange={(open) => {
+          if (!open) onCancelRevokeOthers();
+        }}
+        onSuccess={() => void onRevokeOthersStepUpSuccess()}
+        onCancel={onCancelRevokeOthers}
+        description="Confirmez votre identité pour déconnecter toutes les autres sessions."
+      />
     </div>
   );
 }

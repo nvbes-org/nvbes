@@ -1,11 +1,13 @@
 import {
   configureErrorReporting,
+  installDefaultTrustedTypesPolicy,
   registerServiceWorker,
   type ClientErrorReporter,
 } from '@nvbes/web-runtime';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { captureAndStripSensitiveAuthUrlToken } from './identity.auth-url-secrets';
 import { captureAnalyticsException, initAnalytics } from './identity.analytics';
 import {
   captureErrorReportingException,
@@ -22,6 +24,8 @@ import { router } from './identity.router';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
+installDefaultTrustedTypesPolicy();
+captureAndStripSensitiveAuthUrlToken();
 initErrorReporting();
 initFaro();
 initAnalytics();

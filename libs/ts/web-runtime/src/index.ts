@@ -162,6 +162,11 @@ export {
 export type { VerifiedFetchInit, VerifiedFetchInput, VerifiedFetchOptions } from './verified-fetch';
 export { sanitizeHtml, safeHtmlToString, trustSafeHtml, VerifiedHtml } from './safe-html';
 export type { SafeHtml } from './safe-html';
+export {
+  createTrustedWorkerScriptUrl,
+  installDefaultTrustedTypesPolicy,
+  type NvbesTrustedScriptUrl,
+} from './trusted-types';
 export { sanitizeStyleElementCss, safeStyleElementCssToString } from './safe-css';
 export type { SafeStyleElementCss } from './safe-css';
 export { sanitizeUrlForAttribute, safeUrlToString } from './safe-url';
@@ -229,7 +234,6 @@ const API_ERROR_MESSAGES: Record<string, string> = {
   email_mfa_cannot_be_removed: 'La vérification par email est requise et ne peut pas être retirée.',
   mfa_factor_not_found: 'Cette méthode de vérification est introuvable.',
   challenge_locked: 'Trop de tentatives. Réessayez dans quelques minutes.',
-  password_expired: 'Votre mot de passe a expiré. Réinitialisez-le pour continuer.',
   password_exposed: 'Ce mot de passe est apparu dans une fuite de données. Choisissez-en un autre.',
   password_compromised:
     'Ce mot de passe est apparu dans une fuite de données. Réinitialisez-le avant de vous connecter.',

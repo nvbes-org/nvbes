@@ -6,6 +6,9 @@ use crate::domains::oauth::{
     hash_client_secret,
     logic::OAuthManagementAuth,
     parse_client_type, parse_step_up_level,
+    profiles::{
+        OAuthSecurityProfile, OAuthSenderConstraint, validate_high_assurance_configuration,
+    },
     service::types::{CreateOAuthClientInput, CreateOAuthClientResult, OAuthClientView},
 };
 use crate::http::error::AppError;
@@ -42,6 +45,15 @@ pub async fn create_client(
             "At least one redirect URI is required.",
         ));
     }
+    validate_redirect_uris(&input.redirect_uris, client_type.as_str())?;
+    validate_event_endpoint(
+        input.backchannel_logout_uri.as_deref(),
+        "backchannel_logout_uri",
+    )?;
+    validate_event_endpoint(
+        input.security_event_receiver_uri.as_deref(),
+        "security_event_receiver_uri",
+    )?;
 
     if input.allowed_scopes.is_empty() {
         return Err(AppError::bad_request(
@@ -51,6 +63,8 @@ pub async fn create_client(
     }
     let client_assertion_required = input.client_assertion_required.unwrap_or(false);
     let requires_admin_consent = input.requires_admin_consent.unwrap_or(false);
+    let security_profile = OAuthSecurityProfile::parse(input.security_profile.as_deref())?;
+    let sender_constraint = OAuthSenderConstraint::parse(input.sender_constraint.as_deref())?;
     if client_assertion_required && input.client_assertion_public_key_jwk.is_none() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -65,6 +79,15 @@ pub async fn create_client(
             "client_assertion_public_key_jwk must be a supported RSA or P-256 public JWK.",
         ));
     }
+    validate_high_assurance_configuration(
+        security_profile,
+        client_type.as_str(),
+        client_assertion_required,
+        input.client_assertion_public_key_jwk.as_ref(),
+        input.request_object_signing_jwks.as_ref(),
+        sender_constraint,
+        input.tls_client_certificate_sha256.as_deref(),
+    )?;
     let client_assertion_public_key_configured = input.client_assertion_public_key_jwk.is_some();
     let requested_service_account_role = input
         .service_account_role
@@ -118,9 +141,20 @@ pub async fn create_client(
           client_type,
           client_assertion_public_key_jwk,
           client_assertion_required,
-          requires_admin_consent
+          requires_admin_consent,
+          backchannel_logout_uri,
+          backchannel_logout_session_required,
+          security_event_receiver_uri,
+          security_profile,
+          request_object_signing_jwks,
+          sender_constraint,
+          tls_client_certificate_sha256
         )
-        VALUES ($1, $2, $3, $4, $5, $6::scope_type, $7, $8::client_type, $9, $10, $11)
+        VALUES (
+          $1, $2, $3, $4, $5, $6::scope_type, $7, $8::client_type, $9, $10, $11,
+          $12, $13, $14, $15::oauth_security_profile, $16,
+          $17::oauth_sender_constraint, $18
+        )
         RETURNING id, created_at
         "#,
     )
@@ -135,6 +169,13 @@ pub async fn create_client(
     .bind(input.client_assertion_public_key_jwk.clone())
     .bind(client_assertion_required)
     .bind(requires_admin_consent)
+    .bind(input.backchannel_logout_uri.as_deref())
+    .bind(input.backchannel_logout_session_required.unwrap_or(true))
+    .bind(input.security_event_receiver_uri.as_deref())
+    .bind(security_profile.as_str())
+    .bind(input.request_object_signing_jwks.clone())
+    .bind(sender_constraint.map(OAuthSenderConstraint::as_str))
+    .bind(input.tls_client_certificate_sha256.as_deref())
     .fetch_one(&mut *tx)
     .await?;
     let client_uuid: Uuid = client_row.get("id");
@@ -155,6 +196,15 @@ pub async fn create_client(
     } else {
         None
     };
+    super::keys::insert_initial_keys(
+        &mut tx,
+        tenant_id,
+        &client_id,
+        input.client_assertion_public_key_jwk.as_ref(),
+        input.request_object_signing_jwks.as_ref(),
+        security_profile == OAuthSecurityProfile::HighAssurance,
+    )
+    .await?;
 
     let policy = sqlx::query(
         r#"
@@ -201,6 +251,18 @@ pub async fn create_client(
             client_assertion_required,
             requires_admin_consent,
             client_assertion_public_key_configured,
+            security_profile: security_profile.as_str().to_string(),
+            request_object_signing_keys_configured: input.request_object_signing_jwks.is_some(),
+            sender_constraint: sender_constraint
+                .map(OAuthSenderConstraint::as_str)
+                .map(str::to_string),
+            tls_client_certificate_bound_access_tokens: sender_constraint
+                == Some(OAuthSenderConstraint::Mtls),
+            backchannel_logout_uri: input.backchannel_logout_uri,
+            backchannel_logout_session_required: input
+                .backchannel_logout_session_required
+                .unwrap_or(true),
+            security_event_receiver_uri: input.security_event_receiver_uri,
             service_account_principal_id,
             service_account_workspace_id: is_service_client.then_some(owner_scope_id),
             service_account_role: is_service_client
@@ -209,6 +271,86 @@ pub async fn create_client(
         client_secret,
         policy: super::map_client_policy_row_with_client_id(&policy, client_uuid),
     })
+}
+
+fn validate_event_endpoint(value: Option<&str>, field: &str) -> Result<(), AppError> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    let parsed = url::Url::parse(value).map_err(|_| {
+        AppError::bad_request(
+            "validation_failed",
+            format!("{field} must be an absolute URL."),
+        )
+    })?;
+    if parsed.scheme() != "https"
+        || parsed.host_str().is_none()
+        || parsed.fragment().is_some()
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            format!("{field} must be an HTTPS URL without credentials or fragment."),
+        ));
+    }
+    if let Some(url::Host::Ipv4(address)) = parsed.host()
+        && (address.is_private()
+            || address.is_loopback()
+            || address.is_link_local()
+            || address.is_unspecified())
+    {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            format!("{field} cannot target a private network."),
+        ));
+    }
+    if let Some(url::Host::Ipv6(address)) = parsed.host()
+        && (address.is_loopback() || address.is_unspecified())
+    {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            format!("{field} cannot target a private network."),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_redirect_uris(values: &[String], client_type: &str) -> Result<(), AppError> {
+    if values.len() > 20 {
+        return Err(AppError::bad_request(
+            "validation_failed",
+            "At most 20 redirect URIs may be registered.",
+        ));
+    }
+    let mut unique = std::collections::HashSet::with_capacity(values.len());
+    for value in values {
+        let parsed = url::Url::parse(value).map_err(|_| {
+            AppError::bad_request(
+                "validation_failed",
+                "Every redirect URI must be an absolute URL.",
+            )
+        })?;
+        let loopback_http = crate::domains::oauth::validation::is_public_client_type(client_type)
+            && parsed.scheme() == "http"
+            && parsed
+                .host_str()
+                .is_some_and(|host| matches!(host, "127.0.0.1" | "::1" | "localhost"));
+        if (parsed.scheme() != "https" && !loopback_http)
+            || parsed.fragment().is_some()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.host_str().is_none()
+            || value.contains('*')
+            || !unique.insert(value)
+        {
+            return Err(AppError::bad_request(
+                "validation_failed",
+                "Redirect URIs must be unique exact HTTPS URLs; loopback HTTP is allowed only for native clients.",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn require_workspace_scope(owner_scope_type: &str, owner_scope_id: Uuid) -> Result<Uuid, AppError> {

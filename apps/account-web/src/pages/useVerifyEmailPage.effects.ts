@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { clearCapturedAuthUrlToken } from '../identity.auth-url-secrets';
 import { verifyEmailToken } from '../identity.email-verification';
 
 export function useVerifyEmailPageEffects({
@@ -53,6 +54,9 @@ export function useVerifyEmailPageEffects({
           setStatus('error');
           setMessage(error instanceof Error ? error.message : 'Échec de la vérification.');
         }
+      } finally {
+        clearCapturedAuthUrlToken('/verify');
+        clearCapturedAuthUrlToken('/verify-email');
       }
     };
 

@@ -25,6 +25,7 @@ export default function MfaPage() {
     hasTotp,
     hasWebAuthn,
     hasRecovery,
+    canUsePassword,
     recoveryCreatedAt,
     navigateBack,
     navigateTo,
@@ -96,6 +97,7 @@ export default function MfaPage() {
         hasTotp={hasTotp}
         hasWebAuthn={hasWebAuthn}
         hasRecovery={hasRecovery}
+        canUsePassword={canUsePassword}
         stepUpPassword={stepUpPassword}
         stepUpTotpCode={stepUpTotpCode}
         stepUpRecoveryCode={stepUpRecoveryCode}

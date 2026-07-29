@@ -1,4 +1,5 @@
 use super::*;
+use base64::Engine;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 
 fn sign_request_object(claims: &RequestObjectClaims, secret: &str, algorithm: Algorithm) -> String {
@@ -11,13 +12,40 @@ fn sign_request_object(claims: &RequestObjectClaims, secret: &str, algorithm: Al
     .expect("JWT encoding should succeed")
 }
 
+fn high_assurance_fixture() -> (String, serde_json::Value) {
+    let rsa = openssl::rsa::Rsa::generate(2048).expect("RSA key should generate");
+    let private_key = rsa.private_key_to_pem().expect("private key should encode");
+    let mut claims = valid_claims();
+    claims.jti = Some(uuid::Uuid::new_v4().to_string());
+    let mut header = Header::new(Algorithm::PS256);
+    header.typ = Some("oauth-authz-req+jwt".to_string());
+    header.kid = Some("jar-key-1".to_string());
+    let token = jsonwebtoken::encode(
+        &header,
+        &claims,
+        &EncodingKey::from_rsa_pem(&private_key).expect("private key should parse"),
+    )
+    .expect("request object should encode");
+    let jwks = serde_json::json!({
+        "keys": [{
+            "kty": "RSA",
+            "kid": "jar-key-1",
+            "use": "sig",
+            "alg": "PS256",
+            "n": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(rsa.n().to_vec()),
+            "e": base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(rsa.e().to_vec())
+        }]
+    });
+    (token, jwks)
+}
+
 fn valid_claims() -> RequestObjectClaims {
     let now = chrono::Utc::now().timestamp();
     RequestObjectClaims {
         iss: "gxoc_myclient".to_string(),
-        aud: "https://identity.example.com".to_string(),
+        aud: super::RequestObjectAudience::One("https://identity.example.com".to_string()),
         exp: now + 300,
-        nbf: None,
+        nbf: Some(now),
         iat: Some(now),
         jti: None,
         response_type: Some("code".to_string()),
@@ -25,6 +53,7 @@ fn valid_claims() -> RequestObjectClaims {
         redirect_uri: Some("https://app.example.com/callback".to_string()),
         scope: Some("openid profile".to_string()),
         state: Some("abc123".to_string()),
+        nonce: None,
         audience: None,
         resource: None,
         authorization_details: None,
@@ -234,7 +263,7 @@ fn validate_request_object_accepts_without_optional_fields() {
     let now = chrono::Utc::now().timestamp();
     let claims = RequestObjectClaims {
         iss: client_id.to_string(),
-        aud: issuer_url.to_string(),
+        aud: super::RequestObjectAudience::One(issuer_url.to_string()),
         exp: now + 300,
         nbf: None,
         iat: None,
@@ -244,6 +273,7 @@ fn validate_request_object_accepts_without_optional_fields() {
         redirect_uri: Some("https://app.example.com/callback".to_string()),
         scope: None,
         state: None,
+        nonce: None,
         audience: None,
         resource: None,
         authorization_details: None,
@@ -259,4 +289,36 @@ fn validate_request_object_accepts_without_optional_fields() {
         "Minimal JWT should be accepted: {:?}",
         result.err()
     );
+}
+
+#[test]
+fn high_assurance_request_object_accepts_ps256_registered_jwk() {
+    let (token, jwks) = high_assurance_fixture();
+
+    let claims = validate_high_assurance_request_object(
+        &token,
+        &jwks,
+        "gxoc_myclient",
+        "https://identity.example.com",
+    )
+    .expect("PS256 request object should validate");
+
+    assert_eq!(claims.client_id.as_deref(), Some("gxoc_myclient"));
+    assert!(claims.jti.is_some());
+}
+
+#[test]
+fn high_assurance_request_object_rejects_unknown_kid() {
+    let (token, mut jwks) = high_assurance_fixture();
+    jwks["keys"][0]["kid"] = serde_json::Value::String("other-key".to_string());
+
+    let error = validate_high_assurance_request_object(
+        &token,
+        &jwks,
+        "gxoc_myclient",
+        "https://identity.example.com",
+    )
+    .expect_err("unregistered kid must fail");
+
+    assert_eq!(error.code, "invalid_request_object");
 }

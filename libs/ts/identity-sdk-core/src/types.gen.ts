@@ -676,6 +676,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revoke_all_sessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/sessions/revoke-others": {
         parameters: {
             query?: never;
@@ -708,6 +724,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sessions/{sessionId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm_high_risk_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/step-up": {
         parameters: {
             query?: never;
@@ -718,6 +750,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["step_up"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/step-up/email/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["request_email_step_up"];
         delete?: never;
         options?: never;
         head?: never;
@@ -911,6 +959,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["revoke_client"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/clients/{clientId}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_client_keys"];
+        put?: never;
+        post: operations["rotate_client_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/clients/{clientId}/keys/{keyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_client_key"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1312,13 +1392,23 @@ export interface components {
              * @description Value of `new Date().getTimezoneOffset()` in minutes.
              */
             tz_offset?: number | null;
+            ua_architecture?: string | null;
+            ua_bitness?: string | null;
+            /** @description UA-CH values read through navigator.userAgentData for server/header consistency checks. */
+            ua_brands?: string[] | null;
+            ua_form_factors?: string[] | null;
+            ua_full_version_list?: string[] | null;
+            ua_mobile?: boolean | null;
+            ua_model?: string | null;
+            ua_platform?: string | null;
+            ua_platform_version?: string | null;
+            ua_wow64?: boolean | null;
             /** @description Raw `UNMASKED_RENDERER_WEBGL` string (e.g. "ANGLE (NVIDIA, ...)"). */
             webgl_renderer?: string | null;
             /** @description Raw `UNMASKED_VENDOR_WEBGL` string (e.g. "Google Inc. (NVIDIA)"). */
             webgl_vendor?: string | null;
         };
         ChangePasswordInput: {
-            current_password: string;
             new_password: string;
         };
         ChangePasswordResult: {
@@ -1328,7 +1418,6 @@ export interface components {
             "change-password": string;
         };
         ChangeVerificationRequest: {
-            current_email?: string | null;
             email: string;
         };
         ConsentHistoryResult: {
@@ -1344,6 +1433,8 @@ export interface components {
             allowed_audiences?: string[];
             allowed_resources?: string[];
             allowed_scopes: string[];
+            backchannel_logout_session_required?: boolean | null;
+            backchannel_logout_uri?: string | null;
             client_assertion_public_key_jwk?: unknown;
             client_assertion_required?: boolean | null;
             client_type?: string | null;
@@ -1352,13 +1443,18 @@ export interface components {
             owner_scope_id?: string | null;
             owner_scope_type?: string | null;
             redirect_uris: string[];
+            request_object_signing_jwks?: unknown;
             required_acr?: string | null;
             requires_admin_consent?: boolean | null;
+            security_event_receiver_uri?: string | null;
+            security_profile?: string | null;
+            sender_constraint?: string | null;
             service_account_description?: string | null;
             service_account_name?: string | null;
             /** Format: uuid */
             service_account_principal_id?: string | null;
             service_account_role?: string | null;
+            tls_client_certificate_sha256?: string | null;
         };
         CreateOAuthClientPolicyInput: {
             allowed_audiences?: string[];
@@ -1460,6 +1556,15 @@ export interface components {
             /** Format: int32 */
             primary_min_age_hours: number;
         };
+        EmailStepUpChallengeResult: {
+            /** Format: uuid */
+            challenge_id: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        EmailStepUpRequest: {
+            purpose: components["schemas"]["StepUpPurpose"];
+        };
         ErrorBody: {
             code: string;
             message: string;
@@ -1502,6 +1607,10 @@ export interface components {
             state_token: string;
         };
         IntrospectRequest: {
+            client_assertion?: string | null;
+            client_assertion_type?: string | null;
+            client_id?: string | null;
+            client_secret?: string | null;
             token: string;
             token_type_hint?: string | null;
         };
@@ -1522,6 +1631,7 @@ export interface components {
             auth_time?: number | null;
             authorization_details?: Record<string, never>[];
             client_id?: string | null;
+            cnf?: unknown;
             display_name?: string | null;
             email?: string | null;
             email_verified?: boolean | null;
@@ -1578,6 +1688,10 @@ export interface components {
             user: components["schemas"]["UserView"];
         };
         MfaFactorView: {
+            assurance?: string | null;
+            attestation_format?: string | null;
+            backup_eligible?: boolean | null;
+            backup_state?: boolean | null;
             /** Format: date-time */
             confirmed_at?: string | null;
             /** Format: date-time */
@@ -1589,6 +1703,9 @@ export interface components {
             label?: string | null;
             /** Format: date-time */
             last_used_at?: string | null;
+            phishing_resistant: boolean;
+            /** Format: int64 */
+            sign_count?: number | null;
             status: string;
         };
         MfaFactorsResult: {
@@ -1598,7 +1715,6 @@ export interface components {
             next_cursor?: string | null;
         };
         MfaRequest: {
-            email_code?: string | null;
             recovery_code?: string | null;
             /** Format: uuid */
             state_token: string;
@@ -1607,10 +1723,18 @@ export interface components {
             webauthn_challenge_id?: string | null;
             webauthn_response: Record<string, never>;
         };
+        MtlsEndpointAliases: {
+            introspection_endpoint: string;
+            pushed_authorization_request_endpoint: string;
+            revocation_endpoint: string;
+            token_endpoint: string;
+        };
         OAuthAuthorizationServerMetadata: {
             authorization_details_types_supported: string[];
             authorization_endpoint: string;
             authorization_response_iss_parameter_supported: boolean;
+            backchannel_logout_session_supported: boolean;
+            backchannel_logout_supported: boolean;
             claims_supported: string[];
             code_challenge_methods_supported: string[];
             device_authorization_endpoint: string;
@@ -1620,7 +1744,9 @@ export interface components {
             introspection_endpoint: string;
             issuer: string;
             jwks_uri: string;
+            mtls_endpoint_aliases?: null | components["schemas"]["MtlsEndpointAliases"];
             pushed_authorization_request_endpoint: string;
+            request_object_signing_alg_values_supported: string[];
             request_parameter_supported: boolean;
             request_uri_parameter_supported: boolean;
             require_pushed_authorization_requests: boolean;
@@ -1628,10 +1754,25 @@ export interface components {
             revocation_endpoint: string;
             scopes_supported: string[];
             subject_types_supported: string[];
+            tls_client_certificate_bound_access_tokens: boolean;
             token_endpoint: string;
             token_endpoint_auth_methods_supported: string[];
             token_endpoint_auth_signing_alg_values_supported: string[];
             userinfo_endpoint: string;
+        };
+        OAuthClientKeyView: {
+            /** Format: date-time */
+            activated_at: string;
+            /** Format: uuid */
+            id: string;
+            jwk: unknown;
+            kid: string;
+            purpose: string;
+            /** Format: date-time */
+            retire_at?: string | null;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            status: string;
         };
         OAuthClientPoliciesResult: {
             has_more: boolean;
@@ -1655,6 +1796,8 @@ export interface components {
             status: string;
         };
         OAuthClientView: {
+            backchannel_logout_session_required: boolean;
+            backchannel_logout_uri?: string | null;
             client_assertion_public_key_configured: boolean;
             client_assertion_required: boolean;
             client_id: string;
@@ -1670,7 +1813,11 @@ export interface components {
             owner_scope_id: string;
             owner_scope_type: string;
             redirect_uris: string[];
+            request_object_signing_keys_configured: boolean;
             requires_admin_consent: boolean;
+            security_event_receiver_uri?: string | null;
+            security_profile: string;
+            sender_constraint?: string | null;
             /** Format: uuid */
             service_account_principal_id?: string | null;
             service_account_role?: string | null;
@@ -1678,6 +1825,7 @@ export interface components {
             service_account_workspace_id?: string | null;
             /** Format: uuid */
             tenant_id?: string | null;
+            tls_client_certificate_bound_access_tokens: boolean;
         };
         OAuthClientsResult: {
             clients: components["schemas"]["OAuthClientView"][];
@@ -1687,6 +1835,12 @@ export interface components {
         PasskeyEndpointsWellKnownResponse: {
             enroll: string;
             manage: string;
+        };
+        PasswordContinuationResult: {
+            email: string;
+            next_step: string;
+            /** Format: uuid */
+            state_token: string;
         };
         PowChallenge: {
             /** Format: int32 */
@@ -1703,7 +1857,7 @@ export interface components {
             state_token: string;
         };
         RecoveryCodesGenerateRequest: {
-            password: string;
+            password?: string | null;
         };
         RecoveryCodesResult: {
             codes: string[];
@@ -1756,8 +1910,18 @@ export interface components {
             tokens_revoked: number;
         };
         RevokeRequest: {
+            client_assertion?: string | null;
+            client_assertion_type?: string | null;
+            client_id?: string | null;
+            client_secret?: string | null;
             token: string;
             token_type_hint?: string | null;
+        };
+        RotateOAuthClientKeyInput: {
+            jwk: unknown;
+            purpose: string;
+            /** Format: int64 */
+            retire_previous_after_seconds?: number;
         };
         SecurityEventCount: {
             count: number;
@@ -1796,6 +1960,7 @@ export interface components {
             total_events: number;
         };
         SessionView: {
+            client?: null | components["schemas"]["UserAgentInfo"];
             /** Format: date-time */
             created_at: string;
             current: boolean;
@@ -1816,6 +1981,8 @@ export interface components {
             organization_id?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /** Format: date-time */
+            risk_confirmed_at?: string | null;
             risk_decision?: string | null;
             /** Format: double */
             risk_score?: number | null;
@@ -1831,10 +1998,16 @@ export interface components {
             next_cursor?: string | null;
             sessions: components["schemas"]["SessionView"][];
         };
+        /** @enum {string} */
+        StepUpPurpose: "password_change";
         StepUpRequest: {
+            /** Format: uuid */
+            email_challenge_id?: string | null;
+            email_code?: string | null;
             password?: string | null;
             pow_nonce: string;
             pow_solution: string;
+            purpose?: null | components["schemas"]["StepUpPurpose"];
             recovery_code?: string | null;
             totp_code?: string | null;
             /** Format: uuid */
@@ -1850,6 +2023,8 @@ export interface components {
             country_code: string;
             data_region: string;
             display_name?: string | null;
+            hosting_strategy: string;
+            is_european_exclusive: boolean;
             legal_jurisdiction: string;
             primary_timezone: string;
             sub_region?: string | null;
@@ -1879,6 +2054,7 @@ export interface components {
             authorization_details?: Record<string, never>[];
             /** Format: int64 */
             expires_in: number;
+            id_token?: string | null;
             issued_token_type?: string | null;
             refresh_token?: string | null;
             scope: string;
@@ -1907,6 +2083,15 @@ export interface components {
             allowed_scopes?: string[] | null;
             required_acr?: string | null;
             status?: string | null;
+        };
+        UserAgentInfo: {
+            browser?: string | null;
+            /** Format: double */
+            browser_version?: number | null;
+            device?: string | null;
+            device_type: string;
+            os?: string | null;
+            os_version?: string | null;
         };
         UserConsent: {
             consent_type: string;
@@ -2375,6 +2560,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            /** @description WebAuthn accepted, password challenge required */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordContinuationResult"];
                 };
             };
             /** @description Invalid authentication state */
@@ -3622,6 +3816,35 @@ export interface operations {
             };
         };
     };
+    revoke_all_sessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All sessions revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResult"];
+                };
+            };
+            /** @description Recent step-up required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     revoke_all_other_sessions: {
         parameters: {
             query?: never;
@@ -3691,6 +3914,46 @@ export interface operations {
             };
         };
     };
+    confirm_high_risk_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description High-risk session explicitly confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Recent step-up required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     step_up: {
         parameters: {
             query?: never;
@@ -3715,6 +3978,57 @@ export interface operations {
             };
             /** @description Unauthorized or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    request_email_step_up: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailStepUpRequest"];
+            };
+        };
+        responses: {
+            /** @description Email step-up code sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailStepUpChallengeResult"];
+                };
+            };
+            /** @description Email is not allowed for this purpose */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3797,8 +4111,8 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Account not found */
-            404: {
+            /** @description Registration enrollment missing, expired, or already used */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4071,24 +4385,8 @@ export interface operations {
                 response_type: string;
                 /** @description OAuth client ID */
                 client_id: string;
-                /** @description Redirect URI */
-                redirect_uri?: string;
-                /** @description Requested scopes */
-                scope?: string;
-                /** @description State parameter */
-                state?: string;
-                /** @description Audience */
-                audience?: string;
-                /** @description PKCE code challenge */
-                code_challenge?: string;
-                /** @description PKCE code challenge method */
-                code_challenge_method?: string;
-                /** @description PAR request_uri (RFC 9126) or JAR request_uri (RFC 9101) */
+                /** @description One-time PAR request_uri (RFC 9126) */
                 request_uri?: string;
-                /** @description JAR request object JWT (RFC 9101) */
-                request?: string;
-                /** @description Client secret (required for JAR) */
-                client_secret?: string;
                 /** @description Auth user index */
                 authuser?: string;
             };
@@ -4395,6 +4693,149 @@ export interface operations {
             };
             /** @description Internal server error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_client_keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client verification keys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClientKeyView"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rotate_client_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotateOAuthClientKeyInput"];
+            };
+        };
+        responses: {
+            /** @description Client key rotated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClientKeyView"];
+                };
+            };
+            /** @description Invalid key */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    revoke_client_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+                keyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client key revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClientKeyView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Key not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Last required key */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

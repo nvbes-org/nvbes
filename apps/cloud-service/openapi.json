@@ -131,13 +131,12 @@
             }
           },
           {
-            "name": "before",
+            "name": "cursor",
             "in": "query",
-            "description": "Cursor: return events before this ID",
+            "description": "Opaque pagination cursor",
             "required": false,
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           },
           {
@@ -167,6 +166,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuditEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -292,6 +301,43 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum objects to return (1-200)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectType",
+            "in": "query",
+            "description": "Filter by object type",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ObjectTypeFilter"
+            }
+          },
+          {
+            "name": "namePrefix",
+            "in": "query",
+            "description": "Case-insensitive literal name prefix",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -301,6 +347,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListObjectsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }
@@ -1402,7 +1458,8 @@
         "type": "object",
         "required": [
           "workspace_id",
-          "events"
+          "events",
+          "has_more"
         ],
         "properties": {
           "events": {
@@ -1411,12 +1468,14 @@
               "$ref": "#/components/schemas/AuditEventView"
             }
           },
-          "next_before": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
             "type": [
               "string",
               "null"
-            ],
-            "format": "uuid"
+            ]
           },
           "workspace_id": {
             "type": "string",
@@ -1613,6 +1672,16 @@
           "message": {
             "type": "string"
           },
+          "recovery": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorRecovery"
+              }
+            ]
+          },
           "request_id": {
             "type": [
               "string",
@@ -1632,12 +1701,28 @@
           }
         }
       },
+      "ErrorRecovery": {
+        "type": "string",
+        "enum": [
+          "reauthenticate"
+        ]
+      },
       "ListObjectsResponse": {
         "type": "object",
         "required": [
-          "objects"
+          "objects",
+          "has_more"
         ],
         "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "objects": {
             "type": "array",
             "items": {

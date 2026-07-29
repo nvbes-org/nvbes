@@ -5,6 +5,7 @@ use crate::domains::auth::types::{
     AuthContext, SwitchWorkspaceInput, SwitchWorkspaceResult, WorkspaceView,
 };
 use crate::http::error::AppError;
+use nvbes_core::config::AppConfig;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -55,24 +56,20 @@ pub async fn switch_workspace(
     db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     webauthn: &webauthn_rs::Webauthn,
-    auth_step_up_ttl_minutes: i64,
+    config: &AppConfig,
     auth: &AuthContext,
     workspace_id: Uuid,
     input: SwitchWorkspaceInput,
+    rotate_browser_session: bool,
 ) -> Result<SwitchWorkspaceResult, AppError> {
     let workspace =
         workspace_switch::resolve_workspace_switch_context(db, auth, workspace_id).await?;
     let stepped_up = workspace_switch::ensure_workspace_switch_assurance(
-        db,
-        redis,
-        webauthn,
-        auth_step_up_ttl_minutes,
-        auth,
-        &workspace,
-        input,
+        db, redis, webauthn, config, auth, &workspace, input,
     )
     .await?;
 
+    let mut browser_session_token = None;
     if let Ok(Some(mut session)) =
         nvbes_redis::session::get_session(redis, &auth.session_id.to_string()).await
     {
@@ -83,6 +80,12 @@ pub async fn switch_workspace(
             Some(workspace.workspace_id),
             Some(workspace.data_region.clone()),
         );
+        if rotate_browser_session {
+            let token = crate::domains::auth::sessions::token::issue(auth.session_id);
+            session.browser_session_token_hash =
+                Some(crate::domains::auth::sessions::token::hash(&token));
+            browser_session_token = Some(token);
+        }
         let ttl = current_session_ttl(&session);
         if nvbes_redis::session::set_session(redis, &session, ttl)
             .await
@@ -94,6 +97,8 @@ pub async fn switch_workspace(
                 &auth.session_id.to_string(),
             )
             .await;
+        } else {
+            let _ = crate::domains::auth::sessions::db::insert_session_db(db, &session).await;
         }
     }
 
@@ -109,5 +114,6 @@ pub async fn switch_workspace(
         },
         session: fetch_view(redis, auth.session_id, false).await?,
         stepped_up,
+        browser_session_token,
     })
 }

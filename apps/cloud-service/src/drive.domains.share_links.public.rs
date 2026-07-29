@@ -31,6 +31,7 @@ pub async fn get_public_share(
 
     let mut tx = db.begin().await?;
     let hash = nvbes_core::auth::token_hash(token.trim());
+    set_public_share_rls_context(&mut tx, &hash).await?;
     let resolved = queries::resolve_public_share_for_update_tx(&mut tx, &hash).await?;
     if let Err(error) = logic::enforce_public_share_access(&resolved, require_clean_scan) {
         log_public_share_denied(
@@ -95,6 +96,7 @@ pub async fn create_public_download_url(
 
     let mut tx = db.begin().await?;
     let hash = nvbes_core::auth::token_hash(token.trim());
+    set_public_share_rls_context(&mut tx, &hash).await?;
     let resolved = queries::resolve_public_share_for_update_tx(&mut tx, &hash).await?;
     if let Err(error) = logic::enforce_public_share_access(&resolved, require_clean_scan) {
         log_public_share_denied(
@@ -124,7 +126,10 @@ pub async fn create_public_download_url(
 
     db::increment_download_count_tx(&mut tx, resolved.share_link_id).await?;
 
-    let expires_at = Utc::now() + ChronoDuration::minutes(5);
+    let expires_at = std::cmp::min(
+        Utc::now() + ChronoDuration::seconds(60),
+        resolved.expires_at,
+    );
     let object_key = resolved.object_key.ok_or_else(|| {
         AppError::conflict(
             "missing_object_key",
@@ -180,6 +185,28 @@ pub async fn create_public_download_url(
         share_link_id: resolved.share_link_id,
         download_url,
     })
+}
+
+async fn set_public_share_rls_context(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    token_hash: &str,
+) -> Result<(), AppError> {
+    let workspace_id =
+        sqlx::query_scalar::<_, Option<Uuid>>("SELECT resolve_public_share_workspace($1)")
+            .bind(token_hash)
+            .fetch_one(&mut **tx)
+            .await?
+            .ok_or_else(|| AppError::not_found("share_link_not_found", "Share link not found."))?;
+
+    nvbes_tenancy::set_transaction_rls_context(
+        tx,
+        nvbes_tenancy::RlsContext {
+            workspace_id: Some(workspace_id),
+            ..Default::default()
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 async fn log_public_share_denied(

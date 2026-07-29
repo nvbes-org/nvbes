@@ -31,9 +31,27 @@ variable "private_subnet" {
 }
 
 variable "ssh_allowed_ips" {
-  description = "CIDRs allowed to SSH to compute instances."
+  description = "Short-lived CIDRs allowed to SSH during an approved JIT window. Keep empty by default."
   type        = list(string)
   default     = []
+}
+
+variable "enable_jit_ssh" {
+  description = "Temporarily enables SSH rules for approved JIT CIDRs."
+  type        = bool
+  default     = false
+}
+
+variable "edge_allowed_ipv4_cidrs" {
+  description = "Trusted reverse-proxy CIDRs allowed to reach the API origin."
+  type        = list(string)
+  default     = []
+}
+
+variable "egress_https_allowed_cidrs" {
+  description = "CIDRs reachable over HTTPS by API and worker workloads."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
 
 variable "api_instance_type" {
@@ -83,6 +101,49 @@ variable "postgres_backup_retention_days" {
 variable "bucket_name" {
   description = "Globally unique Object Storage bucket name."
   type        = string
+}
+
+variable "enable_external_audit_archive" {
+  description = "Provision the external WORM audit archive and dedicated writer identity."
+  type        = bool
+  default     = false
+}
+
+variable "audit_archive_bucket_name" {
+  description = "Globally unique bucket name for signed audit anchors."
+  type        = string
+  default     = null
+}
+
+variable "audit_archive_writer_access_key" {
+  description = "Access key for the write-only identity owned by the external Security account."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "audit_anchor_kms_key_id" {
+  description = "Protected asymmetric Scaleway KMS key used only to sign audit anchor digests."
+  type        = string
+  default     = null
+}
+
+variable "audit_anchor_kms_auth_token_secret_id" {
+  description = "Secret Manager ID containing the production KMS signer API secret."
+  type        = string
+  default     = null
+}
+
+variable "audit_archive_writer_secret_id" {
+  description = "Secret Manager ID containing the external Security-account Object Storage writer secret."
+  type        = string
+  default     = null
+}
+
+variable "account_database_url_secret_id" {
+  description = "Secret Manager ID containing the private Account PostgreSQL URL for Serverless Jobs."
+  type        = string
+  default     = null
 }
 
 variable "bucket_cors_allowed_origins" {

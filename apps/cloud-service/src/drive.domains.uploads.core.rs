@@ -22,13 +22,12 @@ pub async fn create_upload(
     let expected_size_bytes = logic::validate_size(input.expected_size_bytes)?;
     let expected_checksum = logic::normalize_checksum(input.expected_checksum)?;
 
-    if let Some(parent_id) = input.parent_id {
-        queries::ensure_parent_is_active_folder(db, access.workspace_id, parent_id).await?;
-    }
-
     let now = Utc::now();
-    let expires_at = now + Duration::minutes(15);
+    let expires_at = now + Duration::minutes(5);
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
+    if let Some(parent_id) = input.parent_id {
+        queries::ensure_parent_is_active_folder(&mut tx, access.workspace_id, parent_id).await?;
+    }
 
     crate::domains::quotas::ensure_upload_allowed_tx(
         &mut tx,
@@ -125,13 +124,12 @@ pub async fn create_tus_upload(
     let expected_size_bytes = logic::validate_size(input.upload_length)?;
     let expected_checksum = logic::normalize_checksum(input.expected_checksum)?;
 
-    if let Some(parent_id) = input.parent_id {
-        queries::ensure_parent_is_active_folder(db, access.workspace_id, parent_id).await?;
-    }
-
     let now = Utc::now();
     let expires_at = now + Duration::minutes(60);
     let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
+    if let Some(parent_id) = input.parent_id {
+        queries::ensure_parent_is_active_folder(&mut tx, access.workspace_id, parent_id).await?;
+    }
 
     crate::domains::quotas::ensure_upload_allowed_tx(
         &mut tx,

@@ -26,7 +26,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     if login_protection_required(&config.environment) && !config.auth_pow_enabled {
         panic!(
             "NVBES_AUTH_POW_ENABLED=true is required outside development/test. Refusing to start with fail-open login protection."
@@ -44,6 +48,10 @@ async fn main() -> anyhow::Result<()> {
     sqlx::migrate!("./migrations").run(&db).await?;
 
     let state = nvbes_account_service::app::AppState::bootstrap(&config, db).await?;
+    nvbes_account_service::domains::oauth::security_events::start_dispatcher(
+        state.db.clone(),
+        state.jwt.clone(),
+    );
     let app = nvbes_account_service::app::build_router(state);
 
     let http_addr: SocketAddr = format!("0.0.0.0:{}", config.api_port).parse()?;
@@ -58,8 +66,11 @@ async fn main() -> anyhow::Result<()> {
         let mtls_app = app.clone();
         let mtls_handle = axum_server::Handle::new();
 
-        let mtls_server =
-            axum_server::bind_rustls(mtls_addr, mtls_acceptor).handle(mtls_handle.clone());
+        let mtls_server = axum_server::Server::bind(mtls_addr)
+            .acceptor(
+                nvbes_account_service::http::mtls::PeerCertificateAcceptor::new(mtls_acceptor),
+            )
+            .handle(mtls_handle.clone());
 
         tracing::info!(addr = %mtls_addr, "Starting mTLS listener");
 

@@ -53,9 +53,16 @@ async fn replace_challenge_prunes_expired_and_keeps_active_flow_unique() {
                 .expect("workspace root"),
         );
     }
-    let auth_state_id = create_state(&redis, None, "challenge@example.com", "mfa", None)
-        .await
-        .expect("auth state should be created");
+    let auth_state_id = create_state(
+        &redis,
+        None,
+        "challenge@example.com",
+        "mfa",
+        None,
+        Vec::new(),
+    )
+    .await
+    .expect("auth state should be created");
     let principal_id = Uuid::new_v4();
     sqlx::query(
         r#"
@@ -145,7 +152,7 @@ async fn failed_attempts_block_fetch_after_limit() {
     let pool = test_pool();
     let redis = crate::test_support::test_redis_pool().await;
     crate::test_support::ensure_test_database(&pool).await;
-    let auth_state_id = create_state(&redis, None, "limit@example.com", "mfa", None)
+    let auth_state_id = create_state(&redis, None, "limit@example.com", "mfa", None, Vec::new())
         .await
         .expect("auth state should be created");
     let principal_id = Uuid::new_v4();

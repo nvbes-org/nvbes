@@ -2,31 +2,41 @@ use axum::{Extension, Json, Router, extract::State, http::HeaderMap, routing::po
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::Deserialize;
 
-use crate::{app::AppState, http::error::AppError, http::middleware::jwt::AuthContext};
+use crate::{
+    app::AppState,
+    http::{
+        error::AppError,
+        middleware::jwt::{
+            AuthContext,
+            account_access::{self, AccountAccess, OAUTH_APPROVAL_SCOPE},
+        },
+    },
+};
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = crate::http::middleware::jwt::jwt_auth_middleware;
-
     Router::new()
         .route("/authorize", post(device_authorize))
         .route("/verify", post(device_verify))
         .route(
             "/approve",
-            post(device_approve).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_APPROVAL_SCOPE),
+                post(device_approve),
+            ),
         )
         .route(
             "/deny",
-            post(device_deny).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_APPROVAL_SCOPE),
+                post(device_deny),
+            ),
         )
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct DeviceAuthorizeRequest {
     client_id: String,
     scope: String,

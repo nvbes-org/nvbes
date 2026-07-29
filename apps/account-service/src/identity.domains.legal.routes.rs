@@ -2,7 +2,10 @@ use crate::app::AppState;
 use crate::domains::legal::db::UserConsent;
 use crate::domains::legal::service;
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::middleware::jwt::{
+    AuthContext,
+    account_access::{self, AccountAccess, LEGAL_READ_SCOPE, LEGAL_WRITE_SCOPE},
+};
 use axum::{
     Json, Router,
     extract::{Extension, State},
@@ -14,36 +17,38 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = jwt_auth_middleware;
-
     Router::new()
         .route(
             "/legal/consent",
-            post(grant_consent).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(LEGAL_WRITE_SCOPE),
+                post(grant_consent),
+            ),
         )
         .route(
             "/legal/consent/revoke",
-            post(revoke_consent).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(LEGAL_WRITE_SCOPE),
+                post(revoke_consent),
+            ),
         )
         .route(
             "/legal/consents",
-            get(list_consents).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(LEGAL_READ_SCOPE),
+                get(list_consents),
+            ),
         )
         .route(
             "/legal/gpc",
-            get(gpc_status).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(LEGAL_READ_SCOPE),
+                get(gpc_status),
+            ),
         )
 }
 

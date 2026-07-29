@@ -1,13 +1,12 @@
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { downloadRecoveryCodes, generateCodes } from './RecoveryCodesPage.actions';
 import { RecoveryCodesListStep } from './RecoveryCodesPage.list';
 import { RecoveryCodesStepUp } from './RecoveryCodesPage.stepup';
 
 export default function RecoveryCodesPage() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const navigate = useNavigate();
   const navigateBack = () =>
     void navigate({

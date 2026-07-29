@@ -40,3 +40,20 @@ output "runtime_secret_key" {
   value       = scaleway_iam_api_key.runtime.secret_key
   sensitive   = true
 }
+
+output "audit_archive_bucket_name" {
+  description = "Configured external Object Lock bucket containing signed audit anchors."
+  value       = var.enable_external_audit_archive ? var.audit_archive_bucket_name : null
+}
+
+output "audit_anchor_signer_access_key" {
+  description = "Dedicated production KMS signer access key."
+  value       = try(scaleway_iam_api_key.audit_anchor_signer[0].access_key, null)
+  sensitive   = true
+}
+
+output "audit_anchor_signer_secret_key" {
+  description = "Dedicated KMS signer secret key. Move it to Secret Manager immediately."
+  value       = try(scaleway_iam_api_key.audit_anchor_signer[0].secret_key, null)
+  sensitive   = true
+}

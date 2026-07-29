@@ -27,7 +27,11 @@ const ACCOUNT_SERVICE_CLIENT_SECRET_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_SE
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
     let port = gateway_port(config.api_port)?;
     let billing_grpc_endpoint = billing_grpc_endpoint(config.api_port)?;
     let state = state::GatewayState {

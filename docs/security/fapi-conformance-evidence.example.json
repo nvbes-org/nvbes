@@ -1,0 +1,21 @@
+{
+  "profile": "fapi2-security-profile-final",
+  "status": "pending",
+  "suite_version": "replace-with-pinned-suite-release",
+  "deployment_commit": "replace-with-tested-git-commit",
+  "completed_at": "replace-with-ISO-8601-timestamp",
+  "plans": [
+    {
+      "plan_name": "fapi2-security-profile-final-test-plan",
+      "sender_constraint": "dpop",
+      "status": "pending",
+      "result_url": "replace-with-official-result-url"
+    },
+    {
+      "plan_name": "fapi2-security-profile-final-test-plan",
+      "sender_constraint": "mtls",
+      "status": "pending",
+      "result_url": "replace-with-official-result-url"
+    }
+  ]
+}

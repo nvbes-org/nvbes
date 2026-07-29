@@ -8,6 +8,9 @@ pub mod lifecycle;
 pub mod logic;
 #[path = "drive.domains.uploads.models.rs"]
 pub mod models;
+#[cfg(test)]
+#[path = "drive.domains.uploads.property.tests.rs"]
+mod property_tests;
 #[path = "drive.domains.uploads.db.queries.rs"]
 pub mod queries;
 #[path = "drive.domains.uploads.routes.rs"]
@@ -24,3 +27,5 @@ pub use service::{
     append_tus_chunk, cancel_upload, complete_upload, create_tus_upload, create_upload,
     get_tus_upload_status,
 };
+#[path = "drive.domains.uploads.content_validation.rs"]
+mod content_validation;

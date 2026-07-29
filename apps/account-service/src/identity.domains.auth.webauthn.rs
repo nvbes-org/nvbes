@@ -1,3 +1,5 @@
+#[path = "identity.domains.auth.webauthn.assurance.rs"]
+pub mod assurance;
 #[path = "identity.domains.auth.webauthn.authentication.rs"]
 pub mod authentication;
 #[path = "identity.domains.auth.webauthn.errors.rs"]

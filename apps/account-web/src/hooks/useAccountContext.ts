@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { accountContextQueryOptions } from '@/account.queries';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { identifyUser, setAnalyticsWorkspaceGroup } from '@/identity.analytics';
-import { readAuthuser } from '@/identity.authuser';
 import type { AccountEntry, AccountMe } from '@/lib/account-context';
 
 type AccountContextState = {
@@ -16,8 +15,7 @@ type AccountContextState = {
 };
 
 export function useAccountContext() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const { data, error, isFetching, isPending, refetch } = useQuery(
     accountContextQueryOptions(authuser),
   );

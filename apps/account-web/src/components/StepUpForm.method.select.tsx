@@ -1,4 +1,4 @@
-import { Key, KeyRound, LifeBuoy, Smartphone } from 'lucide-react';
+import { Key, KeyRound, LifeBuoy, Mail, Smartphone } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -15,12 +15,16 @@ export function StepUpMethodSelect({
   hasWebAuthn,
   hasTotp,
   hasRecovery,
+  canUsePassword,
+  allowEmail,
   onMethodChange,
 }: {
   method: StepUpMethod;
   hasWebAuthn: boolean;
   hasTotp: boolean;
   hasRecovery: boolean;
+  canUsePassword: boolean;
+  allowEmail: boolean;
   onMethodChange: (value: StepUpMethod) => void;
 }) {
   return (
@@ -34,11 +38,13 @@ export function StepUpMethodSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value="password" className="text-xs">
-              <span className="flex items-center gap-2">
-                <Key className="size-3.5" /> Mot de passe
-              </span>
-            </SelectItem>
+            {canUsePassword && (
+              <SelectItem value="password" className="text-xs">
+                <span className="flex items-center gap-2">
+                  <Key className="size-3.5" /> Mot de passe
+                </span>
+              </SelectItem>
+            )}
             {hasWebAuthn && (
               <SelectItem value="webauthn" className="text-xs">
                 <span className="flex items-center gap-2">
@@ -57,6 +63,13 @@ export function StepUpMethodSelect({
               <SelectItem value="recovery" className="text-xs">
                 <span className="flex items-center gap-2">
                   <LifeBuoy className="size-3.5" /> Code de récupération
+                </span>
+              </SelectItem>
+            )}
+            {allowEmail && (
+              <SelectItem value="email" className="text-xs">
+                <span className="flex items-center gap-2">
+                  <Mail className="size-3.5" /> Code envoyé par email
                 </span>
               </SelectItem>
             )}

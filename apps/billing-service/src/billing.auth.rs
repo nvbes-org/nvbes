@@ -13,6 +13,8 @@ pub struct BillingAuthContext {
     pub scope: Option<String>,
     pub acr: Option<String>,
     pub amr: Vec<String>,
+    pub auth_time: Option<i64>,
+    pub authentication_event_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +34,8 @@ struct IdentityIntrospectionResponse {
     acr: Option<String>,
     #[serde(default)]
     amr: Vec<String>,
+    auth_time: Option<i64>,
+    sid: Option<String>,
     network_valid: Option<bool>,
 }
 
@@ -63,8 +67,21 @@ pub async fn authorize_billing_workspace(
     if permission == BillingWorkspacePermission::Manage && !has_step_up(&identity) {
         return Err(AppError::forbidden(
             "step_up_required",
-            "Billing changes require a recent step-up authentication.",
+            "Billing changes require a recent phishing-resistant passkey or security-key authentication.",
         ));
+    }
+    if permission == BillingWorkspacePermission::Manage {
+        tracing::info!(
+            security_event = "privileged_authentication_enforced",
+            privileged_surface = "billing_and_secret_management",
+            principal_id = %identity.principal_id,
+            workspace_id = %workspace_id,
+            authentication_event_id = identity.authentication_event_id.as_deref().unwrap_or_default(),
+            acr = identity.acr.as_deref().unwrap_or_default(),
+            amr = %identity.amr.join(","),
+            auth_time = identity.auth_time.unwrap_or_default(),
+            "accepted privileged Billing request"
+        );
     }
 
     Ok(identity)
@@ -176,6 +193,8 @@ fn identity_auth_context(
         scope: identity.scope,
         acr: identity.acr,
         amr: identity.amr,
+        auth_time: identity.auth_time,
+        authentication_event_id: identity.sid,
     })
 }
 
@@ -216,11 +235,16 @@ fn role_allows(role: &str, permission: BillingWorkspacePermission) -> bool {
 }
 
 fn has_step_up(auth: &BillingAuthContext) -> bool {
-    auth.acr.as_deref() == Some("aal2")
-        || auth
-            .amr
-            .iter()
-            .any(|method| matches!(method.as_str(), "otp" | "webauthn" | "passkey"))
+    auth.authentication_event_id
+        .as_deref()
+        .is_some_and(|event_id| !event_id.trim().is_empty())
+        && nvbes_core::auth::has_recent_phishing_resistant_authentication(
+            auth.acr.as_deref(),
+            &auth.amr,
+            auth.auth_time,
+            chrono::Utc::now().timestamp(),
+            nvbes_core::auth::PRIVILEGED_AUTHENTICATION_MAX_AGE_SECONDS,
+        )
 }
 
 #[cfg(test)]
@@ -236,7 +260,8 @@ mod tests {
     }
 
     #[test]
-    fn step_up_accepts_aal2_or_strong_amr() {
+    fn billing_management_requires_recent_phishing_resistant_step_up() {
+        let now = chrono::Utc::now().timestamp();
         let base = BillingAuthContext {
             principal_id: Uuid::nil(),
             tenant_id: None,
@@ -244,14 +269,33 @@ mod tests {
             scope: None,
             acr: None,
             amr: Vec::new(),
+            auth_time: Some(now),
+            authentication_event_id: Some("billing-authn-event".to_string()),
         };
         assert!(!has_step_up(&base));
-        assert!(has_step_up(&BillingAuthContext {
+        assert!(!has_step_up(&BillingAuthContext {
             acr: Some("aal2".to_string()),
             ..base.clone()
         }));
+        assert!(!has_step_up(&BillingAuthContext {
+            acr: Some("aal2".to_string()),
+            amr: vec!["otp".to_string()],
+            ..base.clone()
+        }));
         assert!(has_step_up(&BillingAuthContext {
+            acr: Some("aal2".to_string()),
             amr: vec!["webauthn".to_string()],
+            ..base.clone()
+        }));
+        assert!(!has_step_up(&BillingAuthContext {
+            acr: Some("aal2".to_string()),
+            amr: vec!["webauthn".to_string()],
+            authentication_event_id: None,
+            ..base.clone()
+        }));
+        assert!(!has_step_up(&BillingAuthContext {
+            acr: Some("aal2".to_string()),
+            auth_time: Some(now - 16 * 60),
             ..base
         }));
     }

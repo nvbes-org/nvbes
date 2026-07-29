@@ -31,7 +31,7 @@ export function preferredMfaMethod(methods: string[] | null | undefined): MfaMet
   if (methods?.includes('totp')) {
     return 'totp';
   }
-  return methods?.length === 1 && methods[0] === 'email' ? 'email' : null;
+  return methods?.includes('recovery') ? 'recovery' : null;
 }
 
 export function consentCancelUrl(request: OAuthAuthorizeRequest): string {

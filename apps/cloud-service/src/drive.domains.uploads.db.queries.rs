@@ -7,7 +7,7 @@ use crate::domains::files::models::StorageObjectType;
 use crate::http::error::AppError;
 
 pub async fn ensure_parent_is_active_folder(
-    pool: &sqlx::PgPool,
+    tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,
     parent_id: Uuid,
 ) -> Result<(), AppError> {
@@ -23,6 +23,8 @@ pub async fn ensure_parent_is_active_folder(
           mime_type,
           checksum,
           status,
+          scan_status,
+          object_key,
           created_by,
           created_by_principal_id,
           created_at,
@@ -34,7 +36,7 @@ pub async fn ensure_parent_is_active_folder(
     )
     .bind(workspace_id)
     .bind(parent_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut **tx)
     .await?;
 
     let parent = parent

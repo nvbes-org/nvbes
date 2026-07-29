@@ -1,4 +1,5 @@
 use crate::app::AppState;
+use crate::http::middleware::jwt::account_access::{self, AccountAccess, SECURITY_READ_SCOPE};
 use axum::Router;
 use axum::{
     extract::{Extension, Query, State},
@@ -6,8 +7,6 @@ use axum::{
 };
 use serde::Deserialize;
 
-#[path = "identity.domains.auth.routes.mfa.email.rs"]
-pub mod email;
 #[path = "identity.domains.auth.routes.mfa.recovery.rs"]
 pub mod recovery;
 #[path = "identity.domains.auth.routes.mfa.totp.rs"]
@@ -60,13 +59,13 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .route(
             "/factors",
-            get(list_mfa_factors).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                crate::http::middleware::jwt::jwt_auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_READ_SCOPE),
+                get(list_mfa_factors),
+            ),
         )
         .merge(totp::router(state))
-        .merge(email::router(state))
         .merge(webauthn::router(state))
         .merge(recovery::router(state))
 }

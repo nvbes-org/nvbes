@@ -33,15 +33,6 @@ export interface WebauthnRegisterFinishRequest {
   credential: unknown;
 }
 
-export interface MfaEmailAddress {
-  id: string;
-  email: string;
-  is_primary: boolean;
-  verified: boolean;
-  verified_at: string | null;
-  created_at: string;
-}
-
 function authHeaders(token?: string, method = 'GET'): Headers {
   const headers = new Headers();
   if (token) {
@@ -71,11 +62,9 @@ const MFA_ERROR_MESSAGES: Record<string, string> = {
   invalid_credentials: 'Les informations saisies sont incorrectes.',
   invalid_totp_code: "Le code d'authentification est incorrect.",
   invalid_recovery_code: 'Le code de récupération est incorrect.',
-  invalid_email_mfa_code: 'Le code reçu par email est incorrect ou a expiré.',
-  email_mfa_not_configured: "La vérification par email n'est pas disponible pour ce compte.",
-  email_mfa_requires_verified_email: 'Ajoutez un email vérifié avant d’utiliser cette méthode.',
-  email_mfa_cannot_be_removed: 'La vérification par email est requise et ne peut pas être retirée.',
   step_up_required: 'Confirmez votre identité pour continuer.',
+  phishing_resistant_step_up_required:
+    'Confirmez cette action avec une passkey ou une clé de sécurité.',
   step_up_expired: 'La vérification a expiré. Recommencez.',
   webauthn_challenge_missing: 'La vérification par clé de sécurité doit être relancée.',
   webauthn_challenge_expired: 'La demande de clé de sécurité a expiré. Recommencez.',
@@ -184,41 +173,6 @@ export async function confirmTotp(
   return response.json();
 }
 
-export async function listEmailMfaEligible(
-  baseUrl: string,
-  token?: string,
-): Promise<{ emails: MfaEmailAddress[]; primary_min_age_hours: number }> {
-  const response = await fetch(`${baseUrl}/auth/mfa/email/eligible`, {
-    headers: authHeaders(token),
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    return handleResponse(response, 'email eligible');
-  }
-
-  return response.json();
-}
-
-export async function setupEmailMfa(
-  baseUrl: string,
-  emailId: string,
-  token?: string,
-): Promise<{ factor: MfaFactorView; mfa_enabled: boolean }> {
-  const response = await fetch(`${baseUrl}/auth/mfa/email/setup`, {
-    method: 'POST',
-    headers: jsonAuthHeaders(token, 'POST'),
-    credentials: 'include',
-    body: JSON.stringify({ email_id: emailId }),
-  });
-
-  if (!response.ok) {
-    return handleResponse(response, 'email setup');
-  }
-
-  return response.json();
-}
-
 /**
  * Démarre l'enregistrement WebAuthn (récupère le défi du serveur).
  */
@@ -321,11 +275,16 @@ export async function completeWebAuthnStepUp(
   baseUrl: string,
   token?: string,
   getOptions?: WebauthnCreateOptions,
+  purpose?: StepUpPurpose,
 ): Promise<void> {
   const { challengeId, options } = await startWebAuthnAuthentication(baseUrl, token);
   const credential = await getWebAuthnCredential(options, getOptions);
   const serialized = serializeCredential(credential);
-  await stepUp(baseUrl, { webauthnResponse: serialized, webauthnChallengeId: challengeId }, token);
+  await stepUp(
+    baseUrl,
+    { purpose, webauthnResponse: serialized, webauthnChallengeId: challengeId },
+    token,
+  );
 }
 
 /**
@@ -378,11 +337,14 @@ export async function removeMfaFactor(
 export async function stepUp(
   baseUrl: string,
   credentials: {
+    purpose?: StepUpPurpose;
     password?: string;
     totpCode?: string;
     webauthnResponse?: unknown;
     webauthnChallengeId?: string;
     recoveryCode?: string;
+    emailCode?: string;
+    emailChallengeId?: string;
   },
   token?: string,
 ): Promise<{ success: boolean; valid_until: string }> {
@@ -395,11 +357,14 @@ export async function stepUp(
     body: JSON.stringify({
       pow_nonce: powChallenge.nonce,
       pow_solution: String(powSolution),
+      purpose: credentials.purpose ?? null,
       password: credentials.password ?? null,
       totp_code: credentials.totpCode ?? null,
       webauthn_response: credentials.webauthnResponse ?? null,
       webauthn_challenge_id: credentials.webauthnChallengeId ?? null,
       recovery_code: credentials.recoveryCode ?? null,
+      email_code: credentials.emailCode ?? null,
+      email_challenge_id: credentials.emailChallengeId ?? null,
     }),
   });
 
@@ -407,5 +372,24 @@ export async function stepUp(
     return handleResponse(response, 'step-up');
   }
 
+  return response.json();
+}
+
+export type StepUpPurpose = 'password_change';
+
+export async function requestEmailStepUpCode(
+  baseUrl: string,
+  purpose: StepUpPurpose,
+  token?: string,
+): Promise<{ challenge_id: string; expires_at: string }> {
+  const response = await fetch(`${baseUrl}/auth/step-up/email/request`, {
+    method: 'POST',
+    headers: jsonAuthHeaders(token, 'POST'),
+    credentials: 'include',
+    body: JSON.stringify({ purpose }),
+  });
+  if (!response.ok) {
+    return handleResponse(response, 'email step-up');
+  }
   return response.json();
 }

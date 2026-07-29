@@ -40,6 +40,7 @@ const LoginIdentifierResultSchema = z.object({
 const LoginPasswordResultSchema = z.object({
   next_step: z.string().optional(),
   state_token: z.string().optional(),
+  email: z.string().optional(),
   available_methods: z.array(z.string()).nullable().optional(),
   user: z
     .object({
@@ -52,10 +53,6 @@ const LoginPasswordResultSchema = z.object({
     .optional(),
   session_token: z.string().optional(),
   verification_resend_available_at: z.string().nullable().optional(),
-});
-
-const ResendLoginMfaEmailCodeResultSchema = z.object({
-  success: z.boolean(),
 });
 
 const WebauthnAuthStartResultSchema = z.object({
@@ -207,14 +204,6 @@ export function submitLoginMfa(
   input:
     | {
         totp_code: string;
-        email_code?: never;
-        recovery_code?: never;
-        webauthn_response?: never;
-        webauthn_challenge_id?: never;
-      }
-    | {
-        email_code: string;
-        totp_code?: never;
         recovery_code?: never;
         webauthn_response?: never;
         webauthn_challenge_id?: never;
@@ -222,7 +211,6 @@ export function submitLoginMfa(
     | {
         recovery_code: string;
         totp_code?: never;
-        email_code?: never;
         webauthn_response?: never;
         webauthn_challenge_id?: never;
       }
@@ -230,7 +218,6 @@ export function submitLoginMfa(
         webauthn_response: unknown;
         webauthn_challenge_id: string;
         totp_code?: never;
-        email_code?: never;
         recovery_code?: never;
       },
 ): Promise<LoginPasswordResult> {
@@ -238,14 +225,6 @@ export function submitLoginMfa(
     state_token: stateToken,
     ...input,
   });
-}
-
-export function resendLoginMfaEmailCode(stateToken: string): Promise<{ success: boolean }> {
-  return identityHttpClient.post(
-    '/auth/challenge/mfa/email/send',
-    ResendLoginMfaEmailCodeResultSchema,
-    { state_token: stateToken },
-  );
 }
 
 export function logoutIdentitySession(): Promise<void> {

@@ -13,7 +13,7 @@ mod verify;
 use serde::Deserialize;
 
 pub use auth::{assertion_auth, client_id_from_unverified_assertion};
-pub use jwk::is_supported_client_assertion_public_jwk;
+pub use jwk::{is_high_assurance_client_assertion_jwk, is_supported_client_assertion_public_jwk};
 pub use verify::verify_private_key_jwt;
 
 pub const CLIENT_ASSERTION_TYPE_JWT_BEARER: &str =
@@ -31,6 +31,7 @@ pub(crate) struct ClientAssertionIdentityClaims {
 pub(crate) struct ClientAssertionClaims {
     pub iss: String,
     pub sub: String,
+    pub aud: serde_json::Value,
     pub exp: i64,
     #[serde(default)]
     pub iat: Option<i64>,

@@ -1,5 +1,5 @@
 export type ResetPasswordPageModel = {
-  tokenFromUrl: string;
+  tokenFromLink: string;
   token: string;
   password: string;
   confirmPassword: string;

@@ -34,7 +34,10 @@ pub(crate) async fn resolve_mfa_challenge_methods(
     db: &sqlx::PgPool,
     principal_id: Uuid,
 ) -> Result<Vec<String>, AppError> {
-    crate::domains::auth::mfa::list_login_methods(db, principal_id).await
+    let methods = crate::domains::auth::mfa::list_login_methods(db, principal_id).await?;
+    let privileged =
+        crate::domains::auth::mfa_policy::principal_has_privileged_role(db, principal_id).await?;
+    crate::domains::auth::mfa_policy::methods_for_privileged_principal(methods, privileged)
 }
 
 pub(crate) async fn resolve_post_password_challenge(
@@ -43,7 +46,6 @@ pub(crate) async fn resolve_post_password_challenge(
     risk_score: f64,
 ) -> Result<Option<Vec<String>>, AppError> {
     if risk_score > 0.0 {
-        crate::domains::auth::mfa::email::ensure_primary_email_factor(db, principal_id).await?;
         return Ok(Some(resolve_mfa_challenge_methods(db, principal_id).await?));
     }
 

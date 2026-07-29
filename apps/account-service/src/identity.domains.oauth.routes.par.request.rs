@@ -45,6 +45,26 @@ pub(super) fn validate_par_request(request: &ParRequest) -> Result<(), AppError>
             "The nonce parameter is required when the openid scope is requested.",
         ));
     }
+    if request
+        .scope
+        .as_deref()
+        .is_some_and(|scope| scope.len() > 2048 || scope.split_whitespace().count() > 64)
+    {
+        return Err(AppError::bad_request(
+            "invalid_scope",
+            "At most 64 scopes and 2048 scope characters are allowed.",
+        ));
+    }
+    if request
+        .resource
+        .as_ref()
+        .is_some_and(|resources| resources.len() > 8)
+    {
+        return Err(AppError::bad_request(
+            "invalid_target",
+            "At most eight resource indicators are allowed.",
+        ));
+    }
 
     Ok(())
 }
@@ -71,6 +91,7 @@ mod tests {
             consent_action: None,
             client_assertion_type: None,
             client_assertion: None,
+            request: None,
         };
 
         let error = validate_par_request(&request).expect_err("state should be required");

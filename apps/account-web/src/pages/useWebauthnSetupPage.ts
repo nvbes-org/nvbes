@@ -3,9 +3,9 @@ import {
   registerWebAuthnCredential,
   WebauthnBrowserError,
 } from '@nvbes/identity-sdk-web';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { setupCopy, type WebauthnSetupKind } from './WebauthnSetupPage.shared';
 
 interface WebauthnSupportState {
@@ -19,8 +19,7 @@ const WEBAUTHN_TIMEOUT_MS = 60_000;
 import { isStepUpRequiredError } from '@/identity.step-up';
 
 export function useWebauthnSetupPage(kind: WebauthnSetupKind) {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const navigate = useNavigate();
   const copy = setupCopy[kind];
   const [step, setStep] = useState<'stepup' | 'register'>('stepup');

@@ -1,3 +1,6 @@
+import { createTrustedWorkerScriptUrl, type NvbesTrustedScriptUrl } from '@nvbes/web-runtime';
+import avatarConversionWorkerUrl from './account.avatar-upload.worker.ts?worker&url';
+
 const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024;
 const BROWSER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const HEIC_IMAGE_TYPES = new Set([
@@ -23,7 +26,11 @@ interface AvatarConversionResponse {
 }
 
 function createAvatarConversionWorker(): Worker {
-  return new Worker(new URL('./account.avatar-upload.worker.ts', import.meta.url), {
+  const TrustedWorker = Worker as unknown as new (
+    scriptURL: string | URL | NvbesTrustedScriptUrl,
+    options?: WorkerOptions,
+  ) => Worker;
+  return new TrustedWorker(createTrustedWorkerScriptUrl(avatarConversionWorkerUrl), {
     name: 'avatar-heic-converter',
     type: 'module',
   });

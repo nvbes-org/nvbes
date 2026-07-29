@@ -56,6 +56,15 @@ export function MfaPageFactorList({
                         Dernière utilisation : {new Date(factor.last_used_at).toLocaleDateString()}
                       </CardDescription>
                     )}
+                    {factor.factor_type === 'webauthn' && (
+                      <CardDescription>
+                        {webauthnAssuranceLabel(factor)}
+                        {factor.backup_state ? ' · synchronisée' : ''}
+                        {factor.sign_count !== null && factor.sign_count !== undefined
+                          ? ` · compteur ${factor.sign_count}`
+                          : ''}
+                      </CardDescription>
+                    )}
                   </div>
                 </div>
                 <Button
@@ -75,4 +84,17 @@ export function MfaPageFactorList({
       })}
     </div>
   );
+}
+
+function webauthnAssuranceLabel(factor: MfaFactorView): string {
+  switch (factor.assurance) {
+    case 'hardware_security_key':
+      return 'Clé matérielle indépendante · résistance au phishing maximale';
+    case 'device_bound_passkey':
+      return 'Passkey liée à cet appareil · résistance au phishing maximale';
+    case 'synced_passkey':
+      return 'Passkey synchronisable · résistance au phishing';
+    default:
+      return 'Credential WebAuthn · résistance au phishing';
+  }
 }

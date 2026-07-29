@@ -107,6 +107,19 @@ pub async fn suspend_user_access(
     if changed == 0 {
         return Err(Status::not_found("enterprise user was not found"));
     }
+    let revoked_sessions =
+        db::revoke_tenant_sessions(&mut tx, tenant_id, target_principal_id).await?;
+    db::enqueue_shared_security_event(
+        &mut tx,
+        tenant_id,
+        target_principal_id,
+        "https://schemas.openid.net/secevent/caep/event-type/session-revoked",
+        serde_json::json!({
+            "reason": "enterprise_access_suspended",
+            "revoked_sessions": revoked_sessions
+        }),
+    )
+    .await?;
     audit::insert_member_audit(
         &mut tx,
         tenant_id,
@@ -160,6 +173,14 @@ pub async fn reactivate_user_access(
     if changed == 0 {
         return Err(Status::not_found("enterprise user was not found"));
     }
+    db::enqueue_shared_security_event(
+        &mut tx,
+        tenant_id,
+        target_principal_id,
+        "https://schemas.openid.net/secevent/caep/event-type/assurance-level-change",
+        serde_json::json!({"reason": "enterprise_access_reactivated"}),
+    )
+    .await?;
     let audit_workspace_ids = audit::merge_workspace_ids(&previous_workspace_ids, &workspace_ids);
     audit::insert_member_audit(
         &mut tx,

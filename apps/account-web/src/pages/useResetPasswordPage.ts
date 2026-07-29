@@ -1,17 +1,21 @@
 import { clientErrorMessage } from '@nvbes/web-runtime';
 import { useMutation } from '@tanstack/react-query';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+import { clearCapturedAuthUrlToken, readCapturedAuthUrlToken } from '../identity.auth-url-secrets';
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  passwordHasSupportedLength,
+} from '../identity.password.policy';
 import { resetPassword } from '../identity.password.api';
 import { estimatePasswordStrength } from './RegisterPage.password-strength';
 
 export function useResetPasswordPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.searchStr);
-  const tokenFromUrl = searchParams.get('token') ?? '';
+  const [tokenFromLink] = useState(() => readCapturedAuthUrlToken('/reset-password'));
 
-  const [token, setToken] = useState(tokenFromUrl);
+  const [token, setToken] = useState(tokenFromLink);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +30,10 @@ export function useResetPasswordPage() {
 
   const mutation = useMutation({
     mutationFn: () => resetPassword(token, password),
-    onSuccess: () => setSuccess(true),
+    onSuccess: () => {
+      clearCapturedAuthUrlToken('/reset-password');
+      setSuccess(true);
+    },
     onError: (error) =>
       setError(
         clientErrorMessage(error, 'Le lien est invalide ou a expire. Veuillez recommencer.'),
@@ -37,8 +44,10 @@ export function useResetPasswordPage() {
     event.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caracteres.');
+    if (!passwordHasSupportedLength(password)) {
+      setError(
+        `Le mot de passe doit contenir entre ${MIN_PASSWORD_LENGTH} et ${MAX_PASSWORD_LENGTH} caractères.`,
+      );
       return;
     }
 
@@ -56,7 +65,7 @@ export function useResetPasswordPage() {
   };
 
   return {
-    tokenFromUrl,
+    tokenFromLink,
     token,
     password,
     confirmPassword,

@@ -48,7 +48,14 @@ services:
   seaweedfs:
     image: chrislusf/seaweedfs:3.80
     container_name: nvbes-seaweedfs
-    command: ["server", "-dir=/data", "-s3", "-s3.config=/etc/seaweedfs/s3.json"]
+    command:
+      [
+        "server",
+        "-dir=/data",
+        "-s3",
+        "-s3.config=/etc/seaweedfs/s3.json",
+        "-s3.allowedOrigins=http://localhost:3001,http://127.0.0.1:3001,http://localhost:5173,http://127.0.0.1:5173",
+      ]
     ports:
       - "8333:8333"
       - "9333:9333"

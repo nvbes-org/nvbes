@@ -34,14 +34,32 @@ pub async fn authenticate(
         ));
     }
 
-    if let Some(ref sid) = claims.sid {
+    if let (Some(sid), Some(workspace_id)) = (claims.sid.as_deref(), claims.workspace_id) {
+        let mut tx = db.begin().await?;
+        nvbes_tenancy::set_transaction_rls_context(
+            &mut tx,
+            nvbes_tenancy::RlsContext {
+                principal_id: claims
+                    .sub
+                    .as_deref()
+                    .and_then(|value| Uuid::parse_str(value).ok()),
+                user_id: claims
+                    .sub
+                    .as_deref()
+                    .and_then(|value| Uuid::parse_str(value).ok()),
+                tenant_id: claims.tenant_id,
+                workspace_id: Some(workspace_id),
+            },
+        )
+        .await?;
         let is_revoked = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM sessions WHERE id = $1 AND revoked_at IS NOT NULL)",
         )
         .bind(Uuid::parse_str(sid).unwrap_or_else(|_| Uuid::nil()))
-        .fetch_one(db)
+        .fetch_one(&mut *tx)
         .await
         .unwrap_or(false);
+        tx.commit().await?;
 
         if is_revoked {
             super::identity::invalidate_cached_session(sid);
@@ -165,6 +183,17 @@ fn ensure_optional_uuid_matches(
 
 pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppError> {
     let user_id = auth.user_id()?;
+    let mut tx = db.begin().await?;
+    nvbes_tenancy::set_transaction_rls_context(
+        &mut tx,
+        nvbes_tenancy::RlsContext {
+            principal_id: Some(auth.principal_id),
+            user_id: Some(user_id),
+            tenant_id: auth.tenant_id,
+            workspace_id: auth.workspace_id,
+        },
+    )
+    .await?;
     let user = sqlx::query(
         r#"
         SELECT id, email, display_name, email_verified_at, status::text AS status
@@ -174,7 +203,7 @@ pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppErro
         "#,
     )
     .bind(user_id)
-    .fetch_one(db)
+    .fetch_one(&mut *tx)
     .await?;
 
     let workspaces = if auth.principal_kind == AuthPrincipalKind::ServiceAccount {
@@ -194,7 +223,7 @@ pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppErro
                     "#,
                 )
                 .bind(workspace_id)
-                .fetch_optional(db)
+                .fetch_optional(&mut *tx)
                 .await?;
 
                 row.into_iter()
@@ -227,7 +256,7 @@ pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppErro
             "#,
         )
         .bind(user_id)
-        .fetch_all(db)
+        .fetch_all(&mut *tx)
         .await?
         .into_iter()
         .map(|row| WorkspaceView {
@@ -240,7 +269,7 @@ pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppErro
         .collect()
     };
 
-    Ok(MeResult {
+    let result = MeResult {
         user: UserView {
             id: user.get("id"),
             email: user.get("email"),
@@ -253,5 +282,7 @@ pub async fn get_me(db: &PgPool, auth: &AuthContext) -> Result<MeResult, AppErro
         current_tenant_id: auth.tenant_id,
         current_organization_id: auth.organization_id,
         current_workspace_id: auth.workspace_id,
-    })
+    };
+    tx.commit().await?;
+    Ok(result)
 }

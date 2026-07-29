@@ -53,6 +53,8 @@ pub struct IntrospectionResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nbf: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnf: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub act: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actor_principal_type: Option<String>,
@@ -94,6 +96,7 @@ impl IntrospectionResponse {
             exp: None,
             iat: None,
             nbf: None,
+            cnf: None,
             act: None,
             actor_principal_type: None,
             actor_role: None,

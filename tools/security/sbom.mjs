@@ -1,96 +1,81 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const args = process.argv.slice(2);
-const write = args.includes("--write");
-const outputPath = "docs/migration/sbom.generated.json";
-const markdownPath = "docs/migration/sbom.md";
-const errors = [];
+const outputArgument = args.find((argument) =>
+	argument.startsWith("--output="),
+);
+const outputPath =
+	outputArgument?.slice("--output=".length) ?? ".temp/security/nvbes.cdx.json";
 
-const components = [
-	{ ecosystem: "node", manifest: "package.json", lockfile: "pnpm-lock.yaml" },
-	{ ecosystem: "rust", manifest: "Cargo.toml", lockfile: "Cargo.lock" },
-	{ ecosystem: "go", manifest: "go.mod", lockfile: "go.mod" },
-	{ ecosystem: "python", manifest: "pyproject.toml", lockfile: "pyproject.toml" },
-	{ ecosystem: "containers", manifest: "deploy/oss/helm/nvbes/Chart.yaml", lockfile: "deploy/oss/helm/nvbes/values.yaml" },
-];
-
-function buildSbom() {
-	const entries = components.map((component) => ({
-		...component,
-		manifest_present: existsSync(component.manifest),
-		lock_present: existsSync(component.lockfile),
-	}));
-	return {
-		schema_version: 1,
-		generation: { command: "tools/security/sbom.mjs --write" },
-		summary: {
-			entries: entries.length,
-			complete: entries.filter((entry) => entry.manifest_present && entry.lock_present).length,
-			pending: entries.filter((entry) => !entry.manifest_present || !entry.lock_present).length,
-		},
-		components: entries,
-	};
-}
-
-function serializeJson(sbom) {
-	return `${JSON.stringify(sbom, null, 2)}\n`;
-}
-
-function serializeMarkdown(sbom) {
-	const lines = [
-		"# SBOM Coverage Manifest",
-		"",
-		"## Status",
-		"",
-		`- entries: ${sbom.summary.entries}`,
-		`- complete: ${sbom.summary.complete}`,
-		`- pending: ${sbom.summary.pending}`,
-		"",
-		"## Components",
-		"",
-		"| Ecosystem | Manifest | Lockfile | Complete |",
-		"|---|---|---|---:|",
-	];
-	for (const component of sbom.components) {
-		const complete = component.manifest_present && component.lock_present;
-		lines.push(`| ${component.ecosystem} | \`${component.manifest}\` | \`${component.lockfile}\` | ${complete} |`);
-	}
-	lines.push("", "## Regeneration", "", "```bash", "pnpm check:sbom", "tools/security/sbom.mjs --write", "```", "");
-	return lines.join("\n");
-}
-
-function validate(sbom) {
-	if (sbom.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	for (const component of sbom.components ?? []) {
-		if (!component.manifest_present) errors.push(`${component.manifest}: missing`);
-		if (!component.lock_present) errors.push(`${component.lockfile}: missing`);
-	}
-}
-
-const sbom = buildSbom();
-const json = serializeJson(sbom);
-const markdown = serializeMarkdown(sbom);
-
-if (write) {
-	mkdirSync(dirname(outputPath), { recursive: true });
-	writeFileSync(outputPath, json);
-	writeFileSync(markdownPath, markdown);
-	console.log(`SBOM coverage written to ${markdownPath} and ${outputPath}`);
-	process.exit(0);
-}
-
-validate(sbom);
-for (const [path, expected] of [[outputPath, json], [markdownPath, markdown]]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run tools/security/sbom.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run tools/security/sbom.mjs --write`);
-}
-
-if (errors.length > 0) {
-	console.error("SBOM coverage checks failed:");
-	for (const error of errors) console.error(`- ${error}`);
+function fail(message) {
+	console.error(`SBOM generation failed: ${message}`);
 	process.exit(1);
 }
 
-console.log(`SBOM coverage: ok (${sbom.summary.complete}/${sbom.summary.entries} complete)`);
+const version = spawnSync("trivy", ["--version"], { encoding: "utf8" });
+if (version.error?.code === "ENOENT") {
+	fail(
+		"trivy is required; install the pinned CI version before running pnpm check:sbom",
+	);
+}
+if (version.status !== 0) {
+	fail(version.stderr.trim() || "unable to execute trivy");
+}
+
+mkdirSync(dirname(outputPath), { recursive: true });
+const result = spawnSync(
+	"trivy",
+	[
+		"filesystem",
+		"--format",
+		"cyclonedx",
+		"--output",
+		outputPath,
+		"--skip-dirs",
+		"node_modules",
+		"--skip-dirs",
+		"target",
+		"--skip-dirs",
+		".nx",
+		"--skip-dirs",
+		".temp",
+		"--no-progress",
+		".",
+	],
+	{ encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+);
+
+if (result.status !== 0) {
+	fail(
+		result.stderr.trim() ||
+			result.stdout.trim() ||
+			"trivy returned a non-zero status",
+	);
+}
+if (!existsSync(outputPath)) {
+	fail(`${outputPath} was not created`);
+}
+
+let sbom;
+try {
+	sbom = JSON.parse(readFileSync(outputPath, "utf8"));
+} catch (error) {
+	fail(`${outputPath} is not valid JSON: ${error.message}`);
+}
+
+if (sbom.bomFormat !== "CycloneDX")
+	fail(`${outputPath}: bomFormat must be CycloneDX`);
+if (typeof sbom.specVersion !== "string")
+	fail(`${outputPath}: specVersion is missing`);
+if (!Array.isArray(sbom.components) || sbom.components.length === 0) {
+	fail(`${outputPath}: no dependency components were discovered`);
+}
+if (!sbom.metadata?.timestamp)
+	fail(`${outputPath}: metadata.timestamp is missing`);
+
+console.log(
+	`CycloneDX SBOM: ok (${sbom.components.length} components, spec ${sbom.specVersion}, ${outputPath})`,
+);

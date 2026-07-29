@@ -1,24 +1,21 @@
-# SBOM Coverage Manifest
+# Software Bill of Materials
 
-## Status
+## Artifact
 
-- entries: 5
-- complete: 5
-- pending: 0
+`pnpm check:sbom` produces a real CycloneDX JSON SBOM at
+`.temp/security/nvbes.cdx.json`. The security workflow uploads that file as an
+immutable CI artifact for every reviewed revision.
 
-## Components
-
-| Ecosystem | Manifest | Lockfile | Complete |
-|---|---|---|---:|
-| node | `package.json` | `pnpm-lock.yaml` | true |
-| rust | `Cargo.toml` | `Cargo.lock` | true |
-| go | `go.mod` | `go.mod` | true |
-| python | `pyproject.toml` | `pyproject.toml` | true |
-| containers | `deploy/oss/helm/nvbes/Chart.yaml` | `deploy/oss/helm/nvbes/values.yaml` | true |
+The artifact is generated from the complete repository filesystem by Trivy. It
+contains the resolved package components and dependency relationships discovered
+from the Node.js, Rust, Go, Python and container manifests.
 
 ## Regeneration
 
 ```bash
 pnpm check:sbom
-tools/security/sbom.mjs --write
+node tools/security/sbom.mjs --output=.temp/security/nvbes.cdx.json
 ```
+
+Trivy is mandatory locally and pinned in CI. A missing generator, an invalid
+CycloneDX document or an empty component inventory fails the gate.

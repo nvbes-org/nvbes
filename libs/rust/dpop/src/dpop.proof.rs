@@ -3,6 +3,9 @@ mod create;
 #[path = "dpop.proof.jwk.rs"]
 mod jwk;
 #[cfg(test)]
+#[path = "dpop.proof.property.tests.rs"]
+mod property_tests;
+#[cfg(test)]
 #[path = "dpop.proof.tests.rs"]
 mod tests;
 #[path = "dpop.proof.verify.rs"]

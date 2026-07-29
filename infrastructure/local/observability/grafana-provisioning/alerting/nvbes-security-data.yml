@@ -1,0 +1,142 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: nvbes-security-data
+    folder: nvbes-security
+    interval: 1m
+    rules:
+      - uid: nvbes-siem-sensitive-export
+        title: Sensitive data export requested
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: Privacy, finance, or audit evidence export activity detected.
+          runbook_url: docs/operations/incident-runbooks.md#sensitive-export
+        labels:
+          severity: warning
+          owner: privacy-security
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(privacy\\.(account|workspace)_export|audit-evidence/export|billing/admin/exports)" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold
+
+      - uid: nvbes-siem-destructive-action
+        title: Destructive production action
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: Account, tenant, workspace, credential, or protected data deletion detected.
+          runbook_url: docs/operations/incident-runbooks.md#destructive-action
+        labels:
+          severity: critical
+          owner: security-operations
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(account\\.deleted|tenant_deleted|workspace_deleted|developer_secret\\.revoked|privacy.*delete)" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold
+
+      - uid: nvbes-siem-cross-tenant-access
+        title: Cross-tenant access attempt
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          description: Tenant boundary mismatch or cross-tenant authorization denial detected.
+          runbook_url: docs/operations/security-incident-exercises.md#database-or-tenant-isolation-compromise
+        labels:
+          severity: critical
+          owner: platform-security
+          signal: siem
+        data:
+          - refId: A
+            datasourceUid: Loki
+            relativeTimeRange: { from: 600, to: 0 }
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({platform="nvbes",environment="production"} |~ "(tenant_mismatch|workspace_tenant_mismatch|cross_tenant_access)" [5m]))'
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              reducer: sum
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [C] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: B
+              refId: C
+              type: threshold

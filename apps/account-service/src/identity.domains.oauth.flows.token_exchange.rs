@@ -12,6 +12,7 @@ pub async fn token_exchange(
     redis: &nvbes_redis::RedisPool,
     jwt: &JwtService,
     input: TokenExchangeInput,
+    token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 ) -> Result<TokenView, AppError> {
     let audience = input
         .audience
@@ -195,18 +196,28 @@ pub async fn token_exchange(
     )
     .await?;
 
-    let access_token = jwt.generate_token_exchange(
-        &subject_claims,
-        &actor_sub,
-        actor_client_id.as_deref(),
-        scope_str,
-        Some(audience),
-    )?;
+    let access_token = jwt
+        .generate_token_exchange(
+            &subject_claims,
+            &actor_sub,
+            actor_client_id.as_deref(),
+            scope_str,
+            Some(audience),
+            token_confirmation.clone(),
+        )
+        .await?;
     metrics::counter!("identity_oauth_token_exchange_total").increment(1);
 
     Ok(TokenView {
         access_token,
-        token_type: "Bearer".to_string(),
+        token_type: if token_confirmation
+            .as_ref()
+            .is_some_and(|confirmation| confirmation.jkt.is_some())
+        {
+            "DPoP".to_string()
+        } else {
+            "Bearer".to_string()
+        },
         expires_in: jwt.access_token_expiry.num_seconds(),
         refresh_token: None,
         id_token: None,

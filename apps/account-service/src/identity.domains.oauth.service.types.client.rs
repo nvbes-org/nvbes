@@ -18,6 +18,13 @@ pub struct OAuthClientView {
     pub client_assertion_required: bool,
     pub requires_admin_consent: bool,
     pub client_assertion_public_key_configured: bool,
+    pub security_profile: String,
+    pub request_object_signing_keys_configured: bool,
+    pub sender_constraint: Option<String>,
+    pub tls_client_certificate_bound_access_tokens: bool,
+    pub backchannel_logout_uri: Option<String>,
+    pub backchannel_logout_session_required: bool,
+    pub security_event_receiver_uri: Option<String>,
     pub service_account_principal_id: Option<Uuid>,
     pub service_account_workspace_id: Option<Uuid>,
     pub service_account_role: Option<String>,
@@ -70,6 +77,7 @@ pub struct RevokeOAuthClientResult {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CreateOAuthClientInput {
     pub name: String,
     pub redirect_uris: Vec<String>,
@@ -84,7 +92,14 @@ pub struct CreateOAuthClientInput {
     pub owner_scope_id: Option<Uuid>,
     pub client_assertion_public_key_jwk: Option<serde_json::Value>,
     pub client_assertion_required: Option<bool>,
+    pub security_profile: Option<String>,
+    pub request_object_signing_jwks: Option<serde_json::Value>,
+    pub sender_constraint: Option<String>,
+    pub tls_client_certificate_sha256: Option<String>,
     pub requires_admin_consent: Option<bool>,
+    pub backchannel_logout_uri: Option<String>,
+    pub backchannel_logout_session_required: Option<bool>,
+    pub security_event_receiver_uri: Option<String>,
     pub service_account_name: Option<String>,
     pub service_account_description: Option<String>,
     pub service_account_principal_id: Option<Uuid>,
@@ -92,6 +107,7 @@ pub struct CreateOAuthClientInput {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CreateOAuthClientPolicyInput {
     pub scope_type: Option<String>,
     pub scope_id: Option<Uuid>,
@@ -105,6 +121,7 @@ pub struct CreateOAuthClientPolicyInput {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct UpdateOAuthClientPolicyInput {
     pub allowed_scopes: Option<Vec<String>>,
     pub allowed_audiences: Option<Vec<String>>,

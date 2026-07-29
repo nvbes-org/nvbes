@@ -16,6 +16,7 @@ pub(super) struct TusFinalizeInput<'a> {
     pub storage_object_id: Uuid,
     pub upload_id: Uuid,
     pub file_data: &'a [u8],
+    pub declared_mime: Option<&'a str>,
     pub actual_size: i64,
     pub computed_checksum: &'a str,
     pub ip: Option<&'a str>,
@@ -33,6 +34,7 @@ pub(super) async fn finalize_tus_upload(
     let scan_outcome = scan::perform_scan(
         input.scanner,
         input.file_data,
+        input.declared_mime,
         input.scan_enabled,
         input.scan_fail_open,
     )
@@ -46,6 +48,7 @@ pub(super) async fn finalize_tus_upload(
             input.storage_object_id,
             input.actual_size,
             Some(input.computed_checksum),
+            &scan_outcome.status,
             input.scan_engine,
             &scan_outcome.quarantine_reason,
             scanned_at,

@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::domains::auth::{
     audit::{AuthAuditInput, record_auth_event},
-    db as auth_db, email_verification, mfa, risk,
+    db as auth_db, email_verification, mfa, registration_enrollment, risk,
     sessions::cache::{
         cached_session_from_login, configure_idle_timeout, current_session_ttl,
         session_view_from_cached_session,
@@ -67,6 +67,11 @@ pub async fn create_session_for_principal(
             )
         })
     };
+    let registration_enrollment_token = if user.email_verified_at.is_none() {
+        Some(registration_enrollment::issue(db, config, principal_id).await?)
+    } else {
+        None
+    };
 
     let session_id = Uuid::new_v4();
     let browser_session_token = token::issue(session_id);
@@ -108,6 +113,10 @@ pub async fn create_session_for_principal(
         now,
     );
     apply_profile(&mut cached_session, &context.request_profile);
+    let session_client = crate::domains::auth::user_agent::parse(
+        context.user_agent.as_deref(),
+        context.request_profile.ua_client_hints.brands.as_deref(),
+    );
     cached_session.account_device_id = Some(device_assessment.device_id.to_string());
     cached_session.device_trust_level = Some(device_assessment.trust_level.clone());
     cached_session.device_trust_score = Some(device_assessment.trust_score);
@@ -216,6 +225,7 @@ pub async fn create_session_for_principal(
                 "account_device_id": device_assessment.device_id,
                 "device_trust_level": device_assessment.trust_level,
                 "device_trust_score": device_assessment.trust_score,
+                "client": session_client,
             }),
         },
     )
@@ -246,6 +256,7 @@ pub async fn create_session_for_principal(
                 "geo_network_kind": geo_resolution.as_ref().map(|resolution| resolution.network_kind.as_str()),
                 "geo_risk_score": geo_resolution.as_ref().map(|resolution| resolution.risk_score),
                 "geo_risk_labels": geo_resolution.as_ref().map(|resolution| &resolution.risk_labels),
+                "client": session_client,
             }),
         },
     )
@@ -269,5 +280,6 @@ pub async fn create_session_for_principal(
         browser_session_token,
         device_cookie_token: device_assessment.cookie_token,
         verification_resend_available_at,
+        registration_enrollment_token,
     })
 }

@@ -1,12 +1,11 @@
 import type { AccountPrincipal } from '@nvbes/identity-client';
 import { identityClient } from '@nvbes/identity-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from '@tanstack/react-router';
 import { type SubmitEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { notifyProfileAvatarUpdated } from '@/account.avatar';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import type { SupportedRegion } from '@/identity.auth.api';
 import { identityAuthMutationKeys, supportedRegionsQueryFn } from '@/identity.auth.queries';
-import { readAuthuser } from '@/identity.authuser';
 import { deleteProfileAvatar, uploadProfileAvatar } from './AccountPersonalInfoPage.api';
 import { fillPersonalInfoForm } from './useAccountPersonalInfoPage.form';
 import { useAccountPersonalInfoMutation } from './useAccountPersonalInfoPage.mutation';
@@ -15,6 +14,7 @@ import {
   formatMemberSince,
   getAccountPersonalInfoQueryKey,
 } from './useAccountPersonalInfoPage.shared';
+import { hasPersonalInfoErrors, validatePersonalInfo } from './AccountPersonalInfoPage.validation';
 
 const regionNameCollator = new Intl.Collator('fr', {
   sensitivity: 'base',
@@ -28,8 +28,7 @@ function regionSortLabel(region: SupportedRegion): string {
 export function useAccountPersonalInfoPage() {
   const didInitializeFormRef = useRef(false);
   const initializedUserIdRef = useRef<string | null>(null);
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
 
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
@@ -83,6 +82,19 @@ export function useAccountPersonalInfoPage() {
       birthdate === (selectedUser.birthdate ?? '') &&
       region === accountRegion
     : true;
+  const personalInfoErrors = useMemo(
+    () =>
+      validatePersonalInfo({
+        firstname,
+        lastname,
+        username,
+        birthdate,
+        region,
+        regions: supportedRegions,
+      }),
+    [birthdate, firstname, lastname, region, supportedRegions, username],
+  );
+  const isPersonalInfoInvalid = hasPersonalInfoErrors(personalInfoErrors);
 
   const mutation = useAccountPersonalInfoMutation({
     authuser,
@@ -149,7 +161,7 @@ export function useAccountPersonalInfoPage() {
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isPersonalInfoUnchanged) {
+    if (isPersonalInfoUnchanged || isPersonalInfoInvalid) {
       return;
     }
     setEditError(null);
@@ -212,10 +224,12 @@ export function useAccountPersonalInfoPage() {
     lastname,
     loading: mutation.isPending,
     isPersonalInfoUnchanged,
+    isPersonalInfoInvalid,
     memberSince,
     region,
     regionLoading: supportedRegionsQuery.isPending,
     regions: supportedRegions,
+    personalInfoErrors,
     selectedUser,
     setBirthdate,
     setFirstname,

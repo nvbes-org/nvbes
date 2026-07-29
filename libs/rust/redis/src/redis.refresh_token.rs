@@ -112,6 +112,14 @@ pub async fn mark_refresh_token_used(
     Ok(())
 }
 
+pub async fn touch_refresh_token(pool: &RedisPool, jti: &str) -> Result<(), RedisError> {
+    if let Some(mut token) = get_refresh_token(pool, jti).await? {
+        token.last_used_at = Some(Utc::now());
+        set_refresh_token(pool, &token).await?;
+    }
+    Ok(())
+}
+
 pub async fn mark_refresh_token_reuse_detected(
     pool: &RedisPool,
     jti: &str,
@@ -194,6 +202,49 @@ pub async fn revoke_all_user_refresh_tokens(
         }
     }
     Ok(())
+}
+
+pub async fn revoke_all_user_refresh_tokens_except_session(
+    pool: &RedisPool,
+    principal_id: Uuid,
+    keep_session_id: Uuid,
+) -> Result<(), RedisError> {
+    let mut conn = pool.get().await?;
+    let tokens: Vec<String> = conn
+        .smembers(refresh_token_principal_index_key(&principal_id))
+        .await?;
+    for token_jti in tokens {
+        if let Some(mut token) = get_refresh_token(pool, &token_jti).await?
+            && token.principal_id == principal_id
+            && token.session_id != keep_session_id
+        {
+            token.revoked_at = Some(Utc::now());
+            set_refresh_token(pool, &token).await?;
+        }
+    }
+    Ok(())
+}
+
+pub async fn client_ids_for_session(
+    pool: &RedisPool,
+    principal_id: Uuid,
+    session_id: Uuid,
+) -> Result<Vec<Uuid>, RedisError> {
+    let mut conn = pool.get().await?;
+    let token_ids: Vec<String> = conn
+        .smembers(refresh_token_session_index_key(&session_id))
+        .await?;
+    let mut client_ids = std::collections::HashSet::new();
+    for token_id in token_ids {
+        if let Some(token) = get_refresh_token(pool, &token_id).await?
+            && token.principal_id == principal_id
+            && token.session_id == session_id
+            && let Some(client_id) = token.client_id
+        {
+            client_ids.insert(client_id);
+        }
+    }
+    Ok(client_ids.into_iter().collect())
 }
 
 pub async fn revoke_all_client_refresh_tokens(

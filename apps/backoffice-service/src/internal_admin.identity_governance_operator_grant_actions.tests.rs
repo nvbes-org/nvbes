@@ -184,6 +184,18 @@ async fn seed_operator_grant_principals(
         .expect("principal should insert");
     }
 
+    for factor_type in ["webauthn", "totp"] {
+        sqlx::query(
+            "INSERT INTO mfa_factors (principal_id, factor_type, status, confirmed_at)
+             VALUES ($1, $2::mfa_factor_type, 'active', NOW())",
+        )
+        .bind(target_id)
+        .bind(factor_type)
+        .execute(pool)
+        .await
+        .expect("target operator factor should insert");
+    }
+
     if grant_actor {
         sqlx::query(
             "INSERT INTO internal_admin_operator_grants (

@@ -127,6 +127,7 @@ pub async fn quarantine_storage_object_tx(
     storage_object_id: Uuid,
     size_bytes: i64,
     checksum: Option<&str>,
+    scan_status: &str,
     scan_engine: &str,
     quarantine_reason: &str,
     scanned_at: DateTime<Utc>,
@@ -137,11 +138,17 @@ pub async fn quarantine_storage_object_tx(
         SET size_bytes = $3,
             checksum = $4,
             status = 'quarantined',
-            scan_status = 'infected',
-            scanned_at = $5,
-            scan_engine = $6,
-            quarantine_reason = $7,
-            updated_at = $5
+            scan_status = $5,
+            scanned_at = $6,
+            scan_engine = $7,
+            quarantine_reason = $8,
+            retention_category = 'quarantine',
+            retention_until = $6 + (
+              SELECT deleted_retention_days * INTERVAL '1 day'
+              FROM data_retention_policies
+              WHERE category = 'quarantine'
+            ),
+            updated_at = $6
         WHERE workspace_id = $1
           AND id = $2
         RETURNING
@@ -166,6 +173,7 @@ pub async fn quarantine_storage_object_tx(
     .bind(storage_object_id)
     .bind(size_bytes)
     .bind(checksum)
+    .bind(scan_status)
     .bind(scanned_at)
     .bind(scan_engine)
     .bind(quarantine_reason)

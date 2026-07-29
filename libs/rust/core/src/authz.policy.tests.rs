@@ -1,5 +1,5 @@
 use super::*;
-use crate::authz::action::action_requires_step_up;
+use crate::authz::action::{action_requires_independent_approval, action_requires_step_up};
 
 #[test]
 fn owner_can_manage_workspace_and_billing() {
@@ -63,6 +63,11 @@ fn security_admin_can_view_audit_but_cannot_invite_members() {
             target_role: Some(WorkspaceRole::Member),
             ..ResourceContext::default()
         }
+    ));
+    assert!(is_allowed(
+        WorkspaceRole::SecurityAdmin,
+        WorkspaceAction::ManageKeys,
+        ResourceContext::default()
     ));
 }
 
@@ -203,4 +208,21 @@ fn sensitive_actions_require_step_up() {
     assert!(action_requires_step_up(WorkspaceAction::DeleteWorkspace));
     assert!(!action_requires_step_up(WorkspaceAction::ViewBilling));
     assert!(!action_requires_step_up(WorkspaceAction::ViewAudit));
+}
+
+#[test]
+fn separation_of_duties_covers_privileged_domains() {
+    for action in [
+        WorkspaceAction::ManageBilling,
+        WorkspaceAction::ManageKeys,
+        WorkspaceAction::ManageAdministration,
+        WorkspaceAction::ExportAudit,
+        WorkspaceAction::ExportWorkspaceData,
+        WorkspaceAction::DeleteWorkspace,
+    ] {
+        assert!(
+            action_requires_independent_approval(action),
+            "{action:?} must require an independent approver"
+        );
+    }
 }

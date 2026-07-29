@@ -168,9 +168,23 @@ pub(super) async fn insert_snapshot_items(
           SELECT 'member' AS item_type, tm.principal_id::text AS subject_id,
             p.display_name AS subject_label, NULL::uuid AS workspace_id,
             tm.role::text AS role, tm.status::text AS status,
-            jsonb_build_object('principal_kind', tm.principal_kind::text, 'created_at', tm.created_at) AS evidence
+            jsonb_build_object(
+              'principal_kind', tm.principal_kind::text,
+              'created_at', tm.created_at,
+              'last_activity_at', activity.last_activity_at,
+              'inactive_days', FLOOR(
+                EXTRACT(EPOCH FROM (NOW() - COALESCE(activity.last_activity_at, tm.created_at)))
+                / 86400
+              )::integer
+            ) AS evidence
           FROM tenant_memberships tm
           INNER JOIN principals p ON p.id = tm.principal_id
+          LEFT JOIN LATERAL (
+            SELECT MAX(us.last_seen_at) AS last_activity_at
+            FROM user_sessions us
+            WHERE us.principal_id = tm.principal_id
+              AND us.tenant_id = tm.tenant_id
+          ) activity ON TRUE
           WHERE tm.tenant_id = $2 AND $3
 
           UNION ALL
@@ -189,9 +203,20 @@ pub(super) async fn insert_snapshot_items(
           SELECT 'service_account' AS item_type, sa.principal_id::text AS subject_id,
             sa.name AS subject_label, sa.workspace_id, wm.role::text AS role,
             p.status::text AS status,
-            jsonb_build_object('auth_method', sa.auth_method, 'client_id', sa.client_id, 'created_at', sa.created_at) AS evidence
+            jsonb_build_object(
+              'auth_method', sa.auth_method,
+              'client_id', sa.client_id,
+              'created_at', sa.created_at,
+              'last_activity_at', oc.last_used_at,
+              'inactive_days', FLOOR(
+                EXTRACT(EPOCH FROM (NOW() - COALESCE(oc.last_used_at, sa.created_at)))
+                / 86400
+              )::integer,
+              'credential_expires_at', sa.credential_expires_at
+            ) AS evidence
           FROM service_accounts sa
           INNER JOIN principals p ON p.id = sa.principal_id
+          LEFT JOIN oauth_clients oc ON oc.client_id = sa.client_id
           LEFT JOIN workspace_memberships wm ON wm.principal_id = sa.principal_id AND wm.workspace_id = sa.workspace_id
           WHERE sa.tenant_id = $2 AND $5
 

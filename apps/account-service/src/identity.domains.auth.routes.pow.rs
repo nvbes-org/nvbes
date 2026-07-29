@@ -30,8 +30,13 @@ pub(crate) async fn challenge_pow(
         crate::domains::auth::ua_client_hints::UserAgentClientHints::from_headers(&headers);
     let ua_ch_assessment =
         ua_client_hints.assess_consistency(meta.user_agent().as_deref(), None, None);
+    let ua_assessment = crate::domains::auth::user_agent::risk::assess(
+        meta.user_agent().as_deref(),
+        ua_client_hints.brands.as_deref(),
+        None,
+    );
 
-    let bot_score = (http_total + ua_ch_assessment.score).min(1.0);
+    let bot_score = (http_total + ua_ch_assessment.score + ua_assessment.score).min(1.0);
     let risk_score = bot_score * 100.0;
 
     let challenge = crate::domains::auth::pow::issue_progressive_challenge(

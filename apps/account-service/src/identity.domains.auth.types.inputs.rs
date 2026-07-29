@@ -47,12 +47,21 @@ pub struct ResetPasswordInput {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct StepUpInput {
+    pub purpose: Option<StepUpPurpose>,
     pub password: Option<String>,
     pub totp_code: Option<String>,
     #[schema(value_type = Object)]
     pub webauthn_response: Option<PublicKeyCredential>,
     pub webauthn_challenge_id: Option<Uuid>,
     pub recovery_code: Option<String>,
+    pub email_code: Option<String>,
+    pub email_challenge_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum StepUpPurpose {
+    PasswordChange,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -68,11 +77,14 @@ pub struct SwitchWorkspaceInput {
 impl SwitchWorkspaceInput {
     pub fn into_step_up_input(self) -> StepUpInput {
         StepUpInput {
+            purpose: None,
             password: self.password,
             totp_code: self.totp_code,
             webauthn_response: self.webauthn_response,
             webauthn_challenge_id: self.webauthn_challenge_id,
             recovery_code: self.recovery_code,
+            email_code: None,
+            email_challenge_id: None,
         }
     }
 }

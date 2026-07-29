@@ -10,6 +10,24 @@ Document de reference a tenir a jour avant publication.
 - Durees de conservation bornees.
 - Suppression ou anonymisation quand la conservation n'est plus necessaire.
 - Cohabitation explicite entre suppression active, corbeille, backups et obligations legales.
+- Toute donnee persistante recoit une classification et une categorie de
+  retention; la classification la plus restrictive prevaut.
+- Une obligation de conservation ou un legal hold suspend la purge, jamais les
+  controles d'acces ni le chiffrement.
+
+## Classes techniques
+
+| Classe         | Exemples                                      | Controle minimal |
+| -------------- | --------------------------------------------- | ---------------- |
+| `public`       | contenu explicitement publie                  | integrite, sauvegarde |
+| `internal`     | metadonnees de service sans contenu client    | acces employe limite, journalisation |
+| `confidential` | fichiers et donnees metier client             | chiffrement par enveloppe, isolation tenant |
+| `restricted`   | secrets, facteurs MFA, preuves de securite    | cle dediee, acces step-up, audit, purge prioritaire |
+
+Le registre executable `data_retention_policies` constitue la source de verite
+pour les workers. Les valeurs de ce document sont les bornes produit et
+reglementaires; une configuration de plan ne peut que raccourcir une duree,
+sauf obligation legale explicite.
 
 ## Regles cibles V1
 
@@ -36,6 +54,10 @@ Document de reference a tenir a jour avant publication.
 
 - **Suppression Logique (Soft Delete)**: La donnée est marquée comme supprimée et n'est plus accessible via les interfaces standard. Elle reste présente en base pour assurer l'intégrité référentielle et permettre une restauration rapide en cas d'erreur.
 - **Purge Physique (Hard Delete)**: Un worker de maintenance (`cloud-worker-maintenance`) parcourt périodiquement les données marquées pour suppression dont le délai de rétention est expiré et procède à leur destruction irréversible sur le stockage objet (Scaleway S3).
+- **Suppression cryptographique**: pour les categories qui l'exigent, la cle de
+  donnees unique de l'objet est detruite avant la purge physique. La suppression
+  est horodatee dans `cryptographic_erased_at`; aucun ciphertext ne doit etre
+  considere comme efface tant que son enveloppe de cle existe encore.
 - **Backups**: Les données supprimées physiquement disparaissent des sauvegardes au fur et à mesure de la rotation des cycles de backup (30 jours).
 - **Observabilité Grafana Cloud**: les signaux quittent l'application via
   Grafana Alloy uniquement. Alloy applique redaction, sampling, labels

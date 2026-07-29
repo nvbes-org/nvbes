@@ -7,7 +7,9 @@ use nvbes_core::pagination::{KeysetCursor, decode_cursor, encode_cursor, page_fr
 
 use super::types::*;
 use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
-use crate::domains::auth::sessions::cache::session_view_from_cached_session;
+use crate::domains::auth::sessions::cache::{
+    current_session_ttl, session_view_from_cached_session,
+};
 use crate::http::error::AppError;
 
 pub async fn logout(
@@ -16,6 +18,8 @@ pub async fn logout(
     session_id: Uuid,
     user_id: Uuid,
 ) -> Result<(), AppError> {
+    crate::domains::oauth::security_events::enqueue_session_revoked(db, redis, user_id, session_id)
+        .await?;
     let _ = crate::domains::auth::sessions::db::revoke_session_db(db, session_id).await;
     revoke_logout_session_state(redis, session_id, user_id).await?;
     let _ = record_auth_event(
@@ -73,8 +77,7 @@ pub async fn list(
             continue;
         };
         if session.principal_id != user_id.to_string()
-            || session.revoked_at.is_some()
-            || session.expires_at <= Utc::now()
+            || crate::domains::auth::sessions::cache::is_expired(&session, Utc::now())
         {
             continue;
         }
@@ -117,6 +120,18 @@ pub async fn revoke(
     user_id: Uuid,
     session_id: Uuid,
 ) -> Result<(), AppError> {
+    let session = nvbes_redis::session::get_session(redis, &session_id.to_string())
+        .await
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
+        .ok_or_else(|| AppError::not_found("session_not_found", "Session not found."))?;
+    if session.principal_id != user_id.to_string() {
+        return Err(AppError::not_found(
+            "session_not_found",
+            "Session not found.",
+        ));
+    }
+    crate::domains::oauth::security_events::enqueue_session_revoked(db, redis, user_id, session_id)
+        .await?;
     let _ = crate::domains::auth::sessions::db::revoke_session_db(db, session_id).await;
     let _ =
         nvbes_redis::session::delete_session(redis, &user_id.to_string(), &session_id.to_string())
@@ -147,6 +162,13 @@ pub async fn revoke_all_others(
     user_id: Uuid,
     current_session_id: Uuid,
 ) -> Result<(), AppError> {
+    crate::domains::oauth::security_events::enqueue_all_sessions_revoked(
+        db,
+        redis,
+        user_id,
+        Some(current_session_id),
+    )
+    .await?;
     nvbes_redis::session::clear_user_sessions_except(
         redis,
         &user_id.to_string(),
@@ -155,9 +177,13 @@ pub async fn revoke_all_others(
     .await
     .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
     let _ = db;
-    nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
-        .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    nvbes_redis::refresh_token::revoke_all_user_refresh_tokens_except_session(
+        redis,
+        user_id,
+        current_session_id,
+    )
+    .await
+    .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
     let _ = record_auth_event(
         db,
         AuthAuditInput {
@@ -175,6 +201,61 @@ pub async fn revoke_all_others(
     Ok(())
 }
 
+pub async fn confirm_high_risk_session(
+    db: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    user_id: Uuid,
+    session_id: Uuid,
+) -> Result<SessionView, AppError> {
+    let mut session = nvbes_redis::session::get_session(redis, &session_id.to_string())
+        .await
+        .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
+        .ok_or_else(|| AppError::not_found("session_not_found", "Session not found."))?;
+    if session.principal_id != user_id.to_string()
+        || session.revoked_at.is_some()
+        || session.expires_at <= Utc::now()
+    {
+        return Err(AppError::not_found(
+            "session_not_found",
+            "Session not found.",
+        ));
+    }
+    if session.risk_decision.as_deref() == Some("deny") {
+        return Err(AppError::unauthorized(
+            "session_reauthentication_required",
+            "This session must be reauthenticated and cannot be confirmed.",
+        ));
+    }
+
+    session.risk_confirmed_at = Some(Utc::now());
+    session.risk_confirmed_score = session.risk_score;
+    session.risk_decision = Some("allow".to_string());
+    nvbes_redis::session::set_session(redis, &session, current_session_ttl(&session))
+        .await
+        .map_err(|err| AppError::internal("session_confirmation_failed", err.to_string()))?;
+    crate::domains::auth::sessions::db::insert_session_db(db, &session)
+        .await
+        .map_err(|err| AppError::internal("session_db_write_failed", err.to_string()))?;
+
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.session_risk_confirmed",
+            target_type: "session",
+            target_id: Some(session_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({
+                "confirmed_risk_score": session.risk_confirmed_score,
+            }),
+        },
+    )
+    .await;
+
+    Ok(session_view_from_cached_session(&session, true))
+}
+
 pub async fn fetch_view(
     redis: &nvbes_redis::RedisPool,
     session_id: Uuid,
@@ -184,7 +265,7 @@ pub async fn fetch_view(
         .await
         .map_err(|err| AppError::internal("redis_session_read_failed", err.to_string()))?
         .ok_or_else(|| AppError::unauthorized("session_not_found", "Session not found."))?;
-    if session.revoked_at.is_some() || session.expires_at <= Utc::now() {
+    if crate::domains::auth::sessions::cache::is_expired(&session, Utc::now()) {
         let _ =
             nvbes_redis::session::delete_session(redis, &session.principal_id, &session.session_id)
                 .await;
@@ -201,12 +282,30 @@ pub async fn revoke_all_user_sessions(
     redis: &nvbes_redis::RedisPool,
     user_id: Uuid,
 ) -> Result<(), AppError> {
+    crate::domains::oauth::security_events::enqueue_all_sessions_revoked(db, redis, user_id, None)
+        .await?;
     let mut tx = db.begin().await?;
     revoke_all_user_sessions_tx(&mut tx, user_id).await?;
     tx.commit().await?;
     nvbes_redis::session::clear_user_sessions(redis, &user_id.to_string())
         .await
         .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
+    nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
+        .await
+        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
+    let _ = record_auth_event(
+        db,
+        AuthAuditInput {
+            principal_id: user_id,
+            action: "auth.session_revoked",
+            target_type: "principal",
+            target_id: Some(user_id),
+            ip: None,
+            user_agent: None,
+            metadata: serde_json::json!({ "reason": "revoke_all" }),
+        },
+    )
+    .await;
     Ok(())
 }
 

@@ -2,7 +2,7 @@ use nvbes_core::config::AppConfig;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::hash_password;
+use super::hash_password_with_pepper;
 use super::history;
 use super::validate_password;
 use crate::domains::auth::audit::{AuthAuditInput, record_auth_event};
@@ -12,7 +12,7 @@ use crate::http::error::AppError;
 
 pub async fn change(
     db: &PgPool,
-    redis: &nvbes_redis::RedisPool,
+    _redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     user_id: Uuid,
     current_session_id: Uuid,
@@ -33,6 +33,7 @@ pub async fn change(
         user_id,
         &input.new_password,
         config.auth_password_history_size,
+        config.auth_password_pepper.as_deref(),
     )
     .await?
     {
@@ -42,7 +43,8 @@ pub async fn change(
         ));
     }
 
-    let new_hash = hash_password(&input.new_password)?;
+    let new_hash =
+        hash_password_with_pepper(&input.new_password, config.auth_password_pepper.as_deref())?;
     let mut tx = db.begin().await?;
     sqlx::query("UPDATE users SET password_hash = $2, password_last_changed_at = NOW(), updated_at = NOW() WHERE principal_id = $1")
         .bind(user_id)
@@ -86,18 +88,6 @@ pub async fn change(
         },
     )
     .await;
-
-    nvbes_redis::session::clear_user_sessions_except(
-        redis,
-        &user_id.to_string(),
-        &current_session_id.to_string(),
-    )
-    .await
-    .map_err(|err| AppError::internal("redis_session_revoke_failed", err.to_string()))?;
-    nvbes_redis::refresh_token::revoke_all_user_refresh_tokens(redis, user_id)
-        .await
-        .map_err(|err| AppError::internal("refresh_token_revoke_failed", err.to_string()))?;
-    let _ = crate::domains::auth::device_trust::revoke_all_devices(db, user_id).await;
 
     Ok(ChangePasswordResult { success: true })
 }

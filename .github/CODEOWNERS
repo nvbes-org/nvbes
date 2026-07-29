@@ -1,0 +1,27 @@
+# Default review owner. GitHub branch rules must require code-owner review.
+* @shaynlink
+
+# Identity, authentication, OAuth, authorization and session boundaries.
+/apps/account-service/ @shaynlink
+/apps/account-web/ @shaynlink
+/libs/ts/identity-client/ @shaynlink
+/libs/ts/identity-sdk*/ @shaynlink
+/libs/rust/identity-sdk-backend/ @shaynlink
+
+# Cryptography, secrets, tokens and shared security primitives.
+/libs/rust/core/ @shaynlink
+/libs/rust/dpop/ @shaynlink
+/libs/rust/redis/ @shaynlink
+/libs/rust/storage/ @shaynlink
+/deny.toml @shaynlink
+/.osv-scanner.toml @shaynlink
+/.gitleaks.toml @shaynlink
+
+# Build, deployment and supply-chain policy.
+/.github/ @shaynlink
+/deploy/ @shaynlink
+/infrastructure/ @shaynlink
+/tools/security/ @shaynlink
+/**/Dockerfile @shaynlink
+/Cargo.lock @shaynlink
+/pnpm-lock.yaml @shaynlink

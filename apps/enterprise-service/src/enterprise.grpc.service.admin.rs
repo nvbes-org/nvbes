@@ -4,6 +4,7 @@ use tonic::{Request, Response, Status};
 use crate::grpc::{
     admin_elevation, audit, invitations,
     pb::nvbes::enterprise::v1 as enterprise,
+    privileged_approvals,
     service_status::{parse_uuid, validate_context},
     trust,
 };
@@ -18,6 +19,48 @@ pub(super) async fn authorize_admin_elevation(
     let actor_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
     Ok(Response::new(
         admin_elevation::authorize_admin_elevation(db, tenant_id, actor_id, request).await?,
+    ))
+}
+
+pub(super) async fn approve_privileged_action(
+    db: &PgPool,
+    request: Request<enterprise::ApprovePrivilegedActionRequest>,
+) -> Result<Response<enterprise::PrivilegedActionApproval>, Status> {
+    let request = request.into_inner();
+    let context = validate_context(request.context.as_ref())?;
+    let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
+    let approver_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
+    Ok(Response::new(
+        privileged_approvals::approve(db, tenant_id, approver_id, request).await?,
+    ))
+}
+
+pub(super) async fn consume_privileged_action_approval(
+    db: &PgPool,
+    request: Request<enterprise::ConsumePrivilegedActionApprovalRequest>,
+) -> Result<Response<enterprise::PrivilegedActionApproval>, Status> {
+    let request = request.into_inner();
+    let context = validate_context(request.context.as_ref())?;
+    let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
+    let actor_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
+    let approval_id = parse_uuid(&request.approval_id, "approval_id")?;
+    Ok(Response::new(
+        privileged_approvals::consume(db, tenant_id, actor_id, approval_id).await?,
+    ))
+}
+
+pub(super) async fn revoke_admin_elevation(
+    db: &PgPool,
+    request: Request<enterprise::RevokeAdminElevationRequest>,
+) -> Result<Response<enterprise::AdminElevationAuthorization>, Status> {
+    let request = request.into_inner();
+    let context = validate_context(request.context.as_ref())?;
+    let tenant_id = parse_uuid(&request.tenant_id, "tenant_id")?;
+    let actor_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
+    let grant_id = parse_uuid(&request.grant_id, "grant_id")?;
+    Ok(Response::new(
+        admin_elevation::revoke_admin_elevation(db, tenant_id, actor_id, grant_id, &request.reason)
+            .await?,
     ))
 }
 

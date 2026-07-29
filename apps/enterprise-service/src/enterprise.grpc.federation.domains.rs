@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use sqlx::{Row, postgres::PgRow};
 use tonic::Status;
 use uuid::Uuid;
@@ -14,8 +15,14 @@ pub async fn configure_tenant_domain(
     request: enterprise::ConfigureTenantDomainRequest,
 ) -> Result<enterprise::TenantDomain, Status> {
     let domain_id = optional_uuid(&request.domain_id, "domain_id")?.unwrap_or_else(Uuid::new_v4);
-    let domain = non_empty(request.domain, "domain")?;
+    let domain = normalize_domain(&non_empty(request.domain, "domain")?)?;
     let sso_provider_id = optional_uuid(&request.sso_provider_id, "sso_provider_id")?;
+    if request.sso_required {
+        let provider_id = sso_provider_id.ok_or_else(|| {
+            Status::invalid_argument("sso_provider_id is required when SSO is enforced")
+        })?;
+        ensure_active_provider(db, tenant_id, provider_id).await?;
+    }
 
     let row = sqlx::query(
         r#"
@@ -51,6 +58,11 @@ pub async fn configure_tenant_domain(
             EXCLUDED.verification_token_hash,
             tenant_domains.verification_token_hash
           ),
+          verified_at = CASE
+            WHEN lower(tenant_domains.domain) = lower(EXCLUDED.domain)
+              THEN tenant_domains.verified_at
+            ELSE NULL
+          END,
           verification_requested_at = COALESCE(
             EXCLUDED.verification_requested_at,
             tenant_domains.verification_requested_at
@@ -91,7 +103,10 @@ pub async fn verify_tenant_domain(
     db: &sqlx::PgPool,
     tenant_id: Uuid,
     domain_id: Uuid,
+    dns_txt_token: &str,
 ) -> Result<enterprise::TenantDomain, Status> {
+    let dns_txt_token = non_empty(dns_txt_token.to_string(), "dns_txt_token")?;
+    let token_hash = format!("{:x}", Sha256::digest(dns_txt_token.as_bytes()));
     let row = sqlx::query(
         r#"
         UPDATE tenant_domains
@@ -99,7 +114,11 @@ pub async fn verify_tenant_domain(
             verification_requested_at = NULL,
             verification_expires_at = NULL,
             verification_token_hash = NULL
-        WHERE id = $1 AND tenant_id = $2
+        WHERE id = $1
+          AND tenant_id = $2
+          AND verification_token_hash IS NOT NULL
+          AND verification_token_hash = $3
+          AND verification_expires_at > NOW()
         RETURNING
           id,
           tenant_id,
@@ -115,9 +134,13 @@ pub async fn verify_tenant_domain(
     )
     .bind(domain_id)
     .bind(tenant_id)
-    .fetch_one(db)
+    .bind(token_hash)
+    .fetch_optional(db)
     .await
-    .map_err(sql_status)?;
+    .map_err(sql_status)?
+    .ok_or_else(|| {
+        Status::failed_precondition("domain verification challenge is missing or expired")
+    })?;
 
     Ok(domain_from_row(row))
 }
@@ -156,9 +179,77 @@ pub(crate) fn domain_from_row(row: PgRow) -> enterprise::TenantDomain {
         verified_at: optional_time_string(row.get("verified_at")),
         verification_requested_at: optional_time_string(row.get("verification_requested_at")),
         verification_expires_at: optional_time_string(row.get("verification_expires_at")),
-        verification_token_hash: row
-            .get::<Option<String>, _>("verification_token_hash")
-            .unwrap_or_default(),
+        verification_token_hash: String::new(),
         created_at: time_string(row.get("created_at")),
+    }
+}
+
+async fn ensure_active_provider(
+    db: &sqlx::PgPool,
+    tenant_id: Uuid,
+    provider_id: Uuid,
+) -> Result<(), Status> {
+    let exists = sqlx::query_scalar::<_, bool>(
+        r#"
+        SELECT EXISTS (
+          SELECT 1
+          FROM federated_identity_providers
+          WHERE id = $1 AND tenant_id = $2 AND status = 'active'
+        )
+        "#,
+    )
+    .bind(provider_id)
+    .bind(tenant_id)
+    .fetch_one(db)
+    .await
+    .map_err(sql_status)?;
+    if exists {
+        Ok(())
+    } else {
+        Err(Status::failed_precondition(
+            "SSO provider must be active and belong to the tenant",
+        ))
+    }
+}
+
+fn normalize_domain(value: &str) -> Result<String, Status> {
+    let domain = value.trim().trim_end_matches('.').to_ascii_lowercase();
+    if domain.len() > 253
+        || domain.parse::<std::net::IpAddr>().is_ok()
+        || domain.contains('*')
+        || domain.contains('@')
+    {
+        return Err(Status::invalid_argument("domain is not a valid DNS name"));
+    }
+    let labels: Vec<&str> = domain.split('.').collect();
+    if labels.len() < 2
+        || labels.iter().any(|label| {
+            label.is_empty()
+                || label.len() > 63
+                || label.starts_with('-')
+                || label.ends_with('-')
+                || !label
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        })
+    {
+        return Err(Status::invalid_argument("domain is not a valid DNS name"));
+    }
+    Ok(domain)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn domain_normalization_rejects_takeover_prone_inputs() {
+        assert_eq!(
+            normalize_domain("Example.COM.").expect("domain should normalize"),
+            "example.com"
+        );
+        assert!(normalize_domain("*.example.com").is_err());
+        assert!(normalize_domain("127.0.0.1").is_err());
+        assert!(normalize_domain("single-label").is_err());
     }
 }

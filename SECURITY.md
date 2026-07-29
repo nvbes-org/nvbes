@@ -2,7 +2,8 @@
 
 ## Reporting
 
-Do not open public issues for suspected vulnerabilities.
+Do not open public issues for suspected vulnerabilities. Send reports to
+`security@nvbes.cloud`.
 
 Send reports to the private security contact configured for the project maintainers. Include:
 
@@ -23,3 +24,7 @@ Security reports are accepted for:
 - public SDKs and clients.
 
 Cloud-only infrastructure incidents are handled through private runbooks and are not exported to `nvbes-oss`.
+
+The coordinated disclosure policy, safe harbor, response targets and bounty
+status are documented in
+`docs/compliance/vulnerability-disclosure-policy.md`.

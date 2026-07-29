@@ -111,6 +111,10 @@ fn apply_risk_to_session(
         }
         .to_string(),
     );
+    if assessment.decision != ActivityDecision::Allow {
+        session.risk_confirmed_at = None;
+        session.risk_confirmed_score = None;
+    }
 }
 
 async fn record_activity_event(

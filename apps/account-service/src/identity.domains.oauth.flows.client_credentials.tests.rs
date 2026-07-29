@@ -1,6 +1,6 @@
 use super::*;
 use crate::domains::oauth::service::ClientAuthentication;
-use axum::{Json, extract::State, http::HeaderMap};
+use axum::{extract::State, http::HeaderMap};
 
 #[path = "identity.domains.oauth.flows.client_credentials.tests.rotation.rs"]
 mod rotation;
@@ -49,6 +49,7 @@ async fn client_credentials_token_introspection_exposes_service_account_context(
             client_assertion_verified: false,
         },
         Some("drive.files.read drive.workspace.read"),
+        None,
         None,
     )
     .await
@@ -106,6 +107,7 @@ async fn client_credentials_records_last_used_and_machine_token_audit() {
             client_assertion_verified: false,
         },
         Some("drive.files.read"),
+        None,
         None,
     )
     .await
@@ -173,6 +175,7 @@ async fn introspection_rejects_machine_token_after_client_revocation() {
         },
         Some("drive.files.read"),
         None,
+        None,
     )
     .await
     .expect("client_credentials should succeed");
@@ -214,6 +217,8 @@ async fn http_client_credentials_and_introspection_expose_service_account_contex
     let token_response = crate::domains::oauth::routes::token::token(
         State(state.clone()),
         basic_headers(&client_id, &client_secret),
+        None,
+        None,
         axum::Form(crate::domains::oauth::routes::token::TokenRequest {
             grant_type: "client_credentials".to_string(),
             code: None,
@@ -245,10 +250,16 @@ async fn http_client_credentials_and_introspection_expose_service_account_contex
     let introspection_response = crate::domains::oauth::routes::introspect::introspect(
         State(state),
         basic_headers(&client_id, &client_secret),
-        Json(
+        None,
+        None,
+        axum::Form(
             crate::domains::oauth::routes::introspect::IntrospectRequest {
                 token: access_token.to_string(),
                 token_type_hint: Some("access_token".to_string()),
+                client_id: None,
+                client_secret: None,
+                client_assertion_type: None,
+                client_assertion: None,
             },
         ),
     )

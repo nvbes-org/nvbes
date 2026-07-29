@@ -1,14 +1,12 @@
 import { identityClient } from '@nvbes/identity-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation } from '@tanstack/react-router';
 import { useState, type SubmitEvent } from 'react';
 import { accountQueryKeys } from '@/account.queries';
-import { readAuthuser } from '@/identity.authuser';
+import { useAuthuser } from '@/hooks/useAuthuser';
 import { getAccountPersonalInfoQueryKey } from './useAccountPersonalInfoPage.shared';
 
 export function useAccountEmailAddresses() {
-  const location = useLocation();
-  const authuser = readAuthuser(location.searchStr, location.pathname);
+  const authuser = useAuthuser();
   const queryClient = useQueryClient();
   const [emailDraft, setEmailDraft] = useState('');
   const [error, setError] = useState<string | null>(null);

@@ -12,19 +12,19 @@ export const FACTOR_ICONS: Record<string, React.ComponentType<{ className?: stri
 
 export const FACTOR_ADD_ACTIONS = [
   {
-    icon: TimerReset,
-    label: "Code d'authentification (TOTP)",
-    path: '/account/mfa/totp/setup',
-  },
-  {
     icon: Fingerprint,
-    label: 'Biométrie',
+    label: 'Ajouter une passkey',
     path: '/account/mfa/passkey/setup',
   },
   {
     icon: KeyRound,
-    label: 'Clé de sécurité',
+    label: 'Ajouter une clé de sécurité indépendante',
     path: '/account/mfa/security-key/setup',
+  },
+  {
+    icon: TimerReset,
+    label: 'Ajouter un code TOTP de secours',
+    path: '/account/mfa/totp/setup',
   },
   {
     icon: ShieldAlert,
@@ -43,7 +43,7 @@ export function getFactorTypeIcon(type: string): React.ComponentType<{ className
 
 export function factorLabel(factor: MfaFactorView) {
   if (factor.factor_type === 'webauthn' && factor.kind === 'passkey') {
-    return 'Biométrie';
+    return 'Passkey';
   }
   if (factor.factor_type === 'webauthn' && factor.kind === 'security_key') {
     return 'Clé de sécurité';
@@ -53,7 +53,7 @@ export function factorLabel(factor: MfaFactorView) {
     case 'totp':
       return "Code d'authentification (TOTP)";
     case 'email':
-      return 'Code par email';
+      return 'Email de récupération';
     case 'webauthn':
       return 'Clé de sécurité (WebAuthn)';
     case 'recovery_code':

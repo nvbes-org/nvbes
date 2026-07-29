@@ -5,7 +5,10 @@ use crate::domains::auth::types::{
     TotpConfirmInput, TotpConfirmResult, TotpSetupInput, TotpSetupResult,
 };
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::middleware::jwt::{
+    AuthContext,
+    account_access::{self, AccountAccess, SECURITY_WRITE_SCOPE},
+};
 use axum::{
     Json, Router,
     extract::{Extension, State},
@@ -14,22 +17,22 @@ use axum::{
 use nvbes_core::http::error::ErrorEnvelope;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = jwt_auth_middleware;
-
     Router::new()
         .route(
             "/totp/setup",
-            post(begin_totp_enrollment).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(begin_totp_enrollment),
+            ),
         )
         .route(
             "/totp/confirm",
-            post(confirm_totp_enrollment).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(confirm_totp_enrollment),
+            ),
         )
 }
 
@@ -48,14 +51,14 @@ pub(crate) async fn begin_totp_enrollment(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<TotpSetupRequest>,
 ) -> Result<Json<TotpSetupResult>, AppError> {
-    crate::domains::auth::verification::require_recent_step_up(
+    crate::domains::auth::verification::require_recent_phishing_resistant_step_up(
         &state.redis,
         &auth,
-        Some(nvbes_core::auth::Aal::Aal2),
     )
     .await?;
     let result = mfa_totp::begin_totp(
         &state.db,
+        &state.config,
         auth.user_id,
         TotpSetupInput {
             label: request.label,
@@ -84,6 +87,7 @@ pub(crate) async fn confirm_totp_enrollment(
 ) -> Result<Json<TotpConfirmResult>, AppError> {
     let result = mfa_totp::confirm_totp(
         &state.db,
+        &state.config,
         auth.user_id,
         TotpConfirmInput {
             factor_id: request.factor_id,

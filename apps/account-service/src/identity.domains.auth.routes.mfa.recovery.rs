@@ -3,7 +3,10 @@ use crate::domains::auth::mfa::recovery;
 use crate::domains::auth::routes::mfa::types::RecoveryCodesGenerateRequest;
 use crate::domains::auth::types::RecoveryCodesResult;
 use crate::http::error::AppError;
-use crate::http::middleware::jwt::{AuthContext, jwt_auth_middleware};
+use crate::http::middleware::jwt::{
+    AuthContext,
+    account_access::{self, AccountAccess, SECURITY_WRITE_SCOPE},
+};
 use axum::{
     Json, Router,
     extract::{Extension, Path, State},
@@ -13,22 +16,22 @@ use nvbes_core::http::error::ErrorEnvelope;
 use uuid::Uuid;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = jwt_auth_middleware;
-
     Router::new()
         .route(
             "/recovery-codes",
-            post(generate_recovery_codes).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(generate_recovery_codes),
+            ),
         )
         .route(
             "/factors/{factorId}",
-            delete(remove_mfa_factor).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                delete(remove_mfa_factor),
+            ),
         )
 }
 
@@ -48,15 +51,20 @@ pub(crate) async fn generate_recovery_codes(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<RecoveryCodesGenerateRequest>,
 ) -> Result<Json<RecoveryCodesResult>, AppError> {
-    crate::domains::auth::verification::require_recent_step_up(
+    crate::domains::auth::verification::require_recent_phishing_resistant_step_up(
         &state.redis,
         &auth,
-        Some(nvbes_core::auth::Aal::Aal2),
     )
     .await?;
 
     let password = request.password.as_deref().unwrap_or("");
-    let result = recovery::generate_recovery(&state.db, auth.user_id, password).await?;
+    let result = recovery::generate_recovery(
+        &state.db,
+        auth.user_id,
+        password,
+        state.config.auth_password_pepper.as_deref(),
+    )
+    .await?;
     Ok(Json(result))
 }
 
@@ -75,10 +83,9 @@ pub(crate) async fn remove_mfa_factor(
     Extension(auth): Extension<AuthContext>,
     Path(factor_id): Path<Uuid>,
 ) -> Result<axum::http::StatusCode, AppError> {
-    crate::domains::auth::verification::require_recent_step_up(
+    crate::domains::auth::verification::require_recent_phishing_resistant_step_up(
         &state.redis,
         &auth,
-        Some(nvbes_core::auth::Aal::Aal2),
     )
     .await?;
     crate::domains::auth::mfa::remove_factor(&state.db, auth.user_id, factor_id).await?;

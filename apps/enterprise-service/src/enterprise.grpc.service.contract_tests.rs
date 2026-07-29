@@ -97,15 +97,16 @@ async fn trust_center_derives_security_posture_from_enterprise_tables() {
             domain: "trust.example.test".to_string(),
             sso_required: true,
             sso_provider_id: provider.provider_id.clone(),
-            verification_token_hash: "trust-token".to_string(),
+            verification_token_hash: sha256("trust-token"),
         },
     )
     .await
     .expect("tenant domain should be configured");
     let domain_id = uuid::Uuid::parse_str(&domain.domain_id).expect("domain id should parse");
-    let domain = federation::verify_tenant_domain(&pool, fixture.tenant_id, domain_id)
-        .await
-        .expect("tenant domain should be verified");
+    let domain =
+        federation::verify_tenant_domain(&pool, fixture.tenant_id, domain_id, "trust-token")
+            .await
+            .expect("tenant domain should be verified");
     seed_trust_center_posture(&pool, &fixture).await;
 
     let trust_center = crate::grpc::trust::trust_center(&pool, fixture.tenant_id)
@@ -139,6 +140,11 @@ async fn trust_center_derives_security_posture_from_enterprise_tables() {
     cleanup_tenant(&pool, fixture.tenant_id).await;
 }
 
+fn sha256(value: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(value.as_bytes()))
+}
+
 #[test]
 fn admin_elevation_authorization_bounds_expiry_and_requires_admin_role() {
     let now = chrono::Utc::now();
@@ -155,6 +161,8 @@ fn admin_elevation_authorization_bounds_expiry_and_requires_admin_role() {
             break_glass: false,
             break_glass_reason: String::new(),
             break_glass_procedure_reference: String::new(),
+            reason: "time-bound administration".to_string(),
+            authentication: Some(privileged_authentication_context(now.timestamp())),
         },
     )
     .expect("owner should be authorized for admin elevation");
@@ -177,32 +185,50 @@ fn admin_elevation_authorization_bounds_expiry_and_requires_admin_role() {
             break_glass: false,
             break_glass_reason: String::new(),
             break_glass_procedure_reference: String::new(),
+            reason: "time-bound administration".to_string(),
+            authentication: Some(privileged_authentication_context(now.timestamp())),
         },
     )
     .expect_err("member should not be authorized for admin elevation");
     assert_eq!(denied.code(), tonic::Code::PermissionDenied);
 }
 
+fn privileged_authentication_context(
+    auth_time: i64,
+) -> enterprise::PrivilegedAuthenticationContext {
+    enterprise::PrivilegedAuthenticationContext {
+        acr: "aal2".to_string(),
+        amr: vec!["webauthn".to_string()],
+        auth_time,
+        authentication_event_id: "contract-authn-event".to_string(),
+    }
+}
+
 #[test]
 fn policy_simulation_allows_owner_and_reports_step_up() {
-    let decision = policy_evaluation::evaluate_policy(enterprise::EvaluatePolicyRequest {
-        context: None,
-        tenant_id: uuid::Uuid::new_v4().to_string(),
-        subject_principal_id: uuid::Uuid::new_v4().to_string(),
-        action: "delete_workspace".to_string(),
-        resource: "workspace".to_string(),
-        attributes: policy_attributes([
-            ("workspace_id", uuid::Uuid::new_v4().to_string()),
-            ("subject_type", "user".to_string()),
-            ("subject_id", uuid::Uuid::new_v4().to_string()),
-            ("subject_label", "Owner".to_string()),
-            ("email_verified", "true".to_string()),
-            ("role", "owner".to_string()),
-            ("owns_resource", "false".to_string()),
-            ("member_share_links_enabled", "false".to_string()),
-            ("target_role", String::new()),
-        ]),
-    })
+    let decision = policy_evaluation::evaluate_with_context(
+        enterprise::EvaluatePolicyRequest {
+            context: None,
+            tenant_id: uuid::Uuid::new_v4().to_string(),
+            subject_principal_id: uuid::Uuid::new_v4().to_string(),
+            action: "delete_workspace".to_string(),
+            resource: "workspace".to_string(),
+            attributes: policy_attributes([
+                ("workspace_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_type", "user".to_string()),
+                ("subject_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_label", "Owner".to_string()),
+                ("email_verified", "true".to_string()),
+                ("role", "owner".to_string()),
+                ("owns_resource", "false".to_string()),
+                ("member_share_links_enabled", "false".to_string()),
+                ("target_role", String::new()),
+            ]),
+        },
+        &Default::default(),
+        None,
+        true,
+    )
     .expect("policy simulation should evaluate");
 
     assert_eq!(decision.result, "allow");
@@ -213,24 +239,29 @@ fn policy_simulation_allows_owner_and_reports_step_up() {
 
 #[test]
 fn policy_simulation_denies_unverified_user_before_role_policy() {
-    let decision = policy_evaluation::evaluate_policy(enterprise::EvaluatePolicyRequest {
-        context: None,
-        tenant_id: uuid::Uuid::new_v4().to_string(),
-        subject_principal_id: uuid::Uuid::new_v4().to_string(),
-        action: "view_files".to_string(),
-        resource: "workspace".to_string(),
-        attributes: policy_attributes([
-            ("workspace_id", uuid::Uuid::new_v4().to_string()),
-            ("subject_type", "user".to_string()),
-            ("subject_id", uuid::Uuid::new_v4().to_string()),
-            ("subject_label", "Member".to_string()),
-            ("email_verified", "false".to_string()),
-            ("role", "owner".to_string()),
-            ("owns_resource", "false".to_string()),
-            ("member_share_links_enabled", "false".to_string()),
-            ("target_role", String::new()),
-        ]),
-    })
+    let decision = policy_evaluation::evaluate_with_context(
+        enterprise::EvaluatePolicyRequest {
+            context: None,
+            tenant_id: uuid::Uuid::new_v4().to_string(),
+            subject_principal_id: uuid::Uuid::new_v4().to_string(),
+            action: "view_files".to_string(),
+            resource: "workspace".to_string(),
+            attributes: policy_attributes([
+                ("workspace_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_type", "user".to_string()),
+                ("subject_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_label", "Member".to_string()),
+                ("email_verified", "false".to_string()),
+                ("role", "owner".to_string()),
+                ("owns_resource", "false".to_string()),
+                ("member_share_links_enabled", "false".to_string()),
+                ("target_role", String::new()),
+            ]),
+        },
+        &Default::default(),
+        None,
+        false,
+    )
     .expect("policy simulation should evaluate");
 
     assert_eq!(decision.result, "deny");
@@ -296,6 +327,7 @@ async fn federation_governance_round_trip_includes_provider_domain_and_scim() {
             provider: "okta".to_string(),
             status: "active".to_string(),
             base_url: "https://idp.example.test/scim/v2".to_string(),
+            credential_ttl_hours: 24,
         },
     )
     .await
@@ -395,6 +427,7 @@ async fn break_glass_activation_and_revocation_round_trip() {
     }
 
     let fixture = seed_enterprise_fixture(&pool, "break-glass").await;
+    let authentication = privileged_authentication_context(chrono::Utc::now().timestamp());
     break_glass::upsert_break_glass(
         &pool,
         fixture.tenant_id,
@@ -402,6 +435,7 @@ async fn break_glass_activation_and_revocation_round_trip() {
         fixture.actor_id,
         "runbook-42",
         "customer incident",
+        &authentication,
     )
     .await
     .expect("break-glass grant should be activated");

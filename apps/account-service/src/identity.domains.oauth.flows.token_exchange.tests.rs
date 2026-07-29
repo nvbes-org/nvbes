@@ -47,6 +47,7 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
             Some(Utc::now().timestamp()),
             None,
         )
+        .await
         .expect("subject token should be created");
 
     let actor = crate::domains::oauth::flows::client_credentials_grant(
@@ -59,6 +60,7 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
             client_assertion_verified: false,
         },
         Some("drive.files.read"),
+        None,
         None,
     )
     .await
@@ -81,6 +83,7 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
             resource: None,
             requested_token_type: Some("urn:ietf:params:oauth:token-type:access_token".to_string()),
         },
+        None,
     )
     .await
     .expect("token exchange should succeed");
@@ -157,11 +160,14 @@ async fn http_token_exchange_preserves_user_subject_and_sets_machine_actor() {
             Some(Utc::now().timestamp()),
             None,
         )
+        .await
         .expect("subject token should be created");
 
     let actor_response = crate::domains::oauth::routes::token::token(
         State(state.clone()),
         basic_headers(&client_id, &client_secret),
+        None,
+        None,
         axum::Form(crate::domains::oauth::routes::token::TokenRequest {
             grant_type: "client_credentials".to_string(),
             code: None,
@@ -194,6 +200,8 @@ async fn http_token_exchange_preserves_user_subject_and_sets_machine_actor() {
     let exchange_response = crate::domains::oauth::routes::token::token(
         State(state.clone()),
         basic_headers(&client_id, &client_secret),
+        None,
+        None,
         axum::Form(crate::domains::oauth::routes::token::TokenRequest {
             grant_type: "urn:ietf:params:oauth:grant-type:token-exchange".to_string(),
             code: None,

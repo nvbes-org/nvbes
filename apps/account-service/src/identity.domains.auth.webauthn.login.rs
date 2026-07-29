@@ -146,7 +146,7 @@ pub async fn finish_login_authentication(
         .finish_passkey_authentication(credential, &stored.authentication)
         .map_err(map_webauthn_authentication_error)?;
 
-    record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
+    let signals = record_passkey_authentication(db, principal_id, &mut passkeys, &result).await?;
 
     login_challenges::consume_challenge(
         redis,
@@ -171,6 +171,10 @@ pub async fn finish_login_authentication(
         json!({
             "cred_id": format!("{:?}", result.cred_id()),
             "auth_state_id": auth_state_id,
+            "assurance": signals.assurance.as_str(),
+            "backup_eligible": signals.backup_eligible,
+            "backup_state": signals.backup_state,
+            "sign_count": signals.sign_count,
         }),
         "webauthn_login_authenticated",
     )

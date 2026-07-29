@@ -34,6 +34,12 @@ export interface MfaFactorView {
   id: string;
   factor_type: string;
   kind?: string;
+  assurance?: string;
+  phishing_resistant: boolean;
+  backup_eligible?: boolean;
+  backup_state?: boolean;
+  sign_count?: number;
+  attestation_format?: string;
   status: string;
   label?: string;
   created_at: string;

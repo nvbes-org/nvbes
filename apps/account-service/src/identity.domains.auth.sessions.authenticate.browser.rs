@@ -5,7 +5,9 @@ use sqlx::PgPool;
 use super::authenticate::{
     build_user_record_from_cache, enforce_cookie_theft_mitigation, get_cached_session,
 };
-use super::cache::{auth_context_from_cached_session, current_session_ttl, refresh_last_seen};
+use super::cache::{
+    auth_context_from_cached_session, current_session_ttl, is_expired, refresh_last_seen,
+};
 use super::token;
 use crate::domains::auth::{mfa, sessions::activity};
 use crate::http::error::AppError;
@@ -37,7 +39,7 @@ pub async fn authenticate_browser_session(
         .map_err(|err| {
             AppError::internal("redis_session_revocation_lookup_failed", err.to_string())
         })?
-        || session.expires_at <= Utc::now()
+        || is_expired(&session, Utc::now())
     {
         let _ =
             nvbes_redis::session::delete_session(redis, &session.principal_id, &session.session_id)

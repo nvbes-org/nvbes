@@ -94,11 +94,25 @@ async fn decide_loaded_workspace_action(
         ));
     }
 
-    if requires_step_up
-        && crate::domains::auth::verification::require_recent_step_up(redis, auth, None)
+    let step_up_satisfied = if !requires_step_up {
+        true
+    } else if matches!(
+        action,
+        WorkspaceAction::ChangeMemberRole
+            | WorkspaceAction::ManageBilling
+            | WorkspaceAction::ExportWorkspaceData
+            | WorkspaceAction::DeleteWorkspace
+    ) {
+        crate::domains::auth::verification::require_recent_maximum_assurance_step_up(redis, auth)
             .await
-            .is_err()
-    {
+            .is_ok()
+    } else {
+        crate::domains::auth::verification::require_recent_phishing_resistant_step_up(redis, auth)
+            .await
+            .is_ok()
+    };
+
+    if requires_step_up && !step_up_satisfied {
         return Ok(workspace_decision(
             false,
             "step_up_required",

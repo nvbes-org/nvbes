@@ -55,7 +55,18 @@ pub async fn create_authorization_code(
     .await?;
 
     let code = format!("gxac_{}", Uuid::new_v4().simple());
-    let expires_at = Utc::now() + chrono::Duration::minutes(10);
+    let high_assurance = sqlx::query_scalar::<_, bool>(
+        "SELECT security_profile = 'high_assurance' FROM oauth_clients WHERE id = $1",
+    )
+    .bind(client_uuid)
+    .fetch_one(db)
+    .await?;
+    let expires_at = Utc::now()
+        + if high_assurance {
+            chrono::Duration::seconds(60)
+        } else {
+            chrono::Duration::minutes(10)
+        };
     let scope = policy.normalized_scope.join(" ");
 
     store_authorization_code(
@@ -74,6 +85,7 @@ pub async fn create_authorization_code(
             authorization_details: input.authorization_details.clone(),
             code_challenge: input.code_challenge.clone(),
             code_challenge_method: input.code_challenge_method.clone(),
+            dpop_jkt: input.dpop_jkt.clone(),
             tenant_id: input.tenant_id,
             organization_id: input.organization_id,
             workspace_id: input.workspace_id,
@@ -194,6 +206,10 @@ pub async fn exchange_code(
             code.code_challenge_method.as_deref(),
             input.code_verifier.as_deref(),
         )?;
+        validate_authorization_code_sender_binding(
+            code.dpop_jkt.as_deref(),
+            input.token_confirmation.as_ref(),
+        )?;
 
         crate::domains::oauth::policies_eval::ensure_client_policy(
             db,
@@ -234,12 +250,15 @@ pub async fn exchange_code(
                     "An OIDC authorization code must contain a nonce.",
                 )
             })?;
-            Some(jwt.generate_id_token(
-                code.user_id,
-                &code.client_id,
-                nonce,
-                assurance.auth_time,
-            )?)
+            Some(
+                jwt.generate_id_token(
+                    code.user_id,
+                    &code.client_id,
+                    nonce,
+                    assurance.auth_time,
+                )
+                .await?,
+            )
         } else {
             None
         };
@@ -252,7 +271,7 @@ pub async fn exchange_code(
             None
         };
 
-        let tokens = jwt.generate_token_pair_with_authorization_details(
+        let tokens = jwt.generate_token_pair_with_confirmation(
             code.user_id,
             code.workspace_id,
             workspace_region,
@@ -265,8 +284,9 @@ pub async fn exchange_code(
             Some(assurance.amr.clone()),
             Some(&code.client_id),
             Some(assurance.auth_time),
-            None,
-        )?;
+            input.token_confirmation,
+        )
+        .await?;
 
         refresh_store::store_refresh_token(
             redis,
@@ -312,4 +332,42 @@ pub async fn exchange_code(
     release_result?;
 
     result
+}
+
+fn validate_authorization_code_sender_binding(
+    expected_jkt: Option<&str>,
+    actual: Option<&crate::domains::auth::jwt::TokenConfirmation>,
+) -> Result<(), AppError> {
+    let actual_jkt = actual.and_then(|confirmation| confirmation.jkt.as_deref());
+    if expected_jkt.is_none() || expected_jkt == actual_jkt {
+        Ok(())
+    } else {
+        Err(AppError::bad_request(
+            "invalid_grant",
+            "The authorization code is bound to a different DPoP key.",
+        ))
+    }
+}
+
+#[cfg(test)]
+mod sender_binding_tests {
+    use super::validate_authorization_code_sender_binding;
+    use crate::domains::auth::jwt::TokenConfirmation;
+
+    #[test]
+    fn authorization_code_replay_with_another_dpop_key_is_rejected() {
+        let confirmation = TokenConfirmation::dpop("attacker".to_string());
+
+        let error =
+            validate_authorization_code_sender_binding(Some("expected"), Some(&confirmation))
+                .expect_err("another DPoP key must not redeem the code");
+        assert_eq!(error.code, "invalid_grant");
+    }
+
+    #[test]
+    fn authorization_code_requires_the_bound_dpop_proof() {
+        let error = validate_authorization_code_sender_binding(Some("expected"), None)
+            .expect_err("a bound code must not be redeemable without its DPoP proof");
+        assert_eq!(error.code, "invalid_grant");
+    }
 }

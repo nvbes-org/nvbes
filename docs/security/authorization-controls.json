@@ -345,7 +345,7 @@
             {
               "path": "apps/enterprise-service/src/enterprise.grpc.policy_evaluation.rs",
               "includes": [
-                "pub fn evaluate_policy",
+                "pub async fn evaluate_policy",
                 "ResourceContext",
                 "email_not_verified",
                 "is_allowed",
@@ -355,7 +355,7 @@
             {
               "path": "apps/enterprise-service/src/enterprise.grpc.service.contract_tests.rs",
               "includes": [
-                "evaluate_policy",
+                "evaluate_with_context",
                 "assert!(decision.requires_step_up)",
                 "email_not_verified"
               ]

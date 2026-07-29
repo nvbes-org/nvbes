@@ -5,23 +5,51 @@ use nvbes_region::{
     geo::{GeoLookupRequest, GeoResolver, parse_ip},
 };
 
-pub fn authorization_bearer_token(headers: &HeaderMap) -> Result<Option<String>, AppError> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AccessTokenScheme {
+    Bearer,
+    Dpop,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AccessTokenAuthorization {
+    pub scheme: AccessTokenScheme,
+    pub token: String,
+}
+
+pub fn authorization_access_token(
+    headers: &HeaderMap,
+) -> Result<Option<AccessTokenAuthorization>, AppError> {
     let Some(auth_header) = headers.get("Authorization") else {
         return Ok(None);
     };
     let auth_str = auth_header
         .to_str()
         .map_err(|_| AppError::unauthorized("invalid_token", "Invalid Authorization header"))?;
-    let token = auth_str.strip_prefix("Bearer ").ok_or_else(|| {
-        AppError::unauthorized("invalid_token", "Authorization must use the Bearer scheme.")
-    })?;
+    let (scheme, token) = if let Some(token) = auth_str.strip_prefix("Bearer ") {
+        (AccessTokenScheme::Bearer, token)
+    } else if let Some(token) = auth_str.strip_prefix("DPoP ") {
+        (AccessTokenScheme::Dpop, token)
+    } else {
+        return Err(AppError::unauthorized(
+            "invalid_token",
+            "Authorization must use the Bearer or DPoP scheme.",
+        ));
+    };
     if token.is_empty() {
         return Err(AppError::unauthorized(
             "invalid_token",
-            "Bearer token is empty.",
+            "Access token is empty.",
         ));
     }
-    Ok(Some(token.to_string()))
+    Ok(Some(AccessTokenAuthorization {
+        scheme,
+        token: token.to_string(),
+    }))
+}
+
+pub fn authorization_bearer_token(headers: &HeaderMap) -> Result<Option<String>, AppError> {
+    Ok(authorization_access_token(headers)?.map(|authorization| authorization.token))
 }
 
 pub fn browser_session_token_with_authuser(
@@ -79,6 +107,18 @@ pub fn cookie_value(headers: &HeaderMap, names: &[&str]) -> Option<String> {
     }
 
     None
+}
+
+pub fn registration_enrollment_token(headers: &HeaderMap) -> Result<String, AppError> {
+    cookie_value(headers, &["__Host-registration_enrollment="])
+        .or_else(|| cookie_value(headers, &["registration_enrollment="]))
+        .filter(|token| !token.is_empty())
+        .ok_or_else(|| {
+            AppError::unauthorized(
+                "registration_enrollment_required",
+                "A valid registration enrollment is required to change this email.",
+            )
+        })
 }
 
 pub fn session_cookie_values(headers: &HeaderMap) -> Vec<String> {
@@ -143,7 +183,9 @@ pub fn user_agent(headers: &HeaderMap) -> Option<String> {
     headers
         .get("User-Agent")
         .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.chars().take(1_024).collect())
 }
 
 pub fn product_analytics_correlation(headers: &HeaderMap) -> (Option<&str>, Option<&str>) {
@@ -209,8 +251,9 @@ pub fn supported_data_regions() -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        authorization_bearer_token, browser_session_token_with_authuser, region_from_headers,
-        session_cookie_tokens, session_cookie_values,
+        AccessTokenScheme, authorization_access_token, authorization_bearer_token,
+        browser_session_token_with_authuser, region_from_headers, session_cookie_tokens,
+        session_cookie_values,
     };
     use axum::http::{HeaderMap, HeaderValue};
 
@@ -277,5 +320,20 @@ mod tests {
             browser_session_token_with_authuser(&headers, "1").unwrap(),
             "v1.session.secret-value"
         );
+    }
+
+    #[test]
+    fn access_token_authorization_accepts_dpop_scheme() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_static("DPoP bound-access-token"),
+        );
+
+        let authorization = authorization_access_token(&headers)
+            .unwrap()
+            .expect("authorization should be present");
+        assert_eq!(authorization.scheme, AccessTokenScheme::Dpop);
+        assert_eq!(authorization.token, "bound-access-token");
     }
 }

@@ -38,3 +38,21 @@ fn shape_registration_options_sets_cross_platform_attachment_for_security_keys()
     );
     assert_eq!(options["publicKey"]["extensions"]["credProps"], true);
 }
+
+#[test]
+fn passkeys_are_discoverable_and_require_user_verification() {
+    let options = shape_registration_options(json!({ "publicKey": {} }), "passkey");
+
+    assert_eq!(
+        options["publicKey"]["authenticatorSelection"]["residentKey"],
+        "required"
+    );
+    assert_eq!(
+        options["publicKey"]["authenticatorSelection"]["requireResidentKey"],
+        true
+    );
+    assert_eq!(
+        options["publicKey"]["authenticatorSelection"]["userVerification"],
+        "required"
+    );
+}

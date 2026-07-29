@@ -44,6 +44,7 @@ pub async fn is_password_reused(
     principal_id: Uuid,
     new_password: &str,
     history_size: usize,
+    password_pepper: Option<&str>,
 ) -> Result<bool, AppError> {
     if history_size == 0 {
         return Ok(false);
@@ -63,7 +64,13 @@ pub async fn is_password_reused(
     .await?;
 
     for stored_hash in hashes {
-        if nvbes_core::auth::verify_password(new_password, &stored_hash).unwrap_or(false) {
+        if nvbes_core::auth::verify_password_with_pepper(
+            new_password,
+            &stored_hash,
+            password_pepper.map(str::as_bytes),
+        )
+        .unwrap_or(false)
+        {
             return Ok(true);
         }
     }

@@ -1,4 +1,3 @@
-use chrono::Utc;
 use nvbes_core::config::AppConfig;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -42,7 +41,6 @@ pub async fn verify_primary_credentials(
           u.region,
           u.password_hash,
           u.email_verified_at,
-          u.password_last_changed_at,
           u.created_at,
           p.tenant_id
         FROM users u
@@ -86,19 +84,6 @@ pub async fn verify_primary_credentials(
         .await?;
     }
 
-    if let Some(max_age_days) = config.auth_password_max_age_days {
-        let last_changed: Option<chrono::DateTime<chrono::Utc>> =
-            row.get("password_last_changed_at");
-        let expired =
-            last_changed.is_none_or(|lc| lc + chrono::Duration::days(max_age_days) <= Utc::now());
-        if expired {
-            return Err(AppError::forbidden(
-                "password_expired",
-                "Your password has expired and must be changed.",
-            ));
-        }
-    }
-
     let (risk_score, risk_decision, risk_factors) =
         risk::current_state_summary(db, principal_id).await?;
     if matches!(
@@ -125,9 +110,9 @@ pub async fn verify_primary_credentials(
         )
         .await;
 
-        return Err(AppError::forbidden(
-            "risk_policy_blocked",
-            "This account is temporarily blocked due to suspicious activity.",
+        return Err(AppError::unauthorized(
+            "invalid_credentials",
+            "Invalid email or password.",
         ));
     }
 

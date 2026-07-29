@@ -134,7 +134,17 @@ pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> AccountRes
             WHERE recipient_email = (SELECT email FROM users WHERE principal_id = $1)
           ), '[]'::jsonb),
           'enterprise_password_recovery_requests', COALESCE((
-            SELECT jsonb_agg((to_jsonb(enterprise_password_recovery_requests) - 'reset_token_hash') ORDER BY created_at DESC)
+            SELECT jsonb_agg(
+              (
+                to_jsonb(enterprise_password_recovery_requests)
+                - 'reset_token_hash'
+                - 'approved_by_principal_id'
+                - 'secondary_approved_by_principal_id'
+                - 'rejected_by_principal_id'
+                - 'review_reason'
+              )
+              ORDER BY created_at DESC
+            )
             FROM enterprise_password_recovery_requests
             WHERE principal_id = $1
           ), '[]'::jsonb)

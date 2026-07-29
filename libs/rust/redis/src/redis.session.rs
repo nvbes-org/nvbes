@@ -85,6 +85,10 @@ pub struct CachedSession {
     #[serde(default)]
     pub risk_decision: Option<String>,
     #[serde(default)]
+    pub risk_confirmed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub risk_confirmed_score: Option<f64>,
+    #[serde(default)]
     pub activity_window_started_at: Option<DateTime<Utc>>,
     #[serde(default)]
     pub activity_request_count: u32,

@@ -17,8 +17,11 @@ pub async fn refresh_token(
     auth_refresh_token_ttl_hours: i64,
     refresh_token: &str,
     client_auth: ClientAuthentication,
+    security_profile: crate::domains::oauth::profiles::OAuthSecurityProfile,
+    token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 ) -> Result<TokenView, AppError> {
     let claims = jwt.decode_token(refresh_token, "refresh")?;
+    validate_refresh_sender_binding(claims.cnf.as_ref(), token_confirmation.as_ref())?;
     if claims.client_id.as_deref() != Some(client_auth.client_id.as_str()) {
         return Err(AppError::unauthorized(
             "invalid_client",
@@ -47,6 +50,10 @@ pub async fn refresh_token(
             .await
             .map_err(|err| AppError::internal("refresh_token_lookup_failed", format!("{}", err)))?
         else {
+            let _ = crate::domains::oauth::security_events::enqueue_session_revoked(
+                db, redis, user_id, session_id,
+            )
+            .await;
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
@@ -138,6 +145,14 @@ pub async fn refresh_token(
             || session.reuse_detected_at.is_some()
             || session.replaced_by_jti.is_some()
         {
+            let _ = crate::domains::oauth::security_events::enqueue_refresh_token_compromise(
+                db, redis, user_id, session_id,
+            )
+            .await;
+            let _ = crate::domains::oauth::security_events::enqueue_session_revoked(
+                db, redis, user_id, session_id,
+            )
+            .await;
             refresh_store::revoke_refresh_family(redis, user_id, session_id, &claims.jti)
                 .await
                 .map_err(|err| AppError::internal("refresh_token_revoke_failed", format!("{}", err)))?;
@@ -185,7 +200,7 @@ pub async fn refresh_token(
             None
         };
 
-        let tokens = jwt.generate_token_pair_with_authorization_details(
+        let tokens = jwt.generate_token_pair_with_confirmation(
             user_id,
             next_workspace_id,
             workspace_region,
@@ -198,44 +213,61 @@ pub async fn refresh_token(
             Some(refreshed_assurance.amr.clone()),
             Some(&client_auth.client_id),
             claims.auth_time,
-            None,
-        )?;
-
-        refresh_store::mark_refresh_token_used(
-            redis,
-            &claims.jti,
-            Some(&tokens.refresh_jti),
+            token_confirmation,
         )
-        .await
-        .map_err(|err| AppError::internal("refresh_token_update_failed", format!("{}", err)))?;
+        .await?;
 
-        let new_refresh = refresh_store::CachedRefreshToken {
-            jti: tokens.refresh_jti.clone(),
-            session_id,
-            principal_id: user_id,
-            tenant_id: session.tenant_id,
-            organization_id: session.organization_id,
-            workspace_id: next_workspace_id,
-            client_id: Some(client_uuid),
-            scope: refresh_scope.clone(),
-            authorization_details: authorization_details.clone(),
-            expires_at: Utc::now() + chrono::Duration::hours(auth_refresh_token_ttl_hours),
-            rotated_from_jti: Some(claims.jti.clone()),
-            replaced_by_jti: None,
-            reuse_detected_at: None,
-            last_used_at: None,
-            revoked_at: None,
-        };
-
-        refresh_store::store_refresh_token(redis, &new_refresh)
+        let returned_refresh_token = if security_profile
+            == crate::domains::oauth::profiles::OAuthSecurityProfile::HighAssurance
+        {
+            refresh_store::touch_refresh_token(redis, &claims.jti)
+                .await
+                .map_err(|err| {
+                    AppError::internal("refresh_token_update_failed", format!("{}", err))
+                })?;
+            refresh_token.to_string()
+        } else {
+            refresh_store::mark_refresh_token_used(
+                redis,
+                &claims.jti,
+                Some(&tokens.refresh_jti),
+            )
             .await
-            .map_err(|err| AppError::internal("refresh_token_store_failed", format!("{}", err)))?;
+            .map_err(|err| {
+                AppError::internal("refresh_token_update_failed", format!("{}", err))
+            })?;
+
+            let new_refresh = refresh_store::CachedRefreshToken {
+                jti: tokens.refresh_jti.clone(),
+                session_id,
+                principal_id: user_id,
+                tenant_id: session.tenant_id,
+                organization_id: session.organization_id,
+                workspace_id: next_workspace_id,
+                client_id: Some(client_uuid),
+                scope: refresh_scope.clone(),
+                authorization_details: authorization_details.clone(),
+                expires_at: Utc::now() + chrono::Duration::hours(auth_refresh_token_ttl_hours),
+                rotated_from_jti: Some(claims.jti.clone()),
+                replaced_by_jti: None,
+                reuse_detected_at: None,
+                last_used_at: None,
+                revoked_at: None,
+            };
+
+            refresh_store::store_refresh_token(redis, &new_refresh)
+                .await
+                .map_err(|err| {
+                    AppError::internal("refresh_token_store_failed", format!("{}", err))
+                })?;
+            tokens.refresh_token
+        };
 
         Ok(TokenView {
             access_token: tokens.access_token,
             token_type: tokens.token_type,
             expires_in: tokens.expires_in,
-            refresh_token: Some(tokens.refresh_token),
+            refresh_token: Some(returned_refresh_token),
             id_token: None,
             scope: refresh_scope,
             authorization_details,
@@ -250,6 +282,53 @@ pub async fn refresh_token(
     release_result?;
 
     result
+}
+
+fn validate_refresh_sender_binding(
+    expected: Option<&crate::domains::auth::jwt::TokenConfirmation>,
+    actual: Option<&crate::domains::auth::jwt::TokenConfirmation>,
+) -> Result<(), AppError> {
+    let matches = match (expected, actual) {
+        (None, None) => true,
+        (Some(expected), Some(actual)) => {
+            expected.jkt == actual.jkt && expected.x5t_s256 == actual.x5t_s256
+        }
+        _ => false,
+    };
+    if matches {
+        Ok(())
+    } else {
+        Err(AppError::unauthorized(
+            "sender_constraint_mismatch",
+            "The refresh token sender constraint does not match the current request.",
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_refresh_sender_binding;
+    use crate::domains::auth::jwt::TokenConfirmation;
+
+    #[test]
+    fn refresh_replay_with_another_dpop_key_is_rejected() {
+        let expected = TokenConfirmation::dpop("expected".to_string());
+        let replay = TokenConfirmation::dpop("attacker".to_string());
+
+        let error = validate_refresh_sender_binding(Some(&expected), Some(&replay))
+            .expect_err("another DPoP key must not replay a refresh token");
+        assert_eq!(error.code, "sender_constraint_mismatch");
+    }
+
+    #[test]
+    fn refresh_replay_with_another_certificate_is_rejected() {
+        let expected = TokenConfirmation::mtls("expected".to_string());
+        let replay = TokenConfirmation::mtls("attacker".to_string());
+
+        let error = validate_refresh_sender_binding(Some(&expected), Some(&replay))
+            .expect_err("another certificate must not replay a refresh token");
+        assert_eq!(error.code, "sender_constraint_mismatch");
+    }
 }
 
 /// Revoke a refresh token family.

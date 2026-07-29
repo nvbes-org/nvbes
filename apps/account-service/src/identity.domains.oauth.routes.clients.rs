@@ -8,48 +8,86 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::domains::auth::verification;
-use crate::{app::AppState, http::error::AppError, http::middleware::jwt::AuthContext};
+use crate::{
+    app::AppState,
+    http::{
+        error::AppError,
+        middleware::jwt::{
+            AuthContext,
+            account_access::{
+                self, AccountAccess, OAUTH_CLIENTS_READ_SCOPE, OAUTH_CLIENTS_WRITE_SCOPE,
+            },
+        },
+    },
+};
+
+#[path = "identity.domains.oauth.routes.clients.keys.rs"]
+pub(crate) mod keys;
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = crate::http::middleware::jwt::jwt_auth_middleware;
-
     Router::new()
+        .merge(keys::router(state))
         .route(
             "/",
-            get(list_clients)
-                .post(create_client)
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    auth_middleware,
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_CLIENTS_READ_SCOPE),
+                get(list_clients),
+            ),
+        )
+        .route(
+            "/",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_CLIENTS_WRITE_SCOPE),
+                axum::routing::post(create_client).layer(axum::middleware::from_fn(
+                    crate::http::middleware::idempotency::require_idempotency_key,
                 )),
+            ),
         )
         .route(
             "/{clientId}/policies",
-            get(list_client_policies).post(create_client_policy).layer(
-                axum::middleware::from_fn_with_state(state.clone(), auth_middleware),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_CLIENTS_READ_SCOPE),
+                get(list_client_policies),
+            ),
+        )
+        .route(
+            "/{clientId}/policies",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_CLIENTS_WRITE_SCOPE),
+                axum::routing::post(create_client_policy).layer(axum::middleware::from_fn(
+                    crate::http::middleware::idempotency::require_idempotency_key,
+                )),
             ),
         )
         .route(
             "/{clientId}",
-            delete(revoke_client).layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(OAUTH_CLIENTS_WRITE_SCOPE),
+                delete(revoke_client).layer(axum::middleware::from_fn(
+                    crate::http::middleware::idempotency::require_idempotency_key,
+                )),
+            ),
         )
 }
 
 // Separate router for /client-policies to preserve original contract
 pub fn policies_router(state: &AppState) -> Router<AppState> {
-    let auth_middleware = crate::http::middleware::jwt::jwt_auth_middleware;
-
     Router::new().route(
         "/{policyId}",
-        patch(update_client_policy)
-            .delete(delete_client_policy)
-            .layer(axum::middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            )),
+        account_access::protected_method(
+            state,
+            AccountAccess::OAuthScope(OAUTH_CLIENTS_WRITE_SCOPE),
+            patch(update_client_policy)
+                .delete(delete_client_policy)
+                .layer(axum::middleware::from_fn(
+                    crate::http::middleware::idempotency::require_idempotency_key,
+                )),
+        ),
     )
 }
 
@@ -57,7 +95,7 @@ async fn require_management_step_up(
     redis: &nvbes_redis::RedisPool,
     auth: &AuthContext,
 ) -> Result<(), AppError> {
-    verification::require_recent_step_up(redis, auth, None).await
+    verification::require_recent_phishing_resistant_step_up(redis, auth).await
 }
 
 fn json_value<T: serde::Serialize>(value: T) -> Result<Json<serde_json::Value>, AppError> {
@@ -86,6 +124,7 @@ pub(crate) async fn list_clients(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ListClientsQuery {
     pub limit: Option<i64>,
     pub cursor: Option<String>,
@@ -109,6 +148,7 @@ pub(crate) async fn create_client(
     Json(request): Json<crate::domains::oauth::service::CreateOAuthClientInput>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     require_management_step_up(&state.redis, &auth).await?;
+    validate_runtime_security_profile(&state, &request)?;
     let result = crate::domains::oauth::clients::create_client(&state.db, &auth, request).await?;
     state
         .allowed_browser_origins
@@ -117,7 +157,34 @@ pub(crate) async fn create_client(
     json_value(result)
 }
 
+fn validate_runtime_security_profile(
+    state: &AppState,
+    request: &crate::domains::oauth::service::CreateOAuthClientInput,
+) -> Result<(), AppError> {
+    if request.security_profile.as_deref() != Some("high_assurance") {
+        return Ok(());
+    }
+    if !state.config.fapi_high_assurance_enabled {
+        return Err(AppError::bad_request(
+            "fapi_profile_not_activated",
+            "High-assurance OAuth clients are disabled until the FAPI conformance gate is enabled.",
+        ));
+    }
+    match request.sender_constraint.as_deref() {
+        Some("dpop") if state.dpop_nonce.is_none() => Err(AppError::bad_request(
+            "dpop_not_available",
+            "High-assurance DPoP clients require NVBES_DPOP_ENABLED.",
+        )),
+        Some("mtls") if !state.config.mtls_enabled => Err(AppError::bad_request(
+            "mtls_not_available",
+            "High-assurance mTLS clients require NVBES_MTLS_ENABLED.",
+        )),
+        _ => Ok(()),
+    }
+}
+
 #[derive(Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ListPoliciesRequest {
     pub client_id: Option<String>,
     pub limit: Option<i64>,

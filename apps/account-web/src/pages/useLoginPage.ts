@@ -11,7 +11,8 @@ import {
 } from '../identity.oauth';
 import { readLoginReturnTo } from '../identity.return-to';
 import { accountPathForAuthuser, readAuthuser } from '../identity.authuser';
-import { resendLoginMfaEmailCodeStep } from '../identity.auth.functions';
+import { prefetchPowChallenge } from '../identity.auth.pow';
+import { accountServiceBaseUrl } from '../identity.http';
 import { useLoginPageActions } from './useLoginPage.actions';
 import { useLoginPageBootstrap } from './useLoginPage.bootstrap';
 import { useLoginPageMutations } from './useLoginPage.mutations';
@@ -61,7 +62,10 @@ export function useLoginPage() {
       return;
     }
 
-    void navigate({ to: '/account/$accountIndex', params: { accountIndex: '0' } });
+    void navigate({
+      to: '/account/$accountIndex',
+      params: { accountIndex: '0' },
+    });
   }, [location.pathname, location.searchStr, navigate, returnTo]);
 
   const handleHostedDecision = useCallback(
@@ -137,7 +141,6 @@ export function useLoginPage() {
     sessionToken: state.sessionToken,
     mfaMethod: state.mfaMethod,
     totpCode: state.totpCode,
-    emailCode: state.emailCode,
     recoveryCode: state.recoveryCode,
     decoyRef,
     mutations: {
@@ -159,6 +162,15 @@ export function useLoginPage() {
     setError: state.setError,
     navigateToAccount,
   });
+  const setEmail = useCallback(
+    (email: string) => {
+      state.setEmail(email);
+      if (email.trim()) {
+        prefetchPowChallenge(accountServiceBaseUrl);
+      }
+    },
+    [state.setEmail],
+  );
   const conditionalWebAuthnAbortRef = useRef<AbortController | null>(null);
 
   const finishLoginRef = useRef(actions.finishLogin);
@@ -185,6 +197,9 @@ export function useLoginPage() {
     void completeConditionalWebAuthnLogin({
       finishLogin: (session) => finishLoginRef.current(session),
       setSessionToken: state.setSessionToken,
+      setEmail: state.setEmail,
+      setLoginStateToken: state.setLoginStateToken,
+      setStep: state.setStep,
       setError: state.setError,
       signal: controller.signal,
     })
@@ -206,8 +221,11 @@ export function useLoginPage() {
   }, [
     state.checkingAuth,
     state.connectedAccounts.length,
+    state.setEmail,
     state.setError,
+    state.setLoginStateToken,
     state.setSessionToken,
+    state.setStep,
     state.step,
   ]);
 
@@ -225,14 +243,9 @@ export function useLoginPage() {
     handleIdentifierSubmit: actions.handleIdentifierSubmit,
     handleMfaSubmit: actions.handleMfaSubmit,
     loginStateToken: state.loginStateToken,
-    resendLoginMfaEmailCode: () =>
-      state.loginStateToken
-        ? resendLoginMfaEmailCodeStep(state.loginStateToken)
-        : Promise.reject(new Error('Session de connexion expirée. Recommencez.')),
     handlePasswordSubmit: actions.handlePasswordSubmit,
     handleUseAnotherAccount: actions.handleUseAnotherAccount,
     hasRecovery: state.hasRecovery,
-    hasEmail: state.hasEmail,
     hasTotp: state.hasTotp,
     hasWebAuthn: state.hasWebAuthn,
     loading,
@@ -242,16 +255,14 @@ export function useLoginPage() {
     oauthRequest,
     hostedConsent: hostedDecision?.kind === 'consent_required' ? hostedDecision : null,
     password: state.password,
-    emailCode: state.emailCode,
     recoveryCode: state.recoveryCode,
     resetToIdentifier: actions.resetToIdentifier,
     sessionToken: state.sessionToken,
-    setEmail: state.setEmail,
+    setEmail,
     setError: state.setError,
     setIdentifierSubmitting: state.setIdentifierSubmitting,
     setMfaMethod: state.setMfaMethod,
     setPassword: state.setPassword,
-    setEmailCode: state.setEmailCode,
     setRecoveryCode: state.setRecoveryCode,
     setTotpCode: state.setTotpCode,
     step: state.step,

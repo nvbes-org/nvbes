@@ -12,17 +12,44 @@ function requireIncludes(path, pattern, label) {
 		errors.push(`${path}: missing`);
 		return;
 	}
-	if (!pattern.test(readFileSync(path, "utf8"))) errors.push(`${path}: missing ${label}`);
+	if (!pattern.test(readFileSync(path, "utf8")))
+		errors.push(`${path}: missing ${label}`);
 }
 
 requirePath("pnpm-lock.yaml");
 requirePath("Cargo.lock");
+requirePath("deny.toml");
+requirePath(".osv-scanner.toml");
+requirePath(".github/dependabot.yml");
+requirePath(".github/workflows/security.yml");
 requirePath("go.mod");
 requirePath("pyproject.toml");
-requireIncludes("package.json", /"packageManager":\s*"pnpm@/, "pinned pnpm packageManager");
+requireIncludes(
+	"package.json",
+	/"packageManager":\s*"pnpm@/,
+	"pinned pnpm packageManager",
+);
 requireIncludes("Cargo.toml", /\[workspace\]/, "Cargo workspace");
-requireIncludes("go.mod", /^module github\.com\/nvbes\/nvbes/m, "nvbes Go module");
+requireIncludes(
+	"go.mod",
+	/^module github\.com\/nvbes\/nvbes/m,
+	"nvbes Go module",
+);
 requireIncludes("pyproject.toml", /^\[project\]/m, "Python project metadata");
+requireIncludes("deny.toml", /^\[advisories\]/m, "cargo-deny advisory policy");
+requireIncludes("deny.toml", /^\[licenses\]/m, "cargo-deny license policy");
+requireIncludes("deny.toml", /^\[bans\]/m, "cargo-deny ban policy");
+requireIncludes("deny.toml", /^\[sources\]/m, "cargo-deny source policy");
+requireIncludes(
+	".github/workflows/security.yml",
+	/google\/osv-scanner-action\/osv-scanner-action@[0-9a-f]{40}/,
+	"full-SHA-pinned OSV scanner",
+);
+requireIncludes(
+	".github/workflows/security.yml",
+	/EmbarkStudios\/cargo-deny-action@[0-9a-f]{40}/,
+	"full-SHA-pinned cargo-deny",
+);
 
 if (errors.length > 0) {
 	console.error("Dependency coverage checks failed:");

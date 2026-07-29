@@ -229,6 +229,7 @@ pub async fn append_tus_chunk(
             storage_object_id: upload.storage_object_id,
             upload_id,
             file_data: &file_data,
+            declared_mime: storage_object.mime_type.as_deref(),
             actual_size,
             computed_checksum: &computed_checksum,
             ip: ip.as_deref(),

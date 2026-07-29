@@ -11,6 +11,7 @@ pub struct AuthState {
     pub email: String,
     pub next_step: String,
     pub device_fingerprint: Option<Value>,
+    pub completed_methods: Vec<String>,
 }
 
 pub async fn create_state(
@@ -19,6 +20,7 @@ pub async fn create_state(
     email: &str,
     next_step: &str,
     device_fingerprint: Option<Value>,
+    completed_methods: Vec<String>,
 ) -> Result<Uuid, AppError> {
     let id = Uuid::new_v4();
     let expires_at = Utc::now() + Duration::minutes(15);
@@ -30,6 +32,7 @@ pub async fn create_state(
             email: email.to_string(),
             next_step: next_step.to_string(),
             device_fingerprint,
+            completed_methods,
             expires_at,
         },
         15 * 60,
@@ -86,6 +89,7 @@ pub async fn fetch_state(
         email: state.email,
         next_step: state.next_step,
         device_fingerprint: state.device_fingerprint,
+        completed_methods: state.completed_methods,
     })
 }
 

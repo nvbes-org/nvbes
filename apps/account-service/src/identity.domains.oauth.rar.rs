@@ -32,11 +32,23 @@ fn validate_authorization_details_value(
     let serde_json::Value::Array(details) = value else {
         return Err(invalid_details());
     };
+    if details.len() > 16 {
+        return Err(AppError::bad_request(
+            "authorization_details_too_complex",
+            "authorization_details may contain at most 16 entries.",
+        ));
+    }
 
     for detail in &details {
         let serde_json::Value::Object(object) = detail else {
             return Err(invalid_details());
         };
+        if object.len() > 16 || json_depth(detail) > 4 {
+            return Err(AppError::bad_request(
+                "authorization_details_too_complex",
+                "Each authorization detail may contain at most 16 fields and four nesting levels.",
+            ));
+        }
         let Some(detail_type) = object.get("type").and_then(|value| value.as_str()) else {
             return Err(AppError::bad_request(
                 "invalid_authorization_details",
@@ -52,6 +64,18 @@ fn validate_authorization_details_value(
     }
 
     Ok(details)
+}
+
+fn json_depth(value: &serde_json::Value) -> usize {
+    match value {
+        serde_json::Value::Array(values) => {
+            1 + values.iter().map(json_depth).max().unwrap_or_default()
+        }
+        serde_json::Value::Object(values) => {
+            1 + values.values().map(json_depth).max().unwrap_or_default()
+        }
+        _ => 1,
+    }
 }
 
 fn invalid_details() -> AppError {

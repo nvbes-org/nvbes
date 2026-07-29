@@ -56,7 +56,7 @@ pub async fn create_download_url(
         )
     })?;
 
-    let expires_at = Utc::now() + chrono::Duration::minutes(5);
+    let expires_at = Utc::now() + chrono::Duration::seconds(60);
     let download_url = build_signed_download_url(storage, &object_key, expires_at).await?;
 
     crate::domains::quotas::record_bandwidth_out_tx(
@@ -110,7 +110,8 @@ pub async fn build_signed_download_url(
 ) -> Result<SignedDownloadUrlView, AppError> {
     let expires = (expires_at - Utc::now())
         .to_std()
-        .unwrap_or(std::time::Duration::from_secs(300));
+        .unwrap_or(std::time::Duration::from_secs(60))
+        .min(std::time::Duration::from_secs(60));
 
     let presigned = storage
         .presign_download(object_key, expires)

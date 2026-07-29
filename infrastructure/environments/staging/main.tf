@@ -11,6 +11,24 @@ locals {
     "managed-by:terraform",
   ]
 
+  cloudflare_origin_ipv4_cidrs = [
+    "173.245.48.0/20",
+    "103.21.244.0/22",
+    "103.22.200.0/22",
+    "103.31.4.0/22",
+    "141.101.64.0/18",
+    "108.162.192.0/18",
+    "190.93.240.0/20",
+    "188.114.96.0/20",
+    "197.234.240.0/22",
+    "198.41.128.0/17",
+    "162.158.0.0/15",
+    "104.16.0.0/13",
+    "104.24.0.0/14",
+    "172.64.0.0/13",
+    "131.0.72.0/22",
+  ]
+
   secret_inventory = {
     "NVBES_DATABASE_URL"              = "PostgreSQL private connection string for the API and workers."
     "NVBES_STRIPE_SECRET_KEY"         = "Staging Stripe secret key."
@@ -31,6 +49,8 @@ module "scaleway" {
   name_prefix                    = local.name_prefix
   private_subnet                 = "10.30.0.0/22"
   ssh_allowed_ips                = var.ssh_allowed_ips
+  enable_jit_ssh                 = false
+  edge_allowed_ipv4_cidrs        = local.cloudflare_origin_ipv4_cidrs
   api_instance_type              = "DEV1-M"
   worker_instance_type           = "DEV1-S"
   rdb_node_type                  = "DB-DEV-S"
@@ -40,6 +60,35 @@ module "scaleway" {
   bucket_name                    = "nvbes-staging-files"
   bucket_cors_allowed_origins    = ["https://${local.web_domain}"]
   tags                           = local.tags
+}
+
+resource "cloudflare_ruleset" "managed_waf" {
+  zone_id     = var.cloudflare_zone_id
+  name        = "nvbes-staging-managed-waf"
+  description = "Cloudflare managed protections for nvbes staging."
+  kind        = "zone"
+  phase       = "http_request_firewall_managed"
+
+  rules = [
+    {
+      ref         = "execute_cloudflare_managed_ruleset"
+      description = "Execute the Cloudflare Managed Ruleset."
+      expression  = "true"
+      action      = "execute"
+      action_parameters = {
+        id = "efb7b8c949ac4650a09736fc376e9aee"
+      }
+    },
+    {
+      ref         = "execute_cloudflare_owasp_ruleset"
+      description = "Execute the Cloudflare OWASP Core Ruleset."
+      expression  = "true"
+      action      = "execute"
+      action_parameters = {
+        id = "4814384a9e5d4991b9815dcfc25d2f1f"
+      }
+    },
+  ]
 }
 
 resource "cloudflare_dns_record" "api" {

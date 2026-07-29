@@ -220,6 +220,10 @@ pub async fn introspect_token(
     ) = resolve_actor_context(db, claims.act.as_ref()).await?;
 
     let network_valid = resolve_network_valid(db, tenant_id, client_ip.as_deref()).await?;
+    let cnf = claims
+        .cnf
+        .as_ref()
+        .and_then(|confirmation| serde_json::to_value(confirmation).ok());
 
     Ok(IntrospectionResponse {
         active: true,
@@ -245,6 +249,7 @@ pub async fn introspect_token(
         exp: Some(claims.exp as i64),
         iat: Some(claims.iat as i64),
         nbf: Some(claims.nbf as i64),
+        cnf,
         act: claims
             .act
             .as_ref()

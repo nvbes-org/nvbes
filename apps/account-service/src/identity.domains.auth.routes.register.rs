@@ -113,8 +113,10 @@ pub(crate) async fn register(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(request): Json<RegisterRequest>,
-) -> Result<Json<crate::domains::auth::types::RegisterResult>, AppError> {
+) -> Result<Response, AppError> {
     let started_at = Instant::now();
+    let secure_cookie = state.config.environment != "development";
+    let enrollment_max_age = (state.config.auth_verification_ttl_hours * 60 * 60).max(0);
     match tokio::time::timeout(
         REGISTER_REQUEST_TIMEOUT,
         register_inner(state, headers, request),
@@ -126,7 +128,7 @@ pub(crate) async fn register(
                 elapsed_ms = started_at.elapsed().as_millis() as u64,
                 "auth_register_completed"
             );
-            Ok(result)
+            registration_response(result, secure_cookie, enrollment_max_age)
         }
         Ok(Err(error)) => {
             warn!(
@@ -148,6 +150,24 @@ pub(crate) async fn register(
             ))
         }
     }
+}
+
+fn registration_response(
+    Json(result): Json<crate::domains::auth::types::RegisterResult>,
+    secure_cookie: bool,
+    enrollment_max_age: i64,
+) -> Result<Response, AppError> {
+    let enrollment_token = result.registration_enrollment_token.clone();
+    let mut response = Json(result).into_response();
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        crate::http::cookies::registration_enrollment_cookie(
+            &enrollment_token,
+            enrollment_max_age,
+            secure_cookie,
+        )?,
+    );
+    Ok(response)
 }
 
 async fn register_inner(
@@ -394,7 +414,7 @@ pub(crate) async fn verify_email(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(request): Json<VerifyEmailRequest>,
-) -> Result<Json<crate::domains::auth::types::VerifyEmailResult>, AppError> {
+) -> Result<Response, AppError> {
     nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
@@ -421,5 +441,11 @@ pub(crate) async fn verify_email(
             .correlation(distinct_id, session_id),
     );
 
-    Ok(Json(result))
+    let secure_cookie = state.config.environment != "development";
+    let mut response = Json(result).into_response();
+    response.headers_mut().append(
+        header::SET_COOKIE,
+        crate::http::cookies::clear_registration_enrollment_cookie(secure_cookie)?,
+    );
+    Ok(response)
 }

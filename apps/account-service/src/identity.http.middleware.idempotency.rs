@@ -132,5 +132,21 @@ pub async fn idempotency_guard(
 }
 
 fn is_mutating_method(method: &Method) -> bool {
-    matches!(method, &Method::POST | &Method::PUT | &Method::PATCH)
+    matches!(
+        method,
+        &Method::POST | &Method::PUT | &Method::PATCH | &Method::DELETE
+    )
+}
+
+pub async fn require_idempotency_key(
+    request: axum::http::Request<Body>,
+    next: Next,
+) -> Result<Response, AppError> {
+    if request.headers().get("Idempotency-Key").is_none() {
+        return Err(AppError::bad_request(
+            "idempotency_key_required",
+            "This repeatable mutation requires an Idempotency-Key header.",
+        ));
+    }
+    Ok(next.run(request).await)
 }

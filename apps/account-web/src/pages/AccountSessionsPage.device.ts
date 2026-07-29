@@ -1,91 +1,70 @@
-import type { AccountSession } from '@nvbes/identity-client';
+import type { AccountSession, AccountSessionClient } from '@nvbes/identity-client';
 
 export type OsKey = 'macos' | 'windows' | 'linux' | 'android' | 'ios' | 'unknown';
 export type BrowserKey = 'chrome' | 'firefox' | 'edge' | 'safari' | 'opera' | 'brave' | 'unknown';
-export type DeviceType = 'desktop' | 'mobile' | 'tablet';
+export type DeviceType = 'console' | 'desktop' | 'mobile' | 'tablet' | 'unknown' | 'wearable';
 
 export interface ParsedDevice {
   browser: string;
+  browserVersion: number | null;
   browserKey: BrowserKey;
   os: string;
+  osVersion: string | null;
   osKey: OsKey;
+  device: string | null;
   deviceType: DeviceType;
 }
 
-export function parseUserAgent(ua: string): ParsedDevice {
-  let browser = 'Navigateur inconnu';
-  let browserKey: BrowserKey = 'unknown';
-  let os = 'OS inconnu';
-  let osKey: OsKey = 'unknown';
-  let deviceType: DeviceType = 'desktop';
-
-  // Browser detection (order matters)
-  if (ua.includes('Brave')) {
-    browser = 'Brave';
-    browserKey = 'brave';
-  } else if (ua.includes('OPR') || ua.includes('Opera')) {
-    browser = 'Opera';
-    browserKey = 'opera';
-  } else if (ua.includes('Edg')) {
-    browser = 'Edge';
-    browserKey = 'edge';
-  } else if (ua.includes('Firefox')) {
-    browser = 'Firefox';
-    browserKey = 'firefox';
-  } else if (ua.includes('Chrome')) {
-    browser = 'Chrome';
-    browserKey = 'chrome';
-  } else if (ua.includes('Safari')) {
-    browser = 'Safari';
-    browserKey = 'safari';
-  }
-
-  // OS detection
-  if (ua.includes('Android')) {
-    os = 'Android';
-    osKey = 'android';
-    deviceType = ua.includes('Tablet') ? 'tablet' : 'mobile';
-  } else if (ua.includes('iPhone')) {
-    os = 'iOS';
-    osKey = 'ios';
-    deviceType = 'mobile';
-  } else if (ua.includes('iPad')) {
-    os = 'iPadOS';
-    osKey = 'ios';
-    deviceType = 'tablet';
-  } else if (ua.includes('Mac OS') || ua.includes('Macintosh')) {
-    os = 'macOS';
-    osKey = 'macos';
-  } else if (ua.includes('Windows')) {
-    os = 'Windows';
-    osKey = 'windows';
-  } else if (ua.includes('Linux')) {
-    os = 'Linux';
-    osKey = 'linux';
-  }
-
-  return { browser, browserKey, os, osKey, deviceType };
+export function parseSessionClient(client: AccountSessionClient | null): ParsedDevice {
+  return {
+    browser: client?.browser ?? 'Navigateur inconnu',
+    browserVersion: client?.browser_version ?? null,
+    browserKey: browserKey(client?.browser),
+    os: client?.os ?? 'OS inconnu',
+    osVersion: client?.os_version ?? null,
+    osKey: osKey(client?.os),
+    device: client?.device ?? null,
+    deviceType: client?.device_type ?? 'unknown',
+  };
 }
 
-export function trustScoreColor(score: number | null): string {
-  if (score === null) return 'text-muted-foreground';
-  if (score >= 70) return 'text-emerald-600';
-  if (score >= 40) return 'text-amber-500';
-  return 'text-red-500';
+function browserKey(browser: string | null | undefined): BrowserKey {
+  const value = browser?.toLowerCase() ?? '';
+  if (value.includes('brave')) return 'brave';
+  if (value.includes('opera')) return 'opera';
+  if (value.includes('edge')) return 'edge';
+  if (value.includes('firefox')) return 'firefox';
+  if (value.includes('chrome')) return 'chrome';
+  if (value.includes('safari')) return 'safari';
+  return 'unknown';
 }
 
-export function trustProgressColor(score: number | null): string {
-  if (score === null) return 'bg-muted';
-  if (score >= 70) return 'bg-emerald-500';
-  if (score >= 40) return 'bg-amber-400';
-  return 'bg-red-500';
+function osKey(os: string | null | undefined): OsKey {
+  const value = os?.toLowerCase() ?? '';
+  if (value.includes('android')) return 'android';
+  if (value.includes('ios') || value.includes('watchos')) return 'ios';
+  if (value.includes('mac')) return 'macos';
+  if (value.includes('windows')) return 'windows';
+  if (value.includes('linux') || value.includes('chrome os')) return 'linux';
+  return 'unknown';
 }
 
 export function riskLabel(decision: string | null): string {
   if (decision === 'allow') return 'Autorisé';
-  if (decision === 'challenge') return 'Challengé';
+  if (decision === 'challenge' || decision === 'step_up') return 'Vérification requise';
   if (decision === 'deny') return 'Refusé';
   return 'Inconnu';
+}
+
+export function trustLabel(level: string | null): string {
+  if (level === 'trusted') return 'Fiable';
+  if (level === 'recognized') return 'Reconnu';
+  if (level === 'restricted') return 'Restreint';
+  return 'Non vérifié';
+}
+
+export function formatActiveSessionCount(count: number): string {
+  return count === 1 ? '1 session active' : `${count} sessions actives`;
 }
 
 export interface DeviceGroup {
@@ -109,7 +88,7 @@ export function groupSessionsByDevice(sessions: AccountSession[]): {
   const map = new Map<string, AccountSession[]>();
 
   for (const session of sessions) {
-    const key = session.device_id || session.user_agent || 'unknown-device';
+    const key = session.device_id || clientFamilyKey(session) || 'unknown-device';
     const group = map.get(key) ?? [];
     group.push(session);
     map.set(key, group);
@@ -126,15 +105,7 @@ export function groupSessionsByDevice(sessions: AccountSession[]): {
 
     const primary = sorted[0];
     const userAgent = primary.user_agent;
-    const parsed = userAgent
-      ? parseUserAgent(userAgent)
-      : {
-          browser: 'Appareil inconnu',
-          browserKey: 'unknown' as const,
-          os: '',
-          osKey: 'unknown' as const,
-          deviceType: 'desktop' as const,
-        };
+    const parsed = parseSessionClient(primary.client);
 
     const isCurrentDevice = sorted.some((s) => s.current);
 
@@ -185,4 +156,13 @@ export function groupSessionsByDevice(sessions: AccountSession[]): {
   const otherDevices = nonCurrentDevices.filter((d) => !d.isRecognized);
 
   return { currentDevice, recognizedDevices, otherDevices };
+}
+
+function clientFamilyKey(session: AccountSession): string | null {
+  if (!session.client) return session.user_agent;
+  return [
+    session.client.browser ?? 'unknown-browser',
+    session.client.os ?? 'unknown-os',
+    session.client.device ?? session.client.device_type,
+  ].join(':');
 }

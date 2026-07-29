@@ -129,6 +129,7 @@ fn required_scope_for_action(action: WorkspaceAction) -> &'static str {
         WorkspaceAction::ViewQuota => "drive.quota.read",
         WorkspaceAction::ViewBilling | WorkspaceAction::ManageBilling => "drive.workspace.manage",
         WorkspaceAction::ViewAudit | WorkspaceAction::ExportAudit => "drive.audit.read",
+        WorkspaceAction::ManageKeys | WorkspaceAction::ManageAdministration => "drive.admin",
         WorkspaceAction::ExportWorkspaceData | WorkspaceAction::DeleteWorkspace => {
             "drive.workspace.manage"
         }

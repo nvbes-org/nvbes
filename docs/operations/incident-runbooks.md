@@ -235,6 +235,49 @@ Validation:
 - API demarre;
 - smoke staging vert.
 
+## Sensitive Export
+
+Signaux :
+
+- alerte `nvbes-siem-sensitive-export` ;
+- export privacy, finance ou audit inhabituel ;
+- volume ou horaire incohérent avec le ticket approuvé.
+
+Actions :
+
+- confirmer l’acteur, le tenant, le step-up et la justification ;
+- suspendre le téléchargement ou révoquer l’URL signée si l’action est suspecte ;
+- préserver l’audit local et son dernier anchor externe ;
+- révoquer la session et ouvrir SEV1 si l’autorisation n’est pas démontrée ;
+- évaluer l’exposition RGPD sans copier le contenu dans le canal incident.
+
+Validation :
+
+- export légitime rapproché d’une demande, ou accès révoqué ;
+- aucun autre tenant accessible ;
+- audit et anchor vérifiés.
+
+## Destructive Action
+
+Signaux :
+
+- alerte `nvbes-siem-destructive-action` ;
+- suppression de compte, tenant, workspace, secret ou donnée protégée.
+
+Actions :
+
+- confirmer la double approbation, le step-up et la période de grâce ;
+- arrêter les workers de purge si l’action est suspecte ;
+- conserver les backups, WAL, journaux et anchors WORM ;
+- révoquer le principal et ses sessions ;
+- restaurer uniquement dans un environnement isolé avant décision de reprise.
+
+Validation :
+
+- périmètre exact établi ;
+- aucune suppression cross-tenant ;
+- restauration testée et preuves attachées au postmortem.
+
 ## Rollback Applicatif
 
 Declencheurs:

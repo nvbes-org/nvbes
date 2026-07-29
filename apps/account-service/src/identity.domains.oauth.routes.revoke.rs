@@ -1,4 +1,4 @@
-use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
+use axum::{Extension, Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
 use std::time::Duration;
 use uuid::Uuid;
@@ -22,15 +22,46 @@ pub fn router() -> Router<AppState> {
 pub(crate) async fn revoke(
     State(state): State<AppState>,
     headers: HeaderMap,
+    dpop: Option<Extension<crate::http::middleware::dpop::DpopContext>>,
+    mtls: Option<Extension<crate::http::mtls::MtlsCertificateThumbprint>>,
     axum::extract::Form(request): axum::extract::Form<RevokeRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let _client_auth = super::parse_basic_client_auth(&headers)?;
+    let mut client_auth = super::token::token_client_auth(
+        &headers,
+        request.client_id.as_deref(),
+        request.client_secret.as_deref(),
+        request.client_assertion_type.as_deref(),
+        request.client_assertion.as_deref(),
+    )?;
+    let endpoint = format!(
+        "{}/oauth/revoke",
+        state.config.api_base_url.trim_end_matches('/')
+    );
+    client_auth.client_assertion_verified =
+        crate::domains::oauth::client_assertion::verify_private_key_jwt(
+            &state.db,
+            &client_auth,
+            &endpoint,
+            state.config.api_base_url.trim_end_matches('/'),
+        )
+        .await?;
+    let security =
+        crate::domains::oauth::profiles::load_client_security(&state.db, &client_auth.client_id)
+            .await?;
+    super::token::enforce_token_endpoint_security(
+        &state,
+        &client_auth,
+        &security,
+        dpop.as_ref().map(|Extension(context)| context),
+        mtls.as_ref().map(|Extension(thumbprint)| thumbprint),
+    )?;
+    verify_client_secret_if_needed(&state, &client_auth, security.tenant_id).await?;
 
     nvbes_core::limiter::check_dual_rate_limit(
         &state.redis,
         &headers,
         "oauth_revoke",
-        &_client_auth.0,
+        &client_auth.client_id,
         60,
         30,
         Duration::from_secs(60),
@@ -54,6 +85,9 @@ pub(crate) async fn revoke(
     let Ok(claims) = result else {
         return Ok(Json(serde_json::json!({})));
     };
+    if claims.client_id.as_deref() != Some(client_auth.client_id.as_str()) {
+        return Ok(Json(serde_json::json!({})));
+    }
 
     let Ok(session_id) = Uuid::parse_str(&claims.sid) else {
         return Ok(Json(serde_json::json!({})));
@@ -74,9 +108,41 @@ pub(crate) async fn revoke(
 }
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RevokeRequest {
     token: String,
     token_type_hint: Option<String>,
+    client_id: Option<String>,
+    client_secret: Option<String>,
+    client_assertion_type: Option<String>,
+    client_assertion: Option<String>,
+}
+
+async fn verify_client_secret_if_needed(
+    state: &AppState,
+    auth: &crate::domains::oauth::service::ClientAuthentication,
+    tenant_id: Uuid,
+) -> Result<(), AppError> {
+    if auth.client_assertion_verified {
+        return Ok(());
+    }
+    let secret = auth.client_secret.as_deref().ok_or_else(|| {
+        AppError::unauthorized("invalid_client", "Client authentication is required.")
+    })?;
+    let hash: String = sqlx::query_scalar(
+        "SELECT client_secret_hash FROM oauth_clients WHERE client_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(&auth.client_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| AppError::unauthorized("invalid_client", "The OAuth client is invalid."))?;
+    crate::domains::oauth::verify_client_secret_with_overlap(
+        tenant_id,
+        &auth.client_id,
+        secret,
+        &hash,
+    )
+    .await
 }
 
 async fn revoke_refresh_family(

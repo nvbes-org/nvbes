@@ -14,6 +14,8 @@ mod geo_impl;
 pub mod history;
 #[path = "identity.domains.auth.password.reset.rs"]
 mod reset_impl;
+#[path = "identity.domains.auth.password.review.rs"]
+pub mod review;
 
 #[cfg(test)]
 #[path = "identity.domains.auth.password.tests.rs"]

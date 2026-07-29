@@ -36,7 +36,6 @@ export type UseLoginPageActionsOptions = {
   sessionToken: string | null;
   mfaMethod: MfaMethod | null;
   totpCode: string;
-  emailCode: string;
   recoveryCode: string;
   decoyRef: MutableRefObject<{ wasClicked(): boolean } | null>;
   mutations: LoginMutations;

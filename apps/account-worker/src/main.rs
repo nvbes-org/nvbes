@@ -8,6 +8,8 @@ use nvbes_observability::{
 mod app;
 #[path = "identity.grpc.pb.rs"]
 mod grpc_pb;
+#[path = "identity.worker.migrations.rs"]
+mod migrations;
 #[path = "identity.worker.rs"]
 mod worker;
 
@@ -17,13 +19,20 @@ const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    let arg1 = std::env::args().nth(1);
+    if matches!(arg1.as_deref(), Some("run-audit-anchor")) {
+        return worker::audit_anchor::run_standalone().await;
+    }
+
+    let mut config = AppConfig::from_env().map_err(anyhow::Error::msg)?;
+    config
+        .resolve_from_secret_manager()
+        .await
+        .map_err(anyhow::Error::msg)?;
 
     let _error_reporting_guard = init_error_reporting_for_service(&config, "account-worker");
     install_safe_panic_hook();
     init_tracing_for_service(&config, "account-worker");
-
-    let arg1 = std::env::args().nth(1);
 
     if matches!(arg1.as_deref(), Some("error-reporting-smoke")) {
         let result = capture_error_reporting_smoke(
@@ -36,12 +45,15 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if matches!(arg1.as_deref(), Some("migrate")) {
+        tracing::info!("running account database migrations with the dedicated migrator role");
+        return migrations::run(&config).await;
+    }
+
     let _profiling_guard =
         start_continuous_profiling(&config, "account-worker").map_err(anyhow::Error::msg)?;
 
     let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
-
-    run_migrations(&db).await?;
 
     let state = app::AppState::bootstrap(&config, db).await?;
 
@@ -68,13 +80,6 @@ async fn main() -> anyhow::Result<()> {
         let _ = tokio::signal::ctrl_c().await;
     })
     .await
-}
-
-async fn run_migrations(db: &sqlx::PgPool) -> anyhow::Result<()> {
-    sqlx::migrate!("../account-service/migrations")
-        .run(db)
-        .await?;
-    Ok(())
 }
 
 fn identity_worker_metrics_bind_addr() -> String {

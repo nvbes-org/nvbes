@@ -33,11 +33,13 @@ function account(status: 'active' | 'expired'): AccountEntry {
       revoked_at: null,
       ip: null,
       user_agent: null,
+      client: null,
       device_id: null,
       device_trust_level: 'untrusted',
       device_trust_score: 0,
       risk_score: 0,
       risk_decision: 'allow',
+      risk_confirmed_at: null,
       current: false,
     },
   };

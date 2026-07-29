@@ -5,18 +5,19 @@ export function isStepUpRequiredError(error: unknown): boolean {
 
   if (error instanceof HttpError) {
     const code = readErrorCodeFromPayload(error.body);
-    if (code === 'step_up_required') return true;
+    if (isStepUpCode(code)) return true;
   }
 
   if (typeof error === 'object' && error !== null && 'body' in error) {
     const code = readErrorCodeFromPayload((error as { body?: unknown }).body);
-    if (code === 'step_up_required') return true;
+    if (isStepUpCode(code)) return true;
   }
 
   if (error instanceof Error) {
     const msg = error.message;
     if (
       msg.includes('step_up_required') ||
+      msg.includes('phishing_resistant_step_up_required') ||
       msg.includes('Please verify again before continuing.') ||
       msg.includes('Confirmez votre identité pour continuer.')
     ) {
@@ -25,6 +26,10 @@ export function isStepUpRequiredError(error: unknown): boolean {
   }
 
   return false;
+}
+
+function isStepUpCode(code: string | null): boolean {
+  return code === 'step_up_required' || code === 'phishing_resistant_step_up_required';
 }
 
 function readErrorCodeFromPayload(body: unknown): string | null {

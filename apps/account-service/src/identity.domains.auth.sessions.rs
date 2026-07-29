@@ -18,8 +18,8 @@ pub mod db;
 pub mod token;
 
 pub use super::sessions_mgmt::{
-    fetch_view, list, logout, revoke, revoke_all_others, revoke_all_user_sessions,
-    revoke_all_user_sessions_tx,
+    confirm_high_risk_session, fetch_view, list, logout, revoke, revoke_all_others,
+    revoke_all_user_sessions, revoke_all_user_sessions_tx,
 };
 pub use authenticate::{
     authenticate, authenticate_bearer, authenticate_verified_bearer, authenticate_with_request,

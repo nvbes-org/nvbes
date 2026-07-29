@@ -10,9 +10,24 @@ pub struct ScanOutcome {
 pub async fn perform_scan(
     scanner: &dyn ScanEngine,
     file_data: &[u8],
+    declared_mime: Option<&str>,
     scan_enabled: bool,
     scan_fail_open: bool,
 ) -> Result<ScanOutcome, AppError> {
+    if let Err(validation_error) =
+        super::content_validation::validate_content(declared_mime, file_data)
+    {
+        tracing::warn!(
+            error_code = validation_error.code,
+            "File content policy rejected upload"
+        );
+        return Ok(ScanOutcome {
+            status: "content_rejected".to_string(),
+            is_quarantined: true,
+            quarantine_reason: format!("content_policy:{}", validation_error.code),
+        });
+    }
+
     if !scan_enabled {
         return Ok(ScanOutcome {
             status: "unscanned_disabled".to_string(),

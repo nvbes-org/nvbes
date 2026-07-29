@@ -6,18 +6,24 @@ export function MfaPageStepUpMethodChoices({
   hasTotp,
   hasWebAuthn,
   hasRecovery,
+  canUsePassword,
   onMethodSelect,
-}: Pick<MfaPageStepUpDialogProps, 'hasTotp' | 'hasWebAuthn' | 'hasRecovery' | 'onMethodSelect'>) {
+}: Pick<
+  MfaPageStepUpDialogProps,
+  'hasTotp' | 'hasWebAuthn' | 'hasRecovery' | 'canUsePassword' | 'onMethodSelect'
+>) {
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        variant="outline"
-        className="justify-start gap-3"
-        onClick={() => onMethodSelect('password')}
-      >
-        <KeyRound className="size-4 text-muted-foreground" />
-        Mot de passe
-      </Button>
+      {canUsePassword && (
+        <Button
+          variant="outline"
+          className="justify-start gap-3"
+          onClick={() => onMethodSelect('password')}
+        >
+          <KeyRound className="size-4 text-muted-foreground" />
+          Mot de passe
+        </Button>
+      )}
       {hasTotp && (
         <Button
           variant="outline"

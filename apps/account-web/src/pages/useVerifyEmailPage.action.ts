@@ -48,7 +48,7 @@ export function useVerifyEmailPageAction({
 
     try {
       const result = emailChanged
-        ? await changeVerificationEmail(originalEmail, draft)
+        ? await changeVerificationEmail(draft)
         : await resendVerificationEmail(draft);
 
       setResendAvailableAt(

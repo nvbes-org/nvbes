@@ -2,10 +2,18 @@ use crate::http::error::AppError;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode_header};
 use serde::{Deserialize, Serialize};
 
+#[path = "identity.domains.oauth.jar.high_assurance.rs"]
+mod high_assurance;
+
+pub use high_assurance::{
+    record_request_object_jti, validate_high_assurance_jwks, validate_high_assurance_request_object,
+};
+
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RequestObjectClaims {
     pub iss: String,
-    pub aud: String,
+    pub aud: RequestObjectAudience,
     pub exp: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nbf: Option<i64>,
@@ -18,12 +26,29 @@ pub struct RequestObjectClaims {
     pub redirect_uri: Option<String>,
     pub scope: Option<String>,
     pub state: Option<String>,
+    pub nonce: Option<String>,
     pub audience: Option<String>,
     pub resource: Option<Vec<String>>,
     pub authorization_details: Option<serde_json::Value>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub consent_action: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum RequestObjectAudience {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl RequestObjectAudience {
+    pub fn contains(&self, expected: &str) -> bool {
+        match self {
+            Self::One(audience) => audience == expected,
+            Self::Many(audiences) => audiences.iter().any(|audience| audience == expected),
+        }
+    }
 }
 
 pub fn validate_request_object(
@@ -114,59 +139,6 @@ pub fn validate_request_object(
 
 pub fn is_par_urn(request_uri: &str) -> bool {
     request_uri.starts_with("urn:ietf:params:oauth:request_uri:gxpar_")
-}
-
-pub async fn fetch_request_object_from_uri(uri: &str) -> Result<String, AppError> {
-    let parsed = url::Url::parse(uri).map_err(|_| {
-        AppError::bad_request("invalid_request_uri", "The request_uri is not a valid URL.")
-    })?;
-
-    if parsed.scheme() != "https" {
-        return Err(AppError::bad_request(
-            "invalid_request_uri",
-            "request_uri must use HTTPS.",
-        ));
-    }
-
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| AppError::internal("http_client_error", e.to_string()))?;
-
-    let request = client.get(uri);
-    let response = nvbes_core::trace_context::with_fresh_trace_headers(request)
-        .send()
-        .await
-        .map_err(|e| {
-            AppError::bad_request(
-                "invalid_request_uri",
-                format!("Failed to fetch request_uri: {}", e),
-            )
-        })?;
-
-    if !response.status().is_success() {
-        return Err(AppError::bad_request(
-            "invalid_request_uri",
-            format!("Failed to fetch request_uri: HTTP {}", response.status()),
-        ));
-    }
-
-    let body = response.text().await.map_err(|e| {
-        AppError::bad_request(
-            "invalid_request_uri",
-            format!("Failed to read request_uri response: {}", e),
-        )
-    })?;
-
-    let trimmed = body.trim().to_string();
-    if trimmed.is_empty() {
-        return Err(AppError::bad_request(
-            "invalid_request_uri",
-            "request_uri response is empty",
-        ));
-    }
-
-    Ok(trimmed)
 }
 
 #[cfg(test)]

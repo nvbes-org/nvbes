@@ -50,7 +50,9 @@ describe('PersonalInfoCard', () => {
         editError={null}
         editSuccess={false}
         loading={false}
+        isPersonalInfoInvalid={false}
         isPersonalInfoUnchanged={true}
+        errors={{}}
         onFirstnameChange={() => undefined}
         onLastnameChange={() => undefined}
         onUsernameChange={() => undefined}
@@ -60,13 +62,44 @@ describe('PersonalInfoCard', () => {
       />,
     );
 
-    expect(markup).toContain('data-slot="card"');
-    expect(markup).toContain('Compte cree le 9 juin 2026');
-    expect(markup).toContain('Email verifie');
+    expect(markup.match(/data-slot="card"/g)).toHaveLength(1);
     expect(markup).toContain('id="account-firstname"');
     expect(markup).toContain('id="account-birthdate"');
     expect(markup).toContain('id="account-region"');
+    expect(markup).toContain('required=""');
     expect(markup).not.toContain('Nom complet');
     expect(markup).not.toContain('rayane@example.test');
+  });
+
+  it('disables saving and exposes field errors when personal information is invalid', () => {
+    const markup = renderToStaticMarkup(
+      <PersonalInfoCard
+        user={user()}
+        memberSince="9 juin 2026"
+        firstname="Rayane"
+        lastname="Guemmoud"
+        username=""
+        birthdate="2000-01-01"
+        region="FR"
+        regionLoading={false}
+        regions={[]}
+        editError={null}
+        editSuccess={false}
+        loading={false}
+        isPersonalInfoInvalid
+        isPersonalInfoUnchanged={false}
+        errors={{ username: 'Le nom d’utilisateur est requis.' }}
+        onFirstnameChange={() => undefined}
+        onLastnameChange={() => undefined}
+        onUsernameChange={() => undefined}
+        onBirthdateChange={() => undefined}
+        onRegionChange={() => undefined}
+        onSubmit={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('aria-invalid="true"');
+    expect(markup).toContain('Le nom d’utilisateur est requis.');
+    expect(markup).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/);
   });
 });

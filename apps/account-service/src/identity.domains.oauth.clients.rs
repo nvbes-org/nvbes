@@ -1,5 +1,7 @@
 #[path = "identity.domains.oauth.clients.create.rs"]
 mod create;
+#[path = "identity.domains.oauth.clients.keys.rs"]
+pub mod keys;
 #[path = "identity.domains.oauth.clients.list.rs"]
 mod list;
 #[path = "identity.domains.oauth.clients.revoke.rs"]

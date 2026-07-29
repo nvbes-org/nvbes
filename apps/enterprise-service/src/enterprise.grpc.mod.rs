@@ -4,6 +4,8 @@ pub mod access_reviews;
 pub mod admin_elevation;
 #[path = "enterprise.grpc.audit.rs"]
 pub mod audit;
+#[path = "enterprise.grpc.auth.rs"]
+pub mod auth;
 #[path = "enterprise.grpc.break_glass.rs"]
 pub mod break_glass;
 #[path = "enterprise.grpc.federation.rs"]
@@ -14,8 +16,14 @@ pub mod invitations;
 pub mod pb;
 #[path = "enterprise.grpc.policies.rs"]
 pub mod policies;
+#[path = "enterprise.grpc.policy.constraints.rs"]
+pub mod policy_constraints;
 #[path = "enterprise.grpc.policy_evaluation.rs"]
 pub mod policy_evaluation;
+#[path = "enterprise.grpc.privileged_approvals.rs"]
+pub mod privileged_approvals;
+#[path = "enterprise.grpc.privileged_authentication.rs"]
+pub mod privileged_authentication;
 #[path = "enterprise.grpc.service.rs"]
 pub mod service;
 #[path = "enterprise.grpc.status.rs"]

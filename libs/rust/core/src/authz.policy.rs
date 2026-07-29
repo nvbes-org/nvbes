@@ -36,6 +36,8 @@ fn owner_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {
         | WorkspaceAction::ViewQuota
         | WorkspaceAction::ViewBilling
         | WorkspaceAction::ManageBilling
+        | WorkspaceAction::ManageKeys
+        | WorkspaceAction::ManageAdministration
         | WorkspaceAction::ViewAudit
         | WorkspaceAction::ExportAudit
         | WorkspaceAction::ExportWorkspaceData
@@ -91,6 +93,8 @@ fn admin_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {
         | WorkspaceAction::DeleteObjectPermanently
         | WorkspaceAction::ViewBilling
         | WorkspaceAction::ManageBilling
+        | WorkspaceAction::ManageKeys
+        | WorkspaceAction::ManageAdministration
         | WorkspaceAction::ExportWorkspaceData
         | WorkspaceAction::DeleteWorkspace => false,
     }
@@ -106,6 +110,8 @@ fn security_admin_allows(action: WorkspaceAction) -> bool {
             | WorkspaceAction::ViewFiles
             | WorkspaceAction::ViewTrash
             | WorkspaceAction::ViewQuota
+            | WorkspaceAction::ManageKeys
+            | WorkspaceAction::ManageAdministration
     )
 }
 
@@ -143,6 +149,8 @@ fn member_allows(action: WorkspaceAction, ctx: ResourceContext) -> bool {
         | WorkspaceAction::UpdateWorkspaceSettings
         | WorkspaceAction::ViewBilling
         | WorkspaceAction::ManageBilling
+        | WorkspaceAction::ManageKeys
+        | WorkspaceAction::ManageAdministration
         | WorkspaceAction::ViewAudit
         | WorkspaceAction::ExportAudit
         | WorkspaceAction::ExportWorkspaceData

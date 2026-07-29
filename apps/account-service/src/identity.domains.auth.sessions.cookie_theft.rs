@@ -77,11 +77,17 @@ pub fn assess(
         40.0,
         "ip_network_changed",
     );
+    let previous_hints = UserAgentClientHints::from_session(session);
     add_if(
         &mut score,
         &mut factors,
-        user_agent_family(session.user_agent.as_deref())
-            != user_agent_family(profile.user_agent.as_deref()),
+        crate::domains::auth::user_agent::stable_family(
+            session.user_agent.as_deref(),
+            previous_hints.brands.as_deref(),
+        ) != crate::domains::auth::user_agent::stable_family(
+            profile.user_agent.as_deref(),
+            profile.ua_client_hints.brands.as_deref(),
+        ),
         35.0,
         "user_agent_family_changed",
     );
@@ -108,7 +114,6 @@ pub fn assess(
         6.0,
         "accept_encoding_changed",
     );
-    let previous_hints = UserAgentClientHints::from_session(session);
     add_if(
         &mut score,
         &mut factors,
@@ -241,35 +246,6 @@ fn changed_group<const N: usize>(previous: [Option<&str>; N], current: [Option<&
 fn primary_language(value: Option<&str>) -> Option<String> {
     let language = value?.split(',').next()?.trim().split('-').next()?;
     Some(language.to_ascii_lowercase())
-}
-
-fn user_agent_family(value: Option<&str>) -> Option<String> {
-    let value = value?.to_ascii_lowercase();
-    let browser = if value.contains("firefox/") {
-        "firefox"
-    } else if value.contains("edg/") {
-        "edge"
-    } else if value.contains("chrome/") || value.contains("chromium/") {
-        "chromium"
-    } else if value.contains("safari/") {
-        "safari"
-    } else {
-        "other"
-    };
-    let os = if value.contains("windows") {
-        "windows"
-    } else if value.contains("android") {
-        "android"
-    } else if value.contains("iphone") || value.contains("ipad") {
-        "ios"
-    } else if value.contains("mac os") || value.contains("macintosh") {
-        "macos"
-    } else if value.contains("linux") {
-        "linux"
-    } else {
-        "unknown"
-    };
-    Some(format!("{browser}:{os}"))
 }
 
 fn ip_network_marker(value: Option<&str>) -> Option<String> {

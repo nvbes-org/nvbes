@@ -14,7 +14,11 @@ pub(super) async fn presign_upload(
 ) -> Result<PresignedUrl, StorageError> {
     let presign_config = PresigningConfig::expires_in(expires)?;
 
-    let mut req = store.client.put_object().bucket(&store.bucket).key(key);
+    let mut req = store
+        .presign_client
+        .put_object()
+        .bucket(&store.bucket)
+        .key(key);
 
     if let Some(ct) = content_type {
         req = req.content_type(ct);
@@ -38,7 +42,7 @@ pub(super) async fn presign_download(
     let presign_config = PresigningConfig::expires_in(expires)?;
 
     let presigned = store
-        .client
+        .presign_client
         .get_object()
         .bucket(&store.bucket)
         .key(key)

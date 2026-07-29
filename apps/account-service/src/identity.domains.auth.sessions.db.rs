@@ -33,11 +33,13 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
             expires_at, step_up_verified_at, step_up_expires_at, revoked_at,
             ip, geo_country_code, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
             account_device_id, device_trust_level, device_trust_score,
-            risk_score, risk_decision, activity_window_started_at,
+            risk_score, risk_decision, risk_confirmed_at, risk_confirmed_score,
+            activity_window_started_at,
             activity_request_count, last_activity_risk_event_at, last_seen_at, created_at
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
+            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29,
+            $30, $31, $32, $33, $34
         )
         ON CONFLICT (session_id) DO UPDATE SET
             browser_session_token_hash = EXCLUDED.browser_session_token_hash,
@@ -63,6 +65,8 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
             device_trust_score = EXCLUDED.device_trust_score,
             risk_score = EXCLUDED.risk_score,
             risk_decision = EXCLUDED.risk_decision,
+            risk_confirmed_at = EXCLUDED.risk_confirmed_at,
+            risk_confirmed_score = EXCLUDED.risk_confirmed_score,
             activity_window_started_at = EXCLUDED.activity_window_started_at,
             activity_request_count = EXCLUDED.activity_request_count,
             last_activity_risk_event_at = EXCLUDED.last_activity_risk_event_at,
@@ -96,6 +100,8 @@ pub async fn insert_session_db(db: &PgPool, session: &CachedSession) -> Result<(
     .bind(session.device_trust_score)
     .bind(session.risk_score)
     .bind(&session.risk_decision)
+    .bind(session.risk_confirmed_at)
+    .bind(session.risk_confirmed_score)
     .bind(session.activity_window_started_at)
     .bind(session.activity_request_count as i32)
     .bind(session.last_activity_risk_event_at)
@@ -120,10 +126,14 @@ pub async fn fetch_session_db(
             expires_at, step_up_verified_at, step_up_expires_at, revoked_at,
             ip, geo_country_code, user_agent, cookie_theft_risk_score, cookie_theft_detected_at,
             account_device_id, device_trust_level, device_trust_score,
-            risk_score, risk_decision, activity_window_started_at,
+            risk_score, risk_decision, risk_confirmed_at, risk_confirmed_score,
+            activity_window_started_at,
             activity_request_count, last_activity_risk_event_at, last_seen_at, created_at
         FROM user_sessions
-        WHERE session_id = $1 AND revoked_at IS NULL AND expires_at > NOW()
+        WHERE session_id = $1
+          AND revoked_at IS NULL
+          AND expires_at > NOW()
+          AND (idle_expires_at IS NULL OR idle_expires_at > NOW())
         "#,
     )
     .bind(session_id)
@@ -192,6 +202,8 @@ pub async fn fetch_session_db(
         device_trust_score: row.get("device_trust_score"),
         risk_score: row.get("risk_score"),
         risk_decision: row.get("risk_decision"),
+        risk_confirmed_at: row.get("risk_confirmed_at"),
+        risk_confirmed_score: row.get("risk_confirmed_score"),
         activity_window_started_at: row.get("activity_window_started_at"),
         activity_request_count: req_count as u32,
         last_activity_risk_event_at: row.get("last_activity_risk_event_at"),

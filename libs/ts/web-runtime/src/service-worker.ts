@@ -1,3 +1,8 @@
+import {
+  createTrustedServiceWorkerScriptUrl,
+  type NvbesTrustedScriptUrl,
+} from "./trusted-types";
+
 let readyResolve: (() => void) | null = null;
 const readyPromise = new Promise<void>((resolve) => {
   readyResolve = resolve;
@@ -23,7 +28,15 @@ export function registerServiceWorker() {
 
   onWindowLoad(async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      const serviceWorker = navigator.serviceWorker as Omit<ServiceWorkerContainer, 'register'> & {
+        register(
+          scriptURL: string | NvbesTrustedScriptUrl,
+          options?: RegistrationOptions,
+        ): Promise<ServiceWorkerRegistration>;
+      };
+      const registration = await serviceWorker.register(
+        createTrustedServiceWorkerScriptUrl('/sw.js'),
+      );
       if (readyResolve) {
         readyResolve();
       }

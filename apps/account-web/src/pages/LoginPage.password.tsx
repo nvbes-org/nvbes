@@ -44,12 +44,14 @@ export function LoginPagePasswordForm({
         />
         <Input
           id="login-password"
+          name="password"
           type="password"
           placeholder="••••••••"
           value={password}
           onChange={(event) => onPasswordChange(event.target.value)}
           required
           autoComplete="current-password"
+          spellCheck={false}
           autoFocus
         />
       </div>

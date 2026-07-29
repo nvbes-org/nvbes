@@ -18,6 +18,7 @@ pub async fn client_credentials_grant(
     client_auth: ClientAuthentication,
     scope: Option<&str>,
     audience: Option<&str>,
+    token_confirmation: Option<crate::domains::auth::jwt::TokenConfirmation>,
 ) -> Result<TokenView, AppError> {
     let audience = audience
         .map(str::trim)
@@ -204,16 +205,19 @@ pub async fn client_credentials_grant(
         ));
     }
 
-    let access_token = jwt.generate_m2m_access_token(
-        &client_auth.client_id,
-        service_account_principal_id,
-        workspace.tenant_id,
-        workspace.organization_id,
-        workspace_id,
-        workspace.data_region,
-        scope_str,
-        Some(audience),
-    )?;
+    let access_token = jwt
+        .generate_m2m_access_token_bound(
+            &client_auth.client_id,
+            service_account_principal_id,
+            workspace.tenant_id,
+            workspace.organization_id,
+            workspace_id,
+            workspace.data_region,
+            scope_str,
+            Some(audience),
+            token_confirmation.clone(),
+        )
+        .await?;
     let claims = jwt.decode_token(&access_token, "access")?;
     audit::record_machine_token_issued(
         db,
@@ -233,7 +237,14 @@ pub async fn client_credentials_grant(
 
     Ok(TokenView {
         access_token,
-        token_type: "Bearer".to_string(),
+        token_type: if token_confirmation
+            .as_ref()
+            .is_some_and(|confirmation| confirmation.jkt.is_some())
+        {
+            "DPoP".to_string()
+        } else {
+            "Bearer".to_string()
+        },
         expires_in: jwt.access_token_expiry.num_seconds(),
         refresh_token: None,
         id_token: None,

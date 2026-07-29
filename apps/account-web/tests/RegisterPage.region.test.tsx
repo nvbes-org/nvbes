@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vite-plus/test';
 import { RegionSelect } from '../src/pages/RegisterPage.region';
+import {
+  filterRegionSearchValue,
+  regionSearchValue,
+} from '../src/pages/RegisterPage.region.search';
 
 const regions = [
   {
@@ -15,6 +19,11 @@ const regions = [
 ];
 
 describe('RegionSelect', () => {
+  it('matches France from a partial country name', () => {
+    expect(filterRegionSearchValue(regionSearchValue(regions[0]), 'Fra')).toBe(1);
+    expect(filterRegionSearchValue(regionSearchValue(regions[0]), 'Belg')).toBe(0);
+  });
+
   it('shows the placeholder when the controlled value is not supported', () => {
     const markup = renderToStaticMarkup(
       <RegionSelect
@@ -27,7 +36,25 @@ describe('RegionSelect', () => {
       />,
     );
 
+    expect(markup).toContain('role="combobox"');
     expect(markup).toContain('Sélectionnez votre pays...');
     expect(markup).not.toContain('unsupported-region');
+    expect(markup).not.toContain('<select');
+  });
+
+  it('shows the selected country in the searchable combobox', () => {
+    const markup = renderToStaticMarkup(
+      <RegionSelect
+        detectedRegion="FR"
+        reliability="high"
+        loading={false}
+        regions={regions}
+        value="FR"
+        onValueChange={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain('🇫🇷 France (Europe)');
   });
 });

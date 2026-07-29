@@ -44,7 +44,7 @@ pub async fn record_permission_denied(
         "client_id": actor.client_id
       }))
     });
-    let mut tx = db.begin().await?;
+    let mut tx = crate::domains::authz::begin_workspace_transaction(db, access).await?;
     crate::domains::audit::record_event_tx(
         &mut tx,
         crate::domains::audit::AuditRecordInput {

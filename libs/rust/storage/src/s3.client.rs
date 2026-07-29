@@ -1,14 +1,11 @@
 use aws_sdk_s3::Client as S3Client;
 
-use super::S3ObjectStore;
-
 pub(super) fn new_client(
-    bucket: String,
     endpoint: &str,
     region: &str,
     access_key: &str,
     secret_key: &str,
-) -> S3ObjectStore {
+) -> S3Client {
     let credentials =
         aws_sdk_s3::config::Credentials::new(access_key, secret_key, None, None, "nvbes");
 
@@ -20,7 +17,5 @@ pub(super) fn new_client(
         .force_path_style(true)
         .build();
 
-    let client = S3Client::from_conf(config);
-
-    S3ObjectStore { client, bucket }
+    S3Client::from_conf(config)
 }

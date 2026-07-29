@@ -47,7 +47,9 @@
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
               "includes": [
                 "validate_password",
-                "password.len() < 8",
+                "MIN_PASSWORD_LENGTH: usize = 15",
+                "MAX_PASSWORD_LENGTH: usize = 128",
+                "password.chars().count()",
                 "zxcvbn::zxcvbn",
                 "weak_password"
               ]
@@ -90,7 +92,9 @@
               "includes": [
                 "Algorithm::Argon2id",
                 "SaltString::generate",
-                "Params::new(65536, 3, 4, None)"
+                "TARGET_M_COST",
+                "TARGET_T_COST",
+                "TARGET_P_COST"
               ]
             }
           ]
@@ -110,6 +114,40 @@
             {
               "path": "apps/account-service/src/identity.domains.auth.password.rs",
               "includes": ["invalid_credentials", "Invalid email or password."]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_023",
+          "name": "Recurring Argon2id calibration",
+          "description": "Benchmark the production Argon2id work factor every week and fail when measured latency leaves the accepted security and availability envelope.",
+          "evidence": [
+            {
+              "path": "libs/rust/core/src/auth.helpers.tests.rs",
+              "includes": [
+                "benchmark_argon2id_latency",
+                "increase its work factor",
+                "recalibrate its parameters"
+              ]
+            },
+            {
+              "path": ".github/workflows/password-hashing-benchmark.yml",
+              "includes": ["schedule:", "benchmark_argon2id_latency", "--release"]
+            }
+          ]
+        },
+        {
+          "id": "AUTHN_CTRL_024",
+          "name": "Risk-triggered password changes only",
+          "description": "Do not expire passwords periodically; require password changes only through explicit recovery, compromise, or user-initiated flows.",
+          "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": [
+                "verify_primary_credentials",
+                "risk::current_state_summary",
+                "credential_stuffing::successful_password_risk_score"
+              ]
             }
           ]
         }
@@ -137,7 +175,7 @@
               "path": "apps/account-service/src/identity.domains.auth.password.forgot.rs",
               "includes": [
                 "password_reset_requested",
-                "risk_policy_blocked",
+                "MINIMUM_FORGOT_RESPONSE_TIME",
                 "insert_password_reset_token_tx",
                 "success: true"
               ]
@@ -163,14 +201,20 @@
         },
         {
           "id": "AUTHN_CTRL_008",
-          "name": "Current-password protected password change",
-          "description": "Require the current password, reject reuse, audit the change, and revoke other sessions and refresh tokens.",
+          "name": "Step-up protected password change",
+          "description": "Require a recent step-up and security write scope, reject reuse, audit the change, and revoke other sessions and refresh tokens.",
           "evidence": [
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "includes": [
+                "SECURITY_WRITE_SCOPE",
+                "require_recent_phishing_resistant_step_up",
+                "auth_change_password"
+              ]
+            },
             {
               "path": "apps/account-service/src/identity.domains.auth.password.change.rs",
               "includes": [
-                "input.current_password",
-                "verify_password(stored_hash, &input.current_password)",
                 "password_reused",
                 "auth.password_changed",
                 "clear_user_sessions_except",
@@ -256,7 +300,7 @@
           "evidence": [
             {
               "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["risk::current_state_summary", "login_blocked", "risk_policy_blocked"]
+              "includes": ["risk::current_state_summary", "login_blocked", "invalid_credentials"]
             },
             {
               "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
@@ -319,7 +363,16 @@
           "evidence": [
             {
               "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["check_rate_limit_pair", "tenant_rule"]
+              "includes": ["check_rate_limit_rules", "tenant_rule"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.login.throttle.rs",
+              "includes": [
+                "ip_account_pair",
+                "account:",
+                "tenant:",
+                "LOGIN_THROTTLE_WINDOW"
+              ]
             },
             {
               "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
@@ -364,7 +417,7 @@
         {
           "id": "AUTHN_CTRL_017",
           "name": "MFA factors and recovery codes",
-          "description": "Support TOTP/email/WebAuthn/recovery factors, one-time recovery code consumption, and risk blocks.",
+          "description": "Support TOTP/WebAuthn/recovery factors, one-time recovery code consumption, and risk blocks. Email is never an authentication factor.",
           "evidence": [
             {
               "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
@@ -373,14 +426,6 @@
                 "token_hash(code)",
                 "invalid_recovery_code",
                 "risk_policy_blocked"
-              ]
-            },
-            {
-              "path": "apps/account-service/src/identity.domains.auth.mfa.email.rs",
-              "includes": [
-                "EMAIL_MFA_CODE_TTL_SECONDS",
-                "verified_mfa_eligible_emails",
-                "email_mfa_requires_verified_email"
               ]
             }
           ]
@@ -397,7 +442,7 @@
                 "finish_passkey_authentication",
                 "challenge.principal_id != user_id",
                 "challenge.session_id != session_id",
-                "consume_auth_challenge"
+                "take_auth_challenge"
               ]
             },
             {
@@ -405,7 +450,7 @@
               "includes": [
                 "finish_passkey_registration",
                 "finish_securitykey_registration",
-                "consume_auth_challenge"
+                "take_auth_challenge"
               ]
             }
           ]

@@ -17,7 +17,7 @@ use crate::{
         pb::nvbes::developer::v1::{ListActivityLogsRequest, ListActivityLogsResponse},
     },
     http::{
-        auth::DeveloperAuth,
+        auth::{DeveloperAuth, require_recent_step_up},
         context::{optional_string, request_context, time},
         error::AppError,
         types::{
@@ -129,7 +129,7 @@ pub async fn update_redirects(
     Json(request): Json<UpdateDeveloperRedirectsRequest>,
 ) -> Result<Json<DeveloperAppView>, AppError> {
     access::require_permission(&state.db, &auth, DeveloperPermission::AppsUpdateRedirects).await?;
-    require_step_up(&auth)?;
+    require_recent_step_up(&auth)?;
     if request.redirect_uris.is_empty() {
         return Err(AppError::bad_request(
             "validation_failed",
@@ -248,22 +248,5 @@ fn app_view(client: IdentityOAuthClient) -> DeveloperAppView {
         client_type: client.client_type,
         created_at: client.created_at,
         last_used_at: client.last_used_at,
-    }
-}
-
-fn require_step_up(auth: &DeveloperAuth) -> Result<(), AppError> {
-    let strong = auth.claims.acr.as_deref() == Some("aal2")
-        || auth
-            .claims
-            .amr
-            .iter()
-            .any(|method| matches!(method.as_str(), "otp" | "webauthn" | "passkey"));
-    if strong {
-        Ok(())
-    } else {
-        Err(AppError::forbidden(
-            "step_up_required",
-            "This Developer action requires step-up authentication.",
-        ))
     }
 }

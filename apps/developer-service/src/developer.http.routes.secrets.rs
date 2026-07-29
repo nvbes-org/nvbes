@@ -16,7 +16,7 @@ use crate::{
         secrets,
     },
     http::{
-        auth::DeveloperAuth,
+        auth::{DeveloperAuth, require_recent_step_up},
         context::{optional_time, request_context, time, uuid},
         error::AppError,
         types::{
@@ -104,6 +104,7 @@ pub async fn rotate_secret(
     Path(client_id): Path<String>,
     Json(input): Json<RotateDeveloperSecretInput>,
 ) -> Result<Json<RotateDeveloperSecretResponse>, AppError> {
+    require_recent_step_up(&auth)?;
     access::require_permission(&state.db, &auth, DeveloperPermission::SecretsRotate).await?;
     if input.overlap_hours < 1 {
         return Err(AppError::bad_request(
@@ -168,6 +169,7 @@ pub async fn revoke_secret_version(
     Extension(auth): Extension<DeveloperAuth>,
     Path((client_id, version_id)): Path<(String, Uuid)>,
 ) -> Result<Json<DeveloperSecretVersionsResponse>, AppError> {
+    require_recent_step_up(&auth)?;
     access::require_permission(
         &state.db,
         &auth,

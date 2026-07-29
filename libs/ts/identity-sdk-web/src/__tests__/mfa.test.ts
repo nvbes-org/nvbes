@@ -11,6 +11,7 @@ import {
   listMfaFactors,
   MfaError,
   removeMfaFactor,
+  requestEmailStepUpCode,
   setupTotp,
   startWebAuthnAuthentication,
   stepUp,
@@ -332,6 +333,24 @@ describe('MFA API functions', () => {
       expect(body.webauthn_challenge_id).toBe('challenge-id');
     });
 
+    it('binds an email code to the password change purpose', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+
+      await stepUp(mockBaseUrl, {
+        purpose: 'password_change',
+        emailCode: '123456',
+        emailChallengeId: 'challenge-id',
+      });
+      const body = JSON.parse((globalThis.fetch as Mock).mock.calls[0][1].body);
+      expect(body.purpose).toBe('password_change');
+      expect(body.email_code).toBe('123456');
+      expect(body.email_challenge_id).toBe('challenge-id');
+      expect(body.password).toBeNull();
+    });
+
     it('should throw MfaError on invalid credential', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
@@ -344,6 +363,29 @@ describe('MFA API functions', () => {
       });
 
       await expect(stepUp(mockBaseUrl, { password: 'wrong' }, mockToken)).rejects.toThrow(MfaError);
+    });
+  });
+
+  describe('requestEmailStepUpCode', () => {
+    it('requests a code only for password change', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            challenge_id: 'challenge-id',
+            expires_at: '2026-07-28T12:00:00Z',
+          }),
+      });
+
+      const result = await requestEmailStepUpCode(mockBaseUrl, 'password_change', mockToken);
+      expect(result.challenge_id).toBe('challenge-id');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        `${mockBaseUrl}/auth/step-up/email/request`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ purpose: 'password_change' }),
+        }),
+      );
     });
   });
 

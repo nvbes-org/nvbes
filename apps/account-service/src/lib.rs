@@ -7,6 +7,9 @@ mod boundary_source_guard_tests;
 pub mod cloud_boundary;
 #[path = "identity.database.rs"]
 pub mod database;
+#[cfg(test)]
+#[path = "identity.database.migrations.tests.rs"]
+mod database_migrations_tests;
 #[path = "identity.developer.client.rs"]
 pub mod developer_client;
 #[path = "identity.domains.mod.rs"]

@@ -6,6 +6,7 @@ export type MfaPageStepUpDialogProps = {
   hasTotp: boolean;
   hasWebAuthn: boolean;
   hasRecovery: boolean;
+  canUsePassword: boolean;
   stepUpPassword: string;
   stepUpTotpCode: string;
   stepUpRecoveryCode: string;

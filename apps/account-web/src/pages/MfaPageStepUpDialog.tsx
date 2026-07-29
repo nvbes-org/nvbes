@@ -19,6 +19,7 @@ export function MfaPageStepUpDialog({
   hasTotp,
   hasWebAuthn,
   hasRecovery,
+  canUsePassword,
   stepUpPassword,
   stepUpTotpCode,
   stepUpRecoveryCode,
@@ -47,6 +48,7 @@ export function MfaPageStepUpDialog({
             hasTotp={hasTotp}
             hasWebAuthn={hasWebAuthn}
             hasRecovery={hasRecovery}
+            canUsePassword={canUsePassword}
             onMethodSelect={onMethodSelect}
           />
         ) : (

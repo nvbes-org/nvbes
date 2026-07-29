@@ -1,12 +1,13 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../identity.password.policy';
 import { PasswordStrengthMeter } from './RegisterPage.password';
 import { ResetPasswordErrorMessage } from './ResetPasswordPage.messages';
 import type { ResetPasswordPageModel } from './ResetPasswordPage.types';
 
 export function ResetPasswordForm({
-  tokenFromUrl,
+  tokenFromLink,
   token,
   password,
   confirmPassword,
@@ -18,7 +19,7 @@ export function ResetPasswordForm({
   handleSubmit,
 }: Pick<
   ResetPasswordPageModel,
-  | 'tokenFromUrl'
+  | 'tokenFromLink'
   | 'token'
   | 'password'
   | 'confirmPassword'
@@ -31,7 +32,7 @@ export function ResetPasswordForm({
 >) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {!tokenFromUrl && (
+      {!tokenFromLink && (
         <div className="flex flex-col gap-2">
           <Label htmlFor="reset-token">Code de reinitialisation</Label>
           <Input
@@ -49,13 +50,17 @@ export function ResetPasswordForm({
         <Label htmlFor="reset-password">Nouveau mot de passe</Label>
         <Input
           id="reset-password"
+          name="new-password"
           type="password"
           placeholder="••••••••"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
           autoComplete="new-password"
-          autoFocus={!!tokenFromUrl}
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          spellCheck={false}
+          autoFocus={!!tokenFromLink}
         />
         <PasswordStrengthMeter password={password} />
       </div>
@@ -63,12 +68,16 @@ export function ResetPasswordForm({
         <Label htmlFor="reset-confirm">Confirmer le mot de passe</Label>
         <Input
           id="reset-confirm"
+          name="confirm-password"
           type="password"
           placeholder="••••••••"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           required
           autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
+          spellCheck={false}
         />
       </div>
       {error && <ResetPasswordErrorMessage message={error} />}

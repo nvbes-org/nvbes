@@ -1,0 +1,31 @@
+scaleway_project_id         = "00000000-0000-0000-0000-000000000000"
+scaleway_production_profile = "nvbes-production"
+cloudflare_zone_id       = "00000000000000000000000000000000"
+base_domain              = "nvbes.example"
+grafana_url              = "https://nvbes.grafana.net"
+grafana_loki_datasource_uid = "grafanacloud-logs"
+grafana_security_contact_point = "security-oncall"
+files_bucket_name        = "nvbes-production-files-example"
+audit_archive_bucket_name = "nvbes-production-security-evidence-example"
+audit_archive_writer_access_key = "SCWXXXXXXXXXXXXXXXXX"
+audit_anchor_kms_key_id  = "22222222-2222-2222-2222-222222222222"
+audit_anchor_kms_auth_token_secret_id = "33333333-3333-3333-3333-333333333333"
+audit_archive_writer_secret_id = "44444444-4444-4444-4444-444444444444"
+account_database_url_secret_id = "55555555-5555-5555-5555-555555555555"
+
+# Emergency-only example. Keep disabled and empty outside an approved window.
+enable_jit_ssh  = false
+ssh_allowed_ips = []
+# jit_access_ticket = "INC-1234"
+# jit_access_requester = "alice@example.invalid"
+# jit_access_approver = "bob@example.invalid"
+# jit_access_authentication_method = "security_key"
+# jit_access_authentication_event_ref = "audit://identity/authentication/01J..."
+# jit_access_authentication_verified_at = "2026-07-27T13:45:00Z"
+# jit_access_expires_at = "2026-07-27T14:30:00Z"
+
+# Supply only through TF_VAR_postgres_password or the CI secret store.
+postgres_password = "replace-me-production"
+
+# Supply only through TF_VAR_grafana_service_account_token.
+grafana_service_account_token = "replace-me-grafana-alerting-token"

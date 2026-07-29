@@ -37,7 +37,7 @@ pub(crate) async fn trust_device(
     Path(device_id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<Json<DeviceTrustResult>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    verification::require_recent_phishing_resistant_step_up(&state.redis, &auth).await?;
     let mutation = device_trust::trust_device(&state.db, auth.user_id(), device_id).await?;
     sync_device_sessions(
         &state.redis,
@@ -67,9 +67,9 @@ pub(crate) async fn revoke_device(
     Path(device_id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<Json<DeviceTrustResult>, AppError> {
-    verification::require_recent_step_up(&state.redis, &auth, None).await?;
+    verification::require_recent_phishing_resistant_step_up(&state.redis, &auth).await?;
     let mutation = device_trust::revoke_device(&state.db, auth.user_id(), device_id).await?;
-    revoke_device_sessions(&state.redis, auth.user_id(), device_id).await?;
+    revoke_device_sessions(&state.db, &state.redis, auth.user_id(), device_id).await?;
     record_device_audit(&state, &auth, &mutation, "auth.device_revoked", &headers).await;
     Ok(Json(result(mutation)))
 }
@@ -103,6 +103,7 @@ async fn sync_device_sessions(
 }
 
 async fn revoke_device_sessions(
+    db: &sqlx::PgPool,
     redis: &nvbes_redis::RedisPool,
     principal_id: Uuid,
     device_id: Uuid,
@@ -119,6 +120,13 @@ async fn revoke_device_sessions(
             let Ok(session_uuid) = Uuid::parse_str(&session_id) else {
                 continue;
             };
+            let _ = crate::domains::oauth::security_events::enqueue_session_revoked(
+                db,
+                redis,
+                principal_id,
+                session_uuid,
+            )
+            .await;
             let _ = nvbes_redis::refresh_token::revoke_session_refresh_tokens(
                 redis,
                 principal_id,

@@ -19,6 +19,7 @@ pub struct OAuthAuthorizationServerMetadata {
     pub grant_types_supported: Vec<&'static str>,
     pub token_endpoint_auth_methods_supported: Vec<&'static str>,
     pub token_endpoint_auth_signing_alg_values_supported: Vec<&'static str>,
+    pub request_object_signing_alg_values_supported: Vec<&'static str>,
     pub subject_types_supported: Vec<&'static str>,
     pub id_token_signing_alg_values_supported: Vec<&'static str>,
     pub claims_supported: Vec<&'static str>,
@@ -29,7 +30,20 @@ pub struct OAuthAuthorizationServerMetadata {
     pub request_uri_parameter_supported: bool,
     pub require_pushed_authorization_requests: bool,
     pub authorization_response_iss_parameter_supported: bool,
+    pub backchannel_logout_supported: bool,
+    pub backchannel_logout_session_supported: bool,
     pub authorization_details_types_supported: Vec<&'static str>,
+    pub tls_client_certificate_bound_access_tokens: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mtls_endpoint_aliases: Option<MtlsEndpointAliases>,
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct MtlsEndpointAliases {
+    pub token_endpoint: String,
+    pub pushed_authorization_request_endpoint: String,
+    pub introspection_endpoint: String,
+    pub revocation_endpoint: String,
 }
 
 #[utoipa::path(
@@ -69,9 +83,12 @@ pub async fn oauth_authorization_server_metadata(
             "client_secret_post",
             "private_key_jwt",
         ],
-        token_endpoint_auth_signing_alg_values_supported: vec!["RS256", "RS384", "RS512", "ES256"],
+        token_endpoint_auth_signing_alg_values_supported: vec![
+            "PS256", "ES256", "EdDSA", "RS256", "RS384", "RS512",
+        ],
+        request_object_signing_alg_values_supported: vec!["PS256", "ES256", "EdDSA"],
         subject_types_supported: vec!["public", "pairwise"],
-        id_token_signing_alg_values_supported: vec!["RS256"],
+        id_token_signing_alg_values_supported: vec!["PS256"],
         claims_supported: vec![
             "sub",
             "sid",
@@ -88,24 +105,26 @@ pub async fn oauth_authorization_server_metadata(
             "acr",
             "amr",
             "auth_time",
+            "cnf",
             "updated_at",
         ],
         code_challenge_methods_supported: vec!["S256"],
         dpop_signing_alg_values_supported: vec!["ES256"],
-        scopes_supported: vec![
-            "openid",
-            "profile",
-            "email",
-            "offline_access",
-            "drive:read",
-            "drive:write",
-            "drive:admin",
-        ],
+        scopes_supported: supported_scopes(),
         request_parameter_supported: true,
         request_uri_parameter_supported: true,
         require_pushed_authorization_requests: true,
         authorization_response_iss_parameter_supported: true,
+        backchannel_logout_supported: true,
+        backchannel_logout_session_supported: true,
         authorization_details_types_supported: vec!["drive:file", "drive:workspace"],
+        tls_client_certificate_bound_access_tokens: state.config.mtls_enabled,
+        mtls_endpoint_aliases: state.config.mtls_enabled.then(|| MtlsEndpointAliases {
+            token_endpoint: mtls_endpoint(&state, "/oauth/token"),
+            pushed_authorization_request_endpoint: mtls_endpoint(&state, "/oauth/par"),
+            introspection_endpoint: mtls_endpoint(&state, "/oauth/introspect"),
+            revocation_endpoint: mtls_endpoint(&state, "/oauth/revoke"),
+        }),
     }))
 }
 
@@ -128,9 +147,35 @@ fn endpoint(issuer: &str, path: &str) -> String {
     format!("{issuer}{path}")
 }
 
+fn mtls_endpoint(state: &AppState, path: &str) -> String {
+    let base = url::Url::parse(&state.config.api_base_url)
+        .ok()
+        .and_then(|mut url| {
+            url.set_port(Some(state.config.mtls_port)).ok()?;
+            Some(url.to_string())
+        })
+        .unwrap_or_else(|| state.config.api_base_url.clone());
+    endpoint(base.trim_end_matches('/'), path)
+}
+
+fn supported_scopes() -> Vec<&'static str> {
+    let mut scopes = vec![
+        "openid",
+        "profile",
+        "email",
+        "offline_access",
+        "drive:read",
+        "drive:write",
+        "drive:admin",
+    ];
+    scopes
+        .extend_from_slice(crate::http::middleware::jwt::account_access::SUPPORTED_ACCOUNT_SCOPES);
+    scopes
+}
+
 #[cfg(test)]
 mod tests {
-    use super::endpoint;
+    use super::{endpoint, supported_scopes};
 
     #[test]
     fn endpoint_joins_normalized_issuer_and_path() {
@@ -160,5 +205,15 @@ mod tests {
             endpoint(issuer, "/.well-known/jwks.json"),
             "https://identity.example/.well-known/jwks.json"
         );
+    }
+
+    #[test]
+    fn oauth_metadata_advertises_account_capability_scopes() {
+        let scopes = supported_scopes();
+
+        assert!(scopes.contains(&"account:profile:read"));
+        assert!(scopes.contains(&"account:email:write"));
+        assert!(scopes.contains(&"account:security:write"));
+        assert!(scopes.contains(&"account:delete"));
     }
 }

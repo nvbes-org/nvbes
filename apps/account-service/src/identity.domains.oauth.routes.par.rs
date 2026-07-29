@@ -1,5 +1,5 @@
 use crate::{app::AppState, http::error::AppError};
-use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
+use axum::{Extension, Json, Router, extract::State, http::HeaderMap, routing::post};
 use nvbes_redis::par as par_store;
 use serde::Deserialize;
 use std::time::Duration;
@@ -18,6 +18,7 @@ pub fn router() -> Router<AppState> {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ParRequest {
     response_type: Option<String>,
     client_id: Option<String>,
@@ -34,11 +35,13 @@ struct ParRequest {
     consent_action: Option<String>,
     client_assertion_type: Option<String>,
     client_assertion: Option<String>,
+    request: Option<String>,
 }
 
 async fn par(
     State(state): State<AppState>,
     headers: HeaderMap,
+    dpop: Option<Extension<crate::http::middleware::dpop::DpopContext>>,
     axum::extract::Form(request): axum::extract::Form<ParRequest>,
 ) -> Result<(axum::http::StatusCode, Json<serde_json::Value>), AppError> {
     let mut client_auth = par_client_auth(
@@ -57,9 +60,21 @@ async fn par(
             &state.db,
             &client_auth,
             &par_endpoint,
+            state.config.api_base_url.trim_end_matches('/'),
         )
         .await?;
 
+    let client_security =
+        crate::domains::oauth::profiles::load_client_security(&state.db, &client_auth.client_id)
+            .await?;
+    let (request, dpop_jkt) = resolve_profile_request(
+        &state,
+        request,
+        &client_auth,
+        &client_security,
+        dpop.as_ref().map(|Extension(context)| context),
+    )
+    .await?;
     let response_type = request.response_type.as_deref().unwrap_or("code");
     if response_type != "code" {
         return Err(AppError::bad_request(
@@ -80,6 +95,13 @@ async fn par(
     .await?;
 
     request::validate_par_request(&request)?;
+    validate_registered_authorization_parameters(
+        &state.db,
+        &client_auth.client_id,
+        &client_security.client_type,
+        &request,
+    )
+    .await?;
 
     let mut parameters = serde_json::Map::new();
     parameters.insert(
@@ -150,6 +172,9 @@ async fn par(
             serde_json::Value::String(consent_action.clone()),
         );
     }
+    if let Some(dpop_jkt) = dpop_jkt {
+        parameters.insert("dpop_jkt".to_string(), serde_json::Value::String(dpop_jkt));
+    }
 
     let request_uri = format!(
         "urn:ietf:params:oauth:request_uri:gxpar_{}",
@@ -180,6 +205,134 @@ async fn par(
             "expires_in": expires_in,
         })),
     ))
+}
+
+async fn resolve_profile_request(
+    state: &AppState,
+    request: ParRequest,
+    client_auth: &crate::domains::oauth::service::ClientAuthentication,
+    security: &crate::domains::oauth::profiles::OAuthClientSecurity,
+    dpop: Option<&crate::http::middleware::dpop::DpopContext>,
+) -> Result<(ParRequest, Option<String>), AppError> {
+    use crate::domains::oauth::profiles::{OAuthSecurityProfile, OAuthSenderConstraint};
+
+    if security.profile == OAuthSecurityProfile::Standard {
+        if request.request.is_some() {
+            return Err(AppError::bad_request(
+                "request_object_not_configured",
+                "Signed request objects are only accepted for high-assurance clients.",
+            ));
+        }
+        return Ok((request, None));
+    }
+    if !client_auth.client_assertion_verified {
+        return Err(AppError::unauthorized(
+            "invalid_client",
+            "High-assurance clients must authenticate PAR with private_key_jwt.",
+        ));
+    }
+    if has_unsigned_authorization_parameters(&request) {
+        return Err(AppError::bad_request(
+            "invalid_request",
+            "High-assurance authorization parameters must be contained only in the signed request object.",
+        ));
+    }
+    let request_jwt = request.request.as_deref().ok_or_else(|| {
+        AppError::bad_request(
+            "request_object_required",
+            "High-assurance clients must submit a signed request object to PAR.",
+        )
+    })?;
+    let jwks = security
+        .request_object_signing_jwks
+        .as_ref()
+        .ok_or_else(|| AppError::unauthorized("invalid_client", "Request-object JWKS missing."))?;
+    let issuer = state.config.api_base_url.trim_end_matches('/');
+    let claims = crate::domains::oauth::jar::validate_high_assurance_request_object(
+        request_jwt,
+        jwks,
+        &client_auth.client_id,
+        issuer,
+    )?;
+    crate::domains::oauth::jar::record_request_object_jti(
+        &state.db,
+        security.tenant_id,
+        &client_auth.client_id,
+        &claims,
+    )
+    .await?;
+
+    let dpop_jkt = match security.sender_constraint {
+        Some(OAuthSenderConstraint::Dpop) => Some(
+            dpop.ok_or_else(|| {
+                AppError::unauthorized(
+                    "dpop_required",
+                    "High-assurance DPoP clients must bind PAR to a DPoP key.",
+                )
+            })?
+            .jkt
+            .clone(),
+        ),
+        _ => None,
+    };
+
+    Ok((
+        ParRequest {
+            response_type: claims.response_type,
+            client_id: Some(client_auth.client_id.clone()),
+            client_secret: None,
+            redirect_uri: claims.redirect_uri,
+            scope: claims.scope,
+            state: claims.state,
+            nonce: claims.nonce,
+            audience: claims.audience,
+            resource: claims.resource,
+            authorization_details: claims.authorization_details.map(|value| value.to_string()),
+            code_challenge: claims.code_challenge,
+            code_challenge_method: claims.code_challenge_method,
+            consent_action: claims.consent_action,
+            client_assertion_type: None,
+            client_assertion: None,
+            request: None,
+        },
+        dpop_jkt,
+    ))
+}
+
+fn has_unsigned_authorization_parameters(request: &ParRequest) -> bool {
+    request.response_type.is_some()
+        || request.redirect_uri.is_some()
+        || request.scope.is_some()
+        || request.state.is_some()
+        || request.nonce.is_some()
+        || request.audience.is_some()
+        || request.resource.is_some()
+        || request.authorization_details.is_some()
+        || request.code_challenge.is_some()
+        || request.code_challenge_method.is_some()
+        || request.consent_action.is_some()
+}
+
+async fn validate_registered_authorization_parameters(
+    db: &sqlx::PgPool,
+    client_id: &str,
+    client_type: &str,
+    request: &ParRequest,
+) -> Result<(), AppError> {
+    let redirect_uris = sqlx::query_scalar::<_, Vec<String>>(
+        "SELECT redirect_uris FROM oauth_clients WHERE client_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(client_id)
+    .fetch_optional(db)
+    .await?
+    .ok_or_else(|| AppError::unauthorized("invalid_client", "The OAuth client is invalid."))?;
+    let redirect_uri = request.redirect_uri.as_deref().unwrap_or_default();
+    crate::domains::oauth::validation::validate_redirect_uri_allowed(&redirect_uris, redirect_uri)?;
+    crate::domains::oauth::validation::validate_pkce_for_authorize(
+        client_type,
+        request.code_challenge.as_deref(),
+        request.code_challenge_method.as_deref(),
+    )
 }
 
 pub(crate) use store::resolve_pushed_parameters;

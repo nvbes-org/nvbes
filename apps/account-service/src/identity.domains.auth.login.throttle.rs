@@ -5,6 +5,8 @@ use uuid::Uuid;
 
 pub const LOGIN_THROTTLE_ACTION: &str = "auth_login";
 pub const LOGIN_THROTTLE_WINDOW: Duration = Duration::from_secs(300);
+const LOGIN_ACCOUNT_MAX_HITS: usize = 30;
+const LOGIN_IP_ACCOUNT_MAX_HITS: usize = 15;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginThrottleKeys {
@@ -34,12 +36,12 @@ impl LoginThrottleKeys {
             },
             RateLimitRule {
                 key: &self.account,
-                max_hits: 12,
+                max_hits: LOGIN_ACCOUNT_MAX_HITS,
                 window: LOGIN_THROTTLE_WINDOW,
             },
             RateLimitRule {
                 key: &self.ip_account_pair,
-                max_hits: 5,
+                max_hits: LOGIN_IP_ACCOUNT_MAX_HITS,
                 window: LOGIN_THROTTLE_WINDOW,
             },
         ]
@@ -83,8 +85,9 @@ mod tests {
         assert_eq!(rules.len(), 3);
         assert_eq!(rules[0].key, "ip:203.0.113.10");
         assert_eq!(rules[1].key, "account:USER@example.com");
+        assert_eq!(rules[1].max_hits, 30);
         assert_eq!(rules[2].key, "ip_account:203.0.113.10:USER@example.com");
-        assert_eq!(rules[2].max_hits, 5);
+        assert_eq!(rules[2].max_hits, 15);
     }
 
     #[test]

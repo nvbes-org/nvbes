@@ -59,6 +59,13 @@ else
   if [ "${RELEASE_APPROVED:-}" != "production" ]; then
     fail "production gate requires RELEASE_APPROVED=production"
   fi
+
+  log_step "independent security assurance gate"
+  NVBES_PRODUCTION_RELEASE=1 pnpm check:production-security-operations
+
+  log_step "FAPI high-assurance conformance gate"
+  pnpm check:fapi-conformance
+
   require_env NVBES_STAGING_WEB_BASE_URL
   require_env NVBES_STAGING_API_BASE_URL
   require_env NVBES_STAGING_DATABASE_URL
