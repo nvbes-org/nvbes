@@ -7,6 +7,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+base64.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }

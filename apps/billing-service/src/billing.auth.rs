@@ -1,5 +1,4 @@
 use axum::http::{HeaderMap, header};
-use serde::Deserialize;
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -21,22 +20,6 @@ pub struct BillingAuthContext {
 pub enum BillingWorkspacePermission {
     Read,
     Manage,
-}
-
-#[derive(Debug, Deserialize)]
-struct IdentityIntrospectionResponse {
-    active: bool,
-    scope: Option<String>,
-    principal_type: Option<String>,
-    sub: Option<String>,
-    tenant_id: Option<Uuid>,
-    workspace_id: Option<Uuid>,
-    acr: Option<String>,
-    #[serde(default)]
-    amr: Vec<String>,
-    auth_time: Option<i64>,
-    sid: Option<String>,
-    network_valid: Option<bool>,
 }
 
 pub async fn authorize_billing_workspace(
@@ -102,65 +85,12 @@ async fn introspect_identity_token(
     headers: &HeaderMap,
     token: &str,
 ) -> Result<BillingAuthContext, AppError> {
-    let client_id = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_ID").map_err(|_| {
-        AppError::internal(
-            "identity_client_id_missing",
-            "NVBES_ACCOUNT_SERVICE_CLIENT_ID is required to authorize Billing requests.",
-        )
-    })?;
-    let client_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET").map_err(|_| {
-        AppError::internal(
-            "identity_client_secret_missing",
-            "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET is required to authorize Billing requests.",
-        )
-    })?;
-    let base_url = std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
-        .unwrap_or_else(|_| "http://localhost:8080".to_string());
-
-    let mut outgoing = HeaderMap::new();
-    nvbes_observability::propagate_headers_trace_context(headers, &mut outgoing);
-    let response = reqwest::Client::new()
-        .post(format!(
-            "{}/oauth/introspect",
-            base_url.trim_end_matches('/')
-        ))
-        .headers(outgoing)
-        .basic_auth(client_id, Some(client_secret))
-        .json(&serde_json::json!({
-            "token": token,
-            "token_type_hint": "access_token",
-        }))
-        .send()
-        .await
-        .map_err(|error| AppError::internal("identity_introspection_failed", error.to_string()))?;
-
-    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-        return Err(AppError::unauthorized(
-            "invalid_token",
-            "The access token is invalid or expired.",
-        ));
-    }
-    if !response.status().is_success() {
-        return Err(AppError::internal(
-            "identity_introspection_failed",
-            format!(
-                "Identity introspection failed with status {}.",
-                response.status()
-            ),
-        ));
-    }
-
-    let identity = response
-        .json::<IdentityIntrospectionResponse>()
-        .await
-        .map_err(|error| {
-            AppError::internal("identity_introspection_invalid_response", error.to_string())
-        })?;
+    let identity = crate::identity_grpc::introspect(headers, token).await?;
     identity_auth_context(identity)
 }
 
 fn identity_auth_context(
-    identity: IdentityIntrospectionResponse,
+    identity: crate::grpc::pb::nvbes::identity::internal::v1::IntrospectAccessTokenResponse,
 ) -> Result<BillingAuthContext, AppError> {
     if !identity.active {
         return Err(AppError::unauthorized(
@@ -185,17 +115,32 @@ fn identity_auth_context(
         .as_deref()
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| AppError::unauthorized("invalid_token", "Invalid Identity subject."))?;
+    let tenant_id = optional_uuid(identity.tenant_id, "tenant_id")?;
+    let workspace_id = optional_uuid(identity.workspace_id, "workspace_id")?;
 
     Ok(BillingAuthContext {
         principal_id,
-        tenant_id: identity.tenant_id,
-        workspace_id: identity.workspace_id,
+        tenant_id,
+        workspace_id,
         scope: identity.scope,
         acr: identity.acr,
         amr: identity.amr,
         auth_time: identity.auth_time,
         authentication_event_id: identity.sid,
     })
+}
+
+fn optional_uuid(value: Option<String>, field: &str) -> Result<Option<Uuid>, AppError> {
+    value
+        .map(|value| {
+            Uuid::parse_str(&value).map_err(|_| {
+                AppError::internal(
+                    "identity_grpc_response_invalid",
+                    format!("Identity gRPC response contains an invalid {field}."),
+                )
+            })
+        })
+        .transpose()
 }
 
 async fn workspace_role(

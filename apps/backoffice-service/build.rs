@@ -10,11 +10,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &[
                 "../../contracts/protobuf/nvbes/platform/v1/common.proto",
                 "../../contracts/protobuf/nvbes/billing/v1/billing.proto",
+                "../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto",
             ],
             &["../../contracts/protobuf"],
         )?;
 
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/platform/v1/common.proto");
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/billing/v1/billing.proto");
+    println!(
+        "cargo:rerun-if-changed=../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto"
+    );
     Ok(())
 }

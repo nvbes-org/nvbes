@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+base64.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }

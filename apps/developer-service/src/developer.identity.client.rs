@@ -1,4 +1,3 @@
-use axum::http::HeaderMap;
 use reqwest::{Client, Response, StatusCode};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use uuid::Uuid;
@@ -6,15 +5,12 @@ use uuid::Uuid;
 use crate::http::error::AppError;
 
 const ACCOUNT_BASE_URL_ENV: &str = "NVBES_ACCOUNT_SERVICE_BASE_URL";
-const ACCOUNT_CLIENT_ID_ENV: &str = "NVBES_DEVELOPER_ACCOUNT_CLIENT_ID";
-const ACCOUNT_CLIENT_SECRET_ENV: &str = "NVBES_DEVELOPER_ACCOUNT_CLIENT_SECRET";
 
 #[derive(Clone)]
 pub struct IdentityClient {
     http: Client,
     base_url: String,
-    client_id: String,
-    client_secret: String,
+    grpc: crate::identity_grpc::IdentityGrpcClient,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,41 +78,19 @@ impl IdentityClient {
     pub fn from_env() -> anyhow::Result<Self> {
         let base_url = std::env::var(ACCOUNT_BASE_URL_ENV)
             .unwrap_or_else(|_| "http://localhost:4000".to_string());
-        let client_id = std::env::var(ACCOUNT_CLIENT_ID_ENV)
-            .map_err(|_| anyhow::anyhow!("{ACCOUNT_CLIENT_ID_ENV} is required"))?;
-        let client_secret = std::env::var(ACCOUNT_CLIENT_SECRET_ENV)
-            .map_err(|_| anyhow::anyhow!("{ACCOUNT_CLIENT_SECRET_ENV} is required"))?;
-
         Ok(Self {
             http: Client::new(),
             base_url: base_url.trim_end_matches('/').to_string(),
-            client_id,
-            client_secret,
+            grpc: crate::identity_grpc::IdentityGrpcClient::from_env()?,
         })
     }
 
     pub async fn introspect(
         &self,
         token: &str,
-        incoming_headers: Option<&HeaderMap>,
+        incoming_headers: Option<&axum::http::HeaderMap>,
     ) -> Result<IdentityClaims, AppError> {
-        let mut headers = HeaderMap::new();
-        if let Some(incoming_headers) = incoming_headers {
-            nvbes_observability::propagate_headers_trace_context(incoming_headers, &mut headers);
-        }
-        let response = self
-            .http
-            .post(format!("{}/oauth/introspect", self.base_url))
-            .headers(headers)
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .json(&serde_json::json!({
-                "token": token,
-                "token_type_hint": "access_token",
-            }))
-            .send()
-            .await?;
-
-        self.decode(response, "identity_introspection_failed").await
+        self.grpc.introspect(token, incoming_headers).await
     }
 
     pub async fn list_oauth_clients(

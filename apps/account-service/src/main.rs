@@ -6,10 +6,13 @@ use nvbes_observability::{
 };
 use std::net::SocketAddr;
 use std::time::Duration;
+use tokio::sync::broadcast;
 use utoipa::OpenApi;
 
 #[path = "identity.tools.beta.rs"]
 mod beta_tools;
+
+const ACCOUNT_GRPC_PORT_ENV: &str = "NVBES_ACCOUNT_GRPC_PORT";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -52,11 +55,21 @@ async fn main() -> anyhow::Result<()> {
         state.db.clone(),
         state.jwt.clone(),
     );
-    let app = nvbes_account_service::app::build_router(state);
+    let app = nvbes_account_service::app::build_router(state.clone());
 
     let http_addr: SocketAddr = format!("0.0.0.0:{}", config.api_port).parse()?;
     let http_listener = keep_alive::bind_listener_with_keepalive(http_addr, 4096)?;
+    let grpc_addr: SocketAddr =
+        format!("0.0.0.0:{}", account_grpc_port(config.api_port)?).parse()?;
     tracing::info!(addr = %http_addr, "Starting HTTP listener");
+    tracing::info!(addr = %grpc_addr, "Starting internal Identity gRPC listener");
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let shutdown_signal_tx = shutdown_tx.clone();
+    tokio::spawn(async move {
+        let _ = tokio::signal::ctrl_c().await;
+        let _ = shutdown_signal_tx.send(());
+    });
 
     if config.mtls_enabled {
         let mtls_addr: SocketAddr = format!("0.0.0.0:{}", config.mtls_port).parse()?;
@@ -80,29 +93,59 @@ async fn main() -> anyhow::Result<()> {
             }
         });
 
-        axum::serve(
+        let http_server = axum::serve(
             http_listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
         )
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+        .with_graceful_shutdown(shutdown_signal(shutdown_tx.subscribe()));
+        let grpc_server = nvbes_account_service::grpc::service::serve(
+            grpc_addr,
+            state,
+            shutdown_signal(shutdown_tx.subscribe()),
+        );
+        tokio::try_join!(
+            async { http_server.await.map_err(anyhow::Error::from) },
+            async { grpc_server.await.map_err(anyhow::Error::from) },
+        )?;
 
         mtls_handle.graceful_shutdown(Some(Duration::from_secs(30)));
     } else {
         tracing::info!(%http_addr, "Starting nvbes Account Service");
-        axum::serve(
+        let http_server = axum::serve(
             http_listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
         )
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+        .with_graceful_shutdown(shutdown_signal(shutdown_tx.subscribe()));
+        let grpc_server = nvbes_account_service::grpc::service::serve(
+            grpc_addr,
+            state,
+            shutdown_signal(shutdown_tx.subscribe()),
+        );
+        tokio::try_join!(
+            async { http_server.await.map_err(anyhow::Error::from) },
+            async { grpc_server.await.map_err(anyhow::Error::from) },
+        )?;
     }
 
     Ok(())
+}
+
+async fn shutdown_signal(mut shutdown_rx: broadcast::Receiver<()>) {
+    let _ = shutdown_rx.recv().await;
+}
+
+fn account_grpc_port(default_api_port: u16) -> anyhow::Result<u16> {
+    match std::env::var(ACCOUNT_GRPC_PORT_ENV) {
+        Ok(port) => port
+            .parse::<u16>()
+            .map_err(|error| anyhow::anyhow!("{ACCOUNT_GRPC_PORT_ENV} is invalid: {error}")),
+        Err(std::env::VarError::NotPresent) => default_api_port
+            .checked_add(10)
+            .ok_or_else(|| anyhow::anyhow!("Default Account gRPC port overflowed")),
+        Err(error) => Err(anyhow::anyhow!(
+            "{ACCOUNT_GRPC_PORT_ENV} could not be read: {error}"
+        )),
+    }
 }
 
 fn login_protection_required(environment: &str) -> bool {
@@ -111,7 +154,12 @@ fn login_protection_required(environment: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::login_protection_required;
+    use super::{account_grpc_port, login_protection_required};
+
+    #[test]
+    fn account_grpc_port_defaults_after_primary_api_port() {
+        assert_eq!(account_grpc_port(4000).unwrap(), 4010);
+    }
 
     #[test]
     fn login_protection_is_not_required_for_local_envs() {

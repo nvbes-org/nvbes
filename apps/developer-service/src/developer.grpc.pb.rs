@@ -5,6 +5,14 @@ pub mod nvbes {
         }
     }
 
+    pub mod identity {
+        pub mod internal {
+            pub mod v1 {
+                tonic::include_proto!("nvbes.identity.internal.v1");
+            }
+        }
+    }
+
     pub mod developer {
         pub mod v1 {
             tonic::include_proto!("nvbes.developer.v1");

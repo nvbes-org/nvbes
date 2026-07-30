@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package nvbes.identity.internal.v1;
+
+service IdentityInternalService {
+  rpc IntrospectAccessToken(IntrospectAccessTokenRequest) returns (IntrospectAccessTokenResponse);
+}
+
+message IntrospectAccessTokenRequest {
+  string access_token = 1;
+  string client_ip = 2;
+}
+
+message IntrospectAccessTokenResponse {
+  bool active = 1;
+  optional string scope = 2;
+  optional string client_id = 3;
+  optional string principal_type = 4;
+  optional string token_type = 5;
+  optional string sub = 6;
+  optional string role = 7;
+  optional string tenant_id = 8;
+  optional string organization_id = 9;
+  optional string workspace_id = 10;
+  optional string username = 11;
+  optional string email = 12;
+  optional bool email_verified = 13;
+  optional string display_name = 14;
+  optional string acr = 15;
+  repeated string amr = 16;
+  optional int64 auth_time = 17;
+  optional string jti = 18;
+  optional string sid = 19;
+  optional int64 exp = 20;
+  optional int64 iat = 21;
+  optional int64 nbf = 22;
+  repeated string authorization_details_json = 23;
+  optional string cnf_json = 24;
+  optional string act_json = 25;
+  optional string actor_principal_type = 26;
+  optional string actor_role = 27;
+  optional string actor_workspace_id = 28;
+  optional string actor_organization_id = 29;
+  optional string actor_tenant_id = 30;
+  optional bool network_valid = 31;
+}

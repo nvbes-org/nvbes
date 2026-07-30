@@ -1,17 +1,22 @@
-use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
+use axum::{Extension, Json, Router, extract::State, routing::post};
 use nvbes_core::http::error::ErrorEnvelope;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{
-    ResourceContext, WorkspaceDecision, decide_workspace_action, parse_action, parse_role,
+    DecisionAuthentication, ResourceContext, WorkspaceDecision, decide_workspace_action,
+    parse_action, parse_role,
 };
 use crate::app::AppState;
 use crate::http::error::AppError;
 
-pub fn router(_state: &AppState) -> Router<AppState> {
+pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .route("/authz/decision", post(decide))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::http::middleware::jwt::jwt_auth_middleware,
+        ))
         .layer(axum::middleware::from_fn(
             nvbes_core::security::no_cache_headers,
         ))
@@ -52,9 +57,18 @@ pub(crate) struct DecisionResponse {
 )]
 pub(crate) async fn decide(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    Extension(http_auth): Extension<crate::http::middleware::jwt::AuthContext>,
     Json(request): Json<DecisionRequest>,
 ) -> Result<Json<DecisionResponse>, AppError> {
+    let authentication = match &http_auth.credential_source {
+        crate::http::middleware::jwt::CredentialSource::BrowserSession => {
+            DecisionAuthentication::BrowserSession
+        }
+        crate::http::middleware::jwt::CredentialSource::OAuthBearer(_) => {
+            DecisionAuthentication::OAuthBearer
+        }
+    };
+    let auth = crate::domains::auth::types::AuthContext::from(&http_auth);
     let action = parse_action(&request.action)?;
     let target_role = request
         .resource
@@ -70,8 +84,8 @@ pub(crate) async fn decide(
     let decision = decide_workspace_action(
         &state.db,
         &state.redis,
-        &state.jwt,
-        &headers,
+        &auth,
+        authentication,
         request.workspace_id,
         action,
         ResourceContext {

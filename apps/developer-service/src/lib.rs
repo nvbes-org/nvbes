@@ -8,6 +8,8 @@ pub mod grpc;
 pub mod http;
 #[path = "developer.identity.client.rs"]
 pub mod identity;
+#[path = "developer.identity.grpc.rs"]
+mod identity_grpc;
 #[path = "developer.domain.rbac.rs"]
 pub mod rbac;
 #[cfg(test)]

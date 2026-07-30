@@ -3558,6 +3558,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "metrics",
  "nvbes-billing",
@@ -3608,6 +3609,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "nvbes-analytics-posthog",
  "nvbes-billing",
@@ -3772,6 +3774,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "hex",
  "hmac 0.12.1",
@@ -3878,6 +3881,7 @@ dependencies = [
  "async-graphql",
  "async-graphql-axum",
  "axum",
+ "base64 0.22.1",
  "nvbes-core",
  "nvbes-observability",
  "prost 0.14.4",

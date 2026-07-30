@@ -13,6 +13,7 @@ anyhow.workspace = true
 async-graphql.workspace = true
 async-graphql-axum.workspace = true
 axum.workspace = true
+base64.workspace = true
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability" }
 prost = "0.14.4"

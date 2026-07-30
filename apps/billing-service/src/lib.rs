@@ -8,3 +8,5 @@ pub mod domains;
 pub mod grpc;
 #[path = "billing.http.mod.rs"]
 pub mod http;
+#[path = "billing.identity.grpc.rs"]
+mod identity_grpc;

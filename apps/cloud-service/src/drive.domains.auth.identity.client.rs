@@ -1,12 +1,11 @@
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-use axum::http::StatusCode;
-
 use crate::http::error::AppError;
 
 use super::{
     cache::{get_cached_introspection, hash_token, set_cached_introspection},
+    grpc::IdentityGrpcClient,
     types::IdentityIntrospectionResponse,
 };
 
@@ -49,8 +48,7 @@ fn env_bool(name: &str, default: bool) -> bool {
 pub struct IdentityAuthClient {
     http: reqwest::Client,
     base_url: String,
-    client_id: String,
-    client_secret: String,
+    grpc: IdentityGrpcClient,
 }
 
 impl IdentityAuthClient {
@@ -68,19 +66,6 @@ impl IdentityAuthClient {
             std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8080".to_string())
         };
-        let client_id = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_ID").map_err(|_| {
-            AppError::internal(
-                "identity_client_id_missing",
-                "NVBES_ACCOUNT_SERVICE_CLIENT_ID is required to validate Identity tokens.",
-            )
-        })?;
-        let client_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET").map_err(|_| {
-            AppError::internal(
-                "identity_client_secret_missing",
-                "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET is required to validate Identity tokens.",
-            )
-        })?;
-
         let http = if mtls_enabled {
             build_mtls_http_client()
                 .map_err(|e| AppError::internal("mtls_client_init_failed", &e))?
@@ -91,8 +76,7 @@ impl IdentityAuthClient {
         Ok(Self {
             http,
             base_url: base_url.trim_end_matches('/').to_string(),
-            client_id,
-            client_secret,
+            grpc: IdentityGrpcClient::from_env()?,
         })
     }
 
@@ -109,65 +93,7 @@ impl IdentityAuthClient {
 
         let started_at = Instant::now();
         metrics::counter!("drive_identity_introspection_total").increment(1);
-        let mut builder = self
-            .http
-            .post(format!("{}/oauth/introspect", self.base_url));
-
-        if let Some(headers) = request_headers {
-            let mut outgoing = axum::http::HeaderMap::new();
-            nvbes_observability::propagate_headers_trace_context(headers, &mut outgoing);
-            if let Some(ip) = headers.get("x-nvbes-client-ip") {
-                outgoing.insert("x-nvbes-client-ip", ip.clone());
-            }
-            builder = builder.headers(outgoing);
-        } else {
-            builder = nvbes_core::trace_context::with_fresh_trace_headers(builder);
-        }
-
-        let response = builder
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .json(&serde_json::json!({
-                "token": token,
-                "token_type_hint": "access_token",
-            }))
-            .send()
-            .await
-            .map_err(|err| {
-                AppError::internal(
-                    "identity_introspection_failed",
-                    format!("Failed to contact Identity: {err}"),
-                )
-            })?;
-
-        if response.status() == StatusCode::UNAUTHORIZED {
-            metrics::histogram!("drive_identity_introspection_duration_seconds")
-                .record(started_at.elapsed().as_secs_f64());
-            return Err(AppError::unauthorized(
-                "invalid_token",
-                "The access token is invalid or expired.",
-            ));
-        }
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            metrics::histogram!("drive_identity_introspection_duration_seconds")
-                .record(started_at.elapsed().as_secs_f64());
-            return Err(AppError::internal(
-                "identity_introspection_failed",
-                format!("Identity introspection failed ({status}): {body}"),
-            ));
-        }
-
-        let parsed = response
-            .json::<IdentityIntrospectionResponse>()
-            .await
-            .map_err(|err| {
-                AppError::internal(
-                    "identity_introspection_invalid_response",
-                    format!("Identity introspection returned invalid JSON: {err}"),
-                )
-            })?;
+        let parsed = self.grpc.introspect(token, request_headers).await?;
         metrics::histogram!("drive_identity_introspection_duration_seconds")
             .record(started_at.elapsed().as_secs_f64());
 

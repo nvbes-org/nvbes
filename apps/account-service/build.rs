@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile_protos(
             &[
                 "../../contracts/protobuf/nvbes/platform/v1/common.proto",
+                "../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto",
                 "../../contracts/protobuf/nvbes/billing/v1/billing.proto",
                 "../../contracts/protobuf/nvbes/cloud/v1/cloud.proto",
                 "../../contracts/protobuf/nvbes/developer/v1/developer.proto",
@@ -18,6 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?;
 
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/platform/v1/common.proto");
+    println!(
+        "cargo:rerun-if-changed=../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto"
+    );
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/billing/v1/billing.proto");
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/cloud/v1/cloud.proto");
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/developer/v1/developer.proto");

@@ -1,19 +1,31 @@
+use std::time::Duration;
+
 use axum::{
     extract::State,
     http::{HeaderMap, HeaderValue, Request, header},
     middleware::Next,
     response::Response,
 };
-use serde::Deserialize;
+use base64::Engine;
+use tonic::{
+    Code, Request as GrpcRequest,
+    metadata::MetadataValue,
+    transport::{Channel, Endpoint},
+};
 use uuid::Uuid;
 
 use crate::app::AppState;
 use crate::error::AppError;
+use crate::grpc_pb::nvbes::identity::internal::v1::{
+    IntrospectAccessTokenRequest, IntrospectAccessTokenResponse,
+    identity_internal_service_client::IdentityInternalServiceClient,
+};
 use crate::observability::record_guard_rejection;
 
-const ACCOUNT_BASE_URL_ENV: &str = "NVBES_ACCOUNT_SERVICE_BASE_URL";
+const ACCOUNT_GRPC_ENDPOINT_ENV: &str = "NVBES_ACCOUNT_GRPC_ENDPOINT";
 const ACCOUNT_CLIENT_ID_ENV: &str = "NVBES_BACKOFFICE_ACCOUNT_CLIENT_ID";
 const ACCOUNT_CLIENT_SECRET_ENV: &str = "NVBES_BACKOFFICE_ACCOUNT_CLIENT_SECRET";
+const INTROSPECTION_TIMEOUT: Duration = Duration::from_secs(5);
 const ACTOR_HEADER: &str = "x-nvbes-actor-principal-id";
 const ACR_HEADER: &str = "x-nvbes-authentication-assurance";
 const AMR_HEADER: &str = "x-nvbes-authentication-methods";
@@ -22,19 +34,16 @@ const AUTH_EVENT_HEADER: &str = "x-nvbes-authentication-event-id";
 
 #[derive(Clone)]
 pub(crate) struct PrivilegedIdentityClient {
-    http: reqwest::Client,
-    base_url: String,
-    client_id: String,
-    client_secret: String,
+    client: IdentityInternalServiceClient<Channel>,
+    authorization: MetadataValue<tonic::metadata::Ascii>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 struct IdentityClaims {
     active: bool,
     principal_type: Option<String>,
     sub: Option<String>,
     acr: Option<String>,
-    #[serde(default)]
     amr: Vec<String>,
     auth_time: Option<i64>,
     sid: Option<String>,
@@ -51,8 +60,8 @@ impl PrivilegedIdentityClient {
                     .ok_or(std::env::VarError::NotPresent)
             })
         };
-        let base_url = std::env::var(ACCOUNT_BASE_URL_ENV)
-            .unwrap_or_else(|_| "http://localhost:4000".to_string());
+        let endpoint = std::env::var(ACCOUNT_GRPC_ENDPOINT_ENV)
+            .unwrap_or_else(|_| "http://127.0.0.1:4010".to_string());
         let client_id = required(ACCOUNT_CLIENT_ID_ENV, "backoffice-service")
             .map_err(|_| format!("{ACCOUNT_CLIENT_ID_ENV} is required outside development"))?;
         let client_secret = required(
@@ -60,12 +69,18 @@ impl PrivilegedIdentityClient {
             "development-backoffice-introspection-secret",
         )
         .map_err(|_| format!("{ACCOUNT_CLIENT_SECRET_ENV} is required outside development"))?;
+        let channel = Endpoint::from_shared(endpoint)
+            .map_err(|error| format!("{ACCOUNT_GRPC_ENDPOINT_ENV} is invalid: {error}"))?
+            .connect_lazy();
+        let encoded = base64::engine::general_purpose::STANDARD
+            .encode(format!("{client_id}:{client_secret}"));
+        let authorization = format!("Basic {encoded}")
+            .parse()
+            .map_err(|_| "Backoffice Identity credential contains invalid metadata".to_string())?;
 
         Ok(Self {
-            http: reqwest::Client::new(),
-            base_url: base_url.trim_end_matches('/').to_string(),
-            client_id,
-            client_secret,
+            client: IdentityInternalServiceClient::new(channel),
+            authorization,
         })
     }
 
@@ -74,34 +89,51 @@ impl PrivilegedIdentityClient {
         token: &str,
         incoming_headers: &HeaderMap,
     ) -> Result<IdentityClaims, AppError> {
-        let mut outgoing_headers = HeaderMap::new();
-        nvbes_observability::propagate_headers_trace_context(
-            incoming_headers,
-            &mut outgoing_headers,
-        );
+        let client_ip =
+            nvbes_core::http::client_ip::client_ip(incoming_headers).unwrap_or_default();
+        let mut request = GrpcRequest::new(IntrospectAccessTokenRequest {
+            access_token: token.to_string(),
+            client_ip,
+        });
+        request
+            .metadata_mut()
+            .insert("authorization", self.authorization.clone());
+        request.set_timeout(INTROSPECTION_TIMEOUT);
         let response = self
-            .http
-            .post(format!("{}/oauth/introspect", self.base_url))
-            .headers(outgoing_headers)
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .json(&serde_json::json!({
-                "token": token,
-                "token_type_hint": "access_token",
-            }))
-            .send()
+            .client
+            .clone()
+            .introspect_access_token(request)
             .await
-            .map_err(|error| {
-                AppError::internal("identity_introspection_failed", error.to_string())
-            })?;
-        if !response.status().is_success() {
-            return Err(AppError::unauthorized(
-                "identity_introspection_rejected",
-                "Identity rejected the Backoffice access token.",
-            ));
-        }
-        response.json().await.map_err(|error| {
-            AppError::internal("identity_introspection_invalid", error.to_string())
-        })
+            .map_err(grpc_error)?
+            .into_inner();
+        Ok(claims_from_response(response))
+    }
+}
+
+fn claims_from_response(response: IntrospectAccessTokenResponse) -> IdentityClaims {
+    IdentityClaims {
+        active: response.active,
+        principal_type: response.principal_type,
+        sub: response.sub,
+        acr: response.acr,
+        amr: response.amr,
+        auth_time: response.auth_time,
+        sid: response.sid,
+        network_valid: response.network_valid,
+    }
+}
+
+fn grpc_error(error: tonic::Status) -> AppError {
+    match error.code() {
+        Code::Unauthenticated => AppError::unauthorized(
+            "identity_introspection_rejected",
+            "Identity rejected the Backoffice access token.",
+        ),
+        Code::PermissionDenied => AppError::forbidden(
+            "identity_introspection_forbidden",
+            "Identity forbids Backoffice token introspection.",
+        ),
+        _ => AppError::internal("identity_introspection_failed", error.to_string()),
     }
 }
 

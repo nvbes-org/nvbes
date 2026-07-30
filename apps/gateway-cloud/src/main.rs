@@ -8,6 +8,8 @@ mod auth;
 mod billing_client;
 #[path = "gateway.http.rs"]
 mod http;
+#[path = "gateway.identity_client.rs"]
+mod identity_client;
 #[path = "gateway.pb.rs"]
 mod pb;
 #[path = "gateway.schema.rs"]
@@ -21,7 +23,7 @@ mod state;
 
 const GATEWAY_CLOUD_PORT_ENV: &str = "NVBES_GATEWAY_CLOUD_PORT";
 const BILLING_GRPC_ENDPOINT_ENV: &str = "NVBES_BILLING_GRPC_ENDPOINT";
-const ACCOUNT_SERVICE_BASE_URL_ENV: &str = "NVBES_ACCOUNT_SERVICE_BASE_URL";
+const ACCOUNT_GRPC_ENDPOINT_ENV: &str = "NVBES_ACCOUNT_GRPC_ENDPOINT";
 const ACCOUNT_SERVICE_CLIENT_ID_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_ID";
 const ACCOUNT_SERVICE_CLIENT_SECRET_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET";
 
@@ -36,9 +38,11 @@ async fn main() -> anyhow::Result<()> {
     let billing_grpc_endpoint = billing_grpc_endpoint(config.api_port)?;
     let state = state::GatewayState {
         billing_grpc_endpoint,
-        identity_base_url: identity_base_url(),
-        identity_client_id: required_env(ACCOUNT_SERVICE_CLIENT_ID_ENV)?,
-        identity_client_secret: required_env(ACCOUNT_SERVICE_CLIENT_SECRET_ENV)?,
+        identity: identity_client::IdentityGrpcClient::new(
+            identity_grpc_endpoint(config.api_port)?,
+            required_env(ACCOUNT_SERVICE_CLIENT_ID_ENV)?,
+            required_env(ACCOUNT_SERVICE_CLIENT_SECRET_ENV)?,
+        )?,
     };
     let app = http::router(state).fallback(http::not_found);
     let addr: SocketAddr = format!("0.0.0.0:{port}").parse()?;
@@ -83,9 +87,22 @@ fn billing_grpc_endpoint(default_api_port: u16) -> anyhow::Result<String> {
     }
 }
 
-fn identity_base_url() -> String {
-    std::env::var(ACCOUNT_SERVICE_BASE_URL_ENV)
-        .unwrap_or_else(|_| "http://localhost:8080".to_string())
+fn identity_grpc_endpoint(default_api_port: u16) -> anyhow::Result<String> {
+    match std::env::var(ACCOUNT_GRPC_ENDPOINT_ENV) {
+        Ok(endpoint) if !endpoint.trim().is_empty() => Ok(endpoint),
+        Ok(_) => Err(anyhow::anyhow!(
+            "{ACCOUNT_GRPC_ENDPOINT_ENV} must not be empty"
+        )),
+        Err(std::env::VarError::NotPresent) => {
+            let port = default_api_port
+                .checked_add(10)
+                .ok_or_else(|| anyhow::anyhow!("Default Account gRPC port overflowed"))?;
+            Ok(format!("http://127.0.0.1:{port}"))
+        }
+        Err(error) => Err(anyhow::anyhow!(
+            "{ACCOUNT_GRPC_ENDPOINT_ENV} could not be read: {error}"
+        )),
+    }
 }
 
 fn required_env(name: &'static str) -> anyhow::Result<String> {
@@ -98,7 +115,7 @@ fn required_env(name: &'static str) -> anyhow::Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{billing_grpc_endpoint, gateway_port, required_env};
+    use super::{billing_grpc_endpoint, gateway_port, identity_grpc_endpoint, required_env};
 
     #[test]
     fn gateway_port_defaults_after_primary_api_port() {
@@ -110,6 +127,14 @@ mod tests {
         assert_eq!(
             billing_grpc_endpoint(3000).unwrap(),
             "http://127.0.0.1:3021"
+        );
+    }
+
+    #[test]
+    fn identity_grpc_endpoint_defaults_to_account_grpc_offset() {
+        assert_eq!(
+            identity_grpc_endpoint(4000).unwrap(),
+            "http://127.0.0.1:4010"
         );
     }
 

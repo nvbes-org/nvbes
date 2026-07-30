@@ -8,12 +8,12 @@ Le service porte:
 - les sessions Redis et tokens OAuth/OIDC;
 - la gouvernance `tenant -> organization? -> workspace`;
 - les memberships, workspaces, membres et une partie des decisions d'acces;
-- l'introspection et les decisions d'acces consommees par les autres services;
+- l'introspection OAuth publique et l'introspection gRPC privée consommée par les autres services;
 - les principals machine (`service accounts`) et les clients OAuth M2M rattachés a un workspace.
 
 ## Architecture
 
-- **Framework** : Axum + Tokio
+- **Framework** : Axum + Tonic + Tokio
 - **Base de données** : PostgreSQL (sqlx)
 - **Auth** : OAuth 2.1 / OIDC, JWT courts, refresh tokens opaques rotatifs stockes dans Redis
 - **Billing** : service separe `billing-service`; Identity fournit l'authz et les vues web peuvent consommer Billing
@@ -46,7 +46,7 @@ src/
 - `organization` optionnelle
 - `workspace` comme contexte produit
 - access tokens JWT courts pour le trafic normal
-- introspection et/ou decision centrale pour les actions critiques
+- validation de signature locale puis introspection gRPC pour l'état dynamique des tokens
 
 Le contrat documentaire de contexte d'acces est:
 
@@ -116,6 +116,21 @@ Pour les principals humains, `principal_id` et `user_id` sont alignes sauf deleg
 - `DELETE /api/v1/auth/mfa/factors/{id}`
 - `POST /api/v1/authz/decision`
 
+`authz/decision` est une prévisualisation de permission liée à une session utilisateur active.
+L'autorisation finale reste dans le service propriétaire de la ressource. Les comptes de service
+ne passent pas par cet endpoint. Une session navigateur est authentifiée par son cookie HTTP-only
+et ses permissions de membership; un access token utilisateur doit en plus porter le scope
+`drive:read`, `drive:write` ou `drive:admin` adapté à l'action, ainsi que respecter son éventuel
+binding DPoP ou mTLS.
+
+### gRPC interne
+
+- `nvbes.identity.internal.v1.IdentityInternalService/IntrospectAccessToken`
+
+Le listener gRPC privé utilise `NVBES_ACCOUNT_GRPC_PORT` (port `4010` par défaut). Les clients
+internes s'authentifient avec leur client OAuth confidentiel dans les metadata gRPC. Les endpoints
+OAuth standard `/oauth/token`, `/oauth/introspect` et `/oauth/revoke` restent disponibles en HTTP.
+
 ### Workspaces
 - `GET  /api/v1/workspaces`
 - `POST /api/v1/workspaces`
@@ -154,6 +169,8 @@ Variables d'environnement (dans `.env`) :
 ```
 DATABASE_URL=postgresql://user:pass@localhost/nvbes_identity
 JWT_SECRET=your-secret-key
+NVBES_ACCOUNT_GRPC_PORT=4010
+NVBES_ACCOUNT_GRPC_ENDPOINT=http://127.0.0.1:4010
 ```
 
 ## Migration

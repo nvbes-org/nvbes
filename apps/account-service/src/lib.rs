@@ -19,6 +19,8 @@ pub mod developer_client;
 pub mod domains;
 #[path = "identity.email.mod.rs"]
 pub mod email;
+#[path = "identity.grpc.mod.rs"]
+pub mod grpc;
 #[path = "identity.grpc.pb.rs"]
 pub mod grpc_pb;
 #[path = "identity.http.mod.rs"]

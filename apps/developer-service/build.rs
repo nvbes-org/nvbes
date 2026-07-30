@@ -9,12 +9,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .compile_protos(
             &[
                 "../../contracts/protobuf/nvbes/platform/v1/common.proto",
+                "../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto",
                 "../../contracts/protobuf/nvbes/developer/v1/developer.proto",
             ],
             &["../../contracts/protobuf"],
         )?;
 
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/platform/v1/common.proto");
+    println!(
+        "cargo:rerun-if-changed=../../contracts/protobuf/nvbes/identity/internal/v1/identity_internal.proto"
+    );
     println!("cargo:rerun-if-changed=../../contracts/protobuf/nvbes/developer/v1/developer.proto");
     Ok(())
 }

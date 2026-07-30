@@ -2,6 +2,8 @@
 mod cache;
 #[path = "drive.domains.auth.identity.client.rs"]
 mod client;
+#[path = "drive.domains.auth.identity.grpc.rs"]
+mod grpc;
 #[cfg(test)]
 #[path = "drive.domains.auth.identity.tests.rs"]
 mod tests;

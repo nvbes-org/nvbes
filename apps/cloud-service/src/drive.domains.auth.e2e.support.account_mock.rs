@@ -16,6 +16,9 @@ use uuid::Uuid;
 
 const TEST_CLOUD_AUDIENCE: &str = "nvbes-cloud-service";
 
+#[path = "drive.domains.auth.e2e.support.account_mock.grpc.rs"]
+mod grpc;
+
 #[derive(Clone)]
 pub(crate) struct MockAccountState {
     pool: PgPool,
@@ -72,10 +75,10 @@ pub(crate) async fn spawn_identity_server(mut state: MockAccountState) -> String
     let addr = listener.local_addr().expect("listener addr");
     let base_url = format!("http://{addr}");
     state.issuer = base_url.clone();
+    grpc::spawn(state.clone());
     let router = Router::new()
         .route("/.well-known/jwks.json", get(jwks))
         .route("/oauth/token", post(issue_token))
-        .route("/oauth/introspect", post(introspect_token))
         .with_state(state);
     tokio::spawn(async move {
         axum::serve(listener, router)
@@ -141,60 +144,6 @@ async fn issue_token(
         "token_type": "Bearer",
         "expires_in": 3600,
         "scope": claims.scope,
-    })))
-}
-
-async fn introspect_token(
-    State(state): State<MockAccountState>,
-    headers: HeaderMap,
-    Json(body): Json<serde_json::Value>,
-) -> Result<Json<serde_json::Value>, StatusCode> {
-    let (client_id, client_secret) = basic_auth(&headers)?;
-    let row = account_client_row(&state.pool, &client_id)
-        .await
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    let secret_hash: String = row.get("client_secret_hash");
-    nvbes_product_account::oauth::verify_client_secret(&client_secret, &secret_hash)
-        .map_err(|_| StatusCode::UNAUTHORIZED)?;
-
-    let token = body
-        .get("token")
-        .and_then(serde_json::Value::as_str)
-        .ok_or(StatusCode::BAD_REQUEST)?;
-    let claims = decode_test_claims(&state.key, &state.issuer, token)?;
-    let token_row =
-        account_client_row(&state.pool, claims.client_id.as_deref().unwrap_or_default())
-            .await
-            .map_err(|_| StatusCode::UNAUTHORIZED)?;
-    let client_revoked = token_row
-        .try_get::<Option<chrono::DateTime<Utc>>, _>("revoked_at")
-        .ok()
-        .flatten()
-        .is_some();
-    let principal_status: String = token_row.get("principal_status");
-
-    Ok(Json(json!({
-        "active": !client_revoked && principal_status == "active",
-        "scope": claims.scope,
-        "client_id": claims.client_id,
-        "principal_type": "service_account",
-        "token_type": "access_token",
-        "sub": claims.sub,
-        "role": claims.role,
-        "tenant_id": claims.tenant_id,
-        "organization_id": claims.organization_id,
-        "workspace_id": claims.workspace_id,
-        "email_verified": true,
-        "name": "Drive E2E Robot",
-        "acr": "aal1",
-        "amr": claims.amr,
-        "auth_time": claims.iat,
-        "jti": claims.jti,
-        "sid": claims.sid,
-        "exp": claims.exp,
-        "iat": claims.iat,
-        "nbf": claims.nbf,
-        "network_valid": true,
     })))
 }
 
