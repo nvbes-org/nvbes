@@ -46,6 +46,7 @@ impl IdentityInternalService for IdentityGrpcService {
         request: Request<IntrospectAccessTokenRequest>,
     ) -> Result<Response<IntrospectAccessTokenResponse>, Status> {
         let client_id = auth::authenticate_client(&self.state.db, &request).await?;
+        let expected_audience = auth::internal_client_audience(&client_id)?;
         let request = request.into_inner();
         let access_token = request.access_token.trim();
         if access_token.is_empty() || access_token.len() > MAX_ACCESS_TOKEN_BYTES {
@@ -65,6 +66,11 @@ impl IdentityInternalService for IdentityGrpcService {
         )
         .await
         .map_err(app_status)?;
+        if introspection.active && introspection.audience.as_deref() != Some(expected_audience) {
+            return Err(Status::permission_denied(
+                "The access token is not intended for this resource server.",
+            ));
+        }
         let response = conversions::introspection_response(introspection)
             .map_err(|_| Status::internal("Identity introspection response encoding failed."))?;
         Ok(Response::new(response))

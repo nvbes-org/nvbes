@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import {
   ACCEPT_ALL_CONSENT,
   ANALYTICS_PURPOSE_CONSENT_TYPES,
@@ -15,14 +15,14 @@ import {
 
 const trackingConsentApi = createTrackingConsentApi({
   identityClient: {
-    listConsents: (options?: { signal?: AbortSignal }) => identityClient.listConsents(options),
+    listConsents: (options?: { signal?: AbortSignal }) => accountClient.listConsents(options),
     grantConsent: (consentType: string, documentVersion: string) =>
-      identityClient.grantConsent(consentType, documentVersion),
+      accountClient.grantConsent(consentType, documentVersion),
     revokeConsent: (consentType: string, documentVersion: string) =>
-      identityClient.revokeConsent(consentType, documentVersion),
+      accountClient.revokeConsent(consentType, documentVersion),
     isAuthenticated: async () => {
       try {
-        await identityClient.getMe();
+        await accountClient.getMe();
         return true;
       } catch {
         return false;

@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { queryOptions } from '@tanstack/react-query';
 
 export const accountQueryKeys = {
@@ -21,8 +21,8 @@ export function accountContextQueryOptions(authuser: string) {
   return queryOptions({
     queryKey: accountQueryKeys.context(authuser),
     queryFn: async ({ signal }) => {
-      const me = await identityClient.getMe({ signal });
-      const accounts = await identityClient.listAccounts({ signal }).catch(() => []);
+      const me = await accountClient.getMe({ signal });
+      const accounts = await accountClient.listAccounts({ signal }).catch(() => []);
 
       return {
         me,

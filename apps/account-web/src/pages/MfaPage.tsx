@@ -1,5 +1,6 @@
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Button } from '@/components/ui/button';
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';
 import { MfaPageAddFactorCard, MfaPageRecoveryCodesCard } from './MfaPageAddFactorCard';
 import { MfaPageFactorList } from './MfaPageFactorList';
 import { MfaPageEmptyState, MfaPageHeader, MfaPageSkeleton } from './MfaPage.layout';
@@ -46,14 +47,10 @@ export default function MfaPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
+    <AccountPage>
       <MfaPageHeader onBack={navigateBack} />
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <FeedbackAlert tone="error">{error}</FeedbackAlert>}
 
       {visibleFactors.length === 0 && !hasRecovery ? <MfaPageEmptyState /> : null}
 
@@ -70,20 +67,26 @@ export default function MfaPage() {
         </Button>
       )}
 
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-heading font-semibold">Ajouter une nouvelle méthode</h1>
-      </div>
+      <AccountPageHeader
+        as="h2"
+        size="subsection"
+        title="Ajouter une nouvelle méthode"
+        contentClassName="max-w-2xl"
+      />
 
       <MfaPageAddFactorCard onNavigate={navigateTo} />
 
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-heading font-semibold">Codes de récupération</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {hasRecovery
+      <AccountPageHeader
+        as="h2"
+        size="subsection"
+        title="Codes de récupération"
+        description={
+          hasRecovery
             ? 'Gardez vos codes dans un endroit sûr et régénérez-les si nécessaire.'
-            : 'Générez des codes de secours pour récupérer votre accès.'}
-        </p>
-      </div>
+            : 'Générez des codes de secours pour récupérer votre accès.'
+        }
+        contentClassName="max-w-2xl"
+      />
 
       <MfaPageRecoveryCodesCard
         hasRecovery={hasRecovery}
@@ -115,6 +118,6 @@ export default function MfaPage() {
         }}
         onSubmit={handleStepUp}
       />
-    </div>
+    </AccountPage>
   );
 }

@@ -1,5 +1,5 @@
 import type { UserConsent } from '@nvbes/identity-client';
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import {
   DEFAULT_CONSENT,
   getTrackingConsent,
@@ -25,7 +25,7 @@ export function buildAccountPrivacyConsentActions({
     const previous = consents;
     setConsents((current) => current.filter((entry) => entry.id !== consent.id));
     try {
-      await identityClient.revokeConsent(consent.consent_type, consent.document_version);
+      await accountClient.revokeConsent(consent.consent_type, consent.document_version);
       if (
         consent.consent_type === 'cookie_consent' ||
         consent.consent_type.startsWith('cookie_consent_') ||

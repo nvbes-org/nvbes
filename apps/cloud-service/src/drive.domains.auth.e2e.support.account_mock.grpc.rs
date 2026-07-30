@@ -16,7 +16,7 @@ pub(super) fn spawn(state: MockAccountState) {
     let addr = listener.local_addr().expect("gRPC listener addr");
     drop(listener);
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_GRPC_ENDPOINT", format!("http://{addr}"));
+        std::env::set_var("NVBES_IDENTITY_GRPC_ENDPOINT", format!("http://{addr}"));
     }
     tokio::spawn(async move {
         tonic::transport::Server::builder()
@@ -67,6 +67,7 @@ impl IdentityInternalService for MockIdentityGrpcService {
             client_id: claims.client_id,
             principal_type: Some("service_account".to_string()),
             token_type: Some("access_token".to_string()),
+            audience: Some(claims.aud),
             sub: Some(claims.sub),
             role: Some(claims.role),
             tenant_id: claims.tenant_id,

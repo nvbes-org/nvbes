@@ -23,9 +23,9 @@ mod state;
 
 const GATEWAY_CLOUD_PORT_ENV: &str = "NVBES_GATEWAY_CLOUD_PORT";
 const BILLING_GRPC_ENDPOINT_ENV: &str = "NVBES_BILLING_GRPC_ENDPOINT";
-const ACCOUNT_GRPC_ENDPOINT_ENV: &str = "NVBES_ACCOUNT_GRPC_ENDPOINT";
-const ACCOUNT_SERVICE_CLIENT_ID_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_ID";
-const ACCOUNT_SERVICE_CLIENT_SECRET_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET";
+const IDENTITY_GRPC_ENDPOINT_ENV: &str = "NVBES_IDENTITY_GRPC_ENDPOINT";
+const IDENTITY_CLIENT_ID_ENV: &str = "NVBES_GATEWAY_IDENTITY_CLIENT_ID";
+const IDENTITY_CLIENT_SECRET_ENV: &str = "NVBES_GATEWAY_IDENTITY_CLIENT_SECRET";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -40,8 +40,8 @@ async fn main() -> anyhow::Result<()> {
         billing_grpc_endpoint,
         identity: identity_client::IdentityGrpcClient::new(
             identity_grpc_endpoint(config.api_port)?,
-            required_env(ACCOUNT_SERVICE_CLIENT_ID_ENV)?,
-            required_env(ACCOUNT_SERVICE_CLIENT_SECRET_ENV)?,
+            required_env(IDENTITY_CLIENT_ID_ENV)?,
+            required_env(IDENTITY_CLIENT_SECRET_ENV)?,
         )?,
     };
     let app = http::router(state).fallback(http::not_found);
@@ -88,19 +88,19 @@ fn billing_grpc_endpoint(default_api_port: u16) -> anyhow::Result<String> {
 }
 
 fn identity_grpc_endpoint(default_api_port: u16) -> anyhow::Result<String> {
-    match std::env::var(ACCOUNT_GRPC_ENDPOINT_ENV) {
+    match std::env::var(IDENTITY_GRPC_ENDPOINT_ENV) {
         Ok(endpoint) if !endpoint.trim().is_empty() => Ok(endpoint),
         Ok(_) => Err(anyhow::anyhow!(
-            "{ACCOUNT_GRPC_ENDPOINT_ENV} must not be empty"
+            "{IDENTITY_GRPC_ENDPOINT_ENV} must not be empty"
         )),
         Err(std::env::VarError::NotPresent) => {
             let port = default_api_port
                 .checked_add(10)
-                .ok_or_else(|| anyhow::anyhow!("Default Account gRPC port overflowed"))?;
+                .ok_or_else(|| anyhow::anyhow!("Default Identity gRPC port overflowed"))?;
             Ok(format!("http://127.0.0.1:{port}"))
         }
         Err(error) => Err(anyhow::anyhow!(
-            "{ACCOUNT_GRPC_ENDPOINT_ENV} could not be read: {error}"
+            "{IDENTITY_GRPC_ENDPOINT_ENV} could not be read: {error}"
         )),
     }
 }

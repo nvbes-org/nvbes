@@ -1,5 +1,5 @@
 import type { AccountPrincipal } from '@nvbes/identity-client';
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type SubmitEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { notifyProfileAvatarUpdated } from '@/account.avatar';
@@ -47,7 +47,7 @@ export function useAccountPersonalInfoPage() {
   const { data: account } = useQuery({
     queryKey: personalInfoQueryKey,
     queryFn: async ({ signal }): Promise<AccountPersonalInfoQueryData> => {
-      const me = await identityClient.getMe({ signal });
+      const me = await accountClient.getMe({ signal });
       return {
         user: me.user,
       };

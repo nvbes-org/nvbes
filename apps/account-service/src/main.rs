@@ -12,7 +12,7 @@ use utoipa::OpenApi;
 #[path = "identity.tools.beta.rs"]
 mod beta_tools;
 
-const ACCOUNT_GRPC_PORT_ENV: &str = "NVBES_ACCOUNT_GRPC_PORT";
+const IDENTITY_GRPC_PORT_ENV: &str = "NVBES_IDENTITY_GRPC_PORT";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -135,15 +135,15 @@ async fn shutdown_signal(mut shutdown_rx: broadcast::Receiver<()>) {
 }
 
 fn account_grpc_port(default_api_port: u16) -> anyhow::Result<u16> {
-    match std::env::var(ACCOUNT_GRPC_PORT_ENV) {
+    match std::env::var(IDENTITY_GRPC_PORT_ENV) {
         Ok(port) => port
             .parse::<u16>()
-            .map_err(|error| anyhow::anyhow!("{ACCOUNT_GRPC_PORT_ENV} is invalid: {error}")),
+            .map_err(|error| anyhow::anyhow!("{IDENTITY_GRPC_PORT_ENV} is invalid: {error}")),
         Err(std::env::VarError::NotPresent) => default_api_port
             .checked_add(10)
             .ok_or_else(|| anyhow::anyhow!("Default Account gRPC port overflowed")),
         Err(error) => Err(anyhow::anyhow!(
-            "{ACCOUNT_GRPC_PORT_ENV} could not be read: {error}"
+            "{IDENTITY_GRPC_PORT_ENV} could not be read: {error}"
         )),
     }
 }

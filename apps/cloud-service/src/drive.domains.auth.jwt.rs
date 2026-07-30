@@ -8,7 +8,6 @@ use tokio::sync::RwLock;
 use crate::http::error::AppError;
 
 const DRIVE_AUDIENCE: &str = "nvbes-cloud-service";
-const IDENTITY_API_AUDIENCE: &str = "nvbes-account-service";
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(300);
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -61,7 +60,7 @@ fn cache() -> &'static RwLock<CachedJwks> {
 }
 
 fn identity_base_url() -> String {
-    std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
+    std::env::var("NVBES_IDENTITY_SERVICE_BASE_URL")
         .unwrap_or_else(|_| "http://localhost:8080".to_string())
 }
 
@@ -87,7 +86,7 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
     let issuer = identity_base_url().trim_end_matches('/').to_string();
     let mut validation = Validation::new(header.alg);
     validation.set_issuer(&[&issuer]);
-    validation.set_audience(&[DRIVE_AUDIENCE, IDENTITY_API_AUDIENCE]);
+    validation.set_audience(&[DRIVE_AUDIENCE]);
     validation.validate_exp = true;
     validation.validate_nbf = true;
 
@@ -98,28 +97,24 @@ pub async fn verify_identity_access_token(token: &str) -> Result<IdentityJwtClai
         )
     })?;
     let claims = data.claims;
+    validate_identity_claims(&claims, &issuer)?;
+    Ok(claims)
+}
 
+fn validate_identity_claims(
+    claims: &IdentityJwtClaims,
+    expected_issuer: &str,
+) -> Result<(), AppError> {
     if claims.token_type != "access"
-        || claims.iss != issuer
-        || ![DRIVE_AUDIENCE, IDENTITY_API_AUDIENCE]
-            .iter()
-            .any(|audience| claims.aud == *audience)
+        || claims.iss != expected_issuer
+        || claims.aud != DRIVE_AUDIENCE
     {
         return Err(AppError::unauthorized(
             "invalid_token",
             "The Identity access token is not valid for Drive.",
         ));
     }
-    if (claims.amr.iter().any(|method| method == "m2m") || claims.act.is_some())
-        && claims.aud != DRIVE_AUDIENCE
-    {
-        return Err(AppError::unauthorized(
-            "invalid_token",
-            "Machine and delegated tokens must target the nvbes-cloud-service audience.",
-        ));
-    }
-
-    Ok(claims)
+    Ok(())
 }
 
 async fn get_decoding_key(kid: &str) -> Result<DecodingKey, AppError> {
@@ -203,4 +198,54 @@ async fn refresh_jwks() -> Result<(), AppError> {
     guard.fetched_at = Some(Instant::now());
     guard.keys = keys;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DRIVE_AUDIENCE, IdentityJwtClaims, validate_identity_claims};
+
+    const ISSUER: &str = "https://identity.nvbes.test";
+
+    #[test]
+    fn accepts_access_token_for_cloud_audience() {
+        let claims = claims(DRIVE_AUDIENCE);
+
+        validate_identity_claims(&claims, ISSUER).expect("Cloud access token should be accepted");
+    }
+
+    #[test]
+    fn rejects_account_audience() {
+        let claims = claims("nvbes-account-service");
+
+        let error = validate_identity_claims(&claims, ISSUER)
+            .expect_err("Account access token must not be accepted by Cloud");
+
+        assert_eq!(error.code, "invalid_token");
+    }
+
+    #[test]
+    fn rejects_non_access_token() {
+        let mut claims = claims(DRIVE_AUDIENCE);
+        claims.token_type = "id".to_string();
+
+        let error = validate_identity_claims(&claims, ISSUER)
+            .expect_err("ID token must not be accepted as an access token");
+
+        assert_eq!(error.code, "invalid_token");
+    }
+
+    fn claims(audience: &str) -> IdentityJwtClaims {
+        IdentityJwtClaims {
+            sub: "principal-id".to_string(),
+            workspace_id: Some("workspace-id".to_string()),
+            tenant_id: Some("tenant-id".to_string()),
+            organization_id: None,
+            token_type: "access".to_string(),
+            amr: vec!["pwd".to_string()],
+            client_id: Some("cloud-web".to_string()),
+            iss: ISSUER.to_string(),
+            aud: audience.to_string(),
+            act: None,
+        }
+    }
 }

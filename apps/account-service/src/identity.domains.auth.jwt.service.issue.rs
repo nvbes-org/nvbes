@@ -2,105 +2,14 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use super::types::{
-    IdTokenClaims, JwtService, LogoutTokenClaims, SecurityEventTokenClaims, TokenClaims,
-    TokenConfirmation, TokenPair,
+    IdTokenClaims, JwtService, M2mAccessTokenIssueRequest, TokenClaims, TokenConfirmation,
+    TokenPair, TokenPairIssueRequest,
 };
 use crate::http::error::AppError;
 
 const CLOUD_TOKEN_AUDIENCE: &str = "nvbes-cloud-service";
 
 impl JwtService {
-    pub async fn generate_logout_token(
-        &self,
-        user_id: Uuid,
-        session_id: Uuid,
-        audience: &str,
-    ) -> Result<String, AppError> {
-        let now = Utc::now();
-        self.encode_typed_claims(
-            &LogoutTokenClaims {
-                iss: self.issuer.clone(),
-                sub: user_id.to_string(),
-                aud: audience.to_string(),
-                iat: now.timestamp(),
-                exp: (now + chrono::Duration::minutes(2)).timestamp(),
-                jti: Uuid::new_v4().to_string(),
-                sid: session_id.to_string(),
-                events: serde_json::json!({
-                    "http://schemas.openid.net/event/backchannel-logout": {}
-                }),
-            },
-            Some("logout+jwt"),
-        )
-        .await
-    }
-
-    pub async fn generate_caep_session_revoked_token(
-        &self,
-        user_id: Uuid,
-        session_id: Uuid,
-        audience: &str,
-    ) -> Result<String, AppError> {
-        let now = Utc::now();
-        self.encode_typed_claims(
-            &SecurityEventTokenClaims {
-                iss: self.issuer.clone(),
-                aud: audience.to_string(),
-                iat: now.timestamp(),
-                jti: Uuid::new_v4().to_string(),
-                sub_id: Some(serde_json::json!({
-                    "format": "complex",
-                    "user": {
-                        "format": "iss_sub",
-                        "iss": self.issuer.clone(),
-                        "sub": user_id,
-                    },
-                    "session": {
-                        "format": "opaque",
-                        "id": session_id,
-                    }
-                })),
-                events: serde_json::json!({
-                    "https://schemas.openid.net/secevent/caep/event-type/session-revoked": {
-                        "event_timestamp": now.timestamp(),
-                    }
-                }),
-            },
-            Some("secevent+jwt"),
-        )
-        .await
-    }
-
-    pub async fn generate_risc_credential_compromise_token(
-        &self,
-        user_id: Uuid,
-        audience: &str,
-    ) -> Result<String, AppError> {
-        let now = Utc::now();
-        self.encode_typed_claims(
-            &SecurityEventTokenClaims {
-                iss: self.issuer.clone(),
-                aud: audience.to_string(),
-                iat: now.timestamp(),
-                jti: Uuid::new_v4().to_string(),
-                sub_id: None,
-                events: serde_json::json!({
-                    "https://schemas.openid.net/secevent/risc/event-type/credential-compromise": {
-                        "subject": {
-                            "format": "iss_sub",
-                            "iss": self.issuer.clone(),
-                            "sub": user_id,
-                        },
-                        "credential_type": "refresh_token",
-                        "event_timestamp": now.timestamp(),
-                    }
-                }),
-            },
-            Some("secevent+jwt"),
-        )
-        .await
-    }
-
     pub async fn generate_id_token(
         &self,
         user_id: Uuid,
@@ -128,81 +37,18 @@ impl JwtService {
         workspace_id: Option<Uuid>,
         scope: &str,
     ) -> Result<TokenPair, AppError> {
-        self.generate_token_pair_with_session(
-            user_id,
-            workspace_id,
-            None,
-            scope,
-            None,
-            None,
-            None,
-            Some("aal1"),
-            Some(vec!["pwd".to_string()]),
-            None,
-            None,
-            None,
-        )
-        .await
+        let mut request = TokenPairIssueRequest::new(user_id, scope);
+        request.workspace_id = workspace_id;
+        request.acr = Some("aal1");
+        request.amr = Some(vec!["pwd".to_string()]);
+        self.issue_token_pair(request).await
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "Token issuance keeps claims sources explicit across flows."
-    )]
-    pub async fn generate_token_pair_with_session(
+    pub async fn issue_token_pair(
         &self,
-        user_id: Uuid,
-        workspace_id: Option<Uuid>,
-        workspace_region: Option<String>,
-        scope: &str,
-        session_id: Option<Uuid>,
-        tenant_id: Option<Uuid>,
-        organization_id: Option<Uuid>,
-        acr: Option<&str>,
-        amr: Option<Vec<String>>,
-        client_id: Option<&str>,
-        auth_time: Option<i64>,
-        cnf_jkt: Option<String>,
+        request: TokenPairIssueRequest<'_>,
     ) -> Result<TokenPair, AppError> {
-        self.generate_token_pair_with_authorization_details(
-            user_id,
-            workspace_id,
-            workspace_region,
-            scope,
-            Vec::new(),
-            session_id,
-            tenant_id,
-            organization_id,
-            acr,
-            amr,
-            client_id,
-            auth_time,
-            cnf_jkt,
-        )
-        .await
-    }
-
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "Authorization details issuance keeps all claim inputs explicit."
-    )]
-    pub async fn generate_token_pair_with_authorization_details(
-        &self,
-        user_id: Uuid,
-        workspace_id: Option<Uuid>,
-        workspace_region: Option<String>,
-        scope: &str,
-        authorization_details: Vec<serde_json::Value>,
-        session_id: Option<Uuid>,
-        tenant_id: Option<Uuid>,
-        organization_id: Option<Uuid>,
-        acr: Option<&str>,
-        amr: Option<Vec<String>>,
-        client_id: Option<&str>,
-        auth_time: Option<i64>,
-        cnf_jkt: Option<String>,
-    ) -> Result<TokenPair, AppError> {
-        self.generate_token_pair_with_confirmation(
+        let TokenPairIssueRequest {
             user_id,
             workspace_id,
             workspace_region,
@@ -215,31 +61,8 @@ impl JwtService {
             amr,
             client_id,
             auth_time,
-            cnf_jkt.map(TokenConfirmation::dpop),
-        )
-        .await
-    }
-
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "Authorization details issuance keeps all claim inputs explicit."
-    )]
-    pub async fn generate_token_pair_with_confirmation(
-        &self,
-        user_id: Uuid,
-        workspace_id: Option<Uuid>,
-        workspace_region: Option<String>,
-        scope: &str,
-        authorization_details: Vec<serde_json::Value>,
-        session_id: Option<Uuid>,
-        tenant_id: Option<Uuid>,
-        organization_id: Option<Uuid>,
-        acr: Option<&str>,
-        amr: Option<Vec<String>>,
-        client_id: Option<&str>,
-        auth_time: Option<i64>,
-        confirmation: Option<TokenConfirmation>,
-    ) -> Result<TokenPair, AppError> {
+            confirmation,
+        } = request;
         let now = Utc::now();
         let session_id = session_id.unwrap_or_else(Uuid::new_v4);
         let access_jti = Uuid::new_v4().to_string();
@@ -326,22 +149,11 @@ impl JwtService {
         self.encode_token(&new_claims).await
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "M2M issuance keeps subject, workspace, and audience explicit."
-    )]
-    pub async fn generate_m2m_access_token(
+    pub async fn issue_m2m_access_token(
         &self,
-        client_id: &str,
-        principal_id: Uuid,
-        tenant_id: Uuid,
-        organization_id: Option<Uuid>,
-        workspace_id: Uuid,
-        workspace_region: Option<String>,
-        scope: &str,
-        audience: Option<&str>,
+        request: M2mAccessTokenIssueRequest<'_>,
     ) -> Result<String, AppError> {
-        self.generate_m2m_access_token_bound(
+        let M2mAccessTokenIssueRequest {
             client_id,
             principal_id,
             tenant_id,
@@ -350,27 +162,8 @@ impl JwtService {
             workspace_region,
             scope,
             audience,
-            None,
-        )
-        .await
-    }
-
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "M2M issuance keeps subject, workspace, audience, and sender binding explicit."
-    )]
-    pub async fn generate_m2m_access_token_bound(
-        &self,
-        client_id: &str,
-        principal_id: Uuid,
-        tenant_id: Uuid,
-        organization_id: Option<Uuid>,
-        workspace_id: Uuid,
-        workspace_region: Option<String>,
-        scope: &str,
-        audience: Option<&str>,
-        confirmation: Option<TokenConfirmation>,
-    ) -> Result<String, AppError> {
+            confirmation,
+        } = request;
         let now = Utc::now();
         let claims = TokenClaims {
             jti: Uuid::new_v4().to_string(),

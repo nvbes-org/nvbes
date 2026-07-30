@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use crate::{app::DeveloperAppState, http::error::AppError, identity::IdentityClaims};
 
+const DEVELOPER_AUDIENCE: &str = "nvbes-developer-service";
+
 #[derive(Debug, Clone)]
 pub struct DeveloperAuth {
     pub user_id: Uuid,
@@ -50,6 +52,12 @@ fn authenticated_user(
         return Err(AppError::unauthorized(
             "invalid_token",
             "The access token is inactive.",
+        ));
+    }
+    if claims.audience.as_deref() != Some(DEVELOPER_AUDIENCE) {
+        return Err(AppError::unauthorized(
+            "invalid_token_audience",
+            "The access token is not intended for Developer.",
         ));
     }
     if claims.network_valid == Some(false) {
@@ -123,7 +131,7 @@ pub(crate) fn require_recent_step_up(auth: &DeveloperAuth) -> Result<(), AppErro
 
 #[cfg(test)]
 mod tests {
-    use super::{authenticated_user, require_recent_step_up};
+    use super::{DEVELOPER_AUDIENCE, authenticated_user, require_recent_step_up};
     use crate::identity::IdentityClaims;
     use uuid::Uuid;
 
@@ -139,6 +147,7 @@ mod tests {
                 client_id: None,
                 principal_type: Some("user".to_string()),
                 token_type: Some("access".to_string()),
+                audience: Some(DEVELOPER_AUDIENCE.to_string()),
                 sub: Some(user_id.to_string()),
                 tenant_id: Some(tenant_id),
                 organization_id: None,
@@ -162,6 +171,38 @@ mod tests {
     }
 
     #[test]
+    fn authentication_rejects_foreign_audience() {
+        let error = authenticated_user(
+            "token".to_string(),
+            IdentityClaims {
+                active: true,
+                scope: None,
+                client_id: Some("cloud-web".to_string()),
+                principal_type: Some("user".to_string()),
+                token_type: Some("access".to_string()),
+                audience: Some("nvbes-cloud-service".to_string()),
+                sub: Some(Uuid::new_v4().to_string()),
+                tenant_id: Some(Uuid::new_v4()),
+                organization_id: None,
+                workspace_id: None,
+                email: None,
+                display_name: None,
+                acr: None,
+                amr: Vec::new(),
+                auth_time: None,
+                sid: None,
+                exp: None,
+                iat: None,
+                nbf: None,
+                network_valid: Some(true),
+            },
+        )
+        .expect_err("Developer must reject a Cloud token");
+
+        assert_eq!(error.code, "invalid_token_audience");
+    }
+
+    #[test]
     fn sensitive_actions_require_strong_and_recent_authentication() {
         let tenant_id = Uuid::new_v4();
         let user_id = Uuid::new_v4();
@@ -175,6 +216,7 @@ mod tests {
                     client_id: None,
                     principal_type: Some("user".to_string()),
                     token_type: Some("access".to_string()),
+                    audience: Some(DEVELOPER_AUDIENCE.to_string()),
                     sub: Some(user_id.to_string()),
                     tenant_id: Some(tenant_id),
                     organization_id: None,

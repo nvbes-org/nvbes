@@ -271,22 +271,23 @@ pub async fn exchange_code(
             None
         };
 
-        let tokens = jwt.generate_token_pair_with_confirmation(
-            code.user_id,
-            code.workspace_id,
-            workspace_region,
-            &code.scope,
-            code.authorization_details.clone(),
-            code.client_session_id,
-            code.tenant_id,
-            code.organization_id,
-            Some(&assurance.acr),
-            Some(assurance.amr.clone()),
-            Some(&code.client_id),
-            Some(assurance.auth_time),
-            input.token_confirmation,
-        )
-        .await?;
+        let tokens = jwt
+            .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
+                user_id: code.user_id,
+                workspace_id: code.workspace_id,
+                workspace_region,
+                scope: &code.scope,
+                authorization_details: code.authorization_details.clone(),
+                session_id: code.client_session_id,
+                tenant_id: code.tenant_id,
+                organization_id: code.organization_id,
+                acr: Some(&assurance.acr),
+                amr: Some(assurance.amr.clone()),
+                client_id: Some(&code.client_id),
+                auth_time: Some(assurance.auth_time),
+                confirmation: input.token_confirmation,
+            })
+            .await?;
 
         refresh_store::store_refresh_token(
             redis,

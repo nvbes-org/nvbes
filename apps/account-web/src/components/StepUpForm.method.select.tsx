@@ -1,5 +1,5 @@
 import { Key, KeyRound, LifeBuoy, Mail, Smartphone } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { Field, FieldLabel } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -28,10 +28,10 @@ export function StepUpMethodSelect({
   onMethodChange: (value: StepUpMethod) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor="stepup-method" className="text-xs">
+    <Field>
+      <FieldLabel htmlFor="stepup-method" className="text-xs">
         Méthode de vérification
-      </Label>
+      </FieldLabel>
       <Select value={method} onValueChange={(value) => onMethodChange(value as StepUpMethod)}>
         <SelectTrigger id="stepup-method" className="w-full text-xs">
           <SelectValue placeholder="Choisir une méthode" />
@@ -76,6 +76,6 @@ export function StepUpMethodSelect({
           </SelectGroup>
         </SelectContent>
       </Select>
-    </div>
+    </Field>
   );
 }

@@ -16,6 +16,9 @@ Architecture checks that enforce the Big Bang restructure rules.
 - `check-product-boundaries.gateway-cloud.mjs`: keeps Gateway Cloud as a
   stateless composition layer by blocking migrations, persistence crates, service
   runtime crate dependencies, database connection types and SQL statements.
+- `check-product-boundaries.mjs`: requires every resource server validator to
+  accept only its own OAuth audience. In particular, Cloud cannot accept an
+  Account access token.
 - `scripts/check-oss-internal-imports.mjs`: scans OSS and Cloud source projects
   for direct imports, `require`, dynamic imports, Rust `#[path]`, and include
   macros that point at `scope:internal` project packages or source paths.

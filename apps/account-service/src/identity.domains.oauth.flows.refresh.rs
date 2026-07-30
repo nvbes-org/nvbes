@@ -204,22 +204,23 @@ pub async fn refresh_token(
             None
         };
 
-        let tokens = jwt.generate_token_pair_with_confirmation(
-            user_id,
-            next_workspace_id,
-            workspace_region,
-            &refresh_scope,
-            authorization_details.clone(),
-            Some(session_id),
-            session.tenant_id,
-            session.organization_id,
-            Some(&refreshed_assurance.acr),
-            Some(refreshed_assurance.amr.clone()),
-            Some(&client_auth.client_id),
-            claims.auth_time,
-            token_confirmation,
-        )
-        .await?;
+        let tokens = jwt
+            .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
+                user_id,
+                workspace_id: next_workspace_id,
+                workspace_region,
+                scope: &refresh_scope,
+                authorization_details: authorization_details.clone(),
+                session_id: Some(session_id),
+                tenant_id: session.tenant_id,
+                organization_id: session.organization_id,
+                acr: Some(&refreshed_assurance.acr),
+                amr: Some(refreshed_assurance.amr.clone()),
+                client_id: Some(&client_auth.client_id),
+                auth_time: claims.auth_time,
+                confirmation: token_confirmation,
+            })
+            .await?;
 
         let returned_refresh_token = if security_profile
             == crate::domains::oauth::profiles::OAuthSecurityProfile::HighAssurance

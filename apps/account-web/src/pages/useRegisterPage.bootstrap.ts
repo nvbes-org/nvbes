@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -16,7 +16,7 @@ function probeRegisterSession(): Promise<boolean> {
     return registerSessionProbe;
   }
 
-  registerSessionProbe = identityClient
+  registerSessionProbe = accountClient
     .getMe()
     .then(async () => {
       await syncTrackingConsent();

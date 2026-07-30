@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 132
+- entries: 194
 - pending: 0
-- keep: 108
-- rotate: 24
+- keep: 150
+- rotate: 44
 - remove: 0
 - replace: 0
 
@@ -21,22 +21,34 @@
 |---|---|---:|---|---|---|
 | CLAMAV_HOST | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.clamav-host` |
 | CLAMAV_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.clamav-port` |
+| GRAFANA_CLOUD_STACK_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-cloud-stack-id` |
+| GRAFANA_FARO_APP_ID_ACCOUNT_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-app-id-account-web` |
+| GRAFANA_FARO_APP_ID_BACKOFFICE_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-app-id-backoffice-web` |
+| GRAFANA_FARO_APP_ID_CLOUD_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-app-id-cloud-web` |
+| GRAFANA_FARO_APP_ID_CONSOLE_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-app-id-console-web` |
+| GRAFANA_FARO_APP_ID_ENTERPRISE_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-app-id-enterprise-web` |
+| GRAFANA_FARO_SOURCEMAP_API_KEY | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.grafana-faro-sourcemap-api-key` |
+| GRAFANA_FARO_SOURCEMAP_ENDPOINT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-sourcemap-endpoint` |
+| GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED | Drive | keep | Drive lead | not-required | `deploy/oss/helm/nvbes#config.grafana-faro-sourcemap-upload-enabled` |
 | NVBES_ACCOUNT_DATABASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-account-database-url` |
-| NVBES_ACCOUNT_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-account-service-base-url` |
-| NVBES_ACCOUNT_SERVICE_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-account-service-client-id` |
-| NVBES_ACCOUNT_SERVICE_CLIENT_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-account-service-client-secret` |
+| NVBES_ACCOUNT_MIGRATION_DATABASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-account-migration-database-url` |
 | NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-account-worker-metrics-bind-addr` |
 | NVBES_ADDITIONAL_CORS_ORIGINS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-additional-cors-origins` |
 | NVBES_ANALYTICS_ID_SALT | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-analytics-id-salt` |
 | NVBES_API_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-api-base-url` |
 | NVBES_API_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-api-port` |
 | NVBES_APP_NAME | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-app-name` |
+| NVBES_AUTH_FACTOR_ENCRYPTION_KEY | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-auth-factor-encryption-key` |
+| NVBES_AUTH_FACTOR_ENCRYPTION_KEY_VERSION | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-auth-factor-encryption-key-version` |
 | NVBES_AUTH_PASSWORD_RESET_TTL_MINUTES | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-password-reset-ttl-minutes` |
 | NVBES_AUTH_POW_ENABLED | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-pow-enabled` |
 | NVBES_AUTH_REFRESH_TOKEN_TTL_HOURS | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-refresh-token-ttl-hours` |
+| NVBES_AUTH_SESSION_IDLE_TTL_MINUTES | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-session-idle-ttl-minutes` |
 | NVBES_AUTH_SESSION_TTL_HOURS | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-session-ttl-hours` |
 | NVBES_AUTH_STEP_UP_TTL_MINUTES | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-step-up-ttl-minutes` |
 | NVBES_AUTH_VERIFICATION_TTL_HOURS | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-auth-verification-ttl-hours` |
+| NVBES_BACKOFFICE_IDENTITY_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-backoffice-identity-client-id` |
+| NVBES_BACKOFFICE_IDENTITY_CLIENT_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-backoffice-identity-client-secret` |
 | NVBES_BETA_SEED_EMAIL | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-beta-seed-email` |
 | NVBES_BETA_SEED_PASSWORD | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-beta-seed-password` |
 | NVBES_BETA_SEED_WORKSPACE | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-beta-seed-workspace` |
@@ -51,22 +63,47 @@
 | NVBES_BILLING_FRAUD_STEP_UP_THRESHOLD | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-fraud-step-up-threshold` |
 | NVBES_BILLING_GRPC_ENDPOINT | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-grpc-endpoint` |
 | NVBES_BILLING_GRPC_PORT | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-grpc-port` |
+| NVBES_BILLING_IDENTITY_CLIENT_ID | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-identity-client-id` |
+| NVBES_BILLING_IDENTITY_CLIENT_SECRET | Billing/Usage | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-billing-identity-client-secret` |
 | NVBES_BILLING_MOLLIE_ROUTING_STATUS | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-mollie-routing-status` |
 | NVBES_BILLING_PORTAL_RETURN_URL | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-portal-return-url` |
 | NVBES_BILLING_SERVICE_BASE_URL | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-service-base-url` |
 | NVBES_BILLING_SERVICE_PORT | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-service-port` |
 | NVBES_BILLING_SUCCESS_URL | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-success-url` |
 | NVBES_BILLING_WORKER_METRICS_BIND_ADDR | Billing/Usage | keep | Billing lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-billing-worker-metrics-bind-addr` |
+| NVBES_CLOUD_IDENTITY_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-cloud-identity-client-id` |
+| NVBES_CLOUD_IDENTITY_CLIENT_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-cloud-identity-client-secret` |
+| NVBES_CLOUD_RUNTIME_DATABASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-cloud-runtime-database-url` |
 | NVBES_CLOUD_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-cloud-service-base-url` |
+| NVBES_CLOUD_SYSTEM_DATABASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-cloud-system-database-url` |
 | NVBES_CLOUD_WORKER_METRICS_BIND_ADDR | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-cloud-worker-metrics-bind-addr` |
 | NVBES_DATABASE_MAX_CONNECTIONS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-database-max-connections` |
 | NVBES_DATABASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-database-url` |
+| NVBES_DEVELOPER_ALLOWED_ORIGINS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-developer-allowed-origins` |
+| NVBES_DEVELOPER_GRPC_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-developer-grpc-port` |
+| NVBES_DEVELOPER_HTTP_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-developer-http-port` |
+| NVBES_DEVELOPER_IDENTITY_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-developer-identity-client-id` |
+| NVBES_DEVELOPER_IDENTITY_CLIENT_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-developer-identity-client-secret` |
 | NVBES_EMAIL_FROM_EMAIL | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-from-email` |
 | NVBES_EMAIL_FROM_NAME | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-from-name` |
 | NVBES_EMAIL_PROVIDER | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-provider` |
+| NVBES_ENTERPRISE_GRPC_AUTH_TOKEN | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-enterprise-grpc-auth-token` |
+| NVBES_ENTERPRISE_GRPC_ENDPOINT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-enterprise-grpc-endpoint` |
 | NVBES_ENV | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-env` |
+| NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256 | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-fapi-conformance-evidence-sha256` |
+| NVBES_FAPI_HIGH_ASSURANCE_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-fapi-high-assurance-enabled` |
 | NVBES_GATEWAY_CLOUD_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-gateway-cloud-port` |
+| NVBES_GATEWAY_IDENTITY_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-gateway-identity-client-id` |
+| NVBES_GATEWAY_IDENTITY_CLIENT_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-gateway-identity-client-secret` |
+| NVBES_IDENTITY_GRPC_ENDPOINT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-identity-grpc-endpoint` |
+| NVBES_IDENTITY_GRPC_PORT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-identity-grpc-port` |
+| NVBES_IDENTITY_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-identity-service-base-url` |
 | NVBES_JWT_SECRET | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-jwt-secret` |
+| NVBES_KMS_API_BASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-kms-api-base-url` |
+| NVBES_KMS_AUTH_TOKEN | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-kms-auth-token` |
+| NVBES_KMS_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-kms-enabled` |
+| NVBES_KMS_KEY_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-kms-key-id` |
+| NVBES_KMS_REGION | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-kms-region` |
 | NVBES_LOG_PII_MASKING | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-log-pii-masking` |
 | NVBES_LOYALSOLDIER_GEOIP_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-loyalsoldier-geoip-enabled` |
 | NVBES_LOYALSOLDIER_GEOIP_LICENSE_ACCEPTED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-loyalsoldier-geoip-license-accepted` |
@@ -96,10 +133,22 @@
 | NVBES_PROFILING_SAMPLE_RATE_HZ | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-profiling-sample-rate-hz` |
 | NVBES_REDIS_MAX_CONNECTIONS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-redis-max-connections` |
 | NVBES_REDIS_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-redis-url` |
+| NVBES_RELEASE | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-release` |
 | NVBES_REQUEST_E2EE_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-request-e2ee-enabled` |
 | NVBES_REQUEST_E2EE_KEY_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-request-e2ee-key-id` |
 | NVBES_REQUEST_E2EE_REQUIRED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-request-e2ee-required` |
 | NVBES_REQUEST_E2EE_SECRET | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-request-e2ee-secret` |
+| NVBES_REQUIRE_FARO_ACCOUNT_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-require-faro-account-web` |
+| NVBES_SECRET_MANAGER_API_BASE_URL | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-secret-manager-api-base-url` |
+| NVBES_SECRET_MANAGER_AUTH_TOKEN | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-secret-manager-auth-token` |
+| NVBES_SECRET_MANAGER_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-secret-manager-enabled` |
+| NVBES_SECRET_MANAGER_REGION | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-secret-manager-region` |
+| NVBES_SECRET_MANAGER_SECRET_ID | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-secret-manager-secret-id` |
+| NVBES_SMTP_HOST | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-smtp-host` |
+| NVBES_SMTP_PASSWORD | Email | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-smtp-password` |
+| NVBES_SMTP_PORT | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-smtp-port` |
+| NVBES_SMTP_STARTTLS | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-smtp-starttls` |
+| NVBES_SMTP_USERNAME | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-smtp-username` |
 | NVBES_STAGING_ACCOUNT_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-staging-account-service-base-url` |
 | NVBES_STAGING_API_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-staging-api-base-url` |
 | NVBES_STAGING_BILLING_DATABASE_URL | Billing/Usage | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-staging-billing-database-url` |
@@ -114,6 +163,10 @@
 | NVBES_TLS_KEY_PATH | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-tls-key-path` |
 | NVBES_TWILIO_API_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-twilio-api-base-url` |
 | NVBES_WEB_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-web-base-url` |
+| POSTHOG_CLI_API_KEY | Observability | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.posthog-cli-api-key` |
+| POSTHOG_CLI_HOST | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.posthog-cli-host` |
+| POSTHOG_CLI_PROJECT_ID | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.posthog-cli-project-id` |
+| POSTHOG_SOURCEMAP_UPLOAD_ENABLED | Drive | keep | Drive lead | not-required | `deploy/oss/helm/nvbes#config.posthog-sourcemap-upload-enabled` |
 | QUARANTINE_RETENTION_DAYS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.quarantine-retention-days` |
 | SCAN_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.scan-enabled` |
 | SCAN_ENGINE | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.scan-engine` |
@@ -123,6 +176,11 @@
 | SENTRY_DSN | Observability | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.sentry-dsn` |
 | SENTRY_ORG | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-org` |
 | SENTRY_PROJECT | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project` |
+| SENTRY_PROJECT_ACCOUNT_WEB | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project-account-web` |
+| SENTRY_PROJECT_BACKOFFICE_WEB | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project-backoffice-web` |
+| SENTRY_PROJECT_CLOUD_WEB | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project-cloud-web` |
+| SENTRY_PROJECT_CONSOLE_WEB | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project-console-web` |
+| SENTRY_PROJECT_ENTERPRISE_WEB | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-project-enterprise-web` |
 | SENTRY_RELEASE | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-release` |
 | SENTRY_TRACES_SAMPLE_RATE | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-traces-sample-rate` |
 | SENTRY_URL | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#config.sentry-url` |
@@ -138,12 +196,16 @@
 | VITE_CLOUD_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-cloud-service-base-url` |
 | VITE_CONSOLE_ACCOUNT_CLIENT_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-console-account-client-id` |
 | VITE_CONSOLE_WEB_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-console-web-base-url` |
+| VITE_DEVELOPER_SERVICE_BASE_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-developer-service-base-url` |
 | VITE_FARO_API_KEY | Platform | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#public-env.vite-faro-api-key` |
+| VITE_FARO_ENVIRONMENT | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-environment` |
 | VITE_FARO_RELEASE | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-release` |
 | VITE_FARO_SESSION_SAMPLE_RATE | Identity | keep | Identity lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-session-sample-rate` |
 | VITE_FARO_TRACING_ORIGINS | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-tracing-origins` |
 | VITE_FARO_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-url` |
+| VITE_FARO_URL_ACCOUNT_WEB | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-faro-url-account-web` |
 | VITE_GRAFANA_FARO_URL | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-grafana-faro-url` |
+| VITE_NVBES_BUILD_ID | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-nvbes-build-id` |
 | VITE_POSTHOG_HOST | Observability | keep | Observability lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-posthog-host` |
 | VITE_POSTHOG_KEY | Observability | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#public-env.vite-posthog-key` |
 | VITE_REACT_QUERY_DEVTOOLS_ENABLED | Platform | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#public-env.vite-react-query-devtools-enabled` |

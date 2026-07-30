@@ -18,4 +18,4 @@ pub use client_credentials::client_credentials_grant;
 pub use codes::{create_authorization_code, exchange_code};
 pub use refresh::{refresh_token, revoke_refresh_family};
 pub use token_exchange::token_exchange;
-pub use tokens::{generate_tokens, introspect_token};
+pub use tokens::introspect_token;

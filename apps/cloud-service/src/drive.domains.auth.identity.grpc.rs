@@ -18,9 +18,9 @@ use crate::{
 
 use super::types::IdentityIntrospectionResponse;
 
-const ACCOUNT_GRPC_ENDPOINT_ENV: &str = "NVBES_ACCOUNT_GRPC_ENDPOINT";
-const ACCOUNT_CLIENT_ID_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_ID";
-const ACCOUNT_CLIENT_SECRET_ENV: &str = "NVBES_ACCOUNT_SERVICE_CLIENT_SECRET";
+const IDENTITY_GRPC_ENDPOINT_ENV: &str = "NVBES_IDENTITY_GRPC_ENDPOINT";
+const IDENTITY_CLIENT_ID_ENV: &str = "NVBES_CLOUD_IDENTITY_CLIENT_ID";
+const IDENTITY_CLIENT_SECRET_ENV: &str = "NVBES_CLOUD_IDENTITY_CLIENT_SECRET";
 const INTROSPECTION_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
@@ -31,10 +31,10 @@ pub(super) struct IdentityGrpcClient {
 
 impl IdentityGrpcClient {
     pub(super) fn from_env() -> Result<Self, AppError> {
-        let endpoint = std::env::var(ACCOUNT_GRPC_ENDPOINT_ENV)
+        let endpoint = std::env::var(IDENTITY_GRPC_ENDPOINT_ENV)
             .unwrap_or_else(|_| "http://127.0.0.1:4010".to_string());
-        let client_id = required_env(ACCOUNT_CLIENT_ID_ENV)?;
-        let client_secret = required_env(ACCOUNT_CLIENT_SECRET_ENV)?;
+        let client_id = required_env(IDENTITY_CLIENT_ID_ENV)?;
+        let client_secret = required_env(IDENTITY_CLIENT_SECRET_ENV)?;
         let channel = Endpoint::from_shared(endpoint)
             .map_err(|error| {
                 AppError::internal("identity_grpc_endpoint_invalid", error.to_string())
@@ -90,6 +90,7 @@ fn convert_response(
         client_id: value.client_id,
         principal_type: value.principal_type,
         token_type: value.token_type,
+        audience: value.audience,
         sub: value.sub,
         role: value.role,
         tenant_id: optional_uuid(value.tenant_id, "tenant_id")?,

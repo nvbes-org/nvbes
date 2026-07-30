@@ -10,7 +10,7 @@ export function ResultCard({
   title: string;
   description: ReactNode;
   icon: ReactNode;
-  actions: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <Card className="w-full max-w-sm">
@@ -19,7 +19,7 @@ export function ResultCard({
         <CardTitle>{title}</CardTitle>
         <CardDescription className="leading-relaxed">{description}</CardDescription>
       </CardHeader>
-      <CardFooter className="flex-col gap-3 pt-2">{actions}</CardFooter>
+      {actions ? <CardFooter className="flex-col gap-3 pt-2">{actions}</CardFooter> : null}
     </Card>
   );
 }

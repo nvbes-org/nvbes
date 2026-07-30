@@ -8,8 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Label } from '@/components/ui/label';
-import { FieldError } from '@/components/ui/field';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import type { SupportedRegion } from '../identity.auth.api';
@@ -50,11 +49,11 @@ export function RegionSelect({
   const selectedRegion = regions.find((entry) => entry.country_code === selectValue);
 
   return (
-    <div className="flex flex-col gap-2">
+    <Field>
       <div className="flex items-center gap-2">
-        <Label htmlFor={id}>
+        <FieldLabel htmlFor={id}>
           Région <span className="text-destructive">*</span>
-        </Label>
+        </FieldLabel>
         {loading && (
           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Spinner className="size-3" />
@@ -109,7 +108,7 @@ export function RegionSelect({
           Sélectionnez le pays où vos données seront stockées.
         </p>
       )}
-    </div>
+    </Field>
   );
 }
 

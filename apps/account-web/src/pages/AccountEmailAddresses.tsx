@@ -5,8 +5,8 @@ import { MailPlus, Send, Trash2 } from 'lucide-react';
 import { AsyncStateButton } from '@/components/AsyncStateButton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 export function AccountEmailAddresses({
   adding,
@@ -44,8 +44,8 @@ export function AccountEmailAddresses({
           onSubmit={onAdd}
           className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end pb-5"
         >
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="secondary-email">Ajouter un email secondaire</Label>
+          <Field>
+            <FieldLabel htmlFor="secondary-email">Ajouter un email secondaire</FieldLabel>
             <Input
               id="secondary-email"
               type="email"
@@ -55,7 +55,7 @@ export function AccountEmailAddresses({
               onChange={(event) => onDraftChange(event.target.value)}
               className="bg-card"
             />
-          </div>
+          </Field>
           <AsyncStateButton
             type="submit"
             size="icon"

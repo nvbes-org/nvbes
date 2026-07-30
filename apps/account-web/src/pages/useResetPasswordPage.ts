@@ -9,7 +9,7 @@ import {
   passwordHasSupportedLength,
 } from '../identity.password.policy';
 import { resetPassword } from '../identity.password.api';
-import { estimatePasswordStrength } from './RegisterPage.password-strength';
+import { estimatePasswordStrength } from '@/lib/password-strength';
 
 export function useResetPasswordPage() {
   const navigate = useNavigate();

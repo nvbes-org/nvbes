@@ -1,4 +1,3 @@
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -18,20 +17,4 @@ export function PersonalInfoSkeleton() {
       </Card>
     </div>
   );
-}
-
-function Message({ message, tone }: { message: string; tone: 'error' | 'success' }) {
-  return (
-    <Alert variant={tone === 'error' ? 'destructive' : 'default'}>
-      <AlertDescription>{message}</AlertDescription>
-    </Alert>
-  );
-}
-
-export function PersonalInfoError({ message }: { message: string }) {
-  return <Message message={message} tone="error" />;
-}
-
-export function PersonalInfoSuccess({ message }: { message: string }) {
-  return <Message message={message} tone="success" />;
 }

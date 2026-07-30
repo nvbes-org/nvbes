@@ -1,5 +1,4 @@
 import { useDeferredValue, useEffect, useState } from 'react';
-
 import { cn } from '@/lib/utils';
 
 interface PasswordStrength {
@@ -10,31 +9,11 @@ interface PasswordStrength {
 }
 
 const strengthLevels = [
-  {
-    label: 'Très faible',
-    color: 'bg-destructive',
-    textColor: 'text-destructive',
-  },
-  {
-    label: 'Très faible',
-    color: 'bg-orange-500',
-    textColor: 'text-orange-600',
-  },
-  {
-    label: 'Faible',
-    color: 'bg-amber-500',
-    textColor: 'text-amber-600',
-  },
-  {
-    label: 'Bon',
-    color: 'bg-teal-600',
-    textColor: 'text-teal-700',
-  },
-  {
-    label: 'Fort',
-    color: 'bg-emerald-600',
-    textColor: 'text-emerald-700',
-  },
+  { label: 'Très faible', color: 'bg-destructive', textColor: 'text-destructive' },
+  { label: 'Très faible', color: 'bg-orange-500', textColor: 'text-orange-600' },
+  { label: 'Faible', color: 'bg-amber-500', textColor: 'text-amber-600' },
+  { label: 'Bon', color: 'bg-teal-600', textColor: 'text-teal-700' },
+  { label: 'Fort', color: 'bg-emerald-600', textColor: 'text-emerald-700' },
 ] as const;
 
 export function PasswordStrengthMeter({ password }: { password: string }) {
@@ -48,7 +27,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
     }
 
     let active = true;
-    void import('./RegisterPage.password-strength').then(({ estimatePasswordStrength }) => {
+    void import('@/lib/password-strength').then(({ estimatePasswordStrength }) => {
       if (active) {
         setResult(estimatePasswordStrength(deferredPassword));
       }
@@ -59,9 +38,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
     };
   }, [deferredPassword]);
 
-  if (!result) {
-    return null;
-  }
+  if (!result) return null;
 
   const score = Math.min(Math.max(result.score, 0), strengthLevels.length - 1);
   const level = strengthLevels[score] ?? strengthLevels[0];
@@ -89,11 +66,11 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
       </div>
       <div className="flex items-center justify-between">
         <span className={cn('text-xs font-medium', level.textColor)}>{level.label}</span>
-        {result.feedback.warning && (
+        {result.feedback.warning ? (
           <span className="max-w-[200px] truncate text-xs text-destructive">
             {result.feedback.warning}
           </span>
-        )}
+        ) : null}
       </div>
     </div>
   );

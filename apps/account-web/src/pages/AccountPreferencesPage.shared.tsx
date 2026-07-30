@@ -1,5 +1,6 @@
 import { Moon, Settings, Sun } from 'lucide-react';
 
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -32,13 +33,12 @@ export function AccountPreferencesPageContent({
   onLanguageChange: (value: Language) => void;
 }) {
   return (
-    <div className="flex animate-fade-slide-up flex-col gap-6 [animation-delay:0ms]">
-      <div>
-        <h1 className="font-heading mt-0 text-xl font-semibold">Preferences</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Personnalisez votre experience utilisateur.
-        </p>
-      </div>
+    <AccountPage>
+      <AccountPageHeader
+        size="section"
+        title="Preferences"
+        description="Personnalisez votre experience utilisateur."
+      />
 
       <Card>
         <CardHeader>
@@ -95,6 +95,6 @@ export function AccountPreferencesPageContent({
           </Select>
         </CardContent>
       </Card>
-    </div>
+    </AccountPage>
   );
 }

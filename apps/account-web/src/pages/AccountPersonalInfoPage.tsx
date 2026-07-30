@@ -1,4 +1,5 @@
 import { profileAvatarUrl } from '@/account.avatar';
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';
 import { AccountEmailAddresses } from './AccountEmailAddresses';
 import { PersonalInfoCard, PersonalInfoSkeleton } from './AccountPersonalInfoPage.shared';
 import { useAccountEmailAddresses } from './useAccountEmailAddresses';
@@ -41,10 +42,8 @@ export default function AccountPersonalInfoPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-heading font-semibold">Informations personnelles</h1>
-      </div>
+    <AccountPage>
+      <AccountPageHeader title="Informations personnelles" contentClassName="max-w-2xl" />
 
       <div className="max-w-4xl">
         <PersonalInfoCard
@@ -77,12 +76,13 @@ export default function AccountPersonalInfoPage() {
         />
       </div>
 
-      <div className="max-w-2xl">
-        <h1 className="text-xl font-heading font-semibold">Addresses emails</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          L&apos;email principal reste celui utilise pour la connexion et les documents du compte.
-        </p>
-      </div>
+      <AccountPageHeader
+        as="h2"
+        size="section"
+        title="Addresses emails"
+        description="L'email principal reste celui utilise pour la connexion et les documents du compte."
+        contentClassName="max-w-2xl"
+      />
 
       <div className="max-w-4xl">
         <AccountEmailAddresses
@@ -101,6 +101,6 @@ export default function AccountPersonalInfoPage() {
           onResendVerification={accountEmails.handleResendVerification}
         />
       </div>
-    </div>
+    </AccountPage>
   );
 }

@@ -43,4 +43,5 @@ message IntrospectAccessTokenResponse {
   optional string actor_organization_id = 29;
   optional string actor_tenant_id = 30;
   optional bool network_valid = 31;
+  optional string audience = 32;
 }

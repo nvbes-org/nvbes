@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { emailHasSupportedFormat } from '../identity.email.policy';
 import { passwordHasSupportedLength } from '../identity.password.policy';
 import { usernameHasSupportedLength } from '../identity.username.policy';
-import { estimatePasswordStrength } from './RegisterPage.password-strength';
+import { estimatePasswordStrength } from '@/lib/password-strength';
 
 export function useRegisterPageState() {
   const [username, setUsername] = useState('');

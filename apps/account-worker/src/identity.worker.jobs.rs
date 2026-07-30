@@ -118,7 +118,7 @@ mod tests {
     };
 
     #[test]
-    fn identity_worker_retries_only_transient_owned_jobs() {
+    fn account_worker_retries_only_transient_owned_jobs() {
         let transient =
             JobExecutionError::transient("provider_unavailable", "Provider is unavailable");
         let permanent = JobExecutionError::permanent("invalid_payload", "Job payload is invalid");

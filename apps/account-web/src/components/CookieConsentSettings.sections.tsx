@@ -14,6 +14,43 @@ import { Switch } from '@/components/ui/switch';
 import type { CookieConsentState } from '../tracking-consent';
 import { essentialVendors } from './CookieConsentSettings.shared';
 
+function CookieConsentToggleSection({
+  title,
+  description,
+  id,
+  label,
+  settingDescription,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  description: string;
+  id: string;
+  label: string;
+  settingDescription: string;
+  checked: boolean;
+  onCheckedChange: () => void;
+}) {
+  return (
+    <>
+      <FieldSeparator />
+      <FieldSet>
+        <FieldLegend>{title}</FieldLegend>
+        <FieldDescription>{description}</FieldDescription>
+        <FieldGroup>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel htmlFor={id}>{label}</FieldLabel>
+              <FieldDescription>{settingDescription}</FieldDescription>
+            </FieldContent>
+            <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+          </Field>
+        </FieldGroup>
+      </FieldSet>
+    </>
+  );
+}
+
 export function CookieConsentEssentialSection() {
   return (
     <FieldSet>
@@ -43,31 +80,15 @@ export function CookieConsentAnalyticsSection({
   onTogglePurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
-    <>
-      <FieldSeparator />
-      <FieldSet>
-        <FieldLegend>Comprendre l'usage du produit</FieldLegend>
-        <FieldDescription>
-          Nous aide à savoir quelles fonctions sont utiles, sans lire votre contenu. Fourni par
-          PostHog.
-        </FieldDescription>
-        <FieldGroup>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel htmlFor="privacy-product-analytics">Mesure d'audience</FieldLabel>
-              <FieldDescription>
-                Pages et fonctionnalités utilisées, sans contenu utilisateur.
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="privacy-product-analytics"
-              checked={cookieConsent.analytics.productAnalytics}
-              onCheckedChange={() => onTogglePurpose('productAnalytics')}
-            />
-          </Field>
-        </FieldGroup>
-      </FieldSet>
-    </>
+    <CookieConsentToggleSection
+      title="Comprendre l'usage du produit"
+      description="Nous aide à savoir quelles fonctions sont utiles, sans lire votre contenu. Fourni par PostHog."
+      id="privacy-product-analytics"
+      label="Mesure d'audience"
+      settingDescription="Pages et fonctionnalités utilisées, sans contenu utilisateur."
+      checked={cookieConsent.analytics.productAnalytics}
+      onCheckedChange={() => onTogglePurpose('productAnalytics')}
+    />
   );
 }
 
@@ -79,30 +100,14 @@ export function CookieConsentPerformanceSection({
   onTogglePurpose: (purpose: keyof CookieConsentState['analytics']) => void;
 }) {
   return (
-    <>
-      <FieldSeparator />
-      <FieldSet>
-        <FieldLegend>Corriger les problèmes techniques</FieldLegend>
-        <FieldDescription>
-          Autorise des diagnostics minimisés pour améliorer la stabilité. Fourni par Sentry et,
-          selon le déploiement, Grafana Labs.
-        </FieldDescription>
-        <FieldGroup>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel htmlFor="privacy-error-tracking">Rapports d'erreurs</FieldLabel>
-              <FieldDescription>
-                Informations techniques sur les pannes, hors pages sensibles.
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="privacy-error-tracking"
-              checked={cookieConsent.analytics.errorTracking}
-              onCheckedChange={() => onTogglePurpose('errorTracking')}
-            />
-          </Field>
-        </FieldGroup>
-      </FieldSet>
-    </>
+    <CookieConsentToggleSection
+      title="Corriger les problèmes techniques"
+      description="Autorise des diagnostics minimisés pour améliorer la stabilité. Fourni par Sentry et, selon le déploiement, Grafana Labs."
+      id="privacy-error-tracking"
+      label="Rapports d'erreurs"
+      settingDescription="Informations techniques sur les pannes, hors pages sensibles."
+      checked={cookieConsent.analytics.errorTracking}
+      onCheckedChange={() => onTogglePurpose('errorTracking')}
+    />
   );
 }

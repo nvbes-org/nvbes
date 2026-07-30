@@ -48,6 +48,18 @@ pub async fn authenticate_client<T>(db: &Database, request: &Request<T>) -> Resu
     Ok(client_id)
 }
 
+pub fn internal_client_audience(client_id: &str) -> Result<&'static str, Status> {
+    match client_id {
+        "cloud-worker" | "gateway-cloud" => Ok("nvbes-cloud-service"),
+        "billing-service" => Ok("nvbes-billing-service"),
+        "developer-service" => Ok("nvbes-developer-service"),
+        "backoffice-service" => Ok("nvbes-backoffice-service"),
+        _ => Err(Status::permission_denied(
+            "OAuth client is not approved for internal Identity introspection.",
+        )),
+    }
+}
+
 fn parse_basic_credentials<T>(request: &Request<T>) -> Result<(String, String), Status> {
     let encoded = request
         .metadata()
@@ -77,7 +89,7 @@ mod tests {
     use base64::Engine;
     use tonic::Request;
 
-    use super::parse_basic_credentials;
+    use super::{internal_client_audience, parse_basic_credentials};
 
     #[test]
     fn parses_basic_client_credentials() {
@@ -100,5 +112,22 @@ mod tests {
     #[test]
     fn rejects_missing_credentials() {
         assert!(parse_basic_credentials(&Request::new(())).is_err());
+    }
+
+    #[test]
+    fn internal_clients_are_bound_to_one_resource_audience() {
+        assert_eq!(
+            internal_client_audience("cloud-worker").unwrap(),
+            "nvbes-cloud-service"
+        );
+        assert_eq!(
+            internal_client_audience("gateway-cloud").unwrap(),
+            "nvbes-cloud-service"
+        );
+        assert_eq!(
+            internal_client_audience("billing-service").unwrap(),
+            "nvbes-billing-service"
+        );
+        assert!(internal_client_audience("customer-app").is_err());
     }
 }

@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { clientErrorMessage } from '@nvbes/web-runtime';
 import {
   isConsentRequiredError,
@@ -31,7 +31,7 @@ export async function bootstrapLoginAuth({
   | 'setEmail'
 >) {
   try {
-    const accountsList = await identityClient.listAccounts().catch(() => []);
+    const accountsList = await accountClient.listAccounts().catch(() => []);
     setConnectedAccounts(accountsList);
 
     const searchParams = new URLSearchParams(locationSearchStr);
@@ -48,7 +48,7 @@ export async function bootstrapLoginAuth({
         return;
       }
 
-      await identityClient.getMe();
+      await accountClient.getMe();
       await syncTrackingConsent();
       if (hasOAuthRequest) {
         await authorizeCurrentOAuth();
@@ -64,7 +64,7 @@ export async function bootstrapLoginAuth({
       return;
     }
 
-    await identityClient.getMe();
+    await accountClient.getMe();
     await syncTrackingConsent();
     if (hasOAuthRequest) {
       await authorizeCurrentOAuth();

@@ -1,38 +1,37 @@
-import { CircleOffIcon } from 'lucide-react';
-import { AuthBrandWordmark } from './AuthBrandWordmark';
+import { AuthBrandPanel } from "@/components/AuthBrandPanel";
+import type { LoginStep } from "./LoginProgress";
 
-export function LoginBrandPanel() {
-  return (
-    <div className="relative hidden w-[45%] overflow-hidden lg:block">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-primary/6 to-background" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_40%,hsl(var(--primary)/0.12),transparent_70%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,hsl(var(--primary)/0.06),transparent_60%)]" />
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E\")",
-        }}
-      />
-      <div className="relative z-10 flex h-full flex-col justify-between p-12 xl:p-16">
-        <div className="animate-fade-slide-up">
-          <div className="mb-16 inline-flex size-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <CircleOffIcon className="size-5 stroke-[2.5]" aria-hidden="true" />
-          </div>
-          <AuthBrandWordmark />
-          <p
-            className="auth-brand-tagline mt-4 max-w-xs text-base leading-relaxed text-muted-foreground"
-            data-wordmark="Votre écosystème numérique."
-          >
-            Votre écosystème numérique.
-          </p>
-        </div>
-        <div className="animate-fade-slide-up [animation-delay:200ms]">
-          <p className="text-xs text-muted-foreground/50">
-            &copy; {new Date().getFullYear()} nvbes
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+const STEP_COPY: Record<LoginStep, { title: string; description: string }> = {
+	chooser: {
+		title: "Choisir un compte",
+		description: "Sélectionnez le compte avec lequel vous souhaitez continuer.",
+	},
+	identifier: {
+		title: "Se connecter",
+		description:
+			"Utilisez votre compte nvbes pour accéder à votre espace sécurisé.",
+	},
+	password: {
+		title: "Bienvenue",
+		description:
+			"Confirmez votre identité pour continuer vers vos services nvbes.",
+	},
+	webauthn: {
+		title: "Clé de sécurité",
+		description: "Validez la connexion avec votre clé de sécurité.",
+	},
+	mfa: {
+		title: "Vérification",
+		description: "Terminez la vérification de sécurité de votre compte.",
+	},
+	consent: {
+		title: "Demande d'autorisation",
+		description: "Vérifiez les accès demandés par l'application.",
+	},
+};
+
+export function LoginBrandPanel({ step }: { step: LoginStep }) {
+	const copy = STEP_COPY[step];
+
+	return <AuthBrandPanel title={copy.title} description={copy.description} />;
 }

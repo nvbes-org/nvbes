@@ -1,7 +1,7 @@
 import { Key, Monitor, ShieldCheck, ShieldOff } from 'lucide-react';
 
+import { AccountActionItem } from '@/components/AccountActionItem';
 import { Card, CardContent } from '@/components/ui/card';
-import { SecurityActionRow } from './AccountSecurityPage.row';
 import type { SecurityOverview } from './useAccountSecurityPage';
 
 export function SecurityMfaCard({
@@ -20,9 +20,11 @@ export function SecurityMfaCard({
   return (
     <Card>
       <CardContent className="flex flex-col">
-        <SecurityActionRow
+        <AccountActionItem
           icon={overview.mfa_enabled ? ShieldCheck : ShieldOff}
-          iconColor={overview.mfa_enabled ? 'size-4 text-primary' : 'size-4 text-muted-foreground'}
+          iconClassName={
+            overview.mfa_enabled ? 'size-4 text-primary' : 'size-4 text-muted-foreground'
+          }
           label="Passkeys et authentification multifacteur"
           description={overview.mfa_enabled ? 'Configurer et activee' : 'Non configuree'}
           badgeLabel={overview.mfa_enabled ? 'Active' : 'Inactive'}
@@ -31,7 +33,7 @@ export function SecurityMfaCard({
           disabled={disabled}
         />
 
-        <SecurityActionRow
+        <AccountActionItem
           icon={Key}
           label="Mot de passe"
           description="Modifier votre mot de passe"
@@ -39,7 +41,7 @@ export function SecurityMfaCard({
           disabled={disabled}
         />
 
-        <SecurityActionRow
+        <AccountActionItem
           icon={Monitor}
           label="Sessions actives"
           description={`${overview.session_count} session(s) ouverte(s)`}

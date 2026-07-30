@@ -13,9 +13,9 @@ mod migrations;
 #[path = "identity.worker.rs"]
 mod worker;
 
-const IDENTITY_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR";
+const ACCOUNT_WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_ACCOUNT_WORKER_METRICS_BIND_ADDR";
 const WORKER_METRICS_BIND_ADDR_ENV: &str = "NVBES_WORKER_METRICS_BIND_ADDR";
-const DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
+const DEFAULT_ACCOUNT_WORKER_METRICS_BIND_ADDR: &str = "127.0.0.1:4102";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
         return worker::run_housekeeping_job(&state).await;
     }
 
-    let metrics_bind_addr = identity_worker_metrics_bind_addr();
+    let metrics_bind_addr = account_worker_metrics_bind_addr();
     let _metrics_server = nvbes_observability::start_metrics_server(
         &config,
         state.observability.clone(),
@@ -82,8 +82,8 @@ async fn main() -> anyhow::Result<()> {
     .await
 }
 
-fn identity_worker_metrics_bind_addr() -> String {
-    std::env::var(IDENTITY_WORKER_METRICS_BIND_ADDR_ENV)
+fn account_worker_metrics_bind_addr() -> String {
+    std::env::var(ACCOUNT_WORKER_METRICS_BIND_ADDR_ENV)
         .or_else(|_| std::env::var(WORKER_METRICS_BIND_ADDR_ENV))
-        .unwrap_or_else(|_| DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR.to_string())
+        .unwrap_or_else(|_| DEFAULT_ACCOUNT_WORKER_METRICS_BIND_ADDR.to_string())
 }

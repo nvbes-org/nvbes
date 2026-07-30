@@ -1,5 +1,32 @@
 import type { DeviceGroup } from './AccountSessionsPage.device';
 import { DeviceCard } from './AccountSessionsPage.deviceCard';
+import { DeviceSection } from './AccountSessionsPage.section';
+
+function DeviceList({
+  devices,
+  revoking,
+  onRevoke,
+  onRevokeDevice,
+}: {
+  devices: DeviceGroup[];
+  revoking: string | null;
+  onRevoke: (sessionId: string) => void;
+  onRevokeDevice: (device: DeviceGroup) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {devices.map((device) => (
+        <DeviceCard
+          key={device.id}
+          device={device}
+          revoking={revoking}
+          onRevoke={onRevoke}
+          onRevokeDevice={onRevokeDevice}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function RecognizedDevicesSection({
   devices,
@@ -15,25 +42,17 @@ export function RecognizedDevicesSection({
   if (devices.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">Appareils reconnus & fiables</h2>
-        <p className="text-xs text-muted-foreground">
-          Appareils authentifiés avec un haut niveau de confiance ou enregistrés comme fiables.
-        </p>
-      </div>
-      <div className="flex flex-col gap-3">
-        {devices.map((device) => (
-          <DeviceCard
-            key={device.id}
-            device={device}
-            revoking={revoking}
-            onRevoke={onRevoke}
-            onRevokeDevice={onRevokeDevice}
-          />
-        ))}
-      </div>
-    </div>
+    <DeviceSection
+      title="Appareils reconnus & fiables"
+      description="Appareils authentifiés avec un haut niveau de confiance ou enregistrés comme fiables."
+    >
+      <DeviceList
+        devices={devices}
+        revoking={revoking}
+        onRevoke={onRevoke}
+        onRevokeDevice={onRevokeDevice}
+      />
+    </DeviceSection>
   );
 }
 
@@ -51,24 +70,16 @@ export function OtherDevicesSection({
   if (devices.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">Autres appareils (non reconnus)</h2>
-        <p className="text-xs text-muted-foreground">
-          Appareils récents ou non vérifiés ayant des sessions actives.
-        </p>
-      </div>
-      <div className="flex flex-col gap-3">
-        {devices.map((device) => (
-          <DeviceCard
-            key={device.id}
-            device={device}
-            revoking={revoking}
-            onRevoke={onRevoke}
-            onRevokeDevice={onRevokeDevice}
-          />
-        ))}
-      </div>
-    </div>
+    <DeviceSection
+      title="Autres appareils (non reconnus)"
+      description="Appareils récents ou non vérifiés ayant des sessions actives."
+    >
+      <DeviceList
+        devices={devices}
+        revoking={revoking}
+        onRevoke={onRevoke}
+        onRevokeDevice={onRevokeDevice}
+      />
+    </DeviceSection>
   );
 }

@@ -338,9 +338,8 @@ function checkGraphqlGatewayImplementation(governance) {
   const auth = readFileSync('apps/gateway-cloud/src/gateway.auth.rs', 'utf8');
   for (const expected of [
     'introspect_identity_token',
-    '/oauth/introspect',
     'bearer_token',
-    'IdentityIntrospectionResponse',
+    'IntrospectAccessTokenResponse',
     'principal_type',
     'network_valid',
   ]) {
@@ -359,8 +358,9 @@ function checkGraphqlGatewayImplementation(governance) {
   }
   const mainSource = readFileSync('apps/gateway-cloud/src/main.rs', 'utf8');
   for (const expected of [
-    'NVBES_ACCOUNT_SERVICE_CLIENT_ID',
-    'NVBES_ACCOUNT_SERVICE_CLIENT_SECRET',
+    'NVBES_IDENTITY_GRPC_ENDPOINT',
+    'NVBES_GATEWAY_IDENTITY_CLIENT_ID',
+    'NVBES_GATEWAY_IDENTITY_CLIENT_SECRET',
   ]) {
     if (!mainSource.includes(expected)) {
       errors.push(

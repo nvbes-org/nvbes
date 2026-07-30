@@ -232,6 +232,7 @@ pub async fn introspect_token(
         client_id: claims.client_id,
         principal_type: Some(principal_type.to_string()),
         token_type: Some(expected_type.to_string()),
+        audience: Some(claims.aud),
         sub: Some(claims.sub),
         role,
         tenant_id,

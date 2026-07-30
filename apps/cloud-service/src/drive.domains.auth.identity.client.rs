@@ -55,7 +55,7 @@ impl IdentityAuthClient {
     pub fn from_env() -> Result<Self, AppError> {
         let mtls_enabled = env_bool("NVBES_MTLS_ENABLED", false);
         let base_url = if mtls_enabled {
-            std::env::var("NVBES_ACCOUNT_SERVICE_MTLS_BASE_URL").unwrap_or_else(|_| {
+            std::env::var("NVBES_IDENTITY_SERVICE_MTLS_BASE_URL").unwrap_or_else(|_| {
                 let port = std::env::var("NVBES_MTLS_PORT")
                     .ok()
                     .and_then(|v| v.parse::<u16>().ok())
@@ -63,7 +63,7 @@ impl IdentityAuthClient {
                 format!("https://localhost:{port}")
             })
         } else {
-            std::env::var("NVBES_ACCOUNT_SERVICE_BASE_URL")
+            std::env::var("NVBES_IDENTITY_SERVICE_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8080".to_string())
         };
         let http = if mtls_enabled {

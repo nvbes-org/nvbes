@@ -7,6 +7,7 @@ pub struct IdentityIntrospectionResponse {
     pub client_id: Option<String>,
     pub principal_type: Option<String>,
     pub token_type: Option<String>,
+    pub audience: Option<String>,
     pub sub: Option<String>,
     pub role: Option<String>,
     pub tenant_id: Option<uuid::Uuid>,

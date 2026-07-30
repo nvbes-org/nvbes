@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
-const ACCOUNT_BASE_URL_ENV: &str = "NVBES_ACCOUNT_SERVICE_BASE_URL";
+const IDENTITY_BASE_URL_ENV: &str = "NVBES_IDENTITY_SERVICE_BASE_URL";
 
 #[derive(Clone)]
 pub struct IdentityClient {
@@ -20,6 +20,7 @@ pub struct IdentityClaims {
     pub client_id: Option<String>,
     pub principal_type: Option<String>,
     pub token_type: Option<String>,
+    pub audience: Option<String>,
     pub sub: Option<String>,
     pub tenant_id: Option<Uuid>,
     pub organization_id: Option<Uuid>,
@@ -76,7 +77,7 @@ pub struct CreateIdentityOAuthClient<'a> {
 
 impl IdentityClient {
     pub fn from_env() -> anyhow::Result<Self> {
-        let base_url = std::env::var(ACCOUNT_BASE_URL_ENV)
+        let base_url = std::env::var(IDENTITY_BASE_URL_ENV)
             .unwrap_or_else(|_| "http://localhost:4000".to_string());
         Ok(Self {
             http: Client::new(),

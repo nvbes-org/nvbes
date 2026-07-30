@@ -206,17 +206,17 @@ pub async fn client_credentials_grant(
     }
 
     let access_token = jwt
-        .generate_m2m_access_token_bound(
-            &client_auth.client_id,
-            service_account_principal_id,
-            workspace.tenant_id,
-            workspace.organization_id,
+        .issue_m2m_access_token(crate::domains::auth::jwt::M2mAccessTokenIssueRequest {
+            client_id: &client_auth.client_id,
+            principal_id: service_account_principal_id,
+            tenant_id: workspace.tenant_id,
+            organization_id: workspace.organization_id,
             workspace_id,
-            workspace.data_region,
-            scope_str,
-            Some(audience),
-            token_confirmation.clone(),
-        )
+            workspace_region: workspace.data_region,
+            scope: scope_str,
+            audience: Some(audience),
+            confirmation: token_confirmation.clone(),
+        })
         .await?;
     let claims = jwt.decode_token(&access_token, "access")?;
     audit::record_machine_token_issued(

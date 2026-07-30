@@ -1,5 +1,6 @@
 import { KeyRoundIcon, ShieldAlertIcon, ShieldCheckIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MfaMethodChoiceList, type MfaMethodChoice } from '@/components/MfaMethodChoiceList';
+import type { MfaMethod } from './LoginPage.mfa';
 import type { LoginPageMfaStepProps } from './LoginPageMfaStep.types';
 
 export function LoginPageMfaMethodChoices({
@@ -12,43 +13,38 @@ export function LoginPageMfaMethodChoices({
   LoginPageMfaStepProps,
   'hasTotp' | 'hasWebAuthn' | 'hasRecovery' | 'availableCount' | 'onMfaMethodSelect'
 >) {
+  const choices: MfaMethodChoice<MfaMethod>[] = [];
+  if (hasWebAuthn) {
+    choices.push({
+      value: 'webauthn',
+      label: 'Utiliser une passkey ou une clé de sécurité',
+      icon: KeyRoundIcon,
+      variant: 'default',
+    });
+  }
+  if (hasTotp) {
+    choices.push({
+      value: 'totp',
+      label: 'Utiliser le code TOTP de secours',
+      icon: ShieldCheckIcon,
+    });
+  }
+  if (hasRecovery) {
+    choices.push({
+      value: 'recovery',
+      label: 'Code de récupération',
+      icon: ShieldAlertIcon,
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-2">
-      {hasWebAuthn && (
-        <Button
-          variant="default"
-          className="w-full justify-start gap-3"
-          onClick={() => onMfaMethodSelect('webauthn')}
-        >
-          <KeyRoundIcon className="size-4" />
-          Utiliser une passkey ou une clé de sécurité
-        </Button>
-      )}
-      {hasTotp && (
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3"
-          onClick={() => onMfaMethodSelect('totp')}
-        >
-          <ShieldCheckIcon className="size-4 text-muted-foreground" />
-          Utiliser le code TOTP de secours
-        </Button>
-      )}
-      {hasRecovery && (
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3"
-          onClick={() => onMfaMethodSelect('recovery')}
-        >
-          <ShieldAlertIcon className="size-4 text-muted-foreground" />
-          Code de récupération
-        </Button>
-      )}
-      {availableCount === 0 && (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          Aucun facteur MFA n&apos;a été proposé pour cette session.
-        </p>
-      )}
-    </div>
+    <MfaMethodChoiceList
+      choices={choices}
+      buttonClassName="w-full"
+      emptyMessage={
+        availableCount === 0 ? "Aucun facteur MFA n'a été proposé pour cette session." : undefined
+      }
+      onSelect={onMfaMethodSelect}
+    />
   );
 }

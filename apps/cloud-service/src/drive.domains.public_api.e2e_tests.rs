@@ -60,9 +60,9 @@ async fn http_m2m_token_authorizes_public_api_me() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;
@@ -102,9 +102,9 @@ async fn http_public_api_auth_rejects_m2m_token_from_blocked_network() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;

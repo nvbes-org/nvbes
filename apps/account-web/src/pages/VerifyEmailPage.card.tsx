@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field, FieldLabel } from '@/components/ui/field';
 import type { VerificationStatus } from './VerifyEmailPage.shared';
 import { VerifyEmailStatusBanner } from './VerifyEmailPage.banner';
 
@@ -62,8 +62,8 @@ export function VerifyEmailCard({
           {message ? <VerifyEmailStatusBanner status={status} message={message} /> : null}
 
           {!verified ? (
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="verification-email">Email du compte</Label>
+            <Field className="gap-3">
+              <FieldLabel htmlFor="verification-email">Email du compte</FieldLabel>
               <Input
                 id="verification-email"
                 type="email"
@@ -73,7 +73,7 @@ export function VerifyEmailCard({
                 disabled={emailLocked}
                 placeholder="adresse@email.com"
               />
-            </div>
+            </Field>
           ) : null}
         </CardContent>
 

@@ -1,14 +1,8 @@
 import type { UserConsent } from '@nvbes/identity-client';
 import { FileCheck2, History, X } from 'lucide-react';
+import { AccountEmptyState } from '@/components/AccountEmptyState';
 
 import { Button } from '@/components/ui/button';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
 import {
   Item,
   ItemActions,
@@ -56,17 +50,11 @@ export function isVisibleConsentType(consentType: string): boolean {
 
 export function ConsentEmptyState() {
   return (
-    <Empty>
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <History />
-        </EmptyMedia>
-        <EmptyTitle>Aucun choix révocable</EmptyTitle>
-        <EmptyDescription>
-          Vos futurs consentements apparaîtront ici avec leur date et leur version.
-        </EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <AccountEmptyState
+      icon={History}
+      title="Aucun choix révocable"
+      description="Vos futurs consentements apparaîtront ici avec leur date et leur version."
+    />
   );
 }
 

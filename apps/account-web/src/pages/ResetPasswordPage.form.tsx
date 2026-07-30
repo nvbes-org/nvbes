@@ -1,9 +1,8 @@
+import { FeedbackAlert } from '@/components/FeedbackAlert';
+import { NewPasswordFields } from '@/components/NewPasswordFields';
 import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../identity.password.policy';
-import { PasswordStrengthMeter } from './RegisterPage.password';
-import { ResetPasswordErrorMessage } from './ResetPasswordPage.messages';
 import type { ResetPasswordPageModel } from './ResetPasswordPage.types';
 
 export function ResetPasswordForm({
@@ -33,8 +32,8 @@ export function ResetPasswordForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {!tokenFromLink && (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="reset-token">Code de reinitialisation</Label>
+        <Field>
+          <FieldLabel htmlFor="reset-token">Code de reinitialisation</FieldLabel>
           <Input
             id="reset-token"
             type="text"
@@ -44,43 +43,19 @@ export function ResetPasswordForm({
             required
             autoFocus
           />
-        </div>
+        </Field>
       )}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="reset-password">Nouveau mot de passe</Label>
-        <Input
-          id="reset-password"
-          name="new-password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          spellCheck={false}
-          autoFocus={!!tokenFromLink}
-        />
-        <PasswordStrengthMeter password={password} />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="reset-confirm">Confirmer le mot de passe</Label>
-        <Input
-          id="reset-confirm"
-          name="confirm-password"
-          type="password"
-          placeholder="••••••••"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          required
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          spellCheck={false}
-        />
-      </div>
-      {error && <ResetPasswordErrorMessage message={error} />}
+      <NewPasswordFields
+        password={password}
+        confirmation={confirmPassword}
+        passwordId="reset-password"
+        confirmationId="reset-confirm"
+        confirmationLabel="Confirmer le mot de passe"
+        passwordAutoFocus={Boolean(tokenFromLink)}
+        onPasswordChange={setPassword}
+        onConfirmationChange={setConfirmPassword}
+      />
+      {error ? <FeedbackAlert tone="error">{error}</FeedbackAlert> : null}
       <Button type="submit" disabled={isPending} className="w-full" size="lg">
         {isPending ? 'Reinitialisation...' : 'Reinitialiser le mot de passe'}
       </Button>

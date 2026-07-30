@@ -4,6 +4,13 @@
 
 nvbes Identity devient le composant central d'identite, d'authentification, d'autorisation et de gouvernance securite pour tous les produits nvbes.
 
+Identity est deploye comme `identity-service`, distinct de `account-service`.
+Identity est l'Authorization Server OAuth 2.1 et l'OpenID Provider. Account,
+Cloud, Billing, Developer, Enterprise et Backoffice sont des Resource Servers
+qui n'acceptent que leur propre audience. La frontiere et les responsabilites
+de migration sont fixees par
+[`ADR 0005`](../adr/0005-separate-identity-from-account.md).
+
 Le systeme cible doit supporter:
 
 - connexion utilisateur globale multi-tenant;

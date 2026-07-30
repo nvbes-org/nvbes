@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::http::error::AppError;
 
+const BILLING_AUDIENCE: &str = "nvbes-billing-service";
+
 #[derive(Debug, Clone)]
 pub struct BillingAuthContext {
     pub principal_id: Uuid,
@@ -96,6 +98,12 @@ fn identity_auth_context(
         return Err(AppError::unauthorized(
             "invalid_token",
             "The access token is inactive.",
+        ));
+    }
+    if identity.audience.as_deref() != Some(BILLING_AUDIENCE) {
+        return Err(AppError::unauthorized(
+            "invalid_token_audience",
+            "The access token is not intended for Billing.",
         ));
     }
     if identity.network_valid == Some(false) {
@@ -194,7 +202,11 @@ fn has_step_up(auth: &BillingAuthContext) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{BillingAuthContext, BillingWorkspacePermission, has_step_up, role_allows};
+    use super::{
+        BillingAuthContext, BillingWorkspacePermission, has_step_up, identity_auth_context,
+        role_allows,
+    };
+    use crate::grpc::pb::nvbes::identity::internal::v1::IntrospectAccessTokenResponse;
     use uuid::Uuid;
 
     #[test]
@@ -243,5 +255,19 @@ mod tests {
             auth_time: Some(now - 16 * 60),
             ..base
         }));
+    }
+
+    #[test]
+    fn billing_rejects_foreign_audience() {
+        let error = identity_auth_context(IntrospectAccessTokenResponse {
+            active: true,
+            audience: Some("nvbes-cloud-service".to_string()),
+            principal_type: Some("user".to_string()),
+            sub: Some(Uuid::new_v4().to_string()),
+            ..Default::default()
+        })
+        .expect_err("Billing must reject a Cloud token");
+
+        assert_eq!(error.code, "invalid_token_audience");
     }
 }

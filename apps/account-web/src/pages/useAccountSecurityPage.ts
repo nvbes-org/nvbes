@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { listMfaFactors } from '@nvbes/identity-sdk-web';
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -39,8 +39,8 @@ export function useAccountSecurityPage() {
     queryKey: securityOverviewQueryKey,
     queryFn: async ({ signal }) => {
       const [meResult, sessionsResult, factorsResult, prefsResult] = await Promise.allSettled([
-        identityClient.getMe({ signal }),
-        identityClient.listSessions({ signal }),
+        accountClient.getMe({ signal }),
+        accountClient.listSessions({ signal }),
         listMfaFactors(''),
         identityHttpClient.request('/auth/me/preferences', SecurityPreferencesSchema, { signal }),
       ]);

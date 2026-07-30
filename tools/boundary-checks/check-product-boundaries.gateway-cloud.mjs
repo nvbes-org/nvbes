@@ -99,7 +99,11 @@ function checkGatewayCloudIdentityAuth(errors) {
   const authPath = 'apps/gateway-cloud/src/gateway.auth.rs';
   if (!existsSync(authPath)) return;
   const auth = readFileSync(authPath, 'utf8');
-  for (const expected of ['introspect_identity_token', '/oauth/introspect', 'bearer_token']) {
+  for (const expected of [
+    'introspect_identity_token',
+    'IntrospectAccessTokenResponse',
+    'bearer_token',
+  ]) {
     if (!auth.includes(expected)) {
       errors.push(
         `${authPath}: Gateway Cloud must authenticate users through Identity token introspection (${expected})`,

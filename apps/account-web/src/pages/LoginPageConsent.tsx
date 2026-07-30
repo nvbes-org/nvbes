@@ -1,6 +1,6 @@
 import { sanitizeStyleElementCss, sanitizeUrlForAttribute } from '@nvbes/web-runtime';
 import { ShieldCheckIcon } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -132,11 +132,7 @@ export function LoginPageConsent({
           </div>
         )}
       </Card>
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <FeedbackAlert tone="error">{error}</FeedbackAlert>}
       <div className="flex flex-col gap-2.5">
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>

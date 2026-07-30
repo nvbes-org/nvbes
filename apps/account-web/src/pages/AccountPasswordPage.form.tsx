@@ -1,13 +1,7 @@
+import { FeedbackAlert } from '@/components/FeedbackAlert';
+import { NewPasswordFields } from '@/components/NewPasswordFields';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  AccountPasswordErrorMessage,
-  AccountPasswordSuccessMessage,
-} from '@/pages/AccountPasswordPage.messages';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
-import { PasswordStrengthMeter } from '@/pages/RegisterPage.password';
-import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../identity.password.policy';
 
 export function AccountPasswordForm({
   accountEmail,
@@ -43,49 +37,19 @@ export function AccountPasswordForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <input name="username" type="hidden" value={accountEmail} autoComplete="username" readOnly />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="new-password">Nouveau mot de passe</Label>
-        <Input
-          id="new-password"
-          name="new-password"
-          type="password"
-          placeholder="••••••••"
-          value={newPassword}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setNewPassword(event.target.value)
-          }
-          required
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          spellCheck={false}
-          autoFocus
-        />
-        <PasswordStrengthMeter password={newPassword} />
-      </div>
+      <NewPasswordFields
+        password={newPassword}
+        confirmation={confirmPassword}
+        passwordId="new-password"
+        confirmationId="confirm-password"
+        passwordAutoFocus
+        onPasswordChange={setNewPassword}
+        onConfirmationChange={setConfirmPassword}
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="confirm-password">Confirmer le nouveau mot de passe</Label>
-        <Input
-          id="confirm-password"
-          name="confirm-password"
-          type="password"
-          placeholder="••••••••"
-          value={confirmPassword}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setConfirmPassword(event.target.value)
-          }
-          required
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          maxLength={MAX_PASSWORD_LENGTH}
-          spellCheck={false}
-        />
-      </div>
-
-      {error ? <AccountPasswordErrorMessage message={error} /> : null}
+      {error ? <FeedbackAlert tone="error">{error}</FeedbackAlert> : null}
       {success ? (
-        <AccountPasswordSuccessMessage message="Votre mot de passe a ete modifie avec succes." />
+        <FeedbackAlert>Votre mot de passe a ete modifie avec succes.</FeedbackAlert>
       ) : null}
 
       <Button type="submit" disabled={mutation.isPending} className="w-full">

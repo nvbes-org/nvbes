@@ -12,6 +12,7 @@ pub fn introspection_response(
         client_id: value.client_id,
         principal_type: value.principal_type,
         token_type: value.token_type,
+        audience: value.audience,
         sub: value.sub,
         role: value.role,
         tenant_id: value.tenant_id.map(|id| id.to_string()),

@@ -54,9 +54,9 @@ async fn http_machine_token_from_identity_authorizes_drive_workspace_route() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;
@@ -102,9 +102,9 @@ async fn http_revoked_machine_client_is_rejected_by_drive_workspace_route() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;
@@ -139,9 +139,9 @@ async fn http_suspended_service_account_is_rejected_by_drive_workspace_route() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;
@@ -176,9 +176,9 @@ async fn http_workspace_mismatch_is_rejected_by_drive_workspace_route() {
         seed_machine_workspace_context(&pool).await;
 
     unsafe {
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_BASE_URL", &identity_base_url);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_ID", &client_id);
-        std::env::set_var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET", &client_secret);
+        std::env::set_var("NVBES_IDENTITY_SERVICE_BASE_URL", &identity_base_url);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_ID", &client_id);
+        std::env::set_var("NVBES_CLOUD_IDENTITY_CLIENT_SECRET", &client_secret);
     }
 
     let access_token = issue_machine_token(&identity_base_url, &client_id, &client_secret).await;

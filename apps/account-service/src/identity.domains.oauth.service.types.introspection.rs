@@ -19,6 +19,8 @@ pub struct IntrospectionResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub audience: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sub: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
@@ -79,6 +81,7 @@ impl IntrospectionResponse {
             client_id: None,
             principal_type: None,
             token_type: None,
+            audience: None,
             sub: None,
             role: None,
             tenant_id: None,

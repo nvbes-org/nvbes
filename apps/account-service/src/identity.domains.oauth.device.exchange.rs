@@ -154,22 +154,23 @@ pub async fn exchange_device_code(
             .await?
             .data_region;
 
-        let token_pair = jwt.generate_token_pair_with_confirmation(
-            principal_id,
-            Some(workspace_id),
-            workspace_region,
-            &scopes,
-            Vec::new(),
-            Some(session_id),
-            Some(tenant_id),
-            organization_id,
-            Some(&assurance.acr),
-            Some(assurance.amr.clone()),
-            Some(&code.client_id),
-            Some(assurance.auth_time),
-            token_confirmation,
-        )
-        .await?;
+        let token_pair = jwt
+            .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
+                user_id: principal_id,
+                workspace_id: Some(workspace_id),
+                workspace_region,
+                scope: &scopes,
+                authorization_details: Vec::new(),
+                session_id: Some(session_id),
+                tenant_id: Some(tenant_id),
+                organization_id,
+                acr: Some(&assurance.acr),
+                amr: Some(assurance.amr.clone()),
+                client_id: Some(&code.client_id),
+                auth_time: Some(assurance.auth_time),
+                confirmation: token_confirmation,
+            })
+            .await?;
 
         refresh_store::store_refresh_token(
             redis,

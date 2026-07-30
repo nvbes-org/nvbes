@@ -1,4 +1,4 @@
-import { type GpcStatus, identityClient, type UserConsent } from '@nvbes/identity-client';
+import { accountClient, type GpcStatus, type UserConsent } from '@nvbes/identity-client';
 import { useEffect } from 'react';
 
 export function useAccountPrivacyPageLoad({
@@ -16,7 +16,7 @@ export function useAccountPrivacyPageLoad({
         const allConsents: UserConsent[] = [];
         let cursor: string | undefined;
         do {
-          const page = await identityClient.listConsentsPage({ limit: 200, cursor });
+          const page = await accountClient.listConsentsPage({ limit: 200, cursor });
           allConsents.push(...page.consents);
           cursor = page.has_more && page.next_cursor ? page.next_cursor : undefined;
         } while (cursor);
@@ -28,7 +28,7 @@ export function useAccountPrivacyPageLoad({
 
     const fetchGpcStatus = async () => {
       try {
-        setGpc(await identityClient.gpcStatus());
+        setGpc(await accountClient.gpcStatus());
       } catch {
         // GPC endpoint is best-effort; silently ignore failures
       }

@@ -58,9 +58,11 @@ La couverture attendue par type de test est definie dans [Strategie de test](../
 
 ## Domaines Backend
 
-Account expose les domaines compte sous `/api/v1` et OAuth sous `/oauth`.
-Cloud expose les routes produit Cloud a la racine du service Cloud, plus l'API
-publique versionnee sous `/v1`.
+Identity expose l'authentification, OAuth 2.1 et OpenID Connect sous `/auth`,
+`/oauth` et `/.well-known`. Account expose les domaines compte sous `/api/v1`
+et exige un access token destine a `nvbes-account-service`. Cloud expose les
+routes produit Cloud a la racine du service Cloud, plus l'API publique
+versionnee sous `/v1`.
 
 - Auth.
 - Workspaces.

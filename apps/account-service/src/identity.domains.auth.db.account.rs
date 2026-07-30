@@ -170,10 +170,10 @@ pub async fn create_user_account(
 }
 
 fn account_creation_constraint_error(error: sqlx::Error) -> AppError {
-    if let sqlx::Error::Database(ref db_error) = error {
-        if let Some(app_error) = account_creation_constraint_error_for(db_error.constraint()) {
-            return app_error;
-        }
+    if let sqlx::Error::Database(ref db_error) = error
+        && let Some(app_error) = account_creation_constraint_error_for(db_error.constraint())
+    {
+        return app_error;
     }
 
     crate::domains::auth::db::emails::email_constraint_error(error)

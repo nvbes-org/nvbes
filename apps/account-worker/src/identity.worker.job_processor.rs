@@ -126,7 +126,7 @@ mod tests {
     };
 
     #[test]
-    fn identity_worker_queues_exclude_billing_runtime() {
+    fn account_worker_queues_exclude_billing_runtime() {
         assert_eq!(
             WORKER_QUEUES,
             [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS, JOB_DATA_EXPORT]

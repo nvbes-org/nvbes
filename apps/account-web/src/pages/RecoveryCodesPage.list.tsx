@@ -1,6 +1,7 @@
 import { ClipboardButton } from '@nvbes/web-ui';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Button } from '@/components/ui/button';
+import { SecuritySetupActions, SecuritySetupPanel } from '@/components/SecuritySetupPanel';
 
 export function RecoveryCodesListStep({
   codes,
@@ -12,15 +13,15 @@ export function RecoveryCodesListStep({
   onDownload: () => void;
 }) {
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <h1 className="text-3xl font-bold">Vos codes de récupération</h1>
-
-      <Alert variant="destructive">
-        <AlertDescription>
-          Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
-          être utilisé qu&apos;une seule fois.
-        </AlertDescription>
-      </Alert>
+    <SecuritySetupPanel
+      title="Vos codes de récupération"
+      className="space-y-6"
+      titleClassName="text-3xl"
+    >
+      <FeedbackAlert tone="error">
+        Conservez ces codes dans un endroit sûr. Ils ne seront plus affichés. Chaque code ne peut
+        être utilisé qu&apos;une seule fois.
+      </FeedbackAlert>
 
       <div className="grid grid-cols-2 gap-2">
         {codes.map((code, index) => (
@@ -33,16 +34,16 @@ export function RecoveryCodesListStep({
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <SecuritySetupActions>
         <ClipboardButton value={codes.join('\n')} label="Copier" className="h-10 flex-1" />
         <Button variant="outline" className="flex-1" onClick={onDownload}>
           Télécharger
         </Button>
-      </div>
+      </SecuritySetupActions>
 
       <Button className="w-full" onClick={onBack}>
         Retour à la sécurité
       </Button>
-    </div>
+    </SecuritySetupPanel>
   );
 }

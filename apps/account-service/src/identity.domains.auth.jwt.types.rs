@@ -28,6 +28,54 @@ impl TokenConfirmation {
     }
 }
 
+pub struct TokenPairIssueRequest<'a> {
+    pub user_id: Uuid,
+    pub workspace_id: Option<Uuid>,
+    pub workspace_region: Option<String>,
+    pub scope: &'a str,
+    pub authorization_details: Vec<serde_json::Value>,
+    pub session_id: Option<Uuid>,
+    pub tenant_id: Option<Uuid>,
+    pub organization_id: Option<Uuid>,
+    pub acr: Option<&'a str>,
+    pub amr: Option<Vec<String>>,
+    pub client_id: Option<&'a str>,
+    pub auth_time: Option<i64>,
+    pub confirmation: Option<TokenConfirmation>,
+}
+
+impl<'a> TokenPairIssueRequest<'a> {
+    pub fn new(user_id: Uuid, scope: &'a str) -> Self {
+        Self {
+            user_id,
+            workspace_id: None,
+            workspace_region: None,
+            scope,
+            authorization_details: Vec::new(),
+            session_id: None,
+            tenant_id: None,
+            organization_id: None,
+            acr: None,
+            amr: None,
+            client_id: None,
+            auth_time: None,
+            confirmation: None,
+        }
+    }
+}
+
+pub struct M2mAccessTokenIssueRequest<'a> {
+    pub client_id: &'a str,
+    pub principal_id: Uuid,
+    pub tenant_id: Uuid,
+    pub organization_id: Option<Uuid>,
+    pub workspace_id: Uuid,
+    pub workspace_region: Option<String>,
+    pub scope: &'a str,
+    pub audience: Option<&'a str>,
+    pub confirmation: Option<TokenConfirmation>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActorClaim {
     pub sub: String,

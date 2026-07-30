@@ -127,7 +127,7 @@ binding DPoP ou mTLS.
 
 - `nvbes.identity.internal.v1.IdentityInternalService/IntrospectAccessToken`
 
-Le listener gRPC privé utilise `NVBES_ACCOUNT_GRPC_PORT` (port `4010` par défaut). Les clients
+Le listener gRPC privé utilise `NVBES_IDENTITY_GRPC_PORT` (port `4010` par défaut). Les clients
 internes s'authentifient avec leur client OAuth confidentiel dans les metadata gRPC. Les endpoints
 OAuth standard `/oauth/token`, `/oauth/introspect` et `/oauth/revoke` restent disponibles en HTTP.
 
@@ -169,8 +169,8 @@ Variables d'environnement (dans `.env`) :
 ```
 DATABASE_URL=postgresql://user:pass@localhost/nvbes_identity
 JWT_SECRET=your-secret-key
-NVBES_ACCOUNT_GRPC_PORT=4010
-NVBES_ACCOUNT_GRPC_ENDPOINT=http://127.0.0.1:4010
+NVBES_IDENTITY_GRPC_PORT=4010
+NVBES_IDENTITY_GRPC_ENDPOINT=http://127.0.0.1:4010
 ```
 
 ## Migration

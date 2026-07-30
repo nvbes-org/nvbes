@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState, useTransition } from 'react';
 import { AccountSidebar } from '@/components/AccountSidebar';
 import { IdentityTopBar } from '@/components/IdentityTopBar';
+import { SkeletonGroup } from '@/components/SkeletonGroup';
 import { accountAuthenticationDisposition } from '@/components/account-layout.authentication';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,9 +20,7 @@ function LayoutSkeleton() {
     <div className="flex h-[calc(100vh-3.5rem)]">
       <aside className="hidden w-60 shrink-0 md:flex md:flex-col">
         <div className="flex-1 px-3 flex flex-col gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="h-6 w-full rounded-lg" />
-          ))}
+          <SkeletonGroup count={10} itemClassName="h-6 w-full rounded-lg" />
         </div>
       </aside>
       <div className="flex flex-1 flex-col min-w-0">
@@ -32,10 +31,7 @@ function LayoutSkeleton() {
               <Skeleton className="h-6 w-120" />
             </div>
             <div className="flex flex-col gap-4 mx-auto w-full max-w-2xl px-4 md:px-8">
-              <Skeleton className="h-8 w-120" />
-              <Skeleton className="h-8 w-120" />
-              <Skeleton className="h-8 w-120" />
-              <Skeleton className="h-8 w-120" />
+              <SkeletonGroup count={4} itemClassName="h-8 w-120" />
             </div>
           </div>
         </main>

@@ -28,6 +28,7 @@ function shouldScan(path) {
 function walk(dir, results = []) {
   if (!existsSync(dir)) return results;
   for (const entry of readdirSync(dir)) {
+    if (skippedDirs.has(entry)) continue;
     const path = join(dir, entry);
     const stat = statSync(path);
     if (stat.isDirectory()) {
@@ -169,6 +170,84 @@ function checkDriveBillingMigrationBoundary() {
   }
 }
 
+function checkResourceServerAudienceBoundary() {
+  const cloudJwt = 'apps/cloud-service/src/drive.domains.auth.jwt.rs';
+  if (!existsSync(cloudJwt)) return;
+
+  const content = readFileSync(cloudJwt, 'utf8');
+  if (!content.includes('validation.set_audience(&[DRIVE_AUDIENCE]);')) {
+    errors.push(`${cloudJwt}: Cloud must validate exactly its own OAuth audience`);
+  }
+  if (!content.includes('claims.aud != DRIVE_AUDIENCE')) {
+    errors.push(`${cloudJwt}: Cloud must reject access tokens issued for another resource server`);
+  }
+  for (const forbidden of ['IDENTITY_API_AUDIENCE', 'nvbes-account-service";']) {
+    if (content.includes(forbidden)) {
+      errors.push(`${cloudJwt}: Cloud must not accept the Account resource audience`);
+    }
+  }
+
+  const legacyIdentityConfiguration = [
+    'NVBES_ACCOUNT_GRPC_ENDPOINT',
+    'NVBES_ACCOUNT_SERVICE_BASE_URL',
+    'NVBES_ACCOUNT_SERVICE_CLIENT_ID',
+    'NVBES_ACCOUNT_SERVICE_CLIENT_SECRET',
+    'NVBES_DEVELOPER_ACCOUNT_CLIENT_ID',
+    'NVBES_DEVELOPER_ACCOUNT_CLIENT_SECRET',
+    'NVBES_BACKOFFICE_ACCOUNT_CLIENT_ID',
+    'NVBES_BACKOFFICE_ACCOUNT_CLIENT_SECRET',
+  ];
+  for (const file of walk('apps')) {
+    const source = readFileSync(file, 'utf8');
+    for (const legacyName of legacyIdentityConfiguration) {
+      if (source.includes(legacyName)) {
+        errors.push(`${file}: Identity integration must use Identity-named configuration`);
+      }
+    }
+  }
+
+  const introspectedAudienceChecks = [
+    [
+      'apps/billing-service/src/billing.auth.rs',
+      'identity.audience.as_deref() != Some(BILLING_AUDIENCE)',
+    ],
+    [
+      'apps/developer-service/src/developer.http.auth.rs',
+      'claims.audience.as_deref() != Some(DEVELOPER_AUDIENCE)',
+    ],
+    [
+      'apps/gateway-cloud/src/gateway.auth.rs',
+      'identity.audience.as_deref() != Some(CLOUD_AUDIENCE)',
+    ],
+    [
+      'apps/backoffice-service/src/internal_admin.privileged_authentication.rs',
+      'claims.audience.as_deref() == Some(BACKOFFICE_AUDIENCE)',
+    ],
+  ];
+  for (const [file, expected] of introspectedAudienceChecks) {
+    if (!existsSync(file) || !readFileSync(file, 'utf8').includes(expected)) {
+      errors.push(`${file}: introspected access tokens require an exact resource audience`);
+    }
+  }
+
+  const identityGrpcAuth = 'apps/account-service/src/identity.grpc.auth.rs';
+  const identityGrpcService = 'apps/account-service/src/identity.grpc.service.rs';
+  if (
+    !existsSync(identityGrpcAuth) ||
+    !readFileSync(identityGrpcAuth, 'utf8').includes('internal_client_audience')
+  ) {
+    errors.push(`${identityGrpcAuth}: internal Identity clients require an audience binding`);
+  }
+  if (
+    !existsSync(identityGrpcService) ||
+    !readFileSync(identityGrpcService, 'utf8').includes(
+      'introspection.audience.as_deref() != Some(expected_audience)',
+    )
+  ) {
+    errors.push(`${identityGrpcService}: Identity must reject cross-audience introspection`);
+  }
+}
+
 function checkInternalAdminBillingBoundary() {
   const commandCenter = 'apps/backoffice-service/src/internal_admin.command_center.rs';
   if (existsSync(commandCenter)) {
@@ -274,6 +353,7 @@ checkBillingWorkerQueueBoundaries(errors);
 checkAccountWebBillingClientBoundary(errors);
 checkDriveBillingBoundary();
 checkDriveBillingMigrationBoundary();
+checkResourceServerAudienceBoundary();
 checkInternalAdminBillingBoundary();
 checkBillingMigrationBoundaries(errors);
 checkBillingProviderEvidence(errors);

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { LoginPageMfaStepProps } from './LoginPageMfaStep.types';
 
 export function LoginPageMfaMethodForm({
@@ -46,8 +46,8 @@ export function LoginPageMfaMethodForm({
   return (
     <form ref={formRef} onSubmit={onMfaSubmit} className="flex flex-col gap-5">
       {mfaMethod === 'totp' && (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="totp-code">Code d&apos;authentification</Label>
+        <Field>
+          <FieldLabel htmlFor="totp-code">Code d&apos;authentification</FieldLabel>
           <Input
             id="totp-code"
             type="text"
@@ -60,12 +60,12 @@ export function LoginPageMfaMethodForm({
             required
             autoFocus
           />
-        </div>
+        </Field>
       )}
 
       {mfaMethod === 'recovery' && (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="recovery-code">Code de récupération</Label>
+        <Field>
+          <FieldLabel htmlFor="recovery-code">Code de récupération</FieldLabel>
           <Input
             id="recovery-code"
             type="text"
@@ -75,7 +75,7 @@ export function LoginPageMfaMethodForm({
             required
             autoFocus
           />
-        </div>
+        </Field>
       )}
 
       {mfaMethod === 'webauthn' && (
@@ -84,11 +84,7 @@ export function LoginPageMfaMethodForm({
         </p>
       )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <FeedbackAlert tone="error">{error}</FeedbackAlert>}
 
       <div className="flex gap-2">
         <Button

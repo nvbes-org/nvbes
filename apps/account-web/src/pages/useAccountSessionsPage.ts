@@ -1,4 +1,4 @@
-import { type AccountSession, identityClient } from '@nvbes/identity-client';
+import { accountClient, type AccountSession } from '@nvbes/identity-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -23,7 +23,7 @@ export function useAccountSessionsPage() {
       const sessions: AccountSession[] = [];
       let cursor: string | undefined;
       do {
-        const page = await identityClient.listSessionsPage({ limit: 200, cursor, signal });
+        const page = await accountClient.listSessionsPage({ limit: 200, cursor, signal });
         sessions.push(...page.sessions);
         cursor = page.has_more && page.next_cursor ? page.next_cursor : undefined;
       } while (cursor);
@@ -43,7 +43,7 @@ export function useAccountSessionsPage() {
     );
 
     try {
-      await identityClient.revokeSession(sessionId);
+      await accountClient.revokeSession(sessionId);
       await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
     } catch {
       queryClient.setQueryData(sessionsQueryKey, previous);
@@ -61,7 +61,7 @@ export function useAccountSessionsPage() {
 
   const handleRevokeOthers = async () => {
     try {
-      await identityClient.revokeOtherSessions();
+      await accountClient.revokeOtherSessions();
       setShowRevokeOthersStepUp(false);
       await queryClient.invalidateQueries({ queryKey: accountQueryKeys.all });
       await queryClient.invalidateQueries({ queryKey: securityOverviewQueryKey });
@@ -79,7 +79,7 @@ export function useAccountSessionsPage() {
     if (!current) return;
     setConfirmingRisk(true);
     try {
-      await identityClient.confirmHighRiskSession(current.id);
+      await accountClient.confirmHighRiskSession(current.id);
       await queryClient.invalidateQueries({ queryKey: sessionsQueryKey });
       setShowRiskStepUp(false);
     } finally {

@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Matcher } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   dateFromDisplayValue,
@@ -113,8 +113,8 @@ export function BirthdateField({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>
+    <Field>
+      <FieldLabel htmlFor={id}>
         {label}
         {required && (
           <>
@@ -122,7 +122,7 @@ export function BirthdateField({
             <span className="text-destructive">*</span>
           </>
         )}
-      </Label>
+      </FieldLabel>
       <div className="relative">
         <Input
           id={id}
@@ -180,6 +180,6 @@ export function BirthdateField({
           {error ?? externalError}
         </p>
       )}
-    </div>
+    </Field>
   );
 }

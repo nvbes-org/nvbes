@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { storePasswordCredential } from '@nvbes/identity-sdk-web';
 import { clientErrorMessage } from '@nvbes/web-runtime';
 
@@ -123,12 +123,12 @@ export function useLoginPageAccountActions({
       setError(null);
       if (account.status !== 'expired') {
         try {
-          await identityClient.revokeSession(account.session.id);
+          await accountClient.revokeSession(account.session.id);
         } catch {
           // Ignore revocation errors (e.g. session already expired or unauthorized)
         }
       }
-      await identityClient.forgetAccount(account.authuser);
+      await accountClient.forgetAccount(account.authuser);
       setConnectedAccounts((previous) => previous.filter((entry) => entry.authuser !== authuser));
       if (connectedAccounts.length <= 1) {
         setStep('identifier');
@@ -151,12 +151,12 @@ export function useLoginPageAccountActions({
       for (const account of sessionsToRevoke) {
         if (account.status !== 'expired') {
           try {
-            await identityClient.revokeSession(account.session.id);
+            await accountClient.revokeSession(account.session.id);
           } catch {
             // Ignore revocation errors
           }
         }
-        await identityClient.forgetAccount(account.authuser);
+        await accountClient.forgetAccount(account.authuser);
       }
       setConnectedAccounts([]);
       setStep('identifier');

@@ -22,15 +22,16 @@ use crate::grpc_pb::nvbes::identity::internal::v1::{
 };
 use crate::observability::record_guard_rejection;
 
-const ACCOUNT_GRPC_ENDPOINT_ENV: &str = "NVBES_ACCOUNT_GRPC_ENDPOINT";
-const ACCOUNT_CLIENT_ID_ENV: &str = "NVBES_BACKOFFICE_ACCOUNT_CLIENT_ID";
-const ACCOUNT_CLIENT_SECRET_ENV: &str = "NVBES_BACKOFFICE_ACCOUNT_CLIENT_SECRET";
+const IDENTITY_GRPC_ENDPOINT_ENV: &str = "NVBES_IDENTITY_GRPC_ENDPOINT";
+const IDENTITY_CLIENT_ID_ENV: &str = "NVBES_BACKOFFICE_IDENTITY_CLIENT_ID";
+const IDENTITY_CLIENT_SECRET_ENV: &str = "NVBES_BACKOFFICE_IDENTITY_CLIENT_SECRET";
 const INTROSPECTION_TIMEOUT: Duration = Duration::from_secs(5);
 const ACTOR_HEADER: &str = "x-nvbes-actor-principal-id";
 const ACR_HEADER: &str = "x-nvbes-authentication-assurance";
 const AMR_HEADER: &str = "x-nvbes-authentication-methods";
 const AUTH_TIME_HEADER: &str = "x-nvbes-authenticated-at";
 const AUTH_EVENT_HEADER: &str = "x-nvbes-authentication-event-id";
+const BACKOFFICE_AUDIENCE: &str = "nvbes-backoffice-service";
 
 #[derive(Clone)]
 pub(crate) struct PrivilegedIdentityClient {
@@ -41,6 +42,7 @@ pub(crate) struct PrivilegedIdentityClient {
 #[derive(Debug, Clone)]
 struct IdentityClaims {
     active: bool,
+    audience: Option<String>,
     principal_type: Option<String>,
     sub: Option<String>,
     acr: Option<String>,
@@ -60,17 +62,17 @@ impl PrivilegedIdentityClient {
                     .ok_or(std::env::VarError::NotPresent)
             })
         };
-        let endpoint = std::env::var(ACCOUNT_GRPC_ENDPOINT_ENV)
+        let endpoint = std::env::var(IDENTITY_GRPC_ENDPOINT_ENV)
             .unwrap_or_else(|_| "http://127.0.0.1:4010".to_string());
-        let client_id = required(ACCOUNT_CLIENT_ID_ENV, "backoffice-service")
-            .map_err(|_| format!("{ACCOUNT_CLIENT_ID_ENV} is required outside development"))?;
+        let client_id = required(IDENTITY_CLIENT_ID_ENV, "backoffice-service")
+            .map_err(|_| format!("{IDENTITY_CLIENT_ID_ENV} is required outside development"))?;
         let client_secret = required(
-            ACCOUNT_CLIENT_SECRET_ENV,
+            IDENTITY_CLIENT_SECRET_ENV,
             "development-backoffice-introspection-secret",
         )
-        .map_err(|_| format!("{ACCOUNT_CLIENT_SECRET_ENV} is required outside development"))?;
+        .map_err(|_| format!("{IDENTITY_CLIENT_SECRET_ENV} is required outside development"))?;
         let channel = Endpoint::from_shared(endpoint)
-            .map_err(|error| format!("{ACCOUNT_GRPC_ENDPOINT_ENV} is invalid: {error}"))?
+            .map_err(|error| format!("{IDENTITY_GRPC_ENDPOINT_ENV} is invalid: {error}"))?
             .connect_lazy();
         let encoded = base64::engine::general_purpose::STANDARD
             .encode(format!("{client_id}:{client_secret}"));
@@ -113,6 +115,7 @@ impl PrivilegedIdentityClient {
 fn claims_from_response(response: IntrospectAccessTokenResponse) -> IdentityClaims {
     IdentityClaims {
         active: response.active,
+        audience: response.audience,
         principal_type: response.principal_type,
         sub: response.sub,
         acr: response.acr,
@@ -180,6 +183,7 @@ fn require_privileged_authentication(
         .as_deref()
         .and_then(|value| Uuid::parse_str(value).ok());
     let valid = claims.active
+        && claims.audience.as_deref() == Some(BACKOFFICE_AUDIENCE)
         && claims.principal_type.as_deref() == Some("user")
         && claims.network_valid != Some(false)
         && principal_id.is_some()
@@ -253,6 +257,7 @@ mod tests {
     fn claims(acr: &str, amr: &[&str], auth_time: i64) -> IdentityClaims {
         IdentityClaims {
             active: true,
+            audience: Some(BACKOFFICE_AUDIENCE.to_string()),
             principal_type: Some("user".to_string()),
             sub: Some(Uuid::nil().to_string()),
             acr: Some(acr.to_string()),
@@ -293,6 +298,15 @@ mod tests {
         let now = 1_800_000_000;
         let mut identity = claims("aal2", &["webauthn"], now);
         identity.sid = None;
+
+        assert!(require_privileged_authentication(&identity, now).is_err());
+    }
+
+    #[test]
+    fn backoffice_rejects_foreign_audience() {
+        let now = 1_800_000_000;
+        let mut identity = claims("aal2", &["webauthn"], now);
+        identity.audience = Some("nvbes-cloud-service".to_string());
 
         assert!(require_privileged_authentication(&identity, now).is_err());
     }

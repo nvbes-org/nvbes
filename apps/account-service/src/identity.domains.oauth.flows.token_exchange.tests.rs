@@ -30,20 +30,21 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
     let session_id = Uuid::new_v4();
     let subject_pair = state
         .jwt
-        .generate_token_pair_with_session(
-            user_principal_id,
-            Some(workspace_id),
-            None,
-            "drive.files.read drive.workspace.read",
-            Some(session_id),
-            Some(tenant_id),
-            None,
-            Some("aal1"),
-            Some(vec!["pwd".to_string()]),
-            None,
-            Some(Utc::now().timestamp()),
-            None,
-        )
+        .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
+            user_id: user_principal_id,
+            workspace_id: Some(workspace_id),
+            workspace_region: None,
+            scope: "drive.files.read drive.workspace.read",
+            authorization_details: Vec::new(),
+            session_id: Some(session_id),
+            tenant_id: Some(tenant_id),
+            organization_id: None,
+            acr: Some("aal1"),
+            amr: Some(vec!["pwd".to_string()]),
+            client_id: None,
+            auth_time: Some(Utc::now().timestamp()),
+            confirmation: None,
+        })
         .await
         .expect("subject token should be created");
 
@@ -140,20 +141,21 @@ async fn http_token_exchange_preserves_user_subject_and_sets_machine_actor() {
     let session_id = Uuid::new_v4();
     let subject_pair = state
         .jwt
-        .generate_token_pair_with_session(
-            user_principal_id,
-            Some(workspace_id),
-            None,
-            "drive.files.read drive.workspace.read",
-            Some(session_id),
-            Some(tenant_id),
-            None,
-            Some("aal1"),
-            Some(vec!["pwd".to_string()]),
-            None,
-            Some(Utc::now().timestamp()),
-            None,
-        )
+        .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
+            user_id: user_principal_id,
+            workspace_id: Some(workspace_id),
+            workspace_region: None,
+            scope: "drive.files.read drive.workspace.read",
+            authorization_details: Vec::new(),
+            session_id: Some(session_id),
+            tenant_id: Some(tenant_id),
+            organization_id: None,
+            acr: Some("aal1"),
+            amr: Some(vec!["pwd".to_string()]),
+            client_id: None,
+            auth_time: Some(Utc::now().timestamp()),
+            confirmation: None,
+        })
         .await
         .expect("subject token should be created");
 

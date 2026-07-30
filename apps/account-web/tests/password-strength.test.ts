@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { estimatePasswordStrength } from '../src/pages/RegisterPage.password-strength';
+import { estimatePasswordStrength } from '../src/lib/password-strength';
 
 describe('estimatePasswordStrength', () => {
   it('uses the configured common and French dictionaries', () => {

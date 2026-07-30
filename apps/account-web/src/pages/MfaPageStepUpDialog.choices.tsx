@@ -1,5 +1,6 @@
 import { Fingerprint, KeyRound, ShieldAlert, TimerReset } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MfaMethodChoiceList, type MfaMethodChoice } from '@/components/MfaMethodChoiceList';
+import type { StepUpMethod } from './MfaPage.shared';
 import type { MfaPageStepUpDialogProps } from './MfaPageStepUpDialog.types';
 
 export function MfaPageStepUpMethodChoices({
@@ -12,48 +13,27 @@ export function MfaPageStepUpMethodChoices({
   MfaPageStepUpDialogProps,
   'hasTotp' | 'hasWebAuthn' | 'hasRecovery' | 'canUsePassword' | 'onMethodSelect'
 >) {
-  return (
-    <div className="flex flex-col gap-2">
-      {canUsePassword && (
-        <Button
-          variant="outline"
-          className="justify-start gap-3"
-          onClick={() => onMethodSelect('password')}
-        >
-          <KeyRound className="size-4 text-muted-foreground" />
-          Mot de passe
-        </Button>
-      )}
-      {hasTotp && (
-        <Button
-          variant="outline"
-          className="justify-start gap-3"
-          onClick={() => onMethodSelect('totp')}
-        >
-          <TimerReset className="size-4 text-muted-foreground" />
-          Code d'authentification (TOTP)
-        </Button>
-      )}
-      {hasWebAuthn && (
-        <Button
-          variant="outline"
-          className="justify-start gap-3"
-          onClick={() => onMethodSelect('webauthn')}
-        >
-          <Fingerprint className="size-4 text-muted-foreground" />
-          Biométrie ou clé de sécurité
-        </Button>
-      )}
-      {hasRecovery && (
-        <Button
-          variant="outline"
-          className="justify-start gap-3"
-          onClick={() => onMethodSelect('recovery')}
-        >
-          <ShieldAlert className="size-4 text-muted-foreground" />
-          Code de récupération
-        </Button>
-      )}
-    </div>
-  );
+  const choices: MfaMethodChoice<StepUpMethod>[] = [];
+  if (canUsePassword) {
+    choices.push({ value: 'password', label: 'Mot de passe', icon: KeyRound });
+  }
+  if (hasTotp) {
+    choices.push({
+      value: 'totp',
+      label: "Code d'authentification (TOTP)",
+      icon: TimerReset,
+    });
+  }
+  if (hasWebAuthn) {
+    choices.push({
+      value: 'webauthn',
+      label: 'Biométrie ou clé de sécurité',
+      icon: Fingerprint,
+    });
+  }
+  if (hasRecovery) {
+    choices.push({ value: 'recovery', label: 'Code de récupération', icon: ShieldAlert });
+  }
+
+  return <MfaMethodChoiceList choices={choices} onSelect={onMethodSelect} />;
 }

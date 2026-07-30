@@ -1,26 +1,24 @@
-import { useLocation } from '@tanstack/react-router';
-import { RegisterBrandPanel } from './RegisterBrandPanel';
-import { RegisterForm } from './RegisterPage.form';
-import { RegisterPageShell } from './RegisterPage.layout';
-import { useRegisterPage } from './useRegisterPage';
+import { useLocation } from "@tanstack/react-router";
+import { AuthPageShell } from "@/components/AuthPageShell";
+import { LoginPageLegalLinks } from "./LoginPage.forms";
+import { RegisterBrandPanel } from "./RegisterBrandPanel";
+import { RegisterForm } from "./RegisterPage.form";
+import { useRegisterPage } from "./useRegisterPage";
 
 export default function RegisterPage() {
-  const location = useLocation();
-  const page = useRegisterPage();
+	const location = useLocation();
+	const page = useRegisterPage();
 
-  if (page.checkingAuth) {
-    return null;
-  }
+	if (page.checkingAuth) {
+		return null;
+	}
 
-  return (
-    <div className="flex min-h-screen">
-      <RegisterBrandPanel />
-
-      <div className="flex flex-1 flex-col items-center justify-center w-full">
-        <RegisterPageShell title="Inscription" searchStr={location.searchStr}>
-          <RegisterForm {...page} />
-        </RegisterPageShell>
-      </div>
-    </div>
-  );
+	return (
+		<AuthPageShell
+			brand={<RegisterBrandPanel />}
+			footerLinks={<LoginPageLegalLinks />}
+		>
+			<RegisterForm {...page} loginTo={`/login${location.searchStr}`} />
+		</AuthPageShell>
+	);
 }

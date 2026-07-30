@@ -1,6 +1,5 @@
-import { ArrowLeft } from 'lucide-react';
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';
 import StepUpModal from '@/components/StepUpModal';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AccountPasswordForm } from '@/pages/AccountPasswordPage.form';
 import type { AccountPasswordPageModel } from '@/pages/AccountPasswordPage.types';
@@ -31,19 +30,8 @@ export function AccountPasswordPageContent({
   showSessionStepUp,
 }: AccountPasswordPageModel) {
   return (
-    <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
-      <div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-3 -ml-1 text-muted-foreground"
-          onClick={navigateBack}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          Retour
-        </Button>
-        <h1 className="text-3xl font-heading font-semibold">Mot de passe</h1>
-      </div>
+    <AccountPage>
+      <AccountPageHeader title="Mot de passe" onBack={navigateBack} />
 
       <Card>
         <CardContent>
@@ -90,6 +78,6 @@ export function AccountPasswordPageContent({
         onCancel={() => setShowSessionStepUp(false)}
         description="Confirmez votre identité pour déconnecter toutes les autres sessions."
       />
-    </div>
+    </AccountPage>
   );
 }

@@ -1,4 +1,4 @@
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type SubmitEvent } from 'react';
 import { accountQueryKeys } from '@/account.queries';
@@ -19,7 +19,7 @@ export function useAccountEmailAddresses() {
       let cursor: string | undefined;
       let primaryMinAgeHours = 0;
       do {
-        const page = await identityClient.listEmailsPage({ limit: 200, cursor, signal });
+        const page = await accountClient.listEmailsPage({ limit: 200, cursor, signal });
         emails.push(...page.emails);
         primaryMinAgeHours = page.primary_min_age_hours;
         cursor = page.has_more && page.next_cursor ? page.next_cursor : undefined;
@@ -42,7 +42,7 @@ export function useAccountEmailAddresses() {
   };
 
   const addMutation = useMutation({
-    mutationFn: (email: string) => identityClient.addSecondaryEmail(email),
+    mutationFn: (email: string) => accountClient.addSecondaryEmail(email),
     onSuccess: async () => {
       setEmailDraft('');
       setError(null);
@@ -54,7 +54,7 @@ export function useAccountEmailAddresses() {
   });
 
   const promoteMutation = useMutation({
-    mutationFn: (emailId: string) => identityClient.promoteSecondaryEmail(emailId),
+    mutationFn: (emailId: string) => accountClient.promoteSecondaryEmail(emailId),
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -65,7 +65,7 @@ export function useAccountEmailAddresses() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (emailId: string) => identityClient.deleteSecondaryEmail(emailId),
+    mutationFn: (emailId: string) => accountClient.deleteSecondaryEmail(emailId),
     onSuccess: async () => {
       setError(null);
       await invalidate();
@@ -76,7 +76,7 @@ export function useAccountEmailAddresses() {
   });
 
   const resendVerificationMutation = useMutation({
-    mutationFn: (emailId: string) => identityClient.resendSecondaryEmailVerification(emailId),
+    mutationFn: (emailId: string) => accountClient.resendSecondaryEmailVerification(emailId),
     onSuccess: async () => {
       setError(null);
       await invalidate();

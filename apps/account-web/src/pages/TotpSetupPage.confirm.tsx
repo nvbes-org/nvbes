@@ -1,11 +1,11 @@
 import { InvisibleUnicodeWarning } from '@nvbes/web-runtime';
 import { ClipboardButton } from '@nvbes/web-ui';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { QRCode } from '@/components/kibo-ui/qr-code';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 export function TotpConfirmCard({
@@ -64,8 +64,8 @@ export function TotpConfirmCard({
       <Separator />
 
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="totp-confirm-code">Code de vérification</Label>
+        <Field>
+          <FieldLabel htmlFor="totp-confirm-code">Code de vérification</FieldLabel>
           <Input
             id="totp-confirm-code"
             type="text"
@@ -79,12 +79,8 @@ export function TotpConfirmCard({
             }
             required
           />
-        </div>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+        </Field>
+        {error ? <FeedbackAlert tone="error">{error}</FeedbackAlert> : null}
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
             Annuler

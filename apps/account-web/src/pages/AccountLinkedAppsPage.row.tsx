@@ -2,6 +2,14 @@ import { ExternalLink, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
 import type { LinkedApp } from '@/pages/AccountLinkedAppsPage.api';
 import { formatLinkedAppDate } from './AccountLinkedAppsPage.utils';
 
@@ -15,19 +23,17 @@ export function LinkedAppRow({
   onRevoke: (clientId: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <ExternalLink className="size-4 text-muted-foreground" />
-        </div>
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium">{client.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {client.client_type} · Cree le {formatLinkedAppDate(client.created_at)}
-          </span>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
+    <Item className="gap-3 px-0 py-1">
+      <ItemMedia variant="icon" className="size-8 rounded-lg bg-muted">
+        <ExternalLink className="size-4 text-muted-foreground" />
+      </ItemMedia>
+      <ItemContent className="min-w-0 gap-0">
+        <ItemTitle className="truncate">{client.name}</ItemTitle>
+        <ItemDescription className="text-xs">
+          {client.client_type} · Cree le {formatLinkedAppDate(client.created_at)}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions className="shrink-0">
         <Badge variant="secondary">{client.client_type}</Badge>
         <Button
           variant="ghost"
@@ -39,7 +45,7 @@ export function LinkedAppRow({
         >
           {revoking === client.id ? <Spinner className="size-3" /> : <X className="size-3.5" />}
         </Button>
-      </div>
-    </div>
+      </ItemActions>
+    </Item>
   );
 }

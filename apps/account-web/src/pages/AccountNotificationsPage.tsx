@@ -8,9 +8,18 @@ import { Bell, Mail, Megaphone, Smartphone } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { accountQueryKeys } from '@/account.queries';
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '@/components/ui/item';
 import { useAuthuser } from '@/hooks/useAuthuser';
 import { identityHttpClient } from '../identity.http';
 
@@ -143,11 +152,12 @@ export default function AccountNotificationsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-slide-up [animation-delay:0ms]">
-      <div>
-        <h1 className="text-xl font-heading font-semibold">Notifications</h1>
-        <p className="text-sm text-muted-foreground mt-1">Gerer vos preferences de notification.</p>
-      </div>
+    <AccountPage>
+      <AccountPageHeader
+        size="section"
+        title="Notifications"
+        description="Gerer vos preferences de notification."
+      />
 
       <Card>
         <CardHeader>
@@ -160,36 +170,36 @@ export default function AccountNotificationsPage() {
           {channels.map(({ key, label, desc, Icon }, i) => (
             <div key={key}>
               {i > 0 && <Separator className="my-1" />}
-              <div className="flex items-center justify-between gap-3 py-1">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-medium">{label}</span>
-                    <span className="text-xs text-muted-foreground">{desc}</span>
-                  </div>
-                </div>
-                <Button
-                  variant={prefs[key] ? 'default' : 'outline'}
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => void togglePref(key)}
-                  disabled={
-                    mutation.isPending || (key === 'push' && !canTogglePush(webPushSupport))
-                  }
-                >
-                  {key === 'push'
-                    ? pushButtonLabel(prefs.push, webPushSupport)
-                    : prefs[key]
-                      ? 'Active'
-                      : 'Desactive'}
-                </Button>
-              </div>
+              <Item className="gap-3 px-0 py-1">
+                <ItemMedia variant="icon" className="size-8 rounded-lg bg-muted">
+                  <Icon className="size-4 text-muted-foreground" />
+                </ItemMedia>
+                <ItemContent className="min-w-0 gap-0">
+                  <ItemTitle>{label}</ItemTitle>
+                  <ItemDescription className="text-xs">{desc}</ItemDescription>
+                </ItemContent>
+                <ItemActions className="shrink-0">
+                  <Button
+                    variant={prefs[key] ? 'default' : 'outline'}
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => void togglePref(key)}
+                    disabled={
+                      mutation.isPending || (key === 'push' && !canTogglePush(webPushSupport))
+                    }
+                  >
+                    {key === 'push'
+                      ? pushButtonLabel(prefs.push, webPushSupport)
+                      : prefs[key]
+                        ? 'Active'
+                        : 'Desactive'}
+                  </Button>
+                </ItemActions>
+              </Item>
             </div>
           ))}
         </CardContent>
       </Card>
-    </div>
+    </AccountPage>
   );
 }

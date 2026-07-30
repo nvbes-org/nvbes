@@ -14,13 +14,12 @@ export function LinkedAppsList(props: {
   const { clients, listRef, revoking, virtualizer, onRevoke } = props;
 
   return (
-    <div className="flex animate-fade-slide-up flex-col gap-6 [animation-delay:0ms]">
-      <div>
-        <h1 className="font-heading text-xl font-semibold">Apps liees</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Gerer les applications et services connectes a votre compte.
-        </p>
-      </div>
+    <AccountPage>
+      <AccountPageHeader
+        size="section"
+        title="Apps liees"
+        description="Gerer les applications et services connectes a votre compte."
+      />
 
       <Card>
         <CardHeader>
@@ -71,6 +70,7 @@ export function LinkedAppsList(props: {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AccountPage>
   );
 }
+import { AccountPage, AccountPageHeader } from '@/components/AccountPage';

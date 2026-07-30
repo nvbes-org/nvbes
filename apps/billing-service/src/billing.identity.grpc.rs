@@ -21,8 +21,8 @@ pub async fn introspect(
     headers: &axum::http::HeaderMap,
     access_token: &str,
 ) -> Result<IntrospectAccessTokenResponse, AppError> {
-    let client_id = required_env("NVBES_ACCOUNT_SERVICE_CLIENT_ID")?;
-    let client_secret = required_env("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET")?;
+    let client_id = required_env("NVBES_BILLING_IDENTITY_CLIENT_ID")?;
+    let client_secret = required_env("NVBES_BILLING_IDENTITY_CLIENT_SECRET")?;
     let client_ip = nvbes_core::http::client_ip::client_ip(headers).unwrap_or_default();
     let mut request = Request::new(IntrospectAccessTokenRequest {
         access_token: access_token.to_string(),
@@ -51,7 +51,7 @@ fn identity_channel() -> Result<Channel, AppError> {
     if let Some(channel) = IDENTITY_CHANNEL.get() {
         return Ok(channel.clone());
     }
-    let endpoint = std::env::var("NVBES_ACCOUNT_GRPC_ENDPOINT")
+    let endpoint = std::env::var("NVBES_IDENTITY_GRPC_ENDPOINT")
         .unwrap_or_else(|_| "http://127.0.0.1:4010".to_string());
     let channel = Endpoint::from_shared(endpoint)
         .map_err(|error| AppError::internal("identity_grpc_endpoint_invalid", error.to_string()))?

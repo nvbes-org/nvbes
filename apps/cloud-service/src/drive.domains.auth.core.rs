@@ -95,6 +95,12 @@ fn ensure_claim_consistency(
             "Identity introspection does not match the verified client.",
         ));
     }
+    if introspected.audience.as_deref() != Some(verified_claims.aud.as_str()) {
+        return Err(AppError::unauthorized(
+            "invalid_token",
+            "Identity introspection does not match the verified audience.",
+        ));
+    }
 
     ensure_optional_uuid_matches(
         verified_claims.tenant_id.as_deref(),

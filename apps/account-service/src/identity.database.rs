@@ -74,76 +74,106 @@ pub async fn ensure_default_oauth_clients_seeded(pool: &PgPool) -> anyhow::Resul
     .execute(pool)
     .await?;
 
-    // 4. Seed cloud-worker (confidential client)
-    let worker_secret = std::env::var("NVBES_ACCOUNT_SERVICE_CLIENT_SECRET")
-        .unwrap_or_else(|_| "cloud-worker-secret-key-12345".to_string());
-    let drive_worker_secret_hash = nvbes_product_account::oauth::hash_client_secret(&worker_secret)
+    seed_confidential_client(
+        pool,
+        ConfidentialClientSeed {
+            tenant_id: system_tenant_id,
+            client_id_env: "NVBES_CLOUD_IDENTITY_CLIENT_ID",
+            client_secret_env: "NVBES_CLOUD_IDENTITY_CLIENT_SECRET",
+            default_client_id: "cloud-worker",
+            default_client_secret: "cloud-worker-secret-key-12345",
+            name: "Cloud Worker",
+        },
+    )
+    .await?;
+    seed_confidential_client(
+        pool,
+        ConfidentialClientSeed {
+            tenant_id: system_tenant_id,
+            client_id_env: "NVBES_DEVELOPER_IDENTITY_CLIENT_ID",
+            client_secret_env: "NVBES_DEVELOPER_IDENTITY_CLIENT_SECRET",
+            default_client_id: "developer-service",
+            default_client_secret: "developer-service-secret-key-12345",
+            name: "Developer Service",
+        },
+    )
+    .await?;
+    seed_confidential_client(
+        pool,
+        ConfidentialClientSeed {
+            tenant_id: system_tenant_id,
+            client_id_env: "NVBES_BILLING_IDENTITY_CLIENT_ID",
+            client_secret_env: "NVBES_BILLING_IDENTITY_CLIENT_SECRET",
+            default_client_id: "billing-service",
+            default_client_secret: "billing-service-secret-key-12345",
+            name: "Billing Service",
+        },
+    )
+    .await?;
+    seed_confidential_client(
+        pool,
+        ConfidentialClientSeed {
+            tenant_id: system_tenant_id,
+            client_id_env: "NVBES_GATEWAY_IDENTITY_CLIENT_ID",
+            client_secret_env: "NVBES_GATEWAY_IDENTITY_CLIENT_SECRET",
+            default_client_id: "gateway-cloud",
+            default_client_secret: "gateway-cloud-secret-key-12345",
+            name: "Gateway Cloud",
+        },
+    )
+    .await?;
+    seed_confidential_client(
+        pool,
+        ConfidentialClientSeed {
+            tenant_id: system_tenant_id,
+            client_id_env: "NVBES_BACKOFFICE_IDENTITY_CLIENT_ID",
+            client_secret_env: "NVBES_BACKOFFICE_IDENTITY_CLIENT_SECRET",
+            default_client_id: "backoffice-service",
+            default_client_secret: "development-backoffice-introspection-secret",
+            name: "Backoffice Service",
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+
+struct ConfidentialClientSeed<'a> {
+    tenant_id: uuid::Uuid,
+    client_id_env: &'a str,
+    client_secret_env: &'a str,
+    default_client_id: &'a str,
+    default_client_secret: &'a str,
+    name: &'a str,
+}
+
+async fn seed_confidential_client(
+    pool: &PgPool,
+    seed: ConfidentialClientSeed<'_>,
+) -> anyhow::Result<()> {
+    let client_id =
+        std::env::var(seed.client_id_env).unwrap_or_else(|_| seed.default_client_id.to_string());
+    let client_secret = std::env::var(seed.client_secret_env)
+        .unwrap_or_else(|_| seed.default_client_secret.to_string());
+    let client_secret_hash = nvbes_product_account::oauth::hash_client_secret(&client_secret)
         .map_err(anyhow::Error::from)?;
-    let drive_worker_redirect_uris: Vec<String> = vec![];
-    sqlx::query(
-        r#"
-        INSERT INTO oauth_clients (
-            client_id, client_secret_hash, name, redirect_uris, tenant_id,
-            owner_scope_type, owner_scope_id, client_type
-        )
-        VALUES ('cloud-worker', $1, 'Drive Worker', $2, $3, 'tenant', $3, 'confidential')
-        ON CONFLICT (client_id) DO UPDATE
-        SET client_secret_hash = EXCLUDED.client_secret_hash
-        "#,
-    )
-    .bind(drive_worker_secret_hash)
-    .bind(&drive_worker_redirect_uris)
-    .bind(system_tenant_id)
-    .execute(pool)
-    .await?;
 
-    // 5. Seed developer-service (confidential client for token introspection)
-    let developer_service_client_id = std::env::var("NVBES_DEVELOPER_ACCOUNT_CLIENT_ID")
-        .unwrap_or_else(|_| "developer-service".to_string());
-    let developer_service_secret = std::env::var("NVBES_DEVELOPER_ACCOUNT_CLIENT_SECRET")
-        .unwrap_or_else(|_| "developer-service-secret-key-12345".to_string());
-    let developer_service_secret_hash =
-        nvbes_product_account::oauth::hash_client_secret(&developer_service_secret)
-            .map_err(anyhow::Error::from)?;
     sqlx::query(
         r#"
         INSERT INTO oauth_clients (
             client_id, client_secret_hash, name, redirect_uris, tenant_id,
             owner_scope_type, owner_scope_id, client_type
         )
-        VALUES ($1, $2, 'Developer Service', ARRAY[]::text[], $3, 'tenant', $3, 'confidential')
+        VALUES ($1, $2, $3, ARRAY[]::text[], $4, 'tenant', $4, 'confidential')
         ON CONFLICT (client_id) DO UPDATE
-        SET client_secret_hash = EXCLUDED.client_secret_hash
+        SET client_secret_hash = EXCLUDED.client_secret_hash,
+            name = EXCLUDED.name
         "#,
     )
-    .bind(developer_service_client_id)
-    .bind(developer_service_secret_hash)
-    .bind(system_tenant_id)
-    .execute(pool)
-    .await?;
-
-    // 6. Seed backoffice-service (confidential client for privileged token introspection)
-    let backoffice_service_client_id = std::env::var("NVBES_BACKOFFICE_ACCOUNT_CLIENT_ID")
-        .unwrap_or_else(|_| "backoffice-service".to_string());
-    let backoffice_service_secret = std::env::var("NVBES_BACKOFFICE_ACCOUNT_CLIENT_SECRET")
-        .unwrap_or_else(|_| "development-backoffice-introspection-secret".to_string());
-    let backoffice_service_secret_hash =
-        nvbes_product_account::oauth::hash_client_secret(&backoffice_service_secret)
-            .map_err(anyhow::Error::from)?;
-    sqlx::query(
-        r#"
-        INSERT INTO oauth_clients (
-            client_id, client_secret_hash, name, redirect_uris, tenant_id,
-            owner_scope_type, owner_scope_id, client_type
-        )
-        VALUES ($1, $2, 'Backoffice Service', ARRAY[]::text[], $3, 'tenant', $3, 'confidential')
-        ON CONFLICT (client_id) DO UPDATE
-        SET client_secret_hash = EXCLUDED.client_secret_hash
-        "#,
-    )
-    .bind(backoffice_service_client_id)
-    .bind(backoffice_service_secret_hash)
-    .bind(system_tenant_id)
+    .bind(client_id)
+    .bind(client_secret_hash)
+    .bind(seed.name)
+    .bind(seed.tenant_id)
     .execute(pool)
     .await?;
 

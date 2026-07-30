@@ -1,7 +1,7 @@
 import { Fingerprint, RotateCcw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { StepUpMethod, WebAuthnStatus } from './useStepUpForm';
 
 export function StepUpMethodFields({
@@ -37,10 +37,10 @@ export function StepUpMethodFields({
 }) {
   if (method === 'password') {
     return (
-      <div className="space-y-2">
-        <Label htmlFor="stepup-password" className="text-xs">
+      <Field>
+        <FieldLabel htmlFor="stepup-password" className="text-xs">
           Mot de passe
-        </Label>
+        </FieldLabel>
         <Input
           id="stepup-password"
           name="password"
@@ -54,16 +54,16 @@ export function StepUpMethodFields({
           required
           autoFocus
         />
-      </div>
+      </Field>
     );
   }
 
   if (method === 'totp') {
     return (
-      <div className="space-y-2">
-        <Label htmlFor="stepup-totp" className="text-xs">
+      <Field>
+        <FieldLabel htmlFor="stepup-totp" className="text-xs">
           Code d&apos;authentification
-        </Label>
+        </FieldLabel>
         <Input
           id="stepup-totp"
           type="text"
@@ -76,16 +76,16 @@ export function StepUpMethodFields({
           required
           autoFocus
         />
-      </div>
+      </Field>
     );
   }
 
   if (method === 'recovery') {
     return (
-      <div className="space-y-2">
-        <Label htmlFor="stepup-recovery" className="text-xs">
+      <Field>
+        <FieldLabel htmlFor="stepup-recovery" className="text-xs">
           Code de récupération
-        </Label>
+        </FieldLabel>
         <Input
           id="stepup-recovery"
           type="text"
@@ -96,7 +96,7 @@ export function StepUpMethodFields({
           required
           autoFocus
         />
-      </div>
+      </Field>
     );
   }
 
@@ -116,10 +116,10 @@ export function StepUpMethodFields({
           {emailCodeSent ? 'Renvoyer le code' : 'Envoyer un code'}
         </Button>
         {emailCodeSent && (
-          <div className="space-y-2">
-            <Label htmlFor="stepup-email-code" className="text-xs">
+          <Field>
+            <FieldLabel htmlFor="stepup-email-code" className="text-xs">
               Code reçu par email
-            </Label>
+            </FieldLabel>
             <Input
               id="stepup-email-code"
               type="text"
@@ -133,7 +133,7 @@ export function StepUpMethodFields({
               required
               autoFocus
             />
-          </div>
+          </Field>
         )}
       </div>
     );

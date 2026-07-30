@@ -16,6 +16,7 @@ fn test_introspection_cache_operations() {
         client_id: Some("client1".to_string()),
         principal_type: Some("user".to_string()),
         token_type: Some("access_token".to_string()),
+        audience: Some("nvbes-cloud-service".to_string()),
         sub: Some("user1".to_string()),
         role: Some("admin".to_string()),
         tenant_id: None,

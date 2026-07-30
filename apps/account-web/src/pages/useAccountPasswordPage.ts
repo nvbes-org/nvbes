@@ -5,14 +5,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useAccountContext } from '@/hooks/useAccountContext';
 import { useAuthuser } from '@/hooks/useAuthuser';
-import { identityClient } from '@nvbes/identity-client';
+import { accountClient } from '@nvbes/identity-client';
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   passwordHasSupportedLength,
 } from '../identity.password.policy';
 import { type ChangePasswordInput, changePassword, forgotPassword } from '../identity.password.api';
-import { estimatePasswordStrength } from './RegisterPage.password-strength';
+import { estimatePasswordStrength } from '@/lib/password-strength';
 
 import { isStepUpRequiredError } from '@/identity.step-up';
 
@@ -133,7 +133,7 @@ export function useAccountPasswordPage() {
 
   const handleRevokeOtherSessions = async () => {
     try {
-      await identityClient.revokeOtherSessions();
+      await accountClient.revokeOtherSessions();
       setShowSessionStepUp(false);
       setShowSessionPrompt(false);
       void queryClient.invalidateQueries({ queryKey: ['identity', 'sessions'] });

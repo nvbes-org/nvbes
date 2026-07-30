@@ -1,8 +1,7 @@
-import { Button } from '@/components/ui/button';
+import { ChevronRight } from 'lucide-react';
+import { AccountActionItem } from '@/components/AccountActionItem';
 import { Card, CardContent } from '@/components/ui/card';
 import { FACTOR_ADD_ACTIONS } from './MfaPage.shared';
-import { SecurityActionRow } from '@/pages/AccountSecurityPage.row';
-import { ChevronRight } from 'lucide-react';
 
 export function MfaPageAddFactorCard({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
@@ -14,9 +13,10 @@ export function MfaPageAddFactorCard({ onNavigate }: { onNavigate: (path: string
               return null;
             }
             return (
-              <SecurityActionRow
+              <AccountActionItem
+                key={action.path}
                 icon={action.icon}
-                iconColor="size-4 text-muted-foreground"
+                iconClassName="size-4 text-muted-foreground"
                 label={action.label}
                 onAction={() => onNavigate(action.path)}
               />
@@ -44,27 +44,21 @@ export function MfaPageRecoveryCodesCard({
   return (
     <Card className="animate-fade-slide-up [animation-delay:350ms]">
       <CardContent>
-        <Button
+        <AccountActionItem
           variant={hasRecovery ? 'ghost' : 'default'}
-          className="h-auto w-full cursor-pointer justify-between gap-3 whitespace-normal rounded-lg px-2 py-3 text-left disabled:cursor-not-allowed"
-          onClick={() => onNavigate('/account/mfa/recovery-codes')}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex min-w-0 flex-col">
-              <span className="text-sm font-medium">
-                {hasRecovery ? 'Régénérer les codes' : 'Générer les codes'}
-              </span>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {hasRecovery && (
-              <p className="shrink-0 text-sm">
-                {formattedDate ? `généré le ${formattedDate}` : 'généré'}
-              </p>
-            )}
-            <ChevronRight className="size-4" />
-          </div>
-        </Button>
+          label={hasRecovery ? 'Régénérer les codes' : 'Générer les codes'}
+          trailing={
+            <>
+              {hasRecovery ? (
+                <p className="shrink-0 text-sm">
+                  {formattedDate ? `généré le ${formattedDate}` : 'généré'}
+                </p>
+              ) : null}
+              <ChevronRight className="size-4" />
+            </>
+          }
+          onAction={() => onNavigate('/account/mfa/recovery-codes')}
+        />
       </CardContent>
     </Card>
   );

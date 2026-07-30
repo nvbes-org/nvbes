@@ -4,14 +4,13 @@ import { type ChangeEvent, type SubmitEvent, useEffect, useMemo, useState } from
 import { type AsyncButtonState, AsyncStateButton } from '@/components/AsyncStateButton';
 import { BirthdateField } from '@/components/BirthdateField';
 import { birthdateBounds } from '@/components/birthdate';
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { FieldError } from '@/components/ui/field';
 import type { SupportedRegion } from '@/identity.auth.api';
-import { PersonalInfoError } from './AccountPersonalInfoPage.feedback';
 import type { PersonalInfoFieldErrors } from './AccountPersonalInfoPage.validation';
 import { RegionSelect } from './RegisterPage.region';
 import { MAX_USERNAME_LENGTH } from '@/identity.username.policy';
@@ -36,10 +35,10 @@ function ProfileField({
   value: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>
+    <Field>
+      <FieldLabel htmlFor={id}>
         {label} <span className="text-destructive">*</span>
-      </Label>
+      </FieldLabel>
       <Input
         id={id}
         type="text"
@@ -53,7 +52,7 @@ function ProfileField({
         onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
       />
       <FieldError id={`${id}-error`}>{error}</FieldError>
-    </div>
+    </Field>
   );
 }
 
@@ -145,8 +144,8 @@ export function PersonalInfoCard({
                 <AvatarImage src={avatarUrl} crossOrigin="anonymous" alt="Photo de profil" />
                 <AvatarFallback>{user.display_name.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="account-avatar">Photo de profil</Label>
+              <Field>
+                <FieldLabel htmlFor="account-avatar">Photo de profil</FieldLabel>
                 <div className="flex items-center gap-2">
                   <Input
                     id="account-avatar"
@@ -178,8 +177,8 @@ export function PersonalInfoCard({
                 <p className="text-xs text-muted-foreground">
                   JPEG, PNG, WebP, HEIC ou HEIF · 5 Mo maximum
                 </p>
-                {avatarError && <PersonalInfoError message={avatarError} />}
-              </div>
+                {avatarError && <FeedbackAlert tone="error">{avatarError}</FeedbackAlert>}
+              </Field>
             </section>
             <section className="grid gap-4 sm:grid-cols-2">
               <ProfileField
@@ -238,7 +237,7 @@ export function PersonalInfoCard({
             </section>
           </div>
 
-          {editError && <PersonalInfoError message={editError} />}
+          {editError && <FeedbackAlert tone="error">{editError}</FeedbackAlert>}
           <div className="mt-4">
             <AsyncStateButton
               type="submit"

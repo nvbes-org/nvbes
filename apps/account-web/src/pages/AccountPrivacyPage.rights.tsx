@@ -1,5 +1,6 @@
 import { Download, ShieldAlert } from 'lucide-react';
 
+import { FeedbackAlert } from '@/components/FeedbackAlert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { ErrorMessage, SuccessMessage } from './AccountPrivacyPage.feedback';
 
 export function PrivacyExportCard({
   exporting,
@@ -37,9 +37,12 @@ export function PrivacyExportCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {exportSuccess && (
-          <SuccessMessage message="Votre demande est enregistrée. Vous recevrez vos données par e-mail dès que l’export sera prêt." />
+          <FeedbackAlert>
+            Votre demande est enregistrée. Vous recevrez vos données par e-mail dès que l’export
+            sera prêt.
+          </FeedbackAlert>
         )}
-        {exportError && <ErrorMessage message={exportError} />}
+        {exportError && <FeedbackAlert tone="error">{exportError}</FeedbackAlert>}
       </CardContent>
       <CardFooter className="justify-start">
         <Button onClick={onExport} disabled={exporting}>
