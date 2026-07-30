@@ -1,5 +1,7 @@
 #[path = "identity.domains.auth.db.account.rs"]
 mod account;
+#[path = "identity.domains.auth.db.availability.rs"]
+mod availability;
 #[path = "identity.domains.auth.db.avatar.rs"]
 mod avatar;
 #[path = "identity.domains.auth.db.emails.rs"]
@@ -16,6 +18,7 @@ mod record;
 pub mod registration_enrollment;
 
 pub use account::create_user_account;
+pub use availability::{registration_email_exists, registration_username_exists};
 pub use avatar::{clear_profile_avatar, fetch_profile_avatar, save_profile_avatar};
 pub use factor_view::map_factor_view;
 pub use preferences::{

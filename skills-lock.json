@@ -337,6 +337,18 @@
       "skillPath": "skills/rag/domain-templates/SKILL.md",
       "computedHash": "0029aa72e963fdbb19fd86f8d5c7f684ecb9dfb172af2c565c2e9ff75adf2a43"
     },
+    "dpa-drafting": {
+      "source": "mukul975/privacy-data-protection-skills",
+      "sourceType": "github",
+      "skillPath": "skills/privacy/dpa-drafting/SKILL.md",
+      "computedHash": "a2d4519abd6bf65993869a4d7004593ba51493291c0eeb3ce3541db7b0c28ea7"
+    },
+    "dpa-review": {
+      "source": "anthropics/claude-for-legal",
+      "sourceType": "github",
+      "skillPath": "privacy-legal/skills/dpa-review/SKILL.md",
+      "computedHash": "a6cbe0b7cd8953dc100b1c7cbfb1480cbbbc34b6c836388f344b58df52cc9cda"
+    },
     "drawio-logical-diagrams": {
       "source": "giuseppe-trisciuoglio/developer-kit",
       "sourceType": "github",
@@ -907,6 +919,12 @@
       "skillPath": "skills/postgresql-optimization/SKILL.md",
       "computedHash": "8022448de70ba9a485e3b5bce34c5bbc644f93eb39b68431c9f7dabcf03aeb09"
     },
+    "privacy-policy-malik-taiar": {
+      "source": "lawvable/awesome-legal-skills",
+      "sourceType": "github",
+      "skillPath": "skills/politique-confidentialite-malik-taiar/SKILL.md",
+      "computedHash": "e8c168b8334b6f176438bd5ce65ae5fd8b327589ad69a758bf824ba3d08faac2"
+    },
     "prompt-engineering": {
       "source": "giuseppe-trisciuoglio/developer-kit",
       "sourceType": "github",
@@ -1476,6 +1494,12 @@
       "sourceType": "github",
       "skillPath": "skills/desktop/tauri/SKILL.md",
       "computedHash": "146fb06c2b99a2739f94d6773885efc26aa2a7656b94329a051b5c53f31f7fb6"
+    },
+    "terms-of-service": {
+      "source": "shawnpang/startup-founder-skills",
+      "sourceType": "github",
+      "skillPath": "skills/terms-of-service/SKILL.md",
+      "computedHash": "044956db2c4b3ec158127a9e5efa0683e42ac4eaa97679cf15a15b1c10d496d3"
     },
     "terraform": {
       "source": "claude-dev-suite/claude-dev-suite",

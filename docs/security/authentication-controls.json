@@ -47,7 +47,7 @@
               "path": "libs/rust/core/src/auth.helpers.validation.rs",
               "includes": [
                 "validate_password",
-                "MIN_PASSWORD_LENGTH: usize = 15",
+                "MIN_PASSWORD_LENGTH: usize = 8",
                 "MAX_PASSWORD_LENGTH: usize = 128",
                 "password.chars().count()",
                 "zxcvbn::zxcvbn",
@@ -385,6 +385,10 @@
             {
               "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
               "includes": ["auth_register", "check_dual_rate_limit", "require_pow_solution"]
+            },
+            {
+              "path": "apps/account-service/src/identity.domains.auth.routes.register.availability.rs",
+              "includes": ["auth_registration_availability", "check_dual_rate_limit", "token_hash"]
             }
           ]
         },

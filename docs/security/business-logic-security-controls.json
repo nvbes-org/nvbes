@@ -171,14 +171,13 @@
         {
           "id": "BLS_CTRL_006",
           "name": "Semantic registration and quota validation",
-          "description": "Validate legal acceptance, profile names, birthdate parsing, supported regions, and quota/spend-cap semantics server-side.",
+          "description": "Validate legal acceptance, username normalization and length, backend-derived supported regions, and quota/spend-cap semantics server-side.",
           "evidence": [
             {
               "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
               "includes": [
-                "parse_birthdate",
-                "validate_required_profile_name",
-                "region_required",
+                "normalize_username",
+                "region_detection_failed",
                 "legal_documents_required"
               ]
             },

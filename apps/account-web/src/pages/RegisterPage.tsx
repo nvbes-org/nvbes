@@ -1,8 +1,7 @@
 import { useLocation } from '@tanstack/react-router';
 import { RegisterBrandPanel } from './RegisterBrandPanel';
-import { RegisterPageContent } from './RegisterPage.content';
+import { RegisterForm } from './RegisterPage.form';
 import { RegisterPageShell } from './RegisterPage.layout';
-import { RegisterProgress } from './RegisterPage.shared';
 import { useRegisterPage } from './useRegisterPage';
 
 export default function RegisterPage() {
@@ -16,20 +15,12 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen">
       <RegisterBrandPanel />
-      <RegisterPageShell
-        title={page.step === 1 ? 'Créer votre compte' : 'Finaliser votre inscription'}
-        description={
-          page.step === 1
-            ? 'Renseignez vos informations personnelles.'
-            : 'Choisissez votre région de données et vos préférences.'
-        }
-        searchStr={location.searchStr}
-      >
-        <RegisterProgress step={page.step} />
-        <div className="mt-6">
-          <RegisterPageContent {...page} />
-        </div>
-      </RegisterPageShell>
+
+      <div className="flex flex-1 flex-col items-center justify-center w-full">
+        <RegisterPageShell title="Inscription" searchStr={location.searchStr}>
+          <RegisterForm {...page} />
+        </RegisterPageShell>
+      </div>
     </div>
   );
 }

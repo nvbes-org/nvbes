@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use nvbes_core::config::AppConfig;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
@@ -22,10 +22,7 @@ pub async fn create_user_account(
     redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     email: String,
-    firstname: String,
-    lastname: String,
     username: String,
-    birthdate: Option<NaiveDate>,
     region: Option<String>,
     data_region: Option<String>,
     password_hash: String,
@@ -48,11 +45,7 @@ pub async fn create_user_account(
     let tenant_id = Uuid::new_v4();
     let principal_id = Uuid::new_v4();
     let slug = password::unique_slug(&email);
-    let display_name = derive_display_name(
-        Some(firstname.as_str()),
-        Some(lastname.as_str()),
-        Some(&username),
-    );
+    let display_name = derive_display_name(None, None, Some(&username));
 
     let mut tx = db.begin().await?;
 
@@ -91,17 +84,17 @@ pub async fn create_user_account(
     )
     .bind(principal_id)
     .bind(&email)
-    .bind(firstname)
-    .bind(lastname)
+    .bind(Option::<String>::None)
+    .bind(Option::<String>::None)
     .bind(Some(username))
-    .bind(birthdate)
+    .bind(Option::<chrono::NaiveDate>::None)
     .bind(&region)
     .bind(&password_hash)
     .bind(now)
     .bind(initial_notifications(marketing_emails_accepted))
     .execute(&mut *tx)
     .await
-    .map_err(crate::domains::auth::db::emails::email_constraint_error)?;
+    .map_err(account_creation_constraint_error)?;
 
     crate::domains::auth::db::registration_enrollment::insert_tx(
         &mut tx,
@@ -176,6 +169,21 @@ pub async fn create_user_account(
     Ok((principal_id, now))
 }
 
+fn account_creation_constraint_error(error: sqlx::Error) -> AppError {
+    if let sqlx::Error::Database(ref db_error) = error {
+        if let Some(app_error) = account_creation_constraint_error_for(db_error.constraint()) {
+            return app_error;
+        }
+    }
+
+    crate::domains::auth::db::emails::email_constraint_error(error)
+}
+
+fn account_creation_constraint_error_for(constraint: Option<&str>) -> Option<AppError> {
+    (constraint == Some("idx_users_username"))
+        .then(|| AppError::conflict("username_taken", "This username is already taken."))
+}
+
 fn initial_notifications(marketing_emails_accepted: bool) -> serde_json::Value {
     serde_json::json!({
         "email": true,
@@ -220,7 +228,9 @@ async fn record_registration_legal_consents_tx(
 
 #[cfg(test)]
 mod tests {
-    use super::{REGISTER_LEGAL_DOCUMENTS, initial_notifications};
+    use super::{
+        REGISTER_LEGAL_DOCUMENTS, account_creation_constraint_error_for, initial_notifications,
+    };
 
     #[test]
     fn registration_legal_documents_are_recorded_per_document() {
@@ -242,5 +252,14 @@ mod tests {
         assert_eq!(notifications["push"], true);
         assert_eq!(notifications["in_app"], true);
         assert_eq!(notifications["marketing_email"], true);
+    }
+
+    #[test]
+    fn username_constraint_is_a_business_conflict() {
+        let app_error = account_creation_constraint_error_for(Some("idx_users_username"))
+            .expect("username constraint must map to a conflict");
+
+        assert_eq!(app_error.code, "username_taken");
+        assert_eq!(app_error.status, axum::http::StatusCode::CONFLICT);
     }
 }

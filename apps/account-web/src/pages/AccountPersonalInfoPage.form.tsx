@@ -14,6 +14,7 @@ import type { SupportedRegion } from '@/identity.auth.api';
 import { PersonalInfoError } from './AccountPersonalInfoPage.feedback';
 import type { PersonalInfoFieldErrors } from './AccountPersonalInfoPage.validation';
 import { RegionSelect } from './RegisterPage.region';
+import { MAX_USERNAME_LENGTH } from '@/identity.username.policy';
 
 function ProfileField({
   autoComplete,
@@ -204,7 +205,7 @@ export function PersonalInfoCard({
                   id="account-username"
                   label="Nom d'utilisateur"
                   error={errors.username}
-                  maxLength={100}
+                  maxLength={MAX_USERNAME_LENGTH}
                   value={username}
                   placeholder="Nom d'utilisateur"
                   autoComplete="username"

@@ -31,13 +31,9 @@ test.describe('@critical identity journeys', () => {
     const { betaEmail, betaPassword, username } = registrationCredentials(testInfo);
 
     await page.goto('/register');
-    await page.getByLabel(/^Prénom/u).fill('Beta');
-    await page.getByLabel(/^Nom \*/u).fill('E2E');
     await page.getByLabel(/^Email/u).fill(betaEmail);
     await page.getByLabel(/^Nom d'utilisateur/u).fill(username);
-    await page.getByLabel(/^Date de naissance/u).fill('01/01/1990');
     await page.getByLabel(/^Mot de passe/u).fill(betaPassword);
-    await page.getByRole('button', { name: 'Continuer vers la dernière étape' }).click();
     await page.getByRole('checkbox', { name: /J'accepte les/u }).check();
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
     await expect(page).toHaveURL(/\/verify\/?$/u);
@@ -168,12 +164,12 @@ function betaCredentials(testInfo: TestInfo) {
 function registrationCredentials(testInfo: TestInfo) {
   const credentials = betaCredentials(testInfo);
   const separator = credentials.betaEmail.lastIndexOf('@');
-  const nonce = randomUUID().replaceAll('-', '').slice(0, 12);
+  const nonce = randomUUID().replaceAll('-', '').slice(0, 8);
 
   return {
     ...credentials,
     betaEmail: `${credentials.betaEmail.slice(0, separator)}-${nonce}${credentials.betaEmail.slice(separator)}`,
-    username: `beta_e2e_${nonce}`,
+    username: nonce,
   };
 }
 

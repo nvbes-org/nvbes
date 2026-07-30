@@ -2,10 +2,6 @@ import { z } from 'zod';
 import type { BotIntegritySignals, DeviceProfile } from '@nvbes/identity-sdk-web';
 import { identityHttpClient } from './identity.http';
 
-const RegionResultSchema = z.object({
-  region: z.string().nullable(),
-});
-
 const SupportedRegionSchema = z.object({
   country_code: z.string(),
   data_region: z.string(),
@@ -28,7 +24,13 @@ const RegisterResultSchema = z.object({
   verification_resend_available_at: z.string(),
 });
 
+const RegistrationAvailabilityResultSchema = z.object({
+  available: z.boolean(),
+});
+
 export type RegisterResult = z.infer<typeof RegisterResultSchema>;
+export type RegistrationAvailabilityResult = z.infer<typeof RegistrationAvailabilityResultSchema>;
+export type RegistrationAvailabilityField = 'email' | 'username';
 export type SupportedRegion = z.infer<typeof SupportedRegionSchema>;
 
 const LoginIdentifierResultSchema = z.object({
@@ -68,12 +70,8 @@ export type WebauthnAuthStartResult = z.infer<typeof WebauthnAuthStartResultSche
 
 export type RegisterInput = {
   email: string;
-  firstname: string;
-  lastname: string;
   username: string;
-  birthdate?: string;
   password: string;
-  region?: string;
   legal_documents_accepted: boolean;
   marketing_emails_accepted: boolean;
 };
@@ -109,10 +107,6 @@ async function withAuthRequestTimeout<T>(
   }
 }
 
-export function detectRegion(): Promise<{ region: string | null }> {
-  return identityHttpClient.get('/auth/region', RegionResultSchema);
-}
-
 export function fetchSupportedRegions(): Promise<SupportedRegion[]> {
   return identityHttpClient.get('/auth/regions', SupportedRegionsResultSchema);
 }
@@ -133,6 +127,19 @@ export function submitRegister(
       },
       { signal },
     ),
+  );
+}
+
+export function fetchRegistrationAvailability(
+  field: RegistrationAvailabilityField,
+  value: string,
+  signal: AbortSignal,
+): Promise<RegistrationAvailabilityResult> {
+  return identityHttpClient.post(
+    '/auth/registration/availability',
+    RegistrationAvailabilityResultSchema,
+    { field, value },
+    { signal },
   );
 }
 

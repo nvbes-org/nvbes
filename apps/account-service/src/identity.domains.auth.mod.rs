@@ -92,6 +92,8 @@ pub mod types;
 pub mod ua_client_hints;
 #[path = "identity.domains.auth.user_agent.rs"]
 pub mod user_agent;
+#[path = "identity.domains.auth.username.rs"]
+pub mod username;
 #[path = "identity.domains.auth.verification.rs"]
 pub mod verification;
 #[path = "identity.domains.auth.webauthn.rs"]

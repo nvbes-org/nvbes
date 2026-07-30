@@ -1,6 +1,6 @@
 use crate::http::error::AppError;
 
-pub const MIN_PASSWORD_LENGTH: usize = 15;
+pub const MIN_PASSWORD_LENGTH: usize = 8;
 pub const MAX_PASSWORD_LENGTH: usize = 128;
 
 pub fn normalize_email(email: &str) -> String {

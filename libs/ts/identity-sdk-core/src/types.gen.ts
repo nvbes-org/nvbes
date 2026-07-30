@@ -676,6 +676,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/registration/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["registration_availability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/sessions": {
         parameters: {
             query?: never;
@@ -1891,22 +1907,27 @@ export interface components {
             region?: string | null;
         };
         RegisterRequest: {
-            birthdate?: string | null;
             email: string;
-            firstname: string;
-            lastname: string;
             legal_documents_accepted?: boolean;
             marketing_emails_accepted?: boolean;
             password: string;
             pow_nonce: string;
             pow_solution: string;
-            region?: string | null;
             username: string;
         };
         RegisterResult: {
             user: components["schemas"]["UserView"];
             /** Format: date-time */
             verification_resend_available_at: string;
+        };
+        /** @enum {string} */
+        RegistrationAvailabilityField: "email" | "username";
+        RegistrationAvailabilityRequest: {
+            field: components["schemas"]["RegistrationAvailabilityField"];
+            value: string;
+        };
+        RegistrationAvailabilityResponse: {
+            available: boolean;
         };
         ResendSecondaryEmailVerificationResult: {
             email: components["schemas"]["EmailAddressView"];
@@ -4059,8 +4080,50 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Email already exists */
+            /** @description Email or username already exists */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    registration_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Registration identifier availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationAvailabilityResponse"];
+                };
+            };
+            /** @description Invalid registration identifier */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

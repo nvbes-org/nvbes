@@ -1,5 +1,5 @@
 import {
-  detectRegistrationRegion,
+  checkRegistrationIdentifierAvailability,
   loadSupportedRegions,
   logoutIdentitySessionFn,
   registerIdentityAccount,
@@ -8,6 +8,12 @@ import {
   submitLoginMfaStep,
   submitLoginPasswordStep,
 } from './identity.auth.functions';
+import type { RegistrationAvailabilityField } from './identity.auth.api';
+
+export const identityAuthQueryKeys = {
+  registrationAvailability: (field: RegistrationAvailabilityField, value: string) =>
+    ['identity', 'auth', 'registration-availability', field, value] as const,
+};
 
 export const identityAuthMutationKeys = {
   loginIdentifier: ['identity', 'auth', 'login-identifier'] as const,
@@ -16,13 +22,13 @@ export const identityAuthMutationKeys = {
   loginWebauthnStart: ['identity', 'auth', 'login-webauthn-start'] as const,
   logout: ['identity', 'auth', 'logout'] as const,
   register: ['identity', 'auth', 'register'] as const,
-  regionDetect: ['identity', 'auth', 'region-detect'] as const,
   supportedRegions: ['identity', 'auth', 'supported-regions'] as const,
 };
 
 export const submitRegisterMutationFn = registerIdentityAccount;
 
-export const detectRegionQueryFn = detectRegistrationRegion;
+export const registrationAvailabilityQueryFn = checkRegistrationIdentifierAvailability;
+
 export const supportedRegionsQueryFn = loadSupportedRegions;
 
 export const submitLoginIdentifierMutationFn = submitLoginIdentifierStep;

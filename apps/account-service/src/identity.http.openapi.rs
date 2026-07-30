@@ -27,8 +27,9 @@ use security::SecurityContract;
     ),
     paths(
         crate::domains::auth::routes::register::register,
-        crate::domains::auth::routes::register::region,
-        crate::domains::auth::routes::register::supported_regions,
+        crate::domains::auth::routes::register::availability::registration_availability,
+        crate::domains::auth::routes::register::registration_region::region,
+        crate::domains::auth::routes::register::registration_region::supported_regions,
         crate::domains::auth::routes::register::verify_email,
         crate::domains::auth::routes::login::identifier::challenge_identifier,
         crate::domains::auth::routes::login::mfa::challenge_mfa,

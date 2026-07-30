@@ -21,15 +21,12 @@ pub async fn register(
     let email = normalize_email(&input.email);
     validate_email(&email)?;
     validate_password(&input.password)?;
+    let username = super::username::normalize_username(&input.username)?;
     if !input.legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
             "Legal documents must be accepted to create an account.",
         ));
-    }
-
-    if let Some(bd) = input.birthdate {
-        nvbes_core::auth::validate_birthdate(bd, input.region.as_deref())?;
     }
 
     nvbes_core::limiter::check_rate_limit(
@@ -51,10 +48,7 @@ pub async fn register(
         redis,
         config,
         email.clone(),
-        input.firstname.clone(),
-        input.lastname.clone(),
-        input.username.clone(),
-        input.birthdate,
+        username.clone(),
         input.region.clone(),
         input.data_region.clone(),
         password_hash.clone(),
@@ -68,11 +62,7 @@ pub async fn register(
     )
     .await?;
     history::insert_password_hash(db, principal_id, &password_hash).await?;
-    let display_name = derive_display_name(
-        Some(input.firstname.as_str()),
-        Some(input.lastname.as_str()),
-        Some(&input.username),
-    );
+    let display_name = derive_display_name(None, None, Some(&username));
 
     super::email_verification::enqueue_verification_email(
         db,
@@ -90,10 +80,10 @@ pub async fn register(
             id: principal_id,
             email: email.clone(),
             display_name,
-            firstname: Some(input.firstname.clone()),
-            lastname: Some(input.lastname.clone()),
-            username: Some(input.username.clone()),
-            birthdate: input.birthdate,
+            firstname: None,
+            lastname: None,
+            username: Some(username),
+            birthdate: None,
             region: input.region.clone(),
             email_verified: false,
             mfa_enabled: false,

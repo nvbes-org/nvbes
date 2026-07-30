@@ -3,36 +3,38 @@ use crate::{app::AppState, http::error::AppError};
 use axum::{
     Json, Router,
     extract::State,
-    http::{HeaderMap, HeaderValue, StatusCode, header},
+    http::{HeaderMap, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use nvbes_product_analytics::ProductAnalyticsEvent;
-use nvbes_region::{
-    country_code_to_data_region, detect_profile_from_country_code, is_country_allowed,
-    supported_data_regions, supported_profiles,
-};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use std::sync::OnceLock;
+use nvbes_region::{country_code_to_data_region, detect_profile_from_country_code};
+use serde::Deserialize;
 use std::time::{Duration, Instant};
 use tracing::{info, warn};
 use utoipa::ToSchema;
+
+#[path = "identity.domains.auth.routes.register.availability.rs"]
+pub(crate) mod availability;
+#[path = "identity.domains.auth.routes.register.region.rs"]
+pub(crate) mod registration_region;
+
+pub(crate) use registration_region::{region, supported_regions};
 
 #[cfg(test)]
 #[path = "identity.domains.auth.routes.register.tests.rs"]
 mod tests;
 
 const REGISTER_REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
-const SUPPORTED_REGIONS_CACHE_CONTROL: &str =
-    "public, max-age=86400, stale-while-revalidate=604800";
-
-static SUPPORTED_REGIONS_CACHE: OnceLock<SupportedRegionsCache> = OnceLock::new();
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/register", post(register))
+        .route(
+            "/registration/availability",
+            post(availability::registration_availability),
+        )
         .route("/verify-email", post(verify_email))
         .route("/region", get(region))
         .route("/regions", get(supported_regions))
@@ -43,11 +45,8 @@ pub fn router() -> Router<AppState> {
 pub(crate) struct RegisterRequest {
     email: String,
     password: String,
-    firstname: String,
-    lastname: String,
+    #[schema(max_length = 100)]
     username: String,
-    birthdate: Option<String>,
-    region: Option<String>,
     pow_nonce: String,
     pow_solution: String,
     #[serde(default)]
@@ -66,17 +65,13 @@ fn register_input_from_request(
     request: RegisterRequest,
     country_code: String,
     data_region: String,
-    birthdate: Option<chrono::NaiveDate>,
     ip: Option<String>,
     user_agent: Option<String>,
 ) -> crate::domains::auth::types::RegisterInput {
     crate::domains::auth::types::RegisterInput {
         email: request.email,
         password: request.password,
-        firstname: request.firstname.trim().to_string(),
-        lastname: request.lastname.trim().to_string(),
-        username: request.username,
-        birthdate,
+        username: request.username.trim().to_string(),
         region: Some(country_code),
         data_region: Some(data_region),
         ip,
@@ -84,17 +79,6 @@ fn register_input_from_request(
         legal_documents_accepted: request.legal_documents_accepted,
         marketing_emails_accepted: request.marketing_emails_accepted,
     }
-}
-
-fn validate_required_profile_name(value: &str, field: &str) -> Result<(), AppError> {
-    if value.trim().is_empty() {
-        return Err(AppError::bad_request(
-            format!("{field}_required"),
-            format!("{field} is required."),
-        ));
-    }
-
-    Ok(())
 }
 
 #[utoipa::path(
@@ -105,7 +89,7 @@ fn validate_required_profile_name(value: &str, field: &str) -> Result<(), AppErr
     responses(
         (status = 200, description = "Registration successful", body = crate::domains::auth::types::RegisterResult),
         (status = 400, description = "Validation error", body = ErrorEnvelope),
-        (status = 409, description = "Email already exists", body = ErrorEnvelope),
+        (status = 409, description = "Email or username already exists", body = ErrorEnvelope),
         (status = 429, description = "Rate limited", body = ErrorEnvelope),
     ),
 )]
@@ -175,14 +159,7 @@ async fn register_inner(
     headers: HeaderMap,
     request: RegisterRequest,
 ) -> Result<Json<crate::domains::auth::types::RegisterResult>, AppError> {
-    info!(
-        has_manual_region = request
-            .region
-            .as_deref()
-            .map(str::trim)
-            .is_some_and(|value| !value.is_empty()),
-        "auth_register_started"
-    );
+    info!("auth_register_started");
 
     crate::domains::auth::challenge_proof::require_pow_solution(
         &state.db,
@@ -205,25 +182,11 @@ async fn register_inner(
     info!("auth_register_rate_limit_passed");
 
     let ip = crate::http::request::client_ip(&headers);
-    let detected_country =
-        crate::http::request::region_from_headers(&headers).and_then(|country| {
-            detect_profile_from_country_code(&country)
-                .map(|profile| profile.country_code.to_string())
-        });
-    let manual_country = request
-        .region
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .and_then(|value| {
-            detect_profile_from_country_code(value).map(|profile| profile.country_code.to_string())
-        });
-
-    let resolved_country = detected_country.or(manual_country);
-    let Some(country_code) = resolved_country else {
+    let detected_country = registration_country_from_headers(&headers, &state.config.environment);
+    let Some(country_code) = detected_country else {
         return Err(AppError::bad_request(
-            "region_required",
-            "Unable to detect a supported region automatically. Please provide one of the supported country codes.",
+            "region_detection_failed",
+            "Unable to detect a supported region from this connection. Please try again.",
         ));
     };
     info!(country = %country_code, "auth_register_region_resolved");
@@ -232,9 +195,7 @@ async fn register_inner(
         .as_str()
         .to_string();
 
-    let birthdate = nvbes_core::auth::parse_birthdate(request.birthdate.as_deref())?;
-    validate_required_profile_name(&request.firstname, "firstname")?;
-    validate_required_profile_name(&request.lastname, "lastname")?;
+    crate::domains::auth::username::normalize_username(&request.username)?;
     if !request.legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
@@ -252,7 +213,6 @@ async fn register_inner(
             request,
             country_code,
             data_region,
-            birthdate,
             ip,
             crate::http::request::user_agent(&headers),
         ),
@@ -278,125 +238,13 @@ async fn register_inner(
     Ok(Json(result))
 }
 
-#[derive(Serialize, ToSchema)]
-pub(crate) struct RegionResponse {
-    region: Option<String>,
-}
-
-#[utoipa::path(
-    get,
-    path = "/auth/region",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Detected region from request headers", body = RegionResponse),
-    ),
-)]
-pub(crate) async fn region(headers: HeaderMap) -> Json<RegionResponse> {
-    Json(RegionResponse {
-        region: crate::http::request::region_from_headers(&headers),
-    })
-}
-
-#[derive(Clone, Serialize, ToSchema)]
-pub(crate) struct SupportedRegionResponse {
-    country_code: &'static str,
-    data_region: &'static str,
-    legal_jurisdiction: &'static str,
-    primary_timezone: &'static str,
-    timezones: Vec<&'static str>,
-    sub_region: Option<&'static str>,
-    display_name: Option<&'static str>,
-    hosting_strategy: &'static str,
-    is_european_exclusive: bool,
-}
-
-struct SupportedRegionsCache {
-    etag: String,
-    body: Vec<SupportedRegionResponse>,
-}
-
-fn supported_region_catalog() -> Vec<SupportedRegionResponse> {
-    let allowed_data_regions = supported_data_regions();
-    let mut regions: Vec<_> = supported_profiles()
-        .iter()
-        .filter(|profile| {
-            allowed_data_regions.contains(&profile.data_region)
-                && is_country_allowed(profile.country_code)
+fn registration_country_from_headers(headers: &HeaderMap, environment: &str) -> Option<String> {
+    crate::http::request::region_from_headers(headers)
+        .and_then(|country| {
+            detect_profile_from_country_code(&country)
+                .map(|profile| profile.country_code.to_string())
         })
-        .map(|profile| SupportedRegionResponse {
-            country_code: profile.country_code,
-            data_region: profile.data_region.as_str(),
-            legal_jurisdiction: profile.legal_jurisdiction.as_str(),
-            primary_timezone: profile.primary_timezone.as_str(),
-            timezones: profile.timezones.iter().map(|tz| tz.as_str()).collect(),
-            sub_region: profile.sub_region,
-            display_name: profile.display_name,
-            hosting_strategy: profile.data_region.hosting_strategy(),
-            is_european_exclusive: profile.data_region.is_european_exclusive(),
-        })
-        .collect();
-
-    regions.sort_by(|left, right| left.country_code.cmp(right.country_code));
-    regions
-}
-
-fn supported_regions_cache() -> &'static SupportedRegionsCache {
-    SUPPORTED_REGIONS_CACHE.get_or_init(|| {
-        let body = supported_region_catalog();
-        let json = serde_json::to_vec(&body).expect("supported regions catalog must serialize");
-        let hash = Sha256::digest(&json);
-
-        SupportedRegionsCache {
-            etag: format!("\"regions-{}\"", hex::encode(hash)),
-            body,
-        }
-    })
-}
-
-fn if_none_match_matches(headers: &HeaderMap, etag: &str) -> bool {
-    headers
-        .get(header::IF_NONE_MATCH)
-        .and_then(|value| value.to_str().ok())
-        .is_some_and(|value| {
-            value
-                .split(',')
-                .map(str::trim)
-                .any(|candidate| candidate == "*" || candidate == etag)
-        })
-}
-
-fn insert_supported_regions_cache_headers(headers: &mut HeaderMap, etag: &str) {
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static(SUPPORTED_REGIONS_CACHE_CONTROL),
-    );
-    headers.insert(
-        header::ETAG,
-        HeaderValue::from_str(etag).expect("supported regions ETag must be a valid header"),
-    );
-}
-
-#[utoipa::path(
-    get,
-    path = "/auth/regions",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Supported region catalog", body = [SupportedRegionResponse]),
-        (status = 304, description = "Supported region catalog not modified"),
-    ),
-)]
-pub(crate) async fn supported_regions(headers: HeaderMap) -> Response {
-    let cache = supported_regions_cache();
-
-    if if_none_match_matches(&headers, &cache.etag) {
-        let mut response = StatusCode::NOT_MODIFIED.into_response();
-        insert_supported_regions_cache_headers(response.headers_mut(), &cache.etag);
-        return response;
-    }
-
-    let mut response = Json(cache.body.clone()).into_response();
-    insert_supported_regions_cache_headers(response.headers_mut(), &cache.etag);
-    response
+        .or_else(|| matches!(environment, "development" | "test").then(|| "FR".to_string()))
 }
 
 #[utoipa::path(

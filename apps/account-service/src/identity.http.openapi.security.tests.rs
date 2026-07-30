@@ -30,6 +30,7 @@ const PUBLIC_OPERATION_IDS: &[&str] = &[
     "region",
     "supported_regions",
     "register",
+    "registration_availability",
     "verify_email",
     "resend_verify_email",
     "authorize",
@@ -195,6 +196,10 @@ fn sentinels_distinguish_public_browser_enrollment_and_oauth_access() {
     let document = document();
     assert_eq!(
         operation(&document, "/auth/register", "post")["security"],
+        json!([])
+    );
+    assert_eq!(
+        operation(&document, "/auth/registration/availability", "post")["security"],
         json!([])
     );
     assert_eq!(

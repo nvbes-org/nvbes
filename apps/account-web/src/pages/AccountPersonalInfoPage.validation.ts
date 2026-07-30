@@ -1,4 +1,5 @@
 import type { SupportedRegion } from '@/identity.auth.api';
+import { MAX_USERNAME_LENGTH, usernameHasSupportedLength } from '@/identity.username.policy';
 
 export interface PersonalInfoFieldErrors {
   firstname?: string;
@@ -35,8 +36,8 @@ export function validatePersonalInfo({
   const trimmedUsername = username.trim();
   if (!trimmedUsername) {
     errors.username = 'Le nom d’utilisateur est requis.';
-  } else if (trimmedUsername.length > 100) {
-    errors.username = 'Le nom d’utilisateur doit contenir 100 caractères maximum.';
+  } else if (!usernameHasSupportedLength(trimmedUsername)) {
+    errors.username = `Le nom d’utilisateur doit contenir ${MAX_USERNAME_LENGTH} caractères maximum.`;
   }
 
   if (!birthdate) {

@@ -2563,7 +2563,58 @@
             }
           },
           "409": {
-            "description": "Email already exists",
+            "description": "Email or username already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/registration/availability": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "registration_availability",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationAvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Registration identifier availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationAvailabilityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid registration identifier",
             "content": {
               "application/json": {
                 "schema": {
@@ -7518,26 +7569,12 @@
         "required": [
           "email",
           "password",
-          "firstname",
-          "lastname",
           "username",
           "pow_nonce",
           "pow_solution"
         ],
         "properties": {
-          "birthdate": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "email": {
-            "type": "string"
-          },
-          "firstname": {
-            "type": "string"
-          },
-          "lastname": {
             "type": "string"
           },
           "legal_documents_accepted": {
@@ -7555,14 +7592,9 @@
           "pow_solution": {
             "type": "string"
           },
-          "region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "username": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           }
         }
       },
@@ -7579,6 +7611,39 @@
           "verification_resend_available_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "RegistrationAvailabilityField": {
+        "type": "string",
+        "enum": [
+          "email",
+          "username"
+        ]
+      },
+      "RegistrationAvailabilityRequest": {
+        "type": "object",
+        "required": [
+          "field",
+          "value"
+        ],
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/RegistrationAvailabilityField"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "RegistrationAvailabilityResponse": {
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean"
           }
         }
       },
@@ -8490,7 +8555,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "maxLength": 100
           }
         }
       },

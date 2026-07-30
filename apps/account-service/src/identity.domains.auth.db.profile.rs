@@ -15,7 +15,12 @@ pub async fn update_user_profile(
 
     let firstname = input.firstname.clone().or(existing.firstname);
     let lastname = input.lastname.clone().or(existing.lastname);
-    let username = input.username.clone().or(existing.username);
+    let username = input
+        .username
+        .as_deref()
+        .map(crate::domains::auth::username::normalize_username)
+        .transpose()?
+        .or(existing.username);
     let birthdate = input.birthdate.or(existing.birthdate);
     let region = input.region.clone().or(existing.region);
     let display_name = derive_display_name(
@@ -23,21 +28,6 @@ pub async fn update_user_profile(
         lastname.as_deref(),
         username.as_deref(),
     );
-
-    if let Some(ref new_username) = input.username {
-        if new_username.trim().is_empty() {
-            return Err(AppError::bad_request(
-                "validation_failed",
-                "Username cannot be empty.",
-            ));
-        }
-        if new_username.len() > 100 {
-            return Err(AppError::bad_request(
-                "validation_failed",
-                "Username must be 100 characters or fewer.",
-            ));
-        }
-    }
 
     let result = sqlx::query(
         r#"

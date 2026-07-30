@@ -1,12 +1,14 @@
 import { normalizeClientError } from '@nvbes/web-runtime';
 import {
-  detectRegion,
+  fetchRegistrationAvailability,
   fetchSupportedRegions,
   type LoginIdentifierResult,
   type LoginPasswordResult,
   logoutIdentitySession,
   type RegisterInput,
   type RegisterResult,
+  type RegistrationAvailabilityField,
+  type RegistrationAvailabilityResult,
   startLoginWebAuthn,
   submitLoginIdentifier,
   submitLoginMfa,
@@ -17,61 +19,6 @@ import {
 } from './identity.auth.api';
 
 export type { RegisterInput };
-
-type RegionDetection = {
-  region: string | null;
-  reliability: 'high' | 'medium' | 'low' | 'none';
-};
-
-export function detectRegionFromBrowser(supportedRegions: SupportedRegion[]): {
-  region: string | null;
-  reliability: 'medium' | 'low' | 'none';
-} {
-  try {
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (userTimezone) {
-      const match = supportedRegions.find(
-        (region) =>
-          region.timezones.includes(userTimezone) || region.primary_timezone === userTimezone,
-      );
-      if (match) {
-        return { region: match.country_code, reliability: 'medium' };
-      }
-    }
-  } catch {
-    // Browser region detection is best-effort.
-  }
-
-  try {
-    const locale = navigator.language || (navigator.languages && navigator.languages[0]);
-    if (locale) {
-      const parts = locale.split('-');
-      const countryCode = parts.length > 1 ? parts[1].toUpperCase() : parts[0].toUpperCase();
-      const match = supportedRegions.find((region) => region.country_code === countryCode);
-      if (match) {
-        return { region: match.country_code, reliability: 'low' };
-      }
-    }
-  } catch {
-    // Browser region detection is best-effort.
-  }
-
-  return { region: null, reliability: 'none' };
-}
-
-export async function detectRegistrationRegion(): Promise<RegionDetection> {
-  try {
-    const serverResult = await detectRegion();
-
-    if (serverResult.region) {
-      return { region: serverResult.region, reliability: 'high' };
-    }
-
-    return { region: null, reliability: 'none' };
-  } catch (error) {
-    throw normalizeClientError(error);
-  }
-}
 
 export async function loadSupportedRegions(): Promise<SupportedRegion[]> {
   try {
@@ -88,6 +35,18 @@ export async function registerIdentityAccount(input: {
 }): Promise<RegisterResult> {
   try {
     return await submitRegister(input.data, input.powNonce, input.powSolution);
+  } catch (error) {
+    throw normalizeClientError(error);
+  }
+}
+
+export async function checkRegistrationIdentifierAvailability(input: {
+  field: RegistrationAvailabilityField;
+  value: string;
+  signal: AbortSignal;
+}): Promise<RegistrationAvailabilityResult> {
+  try {
+    return await fetchRegistrationAvailability(input.field, input.value, input.signal);
   } catch (error) {
     throw normalizeClientError(error);
   }

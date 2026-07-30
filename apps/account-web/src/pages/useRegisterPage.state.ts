@@ -1,15 +1,11 @@
 import { useMemo, useState } from 'react';
-import { birthdateBounds } from '@/components/birthdate';
+import { emailHasSupportedFormat } from '../identity.email.policy';
 import { passwordHasSupportedLength } from '../identity.password.policy';
+import { usernameHasSupportedLength } from '../identity.username.policy';
 import { estimatePasswordStrength } from './RegisterPage.password-strength';
-import type { RegisterStep } from './RegisterPage.shared';
 
 export function useRegisterPageState() {
-  const [step, setStep] = useState<RegisterStep>(1);
-  const [firstname, setFirstname] = useState('');
-  const [lastname, setLastname] = useState('');
   const [username, setUsername] = useState('');
-  const [birthdate, setBirthdate] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [legalDocumentsAccepted, setLegalDocumentsAccepted] = useState(false);
@@ -23,31 +19,24 @@ export function useRegisterPageState() {
     return estimatePasswordStrength(password);
   }, [password]);
 
+  const emailValid = emailHasSupportedFormat(email);
+  const passwordValid = passwordHasSupportedLength(password) && (passwordResult?.score ?? 0) >= 3;
+  const usernameValid = usernameHasSupportedLength(username);
+
   return {
-    birthdate,
-    canProceedFromStep1:
-      firstname.trim() !== '' &&
-      lastname.trim() !== '' &&
-      passwordHasSupportedLength(password) &&
-      (passwordResult?.score ?? 0) >= 3,
+    canSubmit: emailValid && usernameValid && passwordValid && legalDocumentsAccepted,
     email,
-    firstname,
-    lastname,
+    emailValid,
     legalDocumentsAccepted,
     marketingEmailsAccepted,
-    maxBirthdate: birthdateBounds().maxBirthdate,
-    minBirthdate: birthdateBounds().minBirthdate,
     password,
-    setBirthdate,
+    passwordValid,
     setEmail,
-    setFirstname,
-    setLastname,
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    setStep,
     setUsername,
-    step,
     username,
+    usernameValid,
   };
 }

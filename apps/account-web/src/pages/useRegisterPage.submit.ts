@@ -6,19 +6,14 @@ import { resolvePowChallenge } from '../identity.auth.pow';
 import { accountServiceBaseUrl } from '../identity.http';
 import { savePendingOAuthAuthorizeRequest } from '../identity.oauth';
 import { trackEvent } from '../identity.analytics';
-import { isEmailAlreadyExistsError } from './RegisterPage.errors';
+import { isEmailAlreadyExistsError, isUsernameTakenError } from './RegisterPage.errors';
 
 interface RegisterSubmitArgs {
   oauthRequest: ReturnType<typeof import('../identity.oauth').readOAuthAuthorizeRequest>;
-  detectedRegion: string | null;
-  selectedRegion: string;
-  firstname: string;
-  lastname: string;
   username: string;
-  birthdate: string;
   email: string;
   password: string;
-  canProceedFromStep1: boolean;
+  canSubmit: boolean;
   legalDocumentsAccepted: boolean;
   marketingEmailsAccepted: boolean;
   onSuccess: (args: {
@@ -30,15 +25,10 @@ interface RegisterSubmitArgs {
 
 export function useRegisterPageSubmit({
   oauthRequest,
-  detectedRegion,
-  selectedRegion,
-  firstname,
-  lastname,
   username,
-  birthdate,
   email,
   password,
-  canProceedFromStep1,
+  canSubmit,
   legalDocumentsAccepted,
   marketingEmailsAccepted,
   onSuccess,
@@ -51,24 +41,18 @@ export function useRegisterPageSubmit({
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!canProceedFromStep1 || !legalDocumentsAccepted) {
+    if (!canSubmit || !legalDocumentsAccepted) {
       return;
     }
 
     try {
-      trackEvent('auth.signup_started', {
-        country: selectedRegion || detectedRegion || undefined,
-      });
+      trackEvent('auth.signup_started');
 
       const result = await registerMutation.mutateAsync({
         data: {
           email,
-          firstname: firstname.trim(),
-          lastname: lastname.trim(),
-          username,
-          birthdate: birthdate || undefined,
+          username: username.trim(),
           password,
-          region: selectedRegion || undefined,
           legal_documents_accepted: legalDocumentsAccepted,
           marketing_emails_accepted: marketingEmailsAccepted,
         },
@@ -98,5 +82,6 @@ export function useRegisterPageSubmit({
     handleSubmit,
     loading: registerMutation.isPending,
     resetError: registerMutation.reset,
+    usernameTaken: isUsernameTakenError(registerMutation.error),
   };
 }

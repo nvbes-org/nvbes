@@ -141,6 +141,7 @@ fn is_public_operation(operation_id: &str) -> bool {
             | "region"
             | "supported_regions"
             | "register"
+            | "registration_availability"
             | "verify_email"
             | "resend_verify_email"
             | "authorize"

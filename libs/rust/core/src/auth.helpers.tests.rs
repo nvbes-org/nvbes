@@ -65,7 +65,7 @@ fn validate_password_accepts_strong_password() {
 
 #[test]
 fn validate_password_rejects_short_passwords() {
-    let error = validate_password("short phrase").expect_err("expected short password to fail");
+    let error = validate_password("short").expect_err("expected short password to fail");
     assert_eq!(error.status, StatusCode::BAD_REQUEST);
 }
 
@@ -83,8 +83,8 @@ fn validate_password_accepts_long_passphrases_without_composition_rules() {
 
 #[test]
 fn validate_password_counts_unicode_characters() {
-    let error = validate_password("é".repeat(14).as_str())
-        .expect_err("fourteen Unicode characters should be too short");
+    let error = validate_password("é".repeat(7).as_str())
+        .expect_err("seven Unicode characters should be too short");
     assert_eq!(error.code, "validation_failed");
 }
 

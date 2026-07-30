@@ -8,10 +8,7 @@ use webauthn_rs::prelude::{PublicKeyCredential, RegisterPublicKeyCredential};
 pub struct RegisterInput {
     pub email: String,
     pub password: String,
-    pub firstname: String,
-    pub lastname: String,
     pub username: String,
-    pub birthdate: Option<chrono::NaiveDate>,
     pub region: Option<String>,
     pub data_region: Option<String>,
     pub ip: Option<String>,
@@ -127,6 +124,7 @@ pub struct ChangePasswordInput {
 pub struct UpdateProfileInput {
     pub firstname: Option<String>,
     pub lastname: Option<String>,
+    #[schema(max_length = 100)]
     pub username: Option<String>,
     pub birthdate: Option<chrono::NaiveDate>,
     pub region: Option<String>,

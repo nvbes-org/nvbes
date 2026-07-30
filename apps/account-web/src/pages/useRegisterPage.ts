@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router';
+import { useRegisterPageAvailability } from './useRegisterPage.availability';
 import { useRegisterPageBootstrap } from './useRegisterPage.bootstrap';
-import { useRegisterPageRegions } from './useRegisterPage.regions';
 import { useRegisterPageState } from './useRegisterPage.state';
 import { useRegisterPageSubmit } from './useRegisterPage.submit';
 
@@ -8,113 +8,86 @@ export function useRegisterPage() {
   const navigate = useNavigate();
   const { checkingAuth, oauthRequest } = useRegisterPageBootstrap();
   const {
-    birthdate,
-    canProceedFromStep1,
+    canSubmit,
     email,
-    firstname,
-    lastname,
+    emailValid,
     legalDocumentsAccepted,
     marketingEmailsAccepted,
-    maxBirthdate,
-    minBirthdate,
     password,
-    setBirthdate,
+    passwordValid,
     setEmail,
-    setFirstname,
-    setLastname,
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    setStep,
     setUsername,
-    step,
     username,
+    usernameValid,
   } = useRegisterPageState();
-  const {
-    detectedRegion,
-    detectedReliability,
-    regionLoading,
-    selectedRegion,
-    setSelectedRegion,
-    supportedRegions,
-  } = useRegisterPageRegions();
-
-  const handleStep1Next = () => {
-    if (!canProceedFromStep1) {
-      return;
-    }
-    setStep(2);
-  };
-
-  const handleStep2Back = () => {
-    setStep(1);
-  };
-
-  const { emailAlreadyExists, error, handleSubmit, loading, resetError } = useRegisterPageSubmit({
-    oauthRequest,
-    detectedRegion,
-    selectedRegion,
-    firstname,
-    lastname,
-    username,
-    birthdate,
+  const { emailAvailability, usernameAvailability } = useRegisterPageAvailability({
     email,
-    password,
-    canProceedFromStep1,
-    legalDocumentsAccepted,
-    marketingEmailsAccepted,
-    onSuccess: ({ accountName, email: successEmail, resendAvailableAt }) => {
-      void navigate({
-        to: '/verify',
-        state: (state) => ({
-          ...state,
-          accountName,
-          email: successEmail,
-          resendAvailableAt,
-        }),
-      });
-    },
+    emailValid,
+    username,
+    usernameValid,
   });
+  const availabilityAllowsSubmit =
+    (emailAvailability === 'available' || emailAvailability === 'error') &&
+    (usernameAvailability === 'available' || usernameAvailability === 'error');
+  const registrationCanSubmit = canSubmit && availabilityAllowsSubmit;
 
-  const handleEditEmail = () => {
+  const { emailAlreadyExists, error, handleSubmit, loading, resetError, usernameTaken } =
+    useRegisterPageSubmit({
+      oauthRequest,
+      username,
+      email,
+      password,
+      canSubmit: registrationCanSubmit,
+      legalDocumentsAccepted,
+      marketingEmailsAccepted,
+      onSuccess: ({ accountName, email: successEmail, resendAvailableAt }) => {
+        void navigate({
+          to: '/verify',
+          state: (state) => ({
+            ...state,
+            accountName,
+            email: successEmail,
+            resendAvailableAt,
+          }),
+        });
+      },
+    });
+
+  const handleEmailChange = (value: string) => {
     resetError();
-    setStep(1);
+    setEmail(value);
+  };
+
+  const handleUsernameChange = (value: string) => {
+    resetError();
+    setUsername(value);
   };
 
   return {
-    birthdate,
-    canProceedFromStep1,
+    canSubmit: registrationCanSubmit,
     checkingAuth,
-    detectedRegion,
-    detectedReliability,
     email,
     emailAlreadyExists,
+    emailAvailability,
+    emailValid,
     error,
-    firstname,
-    handleStep1Next,
-    handleStep2Back,
-    handleEditEmail,
+    handleEmailChange,
     handleSubmit,
-    lastname,
+    handleUsernameChange,
     legalDocumentsAccepted,
     loading,
     marketingEmailsAccepted,
-    maxBirthdate,
-    minBirthdate,
     password,
-    regionLoading,
-    selectedRegion,
-    setBirthdate,
-    setEmail,
-    setFirstname,
-    setLastname,
+    passwordValid,
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    setSelectedRegion,
-    setUsername,
-    step,
-    supportedRegions,
     username,
+    usernameTaken,
+    usernameAvailability,
+    usernameValid,
   };
 }
