@@ -14,7 +14,7 @@ catalog:
   vite-plus: ^0.2.6
   '@vitejs/plugin-react': ^6.0.4
   react-router-dom: ^7.15.1
-  tsx: ^4.22.1
+  tsx: ^4.23.1
   '@tailwindcss/vite': ^4.3.3
   tailwindcss: ^4.3.3
   '@sentry/browser': ^10.68.0
