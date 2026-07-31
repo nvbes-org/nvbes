@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Enable pnpm
         run: |
           corepack enable
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Echo manual deployment status for identity-service
         run: |
           echo "Deploying identity-service to ${{ github.inputs.environment }}..."
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Echo manual deployment status for account-service
         run: |
           echo "Deploying account-service to ${{ github.inputs.environment }}..."
