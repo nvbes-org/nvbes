@@ -6,9 +6,6 @@
   "scripts": {
     "dev": "bash scripts/dev.sh",
     "dev:account": "bash scripts/dev-account.sh",
-    "dev:account:observability": "bash scripts/dev-account-observability.sh",
-    "dev:account:observability:cloud": "bash scripts/dev-account-observability-cloud.sh",
-    "dev:watch:account": "bash scripts/dev-watch-account.sh",
     "dev:api": "bash scripts/dev-api.sh",
     "dev:account-service": "bash scripts/dev-account-service.sh",
     "dev:identity-service": "bash scripts/dev-identity-service.sh",
