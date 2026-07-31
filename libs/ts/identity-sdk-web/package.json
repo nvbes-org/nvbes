@@ -9,6 +9,16 @@
   "sideEffects": false,
   "module": "dist/index.mjs",
   "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./oauth": {
+      "types": "./dist/oauth.d.mts",
+      "import": "./dist/oauth.mjs"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },

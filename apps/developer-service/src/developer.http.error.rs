@@ -30,17 +30,16 @@ impl From<tonic::Status> for AppError {
     }
 }
 
-impl From<nvbes_product_account::AccountError> for AppError {
-    fn from(error: nvbes_product_account::AccountError) -> Self {
-        use nvbes_product_account::error::AccountErrorKind;
-
+impl From<nvbes_product_identity::IdentityError> for AppError {
+    fn from(error: nvbes_product_identity::IdentityError) -> Self {
+        use nvbes_product_identity::IdentityErrorKind::*;
         match error.kind {
-            AccountErrorKind::BadRequest => Self::bad_request(error.code, error.message),
-            AccountErrorKind::Unauthorized => Self::unauthorized(error.code, error.message),
-            AccountErrorKind::Forbidden => Self::forbidden(error.code, error.message),
-            AccountErrorKind::NotFound => Self::not_found(error.code, error.message),
-            AccountErrorKind::Conflict => Self::conflict(error.code, error.message),
-            AccountErrorKind::Internal => Self::internal(error.code, error.message),
+            BadRequest => Self::bad_request(error.code, error.message),
+            Unauthorized => Self::unauthorized(error.code, error.message),
+            Forbidden => Self::forbidden(error.code, error.message),
+            NotFound => Self::not_found(error.code, error.message),
+            Conflict => Self::conflict(error.code, error.message),
+            Internal => Self::internal(error.code, error.message),
         }
     }
 }

@@ -1,0 +1,7 @@
+{
+  "name": "identity-web",
+  "projectType": "application",
+  "root": "apps/identity-web",
+  "sourceRoot": "apps/identity-web/src",
+  "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"]
+}

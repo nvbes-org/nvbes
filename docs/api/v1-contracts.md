@@ -133,9 +133,10 @@ POST /oauth/device/deny
 Contraintes:
 
 - Les routes OAuth ne sont pas sous `/api/v1`.
-- Universal Login expose `POST /oauth/hosted-login/start`, `GET /oauth/hosted-login/:stateId`, `POST /oauth/hosted-login/:stateId/authorize` et `POST /oauth/hosted-login/:stateId/consent`.
+- Universal Login expose `GET /oauth/hosted-login/:stateId`, `POST /oauth/hosted-login/:stateId/authorize` et `POST /oauth/hosted-login/:stateId/consent`. L'état hébergé est créé uniquement après validation d'une requête PAR.
 - Browser products use authorization code + PKCE through Universal Login.
 - Public clients require `S256` PKCE.
+- Authorization requests require exactly one explicit `audience` or `resource` target.
 - Implicit and password grants are not product contracts.
 - Refresh tokens are one-time-use; reuse revokes the refresh-token family.
 - OIDC discovery, OAuth authorization server metadata, JWKS, userinfo, introspection and revocation are product integration contracts.

@@ -98,7 +98,7 @@ async fn verify_client(
         .await
         .map_err(|_| Status::unauthenticated("invalid client"))?;
     let secret_hash: String = row.get("client_secret_hash");
-    nvbes_product_account::oauth::verify_client_secret(client_secret, &secret_hash)
+    nvbes_product_identity::oauth::verify_client_secret(client_secret, &secret_hash)
         .map_err(|_| Status::unauthenticated("invalid client"))
 }
 

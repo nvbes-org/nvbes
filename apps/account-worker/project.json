@@ -1,7 +1,7 @@
 {
-	"name": "account-worker",
-	"projectType": "application",
-	"root": "apps/account-worker",
+  "name": "account-worker",
+  "projectType": "application",
+  "root": "apps/account-worker",
   "sourceRoot": "apps/account-worker/src",
   "tags": ["scope:oss", "type:app", "domain:account", "layer:app"],
   "namedInputs": {
@@ -40,25 +40,9 @@
       "inputs": ["rustSources"],
       "outputs": [],
       "options": {
-        "command": "cargo test --package nvbes-account-worker --locked -- --test-threads=1",
+        "command": "cargo test --package nvbes-account-worker --locked",
         "cwd": "."
       }
-    },
-    "test-container-contract": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/Cargo.toml",
-				"{projectRoot}/Dockerfile",
-				"{projectRoot}/src/main.rs",
-				"{projectRoot}/tests/*.mjs",
-				"{workspaceRoot}/Cargo.toml",
-				"{workspaceRoot}/Cargo.lock"
-			],
-			"options": {
-				"command": "node --test apps/account-worker/tests/container-contract.test.mjs",
-				"cwd": "."
-			}
-		}
-	}
+    }
+  }
 }

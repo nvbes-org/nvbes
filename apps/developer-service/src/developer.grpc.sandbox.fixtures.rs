@@ -114,7 +114,7 @@ async fn seed_oauth_profile(
 ) -> Result<(), Status> {
     let oauth_client_id = Uuid::new_v4();
     let client_id = format!("sandbox-{}", sandbox_tenant_id.simple());
-    let secret_hash = nvbes_product_account::oauth::hash_client_secret(FIXTURE_CLIENT_SECRET)
+    let secret_hash = nvbes_product_identity::oauth::hash_client_secret(FIXTURE_CLIENT_SECRET)
         .map_err(|error| Status::internal(error.to_string()))?;
 
     sqlx::query(

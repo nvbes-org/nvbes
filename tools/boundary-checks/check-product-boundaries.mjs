@@ -62,6 +62,47 @@ function checkProductSourceImports() {
   }
 }
 
+function checkIdentityProductBoundary() {
+  const identityManifest = 'libs/rust/products/identity/Cargo.toml';
+  const identityRoot = 'libs/rust/products/identity/src';
+  const accountRoot = 'libs/rust/products/account';
+
+  if (!existsSync(identityManifest)) {
+    errors.push(`${identityManifest}: Identity product primitives require their own crate`);
+  }
+
+  for (const file of walk(accountRoot)) {
+    const content = readFileSync(file, 'utf8');
+    if (
+      file.includes('account.oauth.') ||
+      content.includes('hash_client_secret') ||
+      content.includes('verify_client_secret') ||
+      content.includes('cleanup_expired_unverified')
+    ) {
+      errors.push(`${file}: Account product must not own OAuth credentials or Identity cleanup`);
+    }
+  }
+
+  for (const file of [
+    'libs/rust/products/identity/src/identity.oauth.secrets.rs',
+    'libs/rust/products/identity/src/identity.auth.email_verification.rs',
+  ]) {
+    if (!existsSync(file)) {
+      errors.push(`${file}: missing Identity-owned product capability`);
+    }
+  }
+
+  for (const root of ['apps', 'libs/rust']) {
+    for (const file of walk(root)) {
+      if (file.startsWith(`${identityRoot}/`)) continue;
+      const content = readFileSync(file, 'utf8');
+      if (content.includes('nvbes_product_account::oauth')) {
+        errors.push(`${file}: OAuth primitives must come from nvbes-product-identity`);
+      }
+    }
+  }
+}
+
 function checkDriveBillingBoundary() {
   const forbiddenDriveBillingFiles = [
     /drive\.domains\.billing\.manage(?:\.|$)/,
@@ -171,6 +212,30 @@ function checkDriveBillingMigrationBoundary() {
 }
 
 function checkResourceServerAudienceBoundary() {
+  const accountAccess =
+    'apps/account-service/src/identity.http.middleware.jwt.account_access.rs';
+  if (
+    !existsSync(accountAccess) ||
+    !readFileSync(accountAccess, 'utf8').includes('account_bearer_token_required')
+  ) {
+    errors.push(`${accountAccess}: Account APIs must reject the Identity browser session`);
+  }
+
+  const identityDatabase = 'apps/account-service/src/identity.database.rs';
+  const systemClients = 'apps/account-service/src/identity.domains.oauth.system_clients.rs';
+  if (
+    !existsSync(identityDatabase) ||
+    !readFileSync(identityDatabase, 'utf8').includes('client_id: "account-web"')
+  ) {
+    errors.push(`${identityDatabase}: Account Web must be registered as an OAuth public client`);
+  }
+  if (
+    !existsSync(systemClients) ||
+    !readFileSync(systemClients, 'utf8').includes('"account-web"')
+  ) {
+    errors.push(`${systemClients}: Account Web requires an explicit first-party OAuth policy`);
+  }
+
   const cloudJwt = 'apps/cloud-service/src/drive.domains.auth.jwt.rs';
   if (!existsSync(cloudJwt)) return;
 
@@ -348,6 +413,7 @@ function checkInternalAdminBillingBoundary() {
 
 checkRustPackageBoundaries(errors);
 checkProductSourceImports();
+checkIdentityProductBoundary();
 checkAccountBillingRuntimeBoundary(errors);
 checkBillingWorkerQueueBoundaries(errors);
 checkAccountWebBillingClientBoundary(errors);

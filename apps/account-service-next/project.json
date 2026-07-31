@@ -1,0 +1,55 @@
+{
+  "name": "account-service",
+  "projectType": "application",
+  "root": "apps/account-service-next",
+  "sourceRoot": "apps/account-service-next/src",
+  "tags": [
+    "scope:oss",
+    "type:app",
+    "domain:account",
+    "layer:app"
+  ],
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/libs/rust/identity-sdk-backend/**/*",
+        "{workspaceRoot}/libs/rust/storage/**/*"
+      ],
+      "outputs": [],
+      "options": {
+        "command": "cargo check --package nvbes-account-service --all-targets --locked",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock"
+      ],
+      "outputs": [],
+      "options": {
+        "command": "cargo test --package nvbes-account-service --locked",
+        "cwd": "."
+      }
+    },
+    "export-openapi": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "outputs": [
+        "{projectRoot}/openapi.json"
+      ],
+      "options": {
+        "command": "cargo run --quiet --package nvbes-account-service -- --export-openapi > apps/account-service/openapi.json",
+        "cwd": "."
+      }
+    }
+  }
+}

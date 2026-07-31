@@ -16,8 +16,8 @@ import {
   permissionsPolicy,
   productionTransportHeaders,
   uaClientHintsHeaders,
-} from './identity.vite.csp';
-import { resolveFaroUrl } from './identity.vite.observability';
+} from './account.vite.csp';
+import { resolveFaroUrl } from './account.vite.observability';
 
 const workspaceRoot = path.resolve(__dirname, '../..');
 
@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_ACCOUNT_SERVICE_BASE_URL ||
     localEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
     rootEnv.VITE_ACCOUNT_SERVICE_BASE_URL ||
+    'http://localhost:4001';
+  const identityServiceBaseUrl =
+    process.env.VITE_IDENTITY_SERVICE_BASE_URL ||
+    localEnv.VITE_IDENTITY_SERVICE_BASE_URL ||
+    rootEnv.VITE_IDENTITY_SERVICE_BASE_URL ||
     'http://localhost:4000';
   const accountWebPort = Number(
     process.env.VITE_ACCOUNT_WEB_PORT ||
@@ -81,6 +86,10 @@ export default defineConfig(({ mode }) => {
   const posthogConnectUrl = originFromUrl(posthogHost);
   const faroUrl = resolveFaroUrl(envSources);
   const faroConnectUrl = originFromUrl(faroUrl);
+  const resourceConnectUrls = [
+    originFromUrl(accountServiceBaseUrl),
+    originFromUrl(identityServiceBaseUrl),
+  ].filter(Boolean);
   const isLocalEnvironment =
     (process.env.NVBES_ENV || localEnv.NVBES_ENV || rootEnv.NVBES_ENV) === 'development';
   const cspHeader = getCsp(
@@ -88,6 +97,7 @@ export default defineConfig(({ mode }) => {
     sentryConnectUrl,
     posthogConnectUrl,
     faroConnectUrl,
+    resourceConnectUrls,
     isLocalEnvironment,
   );
 
@@ -97,7 +107,14 @@ export default defineConfig(({ mode }) => {
       ...pluginList(tailwindcss()),
       ...pluginList(react()),
       devtoolsJson(),
-      cspPlugin(mode, sentryConnectUrl, posthogConnectUrl, faroConnectUrl, isLocalEnvironment),
+      cspPlugin(
+        mode,
+        sentryConnectUrl,
+        posthogConnectUrl,
+        faroConnectUrl,
+        resourceConnectUrls,
+        isLocalEnvironment,
+      ),
       ...pluginList(
         VitePWA({
           registerType: 'autoUpdate',
@@ -106,13 +123,7 @@ export default defineConfig(({ mode }) => {
           srcDir: 'src',
           filename: 'sw.ts',
           injectManifest: {
-            globIgnores: [
-              '**/account.avatar-upload.worker-*.js',
-              '**/analytics-posthog-*.js',
-              '**/analytics-sentry-*.js',
-              '**/password-strength-*.js',
-              '**/stats.html',
-            ],
+            globIgnores: ['**/analytics-posthog-*.js', '**/analytics-sentry-*.js', '**/stats.html'],
             rollupFormat: 'iife',
             sourcemap: false,
           },
@@ -163,13 +174,6 @@ export default defineConfig(({ mode }) => {
                 test: /node_modules[\\/]posthog-js[\\/]/,
                 priority: 25,
               },
-              {
-                name: 'password-strength',
-                test: /node_modules[\\/]@zxcvbn-ts[\\/]/,
-                minSize: 20_000,
-                maxSize: 450_000,
-                priority: 20,
-              },
             ],
           },
           minify: {
@@ -191,12 +195,8 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, './src'),
         },
         {
-          find: '@nvbes/http-client',
-          replacement: path.resolve(__dirname, '../../libs/ts/http-client/src/index.ts'),
-        },
-        {
-          find: '@nvbes/identity-client',
-          replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
+          find: '@nvbes/account-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/account-client/src/index.ts'),
         },
         {
           find: '@nvbes/web-runtime/analytics',
@@ -207,16 +207,12 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/index.ts'),
         },
         {
-          find: '@nvbes/identity-sdk-web',
-          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
+          find: /^@nvbes\/identity-sdk-web\/oauth$/,
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/oauth.ts'),
         },
         {
           find: '@nvbes/web-ui',
           replacement: path.resolve(__dirname, '../../libs/ts/web-ui/src/index.ts'),
-        },
-        {
-          find: /^@nvbes\/identity-sdk-web\/src\//,
-          replacement: `${path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/')}/`,
         },
       ],
     },
@@ -238,26 +234,6 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         '/api': {
-          target: accountServiceBaseUrl,
-          changeOrigin: true,
-        },
-        '/auth': {
-          target: accountServiceBaseUrl,
-          changeOrigin: true,
-        },
-        '/oauth': {
-          target: accountServiceBaseUrl,
-          changeOrigin: true,
-        },
-        '/csp-report': {
-          target: accountServiceBaseUrl,
-          changeOrigin: true,
-        },
-        '/workspaces': {
-          target: accountServiceBaseUrl,
-          changeOrigin: true,
-        },
-        '/legal': {
           target: accountServiceBaseUrl,
           changeOrigin: true,
         },

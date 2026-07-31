@@ -6,7 +6,7 @@ import openapiTS, { astToString, COMMENT_HEADER } from 'openapi-typescript';
 const packageRoot = new URL('./', import.meta.url);
 const openapiUrl = new URL('openapi.json', packageRoot);
 const generatedTypesUrl = new URL('src/types.gen.ts', packageRoot);
-const serviceOpenapiUrl = new URL('../../../apps/account-service/openapi.json', packageRoot);
+const serviceOpenapiUrl = new URL('../../../apps/identity-service/openapi.json', packageRoot);
 const methods = ['get', 'put', 'post', 'delete', 'patch', 'options', 'head', 'trace'];
 
 async function readJson(url) {
@@ -17,8 +17,8 @@ test('service, SDK and optional runtime OpenAPI documents are identical', async 
   const sdk = await readJson(openapiUrl);
   assert.deepEqual(await readJson(serviceOpenapiUrl), sdk);
 
-  if (process.env.ACCOUNT_RUNTIME_OPENAPI) {
-    assert.deepEqual(JSON.parse(await readFile(process.env.ACCOUNT_RUNTIME_OPENAPI, 'utf8')), sdk);
+  if (process.env.IDENTITY_RUNTIME_OPENAPI) {
+    assert.deepEqual(JSON.parse(await readFile(process.env.IDENTITY_RUNTIME_OPENAPI, 'utf8')), sdk);
   }
 });
 
@@ -51,7 +51,7 @@ test('every operation has a unique ID and an explicit valid security contract', 
     }
   }
 
-  assert.ok(operationCount >= 80, `expected broad Account API surface, got ${operationCount}`);
+  assert.ok(operationCount >= 80, `expected broad Identity API surface, got ${operationCount}`);
   const oauthClient = [{ oauthClientBasic: [] }, { oauthClientMtls: [] }];
   assert.deepEqual(document.paths['/oauth/introspect'].post.security, oauthClient);
   assert.deepEqual(document.paths['/oauth/revoke'].post.security, oauthClient);

@@ -16,4 +16,5 @@ trap cleanup INT TERM
 
 bash "$SCRIPT_DIR/dev-cloud-web.sh" &
 bash "$SCRIPT_DIR/dev-account-web.sh" &
+bash "$SCRIPT_DIR/dev-identity-web.sh" &
 wait

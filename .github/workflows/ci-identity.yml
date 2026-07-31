@@ -1,0 +1,38 @@
+name: ci-identity
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'apps/identity-service/**'
+      - 'apps/identity-worker/**'
+      - 'apps/identity-web/**'
+      - 'libs/rust/products/identity/**'
+      - '.github/workflows/ci-identity.yml'
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'apps/identity-service/**'
+      - 'apps/identity-worker/**'
+      - 'apps/identity-web/**'
+      - 'libs/rust/products/identity/**'
+
+concurrency:
+  group: ci-identity-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  check-identity-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install xmlsec dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
+      - name: Cargo check identity-service
+        run: cargo check -p nvbes-identity-service -p nvbes-product-identity
+      - name: Cargo test identity-service
+        run: cargo test -p nvbes-identity-service -p nvbes-product-identity

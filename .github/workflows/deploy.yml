@@ -1,0 +1,76 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environnement cible de deploiement'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      component:
+        description: 'Composant a deployer (ou all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - email-worker
+          - identity-service
+          - account-service
+          - cloud-service
+          - billing-service
+
+concurrency:
+  group: deploy-${{ github.inputs.environment }}-${{ github.inputs.component }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-email-worker:
+    if: github.inputs.component == 'all' || github.inputs.component == 'email-worker'
+    runs-on: ubuntu-latest
+    environment: ${{ github.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Deploy Cloudflare email-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCALEWAY_SECRET_KEY: ${{ secrets.SCALEWAY_SECRET_KEY }}
+          SCALEWAY_PROJECT_ID: ${{ secrets.SCALEWAY_PROJECT_ID }}
+        run: |
+          cd apps/email-worker
+          pnpm deploy:${{ github.inputs.environment }}
+
+  deploy-identity-service:
+    if: github.inputs.component == 'all' || github.inputs.component == 'identity-service'
+    runs-on: ubuntu-latest
+    environment: ${{ github.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Echo manual deployment status for identity-service
+        run: |
+          echo "Deploying identity-service to ${{ github.inputs.environment }}..."
+
+  deploy-account-service:
+    if: github.inputs.component == 'all' || github.inputs.component == 'account-service'
+    runs-on: ubuntu-latest
+    environment: ${{ github.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Echo manual deployment status for account-service
+        run: |
+          echo "Deploying account-service to ${{ github.inputs.environment }}..."

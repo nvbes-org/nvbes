@@ -67,7 +67,7 @@ pub async fn verify_client_secret_version(
     .map_err(sql_status)?;
 
     let valid = hashes.into_iter().any(|hash| {
-        nvbes_product_account::oauth::verify_client_secret(&request.client_secret, &hash).is_ok()
+        nvbes_product_identity::oauth::verify_client_secret(&request.client_secret, &hash).is_ok()
     });
 
     Ok(developer::VerifyClientSecretVersionResponse { valid })

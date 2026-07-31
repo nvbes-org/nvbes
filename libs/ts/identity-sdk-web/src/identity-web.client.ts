@@ -20,15 +20,23 @@ import {
   startWebAuthnRegistration,
   stepUp,
 } from './mfa';
-import { generateCodeChallenge, generateCodeVerifier, type PKCEChallenge } from './pkce';
-import { memoryStorage, type WebStorage } from './storage';
+import {
+  exchangeAuthorizationCode,
+  type AuthorizationCodeTokenResponse,
+} from './oauth.authorization-code';
+import {
+  createAuthorizationRequest,
+  type AuthorizationRequest,
+  type AuthorizationRequestInput,
+} from './oauth.authorization-request';
+import { defaultWebStorage, type WebStorage } from './storage';
 import type { WebauthnRegistrationKind } from './webauthn';
 
 export interface AuthConfig {
   baseUrl: string;
   clientId: string;
-  clientSecret?: string;
   redirectUri: string;
+  audience?: string;
 }
 
 export interface IdentityWebConfig extends AuthConfig {
@@ -51,47 +59,46 @@ export class NvbesIdentityWeb {
       secureCookies: true,
       ...config,
     };
-    this.storage = config.storage ?? memoryStorage;
+    this.storage = config.storage ?? defaultWebStorage();
   }
 
-  async createPKCEChallenge(): Promise<PKCEChallenge> {
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-    this.storage.saveCodeVerifier(codeVerifier);
-    return { codeVerifier, codeChallenge };
+  createAuthorizationRequest(
+    options: AuthorizationRequestInput = {},
+  ): Promise<AuthorizationRequest> {
+    return createAuthorizationRequest(
+      {
+        baseUrl: this.config.baseUrl,
+        clientId: this.config.clientId,
+        redirectUri: this.config.redirectUri,
+        audience: this.config.audience,
+        storage: this.storage,
+      },
+      options,
+    );
   }
 
-  getAuthorizationUrl(options: {
-    scope?: string;
+  async redirectToLogin(options: AuthorizationRequestInput = {}): Promise<void> {
+    const request = await this.createAuthorizationRequest(options);
+    window.location.assign(request.authorizationUrl);
+  }
+
+  exchangeAuthorizationCode(input: {
+    code: string;
     state: string;
-    codeChallenge: string;
-    nonce: string;
-  }): string {
-    if (!options.state.trim()) throw new Error('OAuth state is required.');
-    if (!options.codeChallenge.trim()) throw new Error('PKCE code challenge is required.');
-    if (!options.nonce.trim()) throw new Error('OIDC nonce is required.');
-
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
-      scope: options.scope ?? 'openid profile email',
-      state: options.state,
-      code_challenge: options.codeChallenge,
-      code_challenge_method: 'S256',
-      nonce: options.nonce,
-    });
-    return `${this.config.baseUrl}/oauth/authorize?${params.toString()}`;
+  }): Promise<AuthorizationCodeTokenResponse> {
+    return exchangeAuthorizationCode(
+      {
+        baseUrl: this.config.baseUrl,
+        clientId: this.config.clientId,
+        redirectUri: this.config.redirectUri,
+        storage: this.storage,
+      },
+      input,
+    );
   }
 
-  async redirectToLogin(options: { scope?: string; state: string; nonce: string }): Promise<void> {
-    const pkce = await this.createPKCEChallenge();
-    window.location.href = this.getAuthorizationUrl({
-      scope: options.scope,
-      state: options.state,
-      codeChallenge: pkce.codeChallenge,
-      nonce: options.nonce,
-    });
+  clearAuthorizationTransaction(): void {
+    this.storage.clearTransaction();
   }
 
   async getCurrentUser(): Promise<UserView> {

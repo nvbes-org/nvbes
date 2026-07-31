@@ -1,45 +1,105 @@
-/**
- * Stockage sécurisé pour le web
- * Ne stocke JAMAIS de tokens sensibles en localStorage/sessionStorage
- * Utilise uniquement les cookies HttpOnly (gérés par le backend)
- */
+const DEFAULT_STORAGE_KEY = 'nvbes.identity.oauth.transaction';
 
-export interface WebStorage {
-  saveCodeVerifier(verifier: string): void;
-  getCodeVerifier(): string | null;
-  clearCodeVerifier(): void;
-  saveState(state: string): void;
-  getState(): string | null;
-  clearState(): void;
+export interface OAuthTransaction {
+  state: string;
+  codeVerifier: string;
+  nonce: string | null;
+  createdAt: number;
+  returnTo: string;
 }
 
-class MemoryStorage implements WebStorage {
-  private verifier: string | null = null;
-  private state: string | null = null;
+export interface WebStorage {
+  saveTransaction(transaction: OAuthTransaction): void;
+  getTransaction(): OAuthTransaction | null;
+  clearTransaction(): void;
+}
 
-  saveCodeVerifier(verifier: string): void {
-    this.verifier = verifier;
+export class MemoryStorage implements WebStorage {
+  private transaction: OAuthTransaction | null = null;
+
+  saveTransaction(transaction: OAuthTransaction): void {
+    this.transaction = { ...transaction };
   }
 
-  getCodeVerifier(): string | null {
-    return this.verifier;
+  getTransaction(): OAuthTransaction | null {
+    return this.transaction ? { ...this.transaction } : null;
   }
 
-  clearCodeVerifier(): void {
-    this.verifier = null;
-  }
-
-  saveState(state: string): void {
-    this.state = state;
-  }
-
-  getState(): string | null {
-    return this.state;
-  }
-
-  clearState(): void {
-    this.state = null;
+  clearTransaction(): void {
+    this.transaction = null;
   }
 }
 
 export const memoryStorage = new MemoryStorage();
+
+export class BrowserSessionStorage implements WebStorage {
+  constructor(
+    private readonly storage: Storage,
+    private readonly key = DEFAULT_STORAGE_KEY,
+  ) {}
+
+  saveTransaction(transaction: OAuthTransaction): void {
+    this.storage.setItem(this.key, JSON.stringify(transaction));
+  }
+
+  getTransaction(): OAuthTransaction | null {
+    const raw = this.storage.getItem(this.key);
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const value: unknown = JSON.parse(raw);
+      if (isOAuthTransaction(value)) {
+        return value;
+      }
+    } catch {
+      // Invalid browser state is treated as an absent one-time transaction.
+    }
+
+    this.clearTransaction();
+    return null;
+  }
+
+  clearTransaction(): void {
+    this.storage.removeItem(this.key);
+  }
+}
+
+export function defaultWebStorage(): WebStorage {
+  if (typeof window === 'undefined') {
+    return new MemoryStorage();
+  }
+
+  try {
+    const probe = `${DEFAULT_STORAGE_KEY}.probe`;
+    window.sessionStorage.setItem(probe, '1');
+    window.sessionStorage.removeItem(probe);
+    return new BrowserSessionStorage(window.sessionStorage);
+  } catch {
+    return new MemoryStorage();
+  }
+}
+
+function isOAuthTransaction(value: unknown): value is OAuthTransaction {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.state === 'string' &&
+    value.state.length > 0 &&
+    typeof value.codeVerifier === 'string' &&
+    value.codeVerifier.length > 0 &&
+    (typeof value.nonce === 'string' || value.nonce === null) &&
+    typeof value.createdAt === 'number' &&
+    Number.isFinite(value.createdAt) &&
+    typeof value.returnTo === 'string' &&
+    value.returnTo.startsWith('/') &&
+    !value.returnTo.startsWith('//')
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}

@@ -11,6 +11,11 @@ qui n'acceptent que leur propre audience. La frontiere et les responsabilites
 de migration sont fixees par
 [`ADR 0005`](../adr/0005-separate-identity-from-account.md).
 
+La crate `nvbes-product-identity` porte les primitives métier qui ne doivent
+jamais dépendre d'Account, notamment le traitement des secrets de clients OAuth
+et le cycle de vie des identités non vérifiées. `nvbes-product-account` reste
+limité au profil, aux préférences et à l'orchestration de la confidentialité.
+
 Le systeme cible doit supporter:
 
 - connexion utilisateur globale multi-tenant;

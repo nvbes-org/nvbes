@@ -1,1 +1,1 @@
-export { cn } from './classnames';
+export { cn } from '@nvbes/web-ui';

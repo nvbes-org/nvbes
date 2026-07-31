@@ -4,9 +4,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { Profiler, useState } from 'react';
-import { router } from './identity.router';
+import { router } from './account.router';
 import { TrackingConsentBanner } from './TrackingConsentBanner';
-import { ToastProvider } from './components/ui/toast';
 
 const REACT_QUERY_DEVTOOLS_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS_ENABLED !== 'false';
@@ -42,23 +41,21 @@ function App() {
   return (
     <ErrorBoundary name="global">
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          {import.meta.env.DEV ? (
-            <Profiler id="account-web" onRender={handleRenderProfiler}>
-              <RouterProvider router={router} />
-              <TrackingConsentBanner />
-              {REACT_QUERY_DEVTOOLS_ENABLED ? <ReactQueryDevtools initialIsOpen={false} /> : null}
-              {TANSTACK_ROUTER_DEVTOOLS_ENABLED ? (
-                <TanStackRouterDevtools router={router} position="bottom-right" />
-              ) : null}
-            </Profiler>
-          ) : (
-            <>
-              <RouterProvider router={router} />
-              <TrackingConsentBanner />
-            </>
-          )}
-        </ToastProvider>
+        {import.meta.env.DEV ? (
+          <Profiler id="account-web" onRender={handleRenderProfiler}>
+            <RouterProvider router={router} />
+            <TrackingConsentBanner />
+            {REACT_QUERY_DEVTOOLS_ENABLED ? <ReactQueryDevtools initialIsOpen={false} /> : null}
+            {TANSTACK_ROUTER_DEVTOOLS_ENABLED ? (
+              <TanStackRouterDevtools router={router} position="bottom-right" />
+            ) : null}
+          </Profiler>
+        ) : (
+          <>
+            <RouterProvider router={router} />
+            <TrackingConsentBanner />
+          </>
+        )}
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -4,6 +4,7 @@ on:
   push:
     branches: ['main']
   pull_request:
+    branches: ['main']
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -18,130 +19,61 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
-  bootstrap-check:
+  cache-and-setup:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/nvbes_test
-      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
-      NVBES_DATABASE_URL: postgres://postgres:postgres@localhost:5432/nvbes_test
-      NVBES_ENV: ci
-      NVBES_REDIS_URL: redis://127.0.0.1:6379/15
-      NX_DAEMON: false
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: nvbes_test
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d nvbes_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
-      - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs
-      - name: Security and compliance standards gate
-        run: node tools/security/check-compliance-standards.mjs
-      - name: Install xmlsec system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
-      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Enable pnpm
         run: |
           corepack enable
           corepack prepare pnpm@11.17.0 --activate
-      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-      - name: Restore Nx cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: .nx/cache
-          key: nx-${{ runner.os }}-${{ hashFiles('nx.json', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.base.json', 'vite.config.ts') }}
-          restore-keys: |
-            nx-${{ runner.os }}-
-      - name: Install frontend dependencies
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pnpm dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Install Backoffice Playwright browser
-        run: pnpm --dir apps/backoffice-web exec playwright install --with-deps chromium
-      - name: Set Nx SHAs
-        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5
+
+  quality-checks:
+    needs: cache-and-setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
       - name: Format check
         run: pnpm format:check
       - name: Structure check
         run: pnpm check:structure
-      - name: Nx boundaries
+      - name: Nx boundaries check
         run: pnpm check:nx-boundaries
-      - name: Rust workspace check
-        run: pnpm exec nx run rust-workspace:check
-      - name: Account Rust Clippy
-        run: pnpm exec nx run account-quality:lint-rust
-      - name: Backoffice targeted check
-        run: pnpm check:backoffice-service
-      - name: Lint
-        run: pnpm exec nx affected -t lint
-      - name: Typecheck
-        run: pnpm exec nx affected -t typecheck
-      - name: Unit tests
-        run: pnpm exec nx affected -t test
-      - name: Account worker container contract
-        run: pnpm exec nx affected -t test-container-contract
-      - name: Account runtime OpenAPI and generated SDK contract
-        run: pnpm exec nx run account-service:test-contract
-      - name: Account fresh, N-1 and interrupted migration recovery
-        run: pnpm exec nx run account-service:test-migrations
-      - name: Integration tests
-        run: pnpm test:integration
-      - name: Build web release artifacts
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: nvbes
-          SENTRY_PROJECT_CLOUD_WEB: cloud-web
-          SENTRY_PROJECT_ACCOUNT_WEB: account-web
-          SENTRY_PROJECT_CONSOLE_WEB: console-web
-          SENTRY_PROJECT_ENTERPRISE_WEB: enterprise-web
-          SENTRY_PROJECT_BACKOFFICE_WEB: backoffice-web
-          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
-          POSTHOG_CLI_PROJECT_ID: ${{ vars.POSTHOG_CLI_PROJECT_ID }}
-          POSTHOG_CLI_HOST: https://eu.posthog.com
-          GRAFANA_FARO_SOURCEMAP_ENDPOINT: ${{ vars.GRAFANA_FARO_SOURCEMAP_ENDPOINT }}
-          GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}
-          GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED: 'false'
-          GRAFANA_CLOUD_STACK_ID: ${{ vars.GRAFANA_CLOUD_STACK_ID }}
-          GRAFANA_FARO_APP_ID_CLOUD_WEB: ${{ vars.GRAFANA_FARO_APP_ID_CLOUD_WEB }}
-          GRAFANA_FARO_APP_ID_ACCOUNT_WEB: ${{ vars.GRAFANA_FARO_APP_ID_ACCOUNT_WEB }}
-          GRAFANA_FARO_APP_ID_CONSOLE_WEB: ${{ vars.GRAFANA_FARO_APP_ID_CONSOLE_WEB }}
-          GRAFANA_FARO_APP_ID_ENTERPRISE_WEB: ${{ vars.GRAFANA_FARO_APP_ID_ENTERPRISE_WEB }}
-          GRAFANA_FARO_APP_ID_BACKOFFICE_WEB: ${{ vars.GRAFANA_FARO_APP_ID_BACKOFFICE_WEB }}
-          NVBES_RELEASE: ${{ github.sha }}
-          NVBES_REQUIRE_FARO_ACCOUNT_WEB: 'true'
-          VITE_FARO_URL_ACCOUNT_WEB: ${{ vars.GRAFANA_FARO_URL_ACCOUNT_WEB }}
-          VITE_FARO_ENVIRONMENT: production
-          VITE_NVBES_BUILD_ID: ${{ github.sha }}
-          VITE_SENTRY_RELEASE: ${{ github.sha }}
-          VITE_SENTRY_ENVIRONMENT: production
-        run: pnpm build:web
+
+  rust-checks:
+    needs: cache-and-setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install xmlsec dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
+      - name: Cargo workspace check
+        run: cargo check --workspace

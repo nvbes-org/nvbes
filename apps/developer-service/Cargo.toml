@@ -14,7 +14,7 @@ hex.workspace = true
 jsonwebtoken = { version = "10.3.0", default-features = false, features = ["aws_lc_rs", "use_pem"] }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
-nvbes-product-account = { path = "../../libs/rust/products/account" }
+nvbes-product-identity = { path = "../../libs/rust/products/identity" }
 prost = "0.14.4"
 reqwest.workspace = true
 serde.workspace = true

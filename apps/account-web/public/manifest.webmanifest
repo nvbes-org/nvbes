@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "nvbes Identity",
-  "short_name": "Identity",
-  "description": "Authentification, MFA, WebAuthn et gestion de comptes pour la plateforme nvbes.",
+  "name": "nvbes Account",
+  "short_name": "Account",
+  "description": "Profil, préférences, notifications et confidentialité du compte nvbes.",
   "theme_color": "#0a0a0a",
   "background_color": "#0a0a0a",
   "display": "standalone",
@@ -30,27 +30,27 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "security"],
+  "categories": ["productivity"],
   "shortcuts": [
     {
-      "name": "Connexion",
-      "short_name": "Connexion",
-      "description": "Ouvrir la page de connexion",
-      "url": "/login",
+      "name": "Profil",
+      "short_name": "Profil",
+      "description": "Gérer les informations du profil",
+      "url": "/profile",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Securite du compte",
-      "short_name": "Securite",
-      "description": "Gerer MFA, WebAuthn et sessions",
-      "url": "/account/security",
+      "name": "Confidentialité",
+      "short_name": "Confidentialité",
+      "description": "Gérer les consentements et les données",
+      "url": "/privacy",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Notifications",
       "short_name": "Notifications",
       "description": "Gerer les notifications",
-      "url": "/account/notifications",
+      "url": "/notifications",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

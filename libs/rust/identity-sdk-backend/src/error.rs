@@ -14,6 +14,12 @@ pub enum SdkError {
     #[error("Token exchange failed: {0}")]
     TokenExchange(String),
 
+    #[error("Identity access token validation failed: {0}")]
+    TokenValidation(String),
+
+    #[error("Identity JWKS resolution failed: {0}")]
+    Jwks(String),
+
     #[error("MFA required: {0}")]
     MfaRequired(String),
 
@@ -30,5 +36,13 @@ impl SdkError {
             message: message.into(),
             status,
         }
+    }
+
+    pub fn invalid_token(message: impl Into<String>) -> Self {
+        Self::TokenValidation(message.into())
+    }
+
+    pub fn jwks(message: impl Into<String>) -> Self {
+        Self::Jwks(message.into())
     }
 }

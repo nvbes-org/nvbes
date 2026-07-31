@@ -1,0 +1,14 @@
+import type { HttpRequestContextHeadersProvider } from './http.types';
+export declare function configureHttpRequestContextHeaders(provider?: HttpRequestContextHeadersProvider): void;
+export declare function requestContextHeaders(): Promise<HeadersInit | undefined>;
+export declare function resolveRequestUrl(path: string, baseUrl: string): URL;
+export declare function sameOrigin(url: string, baseUrl: string): boolean;
+export declare function stripCrossOriginRequestContext(headers: Headers): void;
+export declare function currentAuthuser(): string | undefined;
+export declare function readCsrfToken(authuser?: string): string | undefined;
+export declare function mergeHeaders(target: Headers, source?: HeadersInit): void;
+export declare function createRequestHeaders(method: string, headers?: HeadersInit, idempotencyKey?: string | false): Headers;
+export declare function applyAjaxRequestHeader(headers: Headers, method: string): void;
+export declare function applyIdempotencyKey(headers: Headers, method: string, idempotencyKey?: string | false): void;
+export declare function createIdempotencyKey(): string;
+export declare function isMutatingMethod(method: string): boolean;

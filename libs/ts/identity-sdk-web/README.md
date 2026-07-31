@@ -1,106 +1,65 @@
 # @nvbes/identity-sdk-web
 
-SDK TypeScript pour intégrer nvbes Identity dans les applications web navigateur.
+SDK navigateur pour les parcours nvbes Identity et les clients OAuth publics.
 
-## Sécurité
+## Principes de sécurité
 
-- **Aucun token stocké en JavaScript** (évite XSS)
-- Utilise uniquement des **cookies HttpOnly** gérés par le backend identity
-- Supporte PKCE pour les flux OAuth2 publics
-- Compatible avec les domaines/subdomains (`.nvbes.eu`)
+- Authorization Code avec PAR et PKCE S256 obligatoire.
+- Aucun secret OAuth dans le navigateur.
+- La transaction temporaire `state`/verifier/nonce vit uniquement dans `sessionStorage`.
+- Les access tokens restent sous la responsabilité de l’application et ne sont jamais persistés
+  par le SDK.
+- Les appels Identity interactifs utilisent les cookies HttpOnly Identity. L’échange de code OAuth
+  utilise `credentials: "omit"`.
 
-## Installation
-
-```bash
-pnpm add @nvbes/identity-sdk-web
-```
-
-## Utilisation
-
-### 1. Initialiser le SDK
+## Client OAuth public
 
 ```typescript
-import { nvbesIdentityWeb } from '@nvbes/identity-sdk-web';
+import { NvbesIdentityWeb } from '@nvbes/identity-sdk-web';
 
-const identity = new nvbesIdentityWeb({
+const identity = new NvbesIdentityWeb({
   baseUrl: 'https://identity.nvbes.eu',
-  clientId: 'votre-client-id',
-  redirectUri: 'https://app.nvbes.eu/callback',
-  cookieDomain: '.nvbes.eu',
-  secureCookies: true,
+  clientId: 'account-web',
+  redirectUri: 'https://account.nvbes.eu/oauth/callback',
+  audience: 'nvbes-account-service',
+});
+
+await identity.redirectToLogin({
+  scope: 'account:profile:read account:profile:write account:privacy:read',
+  returnTo: '/profile',
 });
 ```
 
-### 2. Login avec PKCE (recommandé)
+`redirectToLogin` pousse d’abord la requête sur `/oauth/par`, crée une transaction PKCE à usage
+unique, puis navigue vers `/oauth/authorize` avec seulement `client_id` et `request_uri`.
+
+Dans la route de callback :
 
 ```typescript
-function LoginButton() {
-  const handleLogin = async () => {
-    // Redirige vers identity.nvbes.eu avec PKCE
-    await identity.redirectToLogin({
-      scope: 'openid profile email',
-      usePKCE: true,
-    });
-  };
+const params = new URLSearchParams(window.location.search);
+const code = params.get('code');
+const state = params.get('state');
 
-  return <button onClick={handleLogin}>Se connecter</button>;
+if (!code || !state) {
+  throw new Error('Réponse OAuth incomplète.');
 }
+
+const result = await identity.exchangeAuthorizationCode({ code, state });
+// Conserver result.accessToken en mémoire seulement.
+window.location.replace(result.returnTo);
 ```
 
-### 3. Callback (page /callback)
+Le SDK valide `state`, l’âge de la transaction et le verifier PKCE avant l’échange. Il supprime la
+transaction après succès. Un éventuel `idToken` reste opaque : une application qui consomme ses
+claims doit le valider selon OpenID Connect avec l’issuer et le JWKS Identity.
 
-```typescript
-async function CallbackPage() {
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
+## Session Identity
 
-    if (code) {
-      // Le backend doit échanger le code et setter le cookie
-      await fetch('/api/callback', {
-        method: 'POST',
-        body: JSON.stringify({ code }),
-      });
-      window.location.href = '/dashboard';
-    }
-  }, []);
+Les méthodes `getCurrentUser`, `logout`, MFA, WebAuthn et step-up s’adressent directement au
+domaine Identity et utilisent sa session HttpOnly. Elles sont destinées au site Identity, pas aux
+Resource Servers comme Account.
 
-  return <div>Connexion en cours...</div>;
-}
-```
-
-### 4. Vérifier l'authentification
-
-```typescript
-if (await identity.isAuthenticated()) {
-  const user = await identity.getCurrentUser();
-  console.log('Bienvenue', user.name);
-}
-```
-
-## API
-
-### `redirectToLogin(options?)`
-
-Redirige vers la page de login identity (avec PKCE par défaut).
-
-### `getCurrentUser()`
-
-Récupère les infos utilisateur via le cookie de session.
-
-### `logout()`
-
-Déconnecte (supprime les cookies côté backend).
-
-### `isAuthenticated()`
-
-Vérifie si l'utilisateur a un cookie de session valide.
-
-### Détection d'environnement
-
-Le SDK expose un parseur sans dépendance pour normaliser le navigateur, le système et le type
-d'appareil. Les détecteurs spécialisés (`detectBrowser`, `detectBrowserVersion`, `detectOS`,
-`detectDevice` et `detectDeviceType`) sont également exportés.
+## Détection d’environnement
 
 ```typescript
 import { parseUserAgent } from '@nvbes/identity-sdk-web';
@@ -108,17 +67,7 @@ import { parseUserAgent } from '@nvbes/identity-sdk-web';
 const environment = parseUserAgent(navigator.userAgent, {
   vendor: navigator.vendor,
 });
-
-// {
-//   browser: 'Mobile Safari',
-//   browserVersion: 17.5,
-//   device: 'iPhone',
-//   deviceType: 'Mobile',
-//   os: 'iOS',
-//   osVersion: '17.5.0',
-// }
 ```
 
-`collectDeviceProfile()` continue de produire uniquement des catégories grossières destinées à
-la confiance d'appareil. Les noms et versions détaillés retournés par `parseUserAgent()` n'y sont
-pas ajoutés automatiquement.
+Les informations détaillées retournées par `parseUserAgent()` ne sont pas ajoutées
+automatiquement au profil de confiance d’appareil.

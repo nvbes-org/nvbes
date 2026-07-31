@@ -70,9 +70,3 @@ impl From<serde_json::Error> for AccountError {
         Self::internal("json_error", error.to_string())
     }
 }
-
-impl From<nvbes_email::EmailError> for AccountError {
-    fn from(error: nvbes_email::EmailError) -> Self {
-        Self::internal("email_error", error.to_string())
-    }
-}

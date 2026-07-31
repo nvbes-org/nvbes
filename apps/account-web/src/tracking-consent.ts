@@ -1,4 +1,5 @@
-import { accountClient } from '@nvbes/identity-client';
+import { accountClient } from './account.client';
+import { getAccountAccessToken } from './account.oauth.access-token';
 import {
   ACCEPT_ALL_CONSENT,
   ANALYTICS_PURPOSE_CONSENT_TYPES,
@@ -15,31 +16,19 @@ import {
 
 const trackingConsentApi = createTrackingConsentApi({
   identityClient: {
-    listConsents: (options?: { signal?: AbortSignal }) => accountClient.listConsents(options),
+    listConsents: (options?: { signal?: AbortSignal }) =>
+      accountClient.listConsents({ signal: options?.signal }).then(({ consents }) => consents),
     grantConsent: (consentType: string, documentVersion: string) =>
-      accountClient.grantConsent(consentType, documentVersion),
+      accountClient.grantConsent({
+        consent_type: consentType,
+        document_version: documentVersion,
+      }),
     revokeConsent: (consentType: string, documentVersion: string) =>
-      accountClient.revokeConsent(consentType, documentVersion),
-    isAuthenticated: async () => {
-      try {
-        await accountClient.getMe();
-        return true;
-      } catch {
-        return false;
-      }
-    },
-  } satisfies {
-    listConsents: (options?: { signal?: AbortSignal }) => Promise<
-      Array<{
-        consent_type: string;
-        document_version: string;
-        granted_at: string;
-        revoked_at?: string | null;
-      }>
-    >;
-    grantConsent: (consentType: string, documentVersion: string) => Promise<unknown>;
-    revokeConsent: (consentType: string, documentVersion: string) => Promise<unknown>;
-    isAuthenticated: () => boolean | Promise<boolean>;
+      accountClient.revokeConsent({
+        consent_type: consentType,
+        document_version: documentVersion,
+      }),
+    isAuthenticated: () => getAccountAccessToken() !== null,
   },
   defaultSource: 'account-web',
 });

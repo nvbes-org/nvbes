@@ -1,0 +1,39 @@
+name: ci-email-worker
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'apps/email-worker/**'
+      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+      - '.github/workflows/ci-email-worker.yml'
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'apps/email-worker/**'
+      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+
+concurrency:
+  group: ci-email-worker-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  test-email-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: TypeScript Typecheck email-worker
+        run: pnpm --filter email-worker check
+      - name: Vitest Unit & Integration Tests email-worker
+        run: pnpm --filter email-worker test

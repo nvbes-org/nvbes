@@ -1,38 +1,41 @@
 import { beforeEach, describe, expect, it } from 'vite-plus/test';
-import { memoryStorage } from '../storage';
+import { memoryStorage, type OAuthTransaction } from '../storage';
+
+const transaction: OAuthTransaction = {
+  state: 'test-state',
+  codeVerifier: 'test-verifier',
+  nonce: 'test-nonce',
+  createdAt: 123,
+  returnTo: '/security',
+};
 
 describe('MemoryStorage', () => {
   beforeEach(() => {
-    memoryStorage.clearCodeVerifier();
-    memoryStorage.clearState();
+    memoryStorage.clearTransaction();
   });
 
-  it('should save and retrieve code verifier', () => {
-    memoryStorage.saveCodeVerifier('test-verifier');
-    expect(memoryStorage.getCodeVerifier()).toBe('test-verifier');
+  it('saves and retrieves an OAuth transaction', () => {
+    memoryStorage.saveTransaction(transaction);
+
+    expect(memoryStorage.getTransaction()).toEqual(transaction);
   });
 
-  it('should clear code verifier', () => {
-    memoryStorage.saveCodeVerifier('test-verifier');
-    memoryStorage.clearCodeVerifier();
-    expect(memoryStorage.getCodeVerifier()).toBeNull();
+  it('returns copies that cannot mutate the stored transaction', () => {
+    memoryStorage.saveTransaction(transaction);
+    const stored = memoryStorage.getTransaction();
+    if (!stored) {
+      throw new Error('Expected a stored transaction.');
+    }
+
+    stored.state = 'mutated';
+
+    expect(memoryStorage.getTransaction()?.state).toBe('test-state');
   });
 
-  it('should save and retrieve state', () => {
-    memoryStorage.saveState('test-state');
-    expect(memoryStorage.getState()).toBe('test-state');
-  });
+  it('clears an OAuth transaction', () => {
+    memoryStorage.saveTransaction(transaction);
+    memoryStorage.clearTransaction();
 
-  it('should clear state', () => {
-    memoryStorage.saveState('test-state');
-    memoryStorage.clearState();
-    expect(memoryStorage.getState()).toBeNull();
-  });
-
-  it('should start with null values after clear', () => {
-    memoryStorage.clearCodeVerifier();
-    memoryStorage.clearState();
-    expect(memoryStorage.getCodeVerifier()).toBeNull();
-    expect(memoryStorage.getState()).toBeNull();
+    expect(memoryStorage.getTransaction()).toBeNull();
   });
 });

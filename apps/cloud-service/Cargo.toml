@@ -24,6 +24,7 @@ nvbes-observability = { path = "../../libs/rust/observability", features = ["otl
 nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 nvbes-product-cloud = { path = "../../libs/rust/products/cloud" }
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
 nvbes-region = { path = "../../libs/rust/region" }
 metrics.workspace = true
 prost = "0.14.4"
@@ -53,6 +54,6 @@ protoc-bin-vendored = "3.2.0"
 tonic-prost-build = "0.14.6"
 
 [dev-dependencies]
-nvbes-product-account = { path = "../../libs/rust/products/account" }
+nvbes-product-identity = { path = "../../libs/rust/products/identity" }
 openssl = { version = "0.10", features = ["vendored"] }
 proptest.workspace = true

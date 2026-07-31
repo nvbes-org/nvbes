@@ -121,7 +121,7 @@ pub async fn rotate_secret(
         Uuid::new_v4().simple(),
         Uuid::new_v4().simple()
     );
-    let new_hash = nvbes_product_account::oauth::hash_client_secret(&client_secret)?;
+    let new_hash = nvbes_product_identity::oauth::hash_client_secret(&client_secret)?;
     let last4 = client_secret
         .get(client_secret.len().saturating_sub(4)..)
         .unwrap_or(&client_secret)

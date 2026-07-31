@@ -1,0 +1,7 @@
+{
+  "name": "account-client",
+  "projectType": "library",
+  "root": "libs/ts/account-client",
+  "sourceRoot": "libs/ts/account-client/src",
+  "tags": ["scope:oss", "type:lib", "domain:account", "layer:client"]
+}

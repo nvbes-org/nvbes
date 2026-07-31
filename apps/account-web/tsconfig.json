@@ -4,17 +4,14 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "skipLibCheck": true,
     "paths": {
-      "@nvbes/http-client": ["../../libs/ts/http-client/src/index.ts"],
-      "@nvbes/identity-client": ["../../libs/ts/identity-client/src/index.ts"],
-      "@nvbes/identity-sdk-web": ["../../libs/ts/identity-sdk-web/src/index.ts"],
-      "@nvbes/identity-sdk-web/src/*": ["../../libs/ts/identity-sdk-web/src/*"],
+      "@nvbes/account-client": ["../../libs/ts/account-client/src/index.ts"],
+      "@nvbes/identity-sdk-web/oauth": ["../../libs/ts/identity-sdk-web/src/oauth.ts"],
       "@nvbes/web-ui": ["../../libs/ts/web-ui/src/index.ts"],
       "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
       "@nvbes/web-runtime/analytics": ["../../libs/ts/web-runtime/src/analytics.ts"],
-      "@nvbes/identity-sdk-core/src/*": ["../../libs/ts/identity-sdk-core/src/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "tests"],
+  "include": ["src"],
   "exclude": ["src/sw.ts"]
 }

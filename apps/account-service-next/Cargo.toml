@@ -1,0 +1,29 @@
+[package]
+name = "nvbes-account-service"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "nvbes-account-service"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
+nvbes-storage = { path = "../../libs/rust/storage" }
+serde.workspace = true
+serde_json.workspace = true
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+tokio.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["json"] }
+url = "2.5"
+utoipa.workspace = true
+uuid.workspace = true

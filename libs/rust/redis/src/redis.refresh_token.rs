@@ -20,6 +20,10 @@ pub struct CachedRefreshToken {
     pub workspace_id: Option<Uuid>,
     pub client_id: Option<Uuid>,
     pub scope: String,
+    #[serde(default)]
+    pub audience: Option<String>,
+    #[serde(default)]
+    pub resource_indicators: Vec<String>,
     pub authorization_details: Vec<serde_json::Value>,
     pub expires_at: DateTime<Utc>,
     pub rotated_from_jti: Option<String>,

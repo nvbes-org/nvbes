@@ -9,6 +9,7 @@
     "billing-worker",
     "cloud-service",
     "cloud-worker",
+    "identity-service",
     "account-service",
     "account-worker",
     "audit",

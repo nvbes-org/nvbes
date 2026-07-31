@@ -7,25 +7,23 @@ import {
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { captureAndStripSensitiveAuthUrlToken } from './identity.auth-url-secrets';
-import { captureAnalyticsException, initAnalytics } from './identity.analytics';
+import { captureAnalyticsException, initAnalytics } from './account.analytics';
 import {
   captureErrorReportingException,
   initErrorReporting,
   syncErrorReportingConsent,
-} from './identity.error.reporting';
+} from './account.error.reporting';
 import {
   captureFaroException,
   captureFaroNavigation,
   initFaro,
   syncFaroConsent,
-} from './identity.faro';
-import { router } from './identity.router';
+} from './account.faro';
+import { router } from './account.router';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
 import './styles.css';
 
 installDefaultTrustedTypesPolicy();
-captureAndStripSensitiveAuthUrlToken();
 initErrorReporting();
 initFaro();
 initAnalytics();

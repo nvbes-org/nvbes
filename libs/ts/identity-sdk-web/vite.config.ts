@@ -7,7 +7,7 @@ export default defineConfig({
     },
   },
   pack: {
-    entry: ['src/index.ts'],
+    entry: ['src/index.ts', 'src/oauth.ts'],
     format: ['esm'],
     dts: true,
   },

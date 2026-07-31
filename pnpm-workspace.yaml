@@ -27,6 +27,8 @@ allowBuilds:
   msw: true
   nx: true
   protobufjs: true
+  sharp: true
+  workerd: true
 
 overrides:
   '@babel/core': 7.29.7

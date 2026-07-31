@@ -1,79 +1,46 @@
-# nvbes Identity Web
+# nvbes Account Web
 
-Portail React/TypeScript pour nvbes Identity.
+Application React indépendante dédiée aux données du produit Account.
 
-## Fonctionnalites
+## Responsabilités
 
-- Connexion par flux challenge `identifier -> password -> MFA`.
-- Universal Login hébergé pour les flux OAuth authorization-code + PKCE.
-- Inscription avec detection/selection de region supportee.
-- Verification email, renvoi et changement d'adresse.
-- Gestion compte, sessions, MFA TOTP, passkeys, cles de securite et codes de recuperation.
-- Workspaces, billing via service dedie, consentements legaux et vues operationnelles securite.
-- Activation OAuth Device Flow via `/oauth/device/*`.
+- profil ;
+- préférences d’interface ;
+- préférences de notifications ;
+- consentements, export et fermeture du compte.
 
-## Runtime
+L’authentification, les adresses e-mail, les mots de passe, les sessions, les applications liées,
+MFA et WebAuthn appartiennent à `identity-web`.
 
-- Router: TanStack Router dans `src/identity.router.tsx`.
-- Server state: TanStack Query via `*.queries.ts`.
-- Mutations et orchestration async: fonctions TanStack-friendly via `*.functions.ts`.
-- HTTP valide: `@nvbes/http-client`, `@nvbes/identity-client` et `@nvbes/identity-sdk-web`.
+## Authentification
 
-Les composants ne devraient pas ajouter de nouveaux `fetch` directs. Ajouter plutot:
+Account Web est un client OAuth public. Il utilise Authorization Code avec PAR et PKCE via
+`@nvbes/identity-sdk-web`, conserve l’access token uniquement en mémoire, puis appelle Account avec
+`@nvbes/account-client` et un bearer token. Aucun cookie Identity n’est envoyé au service Account.
 
-- `*.api.ts` pour les appels HTTP valides par Zod;
-- `*.functions.ts` pour l'orchestration async;
-- `*.queries.ts` pour les query/mutation keys.
+Variables requises :
 
-## Structure
+- `VITE_IDENTITY_SERVICE_BASE_URL`
+- `VITE_IDENTITY_WEB_BASE_URL`
+- `VITE_ACCOUNT_SERVICE_BASE_URL`
+- `VITE_ACCOUNT_OAUTH_CLIENT_ID`
+- `VITE_ACCOUNT_OAUTH_REDIRECT_URI`
 
-```text
-src/
-├── main.tsx
-├── App.tsx
-├── identity.router.tsx
-├── identity.auth.api.ts
-├── identity.auth.functions.ts
-├── identity.auth.queries.ts
-├── identity.email-verification.ts
-├── account.queries.ts
-├── components/
-├── hooks/
-├── lib/
-└── pages/
-```
+## Routes
 
-## Contrats backend utilises
+- `/` redirige vers `/profile`
+- `/oauth/callback`
+- `/profile`
+- `/preferences`
+- `/notifications`
+- `/privacy`
 
-- Auth web:
-  - `POST /api/v1/auth/challenge/identifier`
-  - `POST /api/v1/auth/challenge/pwd`
-  - `POST /api/v1/auth/challenge/mfa`
-  - `POST /api/v1/auth/logout`
-- Compte:
-  - `GET /api/v1/auth/me`
-  - `GET /api/v1/auth/accounts`
-  - `GET /api/v1/auth/sessions`
-  - `DELETE /api/v1/auth/sessions/{sessionId}`
-  - `POST /api/v1/auth/sessions/revoke-others`
-- MFA:
-  - `GET /api/v1/auth/mfa/factors`
-  - `POST /api/v1/auth/mfa/totp/setup`
-  - `POST /api/v1/auth/mfa/totp/confirm`
-  - `POST /api/v1/auth/mfa/webauthn/register/start`
-  - `POST /api/v1/auth/mfa/webauthn/register/finish`
-- Billing:
-  - les vues Billing peuvent rester dans Identity Web;
-  - les lectures/actions Billing doivent passer par `billing-service` ou le gateway, pas par l'API Identity locale.
-- OAuth Device Flow:
-  - `POST /oauth/device/verify`
-  - `POST /oauth/device/approve`
-  - `POST /oauth/device/deny`
-
-## Demarrage
+## Développement
 
 ```bash
-pnpm --dir apps/account-web dev
+pnpm nx dev account-web
+pnpm nx test account-web
+pnpm nx typecheck account-web
+pnpm nx lint account-web
+pnpm nx build account-web
 ```
-
-Le proxy Vite redirige `/api` et `/oauth` vers l'Account Service.
