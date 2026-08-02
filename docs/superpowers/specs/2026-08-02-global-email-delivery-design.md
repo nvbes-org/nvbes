@@ -44,7 +44,7 @@ flowchart LR
 
 The gRPC ingress, public HTTP webhook ingress, and dispatch loop live in the same deployable initially, but remain separate Rust modules with separate dependency boundaries. This keeps V0 operations simple without coupling their implementations. They can be deployed independently later without changing the client contract or database model.
 
-All nvbes inter-service communication in this email architecture uses gRPC, including product outbox relays. HTTP remains only where imposed by an external protocol: Scaleway's REST provider API and Topics and Events webhook delivery.
+All nvbes inter-service communication in this email architecture uses gRPC, including product outbox relays. HTTP remains only where imposed by an external integration: Scaleway's REST provider API, Topics and Events webhook delivery, and Load Balancer/container health probes.
 
 ## Components
 
@@ -74,18 +74,21 @@ Rebuild the existing TypeScript Cloudflare application as the single Rust email 
 - dispatcher: due-message claiming, provider call, retry scheduling, and terminal failure;
 - webhook ingress: signature verification and event persistence;
 - webhook procedure: normalized state transition and suppression update;
-- observability: metrics, structured logs, and standard gRPC health reporting.
+- observability: metrics, structured logs, and HTTP health probes compatible with Scaleway and the container runtime.
 
 The runtime must not import Identity or Billing product crates. Product-specific meaning is represented only by stable email categories and template variants.
 
 Its private gRPC surface is intentionally small:
 
-- `SubmitEmail` durably accepts an authenticated command;
-- `grpc.health.v1.Health` reports liveness and readiness to orchestration.
+- `SubmitEmail` durably accepts an authenticated command.
 
 Its HTTP surface is reserved for protocols that require HTTP:
 
-- `POST /webhooks/scaleway/topics-and-events` accepts SNS subscription and notification messages.
+- `POST /webhooks/scaleway/topics-and-events` accepts SNS subscription and notification messages;
+- `GET /health/live` is the shallow container liveness probe;
+- `GET /health/ready` is the Scaleway Load Balancer readiness probe.
+
+The container runtime calls `/health/live`; it returns success while the process and HTTP runtime are alive and never checks external dependencies. The Scaleway Load Balancer calls `/health/ready`; it returns success only when the database schema is current, PostgreSQL is reachable, required KMS/provider configuration is loaded, and the dispatch loop heartbeat is current. It does not call the provider: a Scaleway TEM outage must accumulate durable commands rather than remove a healthy ingress instance from rotation. Both responses are bounded, contain no operational secrets, and `/health/ready` is restricted to the private/LB network path.
 
 ### Production provider
 
@@ -276,6 +279,8 @@ Provider errors never cross into product services after command acceptance. Deli
 - code and token messages transition to `expired` on the first dispatcher sweep at or after `deliver_before`, without another provider call;
 - retry scheduling never produces `next_attempt_at >= deliver_before`;
 - provider-accepted messages are not rewritten to `expired` when their credential expires;
+- liveness stays independent of PostgreSQL and provider state;
+- readiness fails for unavailable PostgreSQL, stale schema, missing mandatory configuration, or stale dispatcher heartbeat, but not for a provider outage;
 - stable `Message-ID` across retries;
 - exhausted retry transition and alert metric;
 - valid, invalid, stale, duplicate, and out-of-order webhooks;
@@ -300,6 +305,7 @@ Provider errors never cross into product services after command acceptance. Deli
 - no production path invokes SMTP or the Cloudflare relay;
 - SPF, DKIM, and DMARC validation passes;
 - global dashboards and alerts receive real metrics;
+- the container liveness and Scaleway HTTP readiness probes are exercised;
 - webhook silence and dead-letter alerts are exercised in staging.
 
 ## Acceptance Criteria
@@ -314,4 +320,4 @@ Provider errors never cross into product services after command acceptance. Deli
 
 ## Provider References
 
-[Transactional Email API](https://www.scaleway.com/en/developers/api/transactional-email), [TEM webhooks through Topics and Events](https://www.scaleway.com/en/docs/transactional-email/api-cli/use-webhooks-with-sns-topics/), and [Topics and Events signature verification](https://www.scaleway.com/en/docs/topics-and-events/reference-content/verifying-webhooks/).
+[Transactional Email API](https://www.scaleway.com/en/developers/api/transactional-email), [TEM webhooks through Topics and Events](https://www.scaleway.com/en/docs/transactional-email/api-cli/use-webhooks-with-sns-topics/), [Topics and Events signature verification](https://www.scaleway.com/en/docs/topics-and-events/reference-content/verifying-webhooks/), and [Scaleway Load Balancer health checks](https://www.scaleway.com/en/docs/load-balancer/reference-content/configuring-health-checks/).
