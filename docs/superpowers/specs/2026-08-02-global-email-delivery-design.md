@@ -32,7 +32,7 @@ This migration does not add marketing campaigns, mailing lists, scheduled newsle
 
 ```mermaid
 flowchart LR
-    P["Product service"] -->|"EmailClient::send(command)"| E["Global email-worker HTTP ingress"]
+    P["Product service"] -->|"gRPC SubmitEmail"| E["Global email-worker gRPC ingress"]
     E -->|"insert or return existing"| D["Email PostgreSQL"]
     D -->|"claim due commands"| W["Dispatch loop"]
     W -->|"HTTPS API"| S["Scaleway TEM"]
@@ -42,7 +42,9 @@ flowchart LR
     E -->|"normalized lifecycle event"| O["Metrics and audit"]
 ```
 
-The HTTP ingress and dispatch loop live in the same deployable initially, but remain separate Rust modules with separate dependency boundaries. This keeps V0 operations simple without coupling their implementations. They can be deployed independently later without changing the client contract or database model.
+The gRPC ingress, public HTTP webhook ingress, and dispatch loop live in the same deployable initially, but remain separate Rust modules with separate dependency boundaries. This keeps V0 operations simple without coupling their implementations. They can be deployed independently later without changing the client contract or database model.
+
+All nvbes inter-service communication in this email architecture uses gRPC, including product outbox relays. HTTP remains only where imposed by an external protocol: Scaleway's REST provider API and Topics and Events webhook delivery.
 
 ## Components
 
@@ -50,7 +52,7 @@ The HTTP ingress and dispatch loop live in the same deployable initially, but re
 
 The package becomes the only public email boundary. It contains:
 
-- `EmailClient`, an authenticated internal HTTP client;
+- `EmailClient`, an authenticated tonic gRPC client;
 - versioned `EmailCommand` and `EmailReceipt` contracts;
 - typed recipient, category, template, and idempotency types;
 - safe request validation and redacted errors;
@@ -59,7 +61,9 @@ The package becomes the only public email boundary. It contains:
 
 Product services must not depend on Scaleway, SMTP, template files, email tables, or queue internals.
 
-`EmailCommand` carries a typed idempotency key, recipient, transactional category, and template variant. `EmailReceipt` returns the stable message ID, acceptance time, and whether the command was a duplicate. `TransactionalEmailTemplate` is a closed, versioned enum covering verification, password reset, password-change step-up, account security, billing receipt, billing payment failure, invitation, and access-review reminder emails. Arbitrary product-supplied HTML is not accepted.
+`EmailCommand` carries a typed idempotency key, recipient, transactional category, template variant, and mandatory `deliver_before` deadline. `EmailReceipt` returns the stable message ID, acceptance time, effective deadline, and whether the command was a duplicate. `TransactionalEmailTemplate` is a closed, versioned enum covering verification, password reset, password-change step-up, account security, billing receipt, billing payment failure, invitation, and access-review reminder emails. Arbitrary product-supplied HTML is not accepted.
+
+The wire contract lives in `contracts/protobuf/nvbes/email/v1/email.proto`. `EmailDeliveryService.SubmitEmail` is the only product-facing call. It uses `google.protobuf.Timestamp` for `deliver_before`, follows the repository's generated tonic conventions, and carries the standard request/correlation context. The server authenticates and authorizes the producer with the standard internal-service gRPC boundary.
 
 ### `apps/email-worker`
 
@@ -70,16 +74,18 @@ Rebuild the existing TypeScript Cloudflare application as the single Rust email 
 - dispatcher: due-message claiming, provider call, retry scheduling, and terminal failure;
 - webhook ingress: signature verification and event persistence;
 - webhook procedure: normalized state transition and suppression update;
-- observability: metrics, structured logs, health, and readiness.
+- observability: metrics, structured logs, and standard gRPC health reporting.
 
 The runtime must not import Identity or Billing product crates. Product-specific meaning is represented only by stable email categories and template variants.
 
-Its HTTP surface is intentionally small:
+Its private gRPC surface is intentionally small:
 
-- `POST /internal/v1/email/messages` accepts an authenticated command;
-- `POST /webhooks/scaleway/topics-and-events` accepts SNS subscription and notification messages;
-- `GET /health` reports process liveness;
-- `GET /ready` verifies database connectivity and production provider configuration.
+- `SubmitEmail` durably accepts an authenticated command;
+- `grpc.health.v1.Health` reports liveness and readiness to orchestration.
+
+Its HTTP surface is reserved for protocols that require HTTP:
+
+- `POST /webhooks/scaleway/topics-and-events` accepts SNS subscription and notification messages.
 
 ### Production provider
 
@@ -89,9 +95,9 @@ SMTP is not a production path. Local development uses a mock, test capture, or a
 
 ## Command Ingestion
 
-Product services call `EmailClient::send` only after their business transaction commits. The client authenticates with the standard internal-service credential, sends a bounded request with a short timeout, and may retry transport failures using the same idempotency key.
+Product services call `EmailClient::send` only after their business transaction commits. The tonic client authenticates with the standard internal-service credential, applies a bounded gRPC deadline, and may retry `Unavailable` transport failures using the same idempotency key.
 
-The email runtime validates and inserts the command in its own transaction. A unique `(producer, idempotency_key)` constraint returns the original receipt for duplicates. Reusing a key with different immutable command content returns a conflict and emits a security-relevant error.
+The email runtime validates and inserts the command in its own transaction. A unique `(producer, idempotency_key)` constraint returns the original receipt for duplicates. Reusing a key with different immutable command content returns `AlreadyExists` and emits a security-relevant error. A missing, malformed, or already elapsed `deliver_before` value returns `InvalidArgument` and is never persisted.
 
 If the email runtime is unavailable, the product operation follows an explicit policy:
 
@@ -129,7 +135,11 @@ Failures are classified as:
 - permanent: invalid recipient syntax, rejected sender configuration, invalid template data, or provider 4xx that cannot succeed unchanged;
 - ambiguous: the request may have reached the provider but no authoritative result was received.
 
-Transient and ambiguous failures use bounded exponential backoff with jitter. The initial policy is five attempts over approximately 24 hours. Permanent failures go directly to terminal failure. Exhausted commands remain queryable as dead letters and produce an alert; they are never silently dropped.
+Transient and ambiguous failures use bounded exponential backoff with jitter, constrained by the message deadline. Each category defines a maximum attempt count and backoff sequence rather than inheriting a global five-attempt/24-hour rule. Exhausting the attempt count produces terminal `failed`, even before the deadline. Before every claim and before every provider call, the dispatcher compares database time with `deliver_before`. If the deadline has elapsed before provider acceptance, it atomically marks the message `expired` and performs no provider call. It schedules another attempt only when the computed attempt time is strictly earlier than `deliver_before`; otherwise it marks the message `expired` immediately. Permanent failures go directly to terminal `failed`.
+
+For verification-code email, `deliver_before` must equal the authoritative code expiration timestamp, for example 15 minutes after issuance. Password-reset and verification-link messages use their token expiration timestamp. Long-lived receipts and security notices receive an explicit category policy deadline. The runtime validates that a producer cannot extend a credential-bearing email beyond the credential's template policy maximum.
+
+Once the provider has accepted a message, later token expiry does not rewrite the delivery status to `expired`: the email was sent, although its embedded credential may subsequently be invalid. The deadline prevents stale dispatch and retries; it cannot retract an email already accepted by the provider.
 
 ## Delivery State Model
 
@@ -144,6 +154,7 @@ The canonical states are:
 - `complained`: recipient reported spam;
 - `unsubscribed`: recipient opted out of optional mail;
 - `suppressed`: policy prevented provider dispatch;
+- `expired`: the delivery deadline elapsed before provider acceptance;
 - `dropped`: provider refused or discarded the message;
 - `failed`: local permanent failure or exhausted retry budget.
 
@@ -184,7 +195,7 @@ Product services do not query suppression state. The global runtime accepts the 
 
 The email-owned schema contains four focused tables:
 
-- `email_messages`: immutable command identity, template version, category, recipient identity, current state, and retention timestamps;
+- `email_messages`: immutable command identity, template version, category, recipient identity, `deliver_before`, current state, and retention timestamps;
 - `email_delivery_attempts`: one row per provider attempt, failure classification, lease identity, and provider result;
 - `email_provider_events`: deduplicated normalized webhook events and processing result;
 - `email_suppressions`: global suppression reason, provenance, policy scope, and audited release metadata.
@@ -199,6 +210,7 @@ The runtime emits and owns:
 - queue depth and oldest accepted age;
 - provider latency and outcome;
 - attempts and exhausted deliveries;
+- expired messages by producer, category, template version, and age at expiration;
 - webhook signature failures, duplicates, unknown types, and processing latency;
 - delivery, bounce, complaint, drop, and suppression rates.
 
@@ -219,7 +231,7 @@ SPF, DKIM, and DMARC remain infrastructure requirements for the configured sende
 
 The migration is incremental and has one cutover owner:
 
-1. introduce the email schema, internal command endpoint, dispatcher, webhook endpoint, and Scaleway adapter tests;
+1. introduce the email protobuf contract, schema, internal gRPC command service, dispatcher, HTTP webhook endpoint, and Scaleway adapter tests;
 2. add typed templates and compatibility mapping for every currently produced business type;
 3. migrate Identity producers to `EmailClient` and remove email queues from `identity-worker`;
 4. migrate Billing producers and remove email handling from `billing-worker`;
@@ -241,6 +253,8 @@ The client exposes a small stable error taxonomy:
 - `Unauthorized`: internal identity or producer policy failure;
 - `Accepted`: represented by `EmailReceipt`, regardless of later delivery outcome.
 
+These map to gRPC `InvalidArgument`, `AlreadyExists`, `Unavailable`, `Unauthenticated`/`PermissionDenied`, and `OK`. Delivery expiry occurs asynchronously after acceptance and is represented by the terminal message state, not a later gRPC response.
+
 Provider errors never cross into product services after command acceptance. Delivery failures are visible through operational tooling and normalized lifecycle events, not through the original product request.
 
 ## Testing
@@ -259,6 +273,9 @@ Provider errors never cross into product services after command acceptance. Deli
 - idempotency conflict rejects changed content;
 - concurrent dispatch claims do not share a lease;
 - transient, permanent, and ambiguous failure schedules;
+- code and token messages transition to `expired` on the first dispatcher sweep at or after `deliver_before`, without another provider call;
+- retry scheduling never produces `next_attempt_at >= deliver_before`;
+- provider-accepted messages are not rewritten to `expired` when their credential expires;
 - stable `Message-ID` across retries;
 - exhausted retry transition and alert metric;
 - valid, invalid, stale, duplicate, and out-of-order webhooks;
@@ -287,10 +304,11 @@ Provider errors never cross into product services after command acceptance. Deli
 
 ## Acceptance Criteria
 
-- All transactional email producers use `EmailClient::send` with typed templates and idempotency keys.
+- All transactional email producers use the gRPC-backed `EmailClient::send` with typed templates, idempotency keys, and an explicit delivery deadline.
 - A successful client response proves durable command persistence.
 - One runtime is solely responsible for provider dispatch and provider webhooks.
 - Duplicate commands and duplicate webhooks are harmless.
+- No provider call or retry starts at or after `deliver_before`; unsent stale messages terminate as `expired`.
 - Identity, Billing, and Enterprise contain no provider, rendering, suppression, or delivery-state logic.
 - Every production email has HTML and plain-text content, stable identity, observable lifecycle, and a defined suppression policy; the Cloudflare relay and duplicate template systems are removed after verified cutover.
 
