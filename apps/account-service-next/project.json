@@ -47,7 +47,7 @@
         "{projectRoot}/openapi.json"
       ],
       "options": {
-        "command": "cargo run --quiet --package nvbes-account-service -- --export-openapi > apps/account-service/openapi.json",
+        "command": "cargo run --quiet --package nvbes-account-service -- --export-openapi > apps/account-service-next/openapi.json",
         "cwd": "."
       }
     }

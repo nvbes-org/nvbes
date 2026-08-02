@@ -27,6 +27,8 @@ pub async fn refresh_if_due(
         }
     }
 
+    super::account_projection::refresh_metrics(state).await?;
+
     *last_run = Instant::now();
     Ok(())
 }

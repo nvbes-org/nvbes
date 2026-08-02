@@ -3439,9 +3439,12 @@ dependencies = [
  "axum",
  "chrono",
  "nvbes-identity-sdk",
+ "nvbes-product-account",
  "nvbes-storage",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "tokio",
  "tower-http",
@@ -3458,12 +3461,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "nvbes-account-service",
+ "nvbes-core",
  "nvbes-storage",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "sqlx",
- "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3557,6 +3561,7 @@ dependencies = [
  "nvbes-billing",
  "nvbes-core",
  "nvbes-observability",
+ "nvbes-product-account",
  "nvbes-product-analytics",
  "nvbes-redis",
  "prost 0.14.4",
@@ -3583,6 +3588,7 @@ dependencies = [
  "chrono",
  "nvbes-analytics-posthog",
  "nvbes-billing",
+ "nvbes-billing-service",
  "nvbes-core",
  "nvbes-email",
  "nvbes-observability",
@@ -3619,6 +3625,7 @@ dependencies = [
  "nvbes-core",
  "nvbes-identity-sdk",
  "nvbes-observability",
+ "nvbes-product-account",
  "nvbes-product-analytics",
  "nvbes-product-cloud",
  "nvbes-product-identity",
@@ -3925,6 +3932,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "nvbes-identity-worker"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-observability",
+ "nvbes-product-analytics",
+ "nvbes-product-identity",
+ "nvbes-redis",
+ "nvbes-region",
+ "nvbes-storage",
+ "prost 0.14.4",
+ "protoc-bin-vendored",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "nvbes-observability"
 version = "0.1.0"
 dependencies = [
@@ -3978,6 +4018,7 @@ dependencies = [
  "nvbes-redis",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "thiserror 2.0.18",
  "uuid",
@@ -6628,11 +6669,13 @@ dependencies = [
  "socket2 0.6.4",
  "sync_wrapper",
  "tokio",
+ "tokio-rustls",
  "tokio-stream",
  "tower",
  "tower-layer",
  "tower-service",
  "tracing",
+ "webpki-roots 1.0.8",
 ]
 
 [[package]]
@@ -7041,8 +7084,15 @@ dependencies = [
  "serde_json",
  "url",
  "utoipa",
+ "utoipa-swagger-ui-vendored",
  "zip 3.0.0",
 ]
+
+[[package]]
+name = "utoipa-swagger-ui-vendored"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2eebbbfe4093922c2b6734d7c679ebfebd704a0d7e56dfcb0d05818ce28977d"
 
 [[package]]
 name = "uuid"

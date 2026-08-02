@@ -95,15 +95,14 @@ async fn seed_login_subject(pool: &PgPool, email: &str, password: &str) -> (Uuid
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username, password_hash,
+          principal_id, email, password_hash,
           email_verified_at, status, created_at, updated_at
         )
-        VALUES ($1, $2, 'Login', 'Tester', $3, $4, NOW(), 'active', $5, $5)
+        VALUES ($1, $2, $3, NOW(), 'active', $4, $4)
         "#,
     )
     .bind(principal_id)
     .bind(email)
-    .bind(format!("user-{}", principal_id))
     .bind(password_hash)
     .bind(now)
     .execute(pool)

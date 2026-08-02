@@ -21,6 +21,7 @@ pub struct AppState {
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
     pub storage: std::sync::Arc<dyn nvbes_storage::ObjectStore>,
+    pub identity_internal_token: String,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -109,6 +110,12 @@ impl AppState {
             rate_limiter,
             allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
             storage: nvbes_product_cloud::storage::build_storage(config).await,
+            identity_internal_token: nvbes_core::http::internal_service::load_token(
+                "NVBES_IDENTITY_INTERNAL_TOKEN",
+                &config.environment,
+                "development-identity-internal-token",
+            )
+            .map_err(anyhow::Error::msg)?,
         };
 
         crate::database::ensure_default_oauth_clients_seeded(&state.db).await?;

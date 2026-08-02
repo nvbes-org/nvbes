@@ -41,13 +41,33 @@ accepted only when `NVBES_ENVIRONMENT` is `development` or `test`.
 
 ## Runtime
 
-The service runs its Account-only SQL migrations at startup. Profiles and
-settings are initialized from the verified Identity subject on first use; no
-inter-service foreign key or synchronous Identity data lookup is performed.
+The service runs its Account-only SQL migrations at startup. Identity
+registration events initialize the profile and settings through a versioned,
+fingerprinted inbox. Profile changes are projected back to Identity for OIDC
+claims through a versioned outbox; no inter-service foreign key or synchronous
+Identity data lookup is used.
 
-Account closure is intentionally a saga: `POST /api/v1/closure` atomically
-creates an `account_closure_sagas` row and an `account_outbox_events` event.
-It does not pretend that Identity has already deleted the principal.
+Account closure is a durable saga. `POST /api/v1/closure` returns `202 Accepted`
+with the stable saga identifier and atomically publishes
+`account.closure.requested.v1`. Account Worker executes four persisted,
+ordered checkpoints: Cloud, Billing, Identity, then Account. Every remote
+participant has a fingerprinted inbox, so a crash after a remote success can
+replay the same event safely. The Account checkpoint deletes the avatar, purges
+Account-owned user data and completes the saga in the same transaction as the
+outbox acknowledgement. `GET /api/v1/closure` exposes the saga and participant
+states. Transient failures use bounded exponential retries; terminal failures
+remain observable on the participant, saga and dead-lettered event.
+
+Account Worker requires the three participant base URLs and dedicated tokens:
+
+```text
+NVBES_CLOUD_SERVICE_BASE_URL
+NVBES_CLOUD_INTERNAL_TOKEN
+NVBES_BILLING_SERVICE_BASE_URL
+NVBES_BILLING_INTERNAL_TOKEN
+NVBES_IDENTITY_SERVICE_BASE_URL
+NVBES_IDENTITY_INTERNAL_TOKEN
+```
 
 Generate the contract after the crate replaces the legacy package in the Cargo
 workspace:
@@ -55,4 +75,3 @@ workspace:
 ```bash
 pnpm nx run account-service:export-openapi
 ```
-

@@ -1,13 +1,14 @@
 use axum::{
     Router,
-    routing::{get, patch, post, put},
+    routing::{delete, get, post, put},
 };
 
 use crate::{
     app::AppState,
     auth::{
         DELETE_SCOPE, EXPORT_SCOPE, LEGAL_READ_SCOPE, LEGAL_WRITE_SCOPE, PREFERENCES_READ_SCOPE,
-        PREFERENCES_WRITE_SCOPE, PROFILE_READ_SCOPE, PROFILE_WRITE_SCOPE, protected,
+        PREFERENCES_WRITE_SCOPE, PROFILE_READ_SCOPE, PROFILE_WRITE_SCOPE, SESSION_READ_SCOPE,
+        SESSION_WRITE_SCOPE, protected,
     },
 };
 
@@ -26,7 +27,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             protected(
                 state,
                 PROFILE_WRITE_SCOPE,
-                patch(crate::profile_routes::update_profile),
+                put(crate::profile_routes::update_profile),
             ),
         )
         .route(
@@ -113,19 +114,42 @@ pub fn router(state: &AppState) -> Router<AppState> {
             ),
         )
         .route(
+            "/security/sessions",
+            protected(
+                state,
+                SESSION_READ_SCOPE,
+                get(crate::sessions_routes::list_sessions),
+            ),
+        )
+        .route(
+            "/security/sessions/{sessionId}",
+            protected(
+                state,
+                SESSION_WRITE_SCOPE,
+                delete(crate::sessions_routes::revoke_session),
+            ),
+        )
+        .route(
             "/closure",
             protected(
                 state,
                 DELETE_SCOPE,
-                post(crate::closure_routes::request_closure),
+                post(crate::closure_routes::request_closure)
+                    .get(crate::closure_routes::get_closure),
             ),
         );
+
+    let internal = Router::new().route(
+        "/identity-registrations",
+        post(crate::registration_routes::project_registration),
+    );
 
     Router::new()
         .route("/health", get(crate::health::health))
         .route("/ready", get(crate::health::ready))
         .route("/api/openapi.json", get(crate::openapi::openapi_json))
         .nest("/api/v1", api)
+        .nest("/internal/v1", internal)
         .fallback(not_found)
         .method_not_allowed_fallback(method_not_allowed)
 }

@@ -17,15 +17,13 @@ async fn main() -> anyhow::Result<()> {
         .resolve_from_secret_manager()
         .await
         .map_err(anyhow::Error::msg)?;
+    let command = std::env::args().nth(1);
 
     let _error_reporting_guard = init_error_reporting_for_service(&config, "billing-service");
     install_safe_panic_hook();
     init_tracing(&config);
 
-    if matches!(
-        std::env::args().nth(1).as_deref(),
-        Some("error-reporting-smoke")
-    ) {
+    if matches!(command.as_deref(), Some("error-reporting-smoke")) {
         let result = capture_error_reporting_smoke(
             "billing-service",
             &config.environment,
@@ -39,7 +37,12 @@ async fn main() -> anyhow::Result<()> {
     let _profiling_guard =
         start_continuous_profiling(&config, "billing-service").map_err(anyhow::Error::msg)?;
 
-    let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
+    let db = nvbes_billing_service::database::connect_pool(&config).await?;
+    nvbes_billing_service::database::run_migrations(&db).await?;
+    if matches!(command.as_deref(), Some("migrate")) {
+        tracing::info!("Billing database migrations applied");
+        return Ok(());
+    }
     let state = nvbes_billing_service::app::BillingAppState::bootstrap(&config, db).await?;
     let app = nvbes_billing_service::app::build_router(state.clone());
 

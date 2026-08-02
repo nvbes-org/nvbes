@@ -3,8 +3,6 @@ import type {
   MfaFactorView,
   RecoveryCodesResult,
   TotpSetupResult,
-  UserView,
-  WorkspaceView,
 } from '@nvbes/identity-sdk-core/src/types';
 import { readCurrentAuthuser, readScopedCsrfToken } from './csrf';
 import {
@@ -43,11 +41,6 @@ export interface IdentityWebConfig extends AuthConfig {
   cookieDomain?: string;
   secureCookies?: boolean;
   storage?: WebStorage;
-}
-
-export interface AuthResult {
-  user: UserView;
-  workspace: WorkspaceView;
 }
 
 export class NvbesIdentityWeb {
@@ -101,18 +94,6 @@ export class NvbesIdentityWeb {
     this.storage.clearTransaction();
   }
 
-  async getCurrentUser(): Promise<UserView> {
-    const authuser = readCurrentAuthuser();
-    const response = await fetch(`${this.config.baseUrl}/auth/me`, {
-      credentials: 'include',
-      headers: authuser ? { 'X-Auth-User': authuser } : undefined,
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user: ${response.statusText}`);
-    }
-    return response.json();
-  }
-
   async logout(): Promise<void> {
     const headers: Record<string, string> = {};
     const authuser = readCurrentAuthuser();
@@ -126,15 +107,6 @@ export class NvbesIdentityWeb {
       credentials: 'include',
       headers: createRequestHeaders('POST', headers),
     });
-  }
-
-  async isAuthenticated(): Promise<boolean> {
-    try {
-      await this.getCurrentUser();
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   async listMfaFactors(

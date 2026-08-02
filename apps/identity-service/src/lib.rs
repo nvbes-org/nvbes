@@ -25,5 +25,8 @@ pub mod grpc;
 pub mod grpc_pb;
 #[path = "identity.http.mod.rs"]
 pub mod http;
+#[cfg(test)]
+#[path = "identity.surface.contract.tests.rs"]
+mod identity_surface_contract_tests;
 #[path = "identity.test_support.rs"]
 pub mod test_support;

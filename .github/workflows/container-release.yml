@@ -29,12 +29,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: nvbes-account-worker
-            dockerfile: apps/account-worker/Dockerfile
+          - image: nvbes-identity-service
+            dockerfile: apps/identity-service/Dockerfile
+            contract: apps/identity-service/tests/container-contract.test.mjs
+          - image: nvbes-identity-worker
+            dockerfile: apps/identity-worker/Dockerfile
+            contract: apps/identity-worker/tests/container-contract.test.mjs
           - image: nvbes-billing-worker
             dockerfile: apps/billing-worker/Dockerfile
+            contract: ''
           - image: nvbes-cloud-worker
             dockerfile: apps/cloud-worker/Dockerfile
+            contract: ''
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: nvbes-org/${{ matrix.image }}
@@ -44,10 +50,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: CI/CD security gate
-        run: node tools/security/check-ci-cd-security.mjs
-      - name: Validate Account worker image contract
-        if: matrix.image == 'nvbes-account-worker'
-        run: node --test apps/account-worker/tests/container-contract.test.mjs
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/container-release.yml
+      - name: Validate image contract
+        if: matrix.contract != ''
+        run: node --test "${{ matrix.contract }}"
       - name: Set deterministic build metadata
         run: |
           echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"

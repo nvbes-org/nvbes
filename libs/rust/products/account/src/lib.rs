@@ -6,3 +6,5 @@ pub mod privacy;
 pub mod profile;
 
 pub use error::{AccountError, AccountResult};
+#[path = "account.closure.event.rs"]
+pub mod closure_event;

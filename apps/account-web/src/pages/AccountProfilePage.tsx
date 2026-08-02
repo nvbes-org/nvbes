@@ -57,11 +57,11 @@ export default function AccountProfilePage() {
     event.preventDefault();
     setSaved(false);
     updateProfile.mutate({
-      firstname: form.firstname.trim(),
-      lastname: form.lastname.trim(),
-      username: form.username.trim(),
-      birthdate: form.birthdate,
-      region: form.region.trim(),
+      firstname: form.firstname.trim() || null,
+      lastname: form.lastname.trim() || null,
+      username: form.username.trim() || null,
+      birthdate: form.birthdate || null,
+      region: form.region.trim() || null,
     });
   };
 

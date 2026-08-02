@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     let (shutdown_tx, _) = broadcast::channel(1);
     let shutdown_signal_tx = shutdown_tx.clone();
     tokio::spawn(async move {
-        let _ = tokio::signal::ctrl_c().await;
+        wait_for_termination_signal().await;
         let _ = shutdown_signal_tx.send(());
     });
 
@@ -132,6 +132,24 @@ async fn main() -> anyhow::Result<()> {
 
 async fn shutdown_signal(mut shutdown_rx: broadcast::Receiver<()>) {
     let _ = shutdown_rx.recv().await;
+}
+
+async fn wait_for_termination_signal() {
+    #[cfg(unix)]
+    {
+        let mut terminate =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("SIGTERM handler must be installable");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = terminate.recv() => {},
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
+    }
 }
 
 fn identity_grpc_port(default_api_port: u16) -> anyhow::Result<u16> {

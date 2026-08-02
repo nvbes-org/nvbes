@@ -1,5 +1,5 @@
-import { Link } from '@tanstack/react-router';
 import { AuthFooterLink } from '@/components/AuthFooterLink';
+import { legalDocumentUrl } from '@/identity.account-links';
 
 const LEGAL_LINKS: ReadonlyArray<{ to: string; label: string }> = [
   { to: '/legal/site-legal-notice', label: 'Mentions légales' },
@@ -20,13 +20,13 @@ export function LoginPageLegalLinks() {
       className="mt-5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-center"
     >
       {LEGAL_LINKS.map((link) => (
-        <Link
+        <a
           key={link.to}
-          to={link.to}
+          href={legalDocumentUrl(link.to)}
           className="text-xs text-muted-foreground hover:text-foreground hover:underline"
         >
           {link.label}
-        </Link>
+        </a>
       ))}
     </nav>
   );

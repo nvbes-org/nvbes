@@ -39,6 +39,7 @@ pub fn router(state: &BillingAppState) -> Router<BillingAppState> {
 
     Router::new()
         .route("/health", get(health))
+        .merge(super::account_closure::router())
         .merge(observability_routes)
         .merge(crate::domains::public_workspace::router())
         .merge(crate::domains::webhooks::router())

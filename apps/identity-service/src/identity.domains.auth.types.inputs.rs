@@ -8,8 +8,6 @@ use webauthn_rs::prelude::{PublicKeyCredential, RegisterPublicKeyCredential};
 pub struct RegisterInput {
     pub email: String,
     pub password: String,
-    pub username: String,
-    pub region: Option<String>,
     pub data_region: Option<String>,
     pub ip: Option<String>,
     pub user_agent: Option<String>,
@@ -118,16 +116,6 @@ pub struct RecoveryCodesGenerateInput {
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ChangePasswordInput {
     pub new_password: String,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct UpdateProfileInput {
-    pub firstname: Option<String>,
-    pub lastname: Option<String>,
-    #[schema(max_length = 100)]
-    pub username: Option<String>,
-    pub birthdate: Option<chrono::NaiveDate>,
-    pub region: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

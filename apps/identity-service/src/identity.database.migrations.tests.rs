@@ -71,7 +71,14 @@ async fn postgresql_fresh_database_reaches_complete_schema() -> Result<()> {
     ACCOUNT_MIGRATOR.run(&pool).await?;
     assert_all_migrations_applied(&pool).await?;
 
-    for relation in ["principals", "email_messages", "oauth_client_keys"] {
+    for relation in [
+        "principals",
+        "email_messages",
+        "oauth_client_keys",
+        "identity_outbox_events",
+        "identity_oidc_profile_claims",
+        "identity_inbox_events",
+    ] {
         let qualified_name = format!("public.{relation}");
         let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
             .bind(&qualified_name)
@@ -79,6 +86,25 @@ async fn postgresql_fresh_database_reaches_complete_schema() -> Result<()> {
             .await?;
         assert!(exists, "fresh schema is missing {qualified_name}");
     }
+    let legacy_profile_columns: i64 = sqlx::query_scalar(
+        r#"
+        SELECT COUNT(*)
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'users'
+          AND column_name = ANY($1)
+        "#,
+    )
+    .bind(vec![
+        "firstname",
+        "lastname",
+        "username",
+        "birthdate",
+        "region",
+    ])
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(legacy_profile_columns, 0);
 
     let job_id = Uuid::new_v4();
     let (message_id, attempt_count): (String, i32) = sqlx::query_as(
@@ -120,6 +146,40 @@ async fn postgresql_upgrade_from_n_minus_one_preserves_compatible_data() -> Resu
     let (prior_migrator, latest_version) = prior_migrator()?;
 
     prior_migrator.run(&pool).await?;
+    let tenant_id = Uuid::new_v4();
+    let principal_id = Uuid::new_v4();
+    sqlx::query(
+        r#"
+        INSERT INTO tenants (id, kind, name, slug, status, security_tier)
+        VALUES ($1, 'personal', 'Migration profile', $2, 'active', 'standard')
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(format!("migration-profile-{tenant_id}"))
+    .execute(&pool)
+    .await?;
+    sqlx::query(
+        r#"
+        INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
+        VALUES ($1, $2, 'human', 'active', 'Migration Profile')
+        "#,
+    )
+    .bind(principal_id)
+    .bind(tenant_id)
+    .execute(&pool)
+    .await?;
+    sqlx::query(
+        r#"
+        INSERT INTO users (
+          principal_id, email, firstname, lastname, username, password_hash, status
+        )
+        VALUES ($1, $2, 'Migration', 'Profile', 'migration-profile', 'hash', 'active')
+        "#,
+    )
+    .bind(principal_id)
+    .bind(format!("{principal_id}@example.test"))
+    .execute(&pool)
+    .await?;
     let old_job_id = Uuid::new_v4();
     sqlx::query(
         r#"
@@ -137,6 +197,25 @@ async fn postgresql_upgrade_from_n_minus_one_preserves_compatible_data() -> Resu
     ACCOUNT_MIGRATOR.run(&pool).await?;
     ACCOUNT_MIGRATOR.run(&pool).await?;
     assert_all_migrations_applied(&pool).await?;
+
+    let migrated_profile: (String, Option<String>, i64) = sqlx::query_as(
+        r#"
+        SELECT display_name, preferred_username, profile_version
+        FROM identity_oidc_profile_claims
+        WHERE principal_id = $1
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        migrated_profile,
+        (
+            "Migration Profile".to_string(),
+            Some("migration-profile".to_string()),
+            0
+        )
+    );
 
     let applied_latest: i64 =
         sqlx::query_scalar("SELECT MAX(version) FROM _sqlx_migrations WHERE success")
@@ -242,6 +321,9 @@ async fn assert_all_migrations_applied(pool: &sqlx::PgPool) -> Result<()> {
     let applied: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM _sqlx_migrations WHERE success")
         .fetch_one(pool)
         .await?;
-    assert_eq!(applied, expected, "every Identity migration must be applied");
+    assert_eq!(
+        applied, expected,
+        "every Identity migration must be applied"
+    );
     Ok(())
 }

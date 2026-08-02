@@ -46,6 +46,12 @@ where
         {
             tracing::warn!(%error, "identity worker queue metrics refresh failed");
         }
+        if let Err(error) = super::account_projection::process_next(&state).await {
+            capture_loop_error(&state, "account_registration_projection", error.as_ref());
+            tracing::warn!(%error, "Account registration projection loop failed");
+            sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+            continue;
+        }
         if let Err(error) =
             run_access_review_schedules_if_due(&state, &mut access_review_schedule_last_run).await
         {
@@ -58,16 +64,18 @@ where
             capture_loop_error(&state, "access_review_reminders", error.as_ref());
             return Err(error);
         }
-        tokio::select! {
-            _ = &mut shutdown => return Ok(()),
-            result = super::housekeeping::run_if_due(&state, &mut housekeeping_last_run) => {
-                if let Err(error) = result {
-                    capture_loop_error(&state, "housekeeping", error.as_ref());
-                    tracing::warn!(%error, "identity worker housekeeping failed; retrying after backoff");
-                    sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
-                    continue;
+        if state.inline_housekeeping_enabled {
+            tokio::select! {
+                _ = &mut shutdown => return Ok(()),
+                result = super::housekeeping::run_if_due(&state, &mut housekeeping_last_run) => {
+                    if let Err(error) = result {
+                        capture_loop_error(&state, "housekeeping", error.as_ref());
+                        tracing::warn!(%error, "identity worker housekeeping failed; retrying after backoff");
+                        sleep(TRANSIENT_INFRA_ERROR_SLEEP).await;
+                        continue;
+                    }
                 }
-            },
+            }
         }
         let claimed_job = tokio::select! {
             biased;

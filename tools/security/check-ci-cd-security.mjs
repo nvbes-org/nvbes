@@ -33,6 +33,22 @@ const dangerousRunPatterns = [
 const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
 const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
+const workflowScope = parseWorkflowScope(process.argv.slice(2));
+
+function parseWorkflowScope(args) {
+	if (args.length === 0) return undefined;
+	if (
+		args.length !== 2 ||
+		args[0] !== "--workflow" ||
+		!/^\.github\/workflows\/[^/]+\.ya?ml$/u.test(args[1])
+	) {
+		errors.push(
+			"usage: check-ci-cd-security.mjs [--workflow .github/workflows/<name>.yml]",
+		);
+		return undefined;
+	}
+	return args[1];
+}
 
 function readJson(path) {
 	if (!existsSync(path)) {
@@ -472,18 +488,38 @@ if (registry) {
 			evidence.forEach((entry, evidenceIndex) => {
 				const evidenceContext = `${controlContext}.evidence[${evidenceIndex}]`;
 				const path = requireString(entry?.path, `${evidenceContext}.path`);
-				evidenceCount += requireIncludes(
-					path,
-					entry?.includes,
-					evidenceContext,
-				);
+				if (workflowScope) {
+					for (const include of requireArray(
+						entry?.includes,
+						`${evidenceContext}.includes`,
+					)) {
+						requireString(include, `${evidenceContext}.includes[]`);
+						evidenceCount += 1;
+					}
+				} else {
+					evidenceCount += requireIncludes(
+						path,
+						entry?.includes,
+						evidenceContext,
+					);
+				}
 			});
 		});
 	});
 
-	const workflows = workflowFiles();
+	const availableWorkflows = workflowFiles();
+	const scopedWorkflowExists =
+		!workflowScope || availableWorkflows.includes(workflowScope);
+	const workflows = workflowScope
+		? scopedWorkflowExists
+			? [workflowScope]
+			: []
+		: availableWorkflows;
 	if (workflows.length === 0) {
 		errors.push(`${workflowsDir}: no workflow files found`);
+	}
+	if (workflowScope && !scopedWorkflowExists) {
+		errors.push(`${workflowScope}: workflow does not exist`);
 	}
 
 	for (const path of workflows) {

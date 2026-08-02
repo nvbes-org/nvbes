@@ -1,6 +1,5 @@
 use crate::cloud_boundary::workspace_port;
 use crate::domains::auth::jwt::JwtService;
-use crate::domains::auth::types::derive_display_name;
 use crate::domains::oauth::flows::IntrospectionResponse;
 use crate::domains::oauth::flows::tokens::{
     introspect_actor::resolve_actor_context, introspect_network::resolve_network_valid,
@@ -139,14 +138,15 @@ pub async fn introspect_token(
             let user_row = sqlx::query(
                 r#"
                 SELECT
-                  email,
-                  firstname,
-                  lastname,
-                  username,
-                  email_verified_at,
-                  status::text AS status
-                FROM users
-                WHERE principal_id = $1
+                  u.email,
+                  profile.preferred_username AS username,
+                  COALESCE(profile.display_name, 'User') AS display_name,
+                  u.email_verified_at,
+                  u.status::text AS status
+                FROM users u
+                LEFT JOIN identity_oidc_profile_claims profile
+                  ON profile.principal_id = u.principal_id
+                WHERE u.principal_id = $1
                 LIMIT 1
                 "#,
             )
@@ -161,11 +161,7 @@ pub async fn introspect_token(
                 return Ok(IntrospectionResponse::inactive());
             }
 
-            let display_name = derive_display_name(
-                user_row.get::<Option<String>, _>("firstname").as_deref(),
-                user_row.get::<Option<String>, _>("lastname").as_deref(),
-                user_row.get::<Option<String>, _>("username").as_deref(),
-            );
+            let display_name: String = user_row.get("display_name");
             let session_id = match Uuid::parse_str(&claims.sid) {
                 Ok(value) => value,
                 Err(_) => return Ok(IntrospectionResponse::inactive()),

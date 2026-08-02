@@ -27,8 +27,6 @@ const PUBLIC_OPERATION_IDS: &[&str] = &[
     "challenge_webauthn_discoverable_finish",
     "forgot_password",
     "reset_password",
-    "region",
-    "supported_regions",
     "register",
     "registration_availability",
     "verify_email",
@@ -211,18 +209,12 @@ fn sentinels_distinguish_public_browser_enrollment_and_oauth_access() {
         json!([{ (BROWSER_SESSION_SCHEME): [] }])
     );
     assert_eq!(
-        operation(&document, "/auth/me", "get")["security"],
-        json!([
-            { (BROWSER_SESSION_SCHEME): [] },
-            { (OAUTH2_SCHEME): ["account:profile:read"] },
-        ])
+        operation(&document, "/auth/sessions", "get")["security"],
+        json!([{ (OAUTH2_SCHEME): ["account:session:read"] }])
     );
     assert_eq!(
-        operation(&document, "/auth/me", "patch")["security"],
-        json!([
-            { (BROWSER_SESSION_SCHEME): [] },
-            { (OAUTH2_SCHEME): ["account:profile:write"] },
-        ])
+        operation(&document, "/auth/workspaces/{workspaceId}/switch", "post")["security"],
+        json!([{ (OAUTH2_SCHEME): ["account:session:write"] }])
     );
     assert_eq!(
         operation(&document, "/oauth/userinfo", "get")["security"],
@@ -281,22 +273,25 @@ fn browser_authenticated_mutations_document_signed_double_submit_csrf() {
         operation(&document, "/auth/logout", "post")["parameters"][0]["required"],
         true
     );
-    let profile_parameters = operation(&document, "/auth/me", "patch")["parameters"]
-        .as_array()
-        .expect("profile mutation parameters should be declared");
-    let profile_csrf = profile_parameters
-        .iter()
-        .find(|parameter| parameter["name"] == CSRF_HEADER)
-        .expect("profile mutation should document CSRF");
-    assert_eq!(profile_csrf["required"], false);
 }
 
 #[test]
-fn profile_avatar_runtime_surface_is_present_in_the_contract() {
+fn account_product_surface_is_absent_from_the_identity_contract() {
     let document = document();
-    let avatar = &document["paths"]["/auth/me/avatar"];
-
-    assert!(avatar["get"].is_object());
-    assert!(avatar["post"].is_object());
-    assert!(avatar["delete"].is_object());
+    for path in [
+        "/auth/me",
+        "/auth/me/avatar",
+        "/auth/me/delete",
+        "/auth/me/export",
+        "/auth/me/notifications",
+        "/auth/me/preferences",
+        "/legal/consent",
+        "/legal/consents",
+        "/legal/gpc",
+    ] {
+        assert!(
+            document["paths"].get(path).is_none(),
+            "{path} leaked into Identity"
+        );
+    }
 }

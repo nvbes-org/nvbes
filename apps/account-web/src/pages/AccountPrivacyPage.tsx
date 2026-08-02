@@ -135,7 +135,18 @@ function PrivacyActions() {
   const closureMutation = useMutation({
     mutationFn: () => accountClient.closeAccount(),
   });
-  useAccountAuthenticationRecovery(exportMutation.error ?? closureMutation.error);
+  const closureQuery = useQuery({
+    queryKey: accountQueryKeys.closure,
+    queryFn: ({ signal }) => accountClient.getAccountClosure({ signal }),
+    enabled: closureMutation.isSuccess,
+    refetchInterval: (query) =>
+      query.state.data && ['completed', 'failed', 'cancelled'].includes(query.state.data.status)
+        ? false
+        : 1_000,
+  });
+  useAccountAuthenticationRecovery(
+    exportMutation.error ?? closureMutation.error ?? closureQuery.error,
+  );
 
   return (
     <section className="space-y-6">
@@ -199,15 +210,33 @@ function PrivacyActions() {
             <AlertDescription>{closureMutation.error.message}</AlertDescription>
           </Alert>
         ) : null}
-        {closureMutation.isSuccess ? (
+        {closureQuery.data?.status === 'failed' ? (
+          <Alert variant="destructive">
+            <AlertTitle>Fermeture interrompue</AlertTitle>
+            <AlertDescription>
+              {closureFailureMessage(closureQuery.data.last_error)}
+            </AlertDescription>
+          </Alert>
+        ) : closureMutation.isSuccess ? (
           <Alert>
             <AlertTitle>Demande enregistrée</AlertTitle>
-            <AlertDescription>La procédure de fermeture de compte a commencé.</AlertDescription>
+            <AlertDescription>
+              {closureQuery.data
+                ? `${closureQuery.data.participants.filter((step) => step.status === 'completed').length} étape(s) sur ${closureQuery.data.participants.length} terminée(s).`
+                : 'La procédure de fermeture de compte a commencé.'}
+            </AlertDescription>
           </Alert>
         ) : null}
       </div>
     </section>
   );
+}
+
+function closureFailureMessage(code: string | null): string {
+  if (code === 'cloud_closure_conflict' || code === 'billing_closure_conflict') {
+    return 'Transférez ou supprimez les espaces dont vous êtes propriétaire, puis relancez la fermeture.';
+  }
+  return 'La fermeture n’a pas pu être terminée. Réessayez ou contactez le support.';
 }
 
 function updateConsent(consent: CookieConsentState, category: 'analytics' | 'performance'): void {

@@ -1,22 +1,25 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { readPackageScripts, validateProofCommand } from "./execution-backlog.proof.mjs";
+import {
+	readPackageScripts,
+	validateProofCommand,
+} from "./execution-backlog.proof.mjs";
 
 const args = process.argv.slice(2);
 const write = args.includes("--write");
 const outputPath = "docs/migration/identity-register.generated.json";
 const markdownPath = "docs/migration/identity-register.md";
 const sources = {
-	registerRoute: "apps/account-service/src/identity.domains.auth.routes.register.rs",
-	registerRouteTests: "apps/account-service/src/identity.domains.auth.routes.register.tests.rs",
-	onboarding: "apps/account-service/src/identity.domains.auth.onboarding.rs",
-	accountDb: "apps/account-service/src/identity.domains.auth.db.account.rs",
-	workspaceProjection: "apps/account-service/src/identity.domains.cloud.workspace_projection.rs",
-	authRoutes: "apps/account-service/src/identity.domains.auth.routes.rs",
-	openapiSource: "apps/account-service/src/identity.http.openapi.rs",
-	openapiJson: "apps/account-service/openapi.json",
-	contractSmoke: "scripts/test-openapi-contract.mjs",
+	registerRoute:
+		"apps/identity-service/src/identity.domains.auth.routes.register.rs",
+	registerRouteTests:
+		"apps/identity-service/src/identity.domains.auth.routes.register.tests.rs",
+	onboarding: "apps/identity-service/src/identity.domains.auth.onboarding.rs",
+	accountDb: "apps/identity-service/src/identity.domains.auth.db.account.rs",
+	authRoutes: "apps/identity-service/src/identity.domains.auth.routes.rs",
+	openapiSource: "apps/identity-service/src/identity.http.openapi.rs",
+	openapiJson: "apps/identity-service/openapi.json",
 };
 
 const errors = [];
@@ -43,35 +46,162 @@ function textCheck(id, path, description, pattern) {
 
 function buildChecks() {
 	return [
-		textCheck("route-mounted", sources.authRoutes, "Auth routes mount register under /auth", ".nest(\"/auth\", register::router())"),
-		textCheck("register-route", sources.registerRoute, "Register route accepts POST /register", ".route(\"/register\", post(register))"),
-		textCheck("openapi-annotation", sources.registerRoute, "Register route declares /auth/register OpenAPI path", "path = \"/auth/register\""),
-		textCheck("request-body", sources.registerRoute, "Register route declares RegisterRequest body", "request_body = RegisterRequest"),
-		textCheck("success-response", sources.registerRoute, "Register route returns RegisterResult", "body = crate::domains::auth::types::RegisterResult"),
-		textCheck("pow-gate", sources.registerRoute, "Register route enforces proof-of-work when enabled", "require_pow_solution"),
-		textCheck("rate-limit", sources.registerRoute, "Register route applies dual rate limit", "\"auth_register\""),
-		textCheck("region-resolution", sources.registerRoute, "Register route resolves supported country to data region", "country_code_to_data_region"),
-		textCheck("onboarding-mapping", sources.registerRoute, "Register route maps HTTP request to onboarding input through a tested helper", "register_input_from_request"),
-		textCheck("mapping-test", sources.registerRouteTests, "Register route mapping test covers data region, workspace, IP, and user-agent", "register_input_from_request_maps_http_payload_to_onboarding_input"),
-		textCheck("onboarding-register", sources.onboarding, "Onboarding exposes register command", "pub async fn register"),
-		textCheck("email-validation", sources.onboarding, "Onboarding validates normalized email", "validate_email(&email)?"),
-		textCheck("password-validation", sources.onboarding, "Onboarding validates password policy", "validate_password(&input.password)?"),
-		textCheck("register-limiter", sources.onboarding, "Onboarding applies account-level register rate limit", "\"register\""),
-		textCheck("create-account", sources.onboarding, "Onboarding creates the user account transaction", "db::create_user_account"),
-		textCheck("password-history", sources.onboarding, "Onboarding records password history", "history::insert_password_hash"),
-		textCheck("tenant-insert", sources.accountDb, "Registration creates personal tenant", "INSERT INTO tenants"),
-		textCheck("principal-insert", sources.accountDb, "Registration creates human principal", "INSERT INTO principals"),
-		textCheck("user-insert", sources.accountDb, "Registration creates pending verification user", "'pending_verification'"),
-		textCheck("workspace-insert", sources.workspaceProjection, "Registration creates personal workspace", "INSERT INTO workspaces"),
-		textCheck("workspace-policy", sources.workspaceProjection, "Registration creates workspace policy", "INSERT INTO workspace_policies"),
-		textCheck("owner-membership", sources.workspaceProjection, "Registration creates owner workspace membership", "INSERT INTO workspace_memberships"),
-		textCheck("audit-event", sources.accountDb, "Registration writes user.registered audit event", 'action: "user.registered"'),
-		textCheck("verification-email", sources.accountDb, "Registration issues verification email token", "issue_verification_email_tx"),
-		textCheck("openapi-source", sources.openapiSource, "OpenAPI source exports register path", "crate::domains::auth::routes::register::register"),
-		textCheck("openapi-json-path", sources.openapiJson, "Generated OpenAPI contains /auth/register", "\"/auth/register\""),
-		textCheck("openapi-json-operation", sources.openapiJson, "Generated OpenAPI exposes register operation id", "\"operationId\":\"register\""),
-		textCheck("seeded-smoke-register", sources.contractSmoke, "Seeded OpenAPI smoke registers an account before login", "`${apiBaseUrl}/auth/register`"),
-		textCheck("seeded-smoke-status", sources.contractSmoke, "Seeded OpenAPI smoke expects register success or idempotent conflict", "[200, 409]"),
+		textCheck(
+			"route-mounted",
+			sources.authRoutes,
+			"Auth routes mount register under /auth",
+			'.nest("/auth", register::router())',
+		),
+		textCheck(
+			"register-route",
+			sources.registerRoute,
+			"Register route accepts POST /register",
+			'.route("/register", post(register))',
+		),
+		textCheck(
+			"openapi-annotation",
+			sources.registerRoute,
+			"Register route declares /auth/register OpenAPI path",
+			'path = "/auth/register"',
+		),
+		textCheck(
+			"request-body",
+			sources.registerRoute,
+			"Register route declares RegisterRequest body",
+			"request_body = RegisterRequest",
+		),
+		textCheck(
+			"success-response",
+			sources.registerRoute,
+			"Register route returns RegisterResult",
+			"body = crate::domains::auth::types::RegisterResult",
+		),
+		textCheck(
+			"pow-gate",
+			sources.registerRoute,
+			"Register route enforces proof-of-work when enabled",
+			"require_pow_solution",
+		),
+		textCheck(
+			"rate-limit",
+			sources.registerRoute,
+			"Register route applies dual rate limit",
+			'"auth_register"',
+		),
+		textCheck(
+			"region-resolution",
+			sources.registerRoute,
+			"Register route resolves supported country to data region",
+			"country_code_to_data_region",
+		),
+		textCheck(
+			"onboarding-mapping",
+			sources.registerRoute,
+			"Register route maps HTTP request to onboarding input through a tested helper",
+			"register_input_from_request",
+		),
+		textCheck(
+			"mapping-test",
+			sources.registerRouteTests,
+			"Register route mapping test covers data region, workspace, IP, and user-agent",
+			"register_input_from_request_maps_http_payload_to_onboarding_input",
+		),
+		textCheck(
+			"onboarding-register",
+			sources.onboarding,
+			"Onboarding exposes register command",
+			"pub async fn register",
+		),
+		textCheck(
+			"email-validation",
+			sources.onboarding,
+			"Onboarding validates normalized email",
+			"validate_email(&email)?",
+		),
+		textCheck(
+			"password-validation",
+			sources.onboarding,
+			"Onboarding validates password policy",
+			"validate_password(&input.password)?",
+		),
+		textCheck(
+			"register-limiter",
+			sources.onboarding,
+			"Onboarding applies account-level register rate limit",
+			'"register"',
+		),
+		textCheck(
+			"create-account",
+			sources.onboarding,
+			"Onboarding creates the user account transaction",
+			"db::create_user_account",
+		),
+		textCheck(
+			"password-history",
+			sources.onboarding,
+			"Onboarding records password history",
+			"history::insert_password_hash",
+		),
+		textCheck(
+			"tenant-insert",
+			sources.accountDb,
+			"Registration creates personal tenant",
+			"INSERT INTO tenants",
+		),
+		textCheck(
+			"principal-insert",
+			sources.accountDb,
+			"Registration creates human principal",
+			"INSERT INTO principals",
+		),
+		textCheck(
+			"user-insert",
+			sources.accountDb,
+			"Registration creates pending verification user",
+			"'pending_verification'",
+		),
+		textCheck(
+			"tenant-membership",
+			sources.accountDb,
+			"Registration creates the tenant membership owned by Identity",
+			"INSERT INTO tenant_memberships",
+		),
+		textCheck(
+			"audit-event",
+			sources.accountDb,
+			"Registration writes user.registered audit event",
+			'action: "user.registered"',
+		),
+		textCheck(
+			"verification-email",
+			sources.accountDb,
+			"Registration issues verification email token",
+			"issue_verification_email_tx",
+		),
+		textCheck(
+			"verification-delivery",
+			sources.onboarding,
+			"Registration enqueues the verification email",
+			"enqueue_verification_email",
+		),
+		textCheck(
+			"openapi-source",
+			sources.openapiSource,
+			"OpenAPI source exports register path",
+			"crate::domains::auth::routes::register::register",
+		),
+		textCheck(
+			"openapi-json-path",
+			sources.openapiJson,
+			"Generated OpenAPI contains /auth/register",
+			'"/auth/register"',
+		),
+		textCheck(
+			"openapi-json-operation",
+			sources.openapiJson,
+			"Generated OpenAPI exposes register operation id",
+			'"operationId":"register"',
+		),
 	];
 }
 
@@ -86,38 +216,61 @@ function summarize(checks) {
 }
 
 function sameItems(actual, expected) {
-	return Array.isArray(actual) && actual.length === expected.length && actual.every((item, index) => item === expected[index]);
+	return (
+		Array.isArray(actual) &&
+		actual.length === expected.length &&
+		actual.every((item, index) => item === expected[index])
+	);
 }
 
 function validateReport(report) {
 	const seen = new Set();
 	for (const check of report.checks) {
-		if (seen.has(check.id)) errors.push(`${outputPath}: duplicate check ${check.id}`);
+		if (seen.has(check.id))
+			errors.push(`${outputPath}: duplicate check ${check.id}`);
 		seen.add(check.id);
 		if (!check.description) errors.push(`${check.id}: description is required`);
-		if (!Object.values(sources).includes(check.path)) errors.push(`${check.id}: path is not in identity register source contract`);
-		if (!["passed", "failed"].includes(check.status)) errors.push(`${check.id}: unsupported status ${check.status}`);
+		if (!Object.values(sources).includes(check.path))
+			errors.push(
+				`${check.id}: path is not in identity register source contract`,
+			);
+		if (!["passed", "failed"].includes(check.status))
+			errors.push(`${check.id}: unsupported status ${check.status}`);
 		if (!check.pattern) errors.push(`${check.id}: pattern is required`);
 	}
 	const expectedSummary = summarize(report.checks);
 	for (const [field, value] of Object.entries(expectedSummary)) {
-		if (report.summary[field] !== value) errors.push(`${outputPath}: summary.${field} must be ${value}`);
+		if (report.summary[field] !== value)
+			errors.push(`${outputPath}: summary.${field} must be ${value}`);
 	}
-	if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-	if (report.generation?.command !== "node tools/migration/identity-register.mjs --write") {
+	if (report.schema_version !== 1)
+		errors.push(`${outputPath}: schema_version must be 1`);
+	if (
+		report.generation?.command !==
+		"node tools/migration/identity-register.mjs --write"
+	) {
 		errors.push(`${outputPath}: generation.command is invalid`);
 	}
 	if (!sameItems(report.generation?.sources, Object.values(sources))) {
-		errors.push(`${outputPath}: generation.sources must match identity register source contract`);
+		errors.push(
+			`${outputPath}: generation.sources must match identity register source contract`,
+		);
 	}
-	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-account-service register_input_from_request --locked",
-		"bash scripts/test-openapi-contract-seeded-auth.sh",
-	])) {
+	if (
+		!sameItems(report.generation?.targeted_tests, [
+			"cargo test -p nvbes-identity-service register_input_from_request --locked",
+			"bash scripts/test-identity-service-contract.sh",
+		])
+	) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
 	for (const command of report.generation?.targeted_tests ?? []) {
-		errors.push(...validateProofCommand({ id: "identity-register", proof: command }, packageScripts));
+		errors.push(
+			...validateProofCommand(
+				{ id: "identity-register", proof: command },
+				packageScripts,
+			),
+		);
 	}
 }
 
@@ -150,7 +303,9 @@ function serializeMarkdown(data) {
 		"|---|---:|---|",
 	];
 	for (const check of data.checks) {
-		lines.push(`| ${check.description} | ${check.status} | \`${check.path}\` |`);
+		lines.push(
+			`| ${check.description} | ${check.status} | \`${check.path}\` |`,
+		);
 	}
 	lines.push(
 		"",
@@ -179,8 +334,8 @@ const report = {
 		command: "node tools/migration/identity-register.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-account-service register_input_from_request --locked",
-			"bash scripts/test-openapi-contract-seeded-auth.sh",
+			"cargo test -p nvbes-identity-service register_input_from_request --locked",
+			"bash scripts/test-identity-service-contract.sh",
 		],
 	},
 	summary,
@@ -196,20 +351,29 @@ if (write) {
 	mkdirSync(dirname(outputPath), { recursive: true });
 	writeFileSync(outputPath, json);
 	writeFileSync(markdownPath, markdown);
-	console.log(`Identity register evidence written to ${markdownPath} and ${outputPath}`);
+	console.log(
+		`Identity register evidence written to ${markdownPath} and ${outputPath}`,
+	);
 	process.exit(0);
 }
 
 for (const check of checks) {
-	if (check.status === "failed") errors.push(`${check.path}: missing ${check.description}`);
+	if (check.status === "failed")
+		errors.push(`${check.path}: missing ${check.description}`);
 }
 
 for (const [path, expected] of [
 	[outputPath, json],
 	[markdownPath, markdown],
 ]) {
-	if (!existsSync(path)) errors.push(`${path}: missing; run node tools/migration/identity-register.mjs --write`);
-	else if (readFileSync(path, "utf8") !== expected) errors.push(`${path}: stale; run node tools/migration/identity-register.mjs --write`);
+	if (!existsSync(path))
+		errors.push(
+			`${path}: missing; run node tools/migration/identity-register.mjs --write`,
+		);
+	else if (readFileSync(path, "utf8") !== expected)
+		errors.push(
+			`${path}: stale; run node tools/migration/identity-register.mjs --write`,
+		);
 }
 
 if (errors.length > 0) {
@@ -218,4 +382,6 @@ if (errors.length > 0) {
 	process.exit(1);
 }
 
-console.log(`Identity register evidence: ok (${summary.passed}/${summary.checks} checks passed)`);
+console.log(
+	`Identity register evidence: ok (${summary.passed}/${summary.checks} checks passed)`,
+);

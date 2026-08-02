@@ -39,7 +39,8 @@ async fn main() -> anyhow::Result<()> {
     let _profiling_guard =
         start_continuous_profiling(&config, "billing-worker").map_err(anyhow::Error::msg)?;
 
-    let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
+    let db = nvbes_billing_service::database::connect_pool(&config).await?;
+    nvbes_billing_service::database::run_migrations(&db).await?;
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
     let email = build_email_sender(&config)?;
     let product_analytics = build_product_analytics(&config)?;

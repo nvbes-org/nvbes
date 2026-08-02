@@ -41,8 +41,8 @@ test.describe('@staging authenticated Identity acceptance', () => {
     });
     expect(logoutResponse.status()).toBe(200);
 
-    await page.goto('/security');
-    await expect(page).toHaveURL(/\/login(?:\?|$)/u);
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Se connecter' })).toBeVisible();
   });
 });
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-const { postMock } = vi.hoisted(() => ({
+const { assignMock, postMock } = vi.hoisted(() => ({
+  assignMock: vi.fn(),
   postMock: vi.fn(),
 }));
 
@@ -17,7 +18,7 @@ function installTestWindow(search = '') {
     configurable: true,
     value: {
       location: {
-        assign: vi.fn(),
+        assign: assignMock,
         origin: 'http://localhost:3001',
         search,
       },
@@ -66,9 +67,10 @@ describe('authorizeIdentitySession', () => {
     );
     const parBody = postMock.mock.calls[0][2];
     expect(parBody.get('nonce')).toBe('oidc-nonce');
-    expect(Object.keys(postMock.mock.calls[0][3].headers).map((name) => name.toLowerCase())).not
-      .toContain('authorization');
-    expect(window.location.assign).toHaveBeenCalledWith(
+    expect(
+      Object.keys(postMock.mock.calls[0][3].headers).map((name) => name.toLowerCase()),
+    ).not.toContain('authorization');
+    expect(assignMock).toHaveBeenCalledWith(
       expect.stringContaining(
         '/oauth/authorize?response_type=code&client_id=cloud-web&request_uri=',
       ),

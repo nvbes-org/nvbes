@@ -65,7 +65,7 @@ fn verifier_cache_error() -> AppError {
 
 #[cfg(test)]
 mod tests {
-    use super::{map_verification_error, DRIVE_AUDIENCE};
+    use super::{DRIVE_AUDIENCE, map_verification_error};
     use nvbes_identity_sdk::SdkError;
 
     #[test]

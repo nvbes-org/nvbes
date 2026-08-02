@@ -5,7 +5,7 @@ use axum::{
     extract::State,
     http::{HeaderMap, header},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::post,
 };
 use nvbes_core::http::error::ErrorEnvelope;
 use nvbes_product_analytics::ProductAnalyticsEvent;
@@ -17,11 +17,6 @@ use utoipa::ToSchema;
 
 #[path = "identity.domains.auth.routes.register.availability.rs"]
 pub(crate) mod availability;
-#[path = "identity.domains.auth.routes.register.region.rs"]
-pub(crate) mod registration_region;
-
-pub(crate) use registration_region::{region, supported_regions};
-
 #[cfg(test)]
 #[path = "identity.domains.auth.routes.register.tests.rs"]
 mod tests;
@@ -36,8 +31,6 @@ pub fn router() -> Router<AppState> {
             post(availability::registration_availability),
         )
         .route("/verify-email", post(verify_email))
-        .route("/region", get(region))
-        .route("/regions", get(supported_regions))
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -45,8 +38,6 @@ pub fn router() -> Router<AppState> {
 pub(crate) struct RegisterRequest {
     email: String,
     password: String,
-    #[schema(max_length = 100)]
-    username: String,
     pow_nonce: String,
     pow_solution: String,
     #[serde(default)]
@@ -63,7 +54,6 @@ pub(crate) struct VerifyEmailRequest {
 
 fn register_input_from_request(
     request: RegisterRequest,
-    country_code: String,
     data_region: String,
     ip: Option<String>,
     user_agent: Option<String>,
@@ -71,8 +61,6 @@ fn register_input_from_request(
     crate::domains::auth::types::RegisterInput {
         email: request.email,
         password: request.password,
-        username: request.username.trim().to_string(),
-        region: Some(country_code),
         data_region: Some(data_region),
         ip,
         user_agent,
@@ -89,7 +77,7 @@ fn register_input_from_request(
     responses(
         (status = 200, description = "Registration successful", body = crate::domains::auth::types::RegisterResult),
         (status = 400, description = "Validation error", body = ErrorEnvelope),
-        (status = 409, description = "Email or username already exists", body = ErrorEnvelope),
+        (status = 409, description = "Email already exists", body = ErrorEnvelope),
         (status = 429, description = "Rate limited", body = ErrorEnvelope),
     ),
 )]
@@ -195,7 +183,6 @@ async fn register_inner(
         .as_str()
         .to_string();
 
-    crate::domains::auth::username::normalize_username(&request.username)?;
     if !request.legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
@@ -211,7 +198,6 @@ async fn register_inner(
         &state.config,
         register_input_from_request(
             request,
-            country_code,
             data_region,
             ip,
             crate::http::request::user_agent(&headers),
@@ -224,14 +210,7 @@ async fn register_inner(
     state.product_analytics.capture(
         ProductAnalyticsEvent::user("auth.signup_completed", result.user.id)
             .correlation(distinct_id, session_id)
-            .property(
-                "country",
-                result
-                    .user
-                    .region
-                    .clone()
-                    .unwrap_or_else(|| "unknown".to_string()),
-            ),
+            .property("country", country_code),
     );
     info!("auth_register_analytics_captured");
 

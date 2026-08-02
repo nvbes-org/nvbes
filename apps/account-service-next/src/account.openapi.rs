@@ -32,6 +32,11 @@ impl Modify for AccountOAuthSecurity {
             ("account:legal:write", "Grant or revoke Account consent."),
             ("account:export", "Request and download Account-owned data."),
             ("account:delete", "Request coordinated Account closure."),
+            (
+                "account:session:read",
+                "Read active authentication sessions.",
+            ),
+            ("account:session:write", "Revoke authentication sessions."),
         ]);
         let components = openapi.components.get_or_insert_with(Components::new);
         components.add_security_scheme(
@@ -83,6 +88,9 @@ impl Modify for AccountOAuthSecurity {
         crate::privacy_routes::request_export,
         crate::privacy_routes::download_export,
         crate::closure_routes::request_closure,
+        crate::closure_routes::get_closure,
+        crate::sessions_routes::list_sessions,
+        crate::sessions_routes::revoke_session,
     ),
     modifiers(&AccountOAuthSecurity),
 )]
@@ -111,6 +119,8 @@ mod tests {
             "/api/v1/privacy/gpc",
             "/api/v1/profile",
             "/api/v1/profile/avatar",
+            "/api/v1/security/sessions",
+            "/api/v1/security/sessions/{sessionId}",
         ];
         assert_eq!(paths.len(), expected.len());
         assert!(expected.iter().all(|path| paths.contains_key(*path)));

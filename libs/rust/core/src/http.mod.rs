@@ -14,6 +14,8 @@ pub mod error;
 pub mod etag;
 #[path = "http.internal_observability.rs"]
 pub mod internal_observability;
+#[path = "http.internal_service.rs"]
+pub mod internal_service;
 #[path = "http.keep_alive.rs"]
 pub mod keep_alive;
 #[path = "http.prefer.rs"]

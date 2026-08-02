@@ -1,7 +1,7 @@
 {
-	"name": "identity-worker",
-	"projectType": "application",
-	"root": "apps/identity-worker",
+  "name": "identity-worker",
+  "projectType": "application",
+  "root": "apps/identity-worker",
   "sourceRoot": "apps/identity-worker/src",
   "tags": ["scope:oss", "type:app", "domain:identity", "layer:app"],
   "namedInputs": {
@@ -37,28 +37,35 @@
       "executor": "nx:run-commands",
       "cache": false,
       "parallelism": false,
-      "inputs": ["rustSources"],
+      "inputs": [
+        "rustSources",
+        "{workspaceRoot}/scripts/test-identity-worker.sh",
+        "{workspaceRoot}/scripts/lib/test-env.sh",
+        "{workspaceRoot}/scripts/lib/workspace-env.sh",
+        "{workspaceRoot}/scripts/lib/validate-destructive-test-database.mjs"
+      ],
       "outputs": [],
       "options": {
-        "command": "cargo test --package nvbes-identity-worker --locked -- --test-threads=1",
+        "command": "bash scripts/test-identity-worker.sh",
         "cwd": "."
       }
     },
     "test-container-contract": {
-			"executor": "nx:run-commands",
-			"cache": true,
-			"inputs": [
-				"{projectRoot}/Cargo.toml",
-				"{projectRoot}/Dockerfile",
-				"{projectRoot}/src/main.rs",
-				"{projectRoot}/tests/*.mjs",
-				"{workspaceRoot}/Cargo.toml",
-				"{workspaceRoot}/Cargo.lock"
-			],
-			"options": {
-				"command": "node --test apps/identity-worker/tests/container-contract.test.mjs",
-				"cwd": "."
-			}
-		}
-	}
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/Dockerfile",
+        "{projectRoot}/src/main.rs",
+        "{projectRoot}/tests/*.mjs",
+        "{workspaceRoot}/tools/container-contract/cargo-lock.mjs",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock"
+      ],
+      "options": {
+        "command": "node --test apps/identity-worker/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    }
+  }
 }

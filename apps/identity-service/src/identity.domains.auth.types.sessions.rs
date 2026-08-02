@@ -48,15 +48,6 @@ pub struct SessionsResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct MeResult {
-    pub user: super::UserView,
-    pub current_tenant_id: Option<Uuid>,
-    pub current_organization_id: Option<Uuid>,
-    pub current_workspace_id: Option<Uuid>,
-    pub current_workspace_region: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct SwitchWorkspaceResult {
     pub workspace: WorkspaceView,
     pub session: SessionView,

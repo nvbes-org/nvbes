@@ -1,3 +1,5 @@
+#[path = "drive.http.account_closure.rs"]
+pub mod account_closure;
 #[path = "drive.http.error.rs"]
 pub mod error;
 #[path = "drive.http.middleware.100_continue.rs"]

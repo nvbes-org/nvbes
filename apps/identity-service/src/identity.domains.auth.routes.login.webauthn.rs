@@ -170,9 +170,7 @@ pub(crate) async fn challenge_webauthn_discoverable_finish(
         )
         .await?;
 
-    let preferences =
-        crate::domains::auth::db::fetch_user_preferences(&state.db, principal_id).await?;
-    if !preferences.skip_password {
+    if !crate::domains::auth::db::passwordless_login_enabled(&state.db, principal_id).await? {
         let state_token = create_state(
             &state.redis,
             Some(principal_id),

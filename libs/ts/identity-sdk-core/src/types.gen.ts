@@ -292,54 +292,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["me_update"];
-        trace?: never;
-    };
-    "/auth/me/avatar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me_avatar"];
-        put?: never;
-        post: operations["me_avatar_upload"];
-        delete: operations["me_avatar_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/me/delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["me_delete"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/me/emails": {
         parameters: {
             query?: never;
@@ -398,54 +350,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["me_email_resend_verification"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/me/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me_export_download"];
-        put?: never;
-        post: operations["me_export"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/me/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me_notifications_get"];
-        put: operations["me_notifications_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/me/preferences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me_preferences_get"];
-        put: operations["me_preferences_put"];
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -622,38 +526,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reset_password"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/region": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["region"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/regions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["supported_regions"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -852,6 +724,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/workspaces/{workspaceId}/switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["switch_workspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/authz/decision": {
         parameters: {
             query?: never;
@@ -862,70 +750,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["decide"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/legal/consent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["grant_consent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/legal/consent/revoke": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["revoke_consent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/legal/consents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_consents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/legal/gpc": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["gpc_status"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1228,15 +1052,6 @@ export interface components {
             /** Format: date-time */
             verification_resend_available_at: string;
         };
-        AvatarUploadInput: {
-            content_type: string;
-            /** Format: int64 */
-            size_bytes: number;
-        };
-        AvatarUploadResult: {
-            object_key: string;
-            upload_url: string;
-        };
         /**
          * @description Client-side metadata attached to form submissions for enhanced
          *     session integrity verification.
@@ -1461,15 +1276,6 @@ export interface components {
         ChangeVerificationRequest: {
             email: string;
         };
-        ConsentHistoryResult: {
-            consents: components["schemas"]["UserConsent"][];
-            has_more: boolean;
-            next_cursor?: string | null;
-        };
-        ConsentRequest: {
-            consent_type: string;
-            document_version: string;
-        };
         CreateOAuthClientInput: {
             allowed_audiences?: string[];
             allowed_resources?: string[];
@@ -1512,9 +1318,6 @@ export interface components {
             client_secret: string;
             policy: components["schemas"]["OAuthClientPolicyView"];
         };
-        DataExportResult: {
-            success: boolean;
-        };
         DecisionRequest: {
             action: string;
             resource?: null | components["schemas"]["DecisionResourceRequest"];
@@ -1528,9 +1331,6 @@ export interface components {
         };
         DecisionResponse: {
             decision: components["schemas"]["WorkspaceDecision"];
-        };
-        DeleteAccountResult: {
-            success: boolean;
         };
         DeleteOAuthClientPolicyResult: {
             success: boolean;
@@ -1623,10 +1423,6 @@ export interface components {
         ForgotPasswordResult: {
             success: boolean;
         };
-        GpcStatusResponse: {
-            gpc_enabled: boolean;
-            gpc_opt_out_active: boolean;
-        };
         GpcWellKnownResponse: {
             gpc: boolean;
             /** Format: int32 */
@@ -1668,6 +1464,7 @@ export interface components {
             /** Format: uuid */
             actor_workspace_id?: string | null;
             amr?: string[];
+            audience?: string | null;
             /** Format: int64 */
             auth_time?: number | null;
             authorization_details?: Record<string, never>[];
@@ -1717,16 +1514,6 @@ export interface components {
         };
         LogoutResult: {
             success: boolean;
-        };
-        MeResult: {
-            /** Format: uuid */
-            current_organization_id?: string | null;
-            /** Format: uuid */
-            current_tenant_id?: string | null;
-            /** Format: uuid */
-            current_workspace_id?: string | null;
-            current_workspace_region?: string | null;
-            user: components["schemas"]["UserView"];
         };
         MfaFactorView: {
             assurance?: string | null;
@@ -1903,9 +1690,6 @@ export interface components {
         RecoveryCodesResult: {
             codes: string[];
         };
-        RegionResponse: {
-            region?: string | null;
-        };
         RegisterRequest: {
             email: string;
             legal_documents_accepted?: boolean;
@@ -1913,18 +1697,14 @@ export interface components {
             password: string;
             pow_nonce: string;
             pow_solution: string;
-            username: string;
         };
         RegisterResult: {
             user: components["schemas"]["UserView"];
             /** Format: date-time */
             verification_resend_available_at: string;
         };
-        /** @enum {string} */
-        RegistrationAvailabilityField: "email" | "username";
         RegistrationAvailabilityRequest: {
-            field: components["schemas"]["RegistrationAvailabilityField"];
-            value: string;
+            email: string;
         };
         RegistrationAvailabilityResponse: {
             available: boolean;
@@ -2065,16 +1845,18 @@ export interface components {
             /** Format: date-time */
             valid_until: string;
         };
-        SupportedRegionResponse: {
-            country_code: string;
-            data_region: string;
-            display_name?: string | null;
-            hosting_strategy: string;
-            is_european_exclusive: boolean;
-            legal_jurisdiction: string;
-            primary_timezone: string;
-            sub_region?: string | null;
-            timezones: string[];
+        SwitchWorkspaceRequest: {
+            password?: string | null;
+            recovery_code?: string | null;
+            totp_code?: string | null;
+            /** Format: uuid */
+            webauthn_challenge_id?: string | null;
+            webauthn_response: Record<string, never>;
+        };
+        SwitchWorkspaceResult: {
+            session: components["schemas"]["SessionView"];
+            stepped_up: boolean;
+            workspace: components["schemas"]["WorkspaceView"];
         };
         TokenRequest: {
             actor_token?: string | null;
@@ -2130,17 +1912,6 @@ export interface components {
             required_acr?: string | null;
             status?: string | null;
         };
-        UpdateProfileInput: {
-            /** Format: date */
-            birthdate?: string | null;
-            firstname?: string | null;
-            lastname?: string | null;
-            region?: string | null;
-            username?: string | null;
-        };
-        UpdateProfileResult: {
-            user: components["schemas"]["UserView"];
-        };
         UserAgentInfo: {
             browser?: string | null;
             /** Format: double */
@@ -2150,45 +1921,15 @@ export interface components {
             os?: string | null;
             os_version?: string | null;
         };
-        UserConsent: {
-            consent_type: string;
-            document_version: string;
-            /** Format: date-time */
-            granted_at: string;
-            /** Format: uuid */
-            id: string;
-            ip_address?: string | null;
-            /** Format: uuid */
-            principal_id: string;
-            /** Format: date-time */
-            revoked_at?: string | null;
-        };
-        UserNotifications: {
-            email?: boolean;
-            in_app?: boolean;
-            marketing_email?: boolean;
-            push?: boolean;
-        };
-        UserPreferences: {
-            language?: string;
-            skip_password?: boolean;
-            theme?: string;
-        };
         UserView: {
-            /** Format: date */
-            birthdate?: string | null;
             /** Format: date-time */
             created_at: string;
             display_name: string;
             email: string;
             email_verified: boolean;
-            firstname?: string | null;
             /** Format: uuid */
             id: string;
-            lastname?: string | null;
             mfa_enabled: boolean;
-            region?: string | null;
-            username?: string | null;
         };
         VerifyEmailRequest: {
             token: string;
@@ -2237,6 +1978,18 @@ export interface components {
         };
         /** @enum {string} */
         WorkspaceRole: "Owner" | "Admin" | "SecurityAdmin" | "BillingAdmin" | "Member" | "Viewer";
+        WorkspaceView: {
+            data_region: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            owner_principal_id: string;
+            role: string;
+            /** Format: date-time */
+            trial_ends_at?: string | null;
+            workspace_type: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2704,10 +2457,7 @@ export interface operations {
     revoke_device: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 deviceId: string;
             };
@@ -2747,10 +2497,7 @@ export interface operations {
     trust_device: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 deviceId: string;
             };
@@ -2819,275 +2566,6 @@ export interface operations {
             };
         };
     };
-    me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current user info */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MeResult"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_update: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProfileInput"];
-            };
-        };
-        responses: {
-            /** @description Profile updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UpdateProfileResult"];
-                };
-            };
-            /** @description Validation error */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Username already taken */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_avatar: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Temporary redirect to the profile avatar */
-            307: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Profile avatar not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Storage error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_avatar_upload: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AvatarUploadInput"];
-            };
-        };
-        responses: {
-            /** @description Profile avatar upload prepared */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AvatarUploadResult"];
-                };
-            };
-            /** @description Unsupported avatar type or size */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Storage error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_avatar_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Profile avatar deleted */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Storage error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Account deleted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeleteAccountResult"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     me_emails_get: {
         parameters: {
             query?: {
@@ -3125,10 +2603,7 @@ export interface operations {
     me_emails_post: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3179,10 +2654,7 @@ export interface operations {
     me_email_delete: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 emailId: string;
             };
@@ -3231,10 +2703,7 @@ export interface operations {
     me_email_promote: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 emailId: string;
             };
@@ -3283,10 +2752,7 @@ export interface operations {
     me_email_resend_verification: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 emailId: string;
             };
@@ -3323,224 +2789,6 @@ export interface operations {
             };
             /** @description Email not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_export_download: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Prepared personal data export */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description No prepared export available */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_export: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Data export request recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DataExportResult"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Rate limited */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_notifications_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Notification preferences */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNotifications"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_notifications_put: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserNotifications"];
-            };
-        };
-        responses: {
-            /** @description Notifications updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNotifications"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_preferences_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description User preferences */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserPreferences"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    me_preferences_put: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserPreferences"];
-            };
-        };
-        responses: {
-            /** @description Preferences updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserPreferences"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3587,10 +2835,7 @@ export interface operations {
     remove_mfa_factor: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 factorId: string;
             };
@@ -3628,10 +2873,7 @@ export interface operations {
     generate_recovery_codes: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3673,10 +2915,7 @@ export interface operations {
     confirm_totp_enrollment: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3718,10 +2957,7 @@ export interface operations {
     begin_totp_enrollment: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3754,10 +2990,7 @@ export interface operations {
     confirm_webauthn_enrollment: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3799,10 +3032,7 @@ export interface operations {
     begin_webauthn_enrollment: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3835,10 +3065,7 @@ export interface operations {
     webauthn_auth_start: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -3867,10 +3094,7 @@ export interface operations {
     change_password: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4002,53 +3226,6 @@ export interface operations {
             };
         };
     };
-    region: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Detected region from request headers */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegionResponse"];
-                };
-            };
-        };
-    };
-    supported_regions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Supported region catalog */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportedRegionResponse"][];
-                };
-            };
-            /** @description Supported region catalog not modified */
-            304: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     register: {
         parameters: {
             query?: never;
@@ -4080,7 +3257,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Email or username already exists */
+            /** @description Email already exists */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4174,10 +3351,7 @@ export interface operations {
     revoke_all_sessions: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4206,10 +3380,7 @@ export interface operations {
     revoke_all_other_sessions: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4238,10 +3409,7 @@ export interface operations {
     revoke_session: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 sessionId: string;
             };
@@ -4281,10 +3449,7 @@ export interface operations {
     confirm_high_risk_session: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 sessionId: string;
             };
@@ -4324,10 +3489,7 @@ export interface operations {
     step_up: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4360,10 +3522,7 @@ export interface operations {
     request_email_step_up: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -4555,6 +3714,50 @@ export interface operations {
             };
         };
     };
+    switch_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchWorkspaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Workspace switched */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchWorkspaceResult"];
+                };
+            };
+            /** @description Unauthorized or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Workspace not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     decide: {
         parameters: {
             query?: never;
@@ -4606,157 +3809,6 @@ export interface operations {
             };
         };
     };
-    grant_consent: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsentRequest"];
-            };
-        };
-        responses: {
-            /** @description Consent successfully recorded */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserConsent"];
-                };
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    revoke_consent: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConsentRequest"];
-            };
-        };
-        responses: {
-            /** @description Consent successfully revoked */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    list_consents: {
-        parameters: {
-            query?: {
-                /** @description Max results */
-                limit?: number;
-                /** @description Opaque pagination cursor */
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Consent history listed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConsentHistoryResult"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    gpc_status: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description GPC status and auto-recording result */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GpcStatusResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     authorize: {
         parameters: {
             query: {
@@ -4775,8 +3827,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorization code issued */
-            200: {
+            /** @description Redirect to Identity login or the registered client callback */
+            303: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4823,10 +3875,7 @@ export interface operations {
     delete_client_policy: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 /** @description Policy ID */
                 policyId: string;
@@ -4876,10 +3925,7 @@ export interface operations {
     update_client_policy: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 /** @description Policy ID */
                 policyId: string;
@@ -4980,10 +4026,7 @@ export interface operations {
     create_client: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -5034,10 +4077,7 @@ export interface operations {
     revoke_client: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 /** @description OAuth client ID */
                 clientId: string;
@@ -5136,10 +4176,7 @@ export interface operations {
     rotate_client_key: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 clientId: string;
             };
@@ -5192,10 +4229,7 @@ export interface operations {
     revoke_client_key: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 clientId: string;
                 keyId: string;
@@ -5291,10 +4325,7 @@ export interface operations {
     create_client_policy: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
                 /** @description OAuth client ID */
                 clientId: string;

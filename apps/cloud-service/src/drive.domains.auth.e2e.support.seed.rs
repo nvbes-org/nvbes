@@ -204,39 +204,3 @@ pub(crate) async fn seed_machine_workspace_context(
         owner_email,
     )
 }
-
-pub(crate) async fn seed_public_api_network_range(
-    pool: &PgPool,
-    network: &str,
-    network_kind: &str,
-    risk_score: i16,
-    risk_labels: &[&str],
-) {
-    let labels: Vec<String> = risk_labels
-        .iter()
-        .map(|label| (*label).to_string())
-        .collect();
-    sqlx::query(
-        r#"
-        INSERT INTO geo_personal_ip_ranges (
-          network, country_code, source_reference, note, network_kind, risk_score, risk_labels
-        )
-        VALUES ($1::cidr, 'FR', 'drive-public-api-e2e', 'public api e2e network range', $2, $3, $4)
-        ON CONFLICT (network) DO UPDATE SET
-          country_code = EXCLUDED.country_code,
-          source_reference = EXCLUDED.source_reference,
-          network_kind = EXCLUDED.network_kind,
-          risk_score = EXCLUDED.risk_score,
-          risk_labels = EXCLUDED.risk_labels,
-          enabled = TRUE,
-          updated_at = NOW()
-        "#,
-    )
-    .bind(network)
-    .bind(network_kind)
-    .bind(risk_score)
-    .bind(&labels)
-    .execute(pool)
-    .await
-    .expect("geo network range seed should succeed");
-}

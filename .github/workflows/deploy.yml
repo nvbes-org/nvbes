@@ -61,9 +61,10 @@ jobs:
     environment: ${{ github.inputs.environment }}
     steps:
       - uses: actions/checkout@v4
-      - name: Echo manual deployment status for identity-service
+      - name: Reject unconfigured identity-service deployment
         run: |
-          echo "Deploying identity-service to ${{ github.inputs.environment }}..."
+          echo "identity-service deployment is not wired to a target yet; refusing to report a false success" >&2
+          exit 1
 
   deploy-account-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'account-service'

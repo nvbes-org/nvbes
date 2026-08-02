@@ -64,5 +64,6 @@ export const {
   isVendorAccepted,
   isCategoryAccepted,
   setTrackingConsent,
+  prepareTrackingConsentSubjectSwitch,
   syncTrackingConsent,
 } = trackingConsentApi;

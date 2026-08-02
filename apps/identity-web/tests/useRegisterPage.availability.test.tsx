@@ -11,11 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../src/identity.auth.queries', () => ({
   identityAuthQueryKeys: {
-    registrationAvailability: (field: string, value: string) => [
-      'registration-availability',
-      field,
-      value,
-    ],
+    registrationAvailability: (email: string) => ['registration-availability', email],
   },
   registrationAvailabilityQueryFn: mocks.checkAvailability,
 }));
@@ -40,8 +36,6 @@ describe('useRegisterPageAvailability', () => {
         useRegisterPageAvailability({
           email,
           emailValid,
-          username: '',
-          usernameValid: false,
         }),
       {
         initialProps: { email: '', emailValid: false },
@@ -59,8 +53,7 @@ describe('useRegisterPageAvailability', () => {
     });
     expect(mocks.checkAvailability).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
-        field: 'email',
-        value: 'user@example.com',
+        email: 'user@example.com',
         signal: expect.any(AbortSignal),
       }),
     );

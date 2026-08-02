@@ -201,10 +201,12 @@ Checklist minimale:
 1. Verifier que le worker consomme le job et le marque `succeeded`.
 1. Verifier la reception de l'email d'export et son destinataire.
 1. Rejouer l'operation si necessaire pour confirmer l'idempotence et l'absence de double envoi.
-1. Effectuer le step-up recent requis, puis appeler `POST /api/v1/auth/me/delete`.
-1. Verifier qu'une privacy request est creee et qu'un job worker `privacy.account_delete` est enfile.
-1. Verifier que le worker supprime les memberships et marque le user `deleted`.
-1. Verifier que les sessions sont revoquees et qu'aucune erreur worker/email n'apparait dans les logs.
-1. Tester les garde-fous: rate limit export, refus sans step-up recent, refus si le compte possede encore des workspaces, refus workspace sous legal hold.
+1. Appeler `POST /api/v1/closure` sur Account avec le scope `account:delete`.
+1. Suivre `GET /api/v1/closure` et vérifier les checkpoints `cloud`, `billing`, `identity`, puis `account`.
+1. Vérifier que Cloud retire les memberships et tombstone sa projection utilisateur.
+1. Vérifier que Billing retire sa projection utilisateur sans supprimer les écritures financières à conserver.
+1. Vérifier qu'Identity révoque sessions, credentials et autorisations Developer/Enterprise.
+1. Vérifier qu'Account purge finalement ses données et termine la saga.
+1. Tester les garde-fous: refus si le compte possède encore des workspaces, rejeu idempotent et reprise après crash entre deux checkpoints.
 
 Cette validation doit etre documentee dans le runbook d'exploitation si un comportement change dans la chaine RGPD.

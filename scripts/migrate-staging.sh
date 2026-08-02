@@ -27,21 +27,21 @@ log_step "Migration de la base Identity Staging (nvbes_identity)"
 if [ -n "${NVBES_STAGING_IDENTITY_DATABASE_URL:-}" ]; then
   NVBES_ENV=staging \
     NVBES_DATABASE_URL="$NVBES_STAGING_IDENTITY_DATABASE_URL" \
-    cargo run -p nvbes-identity-service -- --migrate || true
+    cargo run -p nvbes-identity-service -- --migrate
 fi
 
 log_step "Migration de la base Account Staging (nvbes_account)"
 if [ -n "${NVBES_STAGING_ACCOUNT_DATABASE_URL:-}" ]; then
   NVBES_ENV=staging \
     NVBES_DATABASE_URL="$NVBES_STAGING_ACCOUNT_DATABASE_URL" \
-    cargo run -p nvbes-account-service -- --migrate || true
+    cargo run -p nvbes-account-service -- --migrate
 fi
 
 log_step "Migration de la base Cloud Staging (nvbes_cloud)"
 if [ -n "${NVBES_STAGING_CLOUD_DATABASE_URL:-}" ]; then
   NVBES_ENV=staging \
     NVBES_DATABASE_URL="$NVBES_STAGING_CLOUD_DATABASE_URL" \
-    cargo run -p nvbes-cloud-service -- --migrate || true
+    cargo run -p nvbes-cloud-service -- --migrate
 fi
 
 log_step "Migrations Staging terminees avec succes !"

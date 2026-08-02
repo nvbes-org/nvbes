@@ -2,10 +2,8 @@ import { createRoute, redirect } from '@tanstack/react-router';
 
 import type { rootRoute } from './identity.router';
 import {
-  LazyForgotPasswordPage,
   LazyLoginPage,
   LazyRegisterPage,
-  LazyResetPasswordPage,
   LazyVerifyEmailPage,
   LazyVerifyEmailResultPage,
 } from './identity.router.pages';
@@ -44,16 +42,6 @@ export function createStandaloneRoutes(root: typeof rootRoute) {
       getParentRoute: () => root,
       path: '/verify-result',
       component: withAuth(LazyVerifyEmailResultPage),
-    }),
-    createRoute({
-      getParentRoute: () => root,
-      path: '/forgot-password',
-      component: withAuth(LazyForgotPasswordPage),
-    }),
-    createRoute({
-      getParentRoute: () => root,
-      path: '/reset-password',
-      component: withAuth(LazyResetPasswordPage),
     }),
   ];
 }

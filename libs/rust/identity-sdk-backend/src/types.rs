@@ -87,25 +87,6 @@ pub struct AuthContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RegisterInput {
-    pub email: String,
-    pub password: String,
-    pub firstname: String,
-    pub lastname: String,
-    pub username: String,
-    pub birthdate: Option<String>,
-    pub region: Option<String>,
-    pub workspace_name: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RegisterResult {
-    pub user: UserView,
-    pub workspace: WorkspaceView,
-    pub verification_resend_available_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginInput {
     pub email: String,
     pub password: String,

@@ -49,7 +49,7 @@ export async function bootstrapLoginAuth({
       }
 
       await identityClient.getMe();
-      await syncTrackingConsent();
+      await syncTrackingConsent({ sourceOfTruth: 'backend' });
       if (hasOAuthRequest) {
         await authorizeCurrentOAuth();
         return;

@@ -21,8 +21,10 @@ import {
 } from './account.faro';
 import { router } from './account.router';
 import { TRACKING_CONSENT_CHANGED_EVENT } from './tracking-consent';
+import { captureAndStripPasswordResetToken } from './account.password-reset-token';
 import './styles.css';
 
+captureAndStripPasswordResetToken();
 installDefaultTrustedTypesPolicy();
 initErrorReporting();
 initFaro();

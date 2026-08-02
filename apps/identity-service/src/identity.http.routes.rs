@@ -119,6 +119,12 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
             nvbes_core::http::content_digest::content_digest_guard,
         ))
         .layer(axum::middleware::from_fn(region::region_restriction_guard))
+        .nest(
+            "/internal/v1",
+            Router::new()
+                .merge(crate::domains::auth::oidc_profile_projection::router())
+                .merge(crate::domains::auth::account_closure::router()),
+        )
         .merge(crate::email::webhooks::webhook_router(state))
         .merge(docs)
 }

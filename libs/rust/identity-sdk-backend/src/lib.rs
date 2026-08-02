@@ -10,7 +10,7 @@ pub use jwt::{IdentityAccessTokenClaims, IdentityJwtActorClaim, IdentityJwtVerif
 pub use types::{
     AuthConfig, AuthContext, IdentifierResult, LoginInput, LoginPasswordResult, LoginResult,
     LogoutResult, MeResult, MfaChallengeInput, MfaFactorView, MfaFactorsResult,
-    RecoveryCodesResult, RegisterInput, RegisterResult, SessionView, TokenResponse,
-    TotpConfirmResult, TotpSetupResult, UserView, WebauthnAuthStartResult,
-    WebauthnRegisterStartResult, WorkspacePolicyView, WorkspaceView, WorkspacesResult,
+    RecoveryCodesResult, SessionView, TokenResponse, TotpConfirmResult, TotpSetupResult, UserView,
+    WebauthnAuthStartResult, WebauthnRegisterStartResult, WorkspacePolicyView, WorkspaceView,
+    WorkspacesResult,
 };

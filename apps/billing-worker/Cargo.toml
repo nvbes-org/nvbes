@@ -8,6 +8,7 @@ version.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-billing-service = { path = "../billing-service" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }

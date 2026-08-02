@@ -89,15 +89,13 @@ pub(super) async fn seed_exchange_context(
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username,
-          email_verified_at, status, created_at, updated_at
+          principal_id, email, email_verified_at, status, created_at, updated_at
         )
-        VALUES ($1, $2, 'Exchange', 'User', $3, NOW(), 'active', $4, $4)
+        VALUES ($1, $2, NOW(), 'active', $3, $3)
         "#,
     )
     .bind(principal_id)
     .bind(format!("exchange-{}@example.com", principal_id))
-    .bind(format!("exchange-{}", principal_id))
     .bind(now)
     .execute(pool)
     .await

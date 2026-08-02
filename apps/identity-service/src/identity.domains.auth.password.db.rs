@@ -10,7 +10,14 @@ pub async fn find_principal_and_display_name_by_email(
     email: &str,
 ) -> Result<Option<(Uuid, String)>, AppError> {
     let row = sqlx::query(
-        r#"SELECT principal_id, firstname, lastname, username FROM users WHERE lower(email) = lower($1) LIMIT 1"#,
+        r#"
+        SELECT u.principal_id, COALESCE(profile.display_name, 'User') AS display_name
+        FROM users u
+        LEFT JOIN identity_oidc_profile_claims profile
+          ON profile.principal_id = u.principal_id
+        WHERE lower(u.email) = lower($1)
+        LIMIT 1
+        "#,
     )
     .bind(email)
     .fetch_optional(db)
@@ -18,17 +25,7 @@ pub async fn find_principal_and_display_name_by_email(
 
     if let Some(row) = row {
         use sqlx::Row;
-        let firstname: Option<String> = row.get("firstname");
-        let lastname: Option<String> = row.get("lastname");
-        let username: Option<String> = row.get("username");
-        Ok(Some((
-            row.get("principal_id"),
-            crate::domains::auth::types::derive_display_name(
-                firstname.as_deref(),
-                lastname.as_deref(),
-                username.as_deref(),
-            ),
-        )))
+        Ok(Some((row.get("principal_id"), row.get("display_name"))))
     } else {
         Ok(None)
     }

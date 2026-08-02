@@ -113,6 +113,81 @@ describe('AccountClient OAuth transport', () => {
     });
   });
 
+  it('lists and revokes sessions through the Account security API', async () => {
+    const responses = [{ has_more: false, next_cursor: null, sessions: [] }, { success: true }];
+    const recorder = fetchRecorder(() => responses.shift());
+    const client = new AccountClient({
+      baseUrl: 'https://account.example.test',
+      fetchImpl: recorder.fetchImpl,
+      getAccessToken: () => 'session-token',
+    });
+
+    await client.listSessions({ cursor: 'next/session', limit: 20 });
+    await client.revokeSession('session/with spaces');
+
+    const listRequest = requestAt(recorder.calls, 0);
+    expect(listRequest.url.toString()).toBe(
+      'https://account.example.test/api/v1/security/sessions?limit=20&cursor=next%2Fsession',
+    );
+    expect(listRequest.init.method).toBe('GET');
+
+    const revokeRequest = requestAt(recorder.calls, 1);
+    expect(revokeRequest.url.toString()).toBe(
+      'https://account.example.test/api/v1/security/sessions/session%2Fwith%20spaces',
+    );
+    expect(revokeRequest.init.method).toBe('DELETE');
+    expect(revokeRequest.headers.get('Authorization')).toBe('Bearer session-token');
+    expect(revokeRequest.init.credentials).toBe('omit');
+  });
+
+  it('returns the durable closure saga accepted by Account', async () => {
+    const recorder = fetchRecorder({
+      requested_at: '2026-08-02T12:00:00Z',
+      saga_id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
+      status: 'pending',
+    });
+    const client = new AccountClient({
+      baseUrl: 'https://account.example.test',
+      fetchImpl: recorder.fetchImpl,
+      getAccessToken: () => 'closure-token',
+    });
+
+    await expect(client.closeAccount()).resolves.toMatchObject({ status: 'pending' });
+    const request = onlyRequest(recorder.calls);
+    expect(request.url.toString()).toBe('https://account.example.test/api/v1/closure');
+    expect(request.init.method).toBe('POST');
+  });
+
+  it('reads participant checkpoints for an accepted closure', async () => {
+    const recorder = fetchRecorder({
+      completed_at: null,
+      last_error: null,
+      participants: [
+        {
+          attempts: 1,
+          completed_at: '2026-08-02T12:00:01Z',
+          last_error: null,
+          participant: 'cloud',
+          status: 'completed',
+        },
+      ],
+      requested_at: '2026-08-02T12:00:00Z',
+      saga_id: '7f8c519f-4ca9-4242-a49e-b0d174e4c14b',
+      status: 'dispatching',
+      updated_at: '2026-08-02T12:00:01Z',
+    });
+    const client = new AccountClient({
+      baseUrl: 'https://account.example.test',
+      fetchImpl: recorder.fetchImpl,
+      getAccessToken: () => 'closure-token',
+    });
+
+    await expect(client.getAccountClosure()).resolves.toMatchObject({
+      participants: [{ participant: 'cloud', status: 'completed' }],
+    });
+    expect(onlyRequest(recorder.calls).init.method).toBe('GET');
+  });
+
   it('exposes typed HTTP and DTO failures', async () => {
     const failed = fetchRecorder(
       { error: { message: 'Scope refused', request_id: 'request-1' } },

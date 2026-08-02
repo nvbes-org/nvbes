@@ -101,6 +101,23 @@
         "cwd": "."
       }
     },
+    "test-container-contract": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/Dockerfile",
+        "{projectRoot}/src/main.rs",
+        "{projectRoot}/tests/*.mjs",
+        "{workspaceRoot}/Cargo.toml",
+        "{workspaceRoot}/Cargo.lock",
+        "{workspaceRoot}/tools/container-contract/cargo-lock.mjs"
+      ],
+      "options": {
+        "command": "node --test apps/identity-service/tests/container-contract.test.mjs",
+        "cwd": "."
+      }
+    },
     "test-security": {
       "executor": "nx:run-commands",
       "cache": false,

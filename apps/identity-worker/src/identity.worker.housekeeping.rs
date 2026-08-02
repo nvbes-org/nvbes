@@ -129,10 +129,7 @@ async fn run_loyalsoldier_geoip_import_if_due(state: &AppState) -> anyhow::Resul
 
     let check_in = start_worker_monitor_check_in(
         &state.config.environment,
-        &worker_monitor_slug(
-            "identity-worker",
-            "housekeeping-loyalsoldier-geoip-import",
-        ),
+        &worker_monitor_slug("identity-worker", "housekeeping-loyalsoldier-geoip-import"),
         HOUSEKEEPING_MONITOR_SCHEDULE,
     );
 

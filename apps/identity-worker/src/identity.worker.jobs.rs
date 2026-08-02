@@ -56,10 +56,7 @@ pub(crate) async fn renew_job_lease(
 }
 
 pub(super) fn should_retry_job(job_type: &str, error: &JobExecutionError) -> bool {
-    matches!(
-        job_type,
-        JOB_EMAIL_SEND | JOB_EMAIL_WEBHOOK_PROCESS
-    ) && error.is_retryable()
+    matches!(job_type, JOB_EMAIL_SEND | JOB_EMAIL_WEBHOOK_PROCESS) && error.is_retryable()
 }
 
 pub(crate) async fn mark_job_failed(

@@ -48,7 +48,11 @@ impl JobExecutionError {
     pub(super) fn from_identity(error: &IdentityError) -> Self {
         let class = match error.kind {
             IdentityErrorKind::Internal => JobFailureClass::Transient,
-            IdentityErrorKind::Unauthorized => JobFailureClass::Permanent,
+            IdentityErrorKind::BadRequest
+            | IdentityErrorKind::Unauthorized
+            | IdentityErrorKind::Forbidden
+            | IdentityErrorKind::NotFound
+            | IdentityErrorKind::Conflict => JobFailureClass::Permanent,
         };
         let summary = match class {
             JobFailureClass::Transient => "Identity persistence operation failed",
@@ -134,6 +138,7 @@ fn bounded_single_line(value: &str, maximum_chars: usize) -> String {
 mod tests {
     use super::{JobExecutionError, MAX_CODE_CHARS, MAX_SUMMARY_CHARS};
     use nvbes_email::EmailError;
+    use nvbes_product_identity::{IdentityError, IdentityErrorKind};
 
     #[test]
     fn provider_details_are_not_exposed_to_queue_errors() {
@@ -159,5 +164,29 @@ mod tests {
         assert!(!failure.summary().contains('\n'));
         assert!(failure.code().chars().count() <= MAX_CODE_CHARS);
         assert!(failure.summary().chars().count() <= MAX_SUMMARY_CHARS);
+    }
+
+    #[test]
+    fn only_internal_identity_failures_are_retryable() {
+        let transient = JobExecutionError::from_identity(&IdentityError::internal(
+            "database_error",
+            "temporary database failure",
+        ));
+        assert!(transient.is_retryable());
+
+        for kind in [
+            IdentityErrorKind::BadRequest,
+            IdentityErrorKind::Unauthorized,
+            IdentityErrorKind::Forbidden,
+            IdentityErrorKind::NotFound,
+            IdentityErrorKind::Conflict,
+        ] {
+            let permanent = JobExecutionError::from_identity(&IdentityError::new(
+                kind,
+                "invalid_job",
+                "invalid identity job input",
+            ));
+            assert!(!permanent.is_retryable(), "{kind:?} must not be retried");
+        }
     }
 }

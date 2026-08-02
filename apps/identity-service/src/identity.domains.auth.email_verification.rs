@@ -92,11 +92,11 @@ pub async fn resend_verification_email(
         SELECT
           u.principal_id,
           u.email,
-          u.firstname,
-          u.lastname,
-          u.username,
+          COALESCE(profile.display_name, 'User') AS display_name,
           u.email_verified_at
         FROM users u
+        LEFT JOIN identity_oidc_profile_claims profile
+          ON profile.principal_id = u.principal_id
         WHERE lower(u.email) = lower($1)
         "#,
     )
@@ -148,14 +148,7 @@ pub async fn resend_verification_email(
         AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
 
-    let firstname: Option<String> = row.get("firstname");
-    let lastname: Option<String> = row.get("lastname");
-    let username: Option<String> = row.get("username");
-    let display_name = crate::domains::auth::types::derive_display_name(
-        firstname.as_deref(),
-        lastname.as_deref(),
-        username.as_deref(),
-    );
+    let display_name: String = row.get("display_name");
     let verification_token = generate_random_token();
     issue_verification_email_tx(
         redis,

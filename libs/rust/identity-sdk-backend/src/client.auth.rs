@@ -3,12 +3,6 @@ use crate::types::*;
 use crate::SdkError;
 
 impl IdentityClient {
-    /// Enregistre un nouvel utilisateur dans le flux Identity actuel.
-    pub async fn register(&self, input: RegisterInput) -> Result<RegisterResult, SdkError> {
-        self.send_json(self.http.post(self.endpoint("/auth/register")).json(&input))
-            .await
-    }
-
     /// Login email/password via le flux challenge identifier -> password.
     pub async fn login(&self, input: LoginInput) -> Result<LoginResult, SdkError> {
         let identifier = self.start_login(&input.email).await?;

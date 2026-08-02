@@ -37,6 +37,7 @@ export type UseLoginPageActionsOptions = {
   mfaMethod: MfaMethod | null;
   totpCode: string;
   recoveryCode: string;
+  mfaWebauthnAbortRef: MutableRefObject<AbortController | null>;
   decoyRef: MutableRefObject<{ wasClicked(): boolean } | null>;
   mutations: LoginMutations;
   resetMfaState: () => void;

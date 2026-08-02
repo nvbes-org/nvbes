@@ -14,6 +14,14 @@ export const ACCOUNT_OAUTH_SCOPES = [
   'account:legal:write',
   'account:export',
   'account:delete',
+  'account:session:read',
+  'account:session:write',
+  'account:security:read',
+  'account:security:write',
+  'account:email:read',
+  'account:email:write',
+  'account:oauth-clients:read',
+  'account:oauth-clients:write',
 ] as const;
 
 const identityServiceBaseUrl = readRequiredEnv(

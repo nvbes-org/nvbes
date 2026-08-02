@@ -5,8 +5,8 @@ describe('login return_to normalization', () => {
   const allowedOrigins = new Set(['http://localhost:3000', 'http://localhost:5175']);
 
   it('allows local relative paths', () => {
-    expect(normalizeLoginReturnTo('/security', 'http://localhost:3000', allowedOrigins)).toBe(
-      '/security',
+    expect(normalizeLoginReturnTo('/login', 'http://localhost:3000', allowedOrigins)).toBe(
+      '/login',
     );
   });
 

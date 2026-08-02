@@ -27,25 +27,6 @@ impl From<nvbes_email::EmailError> for AppError {
     }
 }
 
-impl From<nvbes_product_account::AccountError> for AppError {
-    fn from(err: nvbes_product_account::AccountError) -> Self {
-        let status = match err.kind {
-            nvbes_product_account::error::AccountErrorKind::BadRequest => StatusCode::BAD_REQUEST,
-            nvbes_product_account::error::AccountErrorKind::Unauthorized => {
-                StatusCode::UNAUTHORIZED
-            }
-            nvbes_product_account::error::AccountErrorKind::Forbidden => StatusCode::FORBIDDEN,
-            nvbes_product_account::error::AccountErrorKind::NotFound => StatusCode::NOT_FOUND,
-            nvbes_product_account::error::AccountErrorKind::Conflict => StatusCode::CONFLICT,
-            nvbes_product_account::error::AccountErrorKind::Internal => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
-        };
-
-        Self::new(status, err.code, err.message)
-    }
-}
-
 impl From<nvbes_product_identity::IdentityError> for AppError {
     fn from(err: nvbes_product_identity::IdentityError) -> Self {
         let status = match err.kind {

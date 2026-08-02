@@ -217,7 +217,7 @@ Go uniquement si:
 
 ### Branches deja reliees au flux de release
 
-- OpenAPI versionnee generee dans `apps/account-service/openapi.json` puis republiee vers `libs/ts/identity-sdk-core/openapi.json` via `pnpm generate:openapi`, et incluse dans `pnpm release:gate:staging` via le build.
+- OpenAPI Identity versionnee generee dans `apps/identity-service/openapi.json` puis republiee vers `libs/ts/identity-sdk-core/openapi.json` via `pnpm generate:openapi`. Le contrat Account distinct est genere dans `apps/account-service-next/openapi.json`.
 
 ### Risques acceptables pour beta interne fermee
 

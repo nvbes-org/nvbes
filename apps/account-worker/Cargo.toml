@@ -11,12 +11,13 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 chrono.workspace = true
+nvbes-account-service = { path = "../account-service-next" }
+nvbes-core = { path = "../../libs/rust/core" }
 nvbes-storage = { path = "../../libs/rust/storage" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
-thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

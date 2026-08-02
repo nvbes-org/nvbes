@@ -77,6 +77,7 @@ describe('MFA API functions', () => {
     });
 
     it('passes pagination parameters to the factors endpoint', async () => {
+      installBrowserContext({ cookie: 'authuser=1; csrf_token=browser-secret' });
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
@@ -95,8 +96,13 @@ describe('MFA API functions', () => {
 
       expect(globalThis.fetch).toHaveBeenCalledWith(
         `${mockBaseUrl}/auth/mfa/factors?limit=25&cursor=opaque-cursor`,
-        expect.objectContaining({ credentials: 'include' }),
+        expect.objectContaining({ credentials: 'omit' }),
       );
+      const request = (globalThis.fetch as Mock).mock.calls[0]?.[1] as RequestInit;
+      const headers = new Headers(request.headers);
+      expect(headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
+      expect(headers.has('X-Auth-User')).toBe(false);
+      expect(headers.has('X-CSRF-Token')).toBe(false);
     });
 
     it('should work with cookie auth when token is absent', async () => {

@@ -46,10 +46,20 @@ pub mod privacy_routes;
 mod profile_db;
 #[path = "account.profile.models.rs"]
 pub mod profile_models;
+#[path = "account.profile.projection.rs"]
+mod profile_projection;
 #[path = "account.profile.routes.rs"]
 pub mod profile_routes;
 #[path = "account.profile.validation.rs"]
 mod profile_validation;
+#[path = "account.registration.db.rs"]
+mod registration_db;
+#[path = "account.registration.models.rs"]
+pub mod registration_models;
+#[path = "account.registration.routes.rs"]
+pub mod registration_routes;
+#[path = "account.sessions.routes.rs"]
+pub mod sessions_routes;
 #[path = "account.settings.models.rs"]
 pub mod settings_models;
 

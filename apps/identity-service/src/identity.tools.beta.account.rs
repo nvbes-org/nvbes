@@ -207,24 +207,35 @@ async fn create_beta_account(
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username,
-          password_hash, email_verified_at, status, password_last_changed_at,
+          principal_id, email, password_hash, email_verified_at, status, password_last_changed_at,
           created_at, updated_at
         )
         VALUES (
-          $1, $2, 'Beta', 'E2E', $3,
-          $4, NOW(), 'active', NOW(),
+          $1, $2, $3, NOW(), 'active', NOW(),
           NOW(), NOW()
         )
         "#,
     )
     .bind(principal_id)
     .bind(email)
-    .bind(username)
     .bind(password_hash)
     .execute(&mut **tx)
     .await
     .context("Failed to create beta user.")?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO identity_oidc_profile_claims (
+          principal_id, display_name, given_name, family_name, preferred_username
+        )
+        VALUES ($1, 'Beta E2E', 'Beta', 'E2E', $2)
+        "#,
+    )
+    .bind(principal_id)
+    .bind(username)
+    .execute(&mut **tx)
+    .await
+    .context("Failed to create beta OIDC profile projection.")?;
 
     sqlx::query(
         r#"

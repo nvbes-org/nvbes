@@ -32,7 +32,7 @@ async fn token_exchange_preserves_user_subject_and_sets_machine_actor() {
         .jwt
         .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
             user_id: user_principal_id,
-            access_token_audience: "nvbes-account-service",
+            access_token_audience: "nvbes-cloud-service",
             workspace_id: Some(workspace_id),
             workspace_region: None,
             scope: "drive.files.read drive.workspace.read",
@@ -144,7 +144,7 @@ async fn http_token_exchange_preserves_user_subject_and_sets_machine_actor() {
         .jwt
         .issue_token_pair(crate::domains::auth::jwt::TokenPairIssueRequest {
             user_id: user_principal_id,
-            access_token_audience: "nvbes-account-service",
+            access_token_audience: "nvbes-cloud-service",
             workspace_id: Some(workspace_id),
             workspace_region: None,
             scope: "drive.files.read drive.workspace.read",

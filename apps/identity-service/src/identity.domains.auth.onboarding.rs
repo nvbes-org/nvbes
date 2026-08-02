@@ -1,6 +1,6 @@
 use chrono::Utc;
 use nvbes_core::config::AppConfig;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use super::password::history;
@@ -21,7 +21,6 @@ pub async fn register(
     let email = normalize_email(&input.email);
     validate_email(&email)?;
     validate_password(&input.password)?;
-    let username = super::username::normalize_username(&input.username)?;
     if !input.legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
@@ -48,8 +47,6 @@ pub async fn register(
         redis,
         config,
         email.clone(),
-        username.clone(),
-        input.region.clone(),
         input.data_region.clone(),
         password_hash.clone(),
         verification_token.clone(),
@@ -62,7 +59,7 @@ pub async fn register(
     )
     .await?;
     history::insert_password_hash(db, principal_id, &password_hash).await?;
-    let display_name = derive_display_name(None, None, Some(&username));
+    let display_name = DEFAULT_DISPLAY_NAME.to_string();
 
     super::email_verification::enqueue_verification_email(
         db,
@@ -80,11 +77,6 @@ pub async fn register(
             id: principal_id,
             email: email.clone(),
             display_name,
-            firstname: None,
-            lastname: None,
-            username: Some(username),
-            birthdate: None,
-            region: input.region.clone(),
             email_verified: false,
             mfa_enabled: false,
             created_at: now,
@@ -143,37 +135,10 @@ pub async fn verify_email(
             email_address_id,
         )
         .await?;
-        let user_row = sqlx::query(
-            "SELECT principal_id, email, firstname, lastname, username, birthdate, region, created_at, email_verified_at FROM users WHERE principal_id = $1"
-        )
-        .bind(principal_id)
-        .fetch_one(db)
-        .await?;
-        let firstname: Option<String> = user_row.get("firstname");
-        let lastname: Option<String> = user_row.get("lastname");
-        let username: Option<String> = user_row.get("username");
-        let display_name = derive_display_name(
-            firstname.as_deref(),
-            lastname.as_deref(),
-            username.as_deref(),
-        );
+        let user = db::fetch_user_view(db, principal_id).await?;
         return Ok(VerifyEmailResult {
             success: true,
-            user: UserView {
-                id: user_row.get("principal_id"),
-                email: user_row.get("email"),
-                display_name,
-                firstname,
-                lastname,
-                username,
-                birthdate: user_row.get("birthdate"),
-                region: user_row.get("region"),
-                email_verified: user_row
-                    .get::<Option<chrono::DateTime<Utc>>, _>("email_verified_at")
-                    .is_some(),
-                mfa_enabled: super::mfa::has_active_factor(db, principal_id).await?,
-                created_at: user_row.get("created_at"),
-            },
+            user,
         });
     }
 
@@ -202,35 +167,8 @@ pub async fn verify_email(
     registration_enrollment::delete_all_for_principal_tx(&mut tx, principal_id).await?;
     tx.commit().await?;
 
-    let user_row = sqlx::query(
-        "SELECT principal_id, email, firstname, lastname, username, birthdate, region, created_at, email_verified_at FROM users WHERE principal_id = $1"
-    )
-    .bind(principal_id)
-    .fetch_one(db)
-    .await?;
-
-    let firstname: Option<String> = user_row.get("firstname");
-    let lastname: Option<String> = user_row.get("lastname");
-    let username: Option<String> = user_row.get("username");
-    let display_name = derive_display_name(
-        firstname.as_deref(),
-        lastname.as_deref(),
-        username.as_deref(),
-    );
     Ok(VerifyEmailResult {
         success: true,
-        user: UserView {
-            id: user_row.get("principal_id"),
-            email: user_row.get("email"),
-            display_name,
-            firstname,
-            lastname,
-            username,
-            birthdate: user_row.get("birthdate"),
-            region: user_row.get("region"),
-            email_verified: true,
-            mfa_enabled: false,
-            created_at: user_row.get("created_at"),
-        },
+        user: db::fetch_user_view(db, principal_id).await?,
     })
 }

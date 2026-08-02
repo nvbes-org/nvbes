@@ -199,6 +199,14 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/account-client/src/index.ts'),
         },
         {
+          find: '@nvbes/http-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/http-client/src/index.ts'),
+        },
+        {
+          find: '@nvbes/identity-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
+        },
+        {
           find: '@nvbes/web-runtime/analytics',
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/analytics.ts'),
         },
@@ -209,6 +217,10 @@ export default defineConfig(({ mode }) => {
         {
           find: /^@nvbes\/identity-sdk-web\/oauth$/,
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/oauth.ts'),
+        },
+        {
+          find: /^@nvbes\/identity-sdk-web$/,
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
         },
         {
           find: '@nvbes/web-ui',

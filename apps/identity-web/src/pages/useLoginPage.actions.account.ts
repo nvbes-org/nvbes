@@ -4,6 +4,7 @@ import { storePasswordCredential } from '@nvbes/identity-sdk-web';
 import { clientErrorMessage } from '@nvbes/web-runtime';
 
 import { clearPendingOAuthAuthorizeRequest } from '../identity.oauth';
+import { prepareTrackingConsentSubjectSwitch } from '../tracking-consent';
 import { cancelConsent, selectAccount, useAnotherAccount } from './useLoginPage.account';
 import { approveConsent, finishLoginSession } from './useLoginPage.oauth';
 import type { UseLoginPageActionsOptions } from './useLoginPage.actions.shared';
@@ -89,6 +90,7 @@ export function useLoginPageAccountActions({
   const handleAccountSelect = (authuser: string) => {
     const account = connectedAccounts.find((entry) => entry.authuser === authuser);
     if (account?.status === 'expired') {
+      prepareTrackingConsentSubjectSwitch('identity-web:expired-account-switch');
       const url = new URL(window.location.href);
       url.searchParams.set('authuser', authuser);
       window.history.replaceState(null, '', url.toString());

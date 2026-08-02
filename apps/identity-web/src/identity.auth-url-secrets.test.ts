@@ -6,7 +6,6 @@ import {
 } from './identity.auth-url-secrets';
 
 afterEach(() => {
-  clearCapturedAuthUrlToken('/reset-password');
   clearCapturedAuthUrlToken('/verify');
   clearCapturedAuthUrlToken('/verify-email');
   clearCapturedAuthUrlToken('/verify-result');
@@ -15,7 +14,6 @@ afterEach(() => {
 
 describe('captureAndStripSensitiveAuthUrlToken', () => {
   it.each([
-    ['/reset-password', 'reset-token'],
     ['/verify', 'verification-token'],
     ['/verify-email', 'verification-token'],
     ['/verify-result', 'verification-token'],

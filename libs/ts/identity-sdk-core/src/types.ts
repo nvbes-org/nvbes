@@ -13,11 +13,6 @@ export interface UserView {
   id: string;
   email: string;
   display_name: string;
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  birthdate?: string;
-  region?: string;
   email_verified: boolean;
   mfa_enabled: boolean;
   created_at: string;

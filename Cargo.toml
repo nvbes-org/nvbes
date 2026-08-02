@@ -7,6 +7,7 @@ members = [
   "apps/developer-service",
   "apps/gateway-cloud",
   "apps/identity-service",
+  "apps/identity-worker",
   "apps/account-service-next",
   "apps/account-worker",
   "apps/enterprise-service",

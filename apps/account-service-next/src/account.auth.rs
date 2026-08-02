@@ -19,16 +19,20 @@ pub const LEGAL_READ_SCOPE: &str = "account:legal:read";
 pub const LEGAL_WRITE_SCOPE: &str = "account:legal:write";
 pub const EXPORT_SCOPE: &str = "account:export";
 pub const DELETE_SCOPE: &str = "account:delete";
+pub const SESSION_READ_SCOPE: &str = "account:session:read";
+pub const SESSION_WRITE_SCOPE: &str = "account:session:write";
 
 #[derive(Clone, Debug)]
 pub struct AuthenticatedPrincipal {
     pub principal_id: Uuid,
     pub claims: IdentityAccessTokenClaims,
+    pub access_token: String,
 }
 
 #[derive(Clone)]
 struct ProtectedRoute {
     verifier: IdentityJwtVerifier,
+    db: sqlx::PgPool,
     required_scope: &'static str,
 }
 
@@ -40,6 +44,7 @@ pub fn protected(
     route.layer(axum::middleware::from_fn_with_state(
         ProtectedRoute {
             verifier: state.jwt_verifier.clone(),
+            db: state.db.clone(),
             required_scope,
         },
         authenticate,
@@ -59,11 +64,36 @@ async fn authenticate(
         .await
         .map_err(map_verification_error)?;
     let principal_id = authorize_claims(&claims, policy.required_scope)?;
+    if policy.required_scope != DELETE_SCOPE {
+        reject_closing_account(&policy.db, principal_id).await?;
+    }
     request.extensions_mut().insert(AuthenticatedPrincipal {
         principal_id,
         claims,
+        access_token: token.to_string(),
     });
     Ok(next.run(request).await)
+}
+
+async fn reject_closing_account(db: &sqlx::PgPool, principal_id: Uuid) -> Result<(), AppError> {
+    let closing: bool = sqlx::query_scalar(
+        r#"
+        SELECT EXISTS (
+          SELECT 1 FROM account_closure_sagas
+          WHERE principal_id = $1 AND status IN ('pending', 'dispatching', 'completed')
+        )
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(db)
+    .await?;
+    if closing {
+        return Err(AppError::conflict(
+            "account_closure_in_progress",
+            "This Account is closing and no longer accepts changes.",
+        ));
+    }
+    Ok(())
 }
 
 fn bearer_token(headers: &HeaderMap) -> Result<&str, AppError> {

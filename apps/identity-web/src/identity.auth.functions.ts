@@ -1,32 +1,21 @@
 import { normalizeClientError } from '@nvbes/web-runtime';
 import {
   fetchRegistrationAvailability,
-  fetchSupportedRegions,
   type LoginIdentifierResult,
   type LoginPasswordResult,
   logoutIdentitySession,
   type RegisterInput,
   type RegisterResult,
-  type RegistrationAvailabilityField,
   type RegistrationAvailabilityResult,
   startLoginWebAuthn,
   submitLoginIdentifier,
   submitLoginMfa,
   submitLoginPassword,
   submitRegister,
-  type SupportedRegion,
   type WebauthnAuthStartResult,
 } from './identity.auth.api';
 
 export type { RegisterInput };
-
-export async function loadSupportedRegions(): Promise<SupportedRegion[]> {
-  try {
-    return await fetchSupportedRegions();
-  } catch (error) {
-    throw normalizeClientError(error);
-  }
-}
 
 export async function registerIdentityAccount(input: {
   data: RegisterInput;
@@ -41,12 +30,11 @@ export async function registerIdentityAccount(input: {
 }
 
 export async function checkRegistrationIdentifierAvailability(input: {
-  field: RegistrationAvailabilityField;
-  value: string;
+  email: string;
   signal: AbortSignal;
 }): Promise<RegistrationAvailabilityResult> {
   try {
-    return await fetchRegistrationAvailability(input.field, input.value, input.signal);
+    return await fetchRegistrationAvailability(input.email, input.signal);
   } catch (error) {
     throw normalizeClientError(error);
   }

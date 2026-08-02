@@ -9,7 +9,9 @@ pub struct AppState {
     pub redis: nvbes_redis::RedisPool,
     pub email: Arc<dyn nvbes_email::EmailSender>,
     pub enterprise_grpc: Option<crate::worker::enterprise_grpc::EnterpriseGrpcConfig>,
+    pub inline_housekeeping_enabled: bool,
     pub observability: nvbes_observability::metrics::HttpMetrics,
+    pub account_projection: crate::worker::account_projection::client::AccountProjectionClient,
 }
 
 impl AppState {
@@ -18,7 +20,12 @@ impl AppState {
         let email = nvbes_product_identity::email::delivery::build_email_sender(config)?;
         let enterprise_grpc =
             crate::worker::enterprise_grpc::EnterpriseGrpcConfig::from_env(&config.environment)?;
+        let inline_housekeeping_enabled = inline_housekeeping_enabled()?;
         let observability = nvbes_observability::metrics::HttpMetrics::default();
+        let account_projection =
+            crate::worker::account_projection::client::AccountProjectionClient::from_env(
+                &config.environment,
+            )?;
 
         observability.record_postgres_pool(
             "identity-worker",
@@ -33,7 +40,20 @@ impl AppState {
             redis,
             email,
             enterprise_grpc,
+            inline_housekeeping_enabled,
             observability,
+            account_projection,
         })
     }
+}
+
+fn inline_housekeeping_enabled() -> anyhow::Result<bool> {
+    std::env::var("NVBES_IDENTITY_WORKER_INLINE_HOUSEKEEPING_ENABLED")
+        .map(|value| value.parse::<bool>())
+        .unwrap_or(Ok(true))
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "NVBES_IDENTITY_WORKER_INLINE_HOUSEKEEPING_ENABLED must be true or false"
+            )
+        })
 }

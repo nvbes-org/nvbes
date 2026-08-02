@@ -3,37 +3,36 @@
   "generation": {
     "command": "node tools/migration/identity-mfa-webauthn.mjs --write",
     "sources": [
-      "apps/account-service/src/identity.domains.auth.routes.mfa.rs",
-      "apps/account-service/src/identity.domains.auth.mfa.rs",
-      "apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
-      "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
-      "apps/account-service/src/identity.domains.auth.routes.login.webauthn.rs",
-      "apps/account-service/src/identity.domains.auth.routes.mfa.totp.rs",
-      "apps/account-service/src/identity.domains.auth.mfa.totp.rs",
-      "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
-      "apps/account-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.registration.start.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.registration.finish.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.registration.options.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.registration.tests.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.login.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.login.discoverable.rs",
-      "apps/account-service/src/identity.domains.auth.webauthn.authentication.rs",
-      "apps/account-service/src/identity.http.openapi.rs",
-      "apps/account-service/openapi.json",
-      "scripts/test-openapi-contract.mjs",
+      "apps/identity-service/src/identity.domains.auth.routes.mfa.rs",
+      "apps/identity-service/src/identity.domains.auth.mfa.rs",
+      "apps/identity-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
+      "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "apps/identity-service/src/identity.domains.auth.routes.login.webauthn.rs",
+      "apps/identity-service/src/identity.domains.auth.routes.mfa.totp.rs",
+      "apps/identity-service/src/identity.domains.auth.mfa.totp.rs",
+      "apps/identity-service/src/identity.domains.auth.mfa.recovery.rs",
+      "apps/identity-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.registration.start.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.registration.finish.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.registration.options.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.registration.tests.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.login.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.login.discoverable.rs",
+      "apps/identity-service/src/identity.domains.auth.webauthn.authentication.rs",
+      "apps/identity-service/src/identity.http.openapi.rs",
+      "apps/identity-service/openapi.json",
       "docs/migration/data-map.md"
     ],
     "targeted_tests": [
-      "cargo test -p nvbes-account-service validate_single_factor --locked",
-      "cargo test -p nvbes-account-service shape_registration_options --locked",
-      "cargo test -p nvbes-account-service login_methods_are_ordered_by_preference --locked",
-      "bash scripts/test-openapi-contract-seeded-auth.sh"
+      "cargo test -p nvbes-identity-service validate_single_factor --locked",
+      "cargo test -p nvbes-identity-service shape_registration_options --locked",
+      "cargo test -p nvbes-identity-service login_methods_are_ordered_by_preference --locked",
+      "bash scripts/test-identity-service-contract.sh"
     ]
   },
   "summary": {
-    "checks": 37,
-    "passed": 37,
+    "checks": 36,
+    "passed": 36,
     "failed": 0,
     "status": "passed"
   },
@@ -41,247 +40,240 @@
     {
       "id": "mfa-router",
       "description": "MFA router exposes factor list and enrollment routes",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.rs",
       "status": "passed",
       "pattern": ".merge(webauthn::router(state))"
     },
     {
       "id": "totp-setup-route",
-      "description": "TOTP setup route is protected by JWT and step-up",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.totp.rs",
+      "description": "TOTP setup requires a recent phishing-resistant step-up",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.totp.rs",
       "status": "passed",
-      "pattern": "require_recent_step_up"
+      "pattern": "require_recent_phishing_resistant_step_up"
     },
     {
       "id": "totp-confirm-route",
       "description": "TOTP confirm route activates a factor",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.totp.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.totp.rs",
       "status": "passed",
       "pattern": "confirm_totp"
     },
     {
       "id": "totp-secret",
       "description": "TOTP enrollment generates a secret through core MFA primitives",
-      "path": "apps/account-service/src/identity.domains.auth.mfa.totp.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.mfa.totp.rs",
       "status": "passed",
       "pattern": "generate_totp_secret()"
     },
     {
       "id": "totp-replay-guard",
       "description": "TOTP verification rejects replayed counters",
-      "path": "apps/account-service/src/identity.domains.auth.mfa.totp.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.mfa.totp.rs",
       "status": "passed",
       "pattern": "counter as i64 > last_counter"
     },
     {
       "id": "recovery-generate",
       "description": "Recovery code generation stores hashed codes",
-      "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.mfa.recovery.rs",
       "status": "passed",
       "pattern": "codes.iter().map(|code| token_hash(code))"
     },
     {
       "id": "recovery-one-time",
       "description": "Recovery verification consumes one matching code",
-      "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.mfa.recovery.rs",
       "status": "passed",
       "pattern": "new_codes.push(c.clone())"
     },
     {
       "id": "login-methods-test",
       "description": "Login method ordering is covered by a unit test",
-      "path": "apps/account-service/src/identity.domains.auth.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.mfa.rs",
       "status": "passed",
       "pattern": "login_methods_are_ordered_by_preference"
     },
     {
       "id": "mfa-login-route",
       "description": "MFA login challenge route is exposed",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
       "status": "passed",
       "pattern": "path = \"/auth/challenge/mfa\""
     },
     {
       "id": "mfa-rate-limit",
       "description": "MFA login challenge is rate limited by IP and state",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
       "status": "passed",
       "pattern": "\"auth_login_mfa\""
     },
     {
       "id": "mfa-single-factor",
       "description": "MFA login accepts exactly one factor",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
       "status": "passed",
       "pattern": "validate_single_factor"
     },
     {
       "id": "mfa-single-factor-test",
       "description": "MFA login rejects multiple factors in a deterministic unit test",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa_flow.rs",
       "status": "passed",
       "pattern": "validate_single_factor_rejects_multiple_factors"
     },
     {
       "id": "mfa-failed-risk",
       "description": "MFA failures record risk events",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
       "status": "passed",
       "pattern": "\"mfa_failed\""
     },
     {
       "id": "mfa-failed-audit",
       "description": "MFA failures record audit events",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
       "status": "passed",
       "pattern": "\"auth.mfa_failed\""
     },
     {
       "id": "mfa-aal2-session",
       "description": "Successful MFA creates an AAL2 session",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
       "status": "passed",
       "pattern": "\"aal2\""
     },
     {
       "id": "login-webauthn-start",
       "description": "Passwordless WebAuthn start route is exposed",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.webauthn.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.webauthn.rs",
       "status": "passed",
       "pattern": "path = \"/auth/challenge/webauthn/start\""
     },
     {
       "id": "login-webauthn-discoverable-start",
       "description": "Discoverable WebAuthn start route is exposed",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.webauthn.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.webauthn.rs",
       "status": "passed",
       "pattern": "path = \"/auth/challenge/webauthn/discoverable/start\""
     },
     {
       "id": "login-webauthn-discoverable-finish",
       "description": "Discoverable WebAuthn finish route creates an AAL2 session",
-      "path": "apps/account-service/src/identity.domains.auth.routes.login.webauthn.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.login.webauthn.rs",
       "status": "passed",
       "pattern": "challenge_webauthn_discoverable_finish"
     },
     {
       "id": "enroll-webauthn-start",
       "description": "WebAuthn enrollment start route is exposed",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
       "status": "passed",
       "pattern": "path = \"/auth/mfa/webauthn/register/start\""
     },
     {
       "id": "enroll-webauthn-step-up",
-      "description": "WebAuthn enrollment requires recent AAL2 step-up",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
+      "description": "WebAuthn enrollment applies the dedicated passkey step-up policy",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
       "status": "passed",
-      "pattern": "require_recent_step_up"
+      "pattern": "require_passkey_enrollment_step_up"
     },
     {
       "id": "enroll-webauthn-finish",
       "description": "WebAuthn enrollment finish route is exposed",
-      "path": "apps/account-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.routes.mfa.webauthn.rs",
       "status": "passed",
       "pattern": "path = \"/auth/mfa/webauthn/register/finish\""
     },
     {
       "id": "webauthn-registration-state",
       "description": "WebAuthn registration challenge state is cached",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.start.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.start.rs",
       "status": "passed",
       "pattern": "purpose: \"webauthn_registration\""
     },
     {
       "id": "webauthn-registration-audit-start",
       "description": "WebAuthn registration start is audited",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.start.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.start.rs",
       "status": "passed",
       "pattern": "\"webauthn_registration_started\""
     },
     {
       "id": "webauthn-registration-finish",
       "description": "WebAuthn registration finish persists passkey data",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.finish.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.finish.rs",
       "status": "passed",
       "pattern": "\"passkey\""
     },
     {
       "id": "webauthn-registration-audit-finish",
       "description": "WebAuthn registration finish is audited",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.finish.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.finish.rs",
       "status": "passed",
       "pattern": "\"webauthn_registered\""
     },
     {
       "id": "webauthn-options",
       "description": "WebAuthn registration distinguishes passkeys from security keys",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.options.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.options.rs",
       "status": "passed",
       "pattern": "\"security_key\""
     },
     {
       "id": "webauthn-options-test",
       "description": "WebAuthn option shaping is covered by unit tests",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.registration.tests.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.registration.tests.rs",
       "status": "passed",
       "pattern": "shape_registration_options_sets_cross_platform_attachment_for_security_keys"
     },
     {
       "id": "webauthn-login-challenge",
       "description": "WebAuthn login stores challenge state",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.login.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.login.rs",
       "status": "passed",
       "pattern": "purpose: \"webauthn_login\""
     },
     {
       "id": "webauthn-login-success",
       "description": "WebAuthn login success is audited",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.login.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.login.rs",
       "status": "passed",
       "pattern": "\"webauthn_login_authenticated\""
     },
     {
       "id": "webauthn-discoverable-success",
       "description": "Discoverable WebAuthn login success is audited",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.login.discoverable.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.login.discoverable.rs",
       "status": "passed",
       "pattern": "\"webauthn_discoverable_login_authenticated\""
     },
     {
       "id": "webauthn-step-up",
       "description": "WebAuthn step-up challenge is supported",
-      "path": "apps/account-service/src/identity.domains.auth.webauthn.authentication.rs",
+      "path": "apps/identity-service/src/identity.domains.auth.webauthn.authentication.rs",
       "status": "passed",
       "pattern": "purpose: \"webauthn_step_up\""
     },
     {
       "id": "openapi-source",
       "description": "OpenAPI source includes MFA and WebAuthn routes",
-      "path": "apps/account-service/src/identity.http.openapi.rs",
+      "path": "apps/identity-service/src/identity.http.openapi.rs",
       "status": "passed",
       "pattern": "crate::domains::auth::routes::mfa::begin_webauthn_enrollment"
     },
     {
       "id": "openapi-mfa-path",
       "description": "Generated OpenAPI includes MFA challenge",
-      "path": "apps/account-service/openapi.json",
+      "path": "apps/identity-service/openapi.json",
       "status": "passed",
       "pattern": "\"/auth/challenge/mfa\""
     },
     {
       "id": "openapi-webauthn-path",
       "description": "Generated OpenAPI includes WebAuthn enrollment",
-      "path": "apps/account-service/openapi.json",
+      "path": "apps/identity-service/openapi.json",
       "status": "passed",
       "pattern": "\"/auth/mfa/webauthn/register/start\""
-    },
-    {
-      "id": "seeded-smoke-mfa-profile",
-      "description": "Seeded OpenAPI smoke observes mfa_enabled in login profile",
-      "path": "scripts/test-openapi-contract.mjs",
-      "status": "passed",
-      "pattern": "mfaEnabled: Boolean(loginBody?.user?.mfa_enabled)"
     },
     {
       "id": "identity-mfa-rebuild-decision",

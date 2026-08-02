@@ -136,6 +136,7 @@ export type {
   CookieConsentState,
   TrackingConsentClient,
   TrackingConsentStoredValue,
+  TrackingConsentSyncOptions,
 } from './tracking-consent';
 export {
   deriveConsentState,

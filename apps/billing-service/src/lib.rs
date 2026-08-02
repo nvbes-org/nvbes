@@ -2,6 +2,8 @@
 pub mod app;
 #[path = "billing.auth.rs"]
 pub mod auth;
+#[path = "billing.database.rs"]
+pub mod database;
 #[path = "billing.domains.mod.rs"]
 pub mod domains;
 #[path = "billing.grpc.mod.rs"]

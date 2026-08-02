@@ -1,104 +1,150 @@
 use std::{fmt, time::Duration};
 
 use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
-
-use crate::types::IdentityClosureRequest;
-
-const IDENTITY_AUDIENCE: &str = "nvbes-identity-service";
-const CLOSURE_SCOPE: &str = "identity:account:close";
 
 #[derive(Clone)]
-pub struct IdentityClosureClient {
+pub struct IdentityClient {
     http: reqwest::Client,
-    token_endpoint: String,
-    closure_endpoint: String,
-    client_id: String,
-    client_secret: String,
+    projection_endpoint: reqwest::Url,
+    closure_endpoint: reqwest::Url,
+    token: String,
+}
+
+#[derive(Clone)]
+pub struct ClosureClient {
+    http: reqwest::Client,
+    endpoint: reqwest::Url,
+    token: String,
+    operation: Operation,
 }
 
 #[derive(Debug)]
 pub struct DispatchError {
     retryable: bool,
     code: &'static str,
-    summary: String,
 }
 
-impl IdentityClosureClient {
-    pub fn new(
-        identity_service_base_url: &str,
-        client_id: String,
-        client_secret: String,
-    ) -> Result<Self, reqwest::Error> {
-        let http = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(5))
-            .timeout(Duration::from_secs(20))
-            .user_agent("nvbes-account-worker/1")
-            .build()?;
+impl IdentityClient {
+    pub fn new(base_url: &str, token: String) -> anyhow::Result<Self> {
+        let base_url = reqwest::Url::parse(base_url)?;
+        let mut projection_endpoint = base_url.clone();
+        projection_endpoint.set_path("/internal/v1/oidc-profile-projections");
+        let mut closure_endpoint = base_url;
+        closure_endpoint.set_path("/internal/v1/account-closures");
+        let http = build_http_client()?;
         Ok(Self {
             http,
-            token_endpoint: format!(
-                "{}/oauth/token",
-                identity_service_base_url.trim_end_matches('/')
-            ),
-            closure_endpoint: format!(
-                "{}/api/v1/internal/account-closures",
-                identity_service_base_url.trim_end_matches('/')
-            ),
-            client_id,
-            client_secret,
+            projection_endpoint,
+            closure_endpoint,
+            token,
         })
     }
 
-    pub async fn close_identity(
-        &self,
-        request: &IdentityClosureRequest,
-    ) -> Result<(), DispatchError> {
-        let access_token = self.request_access_token().await?;
-        let response = self
-            .http
-            .post(&self.closure_endpoint)
-            .bearer_auth(access_token)
-            .header("Idempotency-Key", request.event_id.to_string())
-            .json(request)
-            .send()
-            .await
-            .map_err(|_| DispatchError::transient("identity_closure_unreachable"))?;
-
-        if response.status().is_success() {
-            return Ok(());
-        }
-        Err(status_error("identity_closure_rejected", response.status()))
+    pub async fn dispatch_profile(&self, payload: &serde_json::Value) -> Result<(), DispatchError> {
+        self.dispatch(
+            self.projection_endpoint.clone(),
+            payload,
+            Operation::ProfileProjection,
+        )
+        .await
     }
 
-    async fn request_access_token(&self) -> Result<String, DispatchError> {
-        let response = self
-            .http
-            .post(&self.token_endpoint)
-            .basic_auth(&self.client_id, Some(&self.client_secret))
-            .form(&TokenRequest {
-                grant_type: "client_credentials",
-                audience: IDENTITY_AUDIENCE,
-                scope: CLOSURE_SCOPE,
-            })
-            .send()
-            .await
-            .map_err(|_| DispatchError::transient("identity_token_unreachable"))?;
+    pub async fn close_account(&self, payload: &serde_json::Value) -> Result<(), DispatchError> {
+        self.dispatch(
+            self.closure_endpoint.clone(),
+            payload,
+            Operation::AccountClosure,
+        )
+        .await
+    }
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(status_error("identity_token_rejected", status));
+    async fn dispatch(
+        &self,
+        endpoint: reqwest::Url,
+        payload: &serde_json::Value,
+        operation: Operation,
+    ) -> Result<(), DispatchError> {
+        dispatch(&self.http, endpoint, &self.token, payload, operation).await
+    }
+}
+
+impl ClosureClient {
+    pub fn new(base_url: &str, token: String, service: ClosureService) -> anyhow::Result<Self> {
+        let mut endpoint = reqwest::Url::parse(base_url)?;
+        endpoint.set_path("/internal/v1/account-closures");
+        Ok(Self {
+            http: build_http_client()?,
+            endpoint,
+            token,
+            operation: match service {
+                ClosureService::Cloud => Operation::CloudClosure,
+                ClosureService::Billing => Operation::BillingClosure,
+            },
+        })
+    }
+
+    pub async fn close_account(&self, payload: &serde_json::Value) -> Result<(), DispatchError> {
+        dispatch(
+            &self.http,
+            self.endpoint.clone(),
+            &self.token,
+            payload,
+            self.operation,
+        )
+        .await
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum ClosureService {
+    Cloud,
+    Billing,
+}
+
+fn build_http_client() -> anyhow::Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(20))
+        .user_agent("nvbes-account-worker/1")
+        .build()?)
+}
+
+async fn dispatch(
+    http: &reqwest::Client,
+    endpoint: reqwest::Url,
+    token: &str,
+    payload: &serde_json::Value,
+    operation: Operation,
+) -> Result<(), DispatchError> {
+    let response = http
+        .post(endpoint)
+        .bearer_auth(token)
+        .json(payload)
+        .send()
+        .await
+        .map_err(|_| DispatchError::transient(operation.unreachable_code()))?;
+    if response.status().is_success() {
+        return Ok(());
+    }
+    Err(DispatchError::from_status(response.status(), operation))
+}
+
+#[derive(Clone, Copy)]
+enum Operation {
+    ProfileProjection,
+    AccountClosure,
+    CloudClosure,
+    BillingClosure,
+}
+
+impl Operation {
+    const fn unreachable_code(self) -> &'static str {
+        match self {
+            Self::ProfileProjection => "identity_projection_unreachable",
+            Self::AccountClosure => "identity_closure_unreachable",
+            Self::CloudClosure => "cloud_closure_unreachable",
+            Self::BillingClosure => "billing_closure_unreachable",
         }
-        let token: TokenResponse = response
-            .json()
-            .await
-            .map_err(|_| DispatchError::permanent("identity_token_invalid_response"))?;
-        if token.access_token.trim().is_empty() || !token.token_type.eq_ignore_ascii_case("bearer") {
-            return Err(DispatchError::permanent(
-                "identity_token_invalid_response",
-            ));
-        }
-        Ok(token.access_token)
     }
 }
 
@@ -107,15 +153,45 @@ impl DispatchError {
         Self {
             retryable: true,
             code,
-            summary: code.replace('_', " "),
         }
     }
 
-    fn permanent(code: &'static str) -> Self {
+    pub fn storage() -> Self {
+        Self::transient("account_avatar_delete_failed")
+    }
+
+    fn from_status(status: StatusCode, operation: Operation) -> Self {
         Self {
-            retryable: false,
-            code,
-            summary: code.replace('_', " "),
+            retryable: status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error(),
+            code: if status == StatusCode::UNAUTHORIZED {
+                match operation {
+                    Operation::ProfileProjection => "identity_projection_unauthorized",
+                    Operation::AccountClosure => "identity_closure_unauthorized",
+                    Operation::CloudClosure => "cloud_closure_unauthorized",
+                    Operation::BillingClosure => "billing_closure_unauthorized",
+                }
+            } else if status == StatusCode::CONFLICT {
+                match operation {
+                    Operation::ProfileProjection => "identity_projection_conflict",
+                    Operation::AccountClosure => "identity_closure_conflict",
+                    Operation::CloudClosure => "cloud_closure_conflict",
+                    Operation::BillingClosure => "billing_closure_conflict",
+                }
+            } else if status.is_client_error() {
+                match operation {
+                    Operation::ProfileProjection => "identity_projection_rejected",
+                    Operation::AccountClosure => "identity_closure_rejected",
+                    Operation::CloudClosure => "cloud_closure_rejected",
+                    Operation::BillingClosure => "billing_closure_rejected",
+                }
+            } else {
+                match operation {
+                    Operation::ProfileProjection => "identity_projection_unavailable",
+                    Operation::AccountClosure => "identity_closure_unavailable",
+                    Operation::CloudClosure => "cloud_closure_unavailable",
+                    Operation::BillingClosure => "billing_closure_unavailable",
+                }
+            },
         }
     }
 
@@ -123,61 +199,42 @@ impl DispatchError {
         self.retryable
     }
 
-    pub fn safe_message(&self) -> String {
-        format!("{}: {}", self.code, self.summary)
+    pub const fn code(&self) -> &'static str {
+        self.code
     }
 }
 
 impl fmt::Display for DispatchError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.safe_message())
+        formatter.write_str(self.code)
     }
 }
 
 impl std::error::Error for DispatchError {}
 
-fn status_error(code: &'static str, status: StatusCode) -> DispatchError {
-    DispatchError {
-        retryable: status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error(),
-        code,
-        summary: format!("Identity returned HTTP {}", status.as_u16()),
-    }
-}
-
-#[derive(Serialize)]
-struct TokenRequest<'a> {
-    grant_type: &'a str,
-    audience: &'a str,
-    scope: &'a str,
-}
-
-#[derive(Deserialize)]
-struct TokenResponse {
-    access_token: String,
-    token_type: String,
-}
-
 #[cfg(test)]
 mod tests {
     use reqwest::StatusCode;
 
-    use super::status_error;
+    use super::{DispatchError, Operation};
 
     #[test]
-    fn retries_rate_limits_and_server_failures_only() {
-        assert!(status_error("test", StatusCode::TOO_MANY_REQUESTS).is_retryable());
-        assert!(status_error("test", StatusCode::BAD_GATEWAY).is_retryable());
-        assert!(!status_error("test", StatusCode::BAD_REQUEST).is_retryable());
-        assert!(!status_error("test", StatusCode::FORBIDDEN).is_retryable());
-        assert!(!status_error("test", StatusCode::CONFLICT).is_retryable());
-    }
-
-    #[test]
-    fn safe_error_never_contains_remote_response_body() {
-        let error = status_error("identity_closure_rejected", StatusCode::FORBIDDEN);
-        assert_eq!(
-            error.safe_message(),
-            "identity_closure_rejected: Identity returned HTTP 403"
+    fn retries_only_transient_http_failures() {
+        assert!(
+            DispatchError::from_status(StatusCode::TOO_MANY_REQUESTS, Operation::AccountClosure)
+                .is_retryable()
+        );
+        assert!(
+            DispatchError::from_status(StatusCode::BAD_GATEWAY, Operation::ProfileProjection)
+                .is_retryable()
+        );
+        assert!(
+            !DispatchError::from_status(StatusCode::BAD_REQUEST, Operation::AccountClosure)
+                .is_retryable()
+        );
+        assert!(
+            !DispatchError::from_status(StatusCode::UNAUTHORIZED, Operation::ProfileProjection)
+                .is_retryable()
         );
     }
 }

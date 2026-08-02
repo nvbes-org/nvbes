@@ -1,32 +1,45 @@
-use chrono::{DateTime, Utc};
-use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ClosureParticipant {
+    Cloud,
+    Billing,
+    Identity,
+    Account,
+}
+
+impl ClosureParticipant {
+    pub fn parse(value: &str) -> anyhow::Result<Self> {
+        match value {
+            "cloud" => Ok(Self::Cloud),
+            "billing" => Ok(Self::Billing),
+            "identity" => Ok(Self::Identity),
+            "account" => Ok(Self::Account),
+            _ => anyhow::bail!("Unknown Account closure participant: {value}"),
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Cloud => "cloud",
+            Self::Billing => "billing",
+            Self::Identity => "identity",
+            Self::Account => "account",
+        }
+    }
+}
+
+pub struct ClaimedProjection {
+    pub event_id: Uuid,
+    pub payload: serde_json::Value,
+}
+
 pub struct ClaimedClosure {
     pub event_id: Uuid,
     pub saga_id: Uuid,
     pub principal_id: Uuid,
-    pub requested_at: DateTime<Utc>,
     pub avatar_object_key: Option<String>,
-    pub attempt: i32,
-}
-
-#[derive(Debug, Serialize)]
-pub struct IdentityClosureRequest {
-    pub event_id: Uuid,
-    pub saga_id: Uuid,
-    pub principal_id: Uuid,
-    pub requested_at: DateTime<Utc>,
-}
-
-impl From<&ClaimedClosure> for IdentityClosureRequest {
-    fn from(event: &ClaimedClosure) -> Self {
-        Self {
-            event_id: event.event_id,
-            saga_id: event.saga_id,
-            principal_id: event.principal_id,
-            requested_at: event.requested_at,
-        }
-    }
+    pub payload: serde_json::Value,
+    pub participant: ClosureParticipant,
+    pub participant_attempts: i32,
 }

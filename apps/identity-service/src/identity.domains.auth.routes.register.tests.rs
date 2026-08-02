@@ -8,13 +8,11 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
         RegisterRequest {
             email: " User@Example.COM ".to_string(),
             password: "Secret123!".to_string(),
-            username: " ada ".to_string(),
             pow_nonce: "nonce".to_string(),
             pow_solution: "solution".to_string(),
             legal_documents_accepted: true,
             marketing_emails_accepted: true,
         },
-        "FR".to_string(),
         "eu".to_string(),
         Some("203.0.113.10".to_string()),
         Some("nvbes-test".to_string()),
@@ -22,8 +20,6 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
 
     assert_eq!(input.email, " User@Example.COM ");
     assert_eq!(input.password, "Secret123!");
-    assert_eq!(input.username, "ada");
-    assert_eq!(input.region.as_deref(), Some("FR"));
     assert_eq!(input.data_region.as_deref(), Some("eu"));
     assert_eq!(input.ip.as_deref(), Some("203.0.113.10"));
     assert_eq!(input.user_agent.as_deref(), Some("nvbes-test"));

@@ -11,7 +11,7 @@
       "{workspaceRoot}/Cargo.toml",
       "{workspaceRoot}/Cargo.lock",
       "{workspaceRoot}/.cargo/**/*",
-      "{workspaceRoot}/apps/account-service/migrations/**/*",
+        "{workspaceRoot}/apps/account-service-next/migrations/**/*",
       "{workspaceRoot}/libs/rust/**/Cargo.toml",
       "{workspaceRoot}/libs/rust/**/src/**/*",
       {

@@ -76,9 +76,11 @@ OAuth scopes provide coarse API capabilities. Each service remains responsible
 for its domain authorization and must evaluate local RBAC/ABAC or a dedicated
 policy decision for resource-level access.
 
-Machine identities use Client Credentials. A service acting on behalf of a
-user uses OAuth Token Exchange with a target audience and constrained scopes.
-Services must not forward a user token to a different audience.
+OAuth-facing machine identities use Client Credentials. A service acting on
+behalf of a user uses OAuth Token Exchange with a target audience and
+constrained scopes. Services must not forward a user token to a different
+audience. Private outbox delivery endpoints use a dedicated, narrowly scoped
+service credential and are not exposed as OAuth resource APIs.
 
 Identity and Account use separate persistence ownership. Cross-context changes
 use versioned events and outbox delivery. Synchronous calls are reserved for
@@ -113,9 +115,12 @@ The split introduces an additional service, separate persistence, event
 delivery and more explicit client registration. Account deletion becomes a
 distributed workflow and requires idempotency, retries and reconciliation.
 
-The Account UI may call both Account and Identity APIs for settings that remain
-Identity-owned, such as MFA and active authentication sessions. Those calls use
-separate audience-bound tokens or a BFF that performs the same exchanges.
+The Account UI calls only Account APIs for user-facing account management.
+When an operation targets an Identity-owned security primitive, such as MFA or
+an authentication session, Account acts as the BFF and invokes Identity through
+an explicit audience-bound service contract. Identity Web contains only hosted
+authentication and OAuth/OIDC protocol screens; it exposes no account-management
+navigation or self-service application shell.
 
 ## Validation
 

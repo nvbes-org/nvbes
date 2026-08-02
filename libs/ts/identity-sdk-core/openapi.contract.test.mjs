@@ -51,7 +51,31 @@ test('every operation has a unique ID and an explicit valid security contract', 
     }
   }
 
-  assert.ok(operationCount >= 80, `expected broad Identity API surface, got ${operationCount}`);
+  assert.ok(operationCount > 0, 'Identity OpenAPI must expose operations');
+
+  for (const path of [
+    '/.well-known/openid-configuration',
+    '/oauth/authorize',
+    '/oauth/token',
+    '/oauth/userinfo',
+    '/auth/challenge/identifier',
+    '/auth/challenge/mfa',
+  ]) {
+    assert.ok(document.paths[path], `missing Identity protocol primitive ${path}`);
+  }
+
+  for (const path of [
+    '/auth/me/avatar',
+    '/auth/me/delete',
+    '/auth/me/export',
+    '/auth/me/notifications',
+    '/auth/me/preferences',
+    '/legal/consent',
+    '/legal/consents',
+    '/legal/gpc',
+  ]) {
+    assert.equal(document.paths[path], undefined, `Account product API leaked into Identity: ${path}`);
+  }
   const oauthClient = [{ oauthClientBasic: [] }, { oauthClientMtls: [] }];
   assert.deepEqual(document.paths['/oauth/introspect'].post.security, oauthClient);
   assert.deepEqual(document.paths['/oauth/revoke'].post.security, oauthClient);

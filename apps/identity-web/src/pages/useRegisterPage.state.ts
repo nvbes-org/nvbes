@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react';
 import { emailHasSupportedFormat } from '../identity.email.policy';
 import { passwordHasSupportedLength } from '../identity.password.policy';
-import { usernameHasSupportedLength } from '../identity.username.policy';
 import { estimatePasswordStrength } from '@/lib/password-strength';
 
 export function useRegisterPageState() {
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [legalDocumentsAccepted, setLegalDocumentsAccepted] = useState(false);
@@ -21,10 +19,8 @@ export function useRegisterPageState() {
 
   const emailValid = emailHasSupportedFormat(email);
   const passwordValid = passwordHasSupportedLength(password) && (passwordResult?.score ?? 0) >= 3;
-  const usernameValid = usernameHasSupportedLength(username);
-
   return {
-    canSubmit: emailValid && usernameValid && passwordValid && legalDocumentsAccepted,
+    canSubmit: emailValid && passwordValid && legalDocumentsAccepted,
     email,
     emailValid,
     legalDocumentsAccepted,
@@ -35,8 +31,5 @@ export function useRegisterPageState() {
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    setUsername,
-    username,
-    usernameValid,
   };
 }

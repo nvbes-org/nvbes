@@ -19,7 +19,3 @@ function apiErrorCode(error: unknown): string | null {
 export function isEmailAlreadyExistsError(error: unknown): boolean {
   return apiErrorCode(error) === 'email_already_exists';
 }
-
-export function isUsernameTakenError(error: unknown): boolean {
-  return apiErrorCode(error) === 'username_taken';
-}

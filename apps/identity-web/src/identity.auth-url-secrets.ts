@@ -1,9 +1,4 @@
-const SENSITIVE_AUTH_ROUTES = [
-  '/reset-password',
-  '/verify',
-  '/verify-email',
-  '/verify-result',
-] as const;
+const SENSITIVE_AUTH_ROUTES = ['/verify', '/verify-email', '/verify-result'] as const;
 
 type SensitiveAuthRoute = (typeof SENSITIVE_AUTH_ROUTES)[number];
 

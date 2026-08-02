@@ -11,6 +11,7 @@ export type SubmitActionOptions = Pick<
   | 'mfaMethod'
   | 'totpCode'
   | 'recoveryCode'
+  | 'mfaWebauthnAbortRef'
   | 'decoyRef'
   | 'mutations'
   | 'resetMfaState'

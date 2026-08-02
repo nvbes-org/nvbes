@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { MailIcon } from 'lucide-react';
 import type { SubmitEvent } from 'react';
 import { FeedbackAlert } from '@/components/FeedbackAlert';
@@ -7,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { accountWebUrl } from '@/identity.account-links';
 
 export function LoginPagePasswordForm({
   email,
@@ -58,12 +58,12 @@ export function LoginPagePasswordForm({
         />
       </Field>
       <div className="flex justify-end">
-        <Link
-          to="/forgot-password"
+        <a
+          href={accountWebUrl('/forgot-password')}
           className="text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           Mot de passe oublie ?
-        </Link>
+        </a>
       </div>
       {error && <FeedbackAlert tone="error">{error}</FeedbackAlert>}
       <div className="flex justify-end gap-2">

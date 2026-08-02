@@ -29,7 +29,7 @@ const ALLOWED_RUNTIME_MUTATION_FILES: &[&str] = &[
 ];
 
 const OAUTH_TOKEN_REGION_FILES: &[&str] = &[
-    "identity.domains.oauth.flows.tokens.generate.rs",
+    "identity.domains.oauth.flows.tokens.rs",
     "identity.domains.oauth.flows.refresh.rs",
     "identity.domains.oauth.flows.codes.rs",
     "identity.domains.oauth.device.exchange.rs",
@@ -51,7 +51,6 @@ const SECURITY_CLOUD_CONTEXT_FILES: &[&str] = &[
 ];
 
 const AUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
-    "identity.domains.auth.account_deletion.rs",
     "identity.domains.auth.audit.rs",
     "identity.domains.auth.mfa.rs",
     "identity.domains.auth.mfa.policy.rs",
@@ -61,6 +60,11 @@ const AUTH_CLOUD_CONTEXT_FILES: &[&str] = &[
     "identity.domains.auth.sessions.db.rs",
     "identity.domains.authz.db.rs",
 ];
+
+const REGISTRATION_PERSISTENCE: &str = include_str!("identity.domains.auth.db.account.rs");
+const ACCOUNT_REGISTRATION_EVENT: &str =
+    include_str!("identity.domains.auth.account_registration_event.rs");
+const IDENTITY_USER_PERSISTENCE: &str = include_str!("identity.domains.auth.db.account.rs");
 
 #[test]
 fn account_runtime_mutations_to_external_context_tables_go_through_boundary_ports() {
@@ -102,6 +106,39 @@ fn account_runtime_mutations_to_external_context_tables_go_through_boundary_port
         "Account runtime code must mutate Cloud, Enterprise, and Billing-owned tables only through boundary ports.\nKnown Enterprise/federation compatibility paths are allowlisted in this test.\nViolations:\n{}",
         violations.join("\n")
     );
+}
+
+#[test]
+fn registration_hands_account_data_to_the_outbox_without_product_table_writes() {
+    assert!(REGISTRATION_PERSISTENCE.contains("account_registration_event::enqueue_tx"));
+    for forbidden in [
+        "INSERT INTO user_consents",
+        "notifications)",
+        "preferences)",
+    ] {
+        assert!(
+            !REGISTRATION_PERSISTENCE.contains(forbidden),
+            "Identity registration still persists Account-owned data via `{forbidden}`"
+        );
+    }
+    for forbidden in ["username", "region"] {
+        assert!(
+            !ACCOUNT_REGISTRATION_EVENT.contains(forbidden),
+            "Identity registration event still transports Account profile field `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn identity_user_persistence_contains_no_account_profile_columns() {
+    for forbidden in ["firstname", "lastname", "username", "birthdate"] {
+        assert!(
+            !IDENTITY_USER_PERSISTENCE.contains(forbidden),
+            "Identity user persistence still owns Account profile field `{forbidden}`"
+        );
+    }
+    assert!(!IDENTITY_USER_PERSISTENCE.contains(", region"));
+    assert!(!IDENTITY_USER_PERSISTENCE.contains(" region,"));
 }
 
 #[test]

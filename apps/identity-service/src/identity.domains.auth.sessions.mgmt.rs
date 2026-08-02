@@ -313,8 +313,18 @@ pub async fn revoke_all_user_sessions_tx(
     tx: &mut sqlx::Transaction<'_, Postgres>,
     user_id: Uuid,
 ) -> Result<(), AppError> {
-    let _ = tx;
-    let _ = user_id;
+    sqlx::query(
+        r#"
+        UPDATE user_sessions
+        SET revoked_at = COALESCE(revoked_at, NOW()),
+            browser_session_token_hash = NULL
+        WHERE principal_id = $1
+          AND revoked_at IS NULL
+        "#,
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
