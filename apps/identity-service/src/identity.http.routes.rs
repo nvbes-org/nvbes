@@ -123,9 +123,9 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
             "/internal/v1",
             Router::new()
                 .merge(crate::domains::auth::oidc_profile_projection::router())
-                .merge(crate::domains::auth::account_closure::router()),
+                .merge(crate::domains::auth::account_closure::router())
+                .merge(crate::domains::auth::account_export::router()),
         )
-        .merge(crate::email::webhooks::webhook_router(state))
         .merge(docs)
 }
 

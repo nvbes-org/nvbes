@@ -1,5 +1,7 @@
 #[path = "billing.http.account_closure.rs"]
 pub mod account_closure;
+#[path = "billing.http.account_export.rs"]
+pub mod account_export;
 #[path = "billing.http.error.rs"]
 pub mod error;
 #[path = "billing.http.error.actions.rs"]

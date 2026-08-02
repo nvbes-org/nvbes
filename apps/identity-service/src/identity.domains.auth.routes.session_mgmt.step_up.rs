@@ -158,7 +158,6 @@ pub(crate) async fn request_email_step_up(
     let result = verification::email::request_password_change_code(
         &state.db,
         &state.redis,
-        &state.config,
         auth.user_id,
         auth.session_id,
         request.purpose,

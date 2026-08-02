@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package nvbes.email.v1;
+
+import "google/protobuf/timestamp.proto";
+import "nvbes/platform/v1/common.proto";
+
+service EmailDeliveryService {
+  rpc SubmitEmail(SubmitEmailRequest) returns (EmailReceipt);
+}
+
+message SubmitEmailRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string producer = 2;
+  string idempotency_key = 3;
+  EmailRecipient recipient = 4;
+  TransactionalEmailCategory category = 5;
+  TransactionalEmailTemplate template = 6;
+  google.protobuf.Timestamp deliver_before = 7;
+}
+
+message EmailRecipient {
+  string email = 1;
+  optional string name = 2;
+}
+
+enum TransactionalEmailCategory {
+  TRANSACTIONAL_EMAIL_CATEGORY_UNSPECIFIED = 0;
+  TRANSACTIONAL_EMAIL_CATEGORY_CREDENTIAL = 1;
+  TRANSACTIONAL_EMAIL_CATEGORY_ACCOUNT_SECURITY = 2;
+  TRANSACTIONAL_EMAIL_CATEGORY_BILLING = 3;
+  reserved 4;
+  TRANSACTIONAL_EMAIL_CATEGORY_REMINDER = 5;
+}
+
+message TransactionalEmailTemplate {
+  reserved 7;
+
+  oneof template {
+    EmailVerificationV1 email_verification_v1 = 1;
+    PasswordResetV1 password_reset_v1 = 2;
+    PasswordChangeCodeV1 password_change_code_v1 = 3;
+    AccountSecurityV1 account_security_v1 = 4;
+    BillingReceiptV1 billing_receipt_v1 = 5;
+    BillingPaymentFailureV1 billing_payment_failure_v1 = 6;
+    AccessReviewReminderV1 access_review_reminder_v1 = 8;
+  }
+}
+
+message EmailVerificationV1 {
+  string user_name = 1;
+  string verification_url = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+}
+
+message PasswordResetV1 {
+  string user_name = 1;
+  string reset_url = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+}
+
+message PasswordChangeCodeV1 {
+  string user_name = 1;
+  string code = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+}
+
+enum AccountSecurityEvent {
+  ACCOUNT_SECURITY_EVENT_UNSPECIFIED = 0;
+  ACCOUNT_SECURITY_EVENT_EMAIL_ADDED = 1;
+  ACCOUNT_SECURITY_EVENT_PRIMARY_EMAIL_CHANGED = 2;
+  ACCOUNT_SECURITY_EVENT_ACCOUNT_RECOVERED = 3;
+  ACCOUNT_SECURITY_EVENT_RECOVERY_REVIEW_REQUIRED = 4;
+}
+
+message AccountSecurityV1 {
+  AccountSecurityEvent event = 1;
+  optional string affected_email = 2;
+  optional string previous_email = 3;
+  optional string security_url = 4;
+}
+
+message BillingReceiptV1 {
+  optional string customer_name = 1;
+  int64 amount_minor = 2;
+  string currency = 3;
+  optional string invoice_url = 4;
+  optional string provider_name = 5;
+}
+
+message BillingPaymentFailureV1 {
+  optional string customer_name = 1;
+  int64 amount_minor = 2;
+  string currency = 3;
+  optional string billing_portal_url = 4;
+  optional string invoice_url = 5;
+  optional string provider_name = 6;
+}
+
+message AccessReviewReminderV1 {
+  string reviewer_name = 1;
+  string campaign_name = 2;
+  string review_url = 3;
+  google.protobuf.Timestamp review_due_at = 4;
+}
+
+message EmailReceipt {
+  string message_id = 1;
+  google.protobuf.Timestamp accepted_at = 2;
+  google.protobuf.Timestamp deliver_before = 3;
+  bool duplicate = 4;
+}

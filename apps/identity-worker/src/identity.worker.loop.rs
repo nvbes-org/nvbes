@@ -10,7 +10,6 @@ use nvbes_observability::{
 use tokio::time::{Duration as TokioDuration, sleep};
 
 use crate::app::AppState;
-use nvbes_product_identity::email::{jobs::EmailSendPayload, templates::html_escape};
 
 use super::job_processor::{WORKER_QUEUES, claim_available_job, process_claimed_job};
 
@@ -126,18 +125,10 @@ async fn run_access_review_reminders_if_due(
         return Ok(());
     };
     for candidate in &claim.candidates {
-        let payload = reminder_email_payload(&state.config, candidate);
-        nvbes_product_identity::email::jobs::enqueue_email_job_tx(
-            &state.db,
-            &state.redis,
-            payload,
-            &format!(
-                "access-review-reminder:{}:{}:{}",
-                candidate.campaign_id, candidate.recipient_principal_id, candidate.reminder_kind
-            ),
-        )
-        .await
-        .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
+        let command = reminder_email_command(&state.config, candidate)?;
+        nvbes_product_identity::email::jobs::enqueue_email_command(&state.redis, command)
+            .await
+            .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
     }
     if !claim.candidates.is_empty() {
         tracing::info!(
@@ -149,40 +140,44 @@ async fn run_access_review_reminders_if_due(
     Ok(())
 }
 
-fn reminder_email_payload(
+fn reminder_email_command(
     config: &nvbes_core::config::AppConfig,
     candidate: &crate::grpc_pb::nvbes::enterprise::v1::AccessReviewReminderCandidate,
-) -> EmailSendPayload {
+) -> anyhow::Result<nvbes_email::EmailCommand> {
+    let request_id = uuid::Uuid::new_v4().to_string();
     let link = format!(
         "{}/access-reviews",
         config.web_base_url.trim_end_matches('/')
     );
-    let subject = if candidate.reminder_kind == "overdue" {
-        format!("Access review overdue: {}", candidate.campaign_name)
-    } else {
-        format!("Access review due soon: {}", candidate.campaign_name)
-    };
-    let text_body = format!(
-        "{}\n\nTenant: {}\nPending items: {}\nDue: {}\n\nOpen access reviews: {}",
-        subject, candidate.tenant_name, candidate.pending_items, candidate.due_at, link
-    );
-    let html_body = format!(
-        "<p>{}</p><p><strong>Tenant:</strong> {}<br><strong>Pending items:</strong> {}<br><strong>Due:</strong> {}</p><p><a href=\"{}\">Open access reviews</a></p>",
-        html_escape(&subject),
-        html_escape(&candidate.tenant_name),
-        candidate.pending_items,
-        html_escape(&candidate.due_at),
-        html_escape(&link)
-    );
-
-    EmailSendPayload {
-        to_email: candidate.recipient_email.clone(),
-        to_name: Some(candidate.recipient_name.clone()),
-        subject,
-        html_body,
-        text_body: Some(text_body),
-        business_type: "access_review_reminder".to_string(),
-    }
+    let review_due_at = chrono::DateTime::parse_from_rfc3339(&candidate.due_at)
+        .map_err(|_| anyhow::anyhow!("access review due_at is invalid"))?
+        .with_timezone(&chrono::Utc);
+    let deliver_before = chrono::Utc::now() + chrono::Duration::hours(1);
+    let idempotency_key = nvbes_email::EmailIdempotencyKey::new(format!(
+        "access-review-reminder:{}:{}:{}",
+        candidate.campaign_id, candidate.recipient_principal_id, candidate.reminder_kind
+    ))?;
+    Ok(nvbes_email::EmailCommand {
+        context: nvbes_email::EmailRequestContext {
+            request_id: request_id.clone(),
+            correlation_id: request_id,
+            actor_principal_id: candidate.recipient_principal_id.clone(),
+        },
+        producer: "identity-worker".to_string(),
+        idempotency_key,
+        recipient: nvbes_email::EmailRecipient {
+            email: candidate.recipient_email.clone(),
+            name: Some(candidate.recipient_name.clone()),
+        },
+        category: nvbes_email::EmailCategory::Reminder,
+        template: nvbes_email::EmailTemplate::AccessReviewReminderV1 {
+            reviewer_name: candidate.recipient_name.clone(),
+            campaign_name: candidate.campaign_name.clone(),
+            review_url: link,
+            review_due_at,
+        },
+        deliver_before,
+    })
 }
 
 async fn run_access_review_schedules_if_due(

@@ -1,18 +1,14 @@
 use serde_json::Value;
 
 use crate::app::AppState;
-use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
 
 use nvbes_redis::worker_queue::QueuedJob;
 
 use super::job_failure::JobExecutionError;
 
-#[path = "identity.worker.jobs.email_delivery.rs"]
-mod email_delivery;
 #[path = "identity.worker.jobs.execute.rs"]
 mod execute;
-#[path = "identity.worker.jobs.process_email_event.rs"]
-mod process_email_event;
 
 const RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(60);
 pub(super) const STALE_AFTER: std::time::Duration = std::time::Duration::from_secs(600);
@@ -56,7 +52,7 @@ pub(crate) async fn renew_job_lease(
 }
 
 pub(super) fn should_retry_job(job_type: &str, error: &JobExecutionError) -> bool {
-    matches!(job_type, JOB_EMAIL_SEND | JOB_EMAIL_WEBHOOK_PROCESS) && error.is_retryable()
+    job_type == JOB_EMAIL_SUBMIT && error.is_retryable()
 }
 
 pub(crate) async fn mark_job_failed(
@@ -77,36 +73,11 @@ pub(super) async fn execute_job(
     execute::execute_job(state, job).await
 }
 
-pub(super) fn email_from_address(
-    config: &nvbes_core::config::AppConfig,
-) -> Result<nvbes_email::EmailAddress, JobExecutionError> {
-    let email = match config.email_from_email.clone() {
-        Some(email) => email,
-        None if config.environment == "development" => "dev@nvbes.local".to_string(),
-        None => {
-            return Err(JobExecutionError::permanent(
-                "email_from_missing",
-                "Email sender address is not configured",
-            ));
-        }
-    };
-
-    Ok(nvbes_email::EmailAddress {
-        email,
-        name: Some(
-            config
-                .email_from_name
-                .clone()
-                .unwrap_or_else(|| "nvbes".to_string()),
-        ),
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::should_retry_job;
     use crate::worker::job_failure::JobExecutionError;
-    use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+    use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
 
     #[test]
     fn identity_worker_retries_only_transient_owned_jobs() {
@@ -114,13 +85,8 @@ mod tests {
             JobExecutionError::transient("provider_unavailable", "Provider is unavailable");
         let permanent = JobExecutionError::permanent("invalid_payload", "Job payload is invalid");
 
-        for job_type in [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS] {
-            assert!(
-                should_retry_job(job_type, &transient),
-                "identity-worker should retry transient owned job {job_type}"
-            );
-            assert!(!should_retry_job(job_type, &permanent));
-        }
+        assert!(should_retry_job(JOB_EMAIL_SUBMIT, &transient));
+        assert!(!should_retry_job(JOB_EMAIL_SUBMIT, &permanent));
 
         for job_type in [
             concat!("billing.", "stripe.webhook.process"),

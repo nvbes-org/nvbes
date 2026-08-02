@@ -16,8 +16,6 @@ pub async fn register(
     config: &AppConfig,
     input: RegisterInput,
 ) -> Result<RegisterResult, AppError> {
-    crate::email::templates::ensure_delivery_configured(config)?;
-
     let email = normalize_email(&input.email);
     validate_email(&email)?;
     validate_password(&input.password)?;
@@ -42,7 +40,7 @@ pub async fn register(
     let verification_token = generate_random_token();
     let registration_enrollment =
         registration_enrollment::generate(config.auth_verification_ttl_hours);
-    let (principal_id, now) = db::create_user_account(
+    let (principal_id, now, verification_expires_at) = db::create_user_account(
         db,
         redis,
         config,
@@ -62,13 +60,13 @@ pub async fn register(
     let display_name = DEFAULT_DISPLAY_NAME.to_string();
 
     super::email_verification::enqueue_verification_email(
-        db,
         redis,
         config,
         principal_id,
         &email,
         &display_name,
         &verification_token,
+        verification_expires_at,
     )
     .await?;
 

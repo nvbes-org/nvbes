@@ -1,0 +1,7 @@
+{
+  "name": "email-worker",
+  "projectType": "application",
+  "root": "apps/email-worker",
+  "sourceRoot": "apps/email-worker/src",
+  "tags": ["scope:oss", "type:app", "domain:email", "layer:app"]
+}

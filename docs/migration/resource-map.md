@@ -2,12 +2,12 @@
 
 ## Status
 
-- entries: 44
+- entries: 43
 - pending: 0
 - keep: 24
-- rebuild: 19
+- rebuild: 17
 - remove: 0
-- replace: 1
+- replace: 2
 
 ## Rules
 
@@ -19,6 +19,7 @@
 
 | Type | Name | Decision | Owner | Target |
 |---|---|---:|---|---|
+| bucket | scaleway_object_bucket.archive | replace | Data lead | `deploy/oss/opentofu#s3-compatible-files-bucket` |
 | bucket | scaleway_object_bucket.files | replace | Data lead | `deploy/oss/opentofu#s3-compatible-files-bucket` |
 | event_topic | account.billing.facade.requested | keep | Platform lead | `contracts/events/account.billing.facade.requested.v1.schema.json` |
 | event_topic | account.session.created | keep | Platform lead | `contracts/events/account.session.created.v1.schema.json` |
@@ -44,18 +45,16 @@
 | event_topic | enterprise.policy.changed | keep | Platform lead | `contracts/events/enterprise.policy.changed.v1.schema.json` |
 | event_topic | identity.user.created | keep | Platform lead | `contracts/events/identity.user.created.v1.schema.json` |
 | event_topic | workspace.membership.created | keep | Platform lead | `contracts/events/workspace.membership.created.v1.schema.json` |
+| queue | account.data_export | rebuild | Infra lead | `apps/workers#account-data-export` |
 | queue | billing.email.send | rebuild | Infra lead | `apps/workers#billing-email-send` |
 | queue | billing.mollie.webhook.process | rebuild | Infra lead | `apps/workers#billing-mollie-webhook-process` |
 | queue | billing.stripe.webhook.process | rebuild | Infra lead | `apps/workers#billing-stripe-webhook-process` |
-| queue | data.export | rebuild | Infra lead | `apps/workers#data-export` |
 | queue | email.send | rebuild | Infra lead | `apps/workers#email-send` |
 | queue | email.webhook.process | rebuild | Infra lead | `apps/workers#email-webhook-process` |
 | queue | geo.lookup_maintenance | rebuild | Infra lead | `apps/workers#geo-lookup-maintenance` |
 | queue | geo.loyalsoldier_import | rebuild | Infra lead | `apps/workers#geo-loyalsoldier-import` |
 | queue | geo.maxmind_geolite_import | rebuild | Infra lead | `apps/workers#geo-maxmind-geolite-import` |
 | queue | geo.v2fly_import | rebuild | Infra lead | `apps/workers#geo-v2fly-import` |
-| queue | privacy.account_delete | rebuild | Infra lead | `apps/workers#privacy-account-delete` |
-| queue | privacy.account_export | rebuild | Infra lead | `apps/workers#privacy-account-export` |
 | queue | privacy.workspace_delete | rebuild | Infra lead | `apps/workers#privacy-workspace-delete` |
 | queue | privacy.workspace_export | rebuild | Infra lead | `apps/workers#privacy-workspace-export` |
 | queue | quotas.recalculate | rebuild | Infra lead | `apps/workers#quotas-recalculate` |

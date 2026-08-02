@@ -27,6 +27,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 # Copy workspace manifests and source files
 COPY Cargo.toml Cargo.lock ./
 COPY apps ./apps
+COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 

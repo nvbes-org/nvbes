@@ -34,7 +34,7 @@ function cspPlugin(mode: string): Plugin {
 	};
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
 	const localEnv = loadEnv(mode, process.cwd(), "");
 	const rootEnv = loadEnv(mode, path.resolve(process.cwd(), "../../"), "");
 	const envSources = [process.env, localEnv, rootEnv];
@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
 			cspPlugin(mode),
 			...observabilitySourceMapPlugins({
 				appName: "backoffice-web",
+				command,
 				envSources,
 			}),
 		],

@@ -13,6 +13,7 @@ anyhow.workspace = true
 chrono.workspace = true
 nvbes-account-service = { path = "../account-service-next" }
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-product-account = { path = "../../libs/rust/products/account" }
 nvbes-storage = { path = "../../libs/rust/storage" }
 reqwest.workspace = true
 serde.workspace = true

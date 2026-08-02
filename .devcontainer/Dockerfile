@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
-ARG NODE_VERSION=25.8.0
+ARG NODE_VERSION=24.18.1
 ARG PNPM_VERSION=11.1.3
 ARG USERNAME=vscode
 

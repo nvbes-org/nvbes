@@ -44,9 +44,6 @@ pub(super) async fn execute_job(
         super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE => {
             super::super::privacy::delete::delete_workspace_data(job, database, storage).await
         }
-        super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT => {
-            super::super::privacy::export::export_account_data(job, database, storage).await
-        }
         super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT => {
             super::super::privacy::export::export_workspace_data(job, database, storage).await
         }
@@ -67,7 +64,6 @@ pub(super) fn is_known_job_type(job_type: &str) -> bool {
             | super::super::maintenance::JOB_GEO_MAXMIND_GEOLITE_IMPORT
             | super::super::maintenance::JOB_GEO_LOYALSOLDIER_IMPORT
             | super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE
-            | super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT
             | super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT
     )
 }

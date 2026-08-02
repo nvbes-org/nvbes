@@ -71,7 +71,7 @@ function cspPlugin(
 	};
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
 	const localEnv = loadEnv(mode, process.cwd(), "");
 	const rootEnv = loadEnv(mode, path.resolve(process.cwd(), "../../"), "");
 	const envSources = [process.env, localEnv, rootEnv];
@@ -123,6 +123,7 @@ export default defineConfig(({ mode }) => {
 				: []),
 			...observabilitySourceMapPlugins({
 				appName: "enterprise-web",
+				command,
 				envSources,
 			}),
 			sriPlugin(),

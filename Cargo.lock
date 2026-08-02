@@ -1997,7 +1997,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2665,7 +2665,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.4",
  "tokio",
  "tower-service",
  "tracing",
@@ -3351,7 +3351,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3463,6 +3463,7 @@ dependencies = [
  "chrono",
  "nvbes-account-service",
  "nvbes-core",
+ "nvbes-product-account",
  "nvbes-storage",
  "reqwest 0.12.28",
  "serde",
@@ -3597,7 +3598,6 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "sha2 0.10.9",
  "sqlx",
  "tokio",
  "tracing",
@@ -3777,14 +3777,22 @@ name = "nvbes-email"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "lettre",
  "nvbes-core",
+ "prost 0.14.4",
+ "prost-types",
+ "protoc-bin-vendored",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
+ "tonic",
+ "tonic-prost",
+ "tonic-prost-build",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -3792,12 +3800,45 @@ name = "nvbes-email-scaleway"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "nvbes-core",
  "nvbes-email",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tracing",
+]
+
+[[package]]
+name = "nvbes-email-worker"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "hmac 0.12.1",
+ "lettre",
+ "nvbes-core",
+ "nvbes-email",
+ "nvbes-email-scaleway",
+ "openssl",
+ "prost 0.14.4",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tonic",
+ "tonic-health",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -4080,7 +4121,6 @@ dependencies = [
  "password-hash",
  "serde",
  "serde_json",
- "sha2 0.10.9",
  "sqlx",
  "thiserror 2.0.18",
  "tokio",
@@ -4171,7 +4211,7 @@ version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e219e79014df21a225b1860a479e2dcd7cbd9130f4defd4bd0e191ea31d67d"
 dependencies = [
- "base64 0.21.7",
+ "base64 0.22.1",
  "chrono",
  "getrandom 0.2.17",
  "http 1.4.2",
@@ -5086,7 +5126,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.4",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -5124,7 +5164,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.4",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -5539,7 +5579,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5598,7 +5638,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6081,7 +6121,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52d1cfed4120b4d927bf7c0f86d2087a4a7d6027c906d9f9d525a80573b9be51"
 dependencies = [
  "libc",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6435,7 +6475,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6589,6 +6629,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -6688,6 +6729,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tonic-health"
+version = "0.14.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcfab99db777fba2802f0dfa861d1628d1ae916fb199d29819941f139ae85082"
+dependencies = [
+ "prost 0.14.4",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-prost",
 ]
 
 [[package]]
@@ -7381,7 +7435,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

@@ -545,15 +545,130 @@
         ]
       }
     },
-    "/api/v1/privacy/export": {
+    "/api/v1/privacy/exports": {
+      "post": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "requestAccountPrivacyExport",
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "identityOAuth2": [
+              "account:export"
+            ]
+          }
+        ]
+      }
+    },
+    "/api/v1/privacy/exports/latest": {
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "getLatestAccountPrivacyExport",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "identityOAuth2": [
+              "account:export"
+            ]
+          }
+        ]
+      }
+    },
+    "/api/v1/privacy/exports/{exportId}/document": {
       "get": {
         "tags": [
           "privacy"
         ],
         "operationId": "downloadAccountPrivacyExport",
+        "parameters": [
+          {
+            "name": "exportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Account-owned privacy export",
+            "description": "Multi-product privacy export",
             "content": {
               "application/json": {}
             }
@@ -596,51 +711,6 @@
             ]
           }
         ]
-      },
-      "post": {
-        "tags": [
-          "privacy"
-        ],
-        "operationId": "requestAccountPrivacyExport",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "identityOAuth2": [
-              "account:export"
-            ]
-          }
-        ]
       }
     },
     "/api/v1/privacy/gpc": {
@@ -648,7 +718,7 @@
         "tags": [
           "privacy"
         ],
-        "operationId": "getAccountGpcStatus",
+        "operationId": "get_gpc_status",
         "responses": {
           "200": {
             "description": "",
@@ -1427,6 +1497,113 @@
           }
         }
       },
+      "ExportParticipantStatus": {
+        "type": "object",
+        "required": [
+          "participant",
+          "status",
+          "attempts"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "participant": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportRequest": {
+        "type": "object",
+        "required": [
+          "export_id",
+          "status",
+          "requested_at"
+        ],
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportStatus": {
+        "type": "object",
+        "required": [
+          "export_id",
+          "status",
+          "requested_at",
+          "updated_at",
+          "participants"
+        ],
+        "properties": {
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "export_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportParticipantStatus"
+            }
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "GpcStatus": {
         "type": "object",
         "required": [
@@ -1703,7 +1880,7 @@
             "refreshUrl": "https://identity.nvbes.fr/oauth/token",
             "scopes": {
               "account:delete": "Request coordinated Account closure.",
-              "account:export": "Request and download Account-owned data.",
+              "account:export": "Request and download the coordinated multi-product account export.",
               "account:legal:read": "Read Account consent and GPC state.",
               "account:legal:write": "Grant or revoke Account consent.",
               "account:preferences:read": "Read Account display and notification preferences.",

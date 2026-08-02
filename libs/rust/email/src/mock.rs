@@ -44,11 +44,7 @@ impl Default for MockEmailSender {
 #[async_trait]
 impl EmailSender for MockEmailSender {
     async fn send_message(&self, message: &EmailMessage) -> Result<SendResult, EmailError> {
-        info!(
-            to = ?message.to.iter().map(|a| &a.email).collect::<Vec<_>>(),
-            subject = %message.subject,
-            "MockEmail: email sent (not delivered)"
-        );
+        info!(recipient_count = message.to.len(), "mock email accepted");
 
         self.sent.lock().await.push(SentEmail {
             to: message.to.clone(),

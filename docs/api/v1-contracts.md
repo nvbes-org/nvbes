@@ -351,20 +351,22 @@ Evenements minimum:
 ## Privacy
 
 ```http
-POST /privacy/export
 GET  /privacy/requests/:requestId
 POST /workspaces/:workspaceId/privacy/export
 POST /workspaces/:workspaceId/privacy/delete
 ```
 
-La fermeture du compte est exclusivement portée par Account:
+L'export global et la fermeture du compte sont exclusivement portés par Account:
 
 ```http
+POST /api/v1/privacy/exports
+GET  /api/v1/privacy/exports/latest
+GET  /api/v1/privacy/exports/:exportId/document
 POST /api/v1/closure
 GET  /api/v1/closure
 ```
 
-Cloud n'expose plus de parcours public de suppression du compte.
+Cloud n'expose plus de parcours public d'export ou de suppression du compte.
 
 ## API Publique
 

@@ -38,6 +38,9 @@ jobs:
           - image: nvbes-billing-worker
             dockerfile: apps/billing-worker/Dockerfile
             contract: ''
+          - image: nvbes-email-worker
+            dockerfile: apps/email-worker/Dockerfile
+            contract: apps/email-worker/tests/container-contract.test.mjs
           - image: nvbes-cloud-worker
             dockerfile: apps/cloud-worker/Dockerfile
             contract: ''

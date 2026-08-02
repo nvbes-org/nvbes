@@ -98,7 +98,6 @@ impl AppConfig {
             "observability_internal_token",
             &mut self.observability_internal_token,
         )?;
-        assign_optional(secrets, "smtp_password", &mut self.smtp_password)?;
         assign_optional(secrets, "twilio_account_sid", &mut self.twilio_account_sid)?;
         assign_optional(secrets, "twilio_auth_token", &mut self.twilio_auth_token)?;
         assign_optional(secrets, "storage_access_key", &mut self.storage_access_key)?;

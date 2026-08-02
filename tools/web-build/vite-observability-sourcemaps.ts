@@ -9,13 +9,19 @@ type EnvSource = Record<string, string | undefined>;
 
 type SourceMapPluginsOptions = {
   appName: string;
+  command: 'build' | 'serve';
   envSources: EnvSource[];
 };
 
 export function observabilitySourceMapPlugins({
   appName,
+  command,
   envSources,
 }: SourceMapPluginsOptions): PluginOption[] {
+  if (command !== 'build') {
+    return [];
+  }
+
   const release = releaseName(envSources);
 
   return [

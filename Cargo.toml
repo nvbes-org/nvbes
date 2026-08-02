@@ -5,6 +5,7 @@ members = [
   "apps/cloud-service",
   "apps/cloud-worker",
   "apps/developer-service",
+  "apps/email-worker",
   "apps/gateway-cloud",
   "apps/identity-service",
   "apps/identity-worker",
@@ -88,6 +89,7 @@ opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic", "trace"] }
 pyroscope = { version = "2.0.6", features = ["backend-pprof-rs"] }
 tracing-opentelemetry = "0.32"
 tonic = "0.14.6"
+tonic-health = "0.14.6"
 tower-http = { version = "0.6", features = ["cors", "timeout", "compression-full"] }
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

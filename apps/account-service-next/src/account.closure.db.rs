@@ -156,6 +156,33 @@ pub async fn request(db: &PgPool, principal_id: Uuid) -> Result<ClosureRequest, 
     .execute(&mut *transaction)
     .await?;
 
+    sqlx::query(
+        r#"
+        UPDATE account_outbox_events event
+        SET dead_lettered_at = NOW(), claimed_at = NULL,
+            last_error_code = 'account_closure_requested',
+            last_error_summary = 'Superseded by account closure'
+        FROM account_privacy_exports export
+        WHERE event.aggregate_id = export.id
+          AND export.principal_id = $1
+          AND event.event_type = 'account.export.requested.v1'
+          AND event.published_at IS NULL AND event.dead_lettered_at IS NULL
+        "#,
+    )
+    .bind(principal_id)
+    .execute(&mut *transaction)
+    .await?;
+    sqlx::query(
+        r#"
+        UPDATE account_privacy_exports
+        SET status = 'failed', updated_at = NOW(), last_error = 'account_closure_requested'
+        WHERE principal_id = $1 AND status IN ('pending', 'processing')
+        "#,
+    )
+    .bind(principal_id)
+    .execute(&mut *transaction)
+    .await?;
+
     let event_id = Uuid::new_v4();
     let payload = event_payload(event_id, saga_id, principal_id, requested_at)?;
     sqlx::query(

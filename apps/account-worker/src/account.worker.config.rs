@@ -16,6 +16,7 @@ pub struct AccountWorkerConfig {
     pub poll_interval: Duration,
     pub claim_timeout: Duration,
     pub max_attempts: i32,
+    pub export_fragment_max_bytes: usize,
 }
 
 impl AccountWorkerConfig {
@@ -31,11 +32,19 @@ impl AccountWorkerConfig {
             300,
         )?);
         let max_attempts = optional_parse("NVBES_ACCOUNT_WORKER_MAX_ATTEMPTS", 12)?;
+        let export_fragment_max_bytes =
+            optional_parse("NVBES_ACCOUNT_EXPORT_FRAGMENT_MAX_BYTES", 4 * 1024 * 1024)?;
         if poll_interval.is_zero() || claim_timeout.is_zero() {
             return Err("Account worker intervals must be greater than zero".to_string());
         }
         if max_attempts < 1 {
             return Err("NVBES_ACCOUNT_WORKER_MAX_ATTEMPTS must be at least 1".to_string());
+        }
+        if !(64 * 1024..=64 * 1024 * 1024).contains(&export_fragment_max_bytes) {
+            return Err(
+                "NVBES_ACCOUNT_EXPORT_FRAGMENT_MAX_BYTES must be between 65536 and 67108864"
+                    .to_string(),
+            );
         }
 
         Ok(Self {
@@ -74,6 +83,7 @@ impl AccountWorkerConfig {
             poll_interval,
             claim_timeout,
             max_attempts,
+            export_fragment_max_bytes,
         })
     }
 }

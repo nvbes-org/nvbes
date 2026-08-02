@@ -13,6 +13,10 @@ import {
   AccountClosureStatusSchema,
   type AccountGpcStatus,
   AccountGpcStatusSchema,
+  type AccountExportRequest,
+  AccountExportRequestSchema,
+  type AccountExportStatus,
+  AccountExportStatusSchema,
   type AccountNotifications,
   AccountNotificationsSchema,
   type AccountPreferences,
@@ -184,12 +188,25 @@ export class AccountClient {
     );
   }
 
-  requestDataExport(options?: AccountRequestOptions): Promise<void> {
-    return this.success('/api/v1/privacy/export', 'POST', options);
+  requestDataExport(options?: AccountRequestOptions): Promise<AccountExportRequest> {
+    return this.transport.request('/api/v1/privacy/exports', AccountExportRequestSchema, {
+      ...options,
+      method: 'POST',
+    });
   }
 
-  downloadDataExport(options?: AccountRequestOptions): Promise<Blob> {
-    return this.transport.requestBlob('/api/v1/privacy/export', options);
+  getLatestDataExport(options?: AccountRequestOptions): Promise<AccountExportStatus> {
+    return this.transport.request('/api/v1/privacy/exports/latest', AccountExportStatusSchema, {
+      ...options,
+      method: 'GET',
+    });
+  }
+
+  downloadDataExport(exportId: string, options?: AccountRequestOptions): Promise<Blob> {
+    return this.transport.requestBlob(
+      `/api/v1/privacy/exports/${encodeURIComponent(exportId)}/document`,
+      options,
+    );
   }
 
   closeAccount(options?: AccountRequestOptions): Promise<AccountClosure> {

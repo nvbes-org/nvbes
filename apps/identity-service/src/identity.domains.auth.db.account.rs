@@ -20,7 +20,7 @@ pub async fn create_user_account(
     user_agent: Option<String>,
     legal_documents_accepted: bool,
     marketing_emails_accepted: bool,
-) -> Result<(Uuid, DateTime<Utc>), AppError> {
+) -> Result<(Uuid, DateTime<Utc>, DateTime<Utc>), AppError> {
     if !legal_documents_accepted {
         return Err(AppError::bad_request(
             "legal_documents_required",
@@ -147,7 +147,7 @@ pub async fn create_user_account(
 
     tx.commit().await?;
 
-    email_verification::issue_verification_email_tx(
+    let verification = email_verification::issue_verification_email_tx(
         redis,
         config,
         principal_id,
@@ -157,5 +157,5 @@ pub async fn create_user_account(
     )
     .await?;
 
-    Ok((principal_id, now))
+    Ok((principal_id, now, verification.expires_at))
 }

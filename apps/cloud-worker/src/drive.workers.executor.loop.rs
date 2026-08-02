@@ -9,7 +9,7 @@ use nvbes_observability::{
     worker_monitor_slug,
 };
 
-const WORKER_QUEUES: [&str; 12] = [
+const WORKER_QUEUES: [&str; 11] = [
     super::super::maintenance::JOB_UPLOADS_PURGE_EXPIRED,
     super::super::maintenance::JOB_QUOTAS_RECALCULATE,
     super::super::maintenance::JOB_TRASH_PURGE,
@@ -20,7 +20,6 @@ const WORKER_QUEUES: [&str; 12] = [
     super::super::maintenance::JOB_GEO_MAXMIND_GEOLITE_IMPORT,
     super::super::maintenance::JOB_GEO_LOYALSOLDIER_IMPORT,
     super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE,
-    super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT,
     super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT,
 ];
 const WORKER_HEARTBEAT_INTERVAL: Duration = Duration::from_secs(300);

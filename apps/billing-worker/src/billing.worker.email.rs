@@ -1,8 +1,12 @@
 use anyhow::Context;
+use chrono::{Duration, Utc};
 use nvbes_billing::{StripeWebhookEvent, provider::ProviderPayment};
+use nvbes_email::{
+    EmailCategory, EmailCommand, EmailIdempotencyKey, EmailRecipient, EmailRequestContext,
+    EmailTemplate,
+};
 use serde_json::json;
 use sqlx::PgPool;
-use tracing::warn;
 use uuid::Uuid;
 
 #[path = "billing.worker.email.delivery.rs"]
@@ -10,7 +14,6 @@ mod delivery;
 #[path = "billing.worker.email.payloads.rs"]
 mod payloads;
 
-const EMAIL_MAX_ATTEMPTS: u32 = 3;
 pub(crate) use delivery::process_billing_email_job;
 
 pub(crate) async fn enqueue_billing_email_for_stripe_event(
@@ -19,14 +22,11 @@ pub(crate) async fn enqueue_billing_email_for_stripe_event(
     workspace_id: Uuid,
     event: &StripeWebhookEvent,
 ) -> anyhow::Result<()> {
-    let (to_email, to_name) = billing_email_recipient(db_pool, workspace_id).await?;
-    let Some(payload) = payloads::stripe_event_payload(&to_email, to_name, event) else {
+    let Some(template) = payloads::stripe_event_template(event) else {
         return Ok(());
     };
-
-    let idempotency_key =
-        payloads::billing_email_idempotency_key(&event.id, &payload.business_type);
-    enqueue_email_job(db_pool, redis, payload, &idempotency_key).await
+    let idempotency_key = payloads::billing_email_idempotency_key(&event.id, &template);
+    enqueue_command(db_pool, redis, workspace_id, template, idempotency_key).await
 }
 
 pub(crate) async fn enqueue_billing_email_for_provider_payment(
@@ -36,32 +36,64 @@ pub(crate) async fn enqueue_billing_email_for_provider_payment(
     provider_event_id: &str,
     payment: &ProviderPayment,
 ) -> anyhow::Result<()> {
-    let (to_email, to_name) = billing_email_recipient(db_pool, workspace_id).await?;
-    let Some(payload) = payloads::provider_payment_payload(&to_email, to_name, payment) else {
+    let Some(template) = payloads::provider_payment_template(payment) else {
         return Ok(());
     };
+    let idempotency_key = payloads::billing_email_idempotency_key(provider_event_id, &template);
+    enqueue_command(db_pool, redis, workspace_id, template, idempotency_key).await
+}
 
-    let idempotency_key =
-        payloads::billing_email_idempotency_key(provider_event_id, &payload.business_type);
-    enqueue_email_job(db_pool, redis, payload, &idempotency_key).await
+async fn enqueue_command(
+    pool: &PgPool,
+    redis: &nvbes_redis::RedisPool,
+    workspace_id: Uuid,
+    template: EmailTemplate,
+    idempotency_key: String,
+) -> anyhow::Result<()> {
+    let (email, name) = billing_email_recipient(pool, workspace_id).await?;
+    let request_id = Uuid::new_v4().to_string();
+    let command = EmailCommand {
+        context: EmailRequestContext {
+            request_id: request_id.clone(),
+            correlation_id: request_id,
+            actor_principal_id: String::new(),
+        },
+        producer: "billing-worker".to_string(),
+        idempotency_key: EmailIdempotencyKey::new(idempotency_key)?,
+        recipient: EmailRecipient { email, name },
+        category: EmailCategory::Billing,
+        template,
+        deliver_before: Utc::now() + Duration::hours(24),
+    };
+    command.validate(Utc::now())?;
+    let queue = nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT;
+    let key = command.idempotency_key.as_str().to_string();
+    nvbes_redis::worker_queue::enqueue_job(
+        redis,
+        nvbes_redis::worker_queue::EnqueueJobInput {
+            queue: queue.to_string(),
+            job_type: queue.to_string(),
+            payload: json!(command),
+            idempotency_key: Some(key),
+            max_attempts: 5,
+            overwrite_terminal: false,
+            job_id: None,
+        },
+    )
+    .await
+    .context("failed to enqueue billing email command")?;
+    Ok(())
 }
 
 async fn billing_email_recipient(
-    db_pool: &PgPool,
+    pool: &PgPool,
     workspace_id: Uuid,
 ) -> anyhow::Result<(String, Option<String>)> {
-    let mut tx = db_pool
-        .begin()
-        .await
-        .context("failed to start billing email lookup transaction")?;
+    let mut tx = pool.begin().await?;
     let billing = nvbes_billing::db::fetch_billing_state_tx(&mut tx, workspace_id)
-        .await
-        .context("failed to fetch billing state for billing email")?
+        .await?
         .with_context(|| format!("workspace {workspace_id} not found for billing email"))?;
-    tx.commit()
-        .await
-        .context("failed to commit billing email lookup transaction")?;
-
+    tx.commit().await?;
     Ok((
         billing
             .billing_email
@@ -69,71 +101,4 @@ async fn billing_email_recipient(
             .unwrap_or_else(|| billing.owner_email.clone()),
         Some(billing.owner_email),
     ))
-}
-
-async fn enqueue_email_job(
-    pool: &PgPool,
-    redis: &nvbes_redis::RedisPool,
-    payload: payloads::EmailSendPayload,
-    idempotency_key: &str,
-) -> anyhow::Result<()> {
-    if !is_essential_transactional_email(&payload.business_type)
-        && is_email_suppressed(pool, &payload.to_email).await?
-    {
-        warn!(
-            email = %payload.to_email,
-            subject = %payload.subject,
-            "Skipping billing email send: recipient is suppressed"
-        );
-        return Ok(());
-    }
-
-    nvbes_redis::worker_queue::enqueue_job(
-        redis,
-        nvbes_redis::worker_queue::EnqueueJobInput {
-            queue: nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND.to_string(),
-            job_type: nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND.to_string(),
-            payload: json!(payload),
-            idempotency_key: Some(idempotency_key.to_string()),
-            max_attempts: EMAIL_MAX_ATTEMPTS,
-            overwrite_terminal: false,
-            job_id: None,
-        },
-    )
-    .await
-    .context("failed to enqueue billing email job")?;
-
-    Ok(())
-}
-
-async fn is_email_suppressed(db: &PgPool, email: &str) -> anyhow::Result<bool> {
-    sqlx::query_scalar::<_, bool>(
-        r#"
-        SELECT EXISTS (
-          SELECT 1 FROM suppressed_emails WHERE email = $1
-        )
-        "#,
-    )
-    .bind(email)
-    .fetch_one(db)
-    .await
-    .context("failed to check suppressed email")
-}
-
-fn is_essential_transactional_email(business_type: &str) -> bool {
-    matches!(
-        business_type,
-        "verification" | "password_reset" | "account_security"
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn billing_email_uses_billing_worker_queue() {
-        assert_eq!(
-            nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND,
-            "billing.email.send"
-        );
-    }
 }

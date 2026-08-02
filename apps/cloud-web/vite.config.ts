@@ -65,7 +65,7 @@ function cspPlugin(mode: string, posthogConnectUrl: string): Plugin {
 	};
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
 	const localEnv = loadEnv(mode, process.cwd(), "");
 	const rootEnv = loadEnv(mode, workspaceRoot, "");
 	const envSources = [process.env, localEnv, rootEnv];
@@ -136,7 +136,7 @@ export default defineConfig(({ mode }) => {
 						}),
 					]
 				: []),
-			...observabilitySourceMapPlugins({ appName: "cloud-web", envSources }),
+			...observabilitySourceMapPlugins({ appName: "cloud-web", command, envSources }),
 			sriPlugin(),
 		].filter(Boolean),
 		build: {

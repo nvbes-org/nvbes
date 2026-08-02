@@ -5,35 +5,55 @@ on:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
-      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+      - 'contracts/protobuf/nvbes/email/**'
+      - 'libs/rust/email/**'
+      - 'libs/rust/adapters-cloud/email-scaleway/**'
       - '.github/workflows/ci-email-worker.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
-      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+      - 'contracts/protobuf/nvbes/email/**'
+      - 'libs/rust/email/**'
+      - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - '.github/workflows/ci-email-worker.yml'
 
 concurrency:
   group: ci-email-worker-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
 jobs:
   test-email-worker:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.17.0 --activate
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: TypeScript Typecheck email-worker
-        run: pnpm --filter email-worker check
-      - name: Vitest Unit & Integration Tests email-worker
-        run: pnpm --filter email-worker test
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-email-worker.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: email-worker
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Test email contract and runtime
+        run: cargo test --locked --package nvbes-email --package nvbes-email-worker
+      - name: Check email runtime targets
+        run: cargo check --locked --package nvbes-email-worker --all-targets
+      - name: Validate image contract
+        run: node --test apps/email-worker/tests/container-contract.test.mjs

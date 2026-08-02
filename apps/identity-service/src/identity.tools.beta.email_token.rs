@@ -23,10 +23,6 @@ pub async fn extract_latest_email_token(
 
     loop {
         for (path, capture) in matching_captures(&capture_directory, email, business_type).await? {
-            if !email_delivery_completed(pool, capture.job_id).await? {
-                continue;
-            }
-
             for body in [
                 capture.html_body.as_deref().unwrap_or_default(),
                 capture.text_body.as_deref().unwrap_or_default(),
@@ -94,17 +90,6 @@ async fn matching_captures(
         }
     }
     Ok(captures)
-}
-
-async fn email_delivery_completed(pool: &sqlx::PgPool, job_id: uuid::Uuid) -> anyhow::Result<bool> {
-    let status: Option<String> =
-        sqlx::query_scalar("SELECT status::text FROM email_messages WHERE job_id = $1 LIMIT 1")
-            .bind(job_id)
-            .fetch_optional(pool)
-            .await
-            .context("Failed to read the durable email delivery ledger.")?;
-
-    Ok(matches!(status.as_deref(), Some("sent" | "delivered")))
 }
 
 fn test_capture_directory() -> anyhow::Result<PathBuf> {

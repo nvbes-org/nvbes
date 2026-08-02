@@ -48,7 +48,7 @@ function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, workspaceRoot, '');
   const envSources = [process.env, localEnv, rootEnv];
@@ -140,7 +140,7 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      ...observabilitySourceMapPlugins({ appName: 'account-web', envSources }),
+      ...observabilitySourceMapPlugins({ appName: 'account-web', command, envSources }),
       sriPlugin(),
     ].filter(Boolean),
     build: {

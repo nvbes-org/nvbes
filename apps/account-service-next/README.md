@@ -1,8 +1,8 @@
 # nvbes Account Service
 
 OAuth 2.0 Resource Server for the Account product. It owns profile, display
-preferences, notification preferences, legal consents, Account privacy exports,
-avatar metadata and Account closure orchestration.
+preferences, notification preferences, legal consents, multi-product privacy
+exports, avatar metadata and Account closure orchestration.
 
 It does **not** own authentication, browser sessions, OAuth clients, JWT signing,
 refresh tokens, email identities, MFA or Identity persistence. Every product API
@@ -58,6 +58,15 @@ outbox acknowledgement. `GET /api/v1/closure` exposes the saga and participant
 states. Transient failures use bounded exponential retries; terminal failures
 remain observable on the participant, saga and dead-lettered event.
 
+Privacy export follows the same durable boundary. `POST /api/v1/privacy/exports`
+creates one active saga per principal. Account Worker collects bounded,
+versioned fragments from Cloud, Billing and Identity, generates the Account
+fragment locally, persists every checkpoint, then assembles a single document
+that expires after 24 hours. `GET /api/v1/privacy/exports/latest` exposes
+progress and `GET /api/v1/privacy/exports/{exportId}/document` authorizes the
+download against the requesting principal. Authentication secrets, session
+token hashes, storage keys and access-key material are excluded.
+
 Account Worker requires the three participant base URLs and dedicated tokens:
 
 ```text
@@ -67,6 +76,7 @@ NVBES_BILLING_SERVICE_BASE_URL
 NVBES_BILLING_INTERNAL_TOKEN
 NVBES_IDENTITY_SERVICE_BASE_URL
 NVBES_IDENTITY_INTERNAL_TOKEN
+NVBES_ACCOUNT_EXPORT_FRAGMENT_MAX_BYTES
 ```
 
 Generate the contract after the crate replaces the legacy package in the Cargo

@@ -54,7 +54,6 @@ nvbes/
 │   │   ├── storage/        # Object storage
 │   │   └── tenancy/        # Multi-tenant primitives
 │   └── ts/
-│       ├── email-templates/    # Templates email
 │       ├── identity-sdk/       # SDK TypeScript
 │       ├── identity-sdk-core/  # Types OpenAPI générés
 │       ├── identity-sdk-web/   # SDK web (PKCE, WebAuthn, MFA)

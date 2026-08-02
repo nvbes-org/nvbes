@@ -188,6 +188,48 @@ describe('AccountClient OAuth transport', () => {
     expect(onlyRequest(recorder.calls).init.method).toBe('GET');
   });
 
+  it('uses the canonical distributed export resources', async () => {
+    const exportId = '7f8c519f-4ca9-4242-a49e-b0d174e4c14b';
+    const responses = [
+      { export_id: exportId, requested_at: '2026-08-02T12:00:00Z', status: 'pending' },
+      {
+        completed_at: '2026-08-02T12:00:04Z',
+        expires_at: '2026-08-03T12:00:04Z',
+        export_id: exportId,
+        last_error: null,
+        participants: [
+          {
+            attempts: 1,
+            completed_at: '2026-08-02T12:00:01Z',
+            last_error: null,
+            participant: 'cloud',
+            status: 'completed',
+          },
+        ],
+        requested_at: '2026-08-02T12:00:00Z',
+        status: 'completed',
+        updated_at: '2026-08-02T12:00:04Z',
+      },
+      { schema_version: 'nvbes-account-export.v1' },
+    ];
+    const recorder = fetchRecorder(() => responses.shift());
+    const client = new AccountClient({
+      baseUrl: 'https://account.example.test',
+      fetchImpl: recorder.fetchImpl,
+      getAccessToken: () => 'export-token',
+    });
+
+    await expect(client.requestDataExport()).resolves.toMatchObject({ export_id: exportId });
+    await expect(client.getLatestDataExport()).resolves.toMatchObject({ status: 'completed' });
+    await expect(client.downloadDataExport(exportId)).resolves.toBeInstanceOf(Blob);
+
+    expect(requestAt(recorder.calls, 0).url.pathname).toBe('/api/v1/privacy/exports');
+    expect(requestAt(recorder.calls, 1).url.pathname).toBe('/api/v1/privacy/exports/latest');
+    expect(requestAt(recorder.calls, 2).url.pathname).toBe(
+      `/api/v1/privacy/exports/${exportId}/document`,
+    );
+  });
+
   it('exposes typed HTTP and DTO failures', async () => {
     const failed = fetchRecorder(
       { error: { message: 'Scope refused', request_id: 'request-1' } },

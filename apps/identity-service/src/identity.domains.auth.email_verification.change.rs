@@ -71,7 +71,7 @@ pub async fn change_verification_email(
     .map_err(|err| {
         AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
-    let verification_created_at = issue_verification_email_tx(
+    let verification = issue_verification_email_tx(
         redis,
         config,
         principal_id,
@@ -80,11 +80,21 @@ pub async fn change_verification_email(
         &verification_token,
     )
     .await?;
+    super::email_verification::enqueue_verification_email(
+        redis,
+        config,
+        principal_id,
+        &email,
+        &display_name,
+        &verification_token,
+        verification.expires_at,
+    )
+    .await?;
     Ok(ResendVerificationResult {
         success: true,
         email_verified: false,
         verification_resend_available_at: Some(verification_resend_available_at(
-            verification_created_at,
+            verification.created_at,
             config.auth_verification_resend_cooldown_seconds,
         )),
     })

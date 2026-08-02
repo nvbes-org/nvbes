@@ -105,12 +105,27 @@ pub fn router(state: &AppState) -> Router<AppState> {
             ),
         )
         .route(
-            "/privacy/export",
+            "/privacy/exports",
             protected(
                 state,
                 EXPORT_SCOPE,
-                post(crate::privacy_routes::request_export)
-                    .get(crate::privacy_routes::download_export),
+                post(crate::privacy_routes::request_export),
+            ),
+        )
+        .route(
+            "/privacy/exports/latest",
+            protected(
+                state,
+                EXPORT_SCOPE,
+                get(crate::privacy_routes::get_latest_export),
+            ),
+        )
+        .route(
+            "/privacy/exports/{exportId}/document",
+            protected(
+                state,
+                EXPORT_SCOPE,
+                get(crate::privacy_routes::download_export),
             ),
         )
         .route(

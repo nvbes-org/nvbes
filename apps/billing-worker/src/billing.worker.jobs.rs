@@ -12,7 +12,7 @@ const STALE_AFTER: std::time::Duration = std::time::Duration::from_secs(600);
 const BILLING_QUEUES: [&str; 3] = [
     nvbes_billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS,
     nvbes_billing::jobs::JOB_MOLLIE_WEBHOOK_PROCESS,
-    nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND,
+    nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT,
 ];
 
 pub(crate) async fn recover_stale_jobs(
@@ -47,7 +47,9 @@ pub(crate) async fn execute_job(
         nvbes_billing::jobs::JOB_MOLLIE_WEBHOOK_PROCESS => {
             mollie::process_mollie_webhook_job(state, job).await
         }
-        nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND => process_billing_email_job(state, job).await,
+        nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT => {
+            process_billing_email_job(state, job).await
+        }
         _ => Err(anyhow::anyhow!(
             "Unknown billing job type: {}",
             job.job_type
@@ -75,12 +77,17 @@ pub(crate) async fn mark_job_failed(
     Ok(())
 }
 
-pub(crate) fn should_retry_job(job_type: &str, _error: &anyhow::Error) -> bool {
+pub(crate) fn should_retry_job(job_type: &str, error: &anyhow::Error) -> bool {
+    if job_type == nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT {
+        return matches!(
+            error.downcast_ref::<nvbes_email::EmailClientError>(),
+            Some(nvbes_email::EmailClientError::Unavailable)
+        );
+    }
     matches!(
         job_type,
         nvbes_billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS
             | nvbes_billing::jobs::JOB_MOLLIE_WEBHOOK_PROCESS
-            | nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND
     )
 }
 
@@ -95,7 +102,7 @@ mod tests {
             [
                 nvbes_billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS,
                 nvbes_billing::jobs::JOB_MOLLIE_WEBHOOK_PROCESS,
-                nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND,
+                nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT,
             ]
         );
         for queue in BILLING_QUEUES {
@@ -106,9 +113,24 @@ mod tests {
     #[test]
     fn billing_worker_retries_only_billing_runtime_jobs() {
         let error = anyhow::anyhow!("transient");
-        for queue in BILLING_QUEUES {
-            assert!(should_retry_job(queue, &error));
-        }
+        assert!(should_retry_job(
+            nvbes_billing::jobs::JOB_STRIPE_WEBHOOK_PROCESS,
+            &error
+        ));
+        assert!(should_retry_job(
+            nvbes_billing::jobs::JOB_MOLLIE_WEBHOOK_PROCESS,
+            &error
+        ));
+        let unavailable = anyhow::Error::new(nvbes_email::EmailClientError::Unavailable);
+        assert!(should_retry_job(
+            nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT,
+            &unavailable
+        ));
+        let invalid = anyhow::Error::new(nvbes_email::EmailClientError::Conflict);
+        assert!(!should_retry_job(
+            nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT,
+            &invalid
+        ));
         for non_billing_queue in [
             "email.send",
             "email.webhook.process",

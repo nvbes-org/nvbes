@@ -15,9 +15,8 @@ mod tests;
 mod workspace;
 
 pub use super::types::{PrivacyRequestDraft, PrivacyRequestResponse, PrivacyRequestStatusResponse};
-pub use account::{get_request, request_account_export};
+pub use account::get_request;
 pub use workspace::{request_workspace_delete, request_workspace_export};
 
-pub(super) const JOB_PRIVACY_ACCOUNT_EXPORT: &str = "privacy.account_export";
 pub(super) const JOB_PRIVACY_WORKSPACE_EXPORT: &str = "privacy.workspace_export";
 pub(super) const JOB_PRIVACY_WORKSPACE_DELETE: &str = "privacy.workspace_delete";

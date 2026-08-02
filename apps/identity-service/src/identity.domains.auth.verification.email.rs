@@ -11,7 +11,6 @@ const EMAIL_CODE_TTL_MINUTES: i64 = 10;
 pub async fn request_password_change_code(
     db_pool: &sqlx::PgPool,
     redis: &nvbes_redis::RedisPool,
-    config: &nvbes_core::config::AppConfig,
     user_id: Uuid,
     session_id: Uuid,
     purpose: StepUpPurpose,
@@ -47,25 +46,18 @@ pub async fn request_password_change_code(
     .await
     .map_err(|error| AppError::internal("email_step_up_store_failed", error.to_string()))?;
 
-    let message = crate::email::templates::password_change_code_email(
-        config,
-        &user.email,
-        &user.display_name,
-        &code,
-        EMAIL_CODE_TTL_MINUTES,
-    )?;
-    if let Err(error) = crate::email::jobs::enqueue_email_job_tx(
-        db_pool,
+    if let Err(error) = crate::email::commands::enqueue(
         redis,
-        crate::email::jobs::EmailSendPayload {
-            to_email: user.email,
-            to_name: Some(user.display_name),
-            subject: message.subject,
-            html_body: message.html_body.unwrap_or_default(),
-            text_body: message.text_body,
-            business_type: "account_security".to_string(),
+        user.email,
+        Some(user.display_name.clone()),
+        format!("password-change-step-up:{challenge_id}"),
+        nvbes_email::EmailTemplate::PasswordChangeCodeV1 {
+            user_name: user.display_name,
+            code,
+            credential_expires_at: expires_at,
         },
-        &format!("password-change-step-up:{challenge_id}"),
+        expires_at,
+        Some(user_id),
     )
     .await
     {

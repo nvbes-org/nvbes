@@ -14,7 +14,7 @@ pub struct BillingAppState {
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub product_analytics: nvbes_product_analytics::ProductAnalytics,
-    pub account_closure_internal_token: String,
+    pub internal_service_token: String,
 }
 
 impl axum::extract::FromRef<BillingAppState> for nvbes_observability::metrics::HttpMetrics {
@@ -26,7 +26,7 @@ impl axum::extract::FromRef<BillingAppState> for nvbes_observability::metrics::H
 impl BillingAppState {
     pub async fn bootstrap(config: &AppConfig, db: PgPool) -> anyhow::Result<Self> {
         let redis = nvbes_core::redis_runtime::require_redis_pool(config).await?;
-        let account_closure_internal_token = nvbes_core::http::internal_service::load_token(
+        let internal_service_token = nvbes_core::http::internal_service::load_token(
             "NVBES_BILLING_INTERNAL_TOKEN",
             &config.environment,
             "development-billing-internal-token",
@@ -39,7 +39,7 @@ impl BillingAppState {
             rate_limiter: nvbes_core::limiter::RateLimiter::new(redis),
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             product_analytics: build_product_analytics(config)?,
-            account_closure_internal_token,
+            internal_service_token,
         })
     }
 }

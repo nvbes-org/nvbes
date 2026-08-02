@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use nvbes_observability::{WorkerJobContext, capture_worker_job_error, metrics::HttpMetrics};
-use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
 use nvbes_redis::worker_queue::QueuedJob;
 use tokio::time::{Instant as TokioInstant, MissedTickBehavior, interval_at};
 use tracing::Instrument;
@@ -15,7 +15,7 @@ use super::jobs::{
 
 const JOB_LEASE_HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 
-pub(super) const WORKER_QUEUES: [&str; 2] = [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS];
+pub(super) const WORKER_QUEUES: [&str; 1] = [JOB_EMAIL_SUBMIT];
 
 pub(super) async fn claim_available_job(
     state: &AppState,
@@ -118,11 +118,11 @@ fn failed_job_outcome(attempts: u32, max_attempts: u32, retryable: bool) -> &'st
 #[cfg(test)]
 mod tests {
     use super::{JOB_LEASE_HEARTBEAT_INTERVAL, WORKER_QUEUES, failed_job_outcome};
-    use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+    use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
 
     #[test]
     fn identity_worker_queues_exclude_account_and_billing_runtime() {
-        assert_eq!(WORKER_QUEUES, [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS]);
+        assert_eq!(WORKER_QUEUES, [JOB_EMAIL_SUBMIT]);
         for queue in WORKER_QUEUES {
             assert!(
                 !queue.starts_with("billing."),

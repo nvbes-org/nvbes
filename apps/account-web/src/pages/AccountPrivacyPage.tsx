@@ -10,6 +10,7 @@ import { TrackingConsentToggle } from '@/components/TrackingConsentToggle';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AccountPrivacyExportActions } from '@/pages/AccountPrivacyPage.export';
 import {
   DEFAULT_CONSENT,
   TRACKING_CONSENT_CHANGED_EVENT,
@@ -129,9 +130,6 @@ export default function AccountPrivacyPage() {
 
 function PrivacyActions() {
   const [confirmation, setConfirmation] = useState('');
-  const exportMutation = useMutation({
-    mutationFn: () => accountClient.requestDataExport(),
-  });
   const closureMutation = useMutation({
     mutationFn: () => accountClient.closeAccount(),
   });
@@ -144,39 +142,11 @@ function PrivacyActions() {
         ? false
         : 1_000,
   });
-  useAccountAuthenticationRecovery(
-    exportMutation.error ?? closureMutation.error ?? closureQuery.error,
-  );
+  useAccountAuthenticationRecovery(closureMutation.error ?? closureQuery.error);
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-base font-semibold">Exporter mes données</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Prépare une archive téléchargeable de vos données Account.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={exportMutation.isPending || exportMutation.isSuccess}
-          onClick={() => exportMutation.mutate()}
-        >
-          {exportMutation.isPending
-            ? 'Demande en cours…'
-            : exportMutation.isSuccess
-              ? 'Export demandé'
-              : 'Demander un export'}
-        </Button>
-      </div>
-
-      {exportMutation.error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Export impossible</AlertTitle>
-          <AlertDescription>{exportMutation.error.message}</AlertDescription>
-        </Alert>
-      ) : null}
+      <AccountPrivacyExportActions />
 
       <div className="space-y-3 border-t border-destructive/30 pt-6">
         <div>

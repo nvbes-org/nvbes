@@ -61,7 +61,7 @@ The package becomes the only public email boundary. It contains:
 
 Product services must not depend on Scaleway, SMTP, template files, email tables, or queue internals.
 
-`EmailCommand` carries a typed idempotency key, recipient, transactional category, template variant, and mandatory `deliver_before` deadline. `EmailReceipt` returns the stable message ID, acceptance time, effective deadline, and whether the command was a duplicate. `TransactionalEmailTemplate` is a closed, versioned enum covering verification, password reset, password-change step-up, account security, billing receipt, billing payment failure, invitation, and access-review reminder emails. Arbitrary product-supplied HTML is not accepted.
+`EmailCommand` carries a typed idempotency key, recipient, transactional category, template variant, and mandatory `deliver_before` deadline. `EmailReceipt` returns the stable message ID, acceptance time, effective deadline, and whether the command was a duplicate. `TransactionalEmailTemplate` is a closed, versioned enum covering verification, password reset, password-change step-up, account security, billing receipt, billing payment failure, and access-review reminder emails. Arbitrary product-supplied HTML is not accepted.
 
 The wire contract lives in `contracts/protobuf/nvbes/email/v1/email.proto`. `EmailDeliveryService.SubmitEmail` is the only product-facing call. It uses `google.protobuf.Timestamp` for `deliver_before`, follows the repository's generated tonic conventions, and carries the standard request/correlation context. The server authenticates and authorizes the producer with the standard internal-service gRPC boundary.
 
@@ -81,6 +81,7 @@ The runtime must not import Identity or Billing product crates. Product-specific
 Its private gRPC surface is intentionally small:
 
 - `SubmitEmail` durably accepts an authenticated command.
+- `grpc.health.v1.Health` reports the gRPC server state to internal clients and diagnostics; Scaleway probes do not call it.
 
 Its HTTP surface is reserved for protocols that require HTTP:
 
@@ -124,7 +125,7 @@ Templates live in one canonical Rust-owned template module under the email packa
 
 Sender name, sender address, reply-to, and allowed headers come from runtime configuration and category policy, never from product payloads. Security tokens may appear only inside generated HTTPS links. Logs, metrics, errors, and webhook details must not contain tokens or full rendered bodies.
 
-The current Rust HTML files and TypeScript JSON-render templates are replaced by this single source. Templates that exist without a producer, such as invitations, are either wired to a real command during migration or removed.
+The current Rust HTML files and TypeScript JSON-render templates are replaced by this single source. The orphan invitation template is removed until a real invitation producer is designed and wired atomically with its business outbox.
 
 ## Dispatch and Reliability
 
@@ -187,7 +188,7 @@ Unknown event types are stored with a bounded redacted payload and counted, but 
 Suppressions are global because sender reputation is global. Lookup uses a keyed HMAC of the normalized address; the normalized address itself is envelope-encrypted with a dedicated email KMS key so an authorized delivery process can recover it without exposing it in indexes or logs.
 
 - hard bounce and spam complaint block every category, including security messages;
-- unsubscribe blocks only optional transactional categories such as reminders and invitations;
+- unsubscribe blocks only optional transactional categories such as reminders;
 - a soft bounce increments a rolling counter and becomes a hard suppression only after the configured threshold;
 - successful delivery does not automatically remove a suppression;
 - removing a hard suppression requires an audited administrative procedure or a verified address change.

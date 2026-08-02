@@ -2,10 +2,10 @@
 
 ## Status
 
-- entries: 19
+- entries: 17
 - pending: 0
 - keep: 0
-- rebuild: 19
+- rebuild: 17
 - remove: 0
 - replace: 0
 
@@ -28,14 +28,12 @@
 | storage.purge_quarantined | Drive | rebuild | Drive lead | `apps/workers#storage-purge-quarantined` | `target-worker:storage.purge_quarantined` |
 | trash.purge | Drive | rebuild | Drive lead | `apps/workers#trash-purge` | `target-worker:trash.purge` |
 | uploads.purge_expired | Drive | rebuild | Drive lead | `apps/workers#uploads-purge-expired` | `target-worker:uploads.purge_expired` |
-| privacy.account_delete | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-account-delete` | `target-worker:privacy.account_delete` |
 | privacy.workspace_delete | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-workspace-delete` | `target-worker:privacy.workspace_delete` |
-| privacy.account_export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-account-export` | `target-worker:privacy.account_export` |
 | privacy.workspace_export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#privacy-workspace-export` | `target-worker:privacy.workspace_export` |
 | billing.email.send | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-email-send` | `target-worker:billing.email.send` |
 | billing.mollie.webhook.process | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-mollie-webhook-process` | `target-worker:billing.mollie.webhook.process` |
 | billing.stripe.webhook.process | Billing/Usage | rebuild | Billing lead | `apps/workers#billing-stripe-webhook-process` | `target-worker:billing.stripe.webhook.process` |
-| data.export | Audit/Privacy | rebuild | Privacy lead | `apps/workers#data-export` | `target-worker:data.export` |
+| account.data_export | Platform | rebuild | Infra lead | `apps/workers#account-data-export` | `target-worker:account.data_export` |
 | email.send | Email | rebuild | Platform lead | `apps/workers#email-send` | `target-worker:email.send` |
 | email.webhook.process | Email | rebuild | Platform lead | `apps/workers#email-webhook-process` | `target-worker:email.webhook.process` |
 

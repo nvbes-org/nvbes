@@ -4,6 +4,10 @@ mod closure_db;
 mod config;
 #[path = "account.worker.db.rs"]
 mod db;
+#[path = "account.worker.export.client.rs"]
+mod export_client;
+#[path = "account.worker.export.db.rs"]
+mod export_db;
 #[path = "account.worker.identity.rs"]
 mod identity;
 #[path = "account.worker.storage.rs"]
@@ -46,11 +50,32 @@ async fn main() -> anyhow::Result<()> {
     let avatar_storage =
         nvbes_account_service::app::build_avatar_storage(&config.avatar_storage).await;
     let storage = storage::AccountStorage::new(avatar_storage);
+    let cloud_export = export_client::ExportClient::new(
+        &config.cloud_service_base_url,
+        config.cloud_internal_token.clone(),
+        types::ExportParticipant::Cloud,
+        config.export_fragment_max_bytes,
+    )?;
+    let billing_export = export_client::ExportClient::new(
+        &config.billing_service_base_url,
+        config.billing_internal_token.clone(),
+        types::ExportParticipant::Billing,
+        config.export_fragment_max_bytes,
+    )?;
+    let identity_export = export_client::ExportClient::new(
+        &config.identity_service_base_url,
+        config.identity_internal_token.clone(),
+        types::ExportParticipant::Identity,
+        config.export_fragment_max_bytes,
+    )?;
     tracing::info!("Account worker started");
 
     loop {
         tokio::select! {
-            result = process_next(&db, &identity, &cloud, &billing, &storage, &config) => {
+            result = process_next(
+                &db, &identity, &cloud, &billing, &storage,
+                &cloud_export, &billing_export, &identity_export, &config,
+            ) => {
                 match result {
                     Ok(true) => continue,
                     Ok(false) => tokio::time::sleep(config.poll_interval).await,
@@ -75,6 +100,9 @@ async fn process_next(
     cloud: &identity::ClosureClient,
     billing: &identity::ClosureClient,
     storage: &storage::AccountStorage,
+    cloud_export: &export_client::ExportClient,
+    billing_export: &export_client::ExportClient,
+    identity_export: &export_client::ExportClient,
     config: &config::AccountWorkerConfig,
 ) -> anyhow::Result<bool> {
     if let Some(closure) =
@@ -121,6 +149,56 @@ async fn process_next(
                     retryable = error.is_retryable(),
                     code = error.code(),
                     "Account closure failed"
+                );
+            }
+        }
+        return Ok(true);
+    }
+
+    if let Some(export) =
+        export_db::claim(db_pool, config.claim_timeout, config.max_attempts).await?
+    {
+        let result = match export.participant {
+            types::ExportParticipant::Cloud => cloud_export.collect(&export).await,
+            types::ExportParticipant::Billing => billing_export.collect(&export).await,
+            types::ExportParticipant::Identity => identity_export.collect(&export).await,
+            types::ExportParticipant::Account => {
+                export_db::build_account_fragment(db_pool, export.principal_id)
+                    .await
+                    .map_err(|_| {
+                        // Local persistence failures are retryable through the same durable checkpoint.
+                        export_client::ExportError::local()
+                    })
+            }
+        };
+        match result {
+            Ok(fragment) => {
+                export_db::complete(db_pool, &export, fragment).await?;
+                tracing::info!(
+                    event_id = %export.event_id,
+                    export_id = %export.export_id,
+                    principal_id = %export.principal_id,
+                    participant = export.participant.as_str(),
+                    "Account export participant completed"
+                );
+            }
+            Err(error) => {
+                export_db::fail(
+                    db_pool,
+                    &export,
+                    error.is_retryable(),
+                    error.code(),
+                    config.max_attempts,
+                )
+                .await?;
+                tracing::warn!(
+                    event_id = %export.event_id,
+                    export_id = %export.export_id,
+                    principal_id = %export.principal_id,
+                    participant = export.participant.as_str(),
+                    retryable = error.is_retryable(),
+                    code = error.code(),
+                    "Account export participant failed"
                 );
             }
         }

@@ -6,9 +6,6 @@ fn known_privacy_job_types_are_accepted() {
         super::super::privacy::delete::JOB_PRIVACY_WORKSPACE_DELETE
     ));
     assert!(is_known_job_type(
-        super::super::privacy::export::JOB_PRIVACY_ACCOUNT_EXPORT
-    ));
-    assert!(is_known_job_type(
         super::super::privacy::export::JOB_PRIVACY_WORKSPACE_EXPORT
     ));
 }

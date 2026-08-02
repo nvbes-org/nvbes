@@ -122,6 +122,31 @@ export const AccountSuccessSchema = z.object({
   success: z.literal(true),
 });
 
+export const AccountExportRequestSchema = z.object({
+  export_id: z.uuid(),
+  status: z.enum(['pending', 'processing', 'completed']),
+  requested_at: z.iso.datetime(),
+});
+
+export const AccountExportParticipantSchema = z.object({
+  participant: z.enum(['cloud', 'billing', 'identity', 'account']),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  attempts: z.number().int().nonnegative(),
+  completed_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+});
+
+export const AccountExportStatusSchema = z.object({
+  export_id: z.uuid(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'expired']),
+  requested_at: z.iso.datetime(),
+  updated_at: z.iso.datetime(),
+  completed_at: z.iso.datetime().nullable(),
+  expires_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+  participants: z.array(AccountExportParticipantSchema),
+});
+
 export const AccountClosureSchema = z.object({
   saga_id: z.uuid(),
   status: z.enum(['pending', 'dispatching', 'completed']),
@@ -162,6 +187,9 @@ export type AccountConsentHistory = z.infer<typeof AccountConsentHistorySchema>;
 export type AccountGpcStatus = z.infer<typeof AccountGpcStatusSchema>;
 export type AccountSession = z.infer<typeof AccountSessionSchema>;
 export type AccountSessionsPage = z.infer<typeof AccountSessionsPageSchema>;
+export type AccountExportRequest = z.infer<typeof AccountExportRequestSchema>;
+export type AccountExportParticipant = z.infer<typeof AccountExportParticipantSchema>;
+export type AccountExportStatus = z.infer<typeof AccountExportStatusSchema>;
 export type AccountClosure = z.infer<typeof AccountClosureSchema>;
 export type AccountClosureParticipant = z.infer<typeof AccountClosureParticipantSchema>;
 export type AccountClosureStatus = z.infer<typeof AccountClosureStatusSchema>;

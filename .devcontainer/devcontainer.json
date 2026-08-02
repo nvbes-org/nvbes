@@ -36,10 +36,10 @@
       "label": "SeaweedFS S3"
     },
     "18025": {
-      "label": "MailHog"
+      "label": "Mailpit"
     },
     "11025": {
-      "label": "MailHog SMTP"
+      "label": "Mailpit SMTP"
     }
   },
   "customizations": {

@@ -20,7 +20,7 @@ function cspFor(mode: string): string {
 	});
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
 	const localEnv = loadEnv(mode, process.cwd(), "");
 	const rootEnv = loadEnv(mode, path.resolve(process.cwd(), "../../"), "");
 	const envSources = [process.env, localEnv, rootEnv];
@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
 			react(),
 			tailwindcss(),
 			devtoolsJson(),
-			...observabilitySourceMapPlugins({ appName: "console-web", envSources }),
+			...observabilitySourceMapPlugins({ appName: "console-web", command, envSources }),
 		],
 		build: {
 			target: "esnext",

@@ -8,6 +8,12 @@ use crate::http::error::AppError;
 
 const CLEANUP_ADVISORY_LOCK_ID: i64 = 20260519;
 
+#[derive(Debug, Clone, Copy)]
+pub struct VerificationIssue {
+    pub created_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+}
+
 pub fn verification_resend_available_at(
     sent_at: DateTime<Utc>,
     cooldown_seconds: i64,
@@ -22,7 +28,7 @@ pub async fn issue_verification_email_tx(
     _email: &str,
     _display_name: &str,
     verification_token: &str,
-) -> Result<DateTime<Utc>, AppError> {
+) -> Result<VerificationIssue, AppError> {
     let now = Utc::now();
     let expires_at = now + ChronoDuration::hours(config.auth_verification_ttl_hours);
     nvbes_redis::email_verification::store_email_verification_token(
@@ -41,39 +47,35 @@ pub async fn issue_verification_email_tx(
     .await
     .map_err(|err| AppError::internal("email_verification_token_store_failed", err.to_string()))?;
 
-    Ok(now)
+    Ok(VerificationIssue {
+        created_at: now,
+        expires_at,
+    })
 }
 
 pub async fn enqueue_verification_email(
-    db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     principal_id: Uuid,
     email: &str,
     display_name: &str,
     verification_token: &str,
+    expires_at: DateTime<Utc>,
 ) -> Result<(), AppError> {
-    let email_msg = crate::email::templates::verification_email(
-        config,
-        email,
-        display_name,
-        verification_token,
-    )?;
-    crate::email::jobs::enqueue_email_job_tx(
-        db,
+    crate::email::commands::enqueue(
         redis,
-        crate::email::jobs::EmailSendPayload {
-            to_email: email.to_string(),
-            to_name: Some(display_name.to_string()),
-            subject: email_msg.subject,
-            html_body: email_msg.html_body.unwrap_or_default(),
-            text_body: email_msg.text_body,
-            business_type: "verification".to_string(),
+        email.to_string(),
+        Some(display_name.to_string()),
+        format!("verify:{principal_id}:{}", token_hash(verification_token)),
+        nvbes_email::EmailTemplate::EmailVerificationV1 {
+            user_name: display_name.to_string(),
+            verification_url: crate::email::commands::verification_url(config, verification_token),
+            credential_expires_at: expires_at,
         },
-        &format!("verify:{}:{}", principal_id, token_hash(verification_token)),
+        expires_at,
+        Some(principal_id),
     )
     .await
-    .map_err(AppError::from)
 }
 
 pub async fn resend_verification_email(
@@ -150,7 +152,7 @@ pub async fn resend_verification_email(
 
     let display_name: String = row.get("display_name");
     let verification_token = generate_random_token();
-    issue_verification_email_tx(
+    let issue = issue_verification_email_tx(
         redis,
         config,
         principal_id,
@@ -160,13 +162,13 @@ pub async fn resend_verification_email(
     )
     .await?;
     enqueue_verification_email(
-        db,
         redis,
         config,
         principal_id,
         &email,
         &display_name,
         &verification_token,
+        issue.expires_at,
     )
     .await?;
     Ok(opaque_resend_result(public_resend_available_at))

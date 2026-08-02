@@ -6,6 +6,7 @@ version.workspace = true
 
 [dependencies]
 async-trait = "0.1"
+chrono.workspace = true
 nvbes-core = { path = "../../core" }
 nvbes-email = { path = "../../email" }
 reqwest.workspace = true

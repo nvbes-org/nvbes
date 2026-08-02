@@ -3,6 +3,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EmailFailureClass {
     Transient,
+    Ambiguous,
     Permanent,
 }
 
@@ -32,7 +33,7 @@ pub enum EmailError {
 
 impl EmailError {
     pub fn failure_class(&self) -> EmailFailureClass {
-        use EmailFailureClass::{Permanent, Transient};
+        use EmailFailureClass::{Ambiguous, Permanent, Transient};
 
         match self {
             Self::Api { status, .. } => {
@@ -42,6 +43,7 @@ impl EmailError {
                     Permanent
                 }
             }
+            Self::Http(error) if error.is_timeout() => Ambiguous,
             Self::Http(error) => match error.status() {
                 Some(status)
                     if status.is_client_error()
@@ -85,7 +87,10 @@ impl EmailError {
     }
 
     pub fn is_retryable(&self) -> bool {
-        self.failure_class() == EmailFailureClass::Transient
+        matches!(
+            self.failure_class(),
+            EmailFailureClass::Transient | EmailFailureClass::Ambiguous
+        )
     }
 }
 

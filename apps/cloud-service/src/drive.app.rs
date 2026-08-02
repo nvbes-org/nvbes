@@ -20,7 +20,7 @@ pub struct AppState {
     pub scanner: std::sync::Arc<dyn ScanEngine>,
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
-    pub account_closure_internal_token: String,
+    pub internal_service_token: String,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -73,7 +73,7 @@ pub async fn build_app_state(config: AppConfig, db: Database) -> anyhow::Result<
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
 
     let rate_limiter = nvbes_core::limiter::RateLimiter::new(redis.clone());
-    let account_closure_internal_token = nvbes_core::http::internal_service::load_token(
+    let internal_service_token = nvbes_core::http::internal_service::load_token(
         "NVBES_CLOUD_INTERNAL_TOKEN",
         &config.environment,
         "development-cloud-internal-token-01",
@@ -90,7 +90,7 @@ pub async fn build_app_state(config: AppConfig, db: Database) -> anyhow::Result<
         scanner,
         redis,
         rate_limiter,
-        account_closure_internal_token,
+        internal_service_token,
     };
 
     state.observability.record_postgres_pool(
