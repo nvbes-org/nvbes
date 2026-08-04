@@ -4,6 +4,9 @@ edition.workspace = true
 license.workspace = true
 version.workspace = true
 
+[features]
+database-tests = []
+
 [[bin]]
 name = "nvbes-email-worker"
 path = "src/main.rs"
@@ -17,11 +20,14 @@ chrono.workspace = true
 hex.workspace = true
 hmac.workspace = true
 lettre.workspace = true
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-email-scaleway = { path = "../../libs/rust/adapters-cloud/email-scaleway" }
 openssl = "0.10"
 prost = "0.14.4"
+prost-types = "0.14"
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

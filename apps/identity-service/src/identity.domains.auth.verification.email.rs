@@ -33,6 +33,8 @@ pub async fn request_password_change_code(
     let challenge_id = Uuid::new_v4();
     let code = format!("{:06}", rand::rng().random_range(0..1_000_000_u32));
     let expires_at = Utc::now() + Duration::minutes(EMAIL_CODE_TTL_MINUTES);
+    let recipient_name =
+        crate::domains::auth::email_recipient::recipient_name(Some(&user.display_name));
     nvbes_redis::email_step_up::store_email_step_up_challenge(
         redis,
         &nvbes_redis::email_step_up::CachedEmailStepUpChallenge {
@@ -49,10 +51,10 @@ pub async fn request_password_change_code(
     if let Err(error) = crate::email::commands::enqueue(
         redis,
         user.email,
-        Some(user.display_name.clone()),
+        Some(recipient_name.clone()),
         format!("password-change-step-up:{challenge_id}"),
         nvbes_email::EmailTemplate::PasswordChangeCodeV1 {
-            user_name: user.display_name,
+            user_name: recipient_name,
             code,
             credential_expires_at: expires_at,
         },

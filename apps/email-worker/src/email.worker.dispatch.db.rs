@@ -10,6 +10,7 @@ use crate::dispatch_attempt::{
 pub struct ClaimedEmail {
     pub id: Uuid,
     pub category: String,
+    pub template_name: String,
     pub recipient_ciphertext: Vec<u8>,
     pub recipient_nonce: Vec<u8>,
     pub template_ciphertext: Vec<u8>,
@@ -45,6 +46,14 @@ pub async fn claim_one(pool: &PgPool) -> Result<Option<ClaimedEmail>, sqlx::Erro
         SELECT id, lease_token
         FROM email_messages
         WHERE deliver_before > clock_timestamp()
+          AND NOT EXISTS (
+              SELECT 1
+              FROM email_suppressions AS suppression
+              WHERE suppression.recipient_hash = email_messages.recipient_hash
+                AND suppression.active
+                AND suppression.released_at IS NULL
+                AND (suppression.scope = 'all' OR email_messages.category = 'reminder')
+          )
           AND (
               (state IN ('accepted', 'deferred') AND next_attempt_at <= clock_timestamp())
               OR (state = 'dispatching' AND lease_expires_at <= clock_timestamp())
@@ -80,7 +89,8 @@ pub async fn claim_one(pool: &PgPool) -> Result<Option<ClaimedEmail>, sqlx::Erro
             lease_expires_at = clock_timestamp() + interval '2 minutes',
             attempt_count = attempt_count + 1, updated_at = clock_timestamp()
         WHERE id = $1
-        RETURNING id, category::text AS category, recipient_ciphertext, recipient_nonce,
+        RETURNING id, category::text AS category, template_name,
+                  recipient_ciphertext, recipient_nonce,
                   template_ciphertext, template_nonce, deliver_before, message_id,
                   attempt_count, lease_token
         "#,

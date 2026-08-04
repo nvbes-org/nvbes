@@ -139,6 +139,118 @@ pub async fn expire_stale_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {
     Ok(result.rows_affected())
 }
 
+pub async fn queue_snapshot(pool: &PgPool) -> Result<(i64, Option<f64>), sqlx::Error> {
+    sqlx::query_as(
+        r#"
+        SELECT COUNT(*)::BIGINT,
+               EXTRACT(EPOCH FROM clock_timestamp() - MIN(accepted_at))::DOUBLE PRECISION
+        FROM email_messages
+        WHERE state IN ('accepted', 'deferred', 'dispatching')
+        "#,
+    )
+    .fetch_one(pool)
+    .await
+}
+
+#[derive(Debug, Default)]
+pub struct RetentionResult {
+    pub payloads: u64,
+    pub diagnostics: u64,
+    pub messages: u64,
+    pub events: u64,
+}
+
+pub async fn apply_retention(
+    pool: &PgPool,
+    payload_days: i32,
+    ledger_days: i32,
+) -> Result<RetentionResult, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    let payloads = sqlx::query(
+        r#"
+        UPDATE email_messages
+        SET recipient_ciphertext = NULL, recipient_nonce = NULL,
+            template_ciphertext = NULL, template_nonce = NULL,
+            payload_purged_at = clock_timestamp(), updated_at = clock_timestamp()
+        WHERE terminal_at <= clock_timestamp() - ($1 * INTERVAL '1 day')
+          AND payload_purged_at IS NULL
+        "#,
+    )
+    .bind(payload_days)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    let diagnostics = sqlx::query(
+        r#"
+        UPDATE email_provider_events
+        SET diagnostic = '{}'::jsonb, diagnostic_purged_at = clock_timestamp()
+        WHERE processed_at <= clock_timestamp() - ($1 * INTERVAL '1 day')
+          AND diagnostic_purged_at IS NULL
+        "#,
+    )
+    .bind(payload_days)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    let messages = sqlx::query(
+        r#"
+        DELETE FROM email_messages
+        WHERE terminal_at <= clock_timestamp() - ($1 * INTERVAL '1 day')
+          AND NOT EXISTS (
+              SELECT 1 FROM email_suppressions AS suppression
+              WHERE suppression.recipient_hash = email_messages.recipient_hash
+                AND suppression.active
+          )
+        "#,
+    )
+    .bind(ledger_days)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    let events = sqlx::query(
+        r#"
+        DELETE FROM email_provider_events
+        WHERE processed_at <= clock_timestamp() - ($1 * INTERVAL '1 day')
+        "#,
+    )
+    .bind(ledger_days)
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    tx.commit().await?;
+    Ok(RetentionResult {
+        payloads,
+        diagnostics,
+        messages,
+        events,
+    })
+}
+
+pub async fn release_suppression_by_message(
+    pool: &PgPool,
+    message_id: Uuid,
+    actor: &str,
+    reason: &str,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query(
+        r#"
+        UPDATE email_suppressions AS suppression
+        SET active = FALSE, released_at = clock_timestamp(), released_by = $2,
+            release_reason = $3
+        FROM email_messages AS message
+        WHERE message.id = $1
+          AND suppression.recipient_hash = message.recipient_hash
+          AND suppression.active
+        "#,
+    )
+    .bind(message_id)
+    .bind(actor)
+    .bind(reason)
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() == 1)
+}
+
 fn command_fingerprint(wire: &SubmitEmailRequest) -> [u8; 32] {
     let mut immutable = wire.clone();
     immutable.context = None;
@@ -171,3 +283,7 @@ pub enum AcceptCommandError {
     #[error("email command validation failed")]
     Validation(#[from] nvbes_email::EmailCommandError),
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.database.tests.rs"]
+mod tests;

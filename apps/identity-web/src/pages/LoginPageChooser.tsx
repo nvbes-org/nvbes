@@ -20,9 +20,8 @@ export function LoginPageChooser({
     <div className="flex flex-col gap-4">
       <div className="flex max-h-[280px] flex-col gap-2 overflow-y-auto pr-1">
         {accounts.map((account) => {
-          const initials = (account.user.display_name || account.user.email || '?')
-            .slice(0, 1)
-            .toUpperCase();
+          const displayName = account.user.display_name.trim() || 'User';
+          const initials = displayName.slice(0, 1).toUpperCase();
           const expired = account.status === 'expired';
           return (
             <div key={account.authuser} className="flex items-center gap-2">
@@ -36,7 +35,7 @@ export function LoginPageChooser({
                   {initials}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm font-medium">{account.user.display_name}</span>
+                  <span className="truncate text-sm font-medium">{displayName}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {account.user.email}
                   </span>

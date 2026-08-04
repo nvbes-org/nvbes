@@ -206,7 +206,7 @@ async fn smtp_delivers_a_complete_message_over_a_real_tcp_exchange() {
 
     assert_eq!(
         result.provider_email_id,
-        "<account-job-00000000-0000-0000-0000-000000000042@worker.nvbes.fr>"
+        "<account-job-00000000-0000-0000-0000-000000000042@notify.nvbes.eu>"
     );
     assert_eq!(transcript.commands.len(), 4);
     assert!(

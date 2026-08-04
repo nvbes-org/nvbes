@@ -165,6 +165,7 @@ pub(crate) async fn request_erasure(
 
 pub(crate) async fn review_suppression(
     db: &PgPool,
+    email_operations: &dyn crate::email_operations::BackofficeEmailOperations,
     access: BackofficeAccess,
     workspace_id: Uuid,
     email: String,
@@ -172,28 +173,10 @@ pub(crate) async fn review_suppression(
 ) -> Result<ComplianceActionResult, AppError> {
     validate_email(&email)?;
     validate_reason(&reason)?;
+    let receipt = email_operations
+        .review_suppression(access, workspace_id, &email, &reason)
+        .await?;
     let mut tx = db.begin().await?;
-    let reviewed = sqlx::query(
-        "UPDATE suppressed_emails
-         SET details = COALESCE(details, '{}'::jsonb) || jsonb_build_object(
-           'reviewed_by', $1::text,
-           'review_reason', $2,
-           'reviewed_at', NOW()
-         )
-         WHERE lower(email) = lower($3)",
-    )
-    .bind(access.actor_principal_id)
-    .bind(&reason)
-    .bind(&email)
-    .execute(tx.as_mut())
-    .await?
-    .rows_affected();
-    if reviewed == 0 {
-        return Err(AppError::not_found(
-            "suppressed_email_not_found",
-            "Suppressed email not found.",
-        ));
-    }
     let action_id = insert_action(
         &mut tx,
         access,
@@ -205,7 +188,7 @@ pub(crate) async fn review_suppression(
             email: Some(email),
             status: "reviewed",
             reason,
-            metadata: json!({}),
+            metadata: json!({ "email_operator_action_id": receipt.action_id }),
         },
     )
     .await?;

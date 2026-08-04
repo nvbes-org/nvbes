@@ -34,6 +34,22 @@ jobs:
   test-email-worker:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nvbes_email_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_email_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -52,8 +68,21 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Test email contract and runtime
-        run: cargo test --locked --package nvbes-email --package nvbes-email-worker
+        run: >-
+          cargo test --locked
+          --package nvbes-email
+          --package nvbes-email-worker
+          --package nvbes-email-scaleway
       - name: Check email runtime targets
-        run: cargo check --locked --package nvbes-email-worker --all-targets
+        run: >-
+          cargo check --locked
+          --package nvbes-email-worker
+          --package nvbes-email-scaleway
+          --all-targets
+      - name: Test email database invariants
+        run: >-
+          cargo test --locked
+          --package nvbes-email-worker
+          --features database-tests
       - name: Validate image contract
         run: node --test apps/email-worker/tests/container-contract.test.mjs

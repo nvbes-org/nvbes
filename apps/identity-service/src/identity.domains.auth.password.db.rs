@@ -11,7 +11,9 @@ pub async fn find_principal_and_display_name_by_email(
 ) -> Result<Option<(Uuid, String)>, AppError> {
     let row = sqlx::query(
         r#"
-        SELECT u.principal_id, COALESCE(profile.display_name, 'User') AS display_name
+        SELECT
+          u.principal_id,
+          profile.display_name
         FROM users u
         LEFT JOIN identity_oidc_profile_claims profile
           ON profile.principal_id = u.principal_id
@@ -25,7 +27,10 @@ pub async fn find_principal_and_display_name_by_email(
 
     if let Some(row) = row {
         use sqlx::Row;
-        Ok(Some((row.get("principal_id"), row.get("display_name"))))
+        let recipient_name = crate::domains::auth::email_recipient::recipient_name(
+            row.get::<Option<String>, _>("display_name").as_deref(),
+        );
+        Ok(Some((row.get("principal_id"), recipient_name)))
     } else {
         Ok(None)
     }

@@ -111,10 +111,6 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
             state.clone(),
             idempotency::idempotency_guard,
         ))
-        .layer(axum::middleware::from_fn_with_state(
-            state.config.clone(),
-            nvbes_core::http::e2ee::request_e2ee_guard,
-        ))
         .layer(axum::middleware::from_fn(
             nvbes_core::http::content_digest::content_digest_guard,
         ))

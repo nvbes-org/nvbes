@@ -44,6 +44,8 @@ pub(crate) struct RegisterRequest {
     legal_documents_accepted: bool,
     #[serde(default)]
     marketing_emails_accepted: bool,
+    #[serde(default = "default_timezone")]
+    timezone: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -66,7 +68,12 @@ fn register_input_from_request(
         user_agent,
         legal_documents_accepted: request.legal_documents_accepted,
         marketing_emails_accepted: request.marketing_emails_accepted,
+        timezone: request.timezone,
     }
+}
+
+fn default_timezone() -> String {
+    "UTC".to_string()
 }
 
 #[utoipa::path(

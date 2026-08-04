@@ -2,6 +2,16 @@ use chrono::{DateTime, Utc};
 
 use crate::{AccountSecurityEvent, EmailTemplate};
 
+#[path = "renderer.code.rs"]
+mod code;
+#[path = "renderer.layout.rs"]
+mod layout;
+#[path = "renderer.localization.rs"]
+mod localization;
+
+use layout::{ActionEmail, TemplateHtml};
+use localization::local_date_time;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RenderedEmail {
     pub subject: String,
@@ -17,6 +27,7 @@ impl EmailTemplate {
                 user_name,
                 verification_url,
                 credential_expires_at,
+                timezone,
             } => action(
                 "Verify your email address",
                 &format!(
@@ -24,7 +35,9 @@ impl EmailTemplate {
                 ),
                 "Verify email",
                 verification_url,
-                Some(*credential_expires_at),
+                "This link expires on",
+                *credential_expires_at,
+                timezone,
             ),
             Self::PasswordResetV1 {
                 user_name,
@@ -35,13 +48,15 @@ impl EmailTemplate {
                 &format!("Hi {user_name},\n\nWe received a request to reset your nvbes password."),
                 "Reset password",
                 reset_url,
-                Some(*credential_expires_at),
+                "This link expires on",
+                *credential_expires_at,
+                "UTC",
             ),
             Self::PasswordChangeCodeV1 {
                 user_name,
                 code,
                 credential_expires_at,
-            } => render_code(user_name, code, *credential_expires_at),
+            } => code::render_code(user_name, code, *credential_expires_at),
             Self::AccountSecurityV1 {
                 event,
                 affected_email,
@@ -85,12 +100,14 @@ impl EmailTemplate {
                 &format!("Hi {reviewer_name},\n\nYour access review for {campaign_name} is due."),
                 "Review access",
                 review_url,
-                Some(*review_due_at),
+                "This review is due on",
+                *review_due_at,
+                "UTC",
             ),
         };
         let preview_text = text.lines().next().unwrap_or(&subject).to_string();
         RenderedEmail {
-            html_body: envelope(&preview_text, &subject, &content),
+            html_body: layout::render(&preview_text, &subject, content),
             subject,
             text_body: text,
             preview_text,
@@ -103,42 +120,29 @@ fn action(
     intro: &str,
     label: &str,
     url: &str,
-    expires_at: Option<DateTime<Utc>>,
-) -> (String, String, String) {
-    let expiry = expires_at
-        .map(|value| format!("\n\nThis link expires at {}.", value.to_rfc3339()))
-        .unwrap_or_default();
-    let text = format!("{intro}\n\n{label}: {url}{expiry}");
-    let html_expiry = expires_at
-        .map(|value| {
-            format!(
-                "<p class=\"muted\">Expires at {}.</p>",
-                escape(&value.to_rfc3339())
-            )
-        })
-        .unwrap_or_default();
-    let content = format!(
-        "<p>{}</p><p><a class=\"button\" href=\"{}\">{}</a></p>{html_expiry}",
-        escape(&intro.replace("\n\n", " ")),
-        escape(url),
-        escape(label),
-    );
-    (subject.to_string(), text, content)
-}
-
-fn render_code(user_name: &str, code: &str, expires_at: DateTime<Utc>) -> (String, String, String) {
-    let subject = "Your nvbes password change code".to_string();
+    timing: &str,
+    expires_at: DateTime<Utc>,
+    timezone: &str,
+) -> (String, String, TemplateHtml) {
+    let expiry = local_date_time(expires_at, timezone);
     let text = format!(
-        "Hi {user_name},\n\nYour password change code is {code}. It expires at {}.\n\nIf you did not request this, secure your account.",
-        expires_at.to_rfc3339()
+        "{intro}\n\n{label}: {url}\n\n{timing} {}.\nTime shown in {}.",
+        expiry.date, expiry.timezone
     );
-    let html = format!(
-        "<p>Hi {},</p><p>Your password change code is:</p><p class=\"code\">{}</p><p class=\"muted\">Expires at {}.</p><p>If you did not request this, secure your account.</p>",
-        escape(user_name),
-        escape(code),
-        escape(&expires_at.to_rfc3339())
-    );
-    (subject, text, html)
+    let mut paragraphs = intro.splitn(2, "\n\n");
+    let greeting = paragraphs.next().unwrap_or_default();
+    let message = paragraphs.next().unwrap_or_default();
+    let html = layout::action_email(ActionEmail {
+        action_label: label,
+        action_url: url,
+        expiry: &expiry.date,
+        greeting,
+        message,
+        subject,
+        timing,
+        timezone: &expiry.timezone,
+    });
+    (subject.to_string(), text, TemplateHtml::Document(html))
 }
 
 fn security(
@@ -146,7 +150,7 @@ fn security(
     affected: &Option<String>,
     previous: &Option<String>,
     security_url: &Option<String>,
-) -> (String, String, String) {
+) -> (String, String, TemplateHtml) {
     let (subject, statement) = match event {
         AccountSecurityEvent::EmailAdded => (
             "New email added to your nvbes account",
@@ -184,7 +188,7 @@ fn security(
         "<p>{}</p><p>If this was not you, secure your account immediately.</p>{link}",
         escape(&statement)
     );
-    (subject.to_string(), text, html)
+    (subject.to_string(), text, TemplateHtml::Body(html))
 }
 
 fn billing(
@@ -193,7 +197,7 @@ fn billing(
     currency: &str,
     invoice_url: Option<&str>,
     provider: Option<&str>,
-) -> (String, String, String) {
+) -> (String, String, TemplateHtml) {
     let subject = if paid {
         "Receipt for your nvbes subscription"
     } else {
@@ -210,7 +214,7 @@ fn billing(
     (
         subject.to_string(),
         format!("{statement}{text_link}"),
-        format!("<p>{}</p>{html_link}", escape(&statement)),
+        TemplateHtml::Body(format!("<p>{}</p>{html_link}", escape(&statement))),
     )
 }
 
@@ -220,7 +224,7 @@ fn payment_failure(
     portal: Option<&str>,
     invoice: Option<&str>,
     provider: Option<&str>,
-) -> (String, String, String) {
+) -> (String, String, TemplateHtml) {
     let provider = provider
         .map(|value| format!(" through {value}"))
         .unwrap_or_default();
@@ -234,7 +238,10 @@ fn payment_failure(
     (
         "Payment failed for your nvbes subscription".to_string(),
         format!("{statement}{portal_text}{invoice_text}"),
-        format!("<p>{}</p>{portal_html}{invoice_html}", escape(&statement)),
+        TemplateHtml::Body(format!(
+            "<p>{}</p>{portal_html}{invoice_html}",
+            escape(&statement)
+        )),
     )
 }
 
@@ -263,15 +270,6 @@ fn money(amount_minor: i64, currency: &str) -> String {
 
 fn optional_value(value: &Option<String>) -> &str {
     value.as_deref().unwrap_or("the configured address")
-}
-
-fn envelope(preview: &str, subject: &str, content: &str) -> String {
-    format!(
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{}</title></head><body style=\"background:#f5f7fb;font-family:Arial,sans-serif;color:#172033\"><span style=\"display:none\">{}</span><main style=\"max-width:600px;margin:24px auto;background:#fff;padding:32px\"><h1>{}</h1>{content}<hr><p class=\"muted\">nvbes</p></main></body></html>",
-        escape(subject),
-        escape(preview),
-        escape(subject)
-    )
 }
 
 fn escape(value: &str) -> String {

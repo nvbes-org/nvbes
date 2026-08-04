@@ -108,6 +108,26 @@ variable "base_domain" {
   type = string
 }
 
+variable "accept_scaleway_tem_terms" {
+  description = "Explicit confirmation that the Scaleway TEM terms have been reviewed and accepted for production. Must be true before apply."
+  type        = bool
+
+  validation {
+    condition     = var.accept_scaleway_tem_terms
+    error_message = "accept_scaleway_tem_terms must be true after the Scaleway TEM terms have been reviewed."
+  }
+}
+
+variable "email_webhook_endpoint" {
+  description = "Public HTTPS endpoint of nvbes-email-worker used for Scaleway SNS confirmation and signed TEM events."
+  type        = string
+
+  validation {
+    condition     = startswith(var.email_webhook_endpoint, "https://")
+    error_message = "email_webhook_endpoint must use HTTPS."
+  }
+}
+
 variable "grafana_url" {
   description = "Grafana Cloud stack URL used by the alerting provisioning API."
   type        = string

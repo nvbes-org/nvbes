@@ -25,7 +25,6 @@ pub(crate) async fn communications_actions_schema_exists(pool: &PgPool) -> bool 
           AND to_regclass('public.workspaces') IS NOT NULL
           AND to_regclass('public.principals') IS NOT NULL
           AND to_regclass('public.audit_events') IS NOT NULL
-          AND to_regclass('public.suppressed_emails') IS NOT NULL
           AND to_regclass('public.internal_admin_communications_actions') IS NOT NULL",
     )
     .fetch_one(pool)
@@ -135,14 +134,6 @@ pub(crate) async fn response_json(response: axum::response::Response) -> serde_j
         .await
         .expect("body should be readable");
     serde_json::from_slice(&body).expect("body should be json")
-}
-
-pub(crate) async fn suppressed_email_count(pool: &PgPool, email: &str) -> i64 {
-    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM suppressed_emails WHERE email = $1")
-        .bind(email)
-        .fetch_one(pool)
-        .await
-        .expect("suppression count should load")
 }
 
 pub(crate) async fn communications_action_count(

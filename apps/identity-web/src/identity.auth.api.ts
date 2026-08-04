@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { BotIntegritySignals, DeviceProfile } from '@nvbes/identity-sdk-web';
 import { identityHttpClient } from './identity.http';
+import { browserTimeZone } from './identity.browser-timezone';
 
 const RegisterResultSchema = z.object({
   user: z
@@ -101,6 +102,7 @@ export function submitRegister(
       RegisterResultSchema,
       {
         ...input,
+        timezone: browserTimeZone(),
         pow_nonce: powNonce,
         pow_solution: powSolution,
       },

@@ -20,6 +20,7 @@ pub struct AppState {
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
     pub storage: std::sync::Arc<dyn nvbes_storage::ObjectStore>,
+    pub email_operations: nvbes_email::EmailOperationsClient,
     pub identity_internal_token: String,
 }
 
@@ -108,6 +109,10 @@ impl AppState {
             rate_limiter,
             allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
             storage: nvbes_product_cloud::storage::build_storage(config).await,
+            email_operations: nvbes_email::EmailOperationsClient::from_environment(
+                &config.environment,
+            )
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?,
             identity_internal_token: nvbes_core::http::internal_service::load_token(
                 "NVBES_IDENTITY_INTERNAL_TOKEN",
                 &config.environment,

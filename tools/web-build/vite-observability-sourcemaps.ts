@@ -72,6 +72,10 @@ function sentryPlugins(
   release: string | undefined,
   envSources: EnvSource[],
 ): PluginOption[] {
+  if (!envFlag('SENTRY_SOURCEMAP_UPLOAD_ENABLED', envSources)) {
+    return [];
+  }
+
   const config = completeConfig(
     'Sentry',
     {

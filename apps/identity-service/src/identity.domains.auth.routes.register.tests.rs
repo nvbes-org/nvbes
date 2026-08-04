@@ -12,6 +12,7 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
             pow_solution: "solution".to_string(),
             legal_documents_accepted: true,
             marketing_emails_accepted: true,
+            timezone: "Europe/Paris".to_string(),
         },
         "eu".to_string(),
         Some("203.0.113.10".to_string()),
@@ -25,6 +26,7 @@ fn register_input_from_request_maps_http_payload_to_onboarding_input() {
     assert_eq!(input.user_agent.as_deref(), Some("nvbes-test"));
     assert!(input.legal_documents_accepted);
     assert!(input.marketing_emails_accepted);
+    assert_eq!(input.timezone, "Europe/Paris");
 }
 
 #[test]

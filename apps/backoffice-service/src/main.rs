@@ -150,6 +150,8 @@ mod developer_center_mutations;
 mod developer_center_types;
 #[path = "internal_admin.developer_center.validation.rs"]
 mod developer_center_validation;
+#[path = "internal_admin.email.operations.rs"]
+mod email_operations;
 #[path = "internal_admin.entitlements_center.rs"]
 mod entitlements_center;
 #[path = "internal_admin.entitlements_center.actions.rs"]

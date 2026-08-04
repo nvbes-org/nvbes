@@ -27,6 +27,7 @@ describe('changeVerificationEmail', () => {
     expect(post.mock.calls[0]?.[0]).toBe('/auth/verify-email/change');
     expect(post.mock.calls[0]?.[2]).toEqual({
       email: 'corrected@example.com',
+      timezone: 'Europe/Paris',
     });
     expect(post.mock.calls[0]?.[2]).not.toHaveProperty('current_email');
   });

@@ -8,8 +8,12 @@ use crate::{AccountError, AccountResult};
 
 use super::DATA_EXPORT_TTL_SECONDS;
 
-pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> AccountResult<JsonValue> {
-    let export = sqlx::query_scalar::<_, JsonValue>(
+pub async fn build_account_export(
+    db: &PgPool,
+    principal_id: Uuid,
+    email_activity: JsonValue,
+) -> AccountResult<JsonValue> {
+    let mut export = sqlx::query_scalar::<_, JsonValue>(
         r#"
         SELECT jsonb_build_object(
           'exported_at', NOW(),
@@ -125,16 +129,6 @@ pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> AccountRes
             FROM audit_events
             WHERE actor_principal_id = $1
           ), '[]'::jsonb),
-          'email_events', COALESCE((
-            SELECT jsonb_agg(to_jsonb(email_events) ORDER BY occurred_at DESC)
-            FROM email_events
-            WHERE email = (SELECT email FROM users WHERE principal_id = $1)
-          ), '[]'::jsonb),
-          'email_messages', COALESCE((
-            SELECT jsonb_agg((to_jsonb(email_messages) - 'recipient_hash' - 'provider_email_id') ORDER BY sent_at DESC)
-            FROM email_messages
-            WHERE recipient_email = (SELECT email FROM users WHERE principal_id = $1)
-          ), '[]'::jsonb),
           'enterprise_password_recovery_requests', COALESCE((
             SELECT jsonb_agg(
               (
@@ -158,6 +152,33 @@ pub async fn build_account_export(db: &PgPool, principal_id: Uuid) -> AccountRes
     .fetch_one(db)
     .await
     .map_err(AccountError::from)?;
+
+    let activity = email_activity.as_object().ok_or_else(|| {
+        AccountError::internal(
+            "data_export_email_activity_invalid",
+            "Email activity projection must be a JSON object.",
+        )
+    })?;
+    let export_object = export.as_object_mut().ok_or_else(|| {
+        AccountError::internal(
+            "data_export_projection_invalid",
+            "Account export projection must be a JSON object.",
+        )
+    })?;
+    export_object.insert(
+        "email_messages".to_string(),
+        activity
+            .get("messages")
+            .cloned()
+            .unwrap_or_else(|| JsonValue::Array(Vec::new())),
+    );
+    export_object.insert(
+        "email_events".to_string(),
+        activity
+            .get("provider_events")
+            .cloned()
+            .unwrap_or_else(|| JsonValue::Array(Vec::new())),
+    );
 
     Ok(export)
 }

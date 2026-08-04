@@ -2,48 +2,94 @@ name: container release
 
 on:
   push:
-    tags:
-      - 'v*'
-
-concurrency:
-  group: container-release-${{ github.ref_name }}
-  cancel-in-progress: false
+    branches:
+      - 'main'
+  workflow_dispatch:
+    inputs:
+      application:
+        description: Application image to release
+        required: true
+        type: choice
+        options:
+          - account-service
+          - account-worker
+          - backoffice-service
+          - billing-service
+          - billing-worker
+          - cloud-service
+          - cloud-worker
+          - developer-service
+          - email-worker
+          - enterprise-service
+          - gateway-cloud
+          - identity-service
+          - identity-worker
 
 permissions:
   actions: read
-  attestations: write
   contents: read
-  id-token: write
-  packages: write
-  security-events: write
 
 defaults:
   run:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  detect-affected:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      rust: ${{ steps.affected.outputs.rust }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/container-release.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+      - name: Select one application or detect affected applications
+        id: affected
+        env:
+          APPLICATION: ${{ inputs.application }}
+          BASE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            affected="$(node tools/ci/affected-applications.mjs \
+              --mode containers \
+              --project "$APPLICATION")"
+          else
+            affected="$(node tools/ci/affected-applications.mjs \
+              --mode containers \
+              --base "$BASE_SHA" \
+              --head "$HEAD_SHA")"
+          fi
+          echo "rust=$(jq -c '.rust' <<<"$affected")" >> "$GITHUB_OUTPUT"
+
   build-scan-sign:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.rust != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    concurrency:
+      group: container-release-${{ matrix.image }}-${{ github.ref_name }}
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image: nvbes-identity-service
-            dockerfile: apps/identity-service/Dockerfile
-            contract: apps/identity-service/tests/container-contract.test.mjs
-          - image: nvbes-identity-worker
-            dockerfile: apps/identity-worker/Dockerfile
-            contract: apps/identity-worker/tests/container-contract.test.mjs
-          - image: nvbes-billing-worker
-            dockerfile: apps/billing-worker/Dockerfile
-            contract: ''
-          - image: nvbes-email-worker
-            dockerfile: apps/email-worker/Dockerfile
-            contract: apps/email-worker/tests/container-contract.test.mjs
-          - image: nvbes-cloud-worker
-            dockerfile: apps/cloud-worker/Dockerfile
-            contract: ''
+        include: ${{ fromJSON(needs.detect-affected.outputs.rust) }}
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: nvbes-org/${{ matrix.image }}
@@ -84,6 +130,9 @@ jobs:
           sbom: false
           build-args: |
             SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
+            CARGO_PACKAGE=${{ matrix.package }}
+            CARGO_BINARY=${{ matrix.binary }}
+            APPLICATION_PATH=${{ matrix.appRoot }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

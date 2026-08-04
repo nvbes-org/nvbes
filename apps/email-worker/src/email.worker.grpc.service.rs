@@ -9,7 +9,7 @@ use nvbes_email::{
     },
 };
 
-use crate::{auth, database, state::EmailWorkerState};
+use crate::{auth, database, email_metrics, state::EmailWorkerState};
 
 #[derive(Clone)]
 pub struct EmailDeliveryGrpcService {
@@ -28,11 +28,12 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
         &self,
         request: Request<SubmitEmailRequest>,
     ) -> Result<Response<ProtoEmailReceipt>, Status> {
-        auth::authenticate(&request, &self.state.config.internal_token)?;
+        auth::authenticate_producer(
+            &request,
+            &self.state.config.producer_tokens,
+            &request.get_ref().producer,
+        )?;
         let wire = request.into_inner();
-        if !self.state.config.allowed_producers.contains(&wire.producer) {
-            return Err(Status::permission_denied("email producer is not allowed"));
-        }
         let command = EmailCommand::try_from(wire.clone())
             .map_err(|_| Status::invalid_argument("invalid email command"))?;
         command
@@ -47,6 +48,13 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
         )
         .await
         .map_err(map_accept_error)?;
+        let (template_name, template_version) = command.template.name_and_version();
+        email_metrics::accepted(
+            &command.producer,
+            template_name,
+            template_version,
+            receipt.duplicate,
+        );
         Ok(Response::new(receipt.into_proto()))
     }
 }

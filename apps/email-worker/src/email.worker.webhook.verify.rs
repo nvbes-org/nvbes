@@ -243,55 +243,5 @@ fn canonical_message(message: &SnsMessage) -> anyhow::Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{SnsMessage, canonical_message, validated_url};
-
-    #[test]
-    fn signing_certificate_url_is_strictly_allowlisted() {
-        assert!(
-            validated_url(
-                "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem",
-                "messaging.s3.fr-par.scw.cloud",
-                "/fr-par/sns/"
-            )
-            .is_ok()
-        );
-        assert!(
-            validated_url(
-                "https://evil.example/fr-par/sns/cert.pem",
-                "messaging.s3.fr-par.scw.cloud",
-                "/fr-par/sns/"
-            )
-            .is_err()
-        );
-        assert!(
-            validated_url(
-                "https://messaging.s3.fr-par.scw.cloud.evil.example/fr-par/sns/cert.pem",
-                "messaging.s3.fr-par.scw.cloud",
-                "/fr-par/sns/"
-            )
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn notification_canonical_form_matches_sns_v1_field_order() {
-        let message = SnsMessage {
-            message_type: "Notification".into(),
-            message_id: "id".into(),
-            topic_arn: "arn".into(),
-            message: "payload".into(),
-            timestamp: "2026-08-02T12:00:00Z".into(),
-            signature_version: "1".into(),
-            signature: "signature".into(),
-            signing_cert_url: "https://example.test/cert.pem".into(),
-            subject: None,
-            token: None,
-            subscribe_url: None,
-        };
-        assert_eq!(
-            canonical_message(&message).unwrap(),
-            "Message\npayload\nMessageId\nid\nTimestamp\n2026-08-02T12:00:00Z\nTopicArn\narn\nType\nNotification\n"
-        );
-    }
-}
+#[path = "email.worker.webhook.verify.tests.rs"]
+mod tests;

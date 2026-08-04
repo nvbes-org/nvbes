@@ -129,7 +129,7 @@ fn effective_message_id(message: &EmailMessage) -> Option<String> {
         .map(String::from)
         .or_else(|| {
             header_value(message, "x-nvbes-email-job-id")
-                .map(|job_id| format!("<account-job-{job_id}@worker.nvbes.fr>"))
+                .map(|job_id| format!("<account-job-{job_id}@notify.nvbes.eu>"))
         })
 }
 
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn smtp_serializes_stable_message_and_job_identifiers() {
-        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@worker.nvbes.fr>";
+        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@notify.nvbes.eu>";
         let formatted = build_message(&message(vec![
             ("Message-ID".to_string(), message_id.to_string()),
             (

@@ -61,6 +61,7 @@ pub async fn enqueue_verification_email(
     display_name: &str,
     verification_token: &str,
     expires_at: DateTime<Utc>,
+    timezone: &str,
 ) -> Result<(), AppError> {
     crate::email::commands::enqueue(
         redis,
@@ -71,6 +72,7 @@ pub async fn enqueue_verification_email(
             user_name: display_name.to_string(),
             verification_url: crate::email::commands::verification_url(config, verification_token),
             credential_expires_at: expires_at,
+            timezone: nvbes_email::normalized_timezone(timezone),
         },
         expires_at,
         Some(principal_id),
@@ -83,6 +85,7 @@ pub async fn resend_verification_email(
     redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     email: &str,
+    timezone: &str,
 ) -> Result<ResendVerificationResult, AppError> {
     let email = normalize_email(email);
     validate_email(&email)?;
@@ -94,7 +97,7 @@ pub async fn resend_verification_email(
         SELECT
           u.principal_id,
           u.email,
-          COALESCE(profile.display_name, 'User') AS display_name,
+          profile.display_name,
           u.email_verified_at
         FROM users u
         LEFT JOIN identity_oidc_profile_claims profile
@@ -150,7 +153,9 @@ pub async fn resend_verification_email(
         AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
 
-    let display_name: String = row.get("display_name");
+    let display_name = super::email_recipient::recipient_name(
+        row.get::<Option<String>, _>("display_name").as_deref(),
+    );
     let verification_token = generate_random_token();
     let issue = issue_verification_email_tx(
         redis,
@@ -169,6 +174,7 @@ pub async fn resend_verification_email(
         &display_name,
         &verification_token,
         issue.expires_at,
+        timezone,
     )
     .await?;
     Ok(opaque_resend_result(public_resend_available_at))

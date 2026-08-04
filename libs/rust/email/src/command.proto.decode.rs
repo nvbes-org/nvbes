@@ -61,6 +61,11 @@ impl TryFrom<email_pb::TransactionalEmailTemplate> for EmailTemplate {
                 user_name: value.user_name,
                 verification_url: value.verification_url,
                 credential_expires_at: required_time(value.credential_expires_at)?,
+                timezone: if value.timezone.trim().is_empty() {
+                    "UTC".to_string()
+                } else {
+                    value.timezone
+                },
             }),
             Template::PasswordResetV1(value) => Ok(Self::PasswordResetV1 {
                 user_name: value.user_name,

@@ -1,0 +1,7 @@
+{
+  "name": "email-ui",
+  "projectType": "library",
+  "root": "libs/ts/email-ui",
+  "sourceRoot": "libs/ts/email-ui/src",
+  "tags": ["scope:internal", "type:lib", "domain:shared", "layer:ui"]
+}

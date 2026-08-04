@@ -39,9 +39,9 @@ pub enum EmailClientError {
 
 #[derive(Clone)]
 pub struct EmailClientConfig {
-    endpoint: Endpoint,
-    authorization: MetadataValue<Ascii>,
-    call_timeout: Duration,
+    pub(crate) endpoint: Endpoint,
+    pub(crate) authorization: MetadataValue<Ascii>,
+    pub(crate) call_timeout: Duration,
 }
 
 impl EmailClientConfig {

@@ -36,14 +36,20 @@ impl EmailTemplate {
                 user_name,
                 verification_url,
                 credential_expires_at,
-            } => validate_credential(
-                user_name,
-                verification_url,
-                *credential_expires_at,
-                deliver_before,
-                now,
-                Duration::hours(24),
-            ),
+                timezone,
+            } => {
+                timezone
+                    .parse::<chrono_tz::Tz>()
+                    .map_err(|_| EmailCommandError::field("template.timezone"))?;
+                validate_credential(
+                    user_name,
+                    verification_url,
+                    *credential_expires_at,
+                    deliver_before,
+                    now,
+                    Duration::hours(24),
+                )
+            }
             Self::PasswordResetV1 {
                 user_name,
                 reset_url,

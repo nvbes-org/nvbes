@@ -22,6 +22,7 @@ pub struct EmailWorkerState {
     pub db: PgPool,
     pub crypto: Arc<EmailCrypto>,
     pub provider: Arc<dyn EmailSender>,
+    pub metrics: Arc<metrics_exporter_prometheus::PrometheusHandle>,
     pub webhook_verifier: Option<Arc<WebhookVerifier>>,
     dispatcher_heartbeat: Arc<AtomicI64>,
 }
@@ -56,6 +57,7 @@ impl EmailWorkerState {
             db,
             crypto: Arc::new(crypto),
             provider,
+            metrics: crate::email_metrics::install(),
             webhook_verifier,
             dispatcher_heartbeat: Arc::new(AtomicI64::new(0)),
         })

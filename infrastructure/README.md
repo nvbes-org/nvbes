@@ -6,7 +6,8 @@ Ce dossier contient l'infrastructure as code V1, les conventions d'environnement
 
 - `environments/development`: overlay OpenTofu/Terraform pour l'environnement development.
 - `environments/staging`: overlay OpenTofu/Terraform pour l'environnement staging.
-- `environments/production`: placeholder jusqu'au jalon production.
+- `environments/production`: stack Terraform production, dont le domaine email
+  transactionnel TEM et ses enregistrements Cloudflare.
 - `modules/scaleway-v1`: socle Scaleway reutilisable.
 
 ## Cible V1 minimale
@@ -45,7 +46,9 @@ tofu init
 tofu plan
 ```
 
-Remplacer `development` par `staging` pour valider l'overlay staging.
+Remplacer `development` par `staging` pour valider l'overlay staging. La
+production utilise Terraform et un backend distant obligatoire; suivre son
+README plutôt que ces commandes locales.
 
 ## Secrets
 

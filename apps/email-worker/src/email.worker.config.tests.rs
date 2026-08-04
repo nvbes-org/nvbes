@@ -1,4 +1,4 @@
-use super::{DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, csv_set, key, local_smtp};
+use super::{DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, key, local_smtp, producers};
 
 #[test]
 fn cryptographic_keys_must_decode_to_exactly_32_bytes() {
@@ -8,9 +8,24 @@ fn cryptographic_keys_must_decode_to_exactly_32_bytes() {
 }
 
 #[test]
-fn producer_allowlist_rejects_an_empty_value() {
-    assert!(csv_set(" , ").is_err());
-    assert_eq!(csv_set("identity-service,billing-worker").unwrap().len(), 2);
+fn producer_credentials_are_bound_and_unique_in_production() {
+    assert!(producers::parse(" , ", "production").is_err());
+    assert!(
+        producers::parse(
+            "identity-service=01234567890123456789012345678901,billing-worker=01234567890123456789012345678901",
+            "production",
+        )
+        .is_err()
+    );
+    assert_eq!(
+        producers::parse(
+            "identity-service=01234567890123456789012345678901,billing-worker=abcdefghijklmnopqrstuvwxyzABCDEF",
+            "production",
+        )
+        .unwrap()
+        .len(),
+        2
+    );
 }
 
 #[test]

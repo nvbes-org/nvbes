@@ -1275,6 +1275,7 @@ export interface components {
         };
         ChangeVerificationRequest: {
             email: string;
+            timezone?: string;
         };
         CreateOAuthClientInput: {
             allowed_audiences?: string[];
@@ -1697,6 +1698,7 @@ export interface components {
             password: string;
             pow_nonce: string;
             pow_solution: string;
+            timezone?: string;
         };
         RegisterResult: {
             user: components["schemas"]["UserView"];
@@ -1716,6 +1718,7 @@ export interface components {
         };
         ResendVerificationRequest: {
             email: string;
+            timezone?: string;
         };
         ResendVerificationResult: {
             email_verified: boolean;
@@ -3812,8 +3815,8 @@ export interface operations {
     authorize: {
         parameters: {
             query: {
-                /** @description Response type */
-                response_type: string;
+                /** @description Legacy response type; resolved from the pushed authorization request */
+                response_type?: string;
                 /** @description OAuth client ID */
                 client_id: string;
                 /** @description One-time PAR request_uri (RFC 9126) */

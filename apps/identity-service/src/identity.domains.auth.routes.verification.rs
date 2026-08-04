@@ -21,11 +21,19 @@ pub fn router() -> Router<AppState> {
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct ResendVerificationRequest {
     email: String,
+    #[serde(default = "default_timezone")]
+    timezone: String,
 }
 
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct ChangeVerificationRequest {
     email: String,
+    #[serde(default = "default_timezone")]
+    timezone: String,
+}
+
+fn default_timezone() -> String {
+    "UTC".to_string()
 }
 
 #[utoipa::path(
@@ -68,6 +76,7 @@ pub(crate) async fn resend_verify_email(
         &state.redis,
         &state.config,
         &request.email,
+        &request.timezone,
     )
     .await?;
 
@@ -120,6 +129,7 @@ pub(crate) async fn change_verify_email(
         &state.config,
         &enrollment_token,
         &request.email,
+        &request.timezone,
     )
     .await?;
 

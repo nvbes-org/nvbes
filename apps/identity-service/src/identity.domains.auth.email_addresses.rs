@@ -74,6 +74,7 @@ pub async fn add_secondary(
         &verification_token,
     )
     .await?;
+    let display_name = db::fetch_user_record(db, principal_id).await?.display_name;
 
     enqueue_secondary_verification_email(
         redis,
@@ -82,6 +83,7 @@ pub async fn add_secondary(
         &email.email,
         &verification_token,
         verification.expires_at,
+        &display_name,
     )
     .await?;
     notifications::notify_email_added(db, redis, principal_id, &email.email).await?;
@@ -128,6 +130,7 @@ pub async fn resend_secondary_verification(
         &verification_token,
     )
     .await?;
+    let display_name = db::fetch_user_record(db, principal_id).await?.display_name;
     enqueue_secondary_verification_email(
         redis,
         config,
@@ -135,6 +138,7 @@ pub async fn resend_secondary_verification(
         &email.email,
         &verification_token,
         verification.expires_at,
+        &display_name,
     )
     .await?;
     Ok(ResendSecondaryEmailVerificationResult {
@@ -245,16 +249,18 @@ async fn enqueue_secondary_verification_email(
     email: &str,
     token: &str,
     expires_at: DateTime<Utc>,
+    display_name: &str,
 ) -> Result<(), AppError> {
     crate::email::commands::enqueue(
         redis,
         email.to_string(),
-        None,
+        Some(display_name.to_string()),
         format!("secondary-verify:{principal_id}:{}", token_hash(token)),
         nvbes_email::EmailTemplate::EmailVerificationV1 {
-            user_name: email.to_string(),
+            user_name: super::email_recipient::recipient_name(Some(display_name)),
             verification_url: crate::email::commands::verification_url(config, token),
             credential_expires_at: expires_at,
+            timezone: "UTC".to_string(),
         },
         expires_at,
         Some(principal_id),

@@ -58,15 +58,17 @@ pub async fn register(
     .await?;
     history::insert_password_hash(db, principal_id, &password_hash).await?;
     let display_name = DEFAULT_DISPLAY_NAME.to_string();
+    let recipient_name = super::email_recipient::recipient_name(Some(&display_name));
 
     super::email_verification::enqueue_verification_email(
         redis,
         config,
         principal_id,
         &email,
-        &display_name,
+        &recipient_name,
         &verification_token,
         verification_expires_at,
+        &input.timezone,
     )
     .await?;
 

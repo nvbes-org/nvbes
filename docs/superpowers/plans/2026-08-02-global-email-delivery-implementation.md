@@ -143,7 +143,7 @@ rtk pnpm nx run-many -t check,test --projects=identity-service,identity-worker,b
 2. Add the email runtime container contract and release matrix entry.
 3. Configure Scaleway private gRPC ingress and HTTP routes for webhook and health probes.
 4. Configure `/health/ready` as the Scaleway Load Balancer check and `/health/live` as the container check.
-5. Provision Topics and Events, TEM webhook subscription, sender-domain release gates, secrets, and email database/KMS resources.
+5. Provision Topics and Events, TEM webhook subscription, sender-domain release gates, secrets, and email database/KMS resources exclusively through Terraform.
 6. Remove:
    - TypeScript worker sources/configuration;
    - Cloudflare email pipeline Terraform;
@@ -169,3 +169,42 @@ rtk pnpm check
 - No product service can dispatch directly to Scaleway or SMTP.
 - No provider call begins at or after `deliver_before`.
 - All skipped checks or environment-dependent validation are documented explicitly.
+
+## Post-implementation cutover status
+
+The global runtime, typed producers, delivery ledger, provider adapter,
+authenticated webhook, suppression policy, retention, metrics, alerts, and
+container release path are implemented in the repository.
+
+The repository-side consumer cutover is complete:
+
+- Backoffice communications, compliance, and operations views use the
+  authenticated email operations service;
+- operator replay and suppression actions are executed and audited by the
+  email worker;
+- the coordinated Account privacy export obtains retained email activity from
+  the authenticated privacy RPC;
+- Identity migration `0060` and Billing migration `0013` remove the historical
+  recipient-level delivery tables and their enum types.
+
+The sender-domain infrastructure is now declared in the production Terraform
+stack. Terraform is the sole writer for the TEM domain, exact Cloudflare DNS
+records, domain validation, SNS topic/subscription, and TEM webhook; manual
+provider-console, `scw`, and Wrangler mutations are prohibited.
+
+The final production cutover remains gated on applying and completing the
+remaining runtime infrastructure workstream:
+
+1. provision the always-on Scaleway target, private gRPC route, public signed
+   webhook route, email database, and KMS resources;
+2. initialize the encrypted remote state, import any pre-existing email
+   resources, and apply the production stack after reviewing the TEM terms and
+   deploying the webhook endpoint;
+3. verify `notify.nvbes.eu`, the signed subscription handshake, and a
+   short-lived end-to-end delivery. The apex `nvbes.eu` remains reserved for
+   inbound human mail through Cloudflare Email Routing.
+
+Before applying the two destructive legacy-schema migrations in an existing
+environment, retain the normal encrypted database backup required by the
+deployment policy. No product delivery code writes lifecycle data outside the
+email database after this cutover.

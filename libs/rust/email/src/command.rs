@@ -52,6 +52,8 @@ pub enum EmailTemplate {
         user_name: String,
         verification_url: String,
         credential_expires_at: DateTime<Utc>,
+        #[serde(default = "default_timezone")]
+        timezone: String,
     },
     PasswordResetV1 {
         user_name: String,
@@ -90,6 +92,18 @@ pub enum EmailTemplate {
         review_url: String,
         review_due_at: DateTime<Utc>,
     },
+}
+
+fn default_timezone() -> String {
+    "UTC".to_string()
+}
+
+pub fn normalized_timezone(value: &str) -> String {
+    value
+        .trim()
+        .parse::<chrono_tz::Tz>()
+        .map(|timezone| timezone.to_string())
+        .unwrap_or_else(|_| default_timezone())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

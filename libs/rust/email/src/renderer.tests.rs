@@ -10,6 +10,7 @@ fn every_template_renders_multipart_content() {
             user_name: "Ada".into(),
             verification_url: "https://account.nvbes.fr/verify?t=secret".into(),
             credential_expires_at: expiry,
+            timezone: "Europe/Paris".into(),
         },
         EmailTemplate::PasswordResetV1 {
             user_name: "Ada".into(),
@@ -54,7 +55,12 @@ fn every_template_renders_multipart_content() {
         let rendered = template.render();
         assert!(!rendered.subject.is_empty());
         assert!(!rendered.text_body.is_empty());
-        assert!(rendered.html_body.contains("<!doctype html>"));
+        assert!(
+            rendered
+                .html_body
+                .to_ascii_lowercase()
+                .contains("<!doctype html")
+        );
         assert!(!rendered.preview_text.is_empty());
     }
 }
@@ -72,4 +78,51 @@ fn substitutions_are_escaped_in_html_but_preserved_in_text() {
     assert!(!rendered.html_body.contains("<script>"));
     assert!(rendered.html_body.contains("&lt;script&gt;"));
     assert!(rendered.text_body.contains("person+<script>@example.com"));
+}
+
+#[test]
+fn verification_email_matches_account_brand_and_uses_a_readable_expiry() {
+    let expiry = chrono::DateTime::parse_from_rfc3339("2026-08-04T10:37:53.510247251Z")
+        .expect("test date should be valid")
+        .with_timezone(&Utc);
+    let rendered = EmailTemplate::EmailVerificationV1 {
+        user_name: "Ada".into(),
+        verification_url: "https://identity.nvbes.fr/verify?t=secret".into(),
+        credential_expires_at: expiry,
+        timezone: "Europe/Paris".into(),
+    }
+    .render();
+
+    assert!(rendered.html_body.contains("nvbes <span"));
+    assert!(rendered.html_body.contains("Account</span>"));
+    assert!(rendered.html_body.contains("background-color:#247f7b"));
+    assert!(rendered.html_body.contains("August 4, 2026 at 12:37"));
+    assert!(rendered.text_body.contains("August 4, 2026 at 12:37"));
+    assert!(rendered.html_body.contains("Europe/Paris (UTC+02:00)"));
+    assert!(rendered.text_body.contains("Europe/Paris (UTC+02:00)"));
+    assert!(rendered.html_body.contains("Privacy policy"));
+    assert!(rendered.html_body.contains("Terms of service"));
+    assert!(!rendered.html_body.contains("2026-08-04T10:37:53"));
+    assert!(!rendered.text_body.contains("2026-08-04T10:37:53"));
+    assert!(!rendered.html_body.contains("__NVBES_"));
+}
+
+#[test]
+fn react_template_markers_inside_user_content_are_not_reinterpreted() {
+    let rendered = EmailTemplate::EmailVerificationV1 {
+        user_name: "__NVBES_MESSAGE__".into(),
+        verification_url: "https://identity.nvbes.fr/verify".into(),
+        credential_expires_at: Utc::now() + Duration::minutes(10),
+        timezone: "UTC".into(),
+    }
+    .render();
+
+    assert!(rendered.html_body.contains("Hi __NVBES_MESSAGE__,"));
+    assert_eq!(
+        rendered
+            .html_body
+            .matches("Verify your email address to activate your nvbes account.")
+            .count(),
+        1
+    );
 }

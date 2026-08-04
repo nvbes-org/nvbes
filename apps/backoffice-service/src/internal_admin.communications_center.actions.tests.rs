@@ -6,7 +6,7 @@ use crate::communications_center_actions_test_support::{
     assert_communications_audit_metadata, communications_action_count,
     communications_actions_schema_exists, communications_audit_count, idempotency_schema_exists,
     response_json, seed_workspace_with_actor, suppress_request, suppress_request_with_key,
-    suppressed_email_count, test_pool,
+    test_pool,
 };
 
 #[tokio::test]
@@ -137,7 +137,6 @@ async fn suppress_email_route_enforces_role_confirmation_grant_and_audits_succes
     assert_eq!(payload["action_kind"], "suppress_email");
     assert_eq!(payload["status"], "applied");
 
-    assert_eq!(suppressed_email_count(&pool, &email).await, 1);
     assert_eq!(
         communications_action_count(&pool, tenant_id, actor_id, &email).await,
         1
@@ -218,7 +217,6 @@ async fn suppress_email_reuses_stored_idempotent_response() {
         Some("true")
     );
 
-    assert_eq!(suppressed_email_count(&pool, &email).await, 1);
     assert_eq!(
         communications_action_count(&pool, tenant_id, actor_id, &email).await,
         1

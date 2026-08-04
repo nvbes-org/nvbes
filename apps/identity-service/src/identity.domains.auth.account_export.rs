@@ -1,5 +1,9 @@
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::post};
 use chrono::Utc;
+use nvbes_email::proto::nvbes::{
+    email::v1::{EmailCallerContext, GetEmailPrivacyActivityRequest},
+    platform::v1::RequestContext,
+};
 use nvbes_product_account::export_event::{
     AccountExportContractError, AccountExportFragmentV1, AccountExportRequestedV1,
 };
@@ -24,7 +28,42 @@ async fn export_account(
         ));
     }
     validate_command(&command)?;
-    let data = build_fragment(&state.db, command.principal_id).await?;
+    let mut data = build_fragment(&state.db, command.principal_id).await?;
+    let email: String = sqlx::query_scalar("SELECT email FROM users WHERE principal_id = $1")
+        .bind(command.principal_id)
+        .fetch_one(&state.db)
+        .await?;
+    let activity = state
+        .email_operations
+        .privacy_activity(GetEmailPrivacyActivityRequest {
+            caller: Some(EmailCallerContext {
+                caller: "identity-service".to_string(),
+                request_context: Some(RequestContext {
+                    request_id: command.event_id.to_string(),
+                    correlation_id: command.export_id.to_string(),
+                    actor_principal_id: command.principal_id.to_string(),
+                    tenant: None,
+                }),
+            }),
+            email,
+        })
+        .await
+        .map_err(|error| {
+            AppError::internal("email_privacy_export_unavailable", error.to_string())
+        })?;
+    let activity = nvbes_email::privacy_activity_json(activity)
+        .map_err(|error| AppError::internal("email_privacy_export_invalid", error.to_string()))?;
+    let data_object = data.as_object_mut().ok_or_else(|| {
+        AppError::internal(
+            "identity_export_projection_invalid",
+            "Identity export projection must be an object.",
+        )
+    })?;
+    data_object.insert("email_messages".to_string(), activity["messages"].clone());
+    data_object.insert(
+        "email_events".to_string(),
+        activity["provider_events"].clone(),
+    );
     Ok(Json(AccountExportFragmentV1::new(
         "identity",
         command.principal_id,

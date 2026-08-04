@@ -1,6 +1,15 @@
+use std::collections::HashMap;
+
 use tonic::{Request, Status, metadata::MetadataMap};
 
-pub fn authenticate<T>(request: &Request<T>, expected_token: &str) -> Result<(), Status> {
+pub fn authenticate_producer<T>(
+    request: &Request<T>,
+    producer_tokens: &HashMap<String, String>,
+    producer: &str,
+) -> Result<(), Status> {
+    let expected_token = producer_tokens
+        .get(producer)
+        .ok_or_else(|| Status::unauthenticated("internal authentication required"))?;
     authenticate_metadata(request.metadata(), expected_token)
 }
 
@@ -31,9 +40,11 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use tonic::Request;
 
-    use super::authenticate;
+    use super::authenticate_producer;
 
     const TOKEN: &str = "email-worker-internal-token-32-value";
 
@@ -47,7 +58,15 @@ mod tests {
                 .unwrap(),
         );
 
-        assert!(authenticate(&request, TOKEN).is_ok());
-        assert!(authenticate(&request, "email-worker-internal-token-32-value-extra").is_err());
+        let tokens = HashMap::from([
+            ("identity-service".to_string(), TOKEN.to_string()),
+            (
+                "billing-worker".to_string(),
+                "different-email-worker-token-32-value".to_string(),
+            ),
+        ]);
+        assert!(authenticate_producer(&request, &tokens, "identity-service").is_ok());
+        assert!(authenticate_producer(&request, &tokens, "billing-worker").is_err());
+        assert!(authenticate_producer(&request, &tokens, "unknown-service").is_err());
     }
 }

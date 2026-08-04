@@ -12,6 +12,8 @@ pub struct AppState {
     pub config: AppConfig,
     pub db: PgPool,
     pub(crate) privileged_identity: crate::privileged_authentication::PrivilegedIdentityClient,
+    pub(crate) email_operations:
+        std::sync::Arc<dyn crate::email_operations::BackofficeEmailOperations>,
     pub billing_grpc_endpoint: String,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub rate_limiter: crate::rate_limit::BackofficeRateLimiter,
@@ -25,7 +27,28 @@ impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetr
 
 impl AppState {
     pub fn new(config: AppConfig, db: PgPool) -> Self {
-        Self::try_new(config, db).expect("backoffice identity configuration must be valid")
+        #[cfg(not(test))]
+        {
+            Self::try_new(config, db).expect("backoffice service configuration must be valid")
+        }
+        #[cfg(test)]
+        {
+            let billing_grpc_endpoint = crate::billing_grpc::billing_grpc_endpoint(config.api_port)
+                .unwrap_or_else(|_| "http://127.0.0.1:3021".to_string());
+            Self {
+                privileged_identity:
+                    crate::privileged_authentication::PrivilegedIdentityClient::from_environment(
+                        &config.environment,
+                    )
+                    .expect("test identity configuration must be valid"),
+                email_operations: crate::email_operations::test_gateway(),
+                observability: nvbes_observability::metrics::HttpMetrics::default(),
+                rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),
+                billing_grpc_endpoint,
+                config,
+                db,
+            }
+        }
     }
 
     pub fn try_new(config: AppConfig, db: PgPool) -> Result<Self, String> {
@@ -38,10 +61,12 @@ impl AppState {
             crate::privileged_authentication::PrivilegedIdentityClient::from_environment(
                 &config.environment,
             )?;
+        let email_operations = crate::email_operations::from_environment(&config.environment)?;
         let state = Self {
             config,
             db,
             privileged_identity,
+            email_operations,
             billing_grpc_endpoint,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             rate_limiter: crate::rate_limit::BackofficeRateLimiter::default(),

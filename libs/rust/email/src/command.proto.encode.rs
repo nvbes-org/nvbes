@@ -45,10 +45,12 @@ impl EmailTemplate {
                 user_name,
                 verification_url,
                 credential_expires_at,
+                timezone,
             } => Template::EmailVerificationV1(email_pb::EmailVerificationV1 {
                 user_name,
                 verification_url,
                 credential_expires_at: Some(timestamp(credential_expires_at)),
+                timezone,
             }),
             Self::PasswordResetV1 {
                 user_name,

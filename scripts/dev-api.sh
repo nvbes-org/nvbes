@@ -21,6 +21,7 @@ bash "$SCRIPT_DIR/dev-enterprise-service.sh" &
 bash "$SCRIPT_DIR/dev-gateway-cloud.sh" &
 bash "$SCRIPT_DIR/dev-billing-worker.sh" &
 bash "$SCRIPT_DIR/dev-email-worker.sh" &
+bash "$SCRIPT_DIR/dev-identity-worker.sh" &
 bash "$SCRIPT_DIR/dev-worker.sh" &
 bash "$SCRIPT_DIR/dev-cloud-service.sh" &
 wait

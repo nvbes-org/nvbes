@@ -63,7 +63,7 @@ impl EmailSender for MockEmailSender {
                     .headers
                     .iter()
                     .find(|(name, _)| name.eq_ignore_ascii_case("x-nvbes-email-job-id"))
-                    .map(|(_, value)| format!("<account-job-{value}@worker.nvbes.fr>"))
+                    .map(|(_, value)| format!("<account-job-{value}@notify.nvbes.eu>"))
             })
             .unwrap_or_else(|| {
                 format!(
@@ -88,7 +88,7 @@ mod tests {
     #[tokio::test]
     async fn mock_provider_uses_the_stable_message_id() {
         let sender = MockEmailSender::new();
-        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@worker.nvbes.fr>";
+        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@notify.nvbes.eu>";
         let result = sender
             .send_message(&EmailMessage {
                 from: EmailAddress {

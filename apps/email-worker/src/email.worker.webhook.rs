@@ -7,8 +7,9 @@ use axum::{
     routing::post,
 };
 use serde::Serialize;
+use std::time::Instant;
 
-use crate::{state::EmailWorkerState, webhook_db, webhook_verify::SnsMessage};
+use crate::{email_metrics, state::EmailWorkerState, webhook_db, webhook_verify::SnsMessage};
 
 const MAX_WEBHOOK_BODY_BYTES: usize = 256 * 1024;
 
@@ -32,28 +33,38 @@ async fn handle_scaleway_webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> impl IntoResponse {
+    let started_at = Instant::now();
     if !is_json(&headers) {
+        email_metrics::webhook("sns", "invalid_content_type", started_at.elapsed());
         return response(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid_content_type");
     }
     let Some(verifier) = state.webhook_verifier.as_ref() else {
+        email_metrics::webhook("sns", "disabled", started_at.elapsed());
         return response(StatusCode::SERVICE_UNAVAILABLE, "webhook_disabled");
     };
     let message = match verifier.verify(&body).await {
         Ok(message) => message,
         Err(error) => {
+            email_metrics::webhook_signature_failure();
+            email_metrics::webhook("sns", "invalid_signature", started_at.elapsed());
             tracing::warn!(error = ?error, "Scaleway webhook signature validation failed");
             return response(StatusCode::UNAUTHORIZED, "invalid_signature");
         }
     };
 
+    let event_type = webhook_event_type(&message);
     let result = match message.message_type.as_str() {
         "SubscriptionConfirmation" => confirm_subscription(&state, &message).await,
         "Notification" => apply_notification(&state, &message).await,
         _ => return response(StatusCode::BAD_REQUEST, "unsupported_message"),
     };
     match result {
-        Ok(status) => response(StatusCode::OK, status),
+        Ok((status, outcome)) => {
+            email_metrics::webhook(&event_type, outcome, started_at.elapsed());
+            response(StatusCode::OK, status)
+        }
         Err(error) => {
+            email_metrics::webhook(&event_type, "processing_failed", started_at.elapsed());
             tracing::error!(sns_message_id = %message.message_id, error = ?error, "Scaleway webhook procedure failed");
             response(StatusCode::SERVICE_UNAVAILABLE, "processing_failed")
         }
@@ -63,7 +74,7 @@ async fn handle_scaleway_webhook(
 async fn confirm_subscription(
     state: &EmailWorkerState,
     message: &SnsMessage,
-) -> anyhow::Result<&'static str> {
+) -> anyhow::Result<(&'static str, &'static str)> {
     let verifier = state
         .webhook_verifier
         .as_ref()
@@ -72,19 +83,42 @@ async fn confirm_subscription(
     verifier.confirm(confirmation_url).await?;
     let inserted =
         webhook_db::record_subscription_confirmation(&state.db, &message.message_id).await?;
-    Ok(if inserted { "confirmed" } else { "duplicate" })
+    Ok(if inserted {
+        ("confirmed", "confirmed")
+    } else {
+        ("duplicate", "duplicate")
+    })
 }
 
 async fn apply_notification(
     state: &EmailWorkerState,
     message: &SnsMessage,
-) -> anyhow::Result<&'static str> {
+) -> anyhow::Result<(&'static str, &'static str)> {
     let event: webhook_db::TemWebhookEvent = serde_json::from_str(&message.message)?;
     if event.id.is_empty() || event.email_id.is_empty() || event.event_type.is_empty() {
         anyhow::bail!("TEM webhook event is incomplete");
     }
-    let inserted = webhook_db::apply_notification(&state.db, &message.message_id, &event).await?;
-    Ok(if inserted { "processed" } else { "duplicate" })
+    let result = webhook_db::apply_notification(&state.db, &message.message_id, &event).await?;
+    Ok(if result.inserted {
+        ("processed", result.processing_result)
+    } else {
+        ("duplicate", result.processing_result)
+    })
+}
+
+fn webhook_event_type(message: &SnsMessage) -> String {
+    if message.message_type == "SubscriptionConfirmation" {
+        return "subscription_confirmation".to_string();
+    }
+    serde_json::from_str::<serde_json::Value>(&message.message)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("type")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 fn is_json(headers: &HeaderMap) -> bool {

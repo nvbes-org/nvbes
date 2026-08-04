@@ -12,6 +12,11 @@ pub struct TemWebhookEvent {
     pub status: Option<String>,
 }
 
+pub struct NotificationResult {
+    pub inserted: bool,
+    pub processing_result: &'static str,
+}
+
 pub async fn record_subscription_confirmation(
     pool: &PgPool,
     sns_message_id: &str,
@@ -37,7 +42,7 @@ pub async fn apply_notification(
     pool: &PgPool,
     sns_message_id: &str,
     event: &TemWebhookEvent,
-) -> Result<bool, sqlx::Error> {
+) -> Result<NotificationResult, sqlx::Error> {
     let mut tx = pool.begin().await?;
     let event_id = Uuid::new_v4();
     let inserted = sqlx::query(
@@ -54,12 +59,15 @@ pub async fn apply_notification(
     .bind(sns_message_id)
     .bind(&event.email_id)
     .bind(&event.event_type)
-    .bind(json!({ "status": event.status }))
+    .bind(json!({ "status": bounded_status(event.status.as_deref()) }))
     .execute(&mut *tx)
     .await?;
     if inserted.rows_affected() == 0 {
         tx.commit().await?;
-        return Ok(false);
+        return Ok(NotificationResult {
+            inserted: false,
+            processing_result: "duplicate",
+        });
     }
 
     let result = match normalized_state(&event.event_type) {
@@ -79,7 +87,14 @@ pub async fn apply_notification(
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(true)
+    Ok(NotificationResult {
+        inserted: true,
+        processing_result: result,
+    })
+}
+
+fn bounded_status(status: Option<&str>) -> Option<String> {
+    status.map(|value| value.chars().take(200).collect())
 }
 
 fn normalized_state(event_type: &str) -> Option<&'static str> {
@@ -88,7 +103,9 @@ fn normalized_state(event_type: &str) -> Option<&'static str> {
         "email_delivered" => Some("delivered"),
         "email_deferred" | "email_soft_bounced" => Some("deferred"),
         "email_spam" => Some("complained"),
-        "email_mailbox_not_found" | "email_blocklisted" => Some("hard_bounced"),
+        "email_mailbox_not_found" | "email_blocklisted" | "blocklist_created" => {
+            Some("hard_bounced")
+        }
         "email_dropped" => Some("dropped"),
         _ => None,
     }
@@ -137,10 +154,10 @@ async fn apply_suppression(
         sqlx::query(
             r#"
             INSERT INTO email_suppressions (
-                recipient_hash, recipient_ciphertext, recipient_nonce, scope, reason,
-                source_event_id, soft_bounce_count, active
+                recipient_hash, recipient_ciphertext, recipient_nonce, recipient_encryption_id,
+                scope, reason, source_event_id, soft_bounce_count, active
             )
-            SELECT recipient_hash, recipient_ciphertext, recipient_nonce, 'all',
+            SELECT recipient_hash, recipient_ciphertext, recipient_nonce, id, 'all',
                    'soft_bounce_threshold', $2, 1, FALSE
             FROM email_messages WHERE provider_message_id = $1
             ON CONFLICT (recipient_hash) DO UPDATE
@@ -164,7 +181,9 @@ async fn apply_suppression(
 
     let reason = match event_type {
         "email_spam" => Some("complaint"),
-        "email_mailbox_not_found" | "email_blocklisted" => Some("hard_bounce"),
+        "email_mailbox_not_found" | "email_blocklisted" | "blocklist_created" => {
+            Some("hard_bounce")
+        }
         "email_dropped" => Some("provider_drop"),
         _ => None,
     };
@@ -172,10 +191,10 @@ async fn apply_suppression(
         sqlx::query(
             r#"
             INSERT INTO email_suppressions (
-                recipient_hash, recipient_ciphertext, recipient_nonce, scope, reason,
-                source_event_id, soft_bounce_count, active
+                recipient_hash, recipient_ciphertext, recipient_nonce, recipient_encryption_id,
+                scope, reason, source_event_id, soft_bounce_count, active
             )
-            SELECT recipient_hash, recipient_ciphertext, recipient_nonce, 'all', $2, $3, 0, TRUE
+            SELECT recipient_hash, recipient_ciphertext, recipient_nonce, id, 'all', $2, $3, 0, TRUE
             FROM email_messages WHERE provider_message_id = $1
             ON CONFLICT (recipient_hash) DO UPDATE
             SET scope = 'all', reason = EXCLUDED.reason, source_event_id = EXCLUDED.source_event_id,
@@ -195,12 +214,22 @@ async fn apply_suppression(
 
 #[cfg(test)]
 mod tests {
-    use super::normalized_state;
+    use super::{bounded_status, normalized_state};
 
     #[test]
     fn tem_events_have_stable_normalized_states() {
         assert_eq!(normalized_state("email_delivered"), Some("delivered"));
         assert_eq!(normalized_state("email_spam"), Some("complained"));
+        assert_eq!(normalized_state("blocklist_created"), Some("hard_bounced"));
         assert_eq!(normalized_state("future_event"), None);
     }
+
+    #[test]
+    fn provider_diagnostics_are_bounded() {
+        assert_eq!(bounded_status(Some(&"x".repeat(500))).unwrap().len(), 200);
+    }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.webhook.db.tests.rs"]
+mod database_tests;

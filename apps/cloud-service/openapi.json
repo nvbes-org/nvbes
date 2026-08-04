@@ -1,1 +1,2289 @@
-{"openapi":"3.1.0","info":{"title":"nvbes Cloud Service","description":"File storage, sharing, and collaboration API","contact":{"name":"nvbes","url":"https://nvbes.fr"},"license":{"name":"UNLICENSED"},"version":"0.1.0"},"servers":[{"url":"https://cloud.nvbes.fr","description":"Production"},{"url":"http://localhost:8081","description":"Development"}],"paths":{"/v1/me":{"get":{"tags":["public-api"],"operationId":"me","responses":{"200":{"description":"Current API identity","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiIdentityResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces":{"get":{"tags":["public-api"],"operationId":"list_workspaces","responses":{"200":{"description":"List workspaces","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PublicWorkspacesResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/audit-events":{"get":{"tags":["public-api"],"operationId":"list_audit_events","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"limit","in":"query","description":"Max events to return","required":false,"schema":{"type":"integer","format":"int64"}},{"name":"cursor","in":"query","description":"Opaque pagination cursor","required":false,"schema":{"type":"string"}},{"name":"action","in":"query","description":"Filter by action","required":false,"schema":{"type":"string"}},{"name":"actorUserId","in":"query","description":"Filter by actor user ID","required":false,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Audit events","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AuditEventsResponse"}}}},"400":{"description":"Invalid pagination cursor","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/folders":{"post":{"tags":["public-api"],"operationId":"create_folder","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateFolderRequest"}}},"required":true},"responses":{"200":{"description":"Folder created","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ObjectResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects":{"get":{"tags":["public-api"],"operationId":"list_objects","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"parentId","in":"query","description":"Parent folder ID","required":false,"schema":{"type":"string","format":"uuid"}},{"name":"limit","in":"query","description":"Maximum objects to return (1-200)","required":false,"schema":{"type":"integer","format":"int64"}},{"name":"cursor","in":"query","description":"Opaque pagination cursor","required":false,"schema":{"type":"string"}},{"name":"objectType","in":"query","description":"Filter by object type","required":false,"schema":{"$ref":"#/components/schemas/ObjectTypeFilter"}},{"name":"namePrefix","in":"query","description":"Case-insensitive literal name prefix","required":false,"schema":{"type":"string"}}],"responses":{"200":{"description":"List objects","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ListObjectsResponse"}}}},"400":{"description":"Invalid pagination cursor","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects/{objectId}":{"patch":{"tags":["public-api"],"operationId":"rename_object","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"objectId","in":"path","description":"Object ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/RenameObjectRequest"}}},"required":true},"responses":{"200":{"description":"Object renamed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ObjectResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects/{objectId}/download-url":{"post":{"tags":["public-api"],"operationId":"create_download_url","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"objectId","in":"path","description":"Object ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Download URL created","content":{"application/json":{"schema":{"$ref":"#/components/schemas/DownloadUrlResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects/{objectId}/move":{"post":{"tags":["public-api"],"operationId":"move_object","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"objectId","in":"path","description":"Object ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/MoveObjectRequest"}}},"required":true},"responses":{"200":{"description":"Object moved","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ObjectResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects/{objectId}/share-links":{"post":{"tags":["public-api"],"operationId":"create_share_link","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"objectId","in":"path","description":"Object ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateShareLinkRequest"}}},"required":true},"responses":{"200":{"description":"Share link created","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ShareLinkResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/objects/{objectId}/trash":{"post":{"tags":["public-api"],"operationId":"trash_object","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"objectId","in":"path","description":"Object ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Object trashed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ObjectResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/quota":{"get":{"tags":["public-api"],"operationId":"get_quota","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Workspace quota","content":{"application/json":{"schema":{"$ref":"#/components/schemas/QuotaResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/share-links":{"get":{"tags":["public-api"],"operationId":"list_share_links","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"List share links","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ShareLinkListResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/share-links/{shareLinkId}":{"delete":{"tags":["public-api"],"operationId":"revoke_share_link","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"shareLinkId","in":"path","description":"Share link ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Share link revoked","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ShareLinkResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}},"patch":{"tags":["public-api"],"operationId":"update_share_link","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"shareLinkId","in":"path","description":"Share link ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UpdateShareLinkRequest"}}},"required":true},"responses":{"200":{"description":"Share link updated","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ShareLinkResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/uploads":{"post":{"tags":["public-api"],"operationId":"create_upload","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateUploadRequest"}}},"required":true},"responses":{"200":{"description":"Upload created","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateUploadResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel":{"post":{"tags":["public-api"],"operationId":"cancel_upload","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"uploadId","in":"path","description":"Upload ID","required":true,"schema":{"type":"string","format":"uuid"}}],"responses":{"200":{"description":"Upload cancelled","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CancelUploadResponse"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}},"/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete":{"post":{"tags":["public-api"],"operationId":"complete_upload","parameters":[{"name":"workspaceId","in":"path","description":"Workspace ID","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"uploadId","in":"path","description":"Upload ID","required":true,"schema":{"type":"string","format":"uuid"}}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CompleteUploadRequest"}}},"required":true},"responses":{"200":{"description":"Upload completed","content":{"application/json":{"schema":{"$ref":"#/components/schemas/CompleteUploadResponse"}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorEnvelope"}}}}}}}},"components":{"schemas":{"ApiIdentityResponse":{"type":"object","required":["api_key_id","workspace_id","key_prefix","scopes","rate_limit"],"properties":{"api_key_id":{"type":"string","format":"uuid"},"key_prefix":{"type":"string"},"rate_limit":{"$ref":"#/components/schemas/RateLimitView"},"scopes":{"type":"array","items":{"type":"string"}},"workspace_id":{"type":"string","format":"uuid"}}},"AuditEventView":{"type":"object","required":["id","workspace_id","action","target_type","geo_risk_labels","metadata","event_hash","created_at"],"properties":{"action":{"type":"string"},"actor_email":{"type":["string","null"]},"actor_principal_id":{"type":["string","null"],"format":"uuid"},"actor_user_id":{"type":["string","null"],"format":"uuid"},"created_at":{"type":"string","format":"date-time"},"event_hash":{"type":"string"},"geo_country_code":{"type":["string","null"]},"geo_network_kind":{"type":["string","null"]},"geo_risk_labels":{"type":"array","items":{"type":"string"}},"geo_risk_score":{"type":["integer","null"],"format":"int64"},"id":{"type":"string","format":"uuid"},"ip":{"type":["string","null"]},"metadata":{},"network_block_reason":{"type":["string","null"]},"previous_event_hash":{"type":["string","null"]},"target_id":{"type":["string","null"],"format":"uuid"},"target_type":{"type":"string"},"user_agent":{"type":["string","null"]},"workspace_id":{"type":"string","format":"uuid"}}},"AuditEventsResponse":{"type":"object","required":["workspace_id","events","has_more"],"properties":{"events":{"type":"array","items":{"$ref":"#/components/schemas/AuditEventView"}},"has_more":{"type":"boolean"},"next_cursor":{"type":["string","null"]},"workspace_id":{"type":"string","format":"uuid"}}},"CancelUploadResponse":{"type":"object","required":["upload_id","storage_object_id","cancelled_at"],"properties":{"cancelled_at":{"type":"string","format":"date-time"},"storage_object_id":{"type":"string","format":"uuid"},"upload_id":{"type":"string","format":"uuid"}}},"CompleteUploadRequest":{"type":"object","required":["size_bytes"],"properties":{"checksum":{"type":["string","null"]},"size_bytes":{"type":"integer","format":"int64"}}},"CompleteUploadResponse":{"type":"object","required":["upload_id","storage_object","activated_at"],"properties":{"activated_at":{"type":"string","format":"date-time"},"storage_object":{"$ref":"#/components/schemas/UploadObjectView"},"upload_id":{"type":"string","format":"uuid"}}},"CreateFolderRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string"},"parent_id":{"type":["string","null"],"format":"uuid"}}},"CreateShareLinkRequest":{"type":"object","properties":{"expires_at":{"type":["string","null"],"format":"date-time"},"max_downloads":{"type":["integer","null"],"format":"int32"}}},"CreateUploadRequest":{"type":"object","required":["name","mime_type","expected_size_bytes"],"properties":{"expected_checksum":{"type":["string","null"]},"expected_size_bytes":{"type":"integer","format":"int64"},"mime_type":{"type":"string"},"name":{"type":"string"},"parent_id":{"type":["string","null"],"format":"uuid"}}},"CreateUploadResponse":{"type":"object","required":["upload_id","storage_object","upload_url","tus_url","expires_at"],"properties":{"expires_at":{"type":"string","format":"date-time"},"storage_object":{"$ref":"#/components/schemas/UploadObjectView"},"tus_url":{"type":"string"},"upload_id":{"type":"string","format":"uuid"},"upload_url":{"$ref":"#/components/schemas/SignedUploadUrlView"}}},"DownloadUrlResponse":{"type":"object","required":["object_id","download_url"],"properties":{"download_url":{"$ref":"#/components/schemas/SignedDownloadUrlView"},"object_id":{"type":"string","format":"uuid"}}},"ErrorBody":{"type":"object","required":["code","message"],"properties":{"code":{"type":"string"},"message":{"type":"string"},"recovery":{"oneOf":[{"type":"null"},{"$ref":"#/components/schemas/ErrorRecovery"}]},"request_id":{"type":["string","null"]}}},"ErrorEnvelope":{"type":"object","required":["error"],"properties":{"error":{"$ref":"#/components/schemas/ErrorBody"}}},"ErrorRecovery":{"type":"string","enum":["reauthenticate"]},"ListObjectsResponse":{"type":"object","required":["objects","has_more"],"properties":{"has_more":{"type":"boolean"},"next_cursor":{"type":["string","null"]},"objects":{"type":"array","items":{"$ref":"#/components/schemas/StorageObjectView"}},"parent_id":{"type":["string","null"],"format":"uuid"}}},"MoveObjectRequest":{"type":"object","properties":{"destination_parent_id":{"type":["string","null"],"format":"uuid"}}},"ObjectResponse":{"type":"object","required":["object"],"properties":{"object":{"$ref":"#/components/schemas/StorageObjectView"}}},"PublicWorkspaceView":{"type":"object","required":["id","name","plan_code","scopes"],"properties":{"id":{"type":"string","format":"uuid"},"name":{"type":"string"},"plan_code":{"type":"string"},"scopes":{"type":"array","items":{"type":"string"}}}},"PublicWorkspacesResponse":{"type":"object","required":["workspaces"],"properties":{"workspaces":{"type":"array","items":{"$ref":"#/components/schemas/PublicWorkspaceView"}}}},"QuotaAlertView":{"type":"object","required":["code","level","threshold_percent","message"],"properties":{"code":{"type":"string"},"level":{"type":"string"},"message":{"type":"string"},"threshold_percent":{"type":"integer","format":"int64"}}},"QuotaResponse":{"type":"object","required":["workspace_id","used_storage_bytes","included_storage_bytes","file_count","bandwidth_out_bytes_month","storage_usage_percent","upload_blocked","alerts","updated_at"],"properties":{"alerts":{"type":"array","items":{"$ref":"#/components/schemas/QuotaAlertView"}},"bandwidth_out_bytes_month":{"type":"integer","format":"int64"},"file_count":{"type":"integer","format":"int64"},"included_storage_bytes":{"type":"integer","format":"int64"},"storage_usage_percent":{"type":"number","format":"double"},"updated_at":{"type":"string","format":"date-time"},"upload_blocked":{"type":"boolean"},"used_storage_bytes":{"type":"integer","format":"int64"},"workspace_id":{"type":"string","format":"uuid"}}},"RateLimitView":{"type":"object","required":["requests_per_minute","requests_per_day"],"properties":{"requests_per_day":{"type":"integer","minimum":0},"requests_per_minute":{"type":"integer","minimum":0}}},"RenameObjectRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}},"RequiredHeaderView":{"type":"object","required":["name","value"],"properties":{"name":{"type":"string"},"value":{"type":"string"}}},"ShareLinkListResponse":{"type":"object","required":["share_links"],"properties":{"share_links":{"type":"array","items":{"$ref":"#/components/schemas/ShareLinkView"}}}},"ShareLinkResponse":{"type":"object","required":["share_link"],"properties":{"share_link":{"$ref":"#/components/schemas/ShareLinkView"},"share_url":{"type":["string","null"]},"token":{"type":["string","null"]}}},"ShareLinkView":{"type":"object","required":["id","workspace_id","storage_object_id","permission","expires_at","download_count","created_by","created_by_principal_id","created_at","updated_at"],"properties":{"created_at":{"type":"string","format":"date-time"},"created_by":{"type":"string","format":"uuid"},"created_by_principal_id":{"type":"string","format":"uuid"},"download_count":{"type":"integer","format":"int32"},"expires_at":{"type":"string","format":"date-time"},"id":{"type":"string","format":"uuid"},"max_downloads":{"type":["integer","null"],"format":"int32"},"permission":{"type":"string"},"revoked_at":{"type":["string","null"],"format":"date-time"},"storage_object_id":{"type":"string","format":"uuid"},"updated_at":{"type":"string","format":"date-time"},"workspace_id":{"type":"string","format":"uuid"}}},"SignedDownloadUrlView":{"type":"object","required":["url","method","expires_at"],"properties":{"expires_at":{"type":"string","format":"date-time"},"method":{"type":"string"},"url":{"type":"string"}}},"SignedUploadUrlView":{"type":"object","required":["url","method","expires_at","required_headers"],"properties":{"expires_at":{"type":"string","format":"date-time"},"method":{"type":"string"},"required_headers":{"type":"array","items":{"$ref":"#/components/schemas/RequiredHeaderView"}},"url":{"type":"string"}}},"StorageObjectView":{"type":"object","required":["id","workspace_id","object_type","name","size_bytes","status","created_by","created_by_principal_id","created_at","updated_at"],"properties":{"created_at":{"type":"string","format":"date-time"},"created_by":{"type":"string","format":"uuid"},"created_by_principal_id":{"type":"string","format":"uuid"},"id":{"type":"string","format":"uuid"},"mime_type":{"type":["string","null"]},"name":{"type":"string"},"object_type":{"type":"string"},"parent_id":{"type":["string","null"],"format":"uuid"},"size_bytes":{"type":"integer","format":"int64"},"status":{"type":"string"},"trashed_at":{"type":["string","null"],"format":"date-time"},"updated_at":{"type":"string","format":"date-time"},"workspace_id":{"type":"string","format":"uuid"}}},"UpdateShareLinkRequest":{"type":"object","properties":{"expires_at":{"type":["string","null"],"format":"date-time"},"max_downloads":{"type":["integer","null"],"format":"int32"}}},"UploadObjectView":{"type":"object","required":["id","workspace_id","name","object_type","status","scan_status","size_bytes","created_by","created_by_principal_id","created_at","updated_at"],"properties":{"checksum":{"type":["string","null"]},"created_at":{"type":"string","format":"date-time"},"created_by":{"type":"string","format":"uuid"},"created_by_principal_id":{"type":"string","format":"uuid"},"id":{"type":"string","format":"uuid"},"mime_type":{"type":["string","null"]},"name":{"type":"string"},"object_type":{"type":"string"},"parent_id":{"type":["string","null"],"format":"uuid"},"scan_status":{"type":"string"},"size_bytes":{"type":"integer","format":"int64"},"status":{"type":"string"},"updated_at":{"type":"string","format":"date-time"},"workspace_id":{"type":"string","format":"uuid"}}}}},"tags":[{"name":"files","description":"File and folder management"},{"name":"uploads","description":"File upload workflow"},{"name":"share-links","description":"Share link management"},{"name":"public-shares","description":"Public share access"},{"name":"quotas","description":"Storage quotas"},{"name":"audit","description":"Audit events"},{"name":"privacy","description":"Data privacy & export"},{"name":"api-keys","description":"Legacy API key management (list/revoke only)"},{"name":"public-api","description":"Public REST API v1"}]}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "nvbes Cloud Service",
+    "description": "File storage, sharing, and collaboration API",
+    "contact": {
+      "name": "nvbes",
+      "url": "https://nvbes.fr"
+    },
+    "license": {
+      "name": "UNLICENSED"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "https://cloud.nvbes.fr",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:8081",
+      "description": "Development"
+    }
+  ],
+  "paths": {
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "Current API identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiIdentityResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "list_workspaces",
+        "responses": {
+          "200": {
+            "description": "List workspaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicWorkspacesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/audit-events": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "list_audit_events",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max events to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "Filter by action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "in": "query",
+            "description": "Filter by actor user ID",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/folders": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "create_folder",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Folder created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "list_objects",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "parentId",
+            "in": "query",
+            "description": "Parent folder ID",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum objects to return (1-200)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectType",
+            "in": "query",
+            "description": "Filter by object type",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ObjectTypeFilter"
+            }
+          },
+          {
+            "name": "namePrefix",
+            "in": "query",
+            "description": "Case-insensitive literal name prefix",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListObjectsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects/{objectId}": {
+      "patch": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "rename_object",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "description": "Object ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameObjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Object renamed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects/{objectId}/download-url": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "create_download_url",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "description": "Object ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download URL created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects/{objectId}/move": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "move_object",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "description": "Object ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveObjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Object moved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects/{objectId}/share-links": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "create_share_link",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "description": "Object ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Share link created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/objects/{objectId}/trash": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "trash_object",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "description": "Object ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object trashed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/quota": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "get_quota",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace quota",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/share-links": {
+      "get": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "list_share_links",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List share links",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/share-links/{shareLinkId}": {
+      "delete": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "revoke_share_link",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "shareLinkId",
+            "in": "path",
+            "description": "Share link ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Share link revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "update_share_link",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "shareLinkId",
+            "in": "path",
+            "description": "Share link ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShareLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Share link updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareLinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/uploads": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "create_upload",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Upload created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/uploads/{uploadId}/cancel": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "cancel_upload",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "description": "Upload ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/uploads/{uploadId}/complete": {
+      "post": {
+        "tags": [
+          "public-api"
+        ],
+        "operationId": "complete_upload",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "description": "Workspace ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "description": "Upload ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Upload completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiIdentityResponse": {
+        "type": "object",
+        "required": [
+          "api_key_id",
+          "workspace_id",
+          "key_prefix",
+          "scopes",
+          "rate_limit"
+        ],
+        "properties": {
+          "api_key_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key_prefix": {
+            "type": "string"
+          },
+          "rate_limit": {
+            "$ref": "#/components/schemas/RateLimitView"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AuditEventView": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "action",
+          "target_type",
+          "geo_risk_labels",
+          "metadata",
+          "event_hash",
+          "created_at"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_principal_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "actor_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "event_hash": {
+            "type": "string"
+          },
+          "geo_country_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_network_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "geo_risk_labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "geo_risk_score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {},
+          "network_block_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "previous_event_hash": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AuditEventsResponse": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "events",
+          "has_more"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEventView"
+            }
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CancelUploadResponse": {
+        "type": "object",
+        "required": [
+          "upload_id",
+          "storage_object_id",
+          "cancelled_at"
+        ],
+        "properties": {
+          "cancelled_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "storage_object_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CompleteUploadRequest": {
+        "type": "object",
+        "required": [
+          "size_bytes"
+        ],
+        "properties": {
+          "checksum": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CompleteUploadResponse": {
+        "type": "object",
+        "required": [
+          "upload_id",
+          "storage_object",
+          "activated_at"
+        ],
+        "properties": {
+          "activated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "storage_object": {
+            "$ref": "#/components/schemas/UploadObjectView"
+          },
+          "upload_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateFolderRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateShareLinkRequest": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_downloads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "CreateUploadRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "mime_type",
+          "expected_size_bytes"
+        ],
+        "properties": {
+          "expected_checksum": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expected_size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateUploadResponse": {
+        "type": "object",
+        "required": [
+          "upload_id",
+          "storage_object",
+          "upload_url",
+          "tus_url",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "storage_object": {
+            "$ref": "#/components/schemas/UploadObjectView"
+          },
+          "tus_url": {
+            "type": "string"
+          },
+          "upload_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "upload_url": {
+            "$ref": "#/components/schemas/SignedUploadUrlView"
+          }
+        }
+      },
+      "DownloadUrlResponse": {
+        "type": "object",
+        "required": [
+          "object_id",
+          "download_url"
+        ],
+        "properties": {
+          "download_url": {
+            "$ref": "#/components/schemas/SignedDownloadUrlView"
+          },
+          "object_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "recovery": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ErrorRecovery"
+              }
+            ]
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        }
+      },
+      "ErrorRecovery": {
+        "type": "string",
+        "enum": [
+          "reauthenticate"
+        ]
+      },
+      "ListObjectsResponse": {
+        "type": "object",
+        "required": [
+          "objects",
+          "has_more"
+        ],
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "objects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageObjectView"
+            }
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "MoveObjectRequest": {
+        "type": "object",
+        "properties": {
+          "destination_parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ObjectResponse": {
+        "type": "object",
+        "required": [
+          "object"
+        ],
+        "properties": {
+          "object": {
+            "$ref": "#/components/schemas/StorageObjectView"
+          }
+        }
+      },
+      "PublicWorkspaceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "plan_code",
+          "scopes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan_code": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PublicWorkspacesResponse": {
+        "type": "object",
+        "required": [
+          "workspaces"
+        ],
+        "properties": {
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicWorkspaceView"
+            }
+          }
+        }
+      },
+      "QuotaAlertView": {
+        "type": "object",
+        "required": [
+          "code",
+          "level",
+          "threshold_percent",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "threshold_percent": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "QuotaResponse": {
+        "type": "object",
+        "required": [
+          "workspace_id",
+          "used_storage_bytes",
+          "included_storage_bytes",
+          "file_count",
+          "bandwidth_out_bytes_month",
+          "storage_usage_percent",
+          "upload_blocked",
+          "alerts",
+          "updated_at"
+        ],
+        "properties": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotaAlertView"
+            }
+          },
+          "bandwidth_out_bytes_month": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "file_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "included_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "storage_usage_percent": {
+            "type": "number",
+            "format": "double"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "upload_blocked": {
+            "type": "boolean"
+          },
+          "used_storage_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RateLimitView": {
+        "type": "object",
+        "required": [
+          "requests_per_minute",
+          "requests_per_day"
+        ],
+        "properties": {
+          "requests_per_day": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requests_per_minute": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "RenameObjectRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RequiredHeaderView": {
+        "type": "object",
+        "required": [
+          "name",
+          "value"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "ShareLinkListResponse": {
+        "type": "object",
+        "required": [
+          "share_links"
+        ],
+        "properties": {
+          "share_links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareLinkView"
+            }
+          }
+        }
+      },
+      "ShareLinkResponse": {
+        "type": "object",
+        "required": [
+          "share_link"
+        ],
+        "properties": {
+          "share_link": {
+            "$ref": "#/components/schemas/ShareLinkView"
+          },
+          "share_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ShareLinkView": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "storage_object_id",
+          "permission",
+          "expires_at",
+          "download_count",
+          "created_by",
+          "created_by_principal_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_by_principal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "download_count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "max_downloads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "storage_object_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SignedDownloadUrlView": {
+        "type": "object",
+        "required": [
+          "url",
+          "method",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "method": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "SignedUploadUrlView": {
+        "type": "object",
+        "required": [
+          "url",
+          "method",
+          "expires_at",
+          "required_headers"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "method": {
+            "type": "string"
+          },
+          "required_headers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequiredHeaderView"
+            }
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "StorageObjectView": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "object_type",
+          "name",
+          "size_bytes",
+          "status",
+          "created_by",
+          "created_by_principal_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_by_principal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mime_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "object_type": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "trashed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UpdateShareLinkRequest": {
+        "type": "object",
+        "properties": {
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_downloads": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UploadObjectView": {
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "name",
+          "object_type",
+          "status",
+          "scan_status",
+          "size_bytes",
+          "created_by",
+          "created_by_principal_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "checksum": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_by_principal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mime_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "object_type": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "scan_status": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workspace_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "files",
+      "description": "File and folder management"
+    },
+    {
+      "name": "uploads",
+      "description": "File upload workflow"
+    },
+    {
+      "name": "share-links",
+      "description": "Share link management"
+    },
+    {
+      "name": "public-shares",
+      "description": "Public share access"
+    },
+    {
+      "name": "quotas",
+      "description": "Storage quotas"
+    },
+    {
+      "name": "audit",
+      "description": "Audit events"
+    },
+    {
+      "name": "privacy",
+      "description": "Data privacy & export"
+    },
+    {
+      "name": "api-keys",
+      "description": "Legacy API key management (list/revoke only)"
+    },
+    {
+      "name": "public-api",
+      "description": "Public REST API v1"
+    }
+  ]
+}

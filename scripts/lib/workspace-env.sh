@@ -5,6 +5,7 @@ set -euo pipefail
 load_workspace_env() {
   local env_file="$ROOT_DIR/.env"
   local dotenv_exports
+  local node_process_title="${1:-nvbes:workspace-env}"
 
   export NVBES_WORKSPACE_ROOT="$ROOT_DIR"
 
@@ -14,12 +15,13 @@ load_workspace_env() {
 
   # Parse dotenv as data: never source the developer file as shell code.
   # Existing process and CI variables remain authoritative.
-  dotenv_exports="$(node "$ROOT_DIR/scripts/env.mjs" export)" || return 1
+  dotenv_exports="$(node --title="$node_process_title" "$ROOT_DIR/scripts/env.mjs" export)" || return 1
   eval "$dotenv_exports"
 
   if [ "${NVBES_DEVCONTAINER:-}" = "true" ] || [ -f "/.dockerenv" ]; then
     export NVBES_DATABASE_URL="${NVBES_DEVCONTAINER_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes}"
     export NVBES_IDENTITY_DATABASE_URL="${NVBES_DEVCONTAINER_IDENTITY_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_identity}"
+    export NVBES_IDENTITY_TEST_DATABASE_URL="${NVBES_DEVCONTAINER_IDENTITY_TEST_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_identity_test}"
     export NVBES_ACCOUNT_DATABASE_URL="${NVBES_DEVCONTAINER_ACCOUNT_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_account}"
     export NVBES_CLOUD_DATABASE_URL="${NVBES_DEVCONTAINER_CLOUD_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_cloud}"
     export NVBES_BILLING_DATABASE_URL="${NVBES_DEVCONTAINER_BILLING_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/nvbes_billing}"

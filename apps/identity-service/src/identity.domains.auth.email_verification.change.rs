@@ -15,6 +15,7 @@ pub async fn change_verification_email(
     config: &AppConfig,
     registration_enrollment_token: &str,
     email: &str,
+    timezone: &str,
 ) -> Result<ResendVerificationResult, AppError> {
     let email = normalize_email(email);
     validate_email(&email)?;
@@ -28,7 +29,7 @@ pub async fn change_verification_email(
         SELECT
           u.principal_id,
           u.email,
-          COALESCE(profile.display_name, 'User') AS display_name,
+          profile.display_name,
           u.email_verified_at
         FROM users u
         LEFT JOIN identity_oidc_profile_claims profile
@@ -53,13 +54,15 @@ pub async fn change_verification_email(
     let current_email = row.get::<String, _>("email");
     if current_email.trim().eq_ignore_ascii_case(&email) {
         tx.rollback().await?;
-        return resend_verification_email(db, redis, config, &email).await;
+        return resend_verification_email(db, redis, config, &email, timezone).await;
     }
 
     db::emails::change_unverified_primary_email(&mut tx, principal_id, &email).await?;
     registration_enrollment::consume_all_for_principal_tx(&mut tx, principal_id).await?;
 
-    let display_name: String = row.get("display_name");
+    let display_name = super::email_recipient::recipient_name(
+        row.get::<Option<String>, _>("display_name").as_deref(),
+    );
     let verification_token = generate_random_token();
 
     tx.commit().await?;
@@ -88,6 +91,7 @@ pub async fn change_verification_email(
         &display_name,
         &verification_token,
         verification.expires_at,
+        timezone,
     )
     .await?;
     Ok(ResendVerificationResult {

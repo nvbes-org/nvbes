@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use chrono::Duration as ChronoDuration;
 use nvbes_email::{
@@ -8,27 +8,55 @@ use nvbes_email::{
 use prost::Message;
 use tokio::sync::watch;
 
-use crate::{crypto::SealedValue, database, dispatch_db, state::EmailWorkerState};
+use crate::{crypto::SealedValue, database, dispatch_db, email_metrics, state::EmailWorkerState};
 
 pub async fn run(state: EmailWorkerState, mut shutdown: watch::Receiver<bool>) {
     let mut interval = tokio::time::interval(Duration::from_millis(250));
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut queue_metrics = tokio::time::interval(Duration::from_secs(5));
+    queue_metrics.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut retention = tokio::time::interval(Duration::from_secs(300));
+    retention.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
             _ = interval.tick() => {
                 state.record_dispatcher_heartbeat();
-                if let Err(error) = dispatch_db::suppress_due_messages(&state.db).await {
-                    tracing::error!(error = ?error, "email suppression sweep failed");
-                    continue;
+                match dispatch_db::suppress_due_messages(&state.db).await {
+                    Ok(suppressed) => email_metrics::suppressed(suppressed),
+                    Err(error) => {
+                        tracing::error!(error = ?error, "email suppression sweep failed");
+                        continue;
+                    }
                 }
                 match database::expire_stale_messages(&state.db).await {
-                    Ok(expired) if expired > 0 => tracing::info!(expired, "expired stale email commands"),
+                    Ok(expired) if expired > 0 => {
+                        email_metrics::expired(expired);
+                        tracing::info!(expired, "expired stale email commands");
+                    }
                     Ok(_) => {}
                     Err(error) => tracing::error!(error = ?error, "email deadline sweep failed"),
                 }
                 if let Err(error) = dispatch_one(&state).await {
                     tracing::error!(error = ?error, "email dispatch iteration failed");
+                }
+            }
+            _ = queue_metrics.tick() => {
+                match database::queue_snapshot(&state.db).await {
+                    Ok((depth, oldest_age)) => email_metrics::queue(depth, oldest_age),
+                    Err(error) => tracing::error!(error = ?error, "email queue metrics query failed"),
+                }
+            }
+            _ = retention.tick() => {
+                let policy = &state.config.retention;
+                match database::apply_retention(&state.db, policy.payload_days, policy.ledger_days).await {
+                    Ok(result) => email_metrics::retention(
+                        result.payloads,
+                        result.diagnostics,
+                        result.messages,
+                        result.events,
+                    ),
+                    Err(error) => tracing::error!(error = ?error, "email retention sweep failed"),
                 }
             }
             changed = shutdown.changed() => {
@@ -61,6 +89,12 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
                 ChronoDuration::zero(),
             )
             .await?;
+            email_metrics::dispatch(
+                state.config.provider.label(),
+                &claim.template_name,
+                "permanent_failure",
+                Duration::ZERO,
+            );
             return Ok(());
         }
     };
@@ -68,13 +102,20 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
     if dispatch_db::expire_claim_if_due(&state.db, &claim).await? {
         return Ok(());
     }
+    let started_at = Instant::now();
     match state
         .provider
         .send_message_before(&message, claim.deliver_before)
         .await
     {
         Ok(result) => {
-            dispatch_db::complete_success(&state.db, &claim, &result.provider_email_id).await?
+            dispatch_db::complete_success(&state.db, &claim, &result.provider_email_id).await?;
+            email_metrics::dispatch(
+                state.config.provider.label(),
+                &claim.template_name,
+                "provider_accepted",
+                started_at.elapsed(),
+            );
         }
         Err(error) => {
             let policy = retry_policy(&claim.category, claim.attempt_count);
@@ -99,6 +140,12 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
                 policy.retry_delay,
             )
             .await?;
+            email_metrics::dispatch(
+                state.config.provider.label(),
+                &claim.template_name,
+                outcome,
+                started_at.elapsed(),
+            );
         }
     }
     Ok(())
@@ -222,6 +269,7 @@ mod tests {
                 user_name: "Ada".into(),
                 verification_url: "https://account.nvbes.fr/verify-result?token=secret".into(),
                 credential_expires_at: Utc::now(),
+                timezone: "UTC".into(),
             }),
             "verification"
         );

@@ -13,6 +13,7 @@ pub struct RegisterInput {
     pub user_agent: Option<String>,
     pub legal_documents_accepted: bool,
     pub marketing_emails_accepted: bool,
+    pub timezone: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

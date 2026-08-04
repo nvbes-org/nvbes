@@ -19,12 +19,14 @@ if [ -n "${NVBES_OBSERVABILITY_LOG_DIR:-}" ]; then
   bash "$SCRIPT_DIR/dev-account-service.sh" \
     2>&1 | tee -a "$NVBES_OBSERVABILITY_LOG_DIR/account-service.jsonl" &
   bash "$SCRIPT_DIR/dev-email-worker.sh" &
+  bash "$SCRIPT_DIR/dev-identity-worker.sh" &
   bash "$SCRIPT_DIR/dev-account-web.sh" &
   cargo run -p nvbes-account-worker \
     2>&1 | tee -a "$NVBES_OBSERVABILITY_LOG_DIR/account-worker.jsonl" &
 else
   bash "$SCRIPT_DIR/dev-account-service.sh" &
   bash "$SCRIPT_DIR/dev-email-worker.sh" &
+  bash "$SCRIPT_DIR/dev-identity-worker.sh" &
   bash "$SCRIPT_DIR/dev-account-web.sh" &
   cargo run -p nvbes-account-worker &
 fi

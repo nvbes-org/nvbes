@@ -1,9 +1,14 @@
-use std::{collections::HashSet, net::SocketAddr, path::PathBuf};
+use std::{collections::HashMap, net::SocketAddr, path::PathBuf};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 
-const INTERNAL_TOKEN_ENV: &str = "NVBES_EMAIL_GRPC_AUTH_TOKEN";
-const DEVELOPMENT_TOKEN: &str = "development-email-internal-token-32";
+#[path = "email.worker.config.producers.rs"]
+mod producers;
+#[path = "email.worker.config.retention.rs"]
+mod retention;
+
+pub use retention::RetentionConfig;
+
 const DEVELOPMENT_DATA_KEY: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 const DEVELOPMENT_HMAC_KEY: &str = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=";
 
@@ -22,6 +27,17 @@ pub enum ProviderConfig {
     Scaleway(ScalewayConfig),
 }
 
+impl ProviderConfig {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Mock => "mock",
+            Self::Smtp(_) => "smtp",
+            Self::TestCapture(_) => "test-capture",
+            Self::Scaleway(_) => "scaleway",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct WebhookTrustConfig {
     pub topic_arn: String,
@@ -36,8 +52,7 @@ pub struct EmailWorkerConfig {
     pub database_url: String,
     pub http_bind_addr: SocketAddr,
     pub grpc_bind_addr: SocketAddr,
-    pub internal_token: String,
-    pub allowed_producers: HashSet<String>,
+    pub producer_tokens: HashMap<String, String>,
     pub data_encryption_key: [u8; 32],
     pub recipient_hmac_key: [u8; 32],
     pub from_email: String,
@@ -46,6 +61,7 @@ pub struct EmailWorkerConfig {
     pub message_id_domain: String,
     pub provider: ProviderConfig,
     pub webhook: Option<WebhookTrustConfig>,
+    pub retention: RetentionConfig,
 }
 
 impl EmailWorkerConfig {
@@ -58,16 +74,8 @@ impl EmailWorkerConfig {
         let grpc_bind_addr = env_or("NVBES_EMAIL_GRPC_BIND_ADDR", "127.0.0.1:3041")
             .parse()
             .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_GRPC_BIND_ADDR is invalid: {error}"))?;
-        let internal_token = nvbes_core::http::internal_service::load_token(
-            INTERNAL_TOKEN_ENV,
-            &environment,
-            DEVELOPMENT_TOKEN,
-        )
-        .map_err(anyhow::Error::msg)?;
-        let allowed_producers = csv_set(&env_or(
-            "NVBES_EMAIL_ALLOWED_PRODUCERS",
-            "identity-service,identity-worker,billing-worker,enterprise-service",
-        ))?;
+        let producer_tokens =
+            producers::from_environment(optional("NVBES_EMAIL_PRODUCER_TOKENS"), &environment)?;
         let data_encryption_key = key(
             "NVBES_EMAIL_DATA_ENCRYPTION_KEY",
             development_value(&environment, DEVELOPMENT_DATA_KEY),
@@ -96,14 +104,17 @@ impl EmailWorkerConfig {
             .ok_or_else(|| anyhow::anyhow!("email message ID domain is missing"))?;
         let provider = provider(&environment)?;
         let webhook = webhook(&environment)?;
+        let retention = retention::parse(
+            &env_or("NVBES_EMAIL_PAYLOAD_RETENTION_DAYS", "30"),
+            &env_or("NVBES_EMAIL_LEDGER_RETENTION_DAYS", "400"),
+        )?;
 
         Ok(Self {
             environment,
             database_url,
             http_bind_addr,
             grpc_bind_addr,
-            internal_token,
-            allowed_producers,
+            producer_tokens,
             data_encryption_key,
             recipient_hmac_key,
             from_email,
@@ -112,6 +123,7 @@ impl EmailWorkerConfig {
             message_id_domain,
             provider,
             webhook,
+            retention,
         })
     }
 }
@@ -227,19 +239,6 @@ fn key(variable: &str, fallback: Option<&str>) -> anyhow::Result<[u8; 32]> {
     decoded
         .try_into()
         .map_err(|_| anyhow::anyhow!("{variable} must decode to exactly 32 bytes"))
-}
-
-fn csv_set(value: &str) -> anyhow::Result<HashSet<String>> {
-    let values: HashSet<_> = value
-        .split(',')
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-        .collect();
-    if values.is_empty() {
-        anyhow::bail!("NVBES_EMAIL_ALLOWED_PRODUCERS must not be empty");
-    }
-    Ok(values)
 }
 
 fn development_value<'a>(environment: &str, value: &'a str) -> Option<&'a str> {

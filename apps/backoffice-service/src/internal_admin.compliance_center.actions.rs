@@ -112,6 +112,7 @@ async fn review_suppression_route(
     Ok(Json(
         review_suppression(
             &state.db,
+            &*state.email_operations,
             access,
             workspace_id,
             request.email,
