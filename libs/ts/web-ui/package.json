@@ -26,13 +26,13 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "lucide-react": "^1.16.0",
+    "lucide-react": "^1.29.0",
     "react": "catalog:",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.18",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
   }
