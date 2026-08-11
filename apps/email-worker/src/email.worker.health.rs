@@ -1,11 +1,7 @@
-use std::time::Duration;
-
-use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
+use axum::{Json, Router, http::StatusCode, routing::get};
 use serde::Serialize;
 
-use crate::{database, state::EmailWorkerState};
-
-const MAX_DISPATCHER_HEARTBEAT_AGE: Duration = Duration::from_secs(10);
+use crate::state::EmailWorkerState;
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -27,18 +23,11 @@ async fn live() -> Json<HealthResponse> {
     })
 }
 
-async fn ready(State(state): State<EmailWorkerState>) -> (StatusCode, Json<HealthResponse>) {
-    let database_ready = database::database_now(&state.db).await.is_ok();
-    let dispatcher_ready = state.dispatcher_is_current(MAX_DISPATCHER_HEARTBEAT_AGE);
-    let (status, label) = if database_ready && dispatcher_ready {
-        (StatusCode::OK, "ready")
-    } else {
-        (StatusCode::SERVICE_UNAVAILABLE, "not_ready")
-    };
+async fn ready() -> (StatusCode, Json<HealthResponse>) {
     (
-        status,
+        StatusCode::OK,
         Json(HealthResponse {
-            status: label,
+            status: "ready",
             service: "nvbes-email-worker",
         }),
     )

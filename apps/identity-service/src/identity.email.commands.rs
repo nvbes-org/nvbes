@@ -40,9 +40,13 @@ pub async fn enqueue(
         template,
         deliver_before,
     };
-    command
-        .validate(Utc::now())
-        .map_err(|_| AppError::internal("email_command_invalid", "Email command is invalid."))?;
+    command.validate(Utc::now()).map_err(|error| {
+        tracing::warn!(
+            validation_field = error.field_name(),
+            "Identity rejected an invalid email command before enqueue"
+        );
+        AppError::internal("email_command_invalid", "Email command is invalid.")
+    })?;
     nvbes_product_identity::email::jobs::enqueue_email_command(redis, command)
         .await
         .map_err(AppError::from)

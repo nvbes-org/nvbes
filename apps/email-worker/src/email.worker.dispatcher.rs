@@ -6,57 +6,37 @@ use nvbes_email::{
     proto::nvbes::email::v1::{EmailRecipient, TransactionalEmailTemplate},
 };
 use prost::Message;
-use tokio::sync::watch;
+use tokio::sync::{mpsc, watch};
+use uuid::Uuid;
 
-use crate::{crypto::SealedValue, database, dispatch_db, email_metrics, state::EmailWorkerState};
+use crate::{
+    crypto::SealedValue,
+    dispatch_attempt::FailureResolution,
+    dispatch_db::{self, ClaimResult},
+    email_metrics,
+    state::EmailWorkerState,
+};
 
-pub async fn run(state: EmailWorkerState, mut shutdown: watch::Receiver<bool>) {
-    let mut interval = tokio::time::interval(Duration::from_millis(250));
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let mut queue_metrics = tokio::time::interval(Duration::from_secs(5));
-    queue_metrics.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-    let mut retention = tokio::time::interval(Duration::from_secs(300));
-    retention.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-
+pub async fn run_local(
+    state: EmailWorkerState,
+    mut receiver: mpsc::Receiver<Uuid>,
+    mut shutdown: watch::Receiver<bool>,
+) {
     loop {
         tokio::select! {
-            _ = interval.tick() => {
-                state.record_dispatcher_heartbeat();
-                match dispatch_db::suppress_due_messages(&state.db).await {
-                    Ok(suppressed) => email_metrics::suppressed(suppressed),
-                    Err(error) => {
-                        tracing::error!(error = ?error, "email suppression sweep failed");
-                        continue;
+            message_id = receiver.recv() => {
+                let Some(message_id) = message_id else {
+                    break;
+                };
+                match dispatch_message(&state, message_id).await {
+                    Ok(DispatchOutcome::Acknowledged) => {}
+                    Ok(DispatchOutcome::Retry) => {
+                        tokio::time::sleep(Duration::from_secs(60)).await;
+                        if let Err(error) = state.dispatch_queue.enqueue(message_id).await {
+                            tracing::error!(%message_id, error = ?error, "local email retry enqueue failed");
+                        }
                     }
-                }
-                match database::expire_stale_messages(&state.db).await {
-                    Ok(expired) if expired > 0 => {
-                        email_metrics::expired(expired);
-                        tracing::info!(expired, "expired stale email commands");
-                    }
-                    Ok(_) => {}
-                    Err(error) => tracing::error!(error = ?error, "email deadline sweep failed"),
-                }
-                if let Err(error) = dispatch_one(&state).await {
-                    tracing::error!(error = ?error, "email dispatch iteration failed");
-                }
-            }
-            _ = queue_metrics.tick() => {
-                match database::queue_snapshot(&state.db).await {
-                    Ok((depth, oldest_age)) => email_metrics::queue(depth, oldest_age),
-                    Err(error) => tracing::error!(error = ?error, "email queue metrics query failed"),
-                }
-            }
-            _ = retention.tick() => {
-                let policy = &state.config.retention;
-                match database::apply_retention(&state.db, policy.payload_days, policy.ledger_days).await {
-                    Ok(result) => email_metrics::retention(
-                        result.payloads,
-                        result.diagnostics,
-                        result.messages,
-                        result.events,
-                    ),
-                    Err(error) => tracing::error!(error = ?error, "email retention sweep failed"),
+                    Err(error) => tracing::error!(%message_id, error = ?error, "local email dispatch failed"),
                 }
             }
             changed = shutdown.changed() => {
@@ -68,19 +48,30 @@ pub async fn run(state: EmailWorkerState, mut shutdown: watch::Receiver<bool>) {
     }
 }
 
-async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
-    let Some(claim) = dispatch_db::claim_one(&state.db).await? else {
-        return Ok(());
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DispatchOutcome {
+    Acknowledged,
+    Retry,
+}
+
+pub async fn dispatch_message(
+    state: &EmailWorkerState,
+    message_id: Uuid,
+) -> anyhow::Result<DispatchOutcome> {
+    let claim = match dispatch_db::claim_message(&state.db, message_id).await? {
+        ClaimResult::Claimed(claim) => claim,
+        ClaimResult::Busy => return Ok(DispatchOutcome::Retry),
+        ClaimResult::Settled | ClaimResult::Missing => return Ok(DispatchOutcome::Acknowledged),
     };
     if dispatch_db::expire_claim_if_due(&state.db, &claim).await? {
-        return Ok(());
+        return Ok(DispatchOutcome::Acknowledged);
     }
 
     let message = match materialize(state, &claim) {
         Ok(message) => message,
         Err(error) => {
             tracing::error!(message_id = %claim.id, error = ?error, "stored email command is invalid");
-            dispatch_db::complete_failure(
+            let _ = dispatch_db::complete_failure(
                 &state.db,
                 &claim,
                 "permanent_failure",
@@ -95,12 +86,12 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
                 "permanent_failure",
                 Duration::ZERO,
             );
-            return Ok(());
+            return Ok(DispatchOutcome::Acknowledged);
         }
     };
 
     if dispatch_db::expire_claim_if_due(&state.db, &claim).await? {
-        return Ok(());
+        return Ok(DispatchOutcome::Acknowledged);
     }
     let started_at = Instant::now();
     match state
@@ -131,7 +122,7 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
                 attempt = claim.attempt_count,
                 "email provider attempt failed"
             );
-            dispatch_db::complete_failure(
+            let resolution = dispatch_db::complete_failure(
                 &state.db,
                 &claim,
                 outcome,
@@ -146,9 +137,12 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
                 outcome,
                 started_at.elapsed(),
             );
+            if matches!(resolution, FailureResolution::RetryAt(_)) {
+                return Ok(DispatchOutcome::Retry);
+            }
         }
     }
-    Ok(())
+    Ok(DispatchOutcome::Acknowledged)
 }
 
 fn materialize(
@@ -226,52 +220,17 @@ struct RetryPolicy {
 }
 
 fn retry_policy(category: &str, attempt: i32) -> RetryPolicy {
-    let (maximum_attempts, delays): (i32, &[i64]) = match category {
-        "credential" => (4, &[15, 60, 180]),
-        "account_security" => (5, &[30, 120, 600, 1_800]),
-        "billing" => (5, &[60, 300, 1_800, 7_200]),
-        "reminder" => (4, &[60, 600, 3_600]),
-        _ => (1, &[]),
-    };
-    let index = (attempt.saturating_sub(1) as usize).min(delays.len().saturating_sub(1));
-    let base = delays.get(index).copied().unwrap_or(0);
+    let _ = (category, attempt);
     RetryPolicy {
-        maximum_attempts,
-        retry_delay: ChronoDuration::seconds(jitter(base, attempt)),
+        maximum_attempts: 4,
+        retry_delay: ChronoDuration::seconds(60),
     }
-}
-
-fn jitter(base_seconds: i64, attempt: i32) -> i64 {
-    let percent = 80 + (attempt as i64 * 37 % 41);
-    base_seconds * percent / 100
 }
 
 #[cfg(test)]
-mod tests {
-    use chrono::Utc;
-    use nvbes_email::EmailTemplate;
+#[path = "email.worker.dispatcher.unit.tests.rs"]
+mod tests;
 
-    use super::{business_type, retry_policy};
-
-    #[test]
-    fn credential_retries_fit_short_lived_codes() {
-        let first = retry_policy("credential", 1);
-        let last = retry_policy("credential", 4);
-        assert_eq!(first.maximum_attempts, 4);
-        assert!(first.retry_delay.num_seconds() < 20);
-        assert!(last.retry_delay.num_minutes() < 4);
-    }
-
-    #[test]
-    fn test_capture_uses_the_existing_beta_business_type() {
-        assert_eq!(
-            business_type(&EmailTemplate::EmailVerificationV1 {
-                user_name: "Ada".into(),
-                verification_url: "https://account.nvbes.fr/verify-result?token=secret".into(),
-                credential_expires_at: Utc::now(),
-                timezone: "UTC".into(),
-            }),
-            "verification"
-        );
-    }
-}
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.dispatcher.tests.rs"]
+mod database_tests;

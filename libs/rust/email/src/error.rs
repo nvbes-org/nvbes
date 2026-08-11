@@ -131,3 +131,7 @@ mod tests {
         assert!(!error.safe_summary().contains(secret));
     }
 }
+
+#[cfg(test)]
+#[path = "error.transport.tests.rs"]
+mod transport_tests;

@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-const DEVELOPMENT_ENDPOINT: &str = "http://127.0.0.1:3041";
+const DEVELOPMENT_ENDPOINT: &str = "http://127.0.0.1:3040";
 const DEVELOPMENT_TOKEN: &str = "development-email-internal-token-32";
 const OPERATIONS_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -259,3 +259,10 @@ mod tests {
         assert!(!value.to_string().contains("recipient"));
     }
 }
+
+#[cfg(test)]
+#[path = "operations.integration.tests.rs"]
+mod integration_tests;
+#[cfg(test)]
+#[path = "operations.privacy.tests.rs"]
+mod privacy_tests;

@@ -30,7 +30,7 @@ const mainSource = readFileSync(mainPath, "utf8");
 const lockResolution = {
 	msrv: "1.91.1",
 	packageGraphSha256:
-		"5a1373d06ebd7e8cbe2c90bb13918c3e738ef6862224ed3ee876acfe7ae3d3c2",
+		"098383b91a088ff6bd9e65d040ad95e8b23ad02fdcca2005ef68039fb40b21f1",
 };
 
 const expectedCliModes = [

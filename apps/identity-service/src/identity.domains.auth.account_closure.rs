@@ -120,16 +120,17 @@ async fn purge_authentication_state(
     principal_id: Uuid,
 ) -> Result<(), AppError> {
     crate::domains::auth::sessions_mgmt::revoke_all_user_sessions_tx(tx, principal_id).await?;
+    crate::cloud_boundary::workspace_projection::project_purge_principal_context_tx(
+        tx,
+        principal_id,
+    )
+    .await?;
     for statement in [
         "DELETE FROM registration_enrollment_tokens WHERE principal_id = $1",
         "DELETE FROM enterprise_password_recovery_requests WHERE principal_id = $1",
         "DELETE FROM privileged_action_approvals WHERE requested_by = $1 OR approved_by = $1",
         "DELETE FROM privileged_access_grants WHERE principal_id = $1",
-        "DELETE FROM tenant_break_glass_accounts WHERE principal_id = $1",
-        "DELETE FROM developer_token_debug_sessions WHERE actor_principal_id = $1",
-        "DELETE FROM developer_role_assignments WHERE principal_id = $1",
         "DELETE FROM access_review_reminders WHERE recipient_principal_id = $1",
-        "DELETE FROM workspace_memberships WHERE principal_id = $1",
         "DELETE FROM organization_memberships WHERE principal_id = $1",
         "DELETE FROM tenant_memberships WHERE principal_id = $1",
         "DELETE FROM password_history WHERE principal_id = $1",

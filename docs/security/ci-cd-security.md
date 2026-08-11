@@ -18,6 +18,9 @@ The active GitHub Actions baseline is:
 - CI/CD security self-check before dependency installation;
 - generic secret-bearing release steps restricted to trusted `push` events on
   `main`;
+- production email deployment restricted to the protected `production-email`
+  Environment, the exact `main` commit, a signed immutable image, and the fixed
+  isolated email Terraform state;
 - authenticated DAST restricted to the protected staging Environment, the exact
   `main` commit selected by `github.sha`, exact preflight-validated origins, and
   fail-closed synthetic identity/access proofs before and after each scan.
@@ -32,6 +35,27 @@ New workflow actions, secrets, write permissions, deployment paths, or triggers
 must be added to the registry with owner-reviewed evidence before use. The checker
 scans `.github/workflows` and rejects unregistered integrations and dangerous
 trust-boundary patterns.
+
+## Email deployment trust boundary
+
+The production email exception applies only to
+`.github/workflows/deploy-email.yml`. It has no dispatch inputs, accepts only
+`refs/heads/main`, checks out the exact `github.sha`, and runs through the
+protected `production-email` GitHub Environment. The environment must require
+independent approval and contains only email-scoped provider, state, encryption,
+and delivery credentials.
+
+The workflow consumes only
+`ghcr.io/nvbes-org/nvbes-email-worker:<github.sha>`, resolves it to a digest, and
+verifies the keyless signature identity of `container-release.yml`. It then
+copies only the verified `linux/amd64` image into a private Scaleway Container
+Registry and keyless-signs that immutable copy before passing its digest to
+Terraform. Terraform is fixed to
+`infrastructure/environments/email-production` and
+`production/email/terraform.tfstate`; neither target nor image is accepted from
+operator input. It applies saved plans, requires the SQLx migration job to reach
+`succeeded`, and only then applies the runtime plan and verifies the public
+shallow health endpoint.
 
 ## Account release trust boundary
 

@@ -22,14 +22,15 @@ test("image builds and runs the Rust email worker", () => {
 	);
 	assert.ok(dockerfile.includes("COPY contracts ./contracts"));
 	assert.ok(dockerfile.includes("USER 10001:10001"));
-	assert.ok(dockerfile.includes("EXPOSE 3040 3041"));
+	assert.ok(dockerfile.includes("EXPOSE 8080"));
+	assert.ok(!dockerfile.includes("NVBES_EMAIL_GRPC_BIND_ADDR"));
 	assert.ok(dockerfile.includes('ENTRYPOINT ["/app/email-worker"]'));
 });
 
 test("container liveness uses the shallow HTTP endpoint", () => {
 	assert.match(
 		dockerfile,
-		/HEALTHCHECK[^\n]*\\\n\s+CMD \["curl", "--fail", "--silent", "--show-error", "http:\/\/127\.0\.0\.1:3040\/health\/live"\]/,
+		/HEALTHCHECK[^\n]*\\\n\s+CMD \["curl", "--fail", "--silent", "--show-error", "http:\/\/127\.0\.0\.1:8080\/health\/live"\]/,
 	);
 	assert.ok(dockerfile.includes("STOPSIGNAL SIGTERM"));
 	assert.ok(!dockerfile.includes('"/health/ready"'));

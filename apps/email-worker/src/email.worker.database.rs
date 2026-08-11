@@ -8,13 +8,24 @@ use nvbes_email::{EmailCommand, EmailReceipt, proto::nvbes::email::v1::SubmitEma
 
 use crate::crypto::EmailCrypto;
 
+const DATABASE_ACQUIRE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
 pub async fn connect(database_url: &str) -> anyhow::Result<PgPool> {
     PgPoolOptions::new()
-        .min_connections(1)
+        .min_connections(0)
         .max_connections(10)
-        .acquire_timeout(std::time::Duration::from_secs(5))
+        .acquire_timeout(DATABASE_ACQUIRE_TIMEOUT)
         .connect(database_url)
         .await
+        .map_err(anyhow::Error::from)
+}
+
+pub fn connect_lazy(database_url: &str) -> anyhow::Result<PgPool> {
+    PgPoolOptions::new()
+        .min_connections(0)
+        .max_connections(10)
+        .acquire_timeout(DATABASE_ACQUIRE_TIMEOUT)
+        .connect_lazy(database_url)
         .map_err(anyhow::Error::from)
 }
 
@@ -35,7 +46,7 @@ pub async fn accept_command(
     message_id_domain: &str,
     wire: &SubmitEmailRequest,
     command: &EmailCommand,
-) -> Result<EmailReceipt, AcceptCommandError> {
+) -> Result<AcceptedCommand, AcceptCommandError> {
     let now = database_now(pool).await?;
     command.validate(now)?;
     let message_uuid = Uuid::new_v4();
@@ -83,11 +94,15 @@ pub async fn accept_command(
     .await?;
 
     if let Some((accepted_at,)) = inserted {
-        return Ok(EmailReceipt {
-            message_id,
-            accepted_at,
-            deliver_before: command.deliver_before,
-            duplicate: false,
+        return Ok(AcceptedCommand {
+            id: message_uuid,
+            receipt: EmailReceipt {
+                message_id,
+                accepted_at,
+                deliver_before: command.deliver_before,
+                duplicate: false,
+            },
+            enqueue_required: true,
         });
     }
 
@@ -98,10 +113,10 @@ async fn existing_receipt(
     pool: &PgPool,
     command: &EmailCommand,
     fingerprint: &[u8; 32],
-) -> Result<EmailReceipt, AcceptCommandError> {
-    let row = sqlx::query_as::<_, (Uuid, String, Vec<u8>, DateTime<Utc>, DateTime<Utc>)>(
+) -> Result<AcceptedCommand, AcceptCommandError> {
+    let row = sqlx::query_as::<_, (Uuid, String, Vec<u8>, DateTime<Utc>, DateTime<Utc>, String)>(
         r#"
-        SELECT id, message_id, command_fingerprint, accepted_at, deliver_before
+        SELECT id, message_id, command_fingerprint, accepted_at, deliver_before, state::text
         FROM email_messages
         WHERE producer = $1 AND idempotency_key = $2
         "#,
@@ -114,12 +129,23 @@ async fn existing_receipt(
     if !constant_time_eq(&row.2, fingerprint) {
         return Err(AcceptCommandError::Conflict);
     }
-    Ok(EmailReceipt {
-        message_id: row.1,
-        accepted_at: row.3,
-        deliver_before: row.4,
-        duplicate: true,
+    Ok(AcceptedCommand {
+        id: row.0,
+        receipt: EmailReceipt {
+            message_id: row.1,
+            accepted_at: row.3,
+            deliver_before: row.4,
+            duplicate: true,
+        },
+        enqueue_required: matches!(row.5.as_str(), "accepted" | "deferred" | "dispatching"),
     })
+}
+
+#[derive(Debug)]
+pub struct AcceptedCommand {
+    pub id: Uuid,
+    pub receipt: EmailReceipt,
+    pub enqueue_required: bool,
 }
 
 pub async fn expire_stale_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {
@@ -137,19 +163,6 @@ pub async fn expire_stale_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {
     .execute(pool)
     .await?;
     Ok(result.rows_affected())
-}
-
-pub async fn queue_snapshot(pool: &PgPool) -> Result<(i64, Option<f64>), sqlx::Error> {
-    sqlx::query_as(
-        r#"
-        SELECT COUNT(*)::BIGINT,
-               EXTRACT(EPOCH FROM clock_timestamp() - MIN(accepted_at))::DOUBLE PRECISION
-        FROM email_messages
-        WHERE state IN ('accepted', 'deferred', 'dispatching')
-        "#,
-    )
-    .fetch_one(pool)
-    .await
 }
 
 #[derive(Debug, Default)]
@@ -287,3 +300,7 @@ pub enum AcceptCommandError {
 #[cfg(all(test, feature = "database-tests"))]
 #[path = "email.worker.database.tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "email.worker.database.pool.tests.rs"]
+mod pool_tests;

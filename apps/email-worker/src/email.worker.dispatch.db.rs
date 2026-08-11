@@ -21,6 +21,119 @@ pub struct ClaimedEmail {
     pub lease_token: Uuid,
 }
 
+#[derive(Debug)]
+pub enum ClaimResult {
+    Claimed(ClaimedEmail),
+    Busy,
+    Settled,
+    Missing,
+}
+
+pub async fn claim_message(pool: &PgPool, id: Uuid) -> Result<ClaimResult, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    let row = sqlx::query_as::<_, (String, Option<Uuid>, bool, bool, bool)>(
+        r#"
+        SELECT state::text, lease_token,
+               COALESCE(lease_expires_at <= clock_timestamp(), TRUE),
+               deliver_before <= clock_timestamp(),
+               EXISTS (
+                   SELECT 1 FROM email_suppressions AS suppression
+                   WHERE suppression.recipient_hash = email_messages.recipient_hash
+                     AND suppression.active
+                     AND suppression.released_at IS NULL
+                     AND (suppression.scope = 'all' OR email_messages.category = 'reminder')
+               )
+        FROM email_messages
+        WHERE id = $1
+        FOR UPDATE
+        "#,
+    )
+    .bind(id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some((state, stale_lease_token, lease_expired, deadline_expired, suppressed)) = row else {
+        tx.commit().await?;
+        return Ok(ClaimResult::Missing);
+    };
+
+    if !matches!(state.as_str(), "accepted" | "deferred" | "dispatching") {
+        tx.commit().await?;
+        return Ok(ClaimResult::Settled);
+    }
+    if state == "dispatching" && !lease_expired {
+        tx.commit().await?;
+        return Ok(ClaimResult::Settled);
+    }
+    if let Some(stale_lease_token) = stale_lease_token {
+        finish_attempt_tx(
+            &mut tx,
+            stale_lease_token,
+            "ambiguous_failure",
+            None,
+            Some("lease_expired"),
+        )
+        .await?;
+    }
+    if deadline_expired || suppressed {
+        let terminal_state = if deadline_expired {
+            "expired"
+        } else {
+            "suppressed"
+        };
+        sqlx::query(
+            r#"
+            UPDATE email_messages
+            SET state = $2::email_message_state, terminal_at = clock_timestamp(),
+                updated_at = clock_timestamp(), lease_token = NULL, lease_expires_at = NULL
+            WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .bind(terminal_state)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        return Ok(ClaimResult::Settled);
+    }
+
+    let lease_token = Uuid::new_v4();
+    let claimed = sqlx::query_as::<_, ClaimedEmail>(
+        r#"
+        UPDATE email_messages
+        SET state = 'dispatching', lease_token = $2,
+            lease_expires_at = clock_timestamp() + interval '45 seconds',
+            attempt_count = attempt_count + 1, updated_at = clock_timestamp()
+        WHERE id = $1 AND next_attempt_at <= clock_timestamp()
+        RETURNING id, category::text AS category, template_name,
+                  recipient_ciphertext, recipient_nonce,
+                  template_ciphertext, template_nonce, deliver_before, message_id,
+                  attempt_count, lease_token
+        "#,
+    )
+    .bind(id)
+    .bind(lease_token)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(claimed) = claimed else {
+        tx.commit().await?;
+        return Ok(ClaimResult::Busy);
+    };
+    sqlx::query(
+        r#"
+        INSERT INTO email_delivery_attempts (id, message_id, attempt_number, lease_token)
+        VALUES ($1, $2, $3, $4)
+        "#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(claimed.id)
+    .bind(claimed.attempt_count)
+    .bind(claimed.lease_token)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(ClaimResult::Claimed(claimed))
+}
+
 pub async fn suppress_due_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {
     let result = sqlx::query(
         r#"
@@ -39,82 +152,6 @@ pub async fn suppress_due_messages(pool: &PgPool) -> Result<u64, sqlx::Error> {
     Ok(result.rows_affected())
 }
 
-pub async fn claim_one(pool: &PgPool) -> Result<Option<ClaimedEmail>, sqlx::Error> {
-    let mut tx = pool.begin().await?;
-    let candidate = sqlx::query_as::<_, (Uuid, Option<Uuid>)>(
-        r#"
-        SELECT id, lease_token
-        FROM email_messages
-        WHERE deliver_before > clock_timestamp()
-          AND NOT EXISTS (
-              SELECT 1
-              FROM email_suppressions AS suppression
-              WHERE suppression.recipient_hash = email_messages.recipient_hash
-                AND suppression.active
-                AND suppression.released_at IS NULL
-                AND (suppression.scope = 'all' OR email_messages.category = 'reminder')
-          )
-          AND (
-              (state IN ('accepted', 'deferred') AND next_attempt_at <= clock_timestamp())
-              OR (state = 'dispatching' AND lease_expires_at <= clock_timestamp())
-          )
-        ORDER BY next_attempt_at, accepted_at
-        FOR UPDATE SKIP LOCKED
-        LIMIT 1
-        "#,
-    )
-    .fetch_optional(&mut *tx)
-    .await?;
-    let Some((id, stale_lease_token)) = candidate else {
-        tx.commit().await?;
-        return Ok(None);
-    };
-
-    if let Some(stale_lease_token) = stale_lease_token {
-        finish_attempt_tx(
-            &mut tx,
-            stale_lease_token,
-            "ambiguous_failure",
-            None,
-            Some("lease_expired"),
-        )
-        .await?;
-    }
-
-    let lease_token = Uuid::new_v4();
-    let claimed = sqlx::query_as::<_, ClaimedEmail>(
-        r#"
-        UPDATE email_messages
-        SET state = 'dispatching', lease_token = $2,
-            lease_expires_at = clock_timestamp() + interval '2 minutes',
-            attempt_count = attempt_count + 1, updated_at = clock_timestamp()
-        WHERE id = $1
-        RETURNING id, category::text AS category, template_name,
-                  recipient_ciphertext, recipient_nonce,
-                  template_ciphertext, template_nonce, deliver_before, message_id,
-                  attempt_count, lease_token
-        "#,
-    )
-    .bind(id)
-    .bind(lease_token)
-    .fetch_one(&mut *tx)
-    .await?;
-    sqlx::query(
-        r#"
-        INSERT INTO email_delivery_attempts (id, message_id, attempt_number, lease_token)
-        VALUES ($1, $2, $3, $4)
-        "#,
-    )
-    .bind(Uuid::new_v4())
-    .bind(claimed.id)
-    .bind(claimed.attempt_count)
-    .bind(claimed.lease_token)
-    .execute(&mut *tx)
-    .await?;
-    tx.commit().await?;
-    Ok(Some(claimed))
-}
-
 pub async fn expire_claim_if_due(pool: &PgPool, claim: &ClaimedEmail) -> Result<bool, sqlx::Error> {
     let result = sqlx::query(
         r#"
@@ -122,7 +159,7 @@ pub async fn expire_claim_if_due(pool: &PgPool, claim: &ClaimedEmail) -> Result<
         SET state = 'expired', terminal_at = clock_timestamp(), updated_at = clock_timestamp(),
             lease_token = NULL, lease_expires_at = NULL
         WHERE id = $1 AND state = 'dispatching' AND lease_token = $2
-          AND deliver_before <= clock_timestamp() + interval '250 milliseconds'
+          AND deliver_before <= clock_timestamp()
         "#,
     )
     .bind(claim.id)
@@ -182,7 +219,7 @@ pub async fn complete_failure(
     failure_code: &'static str,
     maximum_attempts: i32,
     retry_delay: Duration,
-) -> Result<(), sqlx::Error> {
+) -> Result<FailureResolution, sqlx::Error> {
     let mut tx = pool.begin().await?;
     let now: DateTime<Utc> = sqlx::query_scalar("SELECT clock_timestamp()")
         .fetch_one(&mut *tx)
@@ -195,10 +232,10 @@ pub async fn complete_failure(
         retry_at,
         claim.deliver_before,
     );
-    let (state, next_attempt_at, terminal) = match resolution {
+    let (state, next_attempt_at, terminal) = match &resolution {
         FailureResolution::Failed => ("failed", now, true),
         FailureResolution::Expired => ("expired", now, true),
-        FailureResolution::RetryAt(retry_at) => ("deferred", retry_at, false),
+        FailureResolution::RetryAt(retry_at) => ("deferred", *retry_at, false),
     };
 
     let result = sqlx::query(
@@ -227,5 +264,10 @@ pub async fn complete_failure(
         )
         .await?;
     }
-    tx.commit().await
+    tx.commit().await?;
+    Ok(resolution)
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.dispatch.db.tests.rs"]
+mod tests;

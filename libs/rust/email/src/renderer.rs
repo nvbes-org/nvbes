@@ -70,7 +70,6 @@ impl EmailTemplate {
                 provider_name,
                 ..
             } => billing(
-                true,
                 *amount_minor,
                 currency,
                 invoice_url.as_deref(),
@@ -192,17 +191,12 @@ fn security(
 }
 
 fn billing(
-    paid: bool,
     amount: i64,
     currency: &str,
     invoice_url: Option<&str>,
     provider: Option<&str>,
 ) -> (String, String, TemplateHtml) {
-    let subject = if paid {
-        "Receipt for your nvbes subscription"
-    } else {
-        "nvbes billing update"
-    };
+    let subject = "Receipt for your nvbes subscription";
     let provider = provider
         .map(|value| format!(" through {value}"))
         .unwrap_or_default();

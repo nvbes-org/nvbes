@@ -8,6 +8,9 @@ on:
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/environments/email-production/**'
+      - 'tools/ci/email-deployment-contract.test.mjs'
+      - '.github/workflows/deploy-email.yml'
       - '.github/workflows/ci-email-worker.yml'
   pull_request:
     branches: ['main']
@@ -16,6 +19,9 @@ on:
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/environments/email-production/**'
+      - 'tools/ci/email-deployment-contract.test.mjs'
+      - '.github/workflows/deploy-email.yml'
       - '.github/workflows/ci-email-worker.yml'
 
 concurrency:
@@ -65,6 +71,21 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           shared-key: email-worker
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Validate email deployment contract
+        run: node --test tools/ci/email-deployment-contract.test.mjs
+      - name: Check email Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/environments/email-production
+      - name: Initialize email Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/email-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated email Terraform stack
+        run: terraform -chdir=infrastructure/environments/email-production validate
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Test email contract and runtime

@@ -59,3 +59,7 @@ fn inline_housekeeping_enabled() -> anyhow::Result<bool> {
             )
         })
 }
+
+#[cfg(test)]
+#[path = "identity.worker.state.tests.rs"]
+mod tests;

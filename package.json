@@ -186,6 +186,7 @@
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "bash scripts/test-unit.sh",
     "test:integration": "bash scripts/test-integration.sh",
+    "test:email:coverage": "bash scripts/test-email-coverage.sh",
     "test:backoffice-web:e2e:mocked": "pnpm --dir apps/backoffice-web test:e2e --grep @mocked",
     "test:e2e:critical": "bash scripts/test-e2e-critical.sh",
     "test:e2e:critical:local": "pnpm exec nx run identity-web:test:e2e:critical:local",

@@ -94,7 +94,7 @@
         {
           "id": "CICD_CTRL_004",
           "name": "Secret usage and checkout credential guard",
-          "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or the target-validated staging DAST workflow.",
+          "description": "Prevent persisted checkout credentials, require secrets to be allowlisted, and keep secret-bearing steps scoped to trusted push builds or explicitly validated protected-Environment workflows.",
           "evidence": [
             {
               "path": ".github/workflows/deploy-web.yml",
@@ -167,6 +167,17 @@
                 "ref: ${{ github.ref }}",
                 "ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.ACCOUNT_PRODUCTION_DENIED_ORIGINS }}",
                 "scripts/release-gate.sh production"
+              ]
+            },
+            {
+              "path": ".github/workflows/deploy-email.yml",
+              "includes": [
+                "name: production-email",
+                "if: github.ref == 'refs/heads/main'",
+                "ref: ${{ github.sha }}",
+                "production/email/terraform.tfstate",
+                "cosign verify",
+                "email-runtime.tfplan"
               ]
             }
           ]
@@ -279,6 +290,7 @@
     "github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
     "github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
     "google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2",
+    "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
     "nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1",
     "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
     "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac"
@@ -290,9 +302,18 @@
     "DAST_API_AUTHORIZATION",
     "DAST_BACKOFFICE_SESSION_COOKIE",
     "CLOUDFLARE_API_TOKEN",
+    "EMAIL_DATA_ENCRYPTION_KEY",
+    "EMAIL_PRODUCER_TOKENS",
+    "EMAIL_RECIPIENT_HMAC_KEY",
+    "EMAIL_SNS_CA_BUNDLE_PEM",
+    "EMAIL_TERRAFORM_STATE_ACCESS_KEY",
+    "EMAIL_TERRAFORM_STATE_SECRET_KEY",
     "GRAFANA_FARO_SOURCEMAP_API_KEY",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
     "POSTHOG_CLI_API_KEY",
+    "SCALEWAY_EMAIL_SECRET_KEY",
+    "SCW_ACCESS_KEY",
+    "SCW_SECRET_KEY",
     "SENTRY_AUTH_TOKEN"
   ],
   "allowedContinueOnError": [],

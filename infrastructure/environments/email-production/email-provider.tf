@@ -106,11 +106,14 @@ resource "scaleway_mnq_sns_topic" "email_events" {
 }
 
 resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
-  project_id   = scaleway_mnq_sns.email_events.project_id
-  region       = var.scaleway_region
-  topic_id     = scaleway_mnq_sns_topic.email_events.id
-  protocol     = "https"
-  endpoint     = var.email_webhook_endpoint
+  project_id = scaleway_mnq_sns.email_events.project_id
+  region     = var.scaleway_region
+  topic_id   = scaleway_mnq_sns_topic.email_events.id
+  protocol   = "https"
+  endpoint = coalesce(
+    var.email_webhook_endpoint,
+    "${scaleway_container.email_runtime["ingress"].public_endpoint}/webhooks/scaleway/topics-and-events",
+  )
   sns_endpoint = scaleway_mnq_sns.email_events.endpoint
   access_key   = scaleway_mnq_sns_credentials.email_events_terraform.access_key
   secret_key   = scaleway_mnq_sns_credentials.email_events_terraform.secret_key

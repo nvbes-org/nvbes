@@ -31,9 +31,9 @@ docker compose --profile infra -f infrastructure/local/docker-compose.yml up -d 
 ```
 
 Les services produits soumettent toujours leurs commandes au worker par gRPC
-sur le port `3041`; seul le worker se connecte à Mailpit. Le provider SMTP est
-refusé hors des environnements `development` et `test`. Les probes et le
-webhook HTTP sont exposés séparément sur le port `3040`.
+sur le port HTTP/2 partagé `3040`; seul le worker se connecte à Mailpit. Le
+provider SMTP est refusé hors des environnements `development` et `test`. Les
+probes et le webhook HTTP utilisent ce même port.
 
 Le conteneur PostgreSQL crée `nvbes_email` à l’initialisation. Sur un volume
 local déjà existant, créez-la une seule fois avec

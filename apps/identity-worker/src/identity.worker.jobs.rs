@@ -74,29 +74,5 @@ pub(super) async fn execute_job(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::should_retry_job;
-    use crate::worker::job_failure::JobExecutionError;
-    use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
-
-    #[test]
-    fn identity_worker_retries_only_transient_owned_jobs() {
-        let transient =
-            JobExecutionError::transient("provider_unavailable", "Provider is unavailable");
-        let permanent = JobExecutionError::permanent("invalid_payload", "Job payload is invalid");
-
-        assert!(should_retry_job(JOB_EMAIL_SUBMIT, &transient));
-        assert!(!should_retry_job(JOB_EMAIL_SUBMIT, &permanent));
-
-        for job_type in [
-            concat!("billing.", "stripe.webhook.process"),
-            concat!("billing.", "mollie.webhook.process"),
-            concat!("billing.", "email.send"),
-        ] {
-            assert!(
-                !should_retry_job(job_type, &transient),
-                "identity-worker must not retry Billing job {job_type}"
-            );
-        }
-    }
-}
+#[path = "identity.worker.jobs.tests.rs"]
+mod tests;

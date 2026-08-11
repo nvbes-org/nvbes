@@ -10,6 +10,7 @@ chrono.workspace = true
 chrono-tz.workspace = true
 lettre.workspace = true
 reqwest.workspace = true
+rustls = { version = "0.23.41", default-features = false, features = ["aws_lc_rs", "std"] }
 nvbes-core = { path = "../core" }
 prost = "0.14.4"
 prost-types = "0.14"
@@ -25,3 +26,6 @@ uuid.workspace = true
 [build-dependencies]
 protoc-bin-vendored = "3.2.0"
 tonic-prost-build = "0.14.6"
+
+[dev-dependencies]
+tokio-stream = { version = "0.1.18", features = ["net"] }

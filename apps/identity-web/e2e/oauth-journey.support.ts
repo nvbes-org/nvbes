@@ -76,23 +76,24 @@ export async function completeHostedAuthorizationCodeJourney(
   expect(tokenResponse.status(), JSON.stringify(tokenPayload)).toBe(200);
   const accessToken = requiredString(tokenPayload, 'access_token');
   expect(requiredString(tokenPayload, 'token_type').toLowerCase()).toBe('bearer');
-  expect(requiredString(tokenPayload, 'id_token').split('.')).toHaveLength(3);
+  const accessClaims = jwtClaims(accessToken);
+  expect(accessClaims.aud).toBe('nvbes-account-service');
+  expect(accessClaims.client_id).toBe(CLIENT_ID);
+  expect(requiredString(accessClaims, 'scope').split(/\s+/u).sort()).toEqual(
+    ['openid', 'profile', 'email'].sort(),
+  );
 
-  const userInfoResponse = await page.request.get(`${apiBaseUrl}/oauth/userinfo`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const userInfo = record(await userInfoResponse.json());
-  expect(userInfoResponse.status(), JSON.stringify(userInfo)).toBe(200);
-  expect(userInfo.email).toBe(email);
-  expect(userInfo.email_verified).toBe(true);
-  expect(userInfo.client_id).toBe(CLIENT_ID);
+  const idClaims = jwtClaims(requiredString(tokenPayload, 'id_token'));
+  expect(idClaims.aud).toBe(CLIENT_ID);
+  expect(idClaims.nonce).toBe(nonce);
+  expect(typeof idClaims.sub).toBe('string');
 
   const replayResponse = await page.request.post(`${apiBaseUrl}/oauth/token`, {
     form: tokenForm,
   });
   const replayPayload = record(await replayResponse.json());
   expect(replayResponse.status(), JSON.stringify(replayPayload)).toBe(400);
-  expect(replayPayload.code).toBe('invalid_grant');
+  expect(record(replayPayload.error).code).toBe('invalid_grant');
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -108,4 +109,12 @@ function requiredString(value: Record<string, unknown>, key: string): string {
     throw new Error(`Identity OAuth response is missing ${key}.`);
   }
   return field;
+}
+
+function jwtClaims(token: string): Record<string, unknown> {
+  const segments = token.split('.');
+  if (segments.length !== 3 || !segments[1]) {
+    throw new Error('Identity returned a malformed JWT.');
+  }
+  return record(JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8')));
 }

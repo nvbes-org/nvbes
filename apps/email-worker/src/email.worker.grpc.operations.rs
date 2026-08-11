@@ -202,3 +202,7 @@ fn internal(error: impl std::fmt::Debug) -> Status {
     tracing::error!(error = ?error, "email operations query failed");
     Status::unavailable("email operations query failed")
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.grpc.operations.tests.rs"]
+mod tests;

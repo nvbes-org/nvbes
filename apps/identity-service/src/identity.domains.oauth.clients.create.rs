@@ -335,6 +335,7 @@ fn validate_redirect_uris(values: &[String], client_type: &str) -> Result<(), Ap
             && parsed.scheme() == "http"
             && parsed
                 .host_str()
+                .map(|host| host.trim_matches(['[', ']']))
                 .is_some_and(|host| matches!(host, "127.0.0.1" | "::1" | "localhost"));
         if (parsed.scheme() != "https" && !loopback_http)
             || parsed.fragment().is_some()
@@ -363,3 +364,7 @@ fn require_workspace_scope(owner_scope_type: &str, owner_scope_id: Uuid) -> Resu
 
     Ok(owner_scope_id)
 }
+
+#[cfg(test)]
+#[path = "identity.domains.oauth.clients.create.tests.rs"]
+mod tests;

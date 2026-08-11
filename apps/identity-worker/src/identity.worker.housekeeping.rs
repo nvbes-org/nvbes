@@ -55,13 +55,17 @@ pub async fn run_once(state: &AppState) -> anyhow::Result<()> {
 }
 
 pub async fn run_if_due(state: &AppState, last_run: &mut Instant) -> anyhow::Result<()> {
-    if last_run.elapsed() < HOUSEKEEPING_INTERVAL {
+    if !housekeeping_due(last_run) {
         return Ok(());
     }
 
     run_once(state).await?;
     *last_run = Instant::now();
     Ok(())
+}
+
+fn housekeeping_due(last_run: &Instant) -> bool {
+    last_run.elapsed() >= HOUSEKEEPING_INTERVAL
 }
 
 async fn run_maxmind_geolite_import_if_due(state: &AppState) -> anyhow::Result<()> {
@@ -225,3 +229,7 @@ async fn run_v2fly_geoip_import_if_due(state: &AppState) -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "identity.worker.housekeeping.tests.rs"]
+mod tests;

@@ -18,7 +18,6 @@ on:
         type: choice
         options:
           - all
-          - email-worker
           - identity-service
           - account-service
           - cloud-service
@@ -37,24 +36,6 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
-  deploy-email-worker:
-    if: github.inputs.component == 'all' || github.inputs.component == 'email-worker'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: ${{ github.inputs.environment }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: CI/CD security gate
-        run: >-
-          node tools/security/check-ci-cd-security.mjs
-          --workflow .github/workflows/deploy.yml
-      - name: Reject unconfigured email-worker deployment
-        run: |
-          echo "email-worker is released as a signed container; its always-on Scaleway target is not wired yet" >&2
-          exit 1
-
   deploy-identity-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'identity-service'
     runs-on: ubuntu-latest

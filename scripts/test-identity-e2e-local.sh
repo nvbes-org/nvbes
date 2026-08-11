@@ -22,8 +22,12 @@ IDENTITY_HTTP_PORT="${NVBES_IDENTITY_E2E_HTTP_PORT:-44000}"
 IDENTITY_GRPC_PORT="${NVBES_IDENTITY_E2E_GRPC_PORT:-44010}"
 CLOUD_HTTP_PORT="${NVBES_IDENTITY_E2E_CLOUD_HTTP_PORT:-44002}"
 CLOUD_GRPC_PORT="${NVBES_IDENTITY_E2E_CLOUD_GRPC_PORT:-44003}"
+DEVELOPER_HTTP_PORT="${NVBES_IDENTITY_E2E_DEVELOPER_HTTP_PORT:-44020}"
+DEVELOPER_GRPC_PORT="${NVBES_IDENTITY_E2E_DEVELOPER_GRPC_PORT:-44021}"
 IDENTITY_WEB_PORT="${NVBES_IDENTITY_E2E_WEB_PORT:-43000}"
+ACCOUNT_WEB_PORT="${NVBES_IDENTITY_E2E_ACCOUNT_WEB_PORT:-43001}"
 WORKER_METRICS_PORT="${NVBES_IDENTITY_E2E_WORKER_METRICS_PORT:-44102}"
+EMAIL_HTTP_PORT="${NVBES_IDENTITY_E2E_EMAIL_HTTP_PORT:-44040}"
 RUNTIME_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nvbes-identity-e2e.XXXXXX")"
 EMAIL_CAPTURE_DIR="$RUNTIME_DIR/email-captures"
 ARTIFACT_DIR="${NVBES_IDENTITY_E2E_ARTIFACT_DIR:-}"
@@ -36,14 +40,26 @@ compose() {
   docker compose --project-name "$COMPOSE_PROJECT" --file "$COMPOSE_FILE" "$@"
 }
 
-terminate_process_tree() {
+ensure_database() {
+  local database="$1"
+  local exists
+
+  exists="$(compose exec -T postgres psql -U postgres -d postgres -tAc \
+    "SELECT 1 FROM pg_database WHERE datname = '$database'")"
+  if [ "$exists" != "1" ]; then
+    compose exec -T postgres createdb -U postgres "$database"
+  fi
+}
+
+signal_process_tree() {
   local process_id="$1"
+  local signal="$2"
   local child_id
 
   while read -r child_id; do
-    [ -n "$child_id" ] && terminate_process_tree "$child_id"
+    [ -n "$child_id" ] && signal_process_tree "$child_id" "$signal"
   done < <(pgrep -P "$process_id" 2>/dev/null || true)
-  kill -TERM "$process_id" 2>/dev/null || true
+  kill -"$signal" "$process_id" 2>/dev/null || true
 }
 
 cleanup() {
@@ -51,10 +67,26 @@ cleanup() {
   trap - EXIT INT TERM
   set +e
 
-  for process_id in "${PROCESS_IDS[@]}"; do
-    terminate_process_tree "$process_id"
+  for process_id in ${PROCESS_IDS[@]+"${PROCESS_IDS[@]}"}; do
+    signal_process_tree "$process_id" INT
   done
-  for process_id in "${PROCESS_IDS[@]}"; do
+  for _ in $(seq 1 50); do
+    local all_stopped=true
+    for process_id in ${PROCESS_IDS[@]+"${PROCESS_IDS[@]}"}; do
+      if kill -0 "$process_id" 2>/dev/null; then
+        all_stopped=false
+        break
+      fi
+    done
+    $all_stopped && break
+    sleep 0.1
+  done
+  for process_id in ${PROCESS_IDS[@]+"${PROCESS_IDS[@]}"}; do
+    if kill -0 "$process_id" 2>/dev/null; then
+      signal_process_tree "$process_id" TERM
+    fi
+  done
+  for process_id in ${PROCESS_IDS[@]+"${PROCESS_IDS[@]}"}; do
     wait "$process_id" 2>/dev/null
   done
 
@@ -119,8 +151,14 @@ export NVBES_SECRET_MANAGER_ENABLED=false
 export NVBES_ENTERPRISE_GRPC_ENDPOINT=
 export NVBES_ENTERPRISE_GRPC_AUTH_TOKEN=
 export NVBES_CLOUD_GRPC_ENDPOINT="http://127.0.0.1:$CLOUD_GRPC_PORT"
+export NVBES_DEVELOPER_GRPC_ENDPOINT="http://127.0.0.1:$DEVELOPER_GRPC_PORT"
 export NVBES_EMAIL_PROVIDER=test-capture
 export NVBES_EMAIL_TEST_CAPTURE_DIR="$EMAIL_CAPTURE_DIR"
+export NVBES_EMAIL_DATABASE_URL="postgres://postgres:postgres@127.0.0.1:$POSTGRES_PORT/nvbes_email_test_e2e"
+export NVBES_EMAIL_HTTP_BIND_ADDR="127.0.0.1:$EMAIL_HTTP_PORT"
+export NVBES_EMAIL_GRPC_ENDPOINT="http://127.0.0.1:$EMAIL_HTTP_PORT"
+export NVBES_EMAIL_GRPC_AUTH_TOKEN="development-email-internal-token-32"
+export NVBES_EMAIL_FROM_EMAIL="no-reply@identity-e2e.example.test"
 export NVBES_BETA_SEED_EMAIL="identity-e2e@example.test"
 export NVBES_BETA_SEED_PASSWORD="IdentityE2e-Strong-Password-2026!"
 export NVBES_BETA_SEED_WORKSPACE="Identity E2E Workspace"
@@ -137,16 +175,29 @@ export NVBES_AUTH_POW_DIFFICULTY=8
 export NVBES_OTP_PROVIDER=mock
 export NVBES_WEBAUTHN_RP_ID=localhost
 export NVBES_WEBAUTHN_RP_ORIGIN="$NVBES_WEB_BASE_URL"
-export NVBES_ADDITIONAL_CORS_ORIGINS="$NVBES_WEB_BASE_URL"
+export NVBES_ADDITIONAL_CORS_ORIGINS="$NVBES_WEB_BASE_URL,http://localhost:$ACCOUNT_WEB_PORT"
 export NVBES_ACCOUNT_WEB_OAUTH_REDIRECT_URIS="$NVBES_WEB_BASE_URL/oauth/callback"
 export NVBES_PRODUCT_ANALYTICS_ENABLED=false
 export NVBES_REQUEST_E2EE_ENABLED=false
 export NVBES_REQUEST_E2EE_REQUIRED=false
 export VITE_IDENTITY_SERVICE_BASE_URL="$NVBES_API_BASE_URL"
 export VITE_IDENTITY_WEB_PORT="$IDENTITY_WEB_PORT"
+export VITE_IDENTITY_WEB_BASE_URL="$NVBES_WEB_BASE_URL"
+export VITE_ACCOUNT_WEB_BASE_URL="http://localhost:$ACCOUNT_WEB_PORT"
+export VITE_ACCOUNT_WEB_PORT="$ACCOUNT_WEB_PORT"
 
 log_step "starting isolated PostgreSQL and Redis"
 compose up --detach --wait
+ensure_database nvbes_email_test_e2e
+
+log_step "starting Email Worker"
+cargo run --quiet --package nvbes-email-worker -- migrate
+start_process email-worker cargo run --quiet --package nvbes-email-worker
+EMAIL_WORKER_PROCESS_ID="$LAST_PROCESS_ID"
+wait_for_http \
+  "Email Worker" \
+  "http://127.0.0.1:$EMAIL_HTTP_PORT/health/live" \
+  "$EMAIL_WORKER_PROCESS_ID"
 
 log_step "starting Cloud Service"
 start_process cloud-service env \
@@ -170,6 +221,18 @@ start_process identity-service env \
 IDENTITY_PROCESS_ID="$LAST_PROCESS_ID"
 wait_for_http "Identity Service" "$NVBES_API_BASE_URL/health" "$IDENTITY_PROCESS_ID"
 
+log_step "starting Developer Service"
+start_process developer-service env \
+  NVBES_APP_NAME=nvbes-developer-e2e \
+  NVBES_DEVELOPER_HTTP_PORT="$DEVELOPER_HTTP_PORT" \
+  NVBES_DEVELOPER_GRPC_PORT="$DEVELOPER_GRPC_PORT" \
+  cargo run --quiet --package nvbes-developer-service
+DEVELOPER_PROCESS_ID="$LAST_PROCESS_ID"
+wait_for_http \
+  "Developer Service" \
+  "http://127.0.0.1:$DEVELOPER_HTTP_PORT/health" \
+  "$DEVELOPER_PROCESS_ID"
+
 log_step "starting Identity Worker"
 start_process identity-worker env \
   NVBES_APP_NAME=nvbes-identity-worker-e2e \
@@ -186,6 +249,14 @@ log_step "starting Identity Web"
 start_process identity-web pnpm --dir apps/identity-web dev
 IDENTITY_WEB_PROCESS_ID="$LAST_PROCESS_ID"
 wait_for_http "Identity Web" "$NVBES_WEB_BASE_URL/login" "$IDENTITY_WEB_PROCESS_ID"
+
+log_step "starting Account Web"
+start_process account-web pnpm --dir apps/account-web dev
+ACCOUNT_WEB_PROCESS_ID="$LAST_PROCESS_ID"
+wait_for_http \
+  "Account Web" \
+  "http://localhost:$ACCOUNT_WEB_PORT/profile" \
+  "$ACCOUNT_WEB_PROCESS_ID"
 
 log_step "running critical Identity browser journeys"
 bash "$ROOT_DIR/scripts/test-e2e-critical.sh"

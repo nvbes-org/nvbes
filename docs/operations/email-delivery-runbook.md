@@ -2,24 +2,26 @@
 
 ## Runtime topology
 
-Run `nvbes-email-worker` as an always-on container. It owns three concurrent
-roles in one process:
+Deploy the same `nvbes-email-worker` image as two Scaleway Serverless Containers
+with `min_scale=0`: a public `ingress` role and a private `dispatch` role. Each
+uses one HTTP/2 port, and together they own three request-driven roles:
 
-- private gRPC ingestion on `3041`;
-- public HTTP webhook and probes on `3040`;
-- PostgreSQL-backed dispatch loop.
+- authenticated gRPC command ingestion;
+- signed TEM webhook ingestion and shallow HTTP probes;
+- private SQS-triggered dispatch of one opaque email UUID per request.
 
-Do not deploy it as a scale-to-zero request-only job: the dispatcher must make
-progress without an inbound request. Product services use gRPC only. HTTP is
-reserved for Scaleway Topics and Events and health probes.
+There is no PostgreSQL polling loop. A successful command transaction publishes
+only its UUID to Scaleway SQS. The SQS trigger wakes the container, which claims
+that exact ledger row and calls TEM. Development uses an in-memory event channel
+with the same handler; it waits for events and never polls the database.
 
 ## Health ownership
 
 - The container runtime calls `GET /health/live`. This is shallow and must not
   depend on PostgreSQL or Scaleway TEM.
-- The private Scaleway Load Balancer calls `GET /health/ready`. It requires a
-  reachable, migrated database and a current dispatcher heartbeat.
-- Internal gRPC diagnostics may call `grpc.health.v1.Health` on `3041`.
+- Scaleway calls `GET /health/ready`. It is also shallow: probes must never wake
+  PostgreSQL while the service is idle.
+- Internal gRPC diagnostics may call `grpc.health.v1.Health` on the same port.
 - Scaleway probes never call the gRPC health service.
 
 The TEM provider is deliberately absent from readiness. A TEM outage must
@@ -27,18 +29,21 @@ accumulate durable commands instead of evicting every ingress instance.
 
 ## Required production configuration
 
-Configure the runtime with:
+Terraform creates a dedicated Scaleway Serverless SQL database for
+`email-worker` and generates `NVBES_EMAIL_DATABASE_URL` from its data-only IAM
+identity. Do not supply a shared RDB URL. Configure the remaining runtime with:
 
-- `NVBES_EMAIL_DATABASE_URL`;
 - `NVBES_EMAIL_PRODUCER_TOKENS`, with one distinct `producer=token` entry per
   production producer;
 - `NVBES_EMAIL_DATA_ENCRYPTION_KEY` and `NVBES_EMAIL_RECIPIENT_HMAC_KEY`;
 - `NVBES_EMAIL_PAYLOAD_RETENTION_DAYS` and `NVBES_EMAIL_LEDGER_RETENTION_DAYS`;
 - `NVBES_EMAIL_FROM_EMAIL`, sender name, and optional reply-to;
 - `NVBES_SCALEWAY_EMAIL_PROJECT_ID`, secret key, and `fr-par` region;
+- `NVBES_EMAIL_QUEUE_URL`, endpoint, region, and publish-only access/secret key;
+- `NVBES_EMAIL_RUNTIME_ROLE`, set to `ingress` or `dispatch` by Terraform;
 - `NVBES_EMAIL_SNS_TOPIC_ARN`;
-- `NVBES_EMAIL_SNS_CA_BUNDLE_PATH` containing the pinned Scaleway SNS trust
-  chain.
+- `NVBES_EMAIL_SNS_CA_BUNDLE_PEM` containing the pinned Scaleway SNS trust
+  chain. A read-only file path remains supported outside Serverless Containers.
 
 Mount secrets read-only. Product services receive only the gRPC endpoint and
 internal authentication token; they never receive provider or encryption
@@ -53,8 +58,10 @@ is rejected outside development and test.
 
 Scrape `GET /metrics` only through the private observability network. Do not
 publish that path through the public webhook listener route. The runtime emits
-queue depth and age, command outcomes, provider latency, webhook outcomes,
-signature failures, expirations, suppressions, and retention activity.
+command outcomes, provider latency, webhook outcomes, signature failures,
+expirations, suppressions, and retention activity. Alert on queue depth,
+oldest-message age, trigger failures, and DLQ depth using Scaleway MNQ metrics,
+because querying PostgreSQL for those gauges would defeat idle scaling.
 
 Alerts cover stale queue age, elevated provider failures, and spam complaint
 rate. During staging rehearsals, exercise each alert and attach the evidence to
@@ -69,7 +76,8 @@ The production sender domain is the dedicated transactional subdomain
 `support@nvbes.eu` exists.
 
 Cloudflare remains authoritative for DNS, while
-`infrastructure/environments/production/email-delivery.tf` is the sole writer.
+`infrastructure/environments/email-production/email-provider.tf` is the sole
+writer.
 Terraform registers `notify.nvbes.eu` in Scaleway TEM, publishes the exact SPF,
 DKIM, DMARC, and blackhole MX values returned by TEM, requests validation,
 creates the SNS topic and HTTPS subscription, then binds the TEM webhook. Do
@@ -79,24 +87,33 @@ pre-existing resource into the production state before applying the stack.
 The apex `nvbes.eu` remains separate so Cloudflare Email Routing can later
 receive human mail without replacing the transactional subdomain MX records.
 
-1. Apply the email database migration.
-2. Start the container and wait for `/health/live` then `/health/ready` so its
-   public HTTPS webhook can accept the SNS subscription confirmation.
-3. Initialize the required remote backend and apply the production Terraform
-   stack with `accept_scaleway_tem_terms=true`.
-4. Confirm the TEM domain validation and SNS subscription outputs/state.
-5. Send one short-lived test command and confirm provider acceptance plus the
-   webhook transition.
-6. Enable product relays.
+1. From `main`, run the GitHub Action `container release` with application
+   `email-worker`. It publishes, scans, attests, and signs only the commit image.
+2. Run the GitHub Action `deploy email`. The protected `production-email`
+   Environment requires operator approval and exposes only email-scoped
+   credentials.
+3. The workflow resolves the GHCR commit tag to an immutable digest, verifies
+   its release certificate, and mirrors only the verified `linux/amd64` image
+   into the private Terraform-owned Scaleway Container Registry. It signs and
+   verifies that private copy before Terraform receives its digest.
+4. Terraform initializes only `production/email/terraform.tfstate`, applies a
+   reviewed migration-foundation plan, and creates or updates the migration job.
+5. The workflow starts that job through the Scaleway Serverless Jobs API and
+   requires `succeeded`. The job receives only the migration DSN from Secret
+   Manager and runs `nvbes-email-worker migrate`; normal container startup never
+   runs migrations.
+6. Terraform replans and applies the complete isolated email stack. This creates
+   or updates the SQS queue, DLQ, scale-to-zero ingress/dispatcher, triggers,
+   TEM, SNS, and DNS without touching the shared `DB-PRO2-M` or another product.
+7. The workflow confirms `/health/live`. Then send one short-lived test command
+   and confirm SQS consumption, TEM acceptance, and the signed webhook
+   transition before enabling product relays.
 
-Never run a production apply with a local state. The production README defines
-the backend bootstrap and credential contract. Terraform provider credentials
-must come from the deployment secret manager, not committed tfvars.
-
-The repository publishes and signs the container image, but the manual deploy
-workflow intentionally fails until an always-on Scaleway target and Load
-Balancer are provisioned. Never replace that failure with a placeholder
-success.
+Never run a production apply with local state. The
+`infrastructure/environments/email-production/README.md` file defines the
+protected GitHub Environment, backend, and credential contract. Import any
+pre-existing email resource into the isolated state before the first workflow
+run; Terraform provider credentials must come from GitHub Environment secrets.
 
 ## Deadline incidents
 
@@ -110,10 +127,26 @@ credential may expire, but the delivery itself already occurred.
 
 ## Provider incidents
 
-Keep the runtime ready during a TEM outage. Commands remain durable and retry
-within their category deadline. Investigate `email_delivery_duration_seconds`
-and `email_messages_total` by outcome. Do not bypass the worker or send directly
-through SMTP or the provider API.
+During a TEM outage, commands remain durable in PostgreSQL and SQS. Transient or
+ambiguous failures return HTTP 503 to the trigger and retry on the 60-second SQS
+visibility window, up to four provider attempts and never beyond
+`deliver_before`. Investigate `email_delivery_duration_seconds`,
+`email_messages_total`, trigger errors, and DLQ depth. Do not bypass the worker
+or send directly through SMTP or the provider API.
+
+The database uses `min_cpu=0` and can become idle after traffic stops. A first
+query after an idle period may therefore be slower; the SQLx acquisition budget
+is 15 seconds. Do not add keepalive queries, database-backed probes, or polling,
+as any of them would prevent the intended idle behavior.
+
+Scaleway limits one Serverless SQL request and the prepared statements held by
+one client connection to 1,024 KiB. `email-worker` keeps a deliberate margin:
+the gRPC transport rejects decoded messages above 256 KiB and the application
+rejects an encoded `SubmitEmailRequest` above 192 KiB before encryption or any
+database call. URLs are limited to 4,096 bytes, email addresses to 320 bytes,
+and human-readable template fields to 200 bytes. Do not raise these limits
+without re-auditing the complete PostgreSQL bind request and SQLx statement
+cache against Scaleway's current technical limits.
 
 ## Deliverability incidents
 
@@ -128,7 +161,8 @@ a provider event type.
 
 Terminal recipient and template ciphertext is purged after
 `NVBES_EMAIL_PAYLOAD_RETENTION_DAYS`. The non-secret lifecycle ledger is removed
-after `NVBES_EMAIL_LEDGER_RETENTION_DAYS`.
+after `NVBES_EMAIL_LEDGER_RETENTION_DAYS`. A daily Scaleway cron trigger performs
+retention and stale-deadline cleanup; no resident maintenance loop exists.
 
 The normal operator path is the Backoffice communications center. It calls the
 authenticated operations service and records both the worker-owned action audit

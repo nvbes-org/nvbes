@@ -1,18 +1,14 @@
-use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicI64, Ordering},
-    },
-    time::Duration,
-};
+use std::sync::{Arc, Mutex};
 
-use chrono::Utc;
 use nvbes_email::EmailSender;
 use sqlx::PgPool;
+use tokio::sync::mpsc;
+use uuid::Uuid;
 
 use crate::{
     config::{EmailWorkerConfig, ProviderConfig},
     crypto::EmailCrypto,
+    queue::{self, DispatchQueue},
     webhook_verify::WebhookVerifier,
 };
 
@@ -22,9 +18,10 @@ pub struct EmailWorkerState {
     pub db: PgPool,
     pub crypto: Arc<EmailCrypto>,
     pub provider: Arc<dyn EmailSender>,
+    pub dispatch_queue: Arc<dyn DispatchQueue>,
     pub metrics: Arc<metrics_exporter_prometheus::PrometheusHandle>,
     pub webhook_verifier: Option<Arc<WebhookVerifier>>,
-    dispatcher_heartbeat: Arc<AtomicI64>,
+    local_dispatch_receiver: Arc<Mutex<Option<mpsc::Receiver<Uuid>>>>,
 }
 
 impl EmailWorkerState {
@@ -52,24 +49,27 @@ impl EmailWorkerState {
             .map(WebhookVerifier::new)
             .transpose()?
             .map(Arc::new);
+        let queue = queue::runtime(&config.dispatch);
         Ok(Self {
             config: Arc::new(config),
             db,
             crypto: Arc::new(crypto),
             provider,
+            dispatch_queue: queue.publisher,
             metrics: crate::email_metrics::install(),
             webhook_verifier,
-            dispatcher_heartbeat: Arc::new(AtomicI64::new(0)),
+            local_dispatch_receiver: Arc::new(Mutex::new(queue.local_receiver)),
         })
     }
 
-    pub fn record_dispatcher_heartbeat(&self) {
-        self.dispatcher_heartbeat
-            .store(Utc::now().timestamp(), Ordering::Release);
-    }
-
-    pub fn dispatcher_is_current(&self, maximum_age: Duration) -> bool {
-        let heartbeat = self.dispatcher_heartbeat.load(Ordering::Acquire);
-        heartbeat > 0 && Utc::now().timestamp() - heartbeat <= maximum_age.as_secs() as i64
+    pub fn take_local_dispatch_receiver(&self) -> Option<mpsc::Receiver<Uuid>> {
+        self.local_dispatch_receiver
+            .lock()
+            .expect("local email queue lock must not be poisoned")
+            .take()
     }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.state.tests.rs"]
+mod tests;

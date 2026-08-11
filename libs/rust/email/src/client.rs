@@ -74,12 +74,13 @@ impl EmailClientConfig {
             EmailClientError::Configuration(format!("{ENDPOINT_ENV} is not a valid URI"))
         })?;
         let is_https = endpoint.uri().scheme_str() == Some("https");
-        if environment != "development" && !is_https {
+        if !matches!(environment, "development" | "test") && !is_https {
             return Err(EmailClientError::Configuration(format!(
                 "{ENDPOINT_ENV} must use https outside development"
             )));
         }
         let endpoint = if is_https {
+            let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
             endpoint
                 .tls_config(ClientTlsConfig::new().with_webpki_roots())
                 .map_err(|_| {
@@ -179,6 +180,9 @@ fn map_status(status: tonic::Status) -> EmailClientError {
     }
 }
 
+#[cfg(test)]
+#[path = "client.integration.tests.rs"]
+mod integration_tests;
 #[cfg(test)]
 #[path = "client.tests.rs"]
 mod tests;

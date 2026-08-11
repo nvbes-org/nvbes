@@ -10,7 +10,7 @@ async function workspaceFile(path) {
   return readFile(new URL(path, root), 'utf8');
 }
 
-test('development entrypoints start the identity email queue consumer', async () => {
+void test('development entrypoints start the identity email queue consumer', async () => {
   const [devApi, devAccount] = await Promise.all([
     workspaceFile('scripts/dev-api.sh'),
     workspaceFile('scripts/dev-account.sh'),
@@ -21,7 +21,7 @@ test('development entrypoints start the identity email queue consumer', async ()
   }
 });
 
-test('identity worker has an explicit development command', async () => {
+void test('identity worker has an explicit development command', async () => {
   const packageJson = JSON.parse(await workspaceFile('package.json'));
   assert.equal(packageJson.scripts['dev:identity-worker'], 'bash scripts/dev-identity-worker.sh');
   assert.match(packageJson.scripts.check, /pnpm check:dev-runtime/);
@@ -32,7 +32,7 @@ test('identity worker has an explicit development command', async () => {
   assert.match(launcher, /NVBES_IDENTITY_WORKER_INLINE_HOUSEKEEPING_ENABLED:-false/);
 });
 
-test('identity service command starts the complete email delivery runtime', async () => {
+void test('identity service command starts the complete email delivery runtime', async () => {
   const packageJson = JSON.parse(await workspaceFile('package.json'));
   assert.equal(packageJson.scripts['dev:identity-service'], 'bash scripts/dev-identity.sh');
 
@@ -46,7 +46,7 @@ test('identity service command starts the complete email delivery runtime', asyn
   }
 });
 
-test('email worker reloads when its renderer or generated React templates change', async () => {
+void test('email worker reloads when its renderer or generated React templates change', async () => {
   const launcher = await workspaceFile('scripts/dev-email-worker.sh');
 
   assert.match(launcher, /cargo watch/);
@@ -61,7 +61,7 @@ test('email worker reloads when its renderer or generated React templates change
   assert.match(launcher, /run -p nvbes-email-worker/);
 });
 
-test('development environment loaders expose custom Node debugger names', async () => {
+void test('development environment loaders expose custom Node debugger names', async () => {
   const [testEnv, workspaceEnv] = await Promise.all([
     workspaceFile('scripts/lib/test-env.sh'),
     workspaceFile('scripts/lib/workspace-env.sh'),
@@ -76,7 +76,7 @@ test('development environment loaders expose custom Node debugger names', async 
   );
 });
 
-test('email database tests load the worker database environment', async () => {
+void test('email database tests load the worker database environment', async () => {
   const [project, launcher] = await Promise.all([
     workspaceFile('apps/email-worker/project.json'),
     workspaceFile('scripts/test-email-worker-database.sh'),
@@ -96,7 +96,7 @@ test('email database tests load the worker database environment', async () => {
   assert.match(launcher, /--test-threads=1/);
 });
 
-test('email database tests accept only local or devcontainer email databases', () => {
+void test('email database tests accept only local or devcontainer email databases', () => {
   assert.deepEqual(
     validateEmailTestDatabaseTarget({
       DATABASE_URL: 'postgres://postgres:postgres@localhost:15432/nvbes_email',
@@ -131,7 +131,7 @@ test('email database tests accept only local or devcontainer email databases', (
   }
 });
 
-test('identity migration tests prefer the dedicated test database', async () => {
+void test('identity migration tests prefer the dedicated test database', async () => {
   const launcher = await workspaceFile('scripts/test-identity-service-migrations.sh');
 
   assert.match(launcher, /source "\$ROOT_DIR\/scripts\/lib\/test-env\.sh"/);

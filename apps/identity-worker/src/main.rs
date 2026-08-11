@@ -87,3 +87,7 @@ fn identity_worker_metrics_bind_addr() -> String {
         .or_else(|_| std::env::var(WORKER_METRICS_BIND_ADDR_ENV))
         .unwrap_or_else(|_| DEFAULT_IDENTITY_WORKER_METRICS_BIND_ADDR.to_string())
 }
+
+#[cfg(test)]
+#[path = "identity.worker.main.tests.rs"]
+mod tests;

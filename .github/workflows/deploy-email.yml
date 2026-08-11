@@ -1,0 +1,252 @@
+name: deploy email
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-email-production
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+  packages: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  deploy-email:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment:
+      name: production-email
+    env:
+      SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
+      SCW_DEFAULT_REGION: fr-par
+      SCW_DEFAULT_ZONE: fr-par-1
+      TF_IN_AUTOMATION: 'true'
+      TF_INPUT: 'false'
+      TF_VAR_accept_scaleway_tem_terms: ${{ vars.SCALEWAY_TEM_TERMS_ACCEPTED }}
+      TF_VAR_base_domain: ${{ vars.BASE_DOMAIN }}
+      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      TF_VAR_private_network_id: ${{ vars.SCW_PRIVATE_NETWORK_ID }}
+      TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
+      EMAIL_TERRAFORM_STATE_BUCKET: ${{ vars.EMAIL_TERRAFORM_STATE_BUCKET }}
+      EMAIL_TERRAFORM_STATE_KEY: production/email/terraform.tfstate
+      EMAIL_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-email-worker
+      STACK_ROOT: infrastructure/environments/email-production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-email.yml
+      - name: Verify protected production candidate
+        env:
+          SCALEWAY_TEM_TERMS_ACCEPTED: ${{ vars.SCALEWAY_TEM_TERMS_ACCEPTED }}
+        run: |
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+          [[ "$SCALEWAY_TEM_TERMS_ACCEPTED" == "true" ]]
+          [[ -n "$EMAIL_TERRAFORM_STATE_BUCKET" ]]
+      - name: Authenticate to GHCR
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: >-
+          printf '%s' "$GHCR_TOKEN" |
+          docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Resolve immutable email image
+        env:
+          IMAGE_TAG: ghcr.io/nvbes-org/nvbes-email-worker:${{ github.sha }}
+        run: |
+          digest="$(docker buildx imagetools inspect "$IMAGE_TAG" --format '{{.Manifest.Digest}}')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          source_image_digest="ghcr.io/nvbes-org/nvbes-email-worker@${digest}"
+          destination_image_digest="${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@${digest}"
+          echo "SOURCE_EMAIL_IMAGE_DIGEST=$source_image_digest" >> "$GITHUB_ENV"
+          echo "TF_VAR_email_worker_image=$destination_image_digest" >> "$GITHUB_ENV"
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - name: Verify signed release identity
+        run: |
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/container-release.yml@refs/heads/main"
+          cosign verify "$SOURCE_EMAIL_IMAGE_DIGEST" \
+            --certificate-identity "$certificate_identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Initialize isolated email state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" init
+          -reconfigure
+          -backend-config=backend.ci.hcl
+          -backend-config="bucket=$EMAIL_TERRAFORM_STATE_BUCKET"
+          -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
+      - name: Plan private image registry
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" plan
+          -lock-timeout=5m
+          -target=scaleway_registry_namespace.email_worker
+          -out=email-registry.tfplan
+      - name: Apply reviewed private registry plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" apply
+          -lock-timeout=5m
+          email-registry.tfplan
+      - name: Mirror verified image into private Scaleway registry
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          registry_endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_registry_endpoint)"
+          [[ "$registry_endpoint" == "$EMAIL_REGISTRY_ENDPOINT" ]]
+          printf '%s' "$SCW_SECRET_KEY" |
+            docker login "$EMAIL_REGISTRY_ENDPOINT" --username nologin --password-stdin
+
+          destination_tag="${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker:${GITHUB_SHA}"
+          docker pull --platform linux/amd64 "$SOURCE_EMAIL_IMAGE_DIGEST"
+          docker tag "$SOURCE_EMAIL_IMAGE_DIGEST" "$destination_tag"
+          docker push "$destination_tag"
+
+          destination_digest="$(docker buildx imagetools inspect "$destination_tag" --format '{{.Manifest.Digest}}')"
+          [[ "$destination_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          image_digest="${EMAIL_REGISTRY_ENDPOINT}/nvbes-email-worker@${destination_digest}"
+          echo "EMAIL_IMAGE_DIGEST=$image_digest" >> "$GITHUB_ENV"
+          echo "TF_VAR_email_worker_image=$image_digest" >> "$GITHUB_ENV"
+      - name: Sign and verify private deployment image
+        run: |
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-email.yml@refs/heads/main"
+          cosign sign --yes "$EMAIL_IMAGE_DIGEST"
+          cosign verify "$EMAIL_IMAGE_DIGEST" \
+            --certificate-identity "$certificate_identity" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Plan migration foundation
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" plan
+          -lock-timeout=5m
+          -target=scaleway_job_definition.email_database_migration
+          -out=email-migration.tfplan
+      - name: Apply reviewed migration foundation plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" apply
+          -lock-timeout=5m
+          email-migration.tfplan
+      - name: Run database migrations
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: |
+          job_definition_ref="$(terraform -chdir="$STACK_ROOT" output -raw email_database_migration_job_id)"
+          job_definition_id="${job_definition_ref##*/}"
+          start_response="$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "X-Auth-Token: $SCW_SECRET_KEY" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "https://api.scaleway.com/serverless-jobs/v1alpha2/regions/fr-par/job-definitions/${job_definition_id}/start")"
+          job_run_id="$(jq -er '.job_runs[0].id' <<<"$start_response")"
+
+          migration_state="queued"
+          for _attempt in {1..60}; do
+            run_response="$(curl --fail-with-body --silent --show-error \
+              --header "X-Auth-Token: $SCW_SECRET_KEY" \
+              "https://api.scaleway.com/serverless-jobs/v1alpha2/regions/fr-par/job-runs/${job_run_id}")"
+            migration_state="$(jq -er '.state' <<<"$run_response")"
+            case "$migration_state" in
+              succeeded)
+                break
+                ;;
+              failed|canceled|interrupted)
+                jq -r '{state, reason, exit_code, error_message}' <<<"$run_response" >&2
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          [[ "$migration_state" == "succeeded" ]]
+      - name: Plan isolated email runtime
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          TF_VAR_email_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_sns_ca_bundle_pem: ${{ secrets.EMAIL_SNS_CA_BUNDLE_PEM }}
+          TF_VAR_scaleway_email_secret_key: ${{ secrets.SCALEWAY_EMAIL_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" plan
+          -lock-timeout=5m
+          -out=email-runtime.tfplan
+      - name: Apply reviewed email runtime plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        run: >-
+          terraform -chdir="$STACK_ROOT" apply
+          -lock-timeout=5m
+          email-runtime.tfplan
+      - name: Verify public email ingress health
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+        run: |
+          endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint)"
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            "${endpoint}/health/live"

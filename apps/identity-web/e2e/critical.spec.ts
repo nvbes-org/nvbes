@@ -173,25 +173,29 @@ function registrationCredentials(testInfo: TestInfo) {
   const credentials = betaCredentials(testInfo);
   const separator = credentials.betaEmail.lastIndexOf('@');
   const nonce = randomUUID().replaceAll('-', '').slice(0, 8);
+  const localPart = credentials.betaEmail.slice(0, separator);
+  const boundedLocalPart = localPart.slice(0, 64 - nonce.length - 1);
 
   return {
     ...credentials,
-    betaEmail: `${credentials.betaEmail.slice(0, separator)}-${nonce}${credentials.betaEmail.slice(separator)}`,
+    betaEmail: `${boundedLocalPart}-${nonce}${credentials.betaEmail.slice(separator)}`,
   };
 }
 
 async function expectAuthenticatedAs(page: Page, email: string) {
-  const response = await page.request.get('/auth/me', { failOnStatusCode: false });
+  const response = await page.request.get('/auth/accounts', { failOnStatusCode: false });
   const responseBody = await response.text();
   expect(response.status(), responseBody).toBe(200);
 
   const payload: unknown = JSON.parse(responseBody);
-  expect(payload).toMatchObject({ user: { email } });
+  expect(payload).toMatchObject({ accounts: [{ user: { email } }] });
 }
 
 async function expectUnauthenticated(page: Page) {
-  const response = await page.request.get('/auth/me', { failOnStatusCode: false });
-  expect(response.status(), await response.text()).toBe(401);
+  const response = await page.request.get('/auth/accounts', { failOnStatusCode: false });
+  const responseBody = await response.text();
+  expect(response.status(), responseBody).toBe(200);
+  expect(JSON.parse(responseBody)).toEqual({ accounts: [] });
 
   const cookieNames = (await page.context().cookies()).map((cookie) => cookie.name);
   expect(cookieNames).not.toContain('session');

@@ -19,6 +19,20 @@ pub(super) async fn execute_job(
 }
 
 async fn submit_email_job(state: &AppState, job: &QueuedJob) -> Result<Value, JobExecutionError> {
+    let command = email_command(job)?;
+    let receipt = state
+        .email
+        .send(command)
+        .await
+        .map_err(|error| JobExecutionError::from_email_client(&error))?;
+    Ok(serde_json::json!({
+        "status": "accepted",
+        "message_id": receipt.message_id,
+        "duplicate": receipt.duplicate,
+    }))
+}
+
+fn email_command(job: &QueuedJob) -> Result<nvbes_email::EmailCommand, JobExecutionError> {
     let command: nvbes_email::EmailCommand =
         serde_json::from_value(job.payload.clone()).map_err(|_| {
             JobExecutionError::permanent(
@@ -32,14 +46,9 @@ async fn submit_email_job(state: &AppState, job: &QueuedJob) -> Result<Value, Jo
             "Email command expired before global acceptance",
         ));
     }
-    let receipt = state
-        .email
-        .send(command)
-        .await
-        .map_err(|error| JobExecutionError::from_email_client(&error))?;
-    Ok(serde_json::json!({
-        "status": "accepted",
-        "message_id": receipt.message_id,
-        "duplicate": receipt.duplicate,
-    }))
+    Ok(command)
 }
+
+#[cfg(test)]
+#[path = "identity.worker.jobs.execute.tests.rs"]
+mod tests;

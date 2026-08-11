@@ -10,6 +10,10 @@ pub mod test_capture;
 #[path = "trait.rs"]
 pub mod trait_def;
 
+#[cfg(test)]
+#[path = "environment.test_support.rs"]
+mod environment_test_support;
+
 pub use client::{EmailClient, EmailClientConfig, EmailClientError};
 pub use command::{
     AccountSecurityEvent, EmailCategory, EmailCommand, EmailCommandError, EmailIdempotencyKey,

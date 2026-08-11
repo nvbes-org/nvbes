@@ -333,3 +333,7 @@ pub async fn delete_secondary_email(
     .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "identity.domains.auth.db.emails.tests.rs"]
+mod tests;

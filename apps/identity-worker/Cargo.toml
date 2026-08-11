@@ -36,3 +36,5 @@ tonic-prost-build = "0.14.6"
 
 [dev-dependencies]
 async-trait = "0.1"
+prost-types = "0.14"
+redis = { version = "0.29", features = ["tokio-comp"] }

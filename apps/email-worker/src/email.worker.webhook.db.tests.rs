@@ -5,7 +5,7 @@ use nvbes_email::{
 };
 use sqlx::PgPool;
 
-use super::{TemWebhookEvent, apply_notification};
+use super::{TemWebhookEvent, apply_notification, record_subscription_confirmation};
 use crate::{crypto::EmailCrypto, database, dispatch_db};
 
 async fn provider_accepted_message(pool: &PgPool, suffix: &str) {
@@ -30,7 +30,7 @@ async fn provider_accepted_message(pool: &PgPool, suffix: &str) {
         },
         deliver_before: Utc::now() + Duration::hours(1),
     };
-    database::accept_command(
+    let accepted = database::accept_command(
         pool,
         &EmailCrypto::new([7; 32], [9; 32]),
         "nvbes.fr",
@@ -39,7 +39,11 @@ async fn provider_accepted_message(pool: &PgPool, suffix: &str) {
     )
     .await
     .unwrap();
-    let claim = dispatch_db::claim_one(pool).await.unwrap().unwrap();
+    let dispatch_db::ClaimResult::Claimed(claim) =
+        dispatch_db::claim_message(pool, accepted.id).await.unwrap()
+    else {
+        panic!("accepted webhook fixture must be claimable");
+    };
     dispatch_db::complete_success(pool, &claim, &format!("provider-{suffix}"))
         .await
         .unwrap();
@@ -122,4 +126,30 @@ async fn complaint_and_soft_bounce_threshold_create_global_suppressions(pool: Pg
             ("soft_bounce_threshold".to_string(), true, 3),
         ]
     );
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn subscription_unknown_and_duplicate_events_are_idempotent(pool: PgPool) {
+    assert!(
+        record_subscription_confirmation(&pool, "sns-confirm")
+            .await
+            .unwrap()
+    );
+    assert!(
+        !record_subscription_confirmation(&pool, "sns-confirm")
+            .await
+            .unwrap()
+    );
+
+    let unknown = event("unknown-event", "missing-provider-id", "future_event");
+    let first = apply_notification(&pool, "sns-unknown", &unknown)
+        .await
+        .unwrap();
+    assert!(first.inserted);
+    assert_eq!(first.processing_result, "stored_unknown");
+    let duplicate = apply_notification(&pool, "sns-unknown-duplicate", &unknown)
+        .await
+        .unwrap();
+    assert!(!duplicate.inserted);
+    assert_eq!(duplicate.processing_result, "duplicate");
 }

@@ -1,15 +1,19 @@
 use chrono::Utc;
+use prost::Message;
 use tonic::{Request, Response, Status};
 
 use nvbes_email::{
     EmailCommand,
     proto::nvbes::email::v1::{
         EmailReceipt as ProtoEmailReceipt, SubmitEmailRequest,
-        email_delivery_service_server::EmailDeliveryService,
+        email_delivery_service_server::{EmailDeliveryService, EmailDeliveryServiceServer},
     },
 };
 
 use crate::{auth, database, email_metrics, state::EmailWorkerState};
+
+pub const MAX_GRPC_DECODE_BYTES: usize = 256 * 1024;
+pub const MAX_PERSISTED_COMMAND_BYTES: usize = 192 * 1024;
 
 #[derive(Clone)]
 pub struct EmailDeliveryGrpcService {
@@ -20,6 +24,19 @@ impl EmailDeliveryGrpcService {
     pub fn new(state: EmailWorkerState) -> Self {
         Self { state }
     }
+}
+
+pub fn delivery_server(
+    service: EmailDeliveryGrpcService,
+) -> EmailDeliveryServiceServer<EmailDeliveryGrpcService> {
+    EmailDeliveryServiceServer::new(service).max_decoding_message_size(MAX_GRPC_DECODE_BYTES)
+}
+
+fn validate_submission_size(request: &SubmitEmailRequest) -> Result<(), Status> {
+    if request.encoded_len() > MAX_PERSISTED_COMMAND_BYTES {
+        return Err(Status::invalid_argument("email command exceeds size limit"));
+    }
+    Ok(())
 }
 
 #[tonic::async_trait]
@@ -33,13 +50,14 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
             &self.state.config.producer_tokens,
             &request.get_ref().producer,
         )?;
+        validate_submission_size(request.get_ref())?;
         let wire = request.into_inner();
         let command = EmailCommand::try_from(wire.clone())
             .map_err(|_| Status::invalid_argument("invalid email command"))?;
         command
             .validate(Utc::now())
             .map_err(|_| Status::invalid_argument("invalid email command"))?;
-        let receipt = database::accept_command(
+        let accepted = database::accept_command(
             &self.state.db,
             &self.state.crypto,
             &self.state.config.message_id_domain,
@@ -48,6 +66,21 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
         )
         .await
         .map_err(map_accept_error)?;
+        if accepted.enqueue_required {
+            self.state
+                .dispatch_queue
+                .enqueue(accepted.id)
+                .await
+                .map_err(|error| {
+                    tracing::error!(
+                        message_id = %accepted.id,
+                        error = ?error,
+                        "email command persisted but dispatch enqueue failed"
+                    );
+                    Status::unavailable("email command dispatch could not be scheduled")
+                })?;
+        }
+        let receipt = accepted.receipt;
         let (template_name, template_version) = command.template.name_and_version();
         email_metrics::accepted(
             &command.producer,
@@ -73,3 +106,11 @@ fn map_accept_error(error: database::AcceptCommandError) -> Status {
         }
     }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.grpc.service.tests.rs"]
+mod tests;
+
+#[cfg(test)]
+#[path = "email.worker.grpc.service.limits.tests.rs"]
+mod limits_tests;

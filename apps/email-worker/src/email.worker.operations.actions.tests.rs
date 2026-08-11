@@ -6,7 +6,8 @@ use nvbes_email::{
 use sqlx::PgPool;
 
 use super::{
-    OperatorAction, apply_suppression, release_suppression, replay_email, review_suppression,
+    ActionError, OperatorAction, apply_suppression, release_suppression, replay_email,
+    review_suppression,
 };
 use crate::{crypto::EmailCrypto, database, operations_privacy, operations_snapshot};
 
@@ -54,7 +55,7 @@ async fn accepted_message(pool: &PgPool, recipient: &str) -> uuid::Uuid {
     .await
     .unwrap();
     sqlx::query_scalar("SELECT id FROM email_messages WHERE message_id = $1")
-        .bind(receipt.message_id)
+        .bind(receipt.receipt.message_id)
         .fetch_one(pool)
         .await
         .unwrap()
@@ -123,4 +124,59 @@ async fn failed_message_can_be_replayed_and_exported_for_privacy(pool: PgPool) {
         .unwrap();
     assert_eq!(privacy.messages.len(), 1);
     assert_eq!(privacy.messages[0].id, message_id.to_string());
+
+    sqlx::query("UPDATE email_messages SET provider_message_id = 'privacy-provider' WHERE id = $1")
+        .bind(message_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        r#"INSERT INTO email_provider_events (
+            id, provider, provider_event_id, sns_message_id, provider_message_id, event_type,
+            processed_at, processing_result
+        ) VALUES ($1, 'test', 'privacy-event', 'privacy-sns', 'privacy-provider',
+                  'email_delivered', clock_timestamp(), 'state_applied')"#,
+    )
+    .bind(uuid::Uuid::new_v4())
+    .execute(&pool)
+    .await
+    .unwrap();
+    let privacy = operations_privacy::load(&pool, &crypto(), email)
+        .await
+        .unwrap();
+    assert_eq!(privacy.provider_events.len(), 1);
+    assert_eq!(
+        privacy.provider_events[0].processing_result.as_deref(),
+        Some("state_applied")
+    );
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn invalid_and_missing_operator_targets_have_distinct_errors(pool: PgPool) {
+    assert!(matches!(
+        apply_suppression(&pool, &crypto(), "invalid", "all", operator()).await,
+        Err(ActionError::Invalid)
+    ));
+    assert!(matches!(
+        apply_suppression(&pool, &crypto(), "valid@example.com", "invalid", operator(),).await,
+        Err(ActionError::Invalid)
+    ));
+    assert!(matches!(
+        release_suppression(&pool, &crypto(), "missing@example.com", operator()).await,
+        Err(ActionError::NotFound)
+    ));
+    assert!(matches!(
+        review_suppression(&pool, &crypto(), "missing@example.com", operator()).await,
+        Err(ActionError::NotFound)
+    ));
+    assert!(matches!(
+        replay_email(&pool, uuid::Uuid::new_v4(), operator()).await,
+        Err(ActionError::NotFound)
+    ));
+
+    let message_id = accepted_message(&pool, "precondition@example.com").await;
+    assert!(matches!(
+        replay_email(&pool, message_id, operator()).await,
+        Err(ActionError::Precondition)
+    ));
 }

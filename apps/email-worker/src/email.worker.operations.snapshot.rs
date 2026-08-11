@@ -251,3 +251,7 @@ fn timestamp(value: DateTime<Utc>) -> prost_types::Timestamp {
         nanos: value.timestamp_subsec_nanos() as i32,
     }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.operations.snapshot.tests.rs"]
+mod tests;

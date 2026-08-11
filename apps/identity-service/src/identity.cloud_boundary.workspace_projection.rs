@@ -217,6 +217,25 @@ pub async fn project_accept_invitation_tx(
     Ok(())
 }
 
+pub async fn project_purge_principal_context_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    principal_id: Uuid,
+) -> Result<(), AppError> {
+    for statement in [
+        "DELETE FROM tenant_break_glass_accounts WHERE principal_id = $1",
+        "DELETE FROM developer_token_debug_sessions WHERE actor_principal_id = $1",
+        "DELETE FROM developer_role_assignments WHERE principal_id = $1",
+        "DELETE FROM workspace_memberships WHERE principal_id = $1",
+    ] {
+        sqlx::query(statement)
+            .bind(principal_id)
+            .execute(&mut **tx)
+            .await?;
+    }
+
+    Ok(())
+}
+
 async fn project_upsert_workspace_membership_tx(
     tx: &mut Transaction<'_, Postgres>,
     workspace_id: Uuid,

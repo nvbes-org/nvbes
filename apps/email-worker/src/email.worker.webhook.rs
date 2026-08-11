@@ -137,7 +137,7 @@ fn response(status: StatusCode, label: &'static str) -> (StatusCode, Json<Webhoo
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
 
-    use super::is_json;
+    use super::{SnsMessage, is_json, response, webhook_event_type};
 
     #[test]
     fn webhook_requires_json_content_type() {
@@ -149,4 +149,34 @@ mod tests {
         );
         assert!(is_json(&headers));
     }
+
+    #[test]
+    fn webhook_labels_are_bounded_for_confirmations_notifications_and_invalid_json() {
+        let mut message = SnsMessage {
+            message_type: "SubscriptionConfirmation".to_string(),
+            message_id: "id".to_string(),
+            topic_arn: "topic".to_string(),
+            message: "{}".to_string(),
+            timestamp: "2026-08-05T00:00:00Z".to_string(),
+            signature_version: "1".to_string(),
+            signature: "signature".to_string(),
+            signing_cert_url: "https://example.test/cert.pem".to_string(),
+            subject: None,
+            token: None,
+            subscribe_url: None,
+        };
+        assert_eq!(webhook_event_type(&message), "subscription_confirmation");
+        message.message_type = "Notification".to_string();
+        message.message = r#"{"type":"email_delivered"}"#.to_string();
+        assert_eq!(webhook_event_type(&message), "email_delivered");
+        message.message = "invalid".to_string();
+        assert_eq!(webhook_event_type(&message), "unknown");
+        let value = response(axum::http::StatusCode::BAD_REQUEST, "invalid");
+        assert_eq!(value.0, axum::http::StatusCode::BAD_REQUEST);
+        assert_eq!(value.1.0.status, "invalid");
+    }
 }
+
+#[cfg(all(test, feature = "database-tests"))]
+#[path = "email.worker.webhook.tests.rs"]
+mod database_tests;

@@ -124,19 +124,27 @@ async fn run_access_review_reminders_if_due(
         *last_run = Instant::now();
         return Ok(());
     };
-    for candidate in &claim.candidates {
+    enqueue_access_review_reminders(state, &claim.candidates).await?;
+    *last_run = Instant::now();
+    Ok(())
+}
+
+async fn enqueue_access_review_reminders(
+    state: &AppState,
+    candidates: &[crate::grpc_pb::nvbes::enterprise::v1::AccessReviewReminderCandidate],
+) -> anyhow::Result<()> {
+    for candidate in candidates {
         let command = reminder_email_command(&state.config, candidate)?;
         nvbes_product_identity::email::jobs::enqueue_email_command(&state.redis, command)
             .await
             .map_err(|error| anyhow::anyhow!("{}: {}", error.code, error.message))?;
     }
-    if !claim.candidates.is_empty() {
+    if !candidates.is_empty() {
         tracing::info!(
-            reminders_enqueued = claim.candidates.len(),
+            reminders_enqueued = candidates.len(),
             "enqueued access review reminders"
         );
     }
-    *last_run = Instant::now();
     Ok(())
 }
 
@@ -236,3 +244,7 @@ fn capture_worker_heartbeat_if_due(state: &AppState, last_run: &mut Instant) {
         .record_worker_heartbeat("identity-worker");
     *last_run = Instant::now();
 }
+
+#[cfg(test)]
+#[path = "identity.worker.loop.tests.rs"]
+mod tests;

@@ -42,11 +42,6 @@ pub fn accepted(producer: &str, business_type: &str, template_version: i16, dupl
     .increment(1);
 }
 
-pub fn queue(depth: i64, oldest_age_seconds: Option<f64>) {
-    metrics::gauge!("email_queue_depth").set(depth as f64);
-    metrics::gauge!("email_queue_oldest_age_seconds").set(oldest_age_seconds.unwrap_or_default());
-}
-
 pub fn dispatch(provider: &str, business_type: &str, outcome: &str, duration: Duration) {
     let labels = [
         ("provider", provider.to_string()),
@@ -93,7 +88,12 @@ pub fn retention(payloads: u64, diagnostics: u64, messages: u64, events: u64) {
 
 #[cfg(test)]
 mod tests {
-    use super::{accepted, install};
+    use std::time::Duration;
+
+    use super::{
+        accepted, dispatch, expired, install, retention, suppressed, webhook,
+        webhook_signature_failure,
+    };
 
     #[test]
     fn acceptance_metrics_expose_bounded_operational_labels() {
@@ -103,5 +103,52 @@ mod tests {
         assert!(rendered.contains("email_messages_total"));
         assert!(rendered.contains("producer=\"identity-service\""));
         assert!(!rendered.contains("recipient"));
+    }
+
+    #[test]
+    fn every_metric_family_can_be_recorded_without_sensitive_labels() {
+        let handle = install();
+        accepted("identity-service", "account_security_v1", 1, true);
+        dispatch(
+            "mock",
+            "account_security_v1",
+            "provider_accepted",
+            Duration::from_millis(25),
+        );
+        expired(2);
+        suppressed(1);
+        webhook("email_delivered", "state_applied", Duration::from_millis(5));
+        webhook_signature_failure();
+        retention(1, 2, 3, 4);
+
+        let rendered = handle.render();
+        for metric in [
+            "email_delivery_duration_seconds",
+            "email_expired_total",
+            "email_suppressed_total",
+            "email_provider_webhooks_total",
+            "email_webhook_signature_failures_total",
+            "email_retention_rows_total",
+        ] {
+            assert!(rendered.contains(metric), "missing {metric}");
+        }
+    }
+
+    #[cfg(feature = "database-tests")]
+    #[sqlx::test(migrations = "./migrations")]
+    async fn metrics_router_renders_the_installed_recorder(pool: sqlx::PgPool) {
+        use axum::{body::Body, http::Request};
+        use tower::ServiceExt;
+
+        let response = super::router(crate::test_support::state(pool))
+            .oneshot(
+                Request::builder()
+                    .uri("/metrics")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
     }
 }

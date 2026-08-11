@@ -5,6 +5,8 @@ use super::{EmailCommand, EmailCommandError, EmailTemplate};
 const MAX_PRODUCER_LENGTH: usize = 64;
 const MAX_IDEMPOTENCY_KEY_LENGTH: usize = 200;
 const MAX_TEXT_FIELD_LENGTH: usize = 200;
+const MAX_EMAIL_LENGTH: usize = 320;
+const MAX_URL_LENGTH: usize = 4096;
 
 pub(super) fn validate_idempotency_key(value: &str) -> Result<(), EmailCommandError> {
     validate_identifier("idempotency_key", value, MAX_IDEMPOTENCY_KEY_LENGTH)
@@ -78,31 +80,44 @@ impl EmailTemplate {
                     Duration::minutes(15),
                 )
             }
-            Self::AccountSecurityV1 { security_url, .. } => {
+            Self::AccountSecurityV1 {
+                affected_email,
+                previous_email,
+                security_url,
+                ..
+            } => {
+                validate_optional_email("template.affected_email", affected_email.as_deref())?;
+                validate_optional_email("template.previous_email", previous_email.as_deref())?;
                 validate_optional_https_url("template.security_url", security_url.as_deref())
             }
             Self::BillingReceiptV1 {
+                customer_name,
                 amount_minor,
                 currency,
                 invoice_url,
-                ..
+                provider_name,
             } => {
+                validate_optional_text("template.customer_name", customer_name.as_deref())?;
                 validate_money(*amount_minor, currency)?;
-                validate_optional_https_url("template.invoice_url", invoice_url.as_deref())
+                validate_optional_https_url("template.invoice_url", invoice_url.as_deref())?;
+                validate_optional_text("template.provider_name", provider_name.as_deref())
             }
             Self::BillingPaymentFailureV1 {
+                customer_name,
                 amount_minor,
                 currency,
                 billing_portal_url,
                 invoice_url,
-                ..
+                provider_name,
             } => {
+                validate_optional_text("template.customer_name", customer_name.as_deref())?;
                 validate_money(*amount_minor, currency)?;
                 validate_optional_https_url(
                     "template.billing_portal_url",
                     billing_portal_url.as_deref(),
                 )?;
-                validate_optional_https_url("template.invoice_url", invoice_url.as_deref())
+                validate_optional_https_url("template.invoice_url", invoice_url.as_deref())?;
+                validate_optional_text("template.provider_name", provider_name.as_deref())
             }
             Self::AccessReviewReminderV1 {
                 reviewer_name,
@@ -164,10 +179,26 @@ fn validate_identifier(
 }
 
 fn validate_email(value: &str) -> Result<(), EmailCommandError> {
+    if value.len() > MAX_EMAIL_LENGTH {
+        return Err(EmailCommandError::field("recipient.email"));
+    }
     value
         .parse::<lettre::Address>()
         .map(|_| ())
         .map_err(|_| EmailCommandError::field("recipient.email"))
+}
+
+fn validate_optional_email(
+    field: &'static str,
+    value: Option<&str>,
+) -> Result<(), EmailCommandError> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    if value.len() > MAX_EMAIL_LENGTH || value.parse::<lettre::Address>().is_err() {
+        return Err(EmailCommandError::field(field));
+    }
+    Ok(())
 }
 
 fn validate_text(field: &'static str, value: &str) -> Result<(), EmailCommandError> {
@@ -201,6 +232,9 @@ fn validate_money(amount_minor: i64, currency: &str) -> Result<(), EmailCommandE
 }
 
 fn validate_https_url(field: &'static str, value: &str) -> Result<(), EmailCommandError> {
+    if value.len() > MAX_URL_LENGTH {
+        return Err(EmailCommandError::field(field));
+    }
     let url = reqwest::Url::parse(value).map_err(|_| EmailCommandError::field(field))?;
     let loopback_http =
         url.scheme() == "http" && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "::1"));

@@ -30,8 +30,6 @@ Profiles/Pyroscope.
   Storage Scaleway, avec verrouillage natif S3.
 - `main.tf`: réseau privé, base privée, origine Cloudflare-only, WAF managé,
   egress contrôlé et archive d’audit WORM externe.
-- `email-delivery.tf`: domaine TEM `notify.nvbes.eu`, enregistrements DNS
-  Cloudflare, validation TEM, topic SNS, abonnement HTTPS et webhook TEM.
 - `siem.tf`: import des six règles Loki dans Grafana Cloud et routage vers le
   contact point Security on-call.
 - `variables.tf`, `outputs.tf`, `terraform.tfvars.example`: contrat de
@@ -41,34 +39,13 @@ Profiles/Pyroscope.
   Grafana Cloud, avec dual-export traces/logs vers PostHog.
 - `observability.env.example`: variables requises, sans secret reel.
 
-## Autorité Terraform
+## Stack email séparé
 
-Terraform est l’unique chemin de modification de l’infrastructure email de
-production. Ne pas créer ni modifier le domaine TEM, ses enregistrements DNS,
-le topic SNS, son abonnement ou le webhook depuis les consoles Scaleway et
-Cloudflare, `scw` ou Wrangler. Une ressource déjà créée manuellement doit être
-importée dans l’état avant le premier plan; elle ne doit pas être recréée.
-
-L’état contient notamment les credentials SNS générés. Il doit donc être
-stocké dans un bucket privé chiffré, versionné et distinct du stack. Le bucket
-est une dépendance de bootstrap et doit exister avant toute gestion de
-production. Copier `backend.hcl.example` vers `backend.hcl`, conserver ce
-dernier hors Git, puis fournir les credentials Object Storage via
-`AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY`.
-
-```bash
-cd infrastructure/environments/production
-terraform init -backend-config=backend.hcl
-terraform plan -out=production.tfplan
-terraform apply production.tfplan
-```
-
-Ajouter `-migrate-state` au premier `terraform init` uniquement si un état
-local existant doit être transféré. Avant le plan, le endpoint HTTPS public du
-worker doit être déployé, les conditions TEM doivent avoir été revues puis
-`accept_scaleway_tem_terms` passé à `true`, et les tokens providers doivent
-être limités au projet/à la zone de production. Ne jamais placer ces tokens
-dans `terraform.tfvars`.
+L’infrastructure email n’appartient plus à cet état général. Elle vit dans
+`../email-production`, avec l’état isolé
+`production/email/terraform.tfstate` et le workflow GitHub `deploy email`.
+Cette séparation garantit qu’un déploiement email ne peut pas modifier les
+Instances, la RDB partagée ou les autres produits.
 
 ## Secrets requis
 

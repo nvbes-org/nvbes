@@ -3,7 +3,6 @@ use nvbes_email::proto::nvbes::email::v1::{
     email_operations_service_server::EmailOperationsServiceServer,
 };
 use tokio::sync::watch;
-use tonic::transport::Server;
 use tracing_subscriber::EnvFilter;
 
 #[path = "email.worker.grpc.auth.rs"]
@@ -34,6 +33,12 @@ mod operations_actions;
 mod operations_privacy;
 #[path = "email.worker.operations.snapshot.rs"]
 mod operations_snapshot;
+#[path = "email.worker.queue.rs"]
+mod queue;
+#[path = "email.worker.queue.trigger.rs"]
+mod queue_trigger;
+#[path = "email.worker.retention.rs"]
+mod retention;
 #[path = "email.worker.state.rs"]
 mod state;
 #[path = "email.worker.webhook.rs"]
@@ -43,24 +48,29 @@ mod webhook_db;
 #[path = "email.worker.webhook.verify.rs"]
 mod webhook_verify;
 
+#[cfg(test)]
+#[path = "email.worker.test_support.rs"]
+mod test_support;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let config = config::EmailWorkerConfig::from_env()?;
-    let db = database::connect(&config.database_url).await?;
-    database::migrate(&db).await?;
-
     let command: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(command.as_slice(), [action] if action == "migrate") {
+        let db = database::connect(&config::database_url_from_env()?).await?;
+        database::migrate(&db).await?;
+        tracing::info!("email database migrations applied");
+        return Ok(());
+    }
+
+    let config = config::EmailWorkerConfig::from_env()?;
     match command.as_slice() {
         [] => {}
-        [action] if action == "migrate" => {
-            tracing::info!("email database migrations applied");
-            return Ok(());
-        }
         [action, message_id, actor, reason] if action == "release-suppression" => {
+            let db = database::connect(&config.database_url).await?;
             release_suppression(&db, message_id, actor, reason).await?;
             return Ok(());
         }
@@ -69,9 +79,9 @@ async fn main() -> anyhow::Result<()> {
         ),
     }
 
+    let db = database::connect_lazy(&config.database_url)?;
     let state = state::EmailWorkerState::new(config, db)?;
     let http_listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
-    let grpc_addr = state.config.grpc_bind_addr;
     let email_grpc = grpc_service::EmailDeliveryGrpcService::new(state.clone());
     let operations_grpc = grpc_operations::EmailOperationsGrpcService::new(state.clone());
     let (health_reporter, health_service) = tonic_health::server::health_reporter();
@@ -81,27 +91,46 @@ async fn main() -> anyhow::Result<()> {
     health_reporter
         .set_serving::<EmailOperationsServiceServer<grpc_operations::EmailOperationsGrpcService>>()
         .await;
-    let grpc = EmailDeliveryServiceServer::new(email_grpc);
+    let grpc = grpc_service::delivery_server(email_grpc);
     let operations = EmailOperationsServiceServer::new(operations_grpc);
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-
-    let dispatcher = tokio::spawn(dispatcher::run(state.clone(), shutdown_rx.clone()));
-    let http_router = health::router(state.clone())
-        .merge(email_metrics::router(state.clone()))
-        .merge(webhook::router(state.clone()));
-    let http_server = axum::serve(http_listener, http_router)
-        .with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
-    let grpc_server = Server::builder()
+    let local_dispatcher = if state.config.runtime_role == config::RuntimeRole::All {
+        state.take_local_dispatch_receiver().map(|receiver| {
+            tokio::spawn(dispatcher::run_local(
+                state.clone(),
+                receiver,
+                shutdown_rx.clone(),
+            ))
+        })
+    } else {
+        None
+    };
+    let http_router = health::router(state.clone());
+    let http_router = match state.config.runtime_role {
+        config::RuntimeRole::All => http_router
+            .merge(email_metrics::router(state.clone()))
+            .merge(webhook::router(state.clone()))
+            .merge(queue_trigger::router(state.clone()))
+            .merge(retention::router(state.clone())),
+        config::RuntimeRole::Ingress => http_router.merge(webhook::router(state.clone())),
+        config::RuntimeRole::Dispatch => http_router
+            .merge(email_metrics::router(state.clone()))
+            .merge(queue_trigger::router(state.clone()))
+            .merge(retention::router(state.clone())),
+    };
+    let app = tonic::service::Routes::from(http_router)
         .add_service(health_service)
         .add_service(grpc)
         .add_service(operations)
-        .serve_with_shutdown(grpc_addr, server_shutdown(shutdown_rx));
+        .into_axum_router();
+    let server = axum::serve(http_listener, app)
+        .with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
 
     tracing::info!(
-        http_addr = %state.config.http_bind_addr,
-        grpc_addr = %grpc_addr,
+        bind_addr = %state.config.http_bind_addr,
         environment = %state.config.environment,
         provider = provider_name(&state.config.provider),
+        runtime_role = ?state.config.runtime_role,
         from_email = %redacted_sender(&state.config.from_email),
         from_name = %state.config.from_name,
         reply_to_configured = state.config.reply_to.is_some(),
@@ -109,12 +138,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     tokio::select! {
-        result = http_server => result?,
-        result = grpc_server => result?,
+        result = server => result?,
         _ = process_shutdown_signal() => {},
     }
     let _ = shutdown_tx.send(true);
-    dispatcher.await?;
+    if let Some(dispatcher) = local_dispatcher {
+        dispatcher.await?;
+    }
     Ok(())
 }
 
@@ -179,3 +209,7 @@ fn redacted_sender(sender: &str) -> String {
         .map(|(_, domain)| format!("***@{domain}"))
         .unwrap_or_else(|| "***".to_string())
 }
+
+#[cfg(test)]
+#[path = "email.worker.main.tests.rs"]
+mod tests;

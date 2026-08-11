@@ -284,13 +284,27 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes(
 				`name: account-acceptance-${githubExpression("github.sha")}`,
 			);
+		const isValidatedEmailDeploymentWorkflow =
+			path === ".github/workflows/deploy-email.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!/^\s+inputs:\s*$/mu.test(text) &&
+			text.includes("name: production-email") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/email/terraform.tfstate") &&
+			text.includes("ghcr.io/nvbes-org/nvbes-email-worker") &&
+			text.includes("cosign verify") &&
+			text.includes("email-runtime.tfplan");
 		if (
 			!preceding.includes(
 				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
 			) &&
 			!isValidatedDastWorkflow &&
 			!isValidatedAccountReleaseWorkflow &&
-			!isValidatedAcceptanceIngestWorkflow
+			!isValidatedAcceptanceIngestWorkflow &&
+			!isValidatedEmailDeploymentWorkflow
 		) {
 			errors.push(
 				`${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,

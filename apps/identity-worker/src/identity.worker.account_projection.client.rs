@@ -60,6 +60,10 @@ impl AccountProjectionClient {
                 anyhow::bail!("NVBES_ACCOUNT_PROVISIONING_TOKEN could not be read: {error}")
             }
         };
+        Self::new(endpoint, token)
+    }
+
+    pub(crate) fn new(endpoint: reqwest::Url, token: impl Into<String>) -> anyhow::Result<Self> {
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(20))
@@ -68,7 +72,7 @@ impl AccountProjectionClient {
         Ok(Self {
             http,
             endpoint,
-            token,
+            token: token.into(),
         })
     }
 
@@ -129,16 +133,5 @@ impl fmt::Display for DispatchError {
 impl std::error::Error for DispatchError {}
 
 #[cfg(test)]
-mod tests {
-    use reqwest::StatusCode;
-
-    use super::DispatchError;
-
-    #[test]
-    fn only_transport_rate_limit_and_server_failures_are_retried() {
-        assert!(DispatchError::from_status(StatusCode::TOO_MANY_REQUESTS).is_retryable());
-        assert!(DispatchError::from_status(StatusCode::BAD_GATEWAY).is_retryable());
-        assert!(!DispatchError::from_status(StatusCode::UNAUTHORIZED).is_retryable());
-        assert!(!DispatchError::from_status(StatusCode::CONFLICT).is_retryable());
-    }
-}
+#[path = "identity.worker.account_projection.client.tests.rs"]
+mod tests;

@@ -126,3 +126,7 @@ pub async fn status(db: &PgPool) -> anyhow::Result<ProjectionQueueStatus> {
         dead_letter_oldest_age_seconds: row.get("dead_letter_oldest_age_seconds"),
     })
 }
+
+#[cfg(test)]
+#[path = "identity.worker.account_projection.db.tests.rs"]
+mod tests;

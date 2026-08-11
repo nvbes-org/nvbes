@@ -4,6 +4,8 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 
 #[path = "email.worker.config.producers.rs"]
 mod producers;
+#[path = "email.worker.config.queue.rs"]
+mod queue;
 #[path = "email.worker.config.retention.rs"]
 mod retention;
 
@@ -17,6 +19,28 @@ pub struct ScalewayConfig {
     pub secret_key: String,
     pub project_id: String,
     pub region: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DispatchQueueConfig {
+    pub endpoint: String,
+    pub queue_url: String,
+    pub access_key: String,
+    pub secret_key: String,
+    pub region: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum DispatchMode {
+    InMemory,
+    Scaleway(DispatchQueueConfig),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeRole {
+    All,
+    Ingress,
+    Dispatch,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +75,6 @@ pub struct EmailWorkerConfig {
     pub environment: String,
     pub database_url: String,
     pub http_bind_addr: SocketAddr,
-    pub grpc_bind_addr: SocketAddr,
     pub producer_tokens: HashMap<String, String>,
     pub data_encryption_key: [u8; 32],
     pub recipient_hmac_key: [u8; 32],
@@ -60,6 +83,8 @@ pub struct EmailWorkerConfig {
     pub reply_to: Option<String>,
     pub message_id_domain: String,
     pub provider: ProviderConfig,
+    pub dispatch: DispatchMode,
+    pub runtime_role: RuntimeRole,
     pub webhook: Option<WebhookTrustConfig>,
     pub retention: RetentionConfig,
 }
@@ -67,13 +92,13 @@ pub struct EmailWorkerConfig {
 impl EmailWorkerConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         let environment = env_or("NVBES_ENVIRONMENT", "development");
-        let database_url = required("NVBES_EMAIL_DATABASE_URL")?;
-        let http_bind_addr = env_or("NVBES_EMAIL_HTTP_BIND_ADDR", "127.0.0.1:3040")
+        let database_url = database_url_from_env()?;
+        let default_bind_addr = std::env::var("PORT")
+            .map(|port| format!("0.0.0.0:{port}"))
+            .unwrap_or_else(|_| "127.0.0.1:3040".to_string());
+        let http_bind_addr = env_or("NVBES_EMAIL_HTTP_BIND_ADDR", &default_bind_addr)
             .parse()
             .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_HTTP_BIND_ADDR is invalid: {error}"))?;
-        let grpc_bind_addr = env_or("NVBES_EMAIL_GRPC_BIND_ADDR", "127.0.0.1:3041")
-            .parse()
-            .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_GRPC_BIND_ADDR is invalid: {error}"))?;
         let producer_tokens =
             producers::from_environment(optional("NVBES_EMAIL_PRODUCER_TOKENS"), &environment)?;
         let data_encryption_key = key(
@@ -103,6 +128,8 @@ impl EmailWorkerConfig {
             })
             .ok_or_else(|| anyhow::anyhow!("email message ID domain is missing"))?;
         let provider = provider(&environment)?;
+        let dispatch = queue::from_environment(&environment)?;
+        let runtime_role = runtime_role(&environment)?;
         let webhook = webhook(&environment)?;
         let retention = retention::parse(
             &env_or("NVBES_EMAIL_PAYLOAD_RETENTION_DAYS", "30"),
@@ -113,7 +140,6 @@ impl EmailWorkerConfig {
             environment,
             database_url,
             http_bind_addr,
-            grpc_bind_addr,
             producer_tokens,
             data_encryption_key,
             recipient_hmac_key,
@@ -122,28 +148,56 @@ impl EmailWorkerConfig {
             reply_to,
             message_id_domain,
             provider,
+            dispatch,
+            runtime_role,
             webhook,
             retention,
         })
     }
 }
 
+pub fn database_url_from_env() -> anyhow::Result<String> {
+    required("NVBES_EMAIL_DATABASE_URL")
+}
+
+fn runtime_role(environment: &str) -> anyhow::Result<RuntimeRole> {
+    match optional("NVBES_EMAIL_RUNTIME_ROLE").as_deref() {
+        Some("ingress") => Ok(RuntimeRole::Ingress),
+        Some("dispatch") => Ok(RuntimeRole::Dispatch),
+        Some("all") if matches!(environment, "development" | "test") => Ok(RuntimeRole::All),
+        None if matches!(environment, "development" | "test") => Ok(RuntimeRole::All),
+        Some(_) => anyhow::bail!("NVBES_EMAIL_RUNTIME_ROLE must be ingress or dispatch"),
+        None => anyhow::bail!("NVBES_EMAIL_RUNTIME_ROLE is required outside development"),
+    }
+}
+
 fn webhook(environment: &str) -> anyhow::Result<Option<WebhookTrustConfig>> {
     let topic_arn = optional("NVBES_EMAIL_SNS_TOPIC_ARN");
     let ca_path = optional("NVBES_EMAIL_SNS_CA_BUNDLE_PATH");
-    if topic_arn.is_none() && ca_path.is_none() && matches!(environment, "development" | "test") {
+    let ca_pem = optional("NVBES_EMAIL_SNS_CA_BUNDLE_PEM");
+    if topic_arn.is_none()
+        && ca_path.is_none()
+        && ca_pem.is_none()
+        && matches!(environment, "development" | "test")
+    {
         return Ok(None);
     }
     let topic_arn = topic_arn.ok_or_else(|| {
         anyhow::anyhow!("NVBES_EMAIL_SNS_TOPIC_ARN is required outside development")
     })?;
-    let ca_path = ca_path.ok_or_else(|| {
-        anyhow::anyhow!("NVBES_EMAIL_SNS_CA_BUNDLE_PATH is required outside development")
-    })?;
-    let ca_bundle_pem = std::fs::read(&ca_path)
-        .map_err(|error| anyhow::anyhow!("could not read SNS CA bundle {ca_path}: {error}"))?;
+    let ca_bundle_pem = match (ca_pem, ca_path) {
+        (Some(pem), None) => pem.into_bytes(),
+        (None, Some(path)) => std::fs::read(&path)
+            .map_err(|error| anyhow::anyhow!("could not read SNS CA bundle {path}: {error}"))?,
+        (None, None) => anyhow::bail!(
+            "NVBES_EMAIL_SNS_CA_BUNDLE_PEM or NVBES_EMAIL_SNS_CA_BUNDLE_PATH is required outside development"
+        ),
+        (Some(_), Some(_)) => anyhow::bail!(
+            "configure only one of NVBES_EMAIL_SNS_CA_BUNDLE_PEM and NVBES_EMAIL_SNS_CA_BUNDLE_PATH"
+        ),
+    };
     if ca_bundle_pem.is_empty() {
-        anyhow::bail!("NVBES_EMAIL_SNS_CA_BUNDLE_PATH is empty");
+        anyhow::bail!("email SNS CA bundle is empty");
     }
     Ok(Some(WebhookTrustConfig {
         topic_arn,

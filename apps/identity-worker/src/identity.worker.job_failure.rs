@@ -121,19 +121,5 @@ fn bounded_single_line(value: &str, maximum_chars: usize) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{JobExecutionError, MAX_CODE_CHARS, MAX_SUMMARY_CHARS};
-
-    #[test]
-    fn persisted_fields_are_single_line_and_bounded() {
-        let failure = JobExecutionError::permanent(
-            &format!("bad\n{}", "x".repeat(MAX_CODE_CHARS * 2)),
-            &format!("unsafe\r\n{}", "y".repeat(MAX_SUMMARY_CHARS * 2)),
-        );
-
-        assert!(!failure.code().contains('\n'));
-        assert!(!failure.summary.contains('\n'));
-        assert!(failure.code().chars().count() <= MAX_CODE_CHARS);
-        assert!(failure.summary.chars().count() <= MAX_SUMMARY_CHARS);
-    }
-}
+#[path = "identity.worker.job_failure.tests.rs"]
+mod tests;

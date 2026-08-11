@@ -204,5 +204,14 @@ mod proto_decode;
 mod proto_encode;
 
 #[cfg(test)]
+#[path = "command.proto.tests.rs"]
+mod proto_tests;
+#[cfg(test)]
+#[path = "command.test_support.rs"]
+mod test_support;
+#[cfg(test)]
 #[path = "command.tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "command.validation.tests.rs"]
+mod validation_tests;
