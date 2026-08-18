@@ -1,0 +1,5 @@
+bucket = "nvbes-production-email-terraform-state-example"
+
+# Credentials are supplied through AWS_ACCESS_KEY_ID and
+# AWS_SECRET_ACCESS_KEY. The backend key and lockfile policy are fixed in
+# backend.tf.

@@ -2,7 +2,7 @@
 
 **Modèle contractuel réservé aux relations professionnelles relatives à nvbes Account**
 
-**Version : 2026-07-30**
+**Version : 2026-08-12**
 
 **Date d’effet : `[À COMPLÉTER LORS DE LA SIGNATURE]`**
 
@@ -16,7 +16,7 @@ Le présent accord relatif au traitement de données à caractère personnel,
 ci-après l’« **Accord** », est conclu entre :
 
 1. **Le Client :** `[DÉNOMINATION SOCIALE, FORME, CAPITAL, SIÈGE,
-   IMMATRICULATION]`, représenté par `[NOM ET QUALITÉ]`, ci-après le
+IMMATRICULATION]`, représenté par `[NOM ET QUALITÉ]`, ci-après le
    « **Client** » ; et
 2. **nvbes Cloud SAS :** société par actions simplifiée au capital de
    `[À COMPLÉTER]` euros, dont le siège social est situé
@@ -459,12 +459,12 @@ L’absence d’exercice d’un droit ne vaut pas renonciation.
 
 ## Signatures
 
-| Pour le Client | Pour nvbes Cloud SAS |
-| --- | --- |
-| Nom : `[À COMPLÉTER]` | Nom : `[À COMPLÉTER]` |
+| Pour le Client            | Pour nvbes Cloud SAS      |
+| ------------------------- | ------------------------- |
+| Nom : `[À COMPLÉTER]`     | Nom : `[À COMPLÉTER]`     |
 | Qualité : `[À COMPLÉTER]` | Qualité : `[À COMPLÉTER]` |
-| Date : `[À COMPLÉTER]` | Date : `[À COMPLÉTER]` |
-| Signature : | Signature : |
+| Date : `[À COMPLÉTER]`    | Date : `[À COMPLÉTER]`    |
+| Signature :               | Signature :               |
 
 Les [annexes I à IV](./data-processing-agreement-annexes.md) font partie
 intégrante de l’Accord. Elles doivent être complétées, paraphées ou acceptées

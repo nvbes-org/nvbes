@@ -4,7 +4,7 @@
   "root": "apps/identity-service",
   "sourceRoot": "apps/identity-service/src",
   "tags": [
-    "scope:oss",
+    "scope:cloud",
     "type:app",
     "domain:identity",
     "layer:app"

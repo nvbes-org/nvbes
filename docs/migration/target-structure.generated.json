@@ -7,9 +7,9 @@
   },
   "summary": {
     "entries": 56,
-    "present": 56,
-    "missing": 0,
-    "pending": 0
+    "present": 51,
+    "missing": 5,
+    "pending": 5
   },
   "entries": [
     {
@@ -19,27 +19,27 @@
     },
     {
       "path": "apps/api",
-      "status": "present",
+      "status": "missing",
       "proof": "apps/api"
     },
     {
       "path": "apps/cloud",
-      "status": "present",
+      "status": "missing",
       "proof": "apps/cloud"
     },
     {
       "path": "apps/internal",
-      "status": "present",
+      "status": "missing",
       "proof": "apps/internal"
     },
     {
       "path": "apps/public",
-      "status": "present",
+      "status": "missing",
       "proof": "apps/public"
     },
     {
       "path": "apps/workers",
-      "status": "present",
+      "status": "missing",
       "proof": "apps/workers"
     },
     {

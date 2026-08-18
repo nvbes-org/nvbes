@@ -4,7 +4,7 @@
   "root": "apps/billing-service",
   "sourceRoot": "apps/billing-service/src",
   "tags": [
-    "scope:oss",
+    "scope:cloud",
     "type:app",
     "domain:billing",
     "layer:app"

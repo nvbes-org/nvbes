@@ -11,7 +11,7 @@ const auditCratePath = "libs/rust/audit/src/lib.rs";
 const migrationTargets = [
 	{
 		product: "identity",
-		path: "apps/account-service/migrations/0001_initial_schema.sql",
+		path: "apps/identity-service/migrations/0001_initial_schema.sql",
 		partition: "tenant_id = NEW.tenant_id",
 	},
 	{

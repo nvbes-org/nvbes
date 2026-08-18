@@ -3,7 +3,7 @@
   "projectType": "library",
   "root": "tools/account-quality",
   "sourceRoot": "tools/account-quality",
-  "tags": ["scope:oss", "type:tooling", "domain:account", "layer:tooling"],
+  "tags": ["scope:oss", "type:workspace", "domain:account", "layer:tooling"],
   "implicitDependencies": [
     "account-service",
     "account-worker",

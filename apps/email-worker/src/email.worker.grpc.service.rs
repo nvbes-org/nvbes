@@ -9,7 +9,7 @@ use nvbes_email::{
     },
 };
 
-use crate::{auth, database, email_metrics, state::EmailWorkerState};
+use crate::{auth, database, email_metrics, error_reporting, state::EmailWorkerState};
 
 #[derive(Clone)]
 pub struct EmailDeliveryGrpcService {
@@ -24,6 +24,19 @@ impl EmailDeliveryGrpcService {
 
 #[tonic::async_trait]
 impl EmailDeliveryService for EmailDeliveryGrpcService {
+    #[tracing::instrument(
+        name = "email.submit",
+        skip_all,
+        fields(
+            rpc.system = "grpc",
+            rpc.service = "nvbes.email.v1.EmailDeliveryService",
+            rpc.method = "SubmitEmail",
+            email.producer = tracing::field::Empty,
+            email.business_type = tracing::field::Empty,
+            email.template_version = tracing::field::Empty,
+            otel.status_code = tracing::field::Empty,
+        )
+    )]
     async fn submit_email(
         &self,
         request: Request<SubmitEmailRequest>,
@@ -47,8 +60,12 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
             &command,
         )
         .await
-        .map_err(map_accept_error)?;
+        .map_err(|error| map_accept_error(error, &self.state))?;
         let (template_name, template_version) = command.template.name_and_version();
+        let span = tracing::Span::current();
+        span.record("email.producer", command.producer.as_str());
+        span.record("email.business_type", template_name);
+        span.record("email.template_version", template_version);
         email_metrics::accepted(
             &command.producer,
             template_name,
@@ -59,7 +76,7 @@ impl EmailDeliveryService for EmailDeliveryGrpcService {
     }
 }
 
-fn map_accept_error(error: database::AcceptCommandError) -> Status {
+fn map_accept_error(error: database::AcceptCommandError, state: &EmailWorkerState) -> Status {
     match error {
         database::AcceptCommandError::Invalid | database::AcceptCommandError::Validation(_) => {
             Status::invalid_argument("invalid email command")
@@ -68,6 +85,8 @@ fn map_accept_error(error: database::AcceptCommandError) -> Status {
             Status::already_exists("email idempotency key conflict")
         }
         database::AcceptCommandError::Database(_) | database::AcceptCommandError::Encryption(_) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
+            error_reporting::capture_operation(&state.config, "grpc_accept_command", &error);
             tracing::error!(error = ?error, "email command could not be persisted");
             Status::unavailable("email command could not be durably accepted")
         }

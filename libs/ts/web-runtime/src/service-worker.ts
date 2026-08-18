@@ -1,7 +1,4 @@
-import {
-  createTrustedServiceWorkerScriptUrl,
-  type NvbesTrustedScriptUrl,
-} from "./trusted-types";
+import { createTrustedServiceWorkerScriptUrl, type NvbesTrustedScriptUrl } from './trusted-types';
 
 let readyResolve: (() => void) | null = null;
 const readyPromise = new Promise<void>((resolve) => {

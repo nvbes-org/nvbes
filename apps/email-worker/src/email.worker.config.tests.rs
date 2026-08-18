@@ -1,4 +1,7 @@
-use super::{DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, key, local_smtp, producers};
+use super::{
+    DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, key, local_smtp, producers,
+    validate_shared_bind_address,
+};
 
 #[test]
 fn cryptographic_keys_must_decode_to_exactly_32_bytes() {
@@ -52,4 +55,13 @@ fn smtp_is_local_only_and_supports_an_unauthenticated_mail_sink() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn http_and_grpc_share_the_serverless_listener() {
+    let shared = "127.0.0.1:3040".parse().unwrap();
+    let separate = "127.0.0.1:3041".parse().unwrap();
+
+    assert!(validate_shared_bind_address(shared, shared).is_ok());
+    assert!(validate_shared_bind_address(shared, separate).is_err());
 }

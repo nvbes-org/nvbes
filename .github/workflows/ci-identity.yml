@@ -174,12 +174,13 @@ jobs:
     timeout-minutes: 60
     env:
       CI: 'true'
-      NVBES_IDENTITY_E2E_ARTIFACT_DIR: ${{ runner.temp }}/identity-e2e-runtime
       NX_DAEMON: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Configure ephemeral Identity E2E path
+        run: echo "NVBES_IDENTITY_E2E_ARTIFACT_DIR=$RUNNER_TEMP/identity-e2e-runtime" >> "$GITHUB_ENV"
       - name: Validate CI/CD security controls
         run: >-
           node tools/security/check-ci-cd-security.mjs

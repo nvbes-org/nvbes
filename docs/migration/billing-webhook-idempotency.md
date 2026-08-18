@@ -19,8 +19,8 @@
 
 | Check | Status | Path |
 |---|---:|---|
-| Identity OpenAPI no longer exposes PSP webhook routes | passed | `apps/account-service/openapi.json` |
-| Identity router no longer merges legacy billing routes | passed | `apps/account-service/src/identity.domains.mod.rs` |
+| Identity OpenAPI no longer exposes PSP webhook routes | passed | `apps/identity-service/openapi.json` |
+| Identity router no longer merges legacy billing routes | passed | `apps/identity-service/src/identity.domains.mod.rs` |
 | billing-service accepts Stripe webhooks | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
 | billing-service accepts Mollie webhooks | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
 | Stripe webhook intake is rate limited in billing-service | passed | `apps/billing-service/src/billing.domains.webhooks.rs` |
@@ -36,7 +36,7 @@
 | Stripe intake enqueues async processing | passed | `libs/rust/billing/src/stripe_webhook_intake.rs` |
 | Stripe webhook processing has a dedicated queue | passed | `libs/rust/billing/src/jobs.rs` |
 | Mollie webhook processing has a dedicated queue | passed | `libs/rust/billing/src/jobs.rs` |
-| Billing email delivery has a dedicated queue | passed | `libs/rust/billing/src/jobs.rs` |
+| Billing email submission has a dedicated integration queue | passed | `libs/rust/billing/src/jobs.rs` |
 | Queued webhook jobs use provider_event_id as idempotency key | passed | `libs/rust/billing/src/jobs.rs` |
 | Billing worker claims Stripe, Mollie, and billing email queues | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
 | Billing worker dispatches Stripe webhook jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
@@ -45,10 +45,10 @@
 | Stripe worker calls billing-domain processing | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
 | Stripe worker publishes Billing workspace updates | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
 | Stripe worker enqueues billing emails after processing | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
-| Billing email enqueue uses the Billing queue | passed | `apps/billing-worker/src/billing.worker.email.rs` |
+| Billing email enqueue uses the Billing integration queue | passed | `apps/billing-worker/src/billing.worker.email.rs` |
 | Billing email enqueue does not use Identity email.send queue | passed | `apps/billing-worker/src/billing.worker.email.rs` |
-| Billing worker sends billing emails locally | passed | `apps/billing-worker/src/billing.worker.email.delivery.rs` |
-| Billing email delivery is tagged as Billing domain | passed | `apps/billing-worker/src/billing.worker.email.delivery.rs` |
+| Billing worker submits commands through the shared email service | passed | `apps/billing-worker/src/billing.worker.email.delivery.rs` |
+| Billing email commands carry the Billing category | passed | `apps/billing-worker/src/billing.worker.email.rs` |
 | Mollie worker calls billing-domain processing | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |
 | Mollie worker publishes Billing workspace updates | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |
 | Mollie worker enqueues billing emails after processing | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |

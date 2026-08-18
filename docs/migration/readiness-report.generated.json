@@ -6,8 +6,8 @@
   },
   "status": {
     "production_cutover": "no-go",
-    "blocking_areas": 15,
-    "blocking_items": 135,
+    "blocking_areas": 16,
+    "blocking_items": 140,
     "live_evidence_missing_requirements": 6,
     "live_evidence_missing_items": 24
   },
@@ -15,28 +15,28 @@
     {
       "id": "data",
       "source": "docs/migration/data-map.generated.json",
-      "total": 203,
+      "total": 237,
       "pending": 0,
       "proof": "pnpm check:migration-data-map"
     },
     {
       "id": "secrets",
       "source": "docs/migration/secret-map.generated.json",
-      "total": 132,
+      "total": 248,
       "pending": 0,
       "proof": "pnpm check:migration-secret-map"
     },
     {
       "id": "jobs",
       "source": "docs/migration/job-map.generated.json",
-      "total": 19,
+      "total": 16,
       "pending": 0,
       "proof": "pnpm check:migration-job-map"
     },
     {
       "id": "resources",
       "source": "docs/migration/resource-map.generated.json",
-      "total": 44,
+      "total": 43,
       "pending": 0,
       "proof": "pnpm check:migration-resource-map"
     },
@@ -44,7 +44,7 @@
       "id": "target_structure",
       "source": "docs/migration/target-structure.generated.json",
       "total": 56,
-      "pending": 0,
+      "pending": 5,
       "proof": "pnpm check:migration-target-structure"
     },
     {
@@ -78,21 +78,21 @@
     {
       "id": "identity_register",
       "source": "docs/migration/identity-register.generated.json",
-      "total": 29,
+      "total": 26,
       "pending": 0,
       "proof": "pnpm check:migration-identity-register"
     },
     {
       "id": "identity_login_session",
       "source": "docs/migration/identity-login-session.generated.json",
-      "total": 27,
+      "total": 23,
       "pending": 0,
       "proof": "pnpm check:migration-identity-login-session"
     },
     {
       "id": "identity_mfa_webauthn",
       "source": "docs/migration/identity-mfa-webauthn.generated.json",
-      "total": 37,
+      "total": 36,
       "pending": 0,
       "proof": "pnpm check:migration-identity-mfa-webauthn"
     },
@@ -141,7 +141,7 @@
     {
       "id": "privacy_export_delete",
       "source": "docs/migration/privacy-export-delete.generated.json",
-      "total": 29,
+      "total": 11,
       "pending": 0,
       "proof": "pnpm check:migration-privacy-export-delete"
     },
@@ -308,6 +308,12 @@
     }
   ],
   "blockers": [
+    {
+      "area": "target_structure",
+      "source": "docs/migration/target-structure.generated.json",
+      "blocking_items": 5,
+      "proof": "pnpm check:migration-target-structure"
+    },
     {
       "area": "phases",
       "source": "docs/migration/phase-ledger.generated.json",

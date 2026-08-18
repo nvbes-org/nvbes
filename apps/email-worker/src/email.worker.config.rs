@@ -2,6 +2,8 @@ use std::{collections::HashMap, net::SocketAddr, path::PathBuf};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 
+#[path = "email.worker.config.observability.rs"]
+mod observability;
 #[path = "email.worker.config.producers.rs"]
 mod producers;
 #[path = "email.worker.config.retention.rs"]
@@ -49,6 +51,11 @@ pub struct WebhookTrustConfig {
 #[derive(Debug, Clone)]
 pub struct EmailWorkerConfig {
     pub environment: String,
+    pub sentry_dsn: Option<String>,
+    pub sentry_traces_sample_rate: f32,
+    pub otlp_endpoint: Option<String>,
+    pub otlp_authorization_header: Option<String>,
+    pub observability_internal_token: Option<String>,
     pub database_url: String,
     pub http_bind_addr: SocketAddr,
     pub grpc_bind_addr: SocketAddr,
@@ -67,13 +74,15 @@ pub struct EmailWorkerConfig {
 impl EmailWorkerConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         let environment = env_or("NVBES_ENVIRONMENT", "development");
+        let observability = observability::from_environment(&environment)?;
         let database_url = required("NVBES_EMAIL_DATABASE_URL")?;
         let http_bind_addr = env_or("NVBES_EMAIL_HTTP_BIND_ADDR", "127.0.0.1:3040")
             .parse()
             .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_HTTP_BIND_ADDR is invalid: {error}"))?;
-        let grpc_bind_addr = env_or("NVBES_EMAIL_GRPC_BIND_ADDR", "127.0.0.1:3041")
+        let grpc_bind_addr = env_or("NVBES_EMAIL_GRPC_BIND_ADDR", "127.0.0.1:3040")
             .parse()
             .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_GRPC_BIND_ADDR is invalid: {error}"))?;
+        validate_shared_bind_address(http_bind_addr, grpc_bind_addr)?;
         let producer_tokens =
             producers::from_environment(optional("NVBES_EMAIL_PRODUCER_TOKENS"), &environment)?;
         let data_encryption_key = key(
@@ -111,6 +120,11 @@ impl EmailWorkerConfig {
 
         Ok(Self {
             environment,
+            sentry_dsn: observability.sentry_dsn,
+            sentry_traces_sample_rate: observability.sentry_traces_sample_rate,
+            otlp_endpoint: observability.otlp_endpoint,
+            otlp_authorization_header: observability.otlp_authorization_header,
+            observability_internal_token: observability.observability_internal_token,
             database_url,
             http_bind_addr,
             grpc_bind_addr,
@@ -243,6 +257,18 @@ fn key(variable: &str, fallback: Option<&str>) -> anyhow::Result<[u8; 32]> {
 
 fn development_value<'a>(environment: &str, value: &'a str) -> Option<&'a str> {
     matches!(environment, "development" | "test").then_some(value)
+}
+
+fn validate_shared_bind_address(
+    http_bind_addr: SocketAddr,
+    grpc_bind_addr: SocketAddr,
+) -> anyhow::Result<()> {
+    if grpc_bind_addr != http_bind_addr {
+        anyhow::bail!(
+            "NVBES_EMAIL_GRPC_BIND_ADDR must match NVBES_EMAIL_HTTP_BIND_ADDR because email-worker multiplexes HTTP and gRPC"
+        );
+    }
+    Ok(())
 }
 
 fn required(variable: &str) -> anyhow::Result<String> {

@@ -9,7 +9,7 @@
     "apps/cloud-worker",
     "apps/enterprise-web",
     "apps/email-worker",
-    "apps/account-service",
+    "apps/identity-service",
     "apps/account-web",
     "apps/account-worker",
     "libs/rust/audit",

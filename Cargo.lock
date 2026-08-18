@@ -3841,6 +3841,7 @@ dependencies = [
  "nvbes-core",
  "nvbes-email",
  "nvbes-email-scaleway",
+ "nvbes-observability",
  "openssl",
  "prost 0.14.4",
  "prost-types",
@@ -3855,7 +3856,6 @@ dependencies = [
  "tonic-health",
  "tower",
  "tracing",
- "tracing-subscriber",
  "uuid",
 ]
 

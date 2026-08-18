@@ -23,6 +23,10 @@ on:
           - account-service
           - cloud-service
           - billing-service
+      email_worker_image_digest:
+        description: 'Digest sha256 de la release signee email-worker'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-${{ github.inputs.environment }}-${{ github.inputs.component }}
@@ -38,10 +42,129 @@ defaults:
 
 jobs:
   deploy-email-worker:
-    if: github.inputs.component == 'all' || github.inputs.component == 'email-worker'
+    if: >-
+      github.inputs.environment == 'production' &&
+      (github.inputs.component == 'all' || github.inputs.component == 'email-worker')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production-email
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy.yml
+      - name: Verify trusted deployment ref
+        run: |
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
+      - name: Validate immutable email-worker release
+        id: image
+        env:
+          IMAGE_DIGEST: ${{ inputs.email_worker_image_digest }}
+        run: |
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "email_worker_image_digest must be a sha256 OCI digest" >&2
+            exit 1
+          }
+          echo "source=ghcr.io/nvbes-org/nvbes-email-worker@$IMAGE_DIGEST" >> "$GITHUB_OUTPUT"
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - uses: scaleway/action-scw@2e34a1eb35cf3cac627f24643a101fea269cbd83 # v0.0.3
+        with:
+          version: 2.60.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - name: Authenticate to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Verify signed email-worker image
+        env:
+          CERTIFICATE_IDENTITY: >-
+            https://github.com/${{ github.repository }}/.github/workflows/container-release.yml@refs/heads/main
+          EMAIL_WORKER_SOURCE_IMAGE: ${{ steps.image.outputs.source }}
+        run: >-
+          cosign verify "$EMAIL_WORKER_SOURCE_IMAGE"
+          --certificate-identity "$CERTIFICATE_IDENTITY"
+          --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Authenticate to the private Scaleway registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: rg.fr-par.scw.cloud
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+      - name: Initialize the production email state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
+        run: >-
+          terraform -chdir=infrastructure/stacks/email/production init
+          -input=false
+          -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
+      - name: Plan and apply the production email stack
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
+          SCW_DEFAULT_REGION: fr-par
+          TF_VAR_accept_scaleway_tem_terms: ${{ vars.SCALEWAY_TEM_TERMS_ACCEPTED }}
+          TF_VAR_base_domain: ${{ vars.BASE_DOMAIN }}
+          TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_email_sentry_dsn: ${{ secrets.EMAIL_SENTRY_DSN }}
+          TF_VAR_email_sentry_dsn_rotation: ${{ vars.EMAIL_SENTRY_DSN_ROTATION }}
+          TF_VAR_email_sentry_traces_sample_rate: ${{ vars.EMAIL_SENTRY_TRACES_SAMPLE_RATE || '0' }}
+          TF_VAR_email_worker_data_encryption_key: ${{ secrets.EMAIL_DATA_ENCRYPTION_KEY }}
+          TF_VAR_email_worker_database_url: ${{ secrets.EMAIL_DATABASE_URL }}
+          TF_VAR_email_worker_observability_internal_token: ${{ secrets.EMAIL_OBSERVABILITY_INTERNAL_TOKEN }}
+          TF_VAR_email_worker_producer_tokens: ${{ secrets.EMAIL_PRODUCER_TOKENS }}
+          TF_VAR_email_worker_recipient_hmac_key: ${{ secrets.EMAIL_RECIPIENT_HMAC_KEY }}
+          TF_VAR_email_worker_runtime_secret_version: ${{ vars.EMAIL_WORKER_RUNTIME_SECRET_VERSION || '1' }}
+          TF_VAR_email_worker_scaleway_secret_key: ${{ secrets.EMAIL_SCALEWAY_SECRET_KEY }}
+          TF_VAR_email_worker_source_image: ${{ steps.image.outputs.source }}
+          TF_VAR_grafana_email_contact_point: ${{ vars.GRAFANA_EMAIL_CONTACT_POINT }}
+          TF_VAR_grafana_prometheus_datasource_uid: ${{ vars.GRAFANA_PROMETHEUS_DATASOURCE_UID }}
+          TF_VAR_grafana_service_account_token: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+          TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
+          TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
+        run: |
+          terraform -chdir=infrastructure/stacks/email/production plan \
+            -input=false \
+            -out=email-production.tfplan
+          terraform -chdir=infrastructure/stacks/email/production apply \
+            -input=false \
+            -auto-approve \
+            email-production.tfplan
+          endpoint="$(terraform -chdir=infrastructure/stacks/email/production output -raw email_worker_public_endpoint)"
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 5 \
+            "$endpoint/health/ready"
+
+  reject-email-worker-staging:
+    if: >-
+      github.inputs.environment == 'staging' &&
+      (github.inputs.component == 'all' || github.inputs.component == 'email-worker')
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: ${{ github.inputs.environment }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -50,9 +173,9 @@ jobs:
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/deploy.yml
-      - name: Reject unconfigured email-worker deployment
+      - name: Reject missing staging email stack
         run: |
-          echo "email-worker is released as a signed container; its always-on Scaleway target is not wired yet" >&2
+          echo "email-worker staging requires a dedicated Terraform stack and GitHub Environment" >&2
           exit 1
 
   deploy-identity-service:

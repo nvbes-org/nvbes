@@ -3,7 +3,7 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode, header},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 
 use crate::config::AppConfig;
@@ -11,14 +11,71 @@ use crate::config::AppConfig;
 const INTERNAL_TOKEN_HEADER: &str = "x-nvbes-internal-token";
 const BEARER_PREFIX: &str = "Bearer ";
 
+#[derive(Debug, Clone)]
+pub struct InternalObservabilityConfig {
+    environment: String,
+    expected_token: Option<String>,
+}
+
+impl InternalObservabilityConfig {
+    pub fn new(environment: &str, expected_token: Option<&str>) -> Self {
+        Self {
+            environment: environment.to_owned(),
+            expected_token: expected_token.map(str::to_owned),
+        }
+    }
+}
+
+impl From<&AppConfig> for InternalObservabilityConfig {
+    fn from(config: &AppConfig) -> Self {
+        Self::new(
+            &config.environment,
+            config.observability_internal_token.as_deref(),
+        )
+    }
+}
+
 pub async fn internal_observability_guard(
     State(config): State<AppConfig>,
     headers: HeaderMap,
     request: axum::http::Request<Body>,
     next: Next,
-) -> Result<Response, impl IntoResponse> {
-    let Some(expected_token) = config.observability_internal_token.as_deref() else {
-        if config.environment == "development" {
+) -> Result<Response, (StatusCode, &'static str)> {
+    authorize(
+        &config.environment,
+        config.observability_internal_token.as_deref(),
+        &headers,
+        request,
+        next,
+    )
+    .await
+}
+
+pub async fn internal_observability_guard_with_config(
+    State(config): State<InternalObservabilityConfig>,
+    headers: HeaderMap,
+    request: axum::http::Request<Body>,
+    next: Next,
+) -> Result<Response, (StatusCode, &'static str)> {
+    authorize(
+        &config.environment,
+        config.expected_token.as_deref(),
+        &headers,
+        request,
+        next,
+    )
+    .await
+}
+
+async fn authorize(
+    environment: &str,
+    expected_token: Option<&str>,
+    headers: &HeaderMap,
+    request: axum::http::Request<Body>,
+    next: Next,
+) -> Result<Response, (StatusCode, &'static str)> {
+    let Some(expected_token) = expected_token else {
+        if environment == "development" {
             return Ok(next.run(request).await);
         }
 
@@ -28,7 +85,7 @@ pub async fn internal_observability_guard(
         ));
     };
 
-    if internal_token_matches(&headers, expected_token) {
+    if internal_token_matches(headers, expected_token) {
         return Ok(next.run(request).await);
     }
 

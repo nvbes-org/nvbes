@@ -45,10 +45,10 @@ WORKDIR /app
 COPY --from=builder --chown=10001:10001 /usr/src/nvbes/target/release/nvbes-email-worker /app/email-worker
 
 ENV NVBES_EMAIL_HTTP_BIND_ADDR="0.0.0.0:3040" \
-    NVBES_EMAIL_GRPC_BIND_ADDR="0.0.0.0:3041"
+    NVBES_EMAIL_GRPC_BIND_ADDR="0.0.0.0:3040"
 
 USER 10001:10001
-EXPOSE 3040 3041
+EXPOSE 3040
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD ["curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:3040/health/live"]

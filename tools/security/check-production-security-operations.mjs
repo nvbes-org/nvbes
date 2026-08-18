@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 const requirements = [
   {
-    file: 'apps/account-worker/src/identity.worker.audit_anchor.rs',
+    file: 'apps/identity-worker/src/identity.worker.audit_anchor.rs',
     evidence: [
       'audit_external_anchors',
       'snapshot_digest_sha256',
@@ -11,7 +11,7 @@ const requirements = [
     ],
   },
   {
-    file: 'apps/account-worker/src/identity.worker.audit_anchor.kms.rs',
+    file: 'apps/identity-worker/src/identity.worker.audit_anchor.kms.rs',
     evidence: ['key-manager/v1alpha1/regions', 'sign_digest', 'verify_signature'],
   },
   {
@@ -83,7 +83,7 @@ const requirements = [
     ],
   },
   {
-    file: 'apps/account-service/src/identity.domains.auth.mfa.policy.rs',
+    file: 'apps/identity-service/src/identity.domains.auth.mfa.policy.rs',
     evidence: ['privileged_passkey_required', 'vec!["webauthn".to_string()]'],
   },
   {

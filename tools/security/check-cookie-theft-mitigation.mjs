@@ -110,7 +110,7 @@ function assertImplementation() {
   }
 
   const detector = readText(
-    'apps/account-service/src/identity.domains.auth.sessions.cookie_theft.rs',
+    'apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs',
   );
   for (const needle of [
     'SessionRequestProfile',
@@ -126,13 +126,13 @@ function assertImplementation() {
 }
 
 function assertRequestAwareAuth() {
-  const login = readText('apps/account-service/src/identity.domains.auth.routes.login.rs');
+  const login = readText('apps/identity-service/src/identity.domains.auth.routes.login.rs');
   const create = readText(
-    'apps/account-service/src/identity.domains.auth.sessions.create.session.rs',
+    'apps/identity-service/src/identity.domains.auth.sessions.create.session.rs',
   );
-  const auth = readText('apps/account-service/src/identity.domains.auth.sessions.authenticate.rs');
+  const auth = readText('apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs');
   const refresh = readText(
-    'apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs',
+    'apps/identity-service/src/identity.http.middleware.jwt.session_refresh.rs',
   );
   /** @type {Array<[string, string, string[]]>} */
   const requestAwareAuthChecks = [
@@ -161,7 +161,7 @@ function assertRequestAwareAuth() {
 }
 
 function assertReauthenticationAndTelemetry() {
-  const auth = readText('apps/account-service/src/identity.domains.auth.sessions.authenticate.rs');
+  const auth = readText('apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs');
   for (const needle of [
     'session_reauthentication_required',
     'revoke_suspicious_session',
@@ -175,7 +175,7 @@ function assertReauthenticationAndTelemetry() {
 }
 
 function assertCookieAttributes() {
-  const cookies = readText('apps/account-service/src/identity.http.cookies.rs');
+  const cookies = readText('apps/identity-service/src/identity.http.cookies.rs');
   for (const needle of ['HttpOnly', 'SameSite=Strict', '; Secure', '__Host-']) {
     if (!cookies.includes(needle)) errors.push(`cookie hardening missing ${needle}`);
   }

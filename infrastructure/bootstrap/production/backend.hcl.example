@@ -1,0 +1,5 @@
+bucket = "nvbes-terraform-state-production-example"
+
+# Supply the bootstrap state identity through AWS_ACCESS_KEY_ID and
+# AWS_SECRET_ACCESS_KEY. The state key, encryption flag, endpoint and lockfile
+# policy are fixed in backend.tf.

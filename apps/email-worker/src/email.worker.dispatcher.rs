@@ -8,7 +8,10 @@ use nvbes_email::{
 use prost::Message;
 use tokio::sync::watch;
 
-use crate::{crypto::SealedValue, database, dispatch_db, email_metrics, state::EmailWorkerState};
+use crate::{
+    crypto::SealedValue, dispatch_db, dispatcher_maintenance, email_metrics, error_reporting,
+    state::EmailWorkerState,
+};
 
 pub async fn run(state: EmailWorkerState, mut shutdown: watch::Receiver<bool>) {
     let mut interval = tokio::time::interval(Duration::from_millis(250));
@@ -17,47 +20,34 @@ pub async fn run(state: EmailWorkerState, mut shutdown: watch::Receiver<bool>) {
     queue_metrics.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut retention = tokio::time::interval(Duration::from_secs(300));
     retention.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut error_reporting_heartbeat = tokio::time::interval(Duration::from_secs(300));
+    error_reporting_heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
             _ = interval.tick() => {
                 state.record_dispatcher_heartbeat();
-                match dispatch_db::suppress_due_messages(&state.db).await {
-                    Ok(suppressed) => email_metrics::suppressed(suppressed),
-                    Err(error) => {
-                        tracing::error!(error = ?error, "email suppression sweep failed");
-                        continue;
-                    }
+                if !dispatcher_maintenance::suppress_due_messages(&state).await {
+                    continue;
                 }
-                match database::expire_stale_messages(&state.db).await {
-                    Ok(expired) if expired > 0 => {
-                        email_metrics::expired(expired);
-                        tracing::info!(expired, "expired stale email commands");
-                    }
-                    Ok(_) => {}
-                    Err(error) => tracing::error!(error = ?error, "email deadline sweep failed"),
-                }
+                dispatcher_maintenance::expire_stale_messages(&state).await;
                 if let Err(error) = dispatch_one(&state).await {
+                    error_reporting::capture_operation(
+                        &state.config,
+                        "dispatch_iteration",
+                        error.as_ref(),
+                    );
                     tracing::error!(error = ?error, "email dispatch iteration failed");
                 }
             }
             _ = queue_metrics.tick() => {
-                match database::queue_snapshot(&state.db).await {
-                    Ok((depth, oldest_age)) => email_metrics::queue(depth, oldest_age),
-                    Err(error) => tracing::error!(error = ?error, "email queue metrics query failed"),
-                }
+                dispatcher_maintenance::record_queue_metrics(&state).await;
             }
             _ = retention.tick() => {
-                let policy = &state.config.retention;
-                match database::apply_retention(&state.db, policy.payload_days, policy.ledger_days).await {
-                    Ok(result) => email_metrics::retention(
-                        result.payloads,
-                        result.diagnostics,
-                        result.messages,
-                        result.events,
-                    ),
-                    Err(error) => tracing::error!(error = ?error, "email retention sweep failed"),
-                }
+                dispatcher_maintenance::apply_retention(&state).await;
+            }
+            _ = error_reporting_heartbeat.tick() => {
+                error_reporting::capture_dispatcher_heartbeat(&state.config);
             }
             changed = shutdown.changed() => {
                 if changed.is_err() || *shutdown.borrow() {
@@ -76,13 +66,40 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let message = match materialize(state, &claim) {
+    dispatch_claim(state, &claim).await
+}
+
+#[tracing::instrument(
+    name = "email.delivery",
+    skip_all,
+    fields(
+        email.provider = state.config.provider.label(),
+        email.business_type = claim.template_name,
+        email.attempt = claim.attempt_count,
+        otel.status_code = tracing::field::Empty,
+    )
+)]
+async fn dispatch_claim(
+    state: &EmailWorkerState,
+    claim: &dispatch_db::ClaimedEmail,
+) -> anyhow::Result<()> {
+    let message = match materialize(state, claim) {
         Ok(message) => message,
         Err(error) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
+            let policy = retry_policy(&claim.category, claim.attempt_count);
+            error_reporting::capture_delivery(
+                &state.config,
+                claim.id,
+                &claim.template_name,
+                claim.attempt_count.max(0) as u32,
+                policy.maximum_attempts.max(0) as u32,
+                error.as_ref(),
+            );
             tracing::error!(message_id = %claim.id, error = ?error, "stored email command is invalid");
             dispatch_db::complete_failure(
                 &state.db,
-                &claim,
+                claim,
                 "permanent_failure",
                 "stored_command_invalid",
                 1,
@@ -99,7 +116,7 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
         }
     };
 
-    if dispatch_db::expire_claim_if_due(&state.db, &claim).await? {
+    if dispatch_db::expire_claim_if_due(&state.db, claim).await? {
         return Ok(());
     }
     let started_at = Instant::now();
@@ -109,7 +126,7 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
         .await
     {
         Ok(result) => {
-            dispatch_db::complete_success(&state.db, &claim, &result.provider_email_id).await?;
+            dispatch_db::complete_success(&state.db, claim, &result.provider_email_id).await?;
             email_metrics::dispatch(
                 state.config.provider.label(),
                 &claim.template_name,
@@ -118,6 +135,7 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
             );
         }
         Err(error) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
             let policy = retry_policy(&claim.category, claim.attempt_count);
             let outcome = match error.failure_class() {
                 EmailFailureClass::Transient => "transient_failure",
@@ -133,7 +151,7 @@ async fn dispatch_one(state: &EmailWorkerState) -> anyhow::Result<()> {
             );
             dispatch_db::complete_failure(
                 &state.db,
-                &claim,
+                claim,
                 outcome,
                 error.safe_code(),
                 policy.maximum_attempts,

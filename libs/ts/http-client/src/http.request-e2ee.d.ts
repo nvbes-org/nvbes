@@ -1,10 +1,10 @@
 export declare function encryptRequestBody(input: {
-    body: string;
-    keyId: string;
-    method: string;
-    secret: string;
-    url: string;
+  body: string;
+  keyId: string;
+  method: string;
+  secret: string;
+  url: string;
 }): Promise<{
-    body: ArrayBuffer;
-    headers: Headers;
+  body: ArrayBuffer;
+  headers: Headers;
 }>;

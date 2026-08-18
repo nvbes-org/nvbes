@@ -110,10 +110,12 @@ resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
   region       = var.scaleway_region
   topic_id     = scaleway_mnq_sns_topic.email_events.id
   protocol     = "https"
-  endpoint     = var.email_webhook_endpoint
+  endpoint     = "${scaleway_container.email_worker.public_endpoint}/webhooks/scaleway/topics-and-events"
   sns_endpoint = scaleway_mnq_sns.email_events.endpoint
   access_key   = scaleway_mnq_sns_credentials.email_events_terraform.access_key
   secret_key   = scaleway_mnq_sns_credentials.email_events_terraform.secret_key
+
+  depends_on = [terraform_data.email_worker_runtime]
 }
 
 resource "scaleway_tem_webhook" "email_events" {

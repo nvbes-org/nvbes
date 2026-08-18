@@ -181,24 +181,24 @@
     },
     {
       "id": "release-staging-e2e",
-      "description": "Release gate runs staging critical E2E checks",
+      "description": "Release gate runs authenticated Account acceptance checks",
       "path": "scripts/release-gate.sh",
       "status": "passed",
-      "pattern": "staging critical E2E gate"
+      "pattern": "staging authenticated Account acceptance gate"
     },
     {
       "id": "migration-backup-guard",
-      "description": "Staging migration requires backup or restore point confirmation",
+      "description": "Staging migration requires restore point confirmation",
       "path": "scripts/migrate-staging.sh",
       "status": "passed",
-      "pattern": "fresh staging backup or restore point"
+      "pattern": "apres avoir verifie le point de restauration Staging"
     },
     {
       "id": "smoke-staging",
-      "description": "Staging smoke wrapper runs smoke and E2E",
+      "description": "Staging smoke wrapper runs smoke and authenticated Account acceptance",
       "path": "scripts/smoke-staging.sh",
       "status": "passed",
-      "pattern": "staging critical E2E"
+      "pattern": "staging authenticated Account acceptance"
     },
     {
       "id": "production-observability-doc",

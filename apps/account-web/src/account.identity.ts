@@ -1,5 +1,6 @@
 import { createHttpClient } from '@nvbes/http-client';
 import { createAccountIdentityClient } from '@nvbes/identity-client';
+import { verifiedFetch } from '@nvbes/web-runtime';
 import {
   confirmTotp,
   generateRecoveryCodes,
@@ -81,7 +82,7 @@ function identityHttp(authenticated = true) {
     baseUrl: identityBaseUrl(),
     credentials: 'omit',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    fetchImpl: token ? bearerOnlyFetch(token) : fetch.bind(globalThis),
+    fetchImpl: token ? bearerOnlyFetch(token) : verifiedFetch,
   });
 }
 
@@ -92,7 +93,7 @@ function bearerOnlyFetch(token: string): typeof fetch {
     headers.delete('Cookie');
     headers.delete('X-Auth-User');
     headers.delete('X-CSRF-Token');
-    return fetch(input, { ...init, credentials: 'omit', headers });
+    return verifiedFetch(input, { ...init, credentials: 'omit', headers });
   };
 }
 

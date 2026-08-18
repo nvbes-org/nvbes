@@ -9,7 +9,9 @@ use axum::{
 use serde::Serialize;
 use std::time::Instant;
 
-use crate::{email_metrics, state::EmailWorkerState, webhook_db, webhook_verify::SnsMessage};
+use crate::{
+    email_metrics, error_reporting, state::EmailWorkerState, webhook_db, webhook_verify::SnsMessage,
+};
 
 const MAX_WEBHOOK_BODY_BYTES: usize = 256 * 1024;
 
@@ -28,6 +30,17 @@ pub fn router(state: EmailWorkerState) -> Router {
         .with_state(state)
 }
 
+#[tracing::instrument(
+    name = "email.provider_webhook",
+    skip_all,
+    fields(
+        http.request.method = "POST",
+        http.route = "/webhooks/scaleway/topics-and-events",
+        email.provider = "scaleway",
+        email.event_type = tracing::field::Empty,
+        otel.status_code = tracing::field::Empty,
+    )
+)]
 async fn handle_scaleway_webhook(
     State(state): State<EmailWorkerState>,
     headers: HeaderMap,
@@ -53,6 +66,7 @@ async fn handle_scaleway_webhook(
     };
 
     let event_type = webhook_event_type(&message);
+    tracing::Span::current().record("email.event_type", event_type.as_str());
     let result = match message.message_type.as_str() {
         "SubscriptionConfirmation" => confirm_subscription(&state, &message).await,
         "Notification" => apply_notification(&state, &message).await,
@@ -64,7 +78,13 @@ async fn handle_scaleway_webhook(
             response(StatusCode::OK, status)
         }
         Err(error) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
             email_metrics::webhook(&event_type, "processing_failed", started_at.elapsed());
+            error_reporting::capture_operation_message(
+                &state.config,
+                "webhook_processing",
+                "Scaleway webhook processing failed",
+            );
             tracing::error!(sns_message_id = %message.message_id, error = ?error, "Scaleway webhook procedure failed");
             response(StatusCode::SERVICE_UNAVAILABLE, "processing_failed")
         }

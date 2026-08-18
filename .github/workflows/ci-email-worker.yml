@@ -7,16 +7,22 @@ on:
       - 'apps/email-worker/**'
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/stacks/email/production/**'
       - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/stacks/email/production/**'
       - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: ci-email-worker-${{ github.head_ref || github.ref_name }}
@@ -65,6 +71,23 @@ jobs:
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           shared-key: email-worker
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Check email Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/stacks/email/production
+      - name: Initialize email Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/stacks/email/production init
+          -backend=false
+          -input=false
+      - name: Validate email Terraform stack
+        run: terraform -chdir=infrastructure/stacks/email/production validate
+      - name: Test email Terraform deployment and rotation
+        run: >-
+          PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
+          terraform -chdir=infrastructure/stacks/email/production test
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Test email contract and runtime

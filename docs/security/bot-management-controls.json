@@ -14,7 +14,7 @@
           "description": "Protect account creation and login identifier flows with PoW, decoy signals, bot proof, and score-based enforcement.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
               "includes": [
                 "enforce_identifier_request_guards",
                 "require_pow_solution",
@@ -23,7 +23,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
               "includes": [
                 "pow_nonce",
                 "pow_solution",
@@ -46,7 +46,7 @@
           "description": "Combine browser proof, app scoring, public API request signing, network policy, and business-layer risk events.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_guard.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.rs",
               "includes": ["Honeypot", "Time-lock", "JS Dynamic Signature"]
             },
             {
@@ -59,7 +59,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
               "includes": ["pub enum RiskDecision", "StepUp", "Deny", "Lock"]
             }
           ]
@@ -95,7 +95,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.password.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.password.rs",
               "includes": ["check_dual_rate_limit", "auth_forgot_password"]
             }
           ]
@@ -113,7 +113,7 @@
           "description": "Score automation and behavior signals without storing raw device fingerprints in risk metadata.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_scorer.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_scorer.rs",
               "includes": [
                 "score_client_signals",
                 "auto_webdriver_spoofed",
@@ -122,7 +122,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
               "includes": [
                 "device_fingerprint_hash",
                 "geo_risk_score",
@@ -149,7 +149,7 @@
           "description": "Issue expiring, single-use PoW nonces and verify leading-zero SHA-256 difficulty before sensitive unauthenticated flows.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.pow.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.pow.rs",
               "includes": [
                 "issue_challenge",
                 "pow_challenges",
@@ -159,7 +159,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.challenge_proof.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.challenge_proof.rs",
               "includes": ["require_pow_solution", "pow_missing", "verify_solution"]
             },
             {
@@ -181,7 +181,7 @@
           "description": "Detect simple form automation through hidden fields, decoy interactions, suspiciously fast submissions, and stale proofs.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_guard.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.rs",
               "includes": [
                 "check_decoy_field",
                 "bot_honeypot_triggered",
@@ -191,7 +191,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_guard.tests.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_guard.tests.rs",
               "includes": ["bot_honeypot_triggered", "bot_time_lock_fast", "bot_time_lock_expired"]
             },
             {
@@ -250,7 +250,7 @@
           "description": "Use risk decisions, monitor-only network policy, anti-bot metrics, and bounded tarpit delays before hard blocking where appropriate.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
               "includes": [
                 "RiskDecision::StepUp",
                 "RiskDecision::Deny",
@@ -259,7 +259,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs",
               "includes": [
                 "bot_score >= 0.80",
                 "bot_score >= 0.60",
@@ -269,7 +269,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_response.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_response.rs",
               "includes": [
                 "identity_bot_guard_decisions_total",
                 "tarpit_delay",
@@ -295,7 +295,7 @@
           "description": "Record bot/risk/security decisions with request, identity, geo, network, user-agent, and decision metadata.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.risk.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.risk.rs",
               "includes": [
                 "event_type",
                 "ip_address",
@@ -306,7 +306,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.security.service.risk_events.rs",
+              "path": "apps/identity-service/src/identity.domains.security.service.risk_events.rs",
               "includes": ["fetch_risk_events", "geo_risk_score", "geo_risk_labels"]
             },
             {
@@ -336,7 +336,7 @@
           "description": "Combine dual-bucket throttling, breached credential proxy signals, MFA/step-up risk recording, and generic failures.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.login.pwd.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.login.pwd.rs",
               "includes": [
                 "ExposedCredentialCheck::from_headers",
                 "login_compromised_password",
@@ -344,12 +344,12 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.exposed_credentials.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.exposed_credentials.rs",
               "includes": ["Exposed-Credential-Check", "password_exposed", "password_compromised"]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
-              "includes": ["LOGIN_THROTTLE_ACTION", "check_rate_limit_pair", "risk_policy_blocked"]
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
+              "includes": ["LOGIN_THROTTLE_ACTION", "check_rate_limit_rules", "record_failed_login"]
             }
           ]
         }

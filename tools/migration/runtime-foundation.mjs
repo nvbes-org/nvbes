@@ -14,7 +14,13 @@ const required = [
 	{
 		runtime: "Rust",
 		scope: "backend core and product/platform crates",
-		required_paths: ["Cargo.toml", "libs/rust", "apps/account-service", "apps/cloud-service"],
+		required_paths: [
+			"Cargo.toml",
+			"libs/rust",
+			"apps/account-service-next",
+			"apps/identity-service",
+			"apps/cloud-service",
+		],
 		required_commands: ["pnpm check:api"],
 	},
 	{

@@ -1,55 +1,25 @@
-use std::{future::Future, net::SocketAddr};
-
 use chrono::Utc;
-use tonic::{Request, Response, Status, transport::Server};
+use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
-use crate::{
-    app::BillingAppState,
-    grpc::{
-        pb::nvbes::{
-            billing::v1 as billing,
-            billing::v1::billing_service_server::{BillingService, BillingServiceServer},
-            platform::v1::RequestContext,
-        },
-        service_admin, service_admin_billing, service_admin_entitlements, service_admin_exports,
-        service_admin_operations, service_admin_platform,
-        service_admin_platform_routing_simulation, service_admin_platform_snapshot,
-        service_admin_revenue, service_admin_revenue_snapshot, service_admin_risk,
-        service_admin_usage, service_conversions,
-        service_status::{
-            checkout_status, empty_to_none, optional_uuid, parse_datetime, parse_uuid,
-            portal_status, reconciliation_status, sql_status, usage_status, validate_context,
-            workspace_id,
-        },
+use crate::grpc::{
+    pb::nvbes::{
+        billing::v1 as billing, billing::v1::billing_service_server::BillingService,
+        platform::v1::RequestContext,
     },
+    service_admin, service_admin_billing, service_admin_entitlements, service_admin_exports,
+    service_admin_operations, service_admin_platform, service_admin_platform_routing_simulation,
+    service_admin_platform_snapshot, service_admin_revenue, service_admin_revenue_snapshot,
+    service_admin_risk, service_admin_usage, service_conversions,
+    service_runtime::BillingGrpcService,
+    service_status::{
+        optional_uuid, parse_datetime, parse_uuid, reconciliation_status, usage_status,
+        validate_context, workspace_id,
+    },
+    service_workspace,
 };
 
-#[derive(Clone)]
-pub struct BillingGrpcService {
-    state: BillingAppState,
-}
-
-impl BillingGrpcService {
-    pub fn new(state: BillingAppState) -> Self {
-        Self { state }
-    }
-
-    pub fn into_server(self) -> BillingServiceServer<Self> {
-        BillingServiceServer::new(self)
-    }
-}
-
-pub async fn serve(
-    addr: SocketAddr,
-    state: BillingAppState,
-    shutdown: impl Future<Output = ()>,
-) -> Result<(), tonic::transport::Error> {
-    Server::builder()
-        .add_service(BillingGrpcService::new(state).into_server())
-        .serve_with_shutdown(addr, shutdown)
-        .await
-}
+pub use super::service_runtime::serve;
 
 #[tonic::async_trait]
 impl BillingService for BillingGrpcService {
@@ -57,154 +27,49 @@ impl BillingService for BillingGrpcService {
         &self,
         request: Request<billing::GetBillingOverviewRequest>,
     ) -> Result<Response<billing::BillingOverview>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let overview =
-            nvbes_billing::fetch_workspace_billing_overview(&self.state.db, workspace_id)
-                .await
-                .map_err(sql_status)?;
-        Ok(Response::new(
-            service_conversions::billing_overview_response(overview),
-        ))
+        service_workspace::get_billing_overview(&self.state, request).await
     }
 
     async fn get_billing_portal(
         &self,
         request: Request<billing::GetBillingPortalRequest>,
     ) -> Result<Response<billing::BillingPortal>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let portal = nvbes_billing::portal_views::fetch_portal_view(&self.state.db, workspace_id)
-            .await
-            .map_err(sql_status)?;
-        Ok(Response::new(service_conversions::billing_portal_view(
-            workspace_id,
-            portal,
-        )))
+        service_workspace::get_billing_portal(&self.state, request).await
     }
 
     async fn create_checkout(
         &self,
         request: Request<billing::CreateCheckoutRequest>,
     ) -> Result<Response<billing::CheckoutSession>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let actor_principal_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
-        let plan_code = request.plan_code.clone();
-        let checkout = nvbes_billing::checkout_sessions::create_billing_checkout_session(
-            &self.state.db,
-            &self.state.config,
-            nvbes_billing::checkout_sessions::CreateBillingCheckoutSessionInput {
-                workspace_id,
-                actor_principal_id,
-                checkout: nvbes_billing::types::CreateCheckoutInput {
-                    plan_code: request.plan_code,
-                    success_url: empty_to_none(request.success_url),
-                    cancel_url: empty_to_none(request.cancel_url),
-                },
-                ip: None,
-                trusted_country_header: None,
-                user_agent: Some("nvbes-billing-grpc".to_string()),
-            },
-        )
-        .await
-        .map_err(checkout_status)?;
-        self.state.product_analytics.capture(
-            nvbes_product_analytics::ProductAnalyticsEvent::workspace(
-                "billing.checkout_started",
-                workspace_id,
-            )
-            .property("plan_code", plan_code),
-        );
-        Ok(Response::new(
-            service_conversions::checkout_session_response(checkout),
-        ))
+        service_workspace::create_checkout(&self.state, request).await
     }
 
     async fn create_portal(
         &self,
         request: Request<billing::CreatePortalRequest>,
     ) -> Result<Response<billing::PortalSession>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        let context = validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let actor_principal_id = parse_uuid(&context.actor_principal_id, "actor_principal_id")?;
-        let portal = nvbes_billing::portal_actions::create_billing_portal_session(
-            &self.state.db,
-            &self.state.config,
-            nvbes_billing::portal_actions::CreateBillingPortalSessionInput {
-                workspace_id,
-                actor_principal_id,
-                portal: nvbes_billing::types::CreatePortalInput {
-                    return_url: empty_to_none(request.return_url),
-                },
-                ip: None,
-                user_agent: Some("nvbes-billing-grpc".to_string()),
-            },
-        )
-        .await
-        .map_err(portal_status)?;
-        Ok(Response::new(service_conversions::portal_session_response(
-            portal,
-        )))
+        service_workspace::create_portal(&self.state, request).await
     }
 
     async fn get_entitlements(
         &self,
         request: Request<billing::GetEntitlementsRequest>,
     ) -> Result<Response<billing::EntitlementSnapshot>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let overview =
-            nvbes_billing::fetch_workspace_billing_overview(&self.state.db, workspace_id)
-                .await
-                .map_err(sql_status)?;
-        Ok(Response::new(service_conversions::entitlement_snapshot(
-            overview,
-        )))
+        service_workspace::get_entitlements(&self.state, request).await
     }
 
     async fn list_invoices(
         &self,
         request: Request<billing::ListInvoicesRequest>,
     ) -> Result<Response<billing::ListInvoicesResponse>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let invoices =
-            nvbes_billing::portal_views::fetch_portal_invoices(&self.state.db, workspace_id)
-                .await
-                .map_err(sql_status)?
-                .into_iter()
-                .map(service_conversions::billing_invoice)
-                .collect();
-        Ok(Response::new(billing::ListInvoicesResponse {
-            invoices,
-            page: None,
-        }))
+        service_workspace::list_invoices(&self.state, request).await
     }
 
     async fn get_invoice(
         &self,
         request: Request<billing::GetInvoiceRequest>,
     ) -> Result<Response<billing::BillingInvoice>, Status> {
-        let request = request.into_inner();
-        let workspace_id = workspace_id(&request.workspace_id)?;
-        validate_context(request.context.as_ref(), Some(workspace_id))?;
-        let invoice_id = parse_uuid(&request.invoice_id, "invoice_id")?.to_string();
-        let invoice =
-            nvbes_billing::portal_views::fetch_portal_invoices(&self.state.db, workspace_id)
-                .await
-                .map_err(sql_status)?
-                .into_iter()
-                .map(service_conversions::billing_invoice)
-                .find(|invoice| invoice.invoice_id == invoice_id)
-                .ok_or_else(|| Status::not_found("billing invoice was not found"))?;
-        Ok(Response::new(invoice))
+        service_workspace::get_invoice(&self.state, request).await
     }
 
     async fn record_ledger_entry(

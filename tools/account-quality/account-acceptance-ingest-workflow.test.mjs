@@ -154,9 +154,11 @@ function validateIngestWorkflow(source) {
 	assert.equal(job.env.NVBES_RELEASE_REF, expression("github.ref"));
 	assert.equal(job.env.NVBES_RELEASE_REF_NAME, expression("github.ref_name"));
 	assert.equal(job.env.NVBES_RELEASE_REF_TYPE, expression("github.ref_type"));
-	assert.equal(
-		job.env.ACCOUNT_INGEST_PUBLICATION_ROOT,
-		`${expression("runner.temp")}/account-acceptance-publication`,
+	assert.ok(
+		Object.values(job.env).every(
+			(value) => !String(value).includes(expression("runner.temp")),
+		),
+		"runner context must not be used in job-level env",
 	);
 	for (const variable of [
 		"ACCOUNT_ACCEPTANCE_TRUSTED_KEY_ID",
@@ -182,6 +184,25 @@ function validateIngestWorkflow(source) {
 		"persist-credentials": false,
 		ref: expression("github.ref"),
 	});
+	const pathConfiguration = namedStep(
+		job,
+		"Configure ephemeral acceptance paths",
+	);
+	for (const assignment of [
+		"ACCOUNT_ACCEPTANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-acceptance-source/acceptance-evidence.json",
+		"ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE=$RUNNER_TEMP/account-acceptance-source/acceptance-evidence.sig",
+		"ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-acceptance-trust/acceptance-public-key.pem",
+		"ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-acceptance-trust/deployment-public-key.pem",
+		"ACCOUNT_INGEST_EVIDENCE_ROOT=$RUNNER_TEMP/account-acceptance-source",
+		"ACCOUNT_INGEST_PUBLICATION_ROOT=$RUNNER_TEMP/account-acceptance-publication",
+		"ACCOUNT_INGEST_TRUST_ROOT=$RUNNER_TEMP/account-acceptance-trust",
+	]) {
+		assert.ok(
+			pathConfiguration.run.includes(assignment),
+			`missing ephemeral path assignment ${assignment}`,
+		);
+	}
+	assert.match(pathConfiguration.run, />> "\$GITHUB_ENV"/u);
 	assert.equal(
 		namedStep(job, "Validate immutable Account RC tag").run,
 		"node tools/account-quality/verify-account-release-ref.mjs",

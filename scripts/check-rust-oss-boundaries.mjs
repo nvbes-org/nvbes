@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { relative } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 
 function run(command, args) {
   return execFileSync(command, args, {
@@ -32,6 +33,13 @@ function scopeForPackage(pkg) {
     manifestPath.startsWith('libs/rust/adapters-cloud/')
   ) {
     return 'cloud';
+  }
+
+  const projectPath = join(dirname(manifestPath), 'project.json');
+  if (existsSync(projectPath)) {
+    const project = JSON.parse(readFileSync(projectPath, 'utf8'));
+    const scope = project.tags?.find((tag) => tag.startsWith('scope:'))?.slice('scope:'.length);
+    if (scope) return scope;
   }
 
   return 'oss';

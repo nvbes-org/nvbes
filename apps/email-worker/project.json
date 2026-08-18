@@ -13,6 +13,7 @@
         "{workspaceRoot}/Cargo.lock",
         "{workspaceRoot}/contracts/protobuf/nvbes/email/**/*",
         "{workspaceRoot}/libs/rust/email/**/*",
+        "{workspaceRoot}/libs/rust/observability/**/*",
         "{workspaceRoot}/libs/rust/adapters-cloud/email-scaleway/**/*"
       ],
       "options": {
@@ -45,5 +46,5 @@
       }
     }
   },
-  "tags": ["scope:oss", "type:app", "domain:email", "layer:app"]
+  "tags": ["scope:cloud", "type:app", "domain:email", "layer:app"]
 }

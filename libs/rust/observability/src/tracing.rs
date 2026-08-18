@@ -1,11 +1,29 @@
 use nvbes_core::config::AppConfig;
 use tracing_subscriber::prelude::*;
 
+#[derive(Debug, Clone, Copy)]
+pub struct TracingConfig<'a> {
+    pub environment: &'a str,
+    pub otlp_endpoint: Option<&'a str>,
+    pub otlp_authorization_header: Option<&'a str>,
+}
+
 pub fn init_tracing(config: &AppConfig) {
     init_tracing_for_service(config, &config.app_name);
 }
 
 pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
+    init_tracing_with_config(
+        TracingConfig {
+            environment: &config.environment,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+        },
+        service_name,
+    );
+}
+
+pub fn init_tracing_with_config(config: TracingConfig<'_>, service_name: &str) {
     let default_filter = "info";
 
     let env_filter = std::env::var("RUST_LOG")
@@ -19,7 +37,7 @@ pub fn init_tracing_for_service(config: &AppConfig, service_name: &str) {
     #[cfg(feature = "otlp")]
     let registry = registry.with(otlp_layer(config, service_name));
 
-    if use_json_logs(&config.environment) {
+    if use_json_logs(config.environment) {
         registry
             .with(
                 tracing_subscriber::fmt::layer()
@@ -49,13 +67,13 @@ fn use_json_logs(environment: &str) -> bool {
 
 #[cfg(feature = "otlp")]
 fn otlp_layer<S>(
-    config: &AppConfig,
+    config: TracingConfig<'_>,
     service_name: &str,
 ) -> Option<impl tracing_subscriber::Layer<S>>
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
-    let endpoint = config.otlp_endpoint.as_ref()?;
+    let endpoint = config.otlp_endpoint?;
 
     use opentelemetry::KeyValue;
     use opentelemetry::trace::TracerProvider;
@@ -65,7 +83,7 @@ where
 
     let mut exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
-        .with_endpoint(endpoint.clone());
+        .with_endpoint(endpoint.to_owned());
 
     if let Some(metadata) = otlp_metadata(config) {
         exporter = exporter.with_metadata(metadata);
@@ -81,8 +99,8 @@ where
                 .with_attributes([
                     KeyValue::new("service.namespace", "nvbes"),
                     KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
-                    KeyValue::new("deployment.environment", config.environment.clone()),
-                    KeyValue::new("deployment.environment.name", config.environment.clone()),
+                    KeyValue::new("deployment.environment", config.environment.to_owned()),
+                    KeyValue::new("deployment.environment.name", config.environment.to_owned()),
                 ])
                 .build(),
         )
@@ -96,8 +114,8 @@ where
 }
 
 #[cfg(feature = "otlp")]
-fn otlp_metadata(config: &AppConfig) -> Option<tonic::metadata::MetadataMap> {
-    let authorization = config.otlp_authorization_header.as_deref()?.trim();
+fn otlp_metadata(config: TracingConfig<'_>) -> Option<tonic::metadata::MetadataMap> {
+    let authorization = config.otlp_authorization_header?.trim();
     if authorization.is_empty() {
         return None;
     }

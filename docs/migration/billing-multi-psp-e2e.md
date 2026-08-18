@@ -28,14 +28,14 @@
 | Mollie webhook queue name is provider-scoped | passed | `libs/rust/billing/src/jobs.rs` |
 | Billing worker dispatches Stripe webhook jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
 | Billing worker dispatches Mollie webhook jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
-| Billing worker dispatches billing email jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
+| Billing worker dispatches billing email submission jobs | passed | `apps/billing-worker/src/billing.worker.jobs.rs` |
 | Stripe worker processes Billing webhook events | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
 | Stripe worker captures Billing analytics | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
 | Stripe worker enqueues Billing email | passed | `apps/billing-worker/src/billing.worker.jobs.stripe.rs` |
 | Mollie worker processes provider payment updates | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |
 | Mollie worker finalizes initial subscriptions | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |
 | Mollie worker enqueues Billing email | passed | `apps/billing-worker/src/billing.worker.jobs.mollie.rs` |
-| Billing email uses the Billing worker queue | passed | `apps/billing-worker/src/billing.worker.email.rs` |
+| Billing email uses the Billing integration queue | passed | `apps/billing-worker/src/billing.worker.email.rs` |
 | Billing worker owns Billing webhook analytics | passed | `apps/billing-worker/src/billing.worker.analytics.rs` |
 | Billing worker publishes workspace update events after PSP webhooks | passed | `apps/billing-worker/src/billing.worker.workspace_updates.rs` |
 | Billing worker publishes workspace plan update events after PSP webhooks | passed | `apps/billing-worker/src/billing.worker.workspace_updates.rs` |
@@ -44,7 +44,7 @@
 | Workspace effects apply only to primary provider subscriptions | passed | `libs/rust/billing/src/stripe_webhook_workspace_effects.rs` |
 | Workspace effects update dunning state from webhook outcomes | passed | `libs/rust/billing/src/stripe_webhook_workspace_effects.rs` |
 | Multi-PSP continuity evidence is generated and passed | passed | `docs/migration/billing-multi-psp-continuity.generated.json` |
-| Account Service and worker do not own PSP webhook runtime | passed | `apps/account-service/src + apps/account-worker/src` |
+| Account Service and worker do not own PSP webhook runtime | passed | `apps/identity-service/src + apps/account-worker/src` |
 
 ## Decision
 

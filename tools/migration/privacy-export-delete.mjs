@@ -9,15 +9,14 @@ const outputPath = "docs/migration/privacy-export-delete.generated.json";
 const markdownPath = "docs/migration/privacy-export-delete.md";
 
 const sources = {
-	openapi: "apps/account-service/openapi.json",
-	openapiExport: "apps/account-service/src/identity.http.openapi.rs",
-	exportRoutes: "apps/account-service/src/identity.domains.auth.routes.session_mgmt.export.rs",
-	deleteRoute: "apps/account-service/src/identity.domains.auth.routes.session_mgmt.profile.rs",
-	dataExport: "apps/account-service/src/identity.domains.auth.data_export.rs",
-	accountDeletion: "apps/account-service/src/identity.domains.auth.account_deletion.rs",
-	emailJobs: "libs/rust/products/account/src/account.email.jobs.rs",
-	workerJobs: "apps/account-worker/src/identity.worker.jobs.execute.rs",
-	workerExport: "apps/account-worker/src/identity.worker.jobs.process_data_export.rs",
+	openapi: "apps/account-service-next/openapi.json",
+	openapiExport: "apps/account-service-next/src/account.openapi.rs",
+	exportRoutes: "apps/account-service-next/src/account.privacy.routes.rs",
+	exportStore: "apps/account-service-next/src/account.privacy.db.rs",
+	accountClosure: "apps/account-service-next/src/account.closure.db.rs",
+	accountExport: "libs/rust/products/account/src/account.privacy.data_export.rs",
+	accountExportQuery: "libs/rust/products/account/src/account.privacy.data_export.query.rs",
+	identityExport: "apps/identity-service/src/identity.domains.auth.account_export.rs",
 };
 
 const errors = [];
@@ -68,35 +67,17 @@ function openApiMethodCheck(id, pathKey, method, description) {
 
 function buildChecks() {
 	return [
-		openApiMethodCheck("openapi-export-request", "/auth/me/export", "post", "OpenAPI exposes data export request"),
-		openApiMethodCheck("openapi-export-download", "/auth/me/export", "get", "OpenAPI exposes prepared export download"),
-		openApiMethodCheck("openapi-account-delete", "/auth/me/delete", "post", "OpenAPI exposes account deletion request"),
-		textCheck("openapi-export-handler", sources.openapiExport, "OpenAPI export includes data export handlers", "crate::domains::auth::routes::session_mgmt::me_export"),
-		textCheck("openapi-delete-handler", sources.openapiExport, "OpenAPI export includes account delete handler", "crate::domains::auth::routes::session_mgmt::profile::me_delete"),
-		textCheck("export-request-step-up", sources.dataExport, "Data export request requires recent step-up", "verification::require_recent_step_up(redis, auth, None)"),
-		textCheck("export-request-rate-limit", sources.dataExport, "Data export request is rate limited", '"auth_me_export"'),
-		textCheck("export-request-confirm-email", sources.dataExport, "Data export request enqueues confirmation email", "business_type: \"data_export\".to_string()"),
-		textCheck("export-request-worker-job", sources.dataExport, "Data export request enqueues worker job", "enqueue_data_export_job_tx(redis, auth.user_id(), &auth.user_email)"),
-		textCheck("export-job-idempotency", sources.emailJobs, "Data export worker job is idempotent per user", "idempotency_key: Some(format!(\"export:{}\", user_id))"),
-		textCheck("export-download-step-up", sources.exportRoutes, "Export download requires recent step-up", "verification::require_recent_step_up(&state.redis, &auth, None)"),
-		textCheck("export-download-no-store", sources.exportRoutes, "Export download disables caching", "header::CACHE_CONTROL, \"no-store\""),
-		textCheck("export-cache-key-test", sources.dataExport, "API tests prove account export cache key scope", "account_export_cache_key_is_subject_scoped"),
-		textCheck("export-cache-ttl-test", sources.dataExport, "API tests prove prepared export TTL", "account_export_ttl_is_one_day"),
-		textCheck("worker-dispatch", sources.workerJobs, "Worker dispatch handles data export jobs", "JOB_DATA_EXPORT =>"),
-		textCheck("worker-build-export", sources.workerExport, "Worker builds account export", "build_account_export(&state.db, payload.user_id)"),
-		textCheck("worker-store-export", sources.workerExport, "Worker stores prepared export before notification", "store_account_export("),
-		textCheck("worker-send-email", sources.workerExport, "Worker notifies the requester when export is ready", "Export de vos donnees - nvbes"),
-		textCheck("worker-payload-parse-test", sources.workerExport, "Worker smoke test accepts valid export payload", "data_export_worker_payload_accepts_user_and_email"),
-		textCheck("worker-payload-missing-test", sources.workerExport, "Worker smoke test rejects missing user id", "data_export_worker_payload_rejects_missing_user_id"),
-		textCheck("worker-payload-invalid-test", sources.workerExport, "Worker smoke test rejects invalid user id", "data_export_worker_payload_rejects_invalid_user_id"),
-		textCheck("delete-step-up", sources.accountDeletion, "Account deletion requires AAL2 step-up", "Some(nvbes_core::auth::Aal::Aal2)"),
-		textCheck("delete-rate-limit", sources.accountDeletion, "Account deletion is rate limited", '"auth_me_delete"'),
-		textCheck("delete-user-status", sources.accountDeletion, "Account deletion marks user deleted", "UPDATE users SET status = 'deleted'"),
-		textCheck("delete-principal-status", sources.accountDeletion, "Account deletion marks principal deleted", "UPDATE principals SET status = 'deleted'"),
-		textCheck("delete-session-revoke", sources.accountDeletion, "Account deletion revokes sessions transactionally", "sessions_mgmt::revoke_all_user_sessions_tx"),
-		textCheck("delete-redis-session-clear", sources.accountDeletion, "Account deletion clears Redis sessions", "clear_user_sessions"),
-		textCheck("delete-pubsub-user", sources.accountDeletion, "Account deletion publishes user suspension", "publish_user_suspended"),
-		textCheck("delete-pubsub-workspaces", sources.accountDeletion, "Account deletion publishes owned workspace deletion", "publish_workspace_deleted"),
+		openApiMethodCheck("openapi-export-request", "/api/v1/privacy/exports", "post", "OpenAPI exposes data export request"),
+		openApiMethodCheck("openapi-export-download", "/api/v1/privacy/exports/{exportId}/document", "get", "OpenAPI exposes prepared export download"),
+		textCheck("openapi-export-handler", sources.openapiExport, "OpenAPI includes privacy export handlers", "crate::privacy_routes::download_export"),
+		textCheck("export-request", sources.exportRoutes, "Export request persists an Account-owned export", "crate::privacy_db::request"),
+		textCheck("export-download", sources.exportRoutes, "Export download is principal scoped", "crate::privacy_db::document(&state.db, auth.principal_id"),
+		textCheck("export-expiry", sources.exportStore, "Expired exports are purged", "DELETE FROM account_privacy_exports"),
+		textCheck("export-participants", sources.exportStore, "Multi-product participants are ordered", "account_export_participants"),
+		textCheck("export-cache-key-test", sources.accountExport, "Account export cache key is subject scoped", "account_export_cache_key_is_subject_scoped"),
+		textCheck("export-cache-ttl-test", sources.accountExport, "Prepared export TTL is bounded", "account_export_ttl_is_one_day"),
+		textCheck("identity-export", sources.identityExport, "Identity contributes privacy activity", "privacy_activity"),
+		textCheck("closure-invalidates-export", sources.accountClosure, "Account closure invalidates prepared exports", "UPDATE account_privacy_exports"),
 	];
 }
 
@@ -136,8 +117,8 @@ function validateReport(report) {
 		errors.push(`${outputPath}: generation.sources must match privacy export/delete source contract`);
 	}
 	if (!sameItems(report.generation?.targeted_tests, [
-		"cargo test -p nvbes-account-worker data_export_worker_payload --locked",
-		"cargo test -p nvbes-account-service account_export --locked",
+		"cargo test -p nvbes-product-account account_export --locked",
+		"cargo test -p nvbes-account-service privacy --locked",
 	])) {
 		errors.push(`${outputPath}: generation.targeted_tests is invalid`);
 	}
@@ -204,8 +185,8 @@ const report = {
 		command: "node tools/migration/privacy-export-delete.mjs --write",
 		sources: Object.values(sources),
 		targeted_tests: [
-			"cargo test -p nvbes-account-worker data_export_worker_payload --locked",
-			"cargo test -p nvbes-account-service account_export --locked",
+			"cargo test -p nvbes-product-account account_export --locked",
+			"cargo test -p nvbes-account-service privacy --locked",
 		],
 	},
 	summary,

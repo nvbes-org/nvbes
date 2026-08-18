@@ -3,8 +3,6 @@ use nvbes_email::proto::nvbes::email::v1::{
     email_operations_service_server::EmailOperationsServiceServer,
 };
 use tokio::sync::watch;
-use tonic::transport::Server;
-use tracing_subscriber::EnvFilter;
 
 #[path = "email.worker.grpc.auth.rs"]
 mod auth;
@@ -20,8 +18,12 @@ mod dispatch_attempt;
 mod dispatch_db;
 #[path = "email.worker.dispatcher.rs"]
 mod dispatcher;
+#[path = "email.worker.dispatcher.maintenance.rs"]
+mod dispatcher_maintenance;
 #[path = "email.worker.metrics.rs"]
 mod email_metrics;
+#[path = "email.worker.error_reporting.rs"]
+mod error_reporting;
 #[path = "email.worker.grpc.operations.rs"]
 mod grpc_operations;
 #[path = "email.worker.grpc.service.rs"]
@@ -45,16 +47,59 @@ mod webhook_verify;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
+    let command: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
+        return run_deployment_bootstrap().await;
+    }
 
     let config = config::EmailWorkerConfig::from_env()?;
+    let _error_reporting_guard = error_reporting::init(&config);
+    nvbes_observability::install_safe_panic_hook();
+    nvbes_observability::init_tracing_with_config(
+        nvbes_observability::TracingConfig {
+            environment: &config.environment,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+        },
+        error_reporting::APP_NAME,
+    );
+    if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
+        println!(
+            "{}",
+            serde_json::to_string(&error_reporting::smoke(&config))?
+        );
+        return Ok(());
+    }
+
+    let result = run(&config, &command).await;
+    if let Err(error) = result.as_ref() {
+        error_reporting::capture_operation(&config, "runtime", error.as_ref());
+    }
+    result
+}
+
+async fn run_deployment_bootstrap() -> anyhow::Result<()> {
+    let bind_addr: std::net::SocketAddr = std::env::var("NVBES_EMAIL_HTTP_BIND_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:3040".to_string())
+        .parse()
+        .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_HTTP_BIND_ADDR is invalid: {error}"))?;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let router = axum::Router::new().route(
+        "/health/live",
+        axum::routing::get(|| async { axum::http::StatusCode::NO_CONTENT }),
+    );
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(process_shutdown_signal())
+        .await?;
+    Ok(())
+}
+
+async fn run(config: &config::EmailWorkerConfig, command: &[String]) -> anyhow::Result<()> {
     let db = database::connect(&config.database_url).await?;
     database::migrate(&db).await?;
 
-    let command: Vec<String> = std::env::args().skip(1).collect();
-    match command.as_slice() {
+    match command {
         [] => {}
         [action] if action == "migrate" => {
             tracing::info!("email database migrations applied");
@@ -65,11 +110,11 @@ async fn main() -> anyhow::Result<()> {
             return Ok(());
         }
         _ => anyhow::bail!(
-            "usage: nvbes-email-worker [migrate|release-suppression <message-id> <actor> <reason>]"
+            "usage: nvbes-email-worker [migrate|error-reporting-smoke|release-suppression <message-id> <actor> <reason>]"
         ),
     }
 
-    let state = state::EmailWorkerState::new(config, db)?;
+    let state = state::EmailWorkerState::new(config.clone(), db)?;
     let http_listener = tokio::net::TcpListener::bind(state.config.http_bind_addr).await?;
     let grpc_addr = state.config.grpc_bind_addr;
     let email_grpc = grpc_service::EmailDeliveryGrpcService::new(state.clone());
@@ -89,13 +134,13 @@ async fn main() -> anyhow::Result<()> {
     let http_router = health::router(state.clone())
         .merge(email_metrics::router(state.clone()))
         .merge(webhook::router(state.clone()));
-    let http_server = axum::serve(http_listener, http_router)
-        .with_graceful_shutdown(server_shutdown(shutdown_rx.clone()));
-    let grpc_server = Server::builder()
+    let application = tonic::service::Routes::from(http_router)
         .add_service(health_service)
         .add_service(grpc)
         .add_service(operations)
-        .serve_with_shutdown(grpc_addr, server_shutdown(shutdown_rx));
+        .into_axum_router();
+    let server = axum::serve(http_listener, application)
+        .with_graceful_shutdown(server_shutdown(shutdown_rx));
 
     tracing::info!(
         http_addr = %state.config.http_bind_addr,
@@ -109,8 +154,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     tokio::select! {
-        result = http_server => result?,
-        result = grpc_server => result?,
+        result = server => result?,
         _ = process_shutdown_signal() => {},
     }
     let _ = shutdown_tx.send(true);

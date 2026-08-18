@@ -14,7 +14,7 @@
           "description": "Login creates a server-side request profile for the authenticated session and stores it in Redis with the session record.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.cookie_theft.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs",
               "includes": [
                 "SessionRequestProfile",
                 "Accept-Language",
@@ -23,11 +23,11 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.login.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.login.rs",
               "includes": ["SessionRequestProfile::from_headers", "request_profile"]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.create.session.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.create.session.rs",
               "includes": ["request_profile", "apply_profile"]
             }
           ]
@@ -69,7 +69,7 @@
           "description": "Session validation scores significant network, user-agent family, language, client hints, accept headers, and cross-site fetch changes.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.cookie_theft.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.cookie_theft.rs",
               "includes": [
                 "ip_network_changed",
                 "user_agent_family_changed",
@@ -93,7 +93,7 @@
           "description": "The session middleware routes bearer JWTs and opaque browser sessions through request-aware validation before protected handlers run.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
               "includes": [
                 "authenticate_with_request",
                 "enforce_cookie_theft_mitigation",
@@ -101,7 +101,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs",
+              "path": "apps/identity-service/src/identity.http.middleware.jwt.session_refresh.rs",
               "includes": [
                 "authenticate_session_request",
                 "authenticate_with_request",
@@ -124,7 +124,7 @@
           "description": "High-scoring cookie theft detections revoke the session and refresh tokens, then return a reauthentication-required error.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
               "includes": [
                 "session_reauthentication_required",
                 "revoke_suspicious_session",
@@ -147,7 +147,7 @@
           "description": "Suspicious session reuse records risk and auth audit events with factors, score, baseline context, and current request context.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.sessions.authenticate.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.sessions.authenticate.rs",
               "includes": [
                 "cookie_theft_suspected",
                 "cookie_theft_risk_score",
@@ -170,7 +170,7 @@
           "description": "Session cookies are HttpOnly, SameSite Strict, Secure outside development, and use __Host- names when secure.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.http.cookies.rs",
+              "path": "apps/identity-service/src/identity.http.cookies.rs",
               "includes": ["HttpOnly", "SameSite=Strict", "__Host-", "Secure"]
             }
           ]

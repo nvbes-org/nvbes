@@ -22,8 +22,12 @@ test("image builds and runs the Rust email worker", () => {
 	);
 	assert.ok(dockerfile.includes("COPY contracts ./contracts"));
 	assert.ok(dockerfile.includes("USER 10001:10001"));
-	assert.ok(dockerfile.includes("EXPOSE 3040 3041"));
+	assert.ok(dockerfile.includes("EXPOSE 3040"));
+	assert.ok(!dockerfile.includes("EXPOSE 3040 3041"));
+	assert.ok(dockerfile.includes('NVBES_EMAIL_HTTP_BIND_ADDR="0.0.0.0:3040"'));
+	assert.ok(dockerfile.includes('NVBES_EMAIL_GRPC_BIND_ADDR="0.0.0.0:3040"'));
 	assert.ok(dockerfile.includes('ENTRYPOINT ["/app/email-worker"]'));
+	assert.ok(mainSource.includes("tonic::service::Routes::from(http_router)"));
 });
 
 test("container liveness uses the shallow HTTP endpoint", () => {
@@ -34,4 +38,14 @@ test("container liveness uses the shallow HTTP endpoint", () => {
 	assert.ok(dockerfile.includes("STOPSIGNAL SIGTERM"));
 	assert.ok(!dockerfile.includes('"/health/ready"'));
 	assert.ok(mainSource.includes("SignalKind::terminate()"));
+});
+
+test("Terraform bootstrap exposes liveness before production secrets exist", () => {
+	const bootstrapGuard = mainSource.indexOf('action == "deployment-bootstrap"');
+	const productionConfig = mainSource.indexOf("EmailWorkerConfig::from_env()");
+
+	assert.ok(bootstrapGuard >= 0);
+	assert.ok(productionConfig > bootstrapGuard);
+	assert.ok(mainSource.includes('"/health/live"'));
+	assert.ok(mainSource.includes("StatusCode::NO_CONTENT"));
 });

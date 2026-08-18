@@ -155,11 +155,7 @@ function fetchRecorder(expectedCalls = 1): {
   const calls: FetchCall[] = [];
   const fetchImpl: typeof fetch = async (input, init = {}) => {
     const rawUrl =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     calls.push({
       headers: new Headers(init.headers),
       init,

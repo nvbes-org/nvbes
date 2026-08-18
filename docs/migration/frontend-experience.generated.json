@@ -7,7 +7,7 @@
       "scripts/test-e2e-critical.sh",
       "scripts/test-identity-e2e-local.sh",
       "apps/identity-web/src/identity.router.tsx",
-      "apps/identity-web/src/components/IdentityLayout.tsx",
+      "apps/identity-web/src/components/AuthPageShell.tsx",
       "apps/identity-web/e2e/critical.spec.ts",
       "apps/identity-web/src/identity.universal-login.test.js",
       "apps/identity-web/src/pages/useUniversalLogin.test.js",
@@ -83,7 +83,7 @@
     {
       "id": "identity-main",
       "description": "Identity shell exposes a main landmark",
-      "path": "apps/identity-web/src/components/IdentityLayout.tsx",
+      "path": "apps/identity-web/src/components/AuthPageShell.tsx",
       "status": "passed",
       "pattern": "<main"
     },
@@ -95,11 +95,11 @@
       "pattern": "critical identity journeys"
     },
     {
-      "id": "identity-critical-e2e-phishing-resistant-mfa",
-      "description": "Identity Web verifies passkey, TOTP and recovery-code MFA journeys",
+      "id": "identity-critical-e2e-oauth-security",
+      "description": "Identity Web verifies PAR, consent and PKCE in the hosted OAuth journey",
       "path": "apps/identity-web/e2e/critical.spec.ts",
       "status": "passed",
-      "pattern": "passkey, TOTP and recovery codes"
+      "pattern": "hosted OAuth authorization enforces PAR, consent and PKCE"
     },
     {
       "id": "identity-critical-e2e-service",

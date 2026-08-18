@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+arguments=" $* "
+
+[[ "$arguments" == *" buildx imagetools create "* ]]
+[[ "$arguments" == *" --tag rg.fr-par.scw.cloud/nvbes-prod-email-worker/nvbes-email-worker:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "* ]]
+[[ "$arguments" == *" ghcr.io/nvbes-org/nvbes-email-worker@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "* ]]

@@ -74,7 +74,7 @@
               ]
             },
             {
-              "path": "apps/account-web/src/pages/LoginPageConsent.tsx",
+              "path": "apps/identity-web/src/pages/LoginPageConsent.tsx",
               "includes": ["safeLogoUrl", "safePrivacyUrl", "safeTermsUrl", "safeSupportUrl"]
             }
           ]
@@ -129,15 +129,15 @@
         {
           "id": "XSS_CTRL_006",
           "name": "Email template escaping",
-          "description": "Account email templates HTML-escape replacement values and test script, tag, and attribute injection payloads.",
+          "description": "Shared email templates HTML-escape replacement values and test script, tag, and attribute injection payloads.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.email.templates.rs",
-              "includes": ["html_escape", "render_template"]
+              "path": "libs/rust/email/src/renderer.layout.rs",
+              "includes": ["fn escape", "TemplateHtml"]
             },
             {
-              "path": "apps/account-service/src/identity.email.tests.rs",
-              "includes": ["test_html_escape_prevents_injection_in_name"]
+              "path": "libs/rust/email/src/renderer.tests.rs",
+              "includes": ["substitutions_are_escaped_in_html_but_preserved_in_text", "&lt;script&gt;"]
             }
           ]
         }

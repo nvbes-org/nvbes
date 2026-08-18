@@ -2,10 +2,10 @@
 
 ## Runtime topology
 
-Run `nvbes-email-worker` as an always-on container. It owns three concurrent
-roles in one process:
+Run `nvbes-email-worker` as an always-on container. HTTP/1.1 and gRPC/h2c share
+the single runtime port `3040`, while the process owns three concurrent roles:
 
-- private gRPC ingestion on `3041`;
+- authenticated gRPC ingestion on `3040`;
 - public HTTP webhook and probes on `3040`;
 - PostgreSQL-backed dispatch loop.
 
@@ -17,9 +17,9 @@ reserved for Scaleway Topics and Events and health probes.
 
 - The container runtime calls `GET /health/live`. This is shallow and must not
   depend on PostgreSQL or Scaleway TEM.
-- The private Scaleway Load Balancer calls `GET /health/ready`. It requires a
-  reachable, migrated database and a current dispatcher heartbeat.
-- Internal gRPC diagnostics may call `grpc.health.v1.Health` on `3041`.
+- The deployment workflow calls `GET /health/ready`. It requires a reachable,
+  migrated database and a current dispatcher heartbeat.
+- Internal gRPC diagnostics may call `grpc.health.v1.Health` on `3040`.
 - Scaleway probes never call the gRPC health service.
 
 The TEM provider is deliberately absent from readiness. A TEM outage must
@@ -39,6 +39,10 @@ Configure the runtime with:
 - `NVBES_EMAIL_SNS_TOPIC_ARN`;
 - `NVBES_EMAIL_SNS_CA_BUNDLE_PATH` containing the pinned Scaleway SNS trust
   chain.
+- `SENTRY_DSN` for server-side error reporting and `SENTRY_RELEASE` for release
+  attribution; keep `SENTRY_TRACES_SAMPLE_RATE` between `0` and `1` (the
+  production default remains `0` until performance sampling is explicitly
+  budgeted).
 
 Mount secrets read-only. Product services receive only the gRPC endpoint and
 internal authentication token; they never receive provider or encryption
@@ -51,14 +55,22 @@ is rejected outside development and test.
 
 ## Metrics and alerts
 
-Scrape `GET /metrics` only through the private observability network. Do not
-publish that path through the public webhook listener route. The runtime emits
-queue depth and age, command outcomes, provider latency, webhook outcomes,
-signature failures, expirations, suppressions, and retention activity.
+Scrape `GET /metrics` only with the dedicated internal bearer token. The path
+shares the Serverless listener but returns no metrics without that token; only
+the observability collector receives it. The runtime emits queue depth and age,
+command outcomes, provider latency, webhook outcomes, signature failures,
+expirations, suppressions, and retention activity.
 
 Alerts cover stale queue age, elevated provider failures, and spam complaint
 rate. During staging rehearsals, exercise each alert and attach the evidence to
 the release packet.
+
+Validate Sentry after each environment is wired by running
+`nvbes-email-worker error-reporting-smoke`. The command returns a JSON event ID,
+monitor check-in ID, configuration state, and flush result without connecting
+to PostgreSQL or starting the delivery runtime. The running dispatcher also
+checks in to the `email-worker-dispatcher-heartbeat` Sentry monitor every five
+minutes.
 
 ## Deployment order
 
@@ -69,7 +81,7 @@ The production sender domain is the dedicated transactional subdomain
 `support@nvbes.eu` exists.
 
 Cloudflare remains authoritative for DNS, while
-`infrastructure/environments/production/email-delivery.tf` is the sole writer.
+`infrastructure/stacks/email/production/email-delivery.tf` is the sole writer.
 Terraform registers `notify.nvbes.eu` in Scaleway TEM, publishes the exact SPF,
 DKIM, DMARC, and blackhole MX values returned by TEM, requests validation,
 creates the SNS topic and HTTPS subscription, then binds the TEM webhook. Do

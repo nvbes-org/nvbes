@@ -85,6 +85,11 @@ prometheus.scrape "nvbes_workers" {
       "job"         = "account-worker",
       "service"     = "account-worker",
     },
+    {
+      "__address__" = sys.env("NVBES_EMAIL_WORKER_METRICS_TARGET"),
+      "job"         = "email-worker",
+      "service"     = "email-worker",
+    },
   ]
 
   scrape_interval = "15s"
