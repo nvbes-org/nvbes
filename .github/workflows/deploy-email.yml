@@ -20,7 +20,7 @@ defaults:
 jobs:
   deploy-email:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
     environment:
       name: production-email
