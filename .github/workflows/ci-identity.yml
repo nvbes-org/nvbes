@@ -19,10 +19,6 @@ on:
       - 'scripts/test-identity-worker.sh'
       - 'infrastructure/local/identity-e2e.compose.yml'
       - 'infrastructure/local/identity-e2e.init.sql'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
       - '.github/workflows/ci-identity.yml'
   pull_request:
     branches: ['main']
@@ -42,10 +38,6 @@ on:
       - 'scripts/test-identity-worker.sh'
       - 'infrastructure/local/identity-e2e.compose.yml'
       - 'infrastructure/local/identity-e2e.init.sql'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
       - '.github/workflows/ci-identity.yml'
 
 concurrency:
