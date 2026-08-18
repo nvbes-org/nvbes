@@ -34,7 +34,7 @@ COPY vendor ./vendor
 RUN cargo build --locked --release --bin nvbes-cloud-worker
 
 # Final minimal runtime image
-FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 AS runtime
+FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241 AS runtime
 
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
