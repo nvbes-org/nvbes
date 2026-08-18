@@ -129,7 +129,7 @@ resource "scaleway_container" "email_runtime" {
   for_each = local.email_runtime_roles
 
   namespace_id           = scaleway_container_namespace.email_worker.id
-  private_network_id     = var.private_network_id
+  private_network_id     = try(length(var.private_network_id) > 0, false) ? var.private_network_id : null
   name                   = "${local.name_prefix}-email-${each.key}"
   description            = each.value.description
   image                  = var.email_worker_image
