@@ -36,6 +36,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
       "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
       > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends ca-certificates curl libssl3 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 nvbes \
