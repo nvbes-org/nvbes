@@ -25,10 +25,10 @@ reviewers. Configure these environment variables:
 
 - `BASE_DOMAIN` (`nvbes.eu`);
 - `CLOUDFLARE_ZONE_ID`;
-- `EMAIL_TERRAFORM_STATE_BUCKET`;
 - `SCALEWAY_TEM_TERMS_ACCEPTED` (`true` only after review);
 - `SCW_PRIVATE_NETWORK_ID`;
-- `SCW_PROJECT_ID`.
+- `SCW_PROJECT_ID`;
+- `TERRAFORM_STATE_BUCKET` (shared state bucket created by `infrastructure/bootstrap/production`).
 
 Configure these environment secrets:
 
@@ -61,8 +61,8 @@ pulls the potentially private GHCR package directly.
 
 ## First deployment and existing resources
 
-The email state bucket must already exist, be private, encrypted, versioned,
-and have S3 lockfile permissions. Do not use the general production state key.
+The shared Terraform state bucket (`TERRAFORM_STATE_BUCKET`) must already exist, be private, encrypted, versioned,
+and have S3 lockfile permissions (created via `infrastructure/bootstrap/production`).
 
 If any TEM, DNS, SNS, SQS, Serverless SQL, Container, IAM, Secret Manager, or
 Job resource already exists outside this state, import it before enabling the
@@ -76,7 +76,7 @@ control, export provider and S3 credentials, then initialize with:
 ```bash
 terraform init \
   -backend-config=backend.ci.hcl \
-  -backend-config='bucket=<email-state-bucket>'
+  -backend-config='bucket=<terraform-state-bucket>'
 ```
 
 Never commit real variable values, backend credentials, plans, or state files.

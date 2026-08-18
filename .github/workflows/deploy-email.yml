@@ -35,7 +35,7 @@ jobs:
       TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
       TF_VAR_private_network_id: ${{ vars.SCW_PRIVATE_NETWORK_ID }}
       TF_VAR_scaleway_project_id: ${{ vars.SCW_PROJECT_ID }}
-      EMAIL_TERRAFORM_STATE_BUCKET: ${{ vars.EMAIL_TERRAFORM_STATE_BUCKET }}
+      TERRAFORM_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
       EMAIL_TERRAFORM_STATE_KEY: production/email/terraform.tfstate
       EMAIL_REGISTRY_ENDPOINT: rg.fr-par.scw.cloud/nvbes-prod-email-worker
       STACK_ROOT: infrastructure/environments/email-production
@@ -55,7 +55,7 @@ jobs:
           [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]
           [[ "$SCALEWAY_TEM_TERMS_ACCEPTED" == "true" ]]
-          [[ -n "$EMAIL_TERRAFORM_STATE_BUCKET" ]]
+          [[ -n "$TERRAFORM_STATE_BUCKET" ]]
       - name: Authenticate to GHCR
         env:
           GHCR_TOKEN: ${{ github.token }}
@@ -92,7 +92,7 @@ jobs:
           terraform -chdir="$STACK_ROOT" init
           -reconfigure
           -backend-config=backend.ci.hcl
-          -backend-config="bucket=$EMAIL_TERRAFORM_STATE_BUCKET"
+          -backend-config="bucket=$TERRAFORM_STATE_BUCKET"
           -backend-config="key=$EMAIL_TERRAFORM_STATE_KEY"
       - name: Plan private image registry
         env:
