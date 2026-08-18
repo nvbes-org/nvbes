@@ -111,15 +111,17 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
             state.clone(),
             idempotency::idempotency_guard,
         ))
-        .layer(axum::middleware::from_fn_with_state(
-            state.config.clone(),
-            nvbes_core::http::e2ee::request_e2ee_guard,
-        ))
         .layer(axum::middleware::from_fn(
             nvbes_core::http::content_digest::content_digest_guard,
         ))
         .layer(axum::middleware::from_fn(region::region_restriction_guard))
-        .merge(crate::email::webhooks::webhook_router(state))
+        .nest(
+            "/internal/v1",
+            Router::new()
+                .merge(crate::domains::auth::oidc_profile_projection::router())
+                .merge(crate::domains::auth::account_closure::router())
+                .merge(crate::domains::auth::account_export::router()),
+        )
         .merge(docs)
 }
 

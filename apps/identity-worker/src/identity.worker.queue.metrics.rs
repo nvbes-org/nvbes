@@ -16,17 +16,31 @@ pub async fn refresh_if_due(
 
     for queue in queues {
         let entries = nvbes_redis::worker_queue::queue_status(&state.redis, queue).await?;
-        for status in QUEUE_STATUSES {
-            let entry = entries.iter().find(|entry| entry.status == status);
-            state.observability.record_worker_queue_depth(
-                queue,
-                status,
-                entry.map_or(0, |entry| entry.depth),
-                entry.and_then(|entry| entry.oldest_age_seconds),
-            );
-        }
+        record_queue_statuses(&state.observability, queue, &entries);
     }
+
+    super::account_projection::refresh_metrics(state).await?;
 
     *last_run = Instant::now();
     Ok(())
 }
+
+fn record_queue_statuses(
+    observability: &nvbes_observability::metrics::HttpMetrics,
+    queue: &str,
+    entries: &[nvbes_redis::worker_queue::QueueStatusEntry],
+) {
+    for status in QUEUE_STATUSES {
+        let entry = entries.iter().find(|entry| entry.status == status);
+        observability.record_worker_queue_depth(
+            queue,
+            status,
+            entry.map_or(0, |entry| entry.depth),
+            entry.and_then(|entry| entry.oldest_age_seconds),
+        );
+    }
+}
+
+#[cfg(test)]
+#[path = "identity.worker.queue.metrics.tests.rs"]
+mod tests;

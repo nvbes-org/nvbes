@@ -60,6 +60,8 @@ mod billing_grpc_operations;
 mod billing_grpc_platform;
 #[path = "internal_admin.billing.grpc.revenue.rs"]
 mod billing_grpc_revenue;
+#[path = "internal_admin.billing.grpc.snapshot.rs"]
+mod billing_grpc_snapshot;
 #[path = "internal_admin.billing_platform_center.rs"]
 mod billing_platform_center;
 #[path = "internal_admin.billing_platform_center.action_log.rs"]
@@ -150,6 +152,8 @@ mod developer_center_mutations;
 mod developer_center_types;
 #[path = "internal_admin.developer_center.validation.rs"]
 mod developer_center_validation;
+#[path = "internal_admin.email.operations.rs"]
+mod email_operations;
 #[path = "internal_admin.entitlements_center.rs"]
 mod entitlements_center;
 #[path = "internal_admin.entitlements_center.actions.rs"]

@@ -37,14 +37,14 @@
 | Core test limits security admin to audit/security views | passed | `libs/rust/core/src/authz.policy.tests.rs` |
 | Core test limits billing admin away from audit | passed | `libs/rust/core/src/authz.policy.tests.rs` |
 | Core test keeps viewer read-only | passed | `libs/rust/core/src/authz.policy.tests.rs` |
-| Account Service authorization calls the shared role policy | passed | `apps/account-service/src/identity.domains.authz.service.rs` |
-| Denied workspace actions are audited before returning an error | passed | `apps/account-service/src/identity.domains.authz.service.rs` |
-| Permission denied decisions insert an audit event | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
-| Permission denied audit uses stable action literal | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
-| Permission denied audit metadata is generated through a tested helper | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
-| Permission denied audit metadata has a unit test | passed | `apps/account-service/src/identity.domains.authz.db.rs` |
-| Authz decision endpoint is routed | passed | `apps/account-service/src/identity.domains.authz.routes.rs` |
-| Authz decision endpoint is present in OpenAPI | passed | `apps/account-service/openapi.json` |
+| Identity Service authorization calls the shared role policy | passed | `apps/identity-service/src/identity.domains.authz.service.rs` |
+| Denied workspace actions are audited before returning an error | passed | `apps/identity-service/src/identity.domains.authz.service.rs` |
+| Permission denied decisions insert an audit event | passed | `apps/identity-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit uses stable action literal | passed | `apps/identity-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit metadata is generated through a tested helper | passed | `apps/identity-service/src/identity.domains.authz.db.rs` |
+| Permission denied audit metadata has a unit test | passed | `apps/identity-service/src/identity.domains.authz.db.rs` |
+| Authz decision endpoint is routed | passed | `apps/identity-service/src/identity.domains.authz.routes.rs` |
+| Authz decision endpoint is present in OpenAPI | passed | `apps/identity-service/openapi.json` |
 
 ## Decision
 

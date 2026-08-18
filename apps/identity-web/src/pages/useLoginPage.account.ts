@@ -4,8 +4,10 @@ import type { UseNavigateResult } from '@tanstack/react-router';
 import type { LoginStep } from './LoginProgress';
 import { consentCancelUrl, nextAuthUser } from './useLoginPage.shared';
 import type { OAuthAuthorizeRequest } from '../identity.oauth';
+import { prepareTrackingConsentSubjectSwitch } from '../tracking-consent';
 
 export function selectAccount(authuser: string) {
+  prepareTrackingConsentSubjectSwitch('identity-web:account-switch');
   const url = new URL(window.location.href);
   url.searchParams.set('authuser', authuser);
   window.location.href = url.toString();
@@ -29,6 +31,7 @@ export async function useAnotherAccount({
   setStep: (value: LoginStep) => void;
 }) {
   setError(null);
+  prepareTrackingConsentSubjectSwitch('identity-web:use-another-account');
 
   const authuser = nextAuthUser(connectedAccounts);
 

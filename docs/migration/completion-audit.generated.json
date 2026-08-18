@@ -7,9 +7,9 @@
   "status": {
     "objective": "incomplete",
     "requirements": 30,
-    "incomplete": 19,
+    "incomplete": 20,
     "readiness": "no-go",
-    "readiness_blocking_items": 135,
+    "readiness_blocking_items": 140,
     "runtimes_go": 4,
     "runtimes_total": 4,
     "domains_go": 8,
@@ -76,7 +76,7 @@
         "docs/migration/target-structure.generated.json"
       ],
       "proof": "node tools/migration/target-structure.mjs --strict",
-      "status": "complete"
+      "status": "blocked"
     },
     {
       "id": "supply-chain-scans",

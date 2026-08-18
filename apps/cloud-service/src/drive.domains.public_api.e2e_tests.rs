@@ -45,6 +45,32 @@ async fn response_error_code(response: axum::response::Response) -> String {
         .to_string()
 }
 
+async fn seed_public_api_network_range(
+    pool: &PgPool,
+    network: &str,
+    network_kind: &str,
+    risk_score: i16,
+    risk_labels: &[&str],
+) {
+    sqlx::query(
+        r#"INSERT INTO geo_ip_network_relations
+           (source_code, relation_key, network, network_kind, risk_score, risk_labels)
+           VALUES ('ip_intelligence', $1, $2::cidr, $3, $4, $5)
+           ON CONFLICT (source_code, relation_key) DO UPDATE SET
+             network = EXCLUDED.network, network_kind = EXCLUDED.network_kind,
+             risk_score = EXCLUDED.risk_score, risk_labels = EXCLUDED.risk_labels,
+             fetched_at = NOW()"#,
+    )
+    .bind(format!("public-api-e2e:{network}"))
+    .bind(network)
+    .bind(network_kind)
+    .bind(risk_score)
+    .bind(risk_labels)
+    .execute(pool)
+    .await
+    .expect("public API network range insert should succeed");
+}
+
 #[tokio::test]
 async fn http_m2m_token_authorizes_public_api_me() {
     let _guard = test_lock().lock().await;

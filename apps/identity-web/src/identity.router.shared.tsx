@@ -1,6 +1,6 @@
 import { AuthErrorBoundary } from '@nvbes/web-runtime';
 import { lazyRouteComponent } from '@tanstack/react-router';
-import { lazy, type ReactElement, Suspense } from 'react';
+import { type ReactElement, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function RouteSkeleton() {
@@ -40,18 +40,6 @@ export function withAuth(Component: () => ReactElement) {
       <AuthErrorBoundary>
         <Component />
       </AuthErrorBoundary>
-    );
-  };
-}
-
-const LazyWebauthnSetupPage = lazy(() => import('./pages/WebauthnSetupPage'));
-
-export function renderWebauthnSetup(kind: 'passkey' | 'security_key') {
-  return function WebauthnSetupRoute() {
-    return (
-      <Suspense fallback={<RouteSkeleton />}>
-        <LazyWebauthnSetupPage kind={kind} />
-      </Suspense>
     );
   };
 }

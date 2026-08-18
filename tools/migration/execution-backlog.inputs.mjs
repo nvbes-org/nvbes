@@ -23,6 +23,7 @@ const inputs = {
 	releaseFreeze: "docs/migration/release-freeze-manifest.md",
 	snapshots: "docs/migration/snapshot-manifest.md",
 	smokeTests: "docs/migration/smoke-test-manifest.md",
+	targetStructure: "docs/migration/target-structure.generated.json",
 	v2DebtReview: "docs/migration/v2-debt-review.md",
 };
 
@@ -55,6 +56,7 @@ export function loadBacklogInputs(errors) {
 			releaseFreeze: readText(inputs.releaseFreeze, errors),
 			snapshots: readText(inputs.snapshots, errors),
 			smokeTests: readText(inputs.smokeTests, errors),
+			targetStructure: readJson(inputs.targetStructure, errors),
 			v2DebtReview: readText(inputs.v2DebtReview, errors),
 		},
 	};

@@ -7,8 +7,16 @@ import {
   AccountConsentHistorySchema,
   type AccountConsentInput,
   AccountConsentSchema,
+  type AccountClosure,
+  AccountClosureSchema,
+  type AccountClosureStatus,
+  AccountClosureStatusSchema,
   type AccountGpcStatus,
   AccountGpcStatusSchema,
+  type AccountExportRequest,
+  AccountExportRequestSchema,
+  type AccountExportStatus,
+  AccountExportStatusSchema,
   type AccountNotifications,
   AccountNotificationsSchema,
   type AccountPreferences,
@@ -18,6 +26,8 @@ import {
   type AccountUpdateProfileInput,
   EmptyResponseSchema,
   AccountSuccessSchema,
+  type AccountSessionsPage,
+  AccountSessionsPageSchema,
 } from './account.schemas';
 import {
   type AccountRequestOptions,
@@ -28,6 +38,11 @@ import {
 export type AccountClientOptions = AccountTransportOptions;
 
 export type AccountConsentPageOptions = AccountRequestOptions & {
+  cursor?: string;
+  limit?: number;
+};
+
+export type AccountSessionPageOptions = AccountRequestOptions & {
   cursor?: string;
   limit?: number;
 };
@@ -53,7 +68,7 @@ export class AccountClient {
       .request('/api/v1/profile', AccountProfileEnvelopeSchema, {
         ...options,
         body: input,
-        method: 'PATCH',
+        method: 'PUT',
       })
       .then(({ user }) => user);
   }
@@ -153,16 +168,59 @@ export class AccountClient {
     });
   }
 
-  requestDataExport(options?: AccountRequestOptions): Promise<void> {
-    return this.success('/api/v1/privacy/export', 'POST', options);
+  listSessions(options: AccountSessionPageOptions = {}): Promise<AccountSessionsPage> {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    if (options.cursor) params.set('cursor', options.cursor);
+    const query = params.toString();
+    return this.transport.request(
+      `/api/v1/security/sessions${query ? `?${query}` : ''}`,
+      AccountSessionsPageSchema,
+      { method: 'GET', signal: options.signal },
+    );
   }
 
-  downloadDataExport(options?: AccountRequestOptions): Promise<Blob> {
-    return this.transport.requestBlob('/api/v1/privacy/export', options);
+  revokeSession(sessionId: string, options?: AccountRequestOptions): Promise<void> {
+    return this.success(
+      `/api/v1/security/sessions/${encodeURIComponent(sessionId)}`,
+      'DELETE',
+      options,
+    );
   }
 
-  closeAccount(options?: AccountRequestOptions): Promise<void> {
-    return this.success('/api/v1/closure', 'POST', options);
+  requestDataExport(options?: AccountRequestOptions): Promise<AccountExportRequest> {
+    return this.transport.request('/api/v1/privacy/exports', AccountExportRequestSchema, {
+      ...options,
+      method: 'POST',
+    });
+  }
+
+  getLatestDataExport(options?: AccountRequestOptions): Promise<AccountExportStatus> {
+    return this.transport.request('/api/v1/privacy/exports/latest', AccountExportStatusSchema, {
+      ...options,
+      method: 'GET',
+    });
+  }
+
+  downloadDataExport(exportId: string, options?: AccountRequestOptions): Promise<Blob> {
+    return this.transport.requestBlob(
+      `/api/v1/privacy/exports/${encodeURIComponent(exportId)}/document`,
+      options,
+    );
+  }
+
+  closeAccount(options?: AccountRequestOptions): Promise<AccountClosure> {
+    return this.transport.request('/api/v1/closure', AccountClosureSchema, {
+      ...options,
+      method: 'POST',
+    });
+  }
+
+  getAccountClosure(options?: AccountRequestOptions): Promise<AccountClosureStatus> {
+    return this.transport.request('/api/v1/closure', AccountClosureStatusSchema, {
+      ...options,
+      method: 'GET',
+    });
   }
 
   private success(

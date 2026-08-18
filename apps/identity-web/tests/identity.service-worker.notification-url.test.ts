@@ -10,7 +10,7 @@ const fallbackUrl = `${origin}${defaultNotificationPath}`;
 
 describe('service worker notification URL', () => {
   it('accepts relative and same-origin absolute URLs', () => {
-    expect(notificationUrl('/sessions', origin)).toBe(`${origin}/sessions`);
+    expect(notificationUrl('/login', origin)).toBe(`${origin}/login`);
     expect(notificationUrl(`${origin}/security`, origin)).toBe(`${origin}/security`);
   });
 

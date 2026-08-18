@@ -42,4 +42,4 @@ esac
 
 log_step "critical browser journeys"
 export CI=true
-pnpm --dir apps/account-web test:e2e:critical
+pnpm --dir apps/identity-web test:e2e:critical

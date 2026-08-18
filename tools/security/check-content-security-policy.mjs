@@ -7,7 +7,7 @@ const expectedSchemaVersion = 1;
 const webCspPath = 'libs/ts/web-runtime/src/csp.ts';
 const apiHeadersPath = 'libs/rust/core/src/security.headers.rs';
 const webAppConfigs = [
-  'apps/account-web/identity.vite.csp.ts',
+  'apps/account-web/account.vite.csp.ts',
   'apps/cloud-web/vite.config.ts',
   'apps/console-web/vite.config.ts',
   'apps/backoffice-web/vite.config.ts',
@@ -172,10 +172,10 @@ function assertRequiredWebDirectives() {
   if (!text.includes('isDev ? ["\'unsafe-inline\'"] : []')) {
     errors.push(`${webCspPath}: unsafe style source must be development-only`);
   }
-  if (!text.includes("directive('style-src-attr', [\"'unsafe-inline'\"])")) {
+  if (!/directive\(["']style-src-attr["'], \[["']'unsafe-inline'["']\]\)/u.test(text)) {
     errors.push(`${webCspPath}: React inline style attributes must remain supported`);
   }
-  if (!/directive\('style-src-elem', \[\s*"'self'",\s*"'unsafe-inline'"/u.test(text)) {
+  if (!/directive\(["']style-src-elem["'], \[\s*["']'self'["'],\s*["']'unsafe-inline'["']/u.test(text)) {
     errors.push(`${webCspPath}: runtime-generated SPA style elements must remain supported`);
   }
   if (!text.includes('cspMetaFromHeader') || !text.includes('frame-ancestors')) {
@@ -237,10 +237,10 @@ function assertNoLocalCspStringLiterals() {
 }
 
 function assertCspReporting() {
-  const routes = readText('apps/account-service/src/identity.http.routes.rs');
-  const handler = readText('apps/account-service/src/identity.http.routes.csp_report.rs');
+  const routes = readText('apps/identity-service/src/identity.http.routes.rs');
+  const handler = readText('apps/identity-service/src/identity.http.routes.csp_report.rs');
   if (!routes.includes('/csp-report') || !routes.includes('csp_report_handler')) {
-    errors.push('apps/account-service/src/identity.http.routes.rs: /csp-report route missing');
+    errors.push('apps/identity-service/src/identity.http.routes.rs: /csp-report route missing');
   }
   for (const field of [
     'blocked-uri',
@@ -249,7 +249,7 @@ function assertCspReporting() {
     'effective-directive',
   ]) {
     if (!handler.includes(field)) {
-      errors.push(`apps/account-service/src/identity.http.routes.csp_report.rs: missing ${field}`);
+      errors.push(`apps/identity-service/src/identity.http.routes.csp_report.rs: missing ${field}`);
     }
   }
 }

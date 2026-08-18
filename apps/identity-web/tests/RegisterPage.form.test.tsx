@@ -35,7 +35,6 @@ describe('RegisterForm', () => {
     error: null,
     handleEmailChange: () => {},
     handleSubmit: async () => {},
-    handleUsernameChange: () => {},
     legalDocumentsAccepted: false,
     loading: false,
     marketingEmailsAccepted: false,
@@ -44,10 +43,6 @@ describe('RegisterForm', () => {
     setLegalDocumentsAccepted: () => {},
     setMarketingEmailsAccepted: () => {},
     setPassword: () => {},
-    username: '',
-    usernameTaken: false,
-    usernameAvailability: 'idle' as const,
-    usernameValid: false,
   };
 
   it('collects minimal registration data with email as the credential identifier', () => {
@@ -61,11 +56,9 @@ describe('RegisterForm', () => {
     expect(markup).toContain('autoComplete="on"');
     expect(markup).toContain('name="email"');
     expect(markup).toContain('autoComplete="username"');
-    expect(markup).toContain('name="nickname"');
-    expect(markup).toContain('autoComplete="nickname"');
+    expect(markup).not.toContain('name="nickname"');
     expect(markup).toContain('name="password"');
     expect(markup).toContain('autoComplete="new-password"');
-    expect(markup).toContain('maxLength="100"');
     expect(markup).toContain('minLength="8"');
     expect(markup).not.toContain('caractères max.');
     expect(markup).toContain('Utilisez au moins 8 caractères.');

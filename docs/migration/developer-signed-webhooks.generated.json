@@ -9,8 +9,8 @@
       "apps/developer-service/src/developer.http.routes.rs",
       "apps/developer-service/src/developer.webhooks.signature.rs",
       "apps/developer-service/src/developer.grpc.webhooks.rs",
-      "apps/account-service/migrations/0011_developer_portal.sql",
-      "apps/account-service/migrations/0008_developer_console.sql",
+      "apps/identity-service/migrations/0011_developer_portal.sql",
+      "apps/identity-service/migrations/0008_developer_console.sql",
       "apps/developer-service/src/developer.grpc.webhooks.contract_tests.rs",
       "apps/console-web/src/developer.api.ts",
       "apps/console-web/src/developer.schemas.ts",
@@ -158,14 +158,14 @@
     {
       "id": "portal-replay-index",
       "description": "Portal schema prevents duplicate replays per original delivery",
-      "path": "apps/account-service/migrations/0011_developer_portal.sql",
+      "path": "apps/identity-service/migrations/0011_developer_portal.sql",
       "status": "passed",
       "pattern": "idx_developer_webhook_deliveries_replay_once"
     },
     {
       "id": "console-replay-index",
       "description": "Console schema prevents duplicate replays per original delivery",
-      "path": "apps/account-service/migrations/0008_developer_console.sql",
+      "path": "apps/identity-service/migrations/0008_developer_console.sql",
       "status": "passed",
       "pattern": "idx_developer_webhook_deliveries_replay_once"
     },

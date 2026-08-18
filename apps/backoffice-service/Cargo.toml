@@ -11,9 +11,11 @@ base64.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
 nvbes-core = { path = "../../libs/rust/core" }
+nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 metrics.workspace = true
 prost = "0.14.4"
+prost-types = "0.14"
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

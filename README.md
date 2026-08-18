@@ -55,11 +55,15 @@ Prerequis:
 Commandes:
 
 ```bash
-cp .env.example .env
+pnpm env:sync
 pnpm install
 pnpm db:migrate
 pnpm dev
 ```
+
+`.env.example` est le contrat versionné et documenté. La commande crée ou
+réaligne le `.env` local sans écraser ses valeurs existantes; `pnpm env:check`
+détecte ensuite les variables manquantes, inconnues ou dupliquées.
 
 Commandes utiles:
 

@@ -3,10 +3,23 @@
   "projectType": "application",
   "root": "apps/billing-worker",
   "sourceRoot": "apps/billing-worker/src",
-  "tags": [
-    "scope:oss",
-    "type:app",
-    "domain:billing",
-    "layer:app"
-  ]
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "cargo check --locked --package nvbes-billing-worker --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo test --locked --package nvbes-billing-worker",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:cloud", "type:app", "domain:billing", "layer:app"]
 }

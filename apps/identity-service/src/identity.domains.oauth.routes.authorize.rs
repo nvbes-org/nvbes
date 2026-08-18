@@ -16,6 +16,9 @@ use std::time::Duration;
 mod params;
 #[path = "identity.domains.oauth.routes.authorize.response.rs"]
 mod response;
+#[cfg(test)]
+#[path = "identity.domains.oauth.routes.authorize.tests.rs"]
+mod tests;
 
 use params::build_params_from_map;
 use response::{oauth_error_redirect, oauth_success_redirect};
@@ -27,7 +30,7 @@ pub fn router() -> Router<AppState> {
 #[derive(Deserialize, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizeRequest {
-    pub response_type: String,
+    pub response_type: Option<String>,
     pub client_id: String,
     pub request_uri: Option<String>,
     #[serde(default)]
@@ -39,7 +42,7 @@ pub struct AuthorizeRequest {
     path = "/oauth/authorize",
     tag = "oauth",
     params(
-        ("response_type" = String, Query, description = "Response type"),
+        ("response_type" = Option<String>, Query, description = "Legacy response type; resolved from the pushed authorization request"),
         ("client_id" = String, Query, description = "OAuth client ID"),
         ("request_uri" = Option<String>, Query, description = "One-time PAR request_uri (RFC 9126)"),
         ("authuser" = Option<String>, Query, description = "Auth user index"),
@@ -57,7 +60,11 @@ pub(crate) async fn authorize(
     headers: HeaderMap,
     Query(request): Query<AuthorizeRequest>,
 ) -> Result<Response, AppError> {
-    if request.response_type != "code" {
+    if request
+        .response_type
+        .as_deref()
+        .is_some_and(|response_type| response_type != "code")
+    {
         return Err(AppError::bad_request(
             "invalid_response_type",
             "Only 'code' is supported",

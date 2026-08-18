@@ -5,8 +5,6 @@ use axum::{
     extract::{Extension, Path, Query, State},
 };
 
-#[path = "identity.domains.auth.routes.session_mgmt.preferences.rs"]
-mod preferences;
 #[path = "identity.domains.auth.routes.session_mgmt.router.rs"]
 mod router_impl;
 
@@ -16,14 +14,12 @@ pub mod accounts;
 pub mod devices;
 #[path = "identity.domains.auth.routes.session_mgmt.emails.rs"]
 pub mod emails;
-#[path = "identity.domains.auth.routes.session_mgmt.export.rs"]
-pub mod export;
-#[path = "identity.domains.auth.routes.session_mgmt.profile.rs"]
-pub mod profile;
 #[path = "identity.domains.auth.routes.session_mgmt.sessions.rs"]
 pub mod sessions;
 #[path = "identity.domains.auth.routes.session_mgmt.step_up.rs"]
 pub mod step_up;
+#[path = "identity.domains.auth.routes.session_mgmt.switch_workspace.rs"]
+pub mod switch_workspace;
 pub fn router(state: &AppState) -> Router<AppState> {
     router_impl::router(state)
 }
@@ -184,112 +180,6 @@ pub(crate) async fn me_email_delete(
     crate::http::error::AppError,
 > {
     emails::me_email_delete(State(state), Extension(auth), Path(email_id)).await
-}
-
-#[utoipa::path(
-    get,
-    path = "/auth/me",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Current user info", body = crate::domains::auth::types::MeResult),
-        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn me(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<crate::domains::auth::types::MeResult>, crate::http::error::AppError> {
-    profile::me(State(state), Extension(auth)).await
-}
-
-#[utoipa::path(
-    post,
-    path = "/auth/me/export",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Data export request recorded", body = crate::domains::auth::types::DataExportResult),
-        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
-        (status = 429, description = "Rate limited", body = nvbes_core::http::error::ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn me_export(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<crate::domains::auth::types::DataExportResult>, crate::http::error::AppError> {
-    export::me_export(State(state), Extension(auth)).await
-}
-
-#[utoipa::path(
-    get,
-    path = "/auth/me/export",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Prepared personal data export", content_type = "application/json"),
-        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
-        (status = 404, description = "No prepared export available", body = nvbes_core::http::error::ErrorEnvelope),
-        (status = 429, description = "Rate limited", body = nvbes_core::http::error::ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn me_export_download(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<axum::response::Response, crate::http::error::AppError> {
-    export::me_export_download(State(state), Extension(auth)).await
-}
-
-#[utoipa::path(
-    post,
-    path = "/auth/me/delete",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Account deleted successfully", body = crate::domains::auth::types::DeleteAccountResult),
-        (status = 401, description = "Unauthorized", body = nvbes_core::http::error::ErrorEnvelope),
-        (status = 429, description = "Rate limited", body = nvbes_core::http::error::ErrorEnvelope),
-    ),
-)]
-pub(crate) async fn me_delete(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<crate::domains::auth::types::DeleteAccountResult>, crate::http::error::AppError> {
-    profile::me_delete(State(state), Extension(auth)).await
-}
-
-pub(crate) async fn me_update(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Json(request): Json<crate::domains::auth::types::UpdateProfileInput>,
-) -> Result<Json<crate::domains::auth::types::UpdateProfileResult>, crate::http::error::AppError> {
-    preferences::me_update(State(state), Extension(auth), Json(request)).await
-}
-
-pub(crate) async fn me_preferences_get(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<crate::domains::auth::types::UserPreferences>, crate::http::error::AppError> {
-    preferences::me_preferences_get(State(state), Extension(auth)).await
-}
-
-pub(crate) async fn me_preferences_put(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Json(request): Json<crate::domains::auth::types::UserPreferences>,
-) -> Result<Json<crate::domains::auth::types::UserPreferences>, crate::http::error::AppError> {
-    preferences::me_preferences_put(State(state), Extension(auth), Json(request)).await
-}
-
-pub(crate) async fn me_notifications_get(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-) -> Result<Json<crate::domains::auth::types::UserNotifications>, crate::http::error::AppError> {
-    preferences::me_notifications_get(State(state), Extension(auth)).await
-}
-
-pub(crate) async fn me_notifications_put(
-    State(state): State<AppState>,
-    Extension(auth): Extension<AuthContext>,
-    Json(request): Json<crate::domains::auth::types::UserNotifications>,
-) -> Result<Json<crate::domains::auth::types::UserNotifications>, crate::http::error::AppError> {
-    preferences::me_notifications_put(State(state), Extension(auth), Json(request)).await
 }
 
 #[utoipa::path(

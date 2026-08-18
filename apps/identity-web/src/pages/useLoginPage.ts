@@ -55,8 +55,13 @@ export function useLoginPage() {
       return;
     }
 
-    void navigate({ to: '/security' });
-  }, [navigate, returnTo]);
+    const accountBaseUrl = import.meta.env.VITE_ACCOUNT_WEB_BASE_URL?.trim();
+    if (!accountBaseUrl) {
+      state.setError('VITE_ACCOUNT_WEB_BASE_URL is required to leave Identity after login.');
+      return;
+    }
+    window.location.assign(new URL('/profile', accountBaseUrl).toString());
+  }, [returnTo, state.setError]);
 
   const handleHostedDecision = useCallback(
     (decision: HostedLoginDecision) => {
@@ -118,6 +123,7 @@ export function useLoginPage() {
     navigateToAccount: navigateToIdentity,
     authorizeCurrentOAuth,
   });
+  const mfaWebauthnAbortRef = useRef<AbortController | null>(null);
   const actions = useLoginPageActions({
     navigate,
     oauthRequest,
@@ -132,6 +138,7 @@ export function useLoginPage() {
     mfaMethod: state.mfaMethod,
     totpCode: state.totpCode,
     recoveryCode: state.recoveryCode,
+    mfaWebauthnAbortRef,
     decoyRef,
     mutations: {
       loginIdentifierMutation,
@@ -160,6 +167,16 @@ export function useLoginPage() {
       }
     },
     [state.setEmail],
+  );
+  const setMfaMethod = useCallback(
+    (method: import('./LoginPage.mfa').MfaMethod | null) => {
+      if (method !== 'webauthn') {
+        mfaWebauthnAbortRef.current?.abort();
+        mfaWebauthnAbortRef.current = null;
+      }
+      state.setMfaMethod(method);
+    },
+    [state.setMfaMethod],
   );
   const conditionalWebAuthnAbortRef = useRef<AbortController | null>(null);
 
@@ -251,7 +268,7 @@ export function useLoginPage() {
     setEmail,
     setError: state.setError,
     setIdentifierSubmitting: state.setIdentifierSubmitting,
-    setMfaMethod: state.setMfaMethod,
+    setMfaMethod,
     setPassword: state.setPassword,
     setRecoveryCode: state.setRecoveryCode,
     setTotpCode: state.setTotpCode,

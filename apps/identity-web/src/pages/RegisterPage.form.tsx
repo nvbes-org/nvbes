@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router';
 import { CheckIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { AuthFooterLink } from '@/components/AuthFooterLink';
@@ -8,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
+import { legalDocumentUrl } from '@/identity.account-links';
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../identity.password.policy';
-import { MAX_USERNAME_LENGTH } from '../identity.username.policy';
 import { registrationAvailabilityMessage, ValidatedInput } from './RegisterPage.field';
 import type { useRegisterPage } from './useRegisterPage';
 
@@ -26,7 +25,6 @@ export function RegisterForm({
   error,
   handleEmailChange,
   handleSubmit,
-  handleUsernameChange,
   legalDocumentsAccepted,
   loginTo = '/login',
   loading,
@@ -36,38 +34,24 @@ export function RegisterForm({
   setLegalDocumentsAccepted,
   setMarketingEmailsAccepted,
   setPassword,
-  username,
-  usernameTaken,
-  usernameAvailability,
-  usernameValid,
 }: RegisterFormProps) {
   const emailInputRef = useRef<HTMLInputElement>(null);
-  const usernameInputRef = useRef<HTMLInputElement>(null);
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
-  const [usernameTouched, setUsernameTouched] = useState(false);
 
   const emailInvalid =
     emailAlreadyExists || (emailTouched && (!emailValid || emailAvailability === 'unavailable'));
   const emailCorrect =
     emailTouched && emailValid && !emailAlreadyExists && emailAvailability === 'available';
   const emailChecking = emailTouched && emailValid && emailAvailability === 'checking';
-  const usernameInvalid =
-    usernameTaken ||
-    (usernameTouched && (!usernameValid || usernameAvailability === 'unavailable'));
-  const usernameCorrect =
-    usernameTouched && usernameValid && !usernameTaken && usernameAvailability === 'available';
-  const usernameChecking = usernameTouched && usernameValid && usernameAvailability === 'checking';
   const passwordInvalid = passwordTouched && !passwordValid;
   const passwordCorrect = passwordTouched && passwordValid;
 
   useEffect(() => {
     if (emailAlreadyExists) {
       emailInputRef.current?.focus();
-    } else if (usernameTaken) {
-      usernameInputRef.current?.focus();
     }
-  }, [emailAlreadyExists, usernameTaken]);
+  }, [emailAlreadyExists]);
 
   return (
     <form onSubmit={handleSubmit} autoComplete="on" className="flex flex-col gap-4">
@@ -102,43 +86,6 @@ export function RegisterForm({
                   invalidMessage: 'Saisissez une adresse email valide.',
                   invalid: emailInvalid,
                   touched: emailTouched,
-                })
-          }
-        />
-      </Field>
-
-      <Field>
-        <FieldLabel htmlFor="register-username">
-          Nom d&apos;utilisateur <span className="text-destructive">*</span>
-        </FieldLabel>
-        <ValidatedInput
-          id="register-username"
-          name="nickname"
-          inputRef={usernameInputRef}
-          type="text"
-          placeholder="username"
-          value={username}
-          onChange={(event) => handleUsernameChange(event.target.value)}
-          onBlur={() => setUsernameTouched(true)}
-          required
-          autoComplete="nickname"
-          maxLength={MAX_USERNAME_LENGTH}
-          spellCheck={false}
-          className="h-11 rounded-xl px-3.5"
-          correct={usernameCorrect}
-          invalid={usernameInvalid}
-          checking={usernameChecking}
-          message={
-            usernameTaken
-              ? "Ce nom d'utilisateur est déjà pris."
-              : registrationAvailabilityMessage({
-                  availability: usernameAvailability,
-                  availableMessage: "Nom d'utilisateur valide.",
-                  unavailableMessage: "Ce nom d'utilisateur est déjà pris.",
-                  checkingMessage: "Vérification du nom d'utilisateur...",
-                  invalidMessage: "Saisissez un nom d'utilisateur.",
-                  invalid: usernameInvalid,
-                  touched: usernameTouched,
                 })
           }
         />
@@ -198,9 +145,7 @@ export function RegisterForm({
         </ConsentCheckbox>
       </div>
 
-      {error && !emailAlreadyExists && !usernameTaken && (
-        <FeedbackAlert tone="error">{error}</FeedbackAlert>
-      )}
+      {error && !emailAlreadyExists && <FeedbackAlert tone="error">{error}</FeedbackAlert>}
 
       <div className="mt-1 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
         <AuthFooterLink prompt="Déjà un compte ?" to={loginTo} label="Se connecter" />
@@ -257,8 +202,8 @@ function ConsentCheckbox({
 
 function LegalLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="font-medium text-primary hover:underline">
+    <a href={legalDocumentUrl(to)} className="font-medium text-primary hover:underline">
       {children}
-    </Link>
+    </a>
   );
 }

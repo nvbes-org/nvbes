@@ -60,14 +60,12 @@ pub async fn add_secondary(
     principal_id: Uuid,
     input: AddSecondaryEmailInput,
 ) -> Result<AddSecondaryEmailResult, AppError> {
-    crate::email::templates::ensure_delivery_configured(config)?;
-
     let verification_token = generate_random_token();
     let mut tx = db.begin().await?;
     let email = db::emails::insert_secondary_email(&mut tx, principal_id, &input.email).await?;
     tx.commit().await?;
 
-    let verification_created_at = issue_secondary_verification_token(
+    let verification = issue_secondary_verification_token(
         redis,
         config,
         principal_id,
@@ -76,14 +74,23 @@ pub async fn add_secondary(
         &verification_token,
     )
     .await?;
+    let display_name = db::fetch_user_record(db, principal_id).await?.display_name;
 
-    enqueue_secondary_verification_email(db, redis, config, &email.email, &verification_token)
-        .await?;
+    enqueue_secondary_verification_email(
+        redis,
+        config,
+        principal_id,
+        &email.email,
+        &verification_token,
+        verification.expires_at,
+        &display_name,
+    )
+    .await?;
     notifications::notify_email_added(db, redis, principal_id, &email.email).await?;
     Ok(AddSecondaryEmailResult {
         email,
         verification_resend_available_at: verification_resend_available_at(
-            verification_created_at,
+            verification.created_at,
             config.auth_verification_resend_cooldown_seconds,
         ),
     })
@@ -96,8 +103,6 @@ pub async fn resend_secondary_verification(
     principal_id: Uuid,
     email_address_id: Uuid,
 ) -> Result<ResendSecondaryEmailVerificationResult, AppError> {
-    crate::email::templates::ensure_delivery_configured(config)?;
-
     let mut tx = db.begin().await?;
     let email =
         db::emails::fetch_email_address_for_update(&mut tx, principal_id, email_address_id).await?;
@@ -116,7 +121,7 @@ pub async fn resend_secondary_verification(
     tx.commit().await?;
 
     let verification_token = generate_random_token();
-    let verification_created_at = issue_secondary_verification_token(
+    let verification = issue_secondary_verification_token(
         redis,
         config,
         principal_id,
@@ -125,12 +130,21 @@ pub async fn resend_secondary_verification(
         &verification_token,
     )
     .await?;
-    enqueue_secondary_verification_email(db, redis, config, &email.email, &verification_token)
-        .await?;
+    let display_name = db::fetch_user_record(db, principal_id).await?.display_name;
+    enqueue_secondary_verification_email(
+        redis,
+        config,
+        principal_id,
+        &email.email,
+        &verification_token,
+        verification.expires_at,
+        &display_name,
+    )
+    .await?;
     Ok(ResendSecondaryEmailVerificationResult {
         email,
         verification_resend_available_at: verification_resend_available_at(
-            verification_created_at,
+            verification.created_at,
             config.auth_verification_resend_cooldown_seconds,
         ),
     })
@@ -204,7 +218,7 @@ async fn issue_secondary_verification_token(
     email_address_id: Uuid,
     email: &str,
     verification_token: &str,
-) -> Result<DateTime<Utc>, AppError> {
+) -> Result<super::email_verification::VerificationIssue, AppError> {
     let now = Utc::now();
     let expires_at = now + ChronoDuration::hours(config.auth_verification_ttl_hours);
     nvbes_redis::email_verification::store_email_verification_token(
@@ -222,30 +236,34 @@ async fn issue_secondary_verification_token(
     )
     .await
     .map_err(|err| AppError::internal("email_verification_token_store_failed", err.to_string()))?;
-    Ok(now)
+    Ok(super::email_verification::VerificationIssue {
+        created_at: now,
+        expires_at,
+    })
 }
 
 async fn enqueue_secondary_verification_email(
-    db: &PgPool,
     redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
+    principal_id: Uuid,
     email: &str,
     token: &str,
+    expires_at: DateTime<Utc>,
+    display_name: &str,
 ) -> Result<(), AppError> {
-    let message = crate::email::templates::verification_email(config, email, email, token)?;
-    crate::email::jobs::enqueue_email_job_tx(
-        db,
+    crate::email::commands::enqueue(
         redis,
-        crate::email::jobs::EmailSendPayload {
-            to_email: email.to_string(),
-            to_name: None,
-            subject: message.subject,
-            html_body: message.html_body.unwrap_or_default(),
-            text_body: message.text_body,
-            business_type: "verification".to_string(),
+        email.to_string(),
+        Some(display_name.to_string()),
+        format!("secondary-verify:{principal_id}:{}", token_hash(token)),
+        nvbes_email::EmailTemplate::EmailVerificationV1 {
+            user_name: super::email_recipient::recipient_name(Some(display_name)),
+            verification_url: crate::email::commands::verification_url(config, token),
+            credential_expires_at: expires_at,
+            timezone: "UTC".to_string(),
         },
-        &format!("secondary-verify:{}:{}", email, token_hash(token)),
+        expires_at,
+        Some(principal_id),
     )
     .await
-    .map_err(AppError::from)
 }

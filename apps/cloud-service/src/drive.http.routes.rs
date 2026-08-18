@@ -8,6 +8,8 @@ use axum::{
 };
 use serde::Serialize;
 
+use super::account_closure;
+use super::account_export;
 use super::observability;
 use super::openapi;
 
@@ -53,6 +55,8 @@ pub fn router(state: &crate::app::AppState) -> Router<crate::app::AppState> {
 
     Router::new()
         .route("/health", get(health))
+        .merge(account_closure::router())
+        .merge(account_export::router())
         .merge(private_observability_routes)
         .merge(public_report_routes)
         .merge(docs)

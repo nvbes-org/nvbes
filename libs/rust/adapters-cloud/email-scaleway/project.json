@@ -2,5 +2,23 @@
   "name": "email-scaleway",
   "projectType": "library",
   "root": "libs/rust/adapters-cloud/email-scaleway",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "cargo check --locked --package nvbes-email-scaleway --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo test --locked --package nvbes-email-scaleway",
+        "cwd": "."
+      }
+    }
+  },
   "tags": ["scope:cloud", "type:lib", "domain:shared", "layer:adapter"]
 }

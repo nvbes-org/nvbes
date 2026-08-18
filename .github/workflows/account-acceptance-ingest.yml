@@ -22,18 +22,11 @@ jobs:
     environment:
       name: account-acceptance
     env:
-      ACCOUNT_ACCEPTANCE_EVIDENCE_FILE: ${{ runner.temp }}/account-acceptance-source/acceptance-evidence.json
-      ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE: ${{ runner.temp }}/account-acceptance-source/acceptance-evidence.sig
       ACCOUNT_ACCEPTANCE_TRUSTED_KEY_ID: ${{ vars.ACCOUNT_ACCEPTANCE_TRUSTED_KEY_ID }}
-      ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/account-acceptance-trust/acceptance-public-key.pem
       ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_SHA256: ${{ vars.ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_SHA256 }}
       ACCOUNT_DEPLOYMENT_EXPECTED_COMPONENT_UIDS: ${{ vars.ACCOUNT_DEPLOYMENT_EXPECTED_COMPONENT_UIDS }}
       ACCOUNT_DEPLOYMENT_TRUSTED_KEY_ID: ${{ vars.ACCOUNT_DEPLOYMENT_TRUSTED_KEY_ID }}
-      ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/account-acceptance-trust/deployment-public-key.pem
       ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_SHA256: ${{ vars.ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_SHA256 }}
-      ACCOUNT_INGEST_EVIDENCE_ROOT: ${{ runner.temp }}/account-acceptance-source
-      ACCOUNT_INGEST_PUBLICATION_ROOT: ${{ runner.temp }}/account-acceptance-publication
-      ACCOUNT_INGEST_TRUST_ROOT: ${{ runner.temp }}/account-acceptance-trust
       CI: 'true'
       NVBES_RELEASE_REF: ${{ github.ref }}
       NVBES_RELEASE_REF_NAME: ${{ github.ref_name }}
@@ -45,6 +38,17 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           ref: ${{ github.ref }}
+      - name: Configure ephemeral acceptance paths
+        run: |
+          {
+            echo "ACCOUNT_ACCEPTANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-acceptance-source/acceptance-evidence.json"
+            echo "ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE=$RUNNER_TEMP/account-acceptance-source/acceptance-evidence.sig"
+            echo "ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-acceptance-trust/acceptance-public-key.pem"
+            echo "ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-acceptance-trust/deployment-public-key.pem"
+            echo "ACCOUNT_INGEST_EVIDENCE_ROOT=$RUNNER_TEMP/account-acceptance-source"
+            echo "ACCOUNT_INGEST_PUBLICATION_ROOT=$RUNNER_TEMP/account-acceptance-publication"
+            echo "ACCOUNT_INGEST_TRUST_ROOT=$RUNNER_TEMP/account-acceptance-trust"
+          } >> "$GITHUB_ENV"
       - name: Validate immutable Account RC tag
         env:
           GH_API_URL: ${{ github.api_url }}

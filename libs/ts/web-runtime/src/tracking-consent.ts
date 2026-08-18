@@ -36,7 +36,11 @@ export type TrackingConsentClient = {
   isAuthenticated?: () => boolean | Promise<boolean>;
 };
 
-const BACKEND_SYNC_SOURCE = 'account-web:sync:backend';
+export type TrackingConsentSyncOptions = {
+  sourceOfTruth?: 'newest' | 'backend';
+};
+
+const BACKEND_SYNC_SOURCE = 'tracking-consent:sync:backend';
 export const TRACKING_CONSENT_DOCUMENT_VERSION = 'cookie-notice-2026-07-20';
 
 function activeVersionsByConsentType(consents: BackendConsent[]): Map<string, Set<string>> {
@@ -237,7 +241,10 @@ function isSkippableConsentSyncError(error: unknown): boolean {
   return error instanceof HttpError && (error.status === 401 || error.status === 403);
 }
 
-async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<void> {
+async function reconcileTrackingConsent(
+  client: TrackingConsentClient,
+  options: TrackingConsentSyncOptions = {},
+): Promise<void> {
   if (typeof client.isAuthenticated === 'function' && !(await client.isAuthenticated())) {
     return;
   }
@@ -260,6 +267,13 @@ async function reconcileTrackingConsent(client: TrackingConsentClient): Promise<
   const storedValue = readTrackingConsentStoredValue();
   const localConsent = getTrackingConsent();
   const localChangedAt = storedValue ? Date.parse(storedValue.savedAt) : Number.NaN;
+
+  if (options.sourceOfTruth === 'backend') {
+    const persistedAt = new Date(backendChangedAt ?? Date.now());
+    persistTrackingConsent(backendConsent, BACKEND_SYNC_SOURCE, persistedAt);
+    dispatchTrackingConsentChange(backendConsent, BACKEND_SYNC_SOURCE);
+    return;
+  }
 
   if (
     backendChangedAt !== null &&
@@ -316,8 +330,16 @@ export function createTrackingConsentApi({
     })();
   };
 
-  const syncTrackingConsent = async () => {
-    await reconcileTrackingConsent(identityClient);
+  const prepareTrackingConsentSubjectSwitch = (
+    source = `${defaultSource}:subject-switch`,
+  ): void => {
+    const suspendedConsent = cloneConsent(DECLINE_ALL_CONSENT);
+    persistTrackingConsent(suspendedConsent, source);
+    dispatchTrackingConsentChange(suspendedConsent, source);
+  };
+
+  const syncTrackingConsent = async (options?: TrackingConsentSyncOptions) => {
+    await reconcileTrackingConsent(identityClient, options);
   };
 
   return {
@@ -327,6 +349,7 @@ export function createTrackingConsentApi({
     isVendorAccepted,
     isCategoryAccepted,
     setTrackingConsent,
+    prepareTrackingConsentSubjectSwitch,
     syncTrackingConsent,
   };
 }

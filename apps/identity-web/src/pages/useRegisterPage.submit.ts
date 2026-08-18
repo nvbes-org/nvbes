@@ -6,11 +6,10 @@ import { resolvePowChallenge } from '../identity.auth.pow';
 import { identityServiceBaseUrl } from '../identity.http';
 import { savePendingOAuthAuthorizeRequest } from '../identity.oauth';
 import { trackEvent } from '../identity.analytics';
-import { isEmailAlreadyExistsError, isUsernameTakenError } from './RegisterPage.errors';
+import { isEmailAlreadyExistsError } from './RegisterPage.errors';
 
 interface RegisterSubmitArgs {
   oauthRequest: ReturnType<typeof import('../identity.oauth').readOAuthAuthorizeRequest>;
-  username: string;
   email: string;
   password: string;
   canSubmit: boolean;
@@ -25,7 +24,6 @@ interface RegisterSubmitArgs {
 
 export function useRegisterPageSubmit({
   oauthRequest,
-  username,
   email,
   password,
   canSubmit,
@@ -51,7 +49,6 @@ export function useRegisterPageSubmit({
       const result = await registerMutation.mutateAsync({
         data: {
           email,
-          username: username.trim(),
           password,
           legal_documents_accepted: legalDocumentsAccepted,
           marketing_emails_accepted: marketingEmailsAccepted,
@@ -63,9 +60,8 @@ export function useRegisterPageSubmit({
         savePendingOAuthAuthorizeRequest(oauthRequest);
       }
 
-      const accountName = (result.user?.username ?? username).trim() || null;
       onSuccess({
-        accountName,
+        accountName: result.user?.display_name?.trim() || null,
         email,
         resendAvailableAt: result.verification_resend_available_at,
       });
@@ -82,6 +78,5 @@ export function useRegisterPageSubmit({
     handleSubmit,
     loading: registerMutation.isPending,
     resetError: registerMutation.reset,
-    usernameTaken: isUsernameTakenError(registerMutation.error),
   };
 }

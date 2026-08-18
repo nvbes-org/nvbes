@@ -5,35 +5,124 @@ on:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
-      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+      - 'contracts/protobuf/nvbes/email/**'
+      - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
+      - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/environments/email-production/**'
+      - 'infrastructure/stacks/email/production/**'
+      - 'tools/ci/email-deployment-contract.test.mjs'
+      - '.github/workflows/deploy-email.yml'
       - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
-      - 'infrastructure/modules/cloudflare-email-pipeline/**'
+      - 'contracts/protobuf/nvbes/email/**'
+      - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
+      - 'libs/rust/adapters-cloud/email-scaleway/**'
+      - 'infrastructure/environments/email-production/**'
+      - 'infrastructure/stacks/email/production/**'
+      - 'tools/ci/email-deployment-contract.test.mjs'
+      - '.github/workflows/deploy-email.yml'
+      - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: ci-email-worker-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
 jobs:
   test-email-worker:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_email_test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nvbes_email_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_email_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.17.0 --activate
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: TypeScript Typecheck email-worker
-        run: pnpm --filter email-worker check
-      - name: Vitest Unit & Integration Tests email-worker
-        run: pnpm --filter email-worker test
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-email-worker.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: email-worker
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Validate email deployment contract
+        run: node --test tools/ci/email-deployment-contract.test.mjs
+      - name: Check email Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/environments/email-production
+      - name: Initialize email Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/environments/email-production init
+          -backend=false
+          -input=false
+      - name: Validate isolated email Terraform stack
+        run: terraform -chdir=infrastructure/environments/email-production validate
+      - name: Check email stacks Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/stacks/email/production
+      - name: Initialize email stacks Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/stacks/email/production init
+          -backend=false
+          -input=false
+      - name: Validate email Terraform stack
+        run: terraform -chdir=infrastructure/stacks/email/production validate
+      - name: Test email Terraform deployment and rotation
+        run: >-
+          PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
+          terraform -chdir=infrastructure/stacks/email/production test
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - name: Test email contract and runtime
+        run: >-
+          cargo test --locked
+          --package nvbes-email
+          --package nvbes-email-worker
+          --package nvbes-email-scaleway
+      - name: Check email runtime targets
+        run: >-
+          cargo check --locked
+          --package nvbes-email-worker
+          --package nvbes-email-scaleway
+          --all-targets
+      - name: Test email database invariants
+        run: >-
+          cargo test --locked
+          --package nvbes-email-worker
+          --features database-tests
+      - name: Validate image contract
+        run: node --test apps/email-worker/tests/container-contract.test.mjs

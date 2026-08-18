@@ -35,6 +35,40 @@ fn identity_browser_operation_accepts_browser_session() {
 }
 
 #[test]
+fn hosted_oauth_approval_accepts_browser_session() {
+    let auth = auth_context(CredentialSource::BrowserSession, "");
+
+    assert!(
+        validate_account_access(
+            &auth,
+            AccountAccess::BrowserSessionOrOAuthScope(OAUTH_APPROVAL_SCOPE),
+            "nvbes-account-service"
+        )
+        .expect("hosted OAuth approval should accept its browser session")
+        .is_none()
+    );
+}
+
+#[test]
+fn hosted_oauth_approval_accepts_scoped_oauth_token() {
+    let auth = oauth_auth_context(
+        Some("customer-app"),
+        "nvbes-account-service",
+        OAUTH_APPROVAL_SCOPE,
+    );
+
+    let check = validate_account_access(
+        &auth,
+        AccountAccess::BrowserSessionOrOAuthScope(OAUTH_APPROVAL_SCOPE),
+        "nvbes-account-service",
+    )
+    .expect("hosted OAuth approval should accept a scoped OAuth token")
+    .expect("OAuth token should require a current policy check");
+
+    assert_eq!(check.required_scope, OAUTH_APPROVAL_SCOPE);
+}
+
+#[test]
 fn minimal_oauth_token_cannot_write_account_email() {
     let auth = oauth_auth_context(
         Some("customer-app"),

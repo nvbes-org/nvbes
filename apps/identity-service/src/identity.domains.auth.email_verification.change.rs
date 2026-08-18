@@ -15,6 +15,7 @@ pub async fn change_verification_email(
     config: &AppConfig,
     registration_enrollment_token: &str,
     email: &str,
+    timezone: &str,
 ) -> Result<ResendVerificationResult, AppError> {
     let email = normalize_email(email);
     validate_email(&email)?;
@@ -28,13 +29,13 @@ pub async fn change_verification_email(
         SELECT
           u.principal_id,
           u.email,
-          u.firstname,
-          u.lastname,
-          u.username,
+          profile.display_name,
           u.email_verified_at
         FROM users u
+        LEFT JOIN identity_oidc_profile_claims profile
+          ON profile.principal_id = u.principal_id
         WHERE u.principal_id = $1
-        FOR UPDATE
+        FOR UPDATE OF u
         "#,
     )
     .bind(principal_id)
@@ -53,19 +54,14 @@ pub async fn change_verification_email(
     let current_email = row.get::<String, _>("email");
     if current_email.trim().eq_ignore_ascii_case(&email) {
         tx.rollback().await?;
-        return resend_verification_email(db, redis, config, &email).await;
+        return resend_verification_email(db, redis, config, &email, timezone).await;
     }
 
     db::emails::change_unverified_primary_email(&mut tx, principal_id, &email).await?;
     registration_enrollment::consume_all_for_principal_tx(&mut tx, principal_id).await?;
 
-    let firstname: Option<String> = row.get("firstname");
-    let lastname: Option<String> = row.get("lastname");
-    let username: Option<String> = row.get("username");
-    let display_name = crate::domains::auth::types::derive_display_name(
-        firstname.as_deref(),
-        lastname.as_deref(),
-        username.as_deref(),
+    let display_name = super::email_recipient::recipient_name(
+        row.get::<Option<String>, _>("display_name").as_deref(),
     );
     let verification_token = generate_random_token();
 
@@ -78,7 +74,7 @@ pub async fn change_verification_email(
     .map_err(|err| {
         AppError::internal("email_verification_token_consume_failed", err.to_string())
     })?;
-    let verification_created_at = issue_verification_email_tx(
+    let verification = issue_verification_email_tx(
         redis,
         config,
         principal_id,
@@ -87,11 +83,22 @@ pub async fn change_verification_email(
         &verification_token,
     )
     .await?;
+    super::email_verification::enqueue_verification_email(
+        redis,
+        config,
+        principal_id,
+        &email,
+        &display_name,
+        &verification_token,
+        verification.expires_at,
+        timezone,
+    )
+    .await?;
     Ok(ResendVerificationResult {
         success: true,
         email_verified: false,
         verification_resend_available_at: Some(verification_resend_available_at(
-            verification_created_at,
+            verification.created_at,
             config.auth_verification_resend_cooldown_seconds,
         )),
     })

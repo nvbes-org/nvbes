@@ -4,10 +4,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+nvbes_env_caller_script="${BASH_SOURCE[1]:-workspace}"
+nvbes_env_caller_script="${nvbes_env_caller_script##*/}"
+nvbes_env_caller_script="${nvbes_env_caller_script%.sh}"
+nvbes_env_caller_script="${nvbes_env_caller_script#dev-}"
+nvbes_node_process_title="${NVBES_NODE_PROCESS_TITLE:-nvbes:$nvbes_env_caller_script}"
+
 # Load workspace-level environment variables for local dev and tests.
 # shellcheck disable=SC1091
 source "$ROOT_DIR/scripts/lib/workspace-env.sh"
-load_workspace_env
+load_workspace_env "$nvbes_node_process_title"
+unset nvbes_env_caller_script nvbes_node_process_title
 
 if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   export NVBES_REDIS_PASSWORD=""

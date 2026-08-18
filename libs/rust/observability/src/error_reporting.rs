@@ -13,6 +13,15 @@ pub struct ErrorReportingGuard {
     _guard: Option<sentry::ClientInitGuard>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct ErrorReportingConfig<'a> {
+    pub app_name: &'a str,
+    pub service_name: &'a str,
+    pub environment: &'a str,
+    pub dsn: Option<&'a str>,
+    pub traces_sample_rate: f32,
+}
+
 pub struct HttpServerErrorContext<'a> {
     pub method: &'a str,
     pub path_template: &'a str,
@@ -31,7 +40,17 @@ pub fn init_error_reporting_for_service(
     config: &AppConfig,
     service_name: &str,
 ) -> ErrorReportingGuard {
-    let Some(dsn) = config.sentry_dsn.as_deref() else {
+    init_error_reporting_with_config(ErrorReportingConfig {
+        app_name: &config.app_name,
+        service_name,
+        environment: &config.environment,
+        dsn: config.sentry_dsn.as_deref(),
+        traces_sample_rate: config.sentry_traces_sample_rate,
+    })
+}
+
+pub fn init_error_reporting_with_config(config: ErrorReportingConfig<'_>) -> ErrorReportingGuard {
+    let Some(dsn) = config.dsn else {
         ERROR_REPORTING_CONFIGURED.store(false, Ordering::Relaxed);
         tracing::info!("Sentry error reporting disabled: SENTRY_DSN is not set");
         return ErrorReportingGuard { _guard: None };
@@ -41,21 +60,24 @@ pub fn init_error_reporting_for_service(
         dsn,
         sentry::ClientOptions {
             release: release_name(),
-            environment: Some(config.environment.clone().into()),
-            traces_sample_rate: config.sentry_traces_sample_rate,
+            environment: Some(config.environment.to_owned().into()),
+            traces_sample_rate: config.traces_sample_rate,
             send_default_pii: false,
             ..Default::default()
         },
     ));
 
     sentry::configure_scope(|scope| {
-        scope.set_tag("app.name", &config.app_name);
-        scope.set_tag("service.name", service_name);
+        scope.set_tag("app.name", config.app_name);
+        scope.set_tag("service.name", config.service_name);
         scope.set_tag("runtime", "rust");
     });
 
     ERROR_REPORTING_CONFIGURED.store(true, Ordering::Relaxed);
-    tracing::info!(service_name, "Sentry error reporting enabled");
+    tracing::info!(
+        service_name = config.service_name,
+        "Sentry error reporting enabled"
+    );
     ErrorReportingGuard {
         _guard: Some(guard),
     }

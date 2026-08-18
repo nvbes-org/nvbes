@@ -21,7 +21,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/approve",
             account_access::protected_method(
                 state,
-                AccountAccess::OAuthScope(OAUTH_APPROVAL_SCOPE),
+                AccountAccess::BrowserSessionOrOAuthScope(OAUTH_APPROVAL_SCOPE),
                 post(device_approve),
             ),
         )
@@ -29,7 +29,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/deny",
             account_access::protected_method(
                 state,
-                AccountAccess::OAuthScope(OAUTH_APPROVAL_SCOPE),
+                AccountAccess::BrowserSessionOrOAuthScope(OAUTH_APPROVAL_SCOPE),
                 post(device_deny),
             ),
         )

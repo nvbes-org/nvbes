@@ -117,21 +117,7 @@ chmod 700 "$HOME/.gnupg" "$HOME/.ssh"
 
 configure_git
 
-if [ ! -f .env ]; then
-  cp .env.example .env
-  sed -i \
-    -e 's#NVBES_DATABASE_URL="postgres://postgres:postgres@localhost:5432/nvbes"#NVBES_DATABASE_URL="postgres://postgres:postgres@postgres:5432/nvbes"#' \
-    -e 's#NVBES_REDIS_URL="redis://localhost:6379"#NVBES_REDIS_URL="redis://:redis_dev@redis:6379"#' \
-    -e 's#NVBES_API_BASE_URL="http://localhost:4000"#NVBES_API_BASE_URL="http://localhost:4000"#' \
-    -e 's#NVBES_IDENTITY_API_BASE_URL="http://localhost:4000"#NVBES_IDENTITY_API_BASE_URL="http://localhost:4000"#' \
-    -e 's#NVBES_DRIVE_API_BASE_URL="http://localhost:4002"#NVBES_DRIVE_API_BASE_URL="http://localhost:4002"#' \
-    .env
-  {
-    printf '\n'
-    printf 'NVBES_DRIVE_DATABASE_URL="postgres://postgres:postgres@postgres:5432/nvbes_drive"\n'
-    printf 'VITE_DRIVE_API_PROXY_TARGET="http://localhost:4002"\n'
-  } >> .env
-fi
+node scripts/env.mjs sync
 
 if ! command -v pnpm >/dev/null 2>&1; then
   npm install -g pnpm@11.1.3

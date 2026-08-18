@@ -39,7 +39,7 @@
         "Identity"
       ],
       "status": "passed",
-      "source_tables": 41,
+      "source_tables": 65,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -91,7 +91,7 @@
         "Drive"
       ],
       "status": "passed",
-      "source_tables": 18,
+      "source_tables": 22,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -118,7 +118,7 @@
         "Billing/Usage"
       ],
       "status": "passed",
-      "source_tables": 97,
+      "source_tables": 99,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -145,7 +145,7 @@
         "Audit/Privacy"
       ],
       "status": "passed",
-      "source_tables": 5,
+      "source_tables": 8,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -171,7 +171,7 @@
         "Audit/Privacy"
       ],
       "status": "passed",
-      "source_tables": 5,
+      "source_tables": 8,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -197,7 +197,7 @@
         "Developer Platform"
       ],
       "status": "passed",
-      "source_tables": 19,
+      "source_tables": 20,
       "stages": {
         "export": "passed",
         "transform": "passed",
@@ -308,35 +308,35 @@
       "description": "Identity data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "41 source table(s), checksum, orphan_check, row_count"
+      "pattern": "65 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "identity-transform",
       "description": "Identity data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "41 source table(s), checksum, orphan_check, row_count"
+      "pattern": "65 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "identity-import",
       "description": "Identity data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "41 source table(s), checksum, orphan_check, row_count"
+      "pattern": "65 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "identity-reject_log",
       "description": "Identity data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "41 source table(s), checksum, orphan_check, row_count"
+      "pattern": "65 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "identity-checksum",
       "description": "Identity data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "41 source table(s), checksum, orphan_check, row_count"
+      "pattern": "65 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "workspace-export",
@@ -378,175 +378,175 @@
       "description": "Drive data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "18 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+      "pattern": "22 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
     },
     {
       "id": "drive-transform",
       "description": "Drive data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "18 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+      "pattern": "22 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
     },
     {
       "id": "drive-import",
       "description": "Drive data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "18 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+      "pattern": "22 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
     },
     {
       "id": "drive-reject_log",
       "description": "Drive data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "18 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+      "pattern": "22 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
     },
     {
       "id": "drive-checksum",
       "description": "Drive data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "18 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
+      "pattern": "22 source table(s), checksum, object_or_link_invariant, orphan_check, row_count"
     },
     {
       "id": "billing-export",
       "description": "Billing data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "97 source table(s), checksum, ledger_balance, orphan_check, row_count"
+      "pattern": "99 source table(s), checksum, ledger_balance, orphan_check, row_count"
     },
     {
       "id": "billing-transform",
       "description": "Billing data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "97 source table(s), checksum, ledger_balance, orphan_check, row_count"
+      "pattern": "99 source table(s), checksum, ledger_balance, orphan_check, row_count"
     },
     {
       "id": "billing-import",
       "description": "Billing data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "97 source table(s), checksum, ledger_balance, orphan_check, row_count"
+      "pattern": "99 source table(s), checksum, ledger_balance, orphan_check, row_count"
     },
     {
       "id": "billing-reject_log",
       "description": "Billing data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "97 source table(s), checksum, ledger_balance, orphan_check, row_count"
+      "pattern": "99 source table(s), checksum, ledger_balance, orphan_check, row_count"
     },
     {
       "id": "billing-checksum",
       "description": "Billing data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "97 source table(s), checksum, ledger_balance, orphan_check, row_count"
+      "pattern": "99 source table(s), checksum, ledger_balance, orphan_check, row_count"
     },
     {
       "id": "audit-export",
       "description": "Audit data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "audit-transform",
       "description": "Audit data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "audit-import",
       "description": "Audit data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "audit-reject_log",
       "description": "Audit data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "audit-checksum",
       "description": "Audit data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "privacy-export",
       "description": "Privacy data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "privacy-transform",
       "description": "Privacy data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "privacy-import",
       "description": "Privacy data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "privacy-reject_log",
       "description": "Privacy data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "privacy-checksum",
       "description": "Privacy data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "5 source table(s), checksum, orphan_check, row_count"
+      "pattern": "8 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "developer-platform-export",
       "description": "Developer Platform data migration export contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "19 source table(s), checksum, orphan_check, row_count"
+      "pattern": "20 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "developer-platform-transform",
       "description": "Developer Platform data migration transform contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "19 source table(s), checksum, orphan_check, row_count"
+      "pattern": "20 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "developer-platform-import",
       "description": "Developer Platform data migration import contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "19 source table(s), checksum, orphan_check, row_count"
+      "pattern": "20 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "developer-platform-reject_log",
       "description": "Developer Platform data migration reject log contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "19 source table(s), checksum, orphan_check, row_count"
+      "pattern": "20 source table(s), checksum, orphan_check, row_count"
     },
     {
       "id": "developer-platform-checksum",
       "description": "Developer Platform data migration checksum contract",
       "path": "docs/migration/data-map.generated.json",
       "status": "passed",
-      "pattern": "19 source table(s), checksum, orphan_check, row_count"
+      "pattern": "20 source table(s), checksum, orphan_check, row_count"
     }
   ]
 }

@@ -39,9 +39,9 @@
 | Runtime IAM policy grants secret manager access | passed | `infrastructure/modules/scaleway-v1/iam.tf` |
 | Integration script validates development and staging OpenTofu | passed | `scripts/test-integration.sh` |
 | Release gate runs staging smoke checks | passed | `scripts/release-gate.sh` |
-| Release gate runs staging critical E2E checks | passed | `scripts/release-gate.sh` |
-| Staging migration requires backup or restore point confirmation | passed | `scripts/migrate-staging.sh` |
-| Staging smoke wrapper runs smoke and E2E | passed | `scripts/smoke-staging.sh` |
+| Release gate runs authenticated Account acceptance checks | passed | `scripts/release-gate.sh` |
+| Staging migration requires restore point confirmation | passed | `scripts/migrate-staging.sh` |
+| Staging smoke wrapper runs smoke and authenticated Account acceptance | passed | `scripts/smoke-staging.sh` |
 | Production observability runbook documents Alloy architecture | passed | `infrastructure/environments/production/README.md` |
 | Production observability uses mounted secret files | passed | `infrastructure/environments/production/README.md` |
 | Alloy pipeline redacts sensitive fields | passed | `infrastructure/environments/production/alloy.config.alloy` |

@@ -33,6 +33,22 @@ const dangerousRunPatterns = [
 const requiredLockfileInstalls = ["pnpm install --frozen-lockfile"];
 const fullCommitShaPattern = /^[0-9a-f]{40}$/u;
 const githubExpression = (value) => `\${{ ${value} }}`;
+const workflowScope = parseWorkflowScope(process.argv.slice(2));
+
+function parseWorkflowScope(args) {
+	if (args.length === 0) return undefined;
+	if (
+		args.length !== 2 ||
+		args[0] !== "--workflow" ||
+		!/^\.github\/workflows\/[^/]+\.ya?ml$/u.test(args[1])
+	) {
+		errors.push(
+			"usage: check-ci-cd-security.mjs [--workflow .github/workflows/<name>.yml]",
+		);
+		return undefined;
+	}
+	return args[1];
+}
 
 function readJson(path) {
 	if (!existsSync(path)) {
@@ -268,13 +284,27 @@ function assertSecrets(path, text, allowedSecrets) {
 			text.includes(
 				`name: account-acceptance-${githubExpression("github.sha")}`,
 			);
+		const isValidatedEmailDeploymentWorkflow =
+			path === ".github/workflows/deploy-email.yml" &&
+			/^\s+workflow_dispatch:\s*$/mu.test(text) &&
+			!/^\s+inputs:\s*$/mu.test(text) &&
+			text.includes("name: production-email") &&
+			text.includes("if: github.ref == 'refs/heads/main'") &&
+			text.includes('[[ "$GITHUB_REF" == "refs/heads/main" ]]') &&
+			text.includes('[[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]]') &&
+			text.includes(`ref: ${githubExpression("github.sha")}`) &&
+			text.includes("production/email/terraform.tfstate") &&
+			text.includes("ghcr.io/nvbes-org/nvbes-email-worker") &&
+			text.includes("cosign verify") &&
+			text.includes("email-runtime.tfplan");
 		if (
 			!preceding.includes(
 				"if: github.event_name == 'push' && github.ref == 'refs/heads/main'",
 			) &&
 			!isValidatedDastWorkflow &&
 			!isValidatedAccountReleaseWorkflow &&
-			!isValidatedAcceptanceIngestWorkflow
+			!isValidatedAcceptanceIngestWorkflow &&
+			!isValidatedEmailDeploymentWorkflow
 		) {
 			errors.push(
 				`${path}: secret-bearing step must be restricted to trusted push on main or a validated protected-Environment workflow`,
@@ -472,18 +502,38 @@ if (registry) {
 			evidence.forEach((entry, evidenceIndex) => {
 				const evidenceContext = `${controlContext}.evidence[${evidenceIndex}]`;
 				const path = requireString(entry?.path, `${evidenceContext}.path`);
-				evidenceCount += requireIncludes(
-					path,
-					entry?.includes,
-					evidenceContext,
-				);
+				if (workflowScope) {
+					for (const include of requireArray(
+						entry?.includes,
+						`${evidenceContext}.includes`,
+					)) {
+						requireString(include, `${evidenceContext}.includes[]`);
+						evidenceCount += 1;
+					}
+				} else {
+					evidenceCount += requireIncludes(
+						path,
+						entry?.includes,
+						evidenceContext,
+					);
+				}
 			});
 		});
 	});
 
-	const workflows = workflowFiles();
+	const availableWorkflows = workflowFiles();
+	const scopedWorkflowExists =
+		!workflowScope || availableWorkflows.includes(workflowScope);
+	const workflows = workflowScope
+		? scopedWorkflowExists
+			? [workflowScope]
+			: []
+		: availableWorkflows;
 	if (workflows.length === 0) {
 		errors.push(`${workflowsDir}: no workflow files found`);
+	}
+	if (workflowScope && !scopedWorkflowExists) {
+		errors.push(`${workflowScope}: workflow does not exist`);
 	}
 
 	for (const path of workflows) {

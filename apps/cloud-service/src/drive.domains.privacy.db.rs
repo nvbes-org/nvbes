@@ -152,22 +152,6 @@ pub async fn update_privacy_request_job_tx(
     Ok(())
 }
 
-pub async fn count_owned_workspaces(pool: &PgPool, user_id: Uuid) -> Result<i64, AppError> {
-    let count = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COUNT(*)::bigint
-        FROM workspaces
-        WHERE (owner_user_id = $1 OR owner_principal_id = $1)
-          AND deleted_at IS NULL
-        "#,
-    )
-    .bind(user_id)
-    .fetch_one(pool)
-    .await?;
-
-    Ok(count)
-}
-
 pub async fn check_legal_hold(pool: &PgPool, workspace_id: Uuid) -> Result<bool, AppError> {
     let exists = sqlx::query_scalar::<_, bool>(
         r#"

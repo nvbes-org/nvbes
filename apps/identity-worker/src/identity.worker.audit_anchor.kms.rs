@@ -23,6 +23,14 @@ pub(super) async fn sign_digest(
         "https://api.scaleway.com/key-manager/v1alpha1/regions/{}/keys/{}/sign",
         config.region, config.kms_key_id
     );
+    sign_digest_at(config, digest, &endpoint).await
+}
+
+async fn sign_digest_at(
+    config: &AuditAnchorConfig,
+    digest: &[u8],
+    endpoint: &str,
+) -> anyhow::Result<KmsSignResponse> {
     let response = reqwest::Client::new()
         .post(endpoint)
         .header("X-Auth-Token", &config.kms_auth_token)
@@ -55,6 +63,15 @@ pub(super) async fn verify_signature(
         "https://api.scaleway.com/key-manager/v1alpha1/regions/{}/keys/{}/verify",
         config.region, config.kms_key_id
     );
+    verify_signature_at(config, digest, signature, &endpoint).await
+}
+
+async fn verify_signature_at(
+    config: &AuditAnchorConfig,
+    digest: &[u8],
+    signature: &KmsSignResponse,
+    endpoint: &str,
+) -> anyhow::Result<()> {
     let response = reqwest::Client::new()
         .post(endpoint)
         .header("X-Auth-Token", &config.kms_auth_token)
@@ -78,3 +95,7 @@ pub(super) async fn verify_signature(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "identity.worker.audit_anchor.kms.tests.rs"]
+mod tests;

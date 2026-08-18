@@ -1,0 +1,223 @@
+use openssl::{
+    asn1::Asn1Time,
+    bn::{BigNum, MsbOption},
+    hash::MessageDigest,
+    pkey::{PKey, Private},
+    rsa::Rsa,
+    x509::{X509, X509NameBuilder, extension::BasicConstraints},
+};
+
+use super::{SnsMessage, WebhookVerifier, canonical_message, validated_url};
+use crate::config::WebhookTrustConfig;
+
+#[test]
+fn signing_certificate_url_is_strictly_allowlisted() {
+    assert!(
+        validated_url(
+            "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem",
+            "messaging.s3.fr-par.scw.cloud",
+            "/fr-par/sns/"
+        )
+        .is_ok()
+    );
+    assert!(
+        validated_url(
+            "https://evil.example/fr-par/sns/cert.pem",
+            "messaging.s3.fr-par.scw.cloud",
+            "/fr-par/sns/"
+        )
+        .is_err()
+    );
+    assert!(
+        validated_url(
+            "https://messaging.s3.fr-par.scw.cloud.evil.example/fr-par/sns/cert.pem",
+            "messaging.s3.fr-par.scw.cloud",
+            "/fr-par/sns/"
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn notification_canonical_form_matches_sns_v1_field_order() {
+    let message = SnsMessage {
+        message_type: "Notification".into(),
+        message_id: "id".into(),
+        topic_arn: "arn".into(),
+        message: "payload".into(),
+        timestamp: "2026-08-02T12:00:00Z".into(),
+        signature_version: "1".into(),
+        signature: "signature".into(),
+        signing_cert_url: "https://example.test/cert.pem".into(),
+        subject: None,
+        token: None,
+        subscribe_url: None,
+    };
+    assert_eq!(
+        canonical_message(&message).unwrap(),
+        "Message\npayload\nMessageId\nid\nTimestamp\n2026-08-02T12:00:00Z\nTopicArn\narn\nType\nNotification\n"
+    );
+}
+
+#[test]
+fn subscription_envelope_and_confirmation_url_are_strictly_validated() {
+    let (authority, _) = certificate_authority("nvbes-test-ca");
+    let verifier = WebhookVerifier::new(&WebhookTrustConfig {
+        topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
+        ca_bundle_pem: authority.to_pem().unwrap(),
+        signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+        confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+    })
+    .unwrap();
+    let token = "confirmation-token";
+    let topic = "arn:scw:sns:fr-par:test:topic";
+    let mut message = SnsMessage {
+        message_type: "SubscriptionConfirmation".into(),
+        message_id: "id".into(),
+        topic_arn: topic.into(),
+        message: "confirm".into(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        signature_version: "1".into(),
+        signature: "signature".into(),
+        signing_cert_url: "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem".into(),
+        subject: None,
+        token: Some(token.into()),
+        subscribe_url: Some(format!(
+            "https://sns.mnq.fr-par.scaleway.com/?Action=ConfirmSubscription&TopicArn={topic}&Token={token}"
+        )),
+    };
+    assert!(verifier.validate_envelope(&message).is_ok());
+    assert!(verifier.confirmation_url(&message).is_ok());
+    assert!(
+        canonical_message(&message)
+            .unwrap()
+            .contains("SubscribeURL")
+    );
+
+    message.signature_version = "2".into();
+    assert!(verifier.validate_envelope(&message).is_err());
+    message.signature_version = "1".into();
+    message.topic_arn = "other".into();
+    assert!(verifier.validate_envelope(&message).is_err());
+    message.topic_arn = topic.into();
+    message.message_type = "Unknown".into();
+    assert!(verifier.validate_envelope(&message).is_err());
+    message.message_type = "SubscriptionConfirmation".into();
+    message.timestamp = (chrono::Utc::now() - chrono::Duration::minutes(6)).to_rfc3339();
+    assert!(verifier.validate_envelope(&message).is_err());
+    message.timestamp = chrono::Utc::now().to_rfc3339();
+    message.subscribe_url = None;
+    assert!(verifier.confirmation_url(&message).is_err());
+    assert!(canonical_message(&message).is_err());
+}
+
+#[tokio::test]
+async fn verification_rejects_malformed_and_untrusted_envelopes_before_network_io() {
+    let (authority, _) = certificate_authority("nvbes-test-ca");
+    let verifier = WebhookVerifier::new(&WebhookTrustConfig {
+        topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
+        ca_bundle_pem: authority.to_pem().unwrap(),
+        signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+        confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+    })
+    .unwrap();
+    assert!(verifier.verify(b"not-json").await.is_err());
+    let body = serde_json::json!({
+        "Type": "Notification",
+        "MessageId": "id",
+        "TopicArn": "wrong-topic",
+        "Message": "{}",
+        "Timestamp": chrono::Utc::now().to_rfc3339(),
+        "SignatureVersion": "1",
+        "Signature": "invalid",
+        "SigningCertURL": "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem"
+    });
+    assert!(
+        verifier
+            .verify(&serde_json::to_vec(&body).unwrap())
+            .await
+            .is_err()
+    );
+}
+
+#[test]
+fn url_allowlists_reject_credentials_ports_paths_and_queries() {
+    let host = "messaging.s3.fr-par.scw.cloud";
+    for value in [
+        "http://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem",
+        "https://user@messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem",
+        "https://messaging.s3.fr-par.scw.cloud:444/fr-par/sns/cert.pem",
+        "https://messaging.s3.fr-par.scw.cloud/other/cert.pem",
+        "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem?x=1",
+        "https://messaging.s3.fr-par.scw.cloud/fr-par/sns/cert.pem#fragment",
+    ] {
+        assert!(validated_url(value, host, "/fr-par/sns/").is_err());
+    }
+}
+
+#[test]
+fn signing_certificate_must_chain_to_the_pinned_authority() {
+    let (authority, authority_key) = certificate_authority("nvbes-test-ca");
+    let trusted_leaf = leaf_certificate("sns.scaleway.test", &authority, &authority_key);
+    let (other_authority, other_key) = certificate_authority("untrusted-ca");
+    let untrusted_leaf = leaf_certificate("sns.scaleway.test", &other_authority, &other_key);
+    let verifier = WebhookVerifier::new(&WebhookTrustConfig {
+        topic_arn: "arn:scw:sns:fr-par:test:topic".to_string(),
+        ca_bundle_pem: authority.to_pem().unwrap(),
+        signing_certificate_host: "messaging.s3.fr-par.scw.cloud".to_string(),
+        confirmation_host: "sns.mnq.fr-par.scaleway.com".to_string(),
+    })
+    .unwrap();
+
+    assert!(verifier.validate_certificate(&trusted_leaf).is_ok());
+    assert!(verifier.validate_certificate(&untrusted_leaf).is_err());
+}
+
+fn certificate_authority(common_name: &str) -> (X509, PKey<Private>) {
+    let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
+    let name = name(common_name);
+    let mut builder = base_certificate(&name, &name, &key);
+    builder
+        .append_extension(BasicConstraints::new().critical().ca().build().unwrap())
+        .unwrap();
+    builder.sign(&key, MessageDigest::sha256()).unwrap();
+    (builder.build(), key)
+}
+
+fn leaf_certificate(common_name: &str, issuer: &X509, issuer_key: &PKey<Private>) -> X509 {
+    let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
+    let subject = name(common_name);
+    let mut builder = base_certificate(&subject, issuer.subject_name(), &key);
+    builder.sign(issuer_key, MessageDigest::sha256()).unwrap();
+    builder.build()
+}
+
+fn base_certificate(
+    subject: &openssl::x509::X509NameRef,
+    issuer: &openssl::x509::X509NameRef,
+    key: &PKey<Private>,
+) -> openssl::x509::X509Builder {
+    let mut builder = X509::builder().unwrap();
+    let mut serial = BigNum::new().unwrap();
+    serial.rand(128, MsbOption::MAYBE_ZERO, false).unwrap();
+    builder
+        .set_serial_number(&serial.to_asn1_integer().unwrap())
+        .unwrap();
+    builder.set_version(2).unwrap();
+    builder.set_subject_name(subject).unwrap();
+    builder.set_issuer_name(issuer).unwrap();
+    builder.set_pubkey(key).unwrap();
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).unwrap())
+        .unwrap();
+    builder
+        .set_not_after(&Asn1Time::days_from_now(30).unwrap())
+        .unwrap();
+    builder
+}
+
+fn name(common_name: &str) -> openssl::x509::X509Name {
+    let mut name = X509NameBuilder::new().unwrap();
+    name.append_entry_by_text("CN", common_name).unwrap();
+    name.build()
+}

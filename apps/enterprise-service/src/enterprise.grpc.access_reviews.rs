@@ -1,5 +1,7 @@
 #[path = "enterprise.grpc.access_reviews.changes.rs"]
 mod changes;
+#[path = "enterprise.grpc.access_reviews.item.rs"]
+mod item;
 #[path = "enterprise.grpc.access_reviews.reads.rs"]
 pub mod reads;
 #[path = "enterprise.grpc.access_reviews.reminders.rs"]
@@ -12,7 +14,7 @@ pub mod schedules;
 mod scope;
 
 use chrono::{DateTime, Utc};
-use sqlx::{Postgres, Row, Transaction, postgres::PgRow};
+use sqlx::{Postgres, Row, Transaction};
 use tonic::Status;
 use uuid::Uuid;
 
@@ -20,6 +22,7 @@ use crate::grpc::{
     pb::nvbes::enterprise::v1 as enterprise,
     service_status::{non_empty, parse_uuid, sql_status},
 };
+pub(super) use item::AccessReviewItemRow;
 pub(super) use scope::AccessReviewScope;
 
 pub async fn start_access_review(
@@ -476,26 +479,6 @@ fn validate_decision(value: &str) -> Result<&'static str, Status> {
         _ => Err(Status::invalid_argument(
             "decision must be approved, revoked, or changed",
         )),
-    }
-}
-
-pub(super) struct AccessReviewItemRow {
-    id: Uuid,
-    pub(super) item_type: String,
-    pub(super) subject_id: String,
-    pub(super) workspace_id: Option<Uuid>,
-    decision: String,
-}
-
-impl AccessReviewItemRow {
-    fn from_row(row: PgRow) -> Result<Self, sqlx::Error> {
-        Ok(Self {
-            id: row.try_get("id")?,
-            item_type: row.try_get("item_type")?,
-            subject_id: row.try_get("subject_id")?,
-            workspace_id: row.try_get("workspace_id")?,
-            decision: row.try_get("decision")?,
-        })
     }
 }
 

@@ -108,6 +108,109 @@ describe('tracking consent sync', () => {
     expect(revokeConsentCalls).toBe(0);
   });
 
+  it('suspends optional tracking before a subject switch without mutating the previous account', () => {
+    installTestWindow();
+    installStoredConsent(ACCEPT_ALL_CONSENT);
+
+    let listConsentsCalls = 0;
+    let mutationCalls = 0;
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => {
+          listConsentsCalls += 1;
+          return [];
+        },
+        grantConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+        revokeConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+      },
+      defaultSource: 'test',
+    });
+
+    api.prepareTrackingConsentSubjectSwitch('test:subject-switch');
+
+    expect(api.getTrackingConsent()).toEqual(DECLINE_ALL_CONSENT);
+    expect(listConsentsCalls).toBe(0);
+    expect(mutationCalls).toBe(0);
+    const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY_V4) ?? '{}') as {
+      source?: string;
+    };
+    expect(stored.source).toBe('test:subject-switch');
+  });
+
+  it('reactivates only the target account backend consent after a subject switch', async () => {
+    installTestWindow();
+    installStoredConsent(ACCEPT_ALL_CONSENT);
+
+    let mutationCalls = 0;
+    const grantedAt = new Date().toISOString();
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [
+          {
+            consent_type: 'analytics_product_analytics',
+            document_version: NOTICE_VERSION,
+            granted_at: grantedAt,
+            revoked_at: null,
+          },
+        ],
+        grantConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+        revokeConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    api.prepareTrackingConsentSubjectSwitch();
+    expect(api.getAnalyticsConsent().productAnalytics).toBe(false);
+
+    await api.syncTrackingConsent({ sourceOfTruth: 'backend' });
+
+    expect(api.getAnalyticsConsent().productAnalytics).toBe(true);
+    expect(api.getTrackingConsent()?.vendors.posthog).toBe(true);
+    expect(api.getAnalyticsConsent().errorTracking).toBe(false);
+    expect(mutationCalls).toBe(0);
+  });
+
+  it('keeps tracking disabled when the target account has no optional consent', async () => {
+    installTestWindow();
+    installStoredConsent(ACCEPT_ALL_CONSENT);
+
+    let mutationCalls = 0;
+    const api = createTrackingConsentApi({
+      identityClient: {
+        listConsents: async () => [],
+        grantConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+        revokeConsent: async () => {
+          mutationCalls += 1;
+          return {};
+        },
+        isAuthenticated: async () => true,
+      },
+      defaultSource: 'test',
+    });
+
+    api.prepareTrackingConsentSubjectSwitch();
+    await api.syncTrackingConsent({ sourceOfTruth: 'backend' });
+
+    expect(api.getTrackingConsent()).toEqual(DECLINE_ALL_CONSENT);
+    expect(mutationCalls).toBe(0);
+  });
+
   it('syncs local browser consent once the session becomes authenticated', async () => {
     installTestWindow();
     const localSavedAt = new Date(Date.now() - 60_000).toISOString();

@@ -1,0 +1,248 @@
+syntax = "proto3";
+
+package nvbes.email.v1;
+
+import "google/protobuf/timestamp.proto";
+import "nvbes/platform/v1/common.proto";
+
+service EmailDeliveryService {
+  rpc SubmitEmail(SubmitEmailRequest) returns (EmailReceipt);
+}
+
+service EmailOperationsService {
+  rpc GetOperationsSnapshot(GetEmailOperationsSnapshotRequest) returns (EmailOperationsSnapshot);
+  rpc ReplayEmail(ReplayEmailRequest) returns (EmailOperatorActionReceipt);
+  rpc ApplySuppression(ApplyEmailSuppressionRequest) returns (EmailOperatorActionReceipt);
+  rpc ReleaseSuppression(ReleaseEmailSuppressionRequest) returns (EmailOperatorActionReceipt);
+  rpc ReviewSuppression(ReviewEmailSuppressionRequest) returns (EmailOperatorActionReceipt);
+  rpc GetPrivacyActivity(GetEmailPrivacyActivityRequest) returns (EmailPrivacyActivity);
+}
+
+message SubmitEmailRequest {
+  nvbes.platform.v1.RequestContext context = 1;
+  string producer = 2;
+  string idempotency_key = 3;
+  EmailRecipient recipient = 4;
+  TransactionalEmailCategory category = 5;
+  TransactionalEmailTemplate template = 6;
+  google.protobuf.Timestamp deliver_before = 7;
+}
+
+message EmailRecipient {
+  string email = 1;
+  optional string name = 2;
+}
+
+enum TransactionalEmailCategory {
+  TRANSACTIONAL_EMAIL_CATEGORY_UNSPECIFIED = 0;
+  TRANSACTIONAL_EMAIL_CATEGORY_CREDENTIAL = 1;
+  TRANSACTIONAL_EMAIL_CATEGORY_ACCOUNT_SECURITY = 2;
+  TRANSACTIONAL_EMAIL_CATEGORY_BILLING = 3;
+  reserved 4;
+  TRANSACTIONAL_EMAIL_CATEGORY_REMINDER = 5;
+}
+
+message TransactionalEmailTemplate {
+  reserved 7;
+
+  oneof template {
+    EmailVerificationV1 email_verification_v1 = 1;
+    PasswordResetV1 password_reset_v1 = 2;
+    PasswordChangeCodeV1 password_change_code_v1 = 3;
+    AccountSecurityV1 account_security_v1 = 4;
+    BillingReceiptV1 billing_receipt_v1 = 5;
+    BillingPaymentFailureV1 billing_payment_failure_v1 = 6;
+    AccessReviewReminderV1 access_review_reminder_v1 = 8;
+  }
+}
+
+message EmailVerificationV1 {
+  string user_name = 1;
+  string verification_url = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+  string timezone = 4;
+}
+
+message PasswordResetV1 {
+  string user_name = 1;
+  string reset_url = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+}
+
+message PasswordChangeCodeV1 {
+  string user_name = 1;
+  string code = 2;
+  google.protobuf.Timestamp credential_expires_at = 3;
+}
+
+enum AccountSecurityEvent {
+  ACCOUNT_SECURITY_EVENT_UNSPECIFIED = 0;
+  ACCOUNT_SECURITY_EVENT_EMAIL_ADDED = 1;
+  ACCOUNT_SECURITY_EVENT_PRIMARY_EMAIL_CHANGED = 2;
+  ACCOUNT_SECURITY_EVENT_ACCOUNT_RECOVERED = 3;
+  ACCOUNT_SECURITY_EVENT_RECOVERY_REVIEW_REQUIRED = 4;
+}
+
+message AccountSecurityV1 {
+  AccountSecurityEvent event = 1;
+  optional string affected_email = 2;
+  optional string previous_email = 3;
+  optional string security_url = 4;
+}
+
+message BillingReceiptV1 {
+  optional string customer_name = 1;
+  int64 amount_minor = 2;
+  string currency = 3;
+  optional string invoice_url = 4;
+  optional string provider_name = 5;
+}
+
+message BillingPaymentFailureV1 {
+  optional string customer_name = 1;
+  int64 amount_minor = 2;
+  string currency = 3;
+  optional string billing_portal_url = 4;
+  optional string invoice_url = 5;
+  optional string provider_name = 6;
+}
+
+message AccessReviewReminderV1 {
+  string reviewer_name = 1;
+  string campaign_name = 2;
+  string review_url = 3;
+  google.protobuf.Timestamp review_due_at = 4;
+}
+
+message EmailReceipt {
+  string message_id = 1;
+  google.protobuf.Timestamp accepted_at = 2;
+  google.protobuf.Timestamp deliver_before = 3;
+  bool duplicate = 4;
+}
+
+message EmailCallerContext {
+  nvbes.platform.v1.RequestContext request_context = 1;
+  string caller = 2;
+}
+
+message EmailOperatorContext {
+  EmailCallerContext caller = 1;
+  string actor = 2;
+  string reason = 3;
+}
+
+message GetEmailOperationsSnapshotRequest {
+  EmailCallerContext caller = 1;
+}
+
+message EmailOperationsSnapshot {
+  int64 queued_message_count = 1;
+  int64 sent_message_count_24h = 2;
+  int64 delivered_message_count_24h = 3;
+  int64 failed_message_count_24h = 4;
+  int64 suppressed_email_count = 5;
+  int64 webhook_event_count_24h = 6;
+  int64 unprocessed_event_count = 7;
+  repeated EmailStatusCount status_distribution = 8;
+  repeated EmailBusinessTypeCount business_type_distribution = 9;
+  repeated EmailFailureSummary recent_failures = 10;
+  repeated EmailSuppressionSummary recent_suppressions = 11;
+  repeated EmailProviderEventSummary recent_unprocessed_events = 12;
+  int64 bounce_event_count_24h = 13;
+}
+
+message EmailStatusCount {
+  string status = 1;
+  int64 message_count = 2;
+}
+
+message EmailBusinessTypeCount {
+  string business_type = 1;
+  int64 message_count = 2;
+  int64 failure_count = 3;
+}
+
+message EmailFailureSummary {
+  string id = 1;
+  string business_type = 2;
+  string recipient_email = 3;
+  optional string provider_email_id = 4;
+  string status = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message EmailSuppressionSummary {
+  string email = 1;
+  string reason = 2;
+  google.protobuf.Timestamp suppressed_at = 3;
+  optional google.protobuf.Timestamp reviewed_at = 4;
+  optional string reviewed_by = 5;
+}
+
+message EmailProviderEventSummary {
+  string id = 1;
+  string provider_event_id = 2;
+  optional string provider_email_id = 3;
+  string email = 4;
+  string event_type = 5;
+  google.protobuf.Timestamp received_at = 6;
+}
+
+message ReplayEmailRequest {
+  EmailOperatorContext operator = 1;
+  string message_id = 2;
+}
+
+message ApplyEmailSuppressionRequest {
+  EmailOperatorContext operator = 1;
+  string email = 2;
+  string scope = 3;
+}
+
+message ReleaseEmailSuppressionRequest {
+  EmailOperatorContext operator = 1;
+  string email = 2;
+}
+
+message ReviewEmailSuppressionRequest {
+  EmailOperatorContext operator = 1;
+  string email = 2;
+}
+
+message EmailOperatorActionReceipt {
+  string action_id = 1;
+  string status = 2;
+}
+
+message GetEmailPrivacyActivityRequest {
+  EmailCallerContext caller = 1;
+  string email = 2;
+}
+
+message EmailPrivacyActivity {
+  repeated EmailPrivacyMessage messages = 1;
+  repeated EmailPrivacyProviderEvent provider_events = 2;
+}
+
+message EmailPrivacyMessage {
+  string id = 1;
+  string producer = 2;
+  string business_type = 3;
+  int32 template_version = 4;
+  string status = 5;
+  google.protobuf.Timestamp accepted_at = 6;
+  optional google.protobuf.Timestamp provider_accepted_at = 7;
+  optional google.protobuf.Timestamp terminal_at = 8;
+  google.protobuf.Timestamp deliver_before = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message EmailPrivacyProviderEvent {
+  string id = 1;
+  string provider = 2;
+  string event_type = 3;
+  google.protobuf.Timestamp received_at = 4;
+  optional google.protobuf.Timestamp processed_at = 5;
+  optional string processing_result = 6;
+}

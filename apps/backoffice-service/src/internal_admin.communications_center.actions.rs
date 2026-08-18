@@ -14,9 +14,7 @@ use crate::backoffice_authorization::{
 };
 use crate::backoffice_dual_control::require_dual_control;
 use crate::billing_admin_access::authorize_backoffice;
-use crate::communications_center_mutations::{
-    replay_email, replay_webhook, suppress_email, unsuppress_email,
-};
+use crate::communications_center_mutations::{replay_email, suppress_email, unsuppress_email};
 use crate::communications_center_types::CommunicationsActionResult;
 use crate::error::AppError;
 
@@ -38,10 +36,6 @@ pub fn router() -> Router<AppState> {
         .route(
             "/workspaces/{workspaceId}/admin/communications/emails/{messageId}/replay",
             post(replay_email_route),
-        )
-        .route(
-            "/workspaces/{workspaceId}/admin/communications/webhooks/{eventId}/replay",
-            post(replay_webhook_route),
         )
         .route(
             "/workspaces/{workspaceId}/admin/communications/suppressions",
@@ -69,27 +63,15 @@ async fn replay_email_route(
     .await?;
     let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
     Ok(Json(
-        replay_email(&state.db, access, workspace_id, message_id, request.reason).await?,
-    ))
-}
-
-async fn replay_webhook_route(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path((workspace_id, event_id)): Path<(Uuid, Uuid)>,
-    Json(request): Json<CommunicationsReasonRequest>,
-) -> Result<Json<CommunicationsActionResult>, AppError> {
-    require_communications_mutation(
-        &state.db,
-        &headers,
-        &request.confirm_code,
-        "REPLAY WEBHOOK",
-        event_id,
-    )
-    .await?;
-    let access = authorize_backoffice(&state.db, &headers, workspace_id).await?;
-    Ok(Json(
-        replay_webhook(&state.db, access, workspace_id, event_id, request.reason).await?,
+        replay_email(
+            &state.db,
+            &*state.email_operations,
+            access,
+            workspace_id,
+            message_id,
+            request.reason,
+        )
+        .await?,
     ))
 }
 
@@ -111,6 +93,7 @@ async fn suppress_email_route(
     Ok(Json(
         suppress_email(
             &state.db,
+            &*state.email_operations,
             access,
             workspace_id,
             request.email,
@@ -138,6 +121,7 @@ async fn unsuppress_email_route(
     Ok(Json(
         unsuppress_email(
             &state.db,
+            &*state.email_operations,
             access,
             workspace_id,
             request.email,

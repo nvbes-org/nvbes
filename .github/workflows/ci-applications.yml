@@ -1,0 +1,129 @@
+name: applications ci
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+concurrency:
+  group: applications-ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  detect-affected:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      rust: ${{ steps.affected.outputs.rust }}
+      web: ${{ steps.affected.outputs.web }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-applications.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Detect affected applications
+        id: affected
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          affected="$(node tools/ci/affected-applications.mjs \
+            --mode ci \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA")"
+          echo "rust=$(jq -c '.rust' <<<"$affected")" >> "$GITHUB_OUTPUT"
+          echo "web=$(jq -c '.web' <<<"$affected")" >> "$GITHUB_OUTPUT"
+
+  rust-application:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.rust != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: rust-ci-${{ matrix.project }}-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect-affected.outputs.rust) }}
+    name: rust / ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: application-${{ matrix.project }}
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
+      - name: Check application and test targets
+        run: cargo check --locked --package "${{ matrix.package }}" --all-targets
+
+  web-application:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.web != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: web-ci-${{ matrix.project }}-${{ github.head_ref || github.ref_name }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect-affected.outputs.web) }}
+    name: web / ${{ matrix.project }}
+    env:
+      CI: 'true'
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Check and build web application
+        run: >-
+          pnpm exec nx run-many
+          -t format:check,lint,typecheck,build
+          --projects="${{ matrix.project }}"

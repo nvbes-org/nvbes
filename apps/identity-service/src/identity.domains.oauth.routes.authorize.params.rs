@@ -1,6 +1,10 @@
 use crate::http::error::AppError;
 
-#[derive(Default)]
+#[cfg(test)]
+#[path = "identity.domains.oauth.routes.authorize.params.tests.rs"]
+mod tests;
+
+#[derive(Debug, Default)]
 pub(super) struct ResolvedParams {
     pub redirect_uri: String,
     pub scope: Option<String>,
@@ -17,6 +21,14 @@ pub(super) struct ResolvedParams {
 pub(super) fn build_params_from_map(
     params: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<ResolvedParams, AppError> {
+    let response_type = params.get("response_type").and_then(|value| value.as_str());
+    if response_type != Some("code") {
+        return Err(AppError::bad_request(
+            "invalid_response_type",
+            "Only 'code' is supported",
+        ));
+    }
+
     let redirect_uri = params
         .get("redirect_uri")
         .and_then(|v| v.as_str())

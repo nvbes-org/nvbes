@@ -9,15 +9,15 @@ const outputPath = 'docs/migration/developer-oauth-tokens.generated.json';
 const markdownPath = 'docs/migration/developer-oauth-tokens.md';
 
 const sources = {
-  identityOpenapi: 'apps/account-service/openapi.json',
+  identityOpenapi: 'apps/identity-service/openapi.json',
   developerOpenapi: 'apps/developer-service/openapi.json',
-  identityOpenapiExport: 'apps/account-service/src/identity.http.openapi.rs',
+  identityOpenapiExport: 'apps/identity-service/src/identity.http.openapi.rs',
   developerOpenapiExport: 'apps/developer-service/src/developer.http.openapi.rs',
-  oauthRoutes: 'apps/account-service/src/identity.domains.oauth.routes.clients.rs',
-  oauthCreate: 'apps/account-service/src/identity.domains.oauth.clients.create.rs',
-  oauthRevoke: 'apps/account-service/src/identity.domains.oauth.clients.revoke.rs',
+  oauthRoutes: 'apps/identity-service/src/identity.domains.oauth.routes.clients.rs',
+  oauthCreate: 'apps/identity-service/src/identity.domains.oauth.clients.create.rs',
+  oauthRevoke: 'apps/identity-service/src/identity.domains.oauth.clients.revoke.rs',
   clientCredentialsTests:
-    'apps/account-service/src/identity.domains.oauth.flows.client_credentials.tests.rs',
+    'apps/identity-service/src/identity.domains.oauth.flows.client_credentials.tests.rs',
   tokenRoutes: 'apps/developer-service/src/developer.http.routes.tools.rs',
   developerOAuthRoutes: 'apps/developer-service/src/developer.http.routes.oauth.rs',
   developerTypes: 'apps/developer-service/src/developer.http.types.rs',
@@ -134,7 +134,7 @@ function buildChecks() {
       'oauth-route-create',
       sources.oauthRoutes,
       'OAuth routes wire list, create, and revoke',
-      'get(list_clients)\n                .post(create_client)',
+      'delete(revoke_client)',
     ),
     textCheck(
       'oauth-route-step-up',

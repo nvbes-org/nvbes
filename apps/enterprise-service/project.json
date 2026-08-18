@@ -1,0 +1,25 @@
+{
+  "name": "enterprise-service",
+  "projectType": "application",
+  "root": "apps/enterprise-service",
+  "sourceRoot": "apps/enterprise-service/src",
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "cargo check --locked --package nvbes-enterprise-service --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "cargo test --locked --package nvbes-enterprise-service",
+        "cwd": "."
+      }
+    }
+  },
+  "tags": ["scope:oss", "type:app", "domain:enterprise", "layer:app"]
+}

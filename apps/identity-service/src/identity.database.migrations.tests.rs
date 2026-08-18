@@ -71,7 +71,13 @@ async fn postgresql_fresh_database_reaches_complete_schema() -> Result<()> {
     ACCOUNT_MIGRATOR.run(&pool).await?;
     assert_all_migrations_applied(&pool).await?;
 
-    for relation in ["principals", "email_messages", "oauth_client_keys"] {
+    for relation in [
+        "principals",
+        "oauth_client_keys",
+        "identity_outbox_events",
+        "identity_oidc_profile_claims",
+        "identity_inbox_events",
+    ] {
         let qualified_name = format!("public.{relation}");
         let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
             .bind(&qualified_name)
@@ -79,25 +85,26 @@ async fn postgresql_fresh_database_reaches_complete_schema() -> Result<()> {
             .await?;
         assert!(exists, "fresh schema is missing {qualified_name}");
     }
-
-    let job_id = Uuid::new_v4();
-    let (message_id, attempt_count): (String, i32) = sqlx::query_as(
+    assert_legacy_email_schema_removed(&pool).await?;
+    let legacy_profile_columns: i64 = sqlx::query_scalar(
         r#"
-        INSERT INTO email_messages (
-            job_id, business_type, recipient_email, recipient_hash
-        )
-        VALUES ($1, 'migration_fresh', 'fresh@example.test', 'fresh-hash')
-        RETURNING message_id, attempt_count
+        SELECT COUNT(*)
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'users'
+          AND column_name = ANY($1)
         "#,
     )
-    .bind(job_id)
+    .bind(vec![
+        "firstname",
+        "lastname",
+        "username",
+        "birthdate",
+        "region",
+    ])
     .fetch_one(&pool)
     .await?;
-    assert_eq!(
-        message_id,
-        format!("<account-job-{job_id}@worker.nvbes.fr>")
-    );
-    assert_eq!(attempt_count, 0);
+    assert_eq!(legacy_profile_columns, 0);
 
     pool.close().await;
     database.cleanup().await?;
@@ -120,7 +127,50 @@ async fn postgresql_upgrade_from_n_minus_one_preserves_compatible_data() -> Resu
     let (prior_migrator, latest_version) = prior_migrator()?;
 
     prior_migrator.run(&pool).await?;
-    let old_job_id = Uuid::new_v4();
+    let tenant_id = Uuid::new_v4();
+    let principal_id = Uuid::new_v4();
+    sqlx::query(
+        r#"
+        INSERT INTO tenants (id, kind, name, slug, status, security_tier)
+        VALUES ($1, 'personal', 'Migration profile', $2, 'active', 'standard')
+        "#,
+    )
+    .bind(tenant_id)
+    .bind(format!("migration-profile-{tenant_id}"))
+    .execute(&pool)
+    .await?;
+    sqlx::query(
+        r#"
+        INSERT INTO principals (id, tenant_id, principal_kind, status, display_name)
+        VALUES ($1, $2, 'human', 'active', 'Migration Profile')
+        "#,
+    )
+    .bind(principal_id)
+    .bind(tenant_id)
+    .execute(&pool)
+    .await?;
+    sqlx::query(
+        r#"
+        INSERT INTO users (principal_id, email, password_hash, status)
+        VALUES ($1, $2, 'hash', 'active')
+        "#,
+    )
+    .bind(principal_id)
+    .bind(format!("{principal_id}@example.test"))
+    .execute(&pool)
+    .await?;
+    sqlx::query(
+        r#"
+        INSERT INTO identity_oidc_profile_claims (
+          principal_id, display_name, given_name, family_name, preferred_username
+        )
+        VALUES ($1, 'Migration Profile', 'Migration', 'Profile', 'migration-profile')
+        "#,
+    )
+    .bind(principal_id)
+    .execute(&pool)
+    .await?;
+    let legacy_email_job_id = Uuid::new_v4();
     sqlx::query(
         r#"
         INSERT INTO email_messages (
@@ -129,7 +179,7 @@ async fn postgresql_upgrade_from_n_minus_one_preserves_compatible_data() -> Resu
         VALUES ($1, 'migration_upgrade', 'upgrade@example.test', 'upgrade-hash')
         "#,
     )
-    .bind(old_job_id)
+    .bind(legacy_email_job_id)
     .execute(&pool)
     .await
     .context("seed an N-1 email row")?;
@@ -137,50 +187,32 @@ async fn postgresql_upgrade_from_n_minus_one_preserves_compatible_data() -> Resu
     ACCOUNT_MIGRATOR.run(&pool).await?;
     ACCOUNT_MIGRATOR.run(&pool).await?;
     assert_all_migrations_applied(&pool).await?;
+    assert_legacy_email_schema_removed(&pool).await?;
+
+    let migrated_profile: (String, Option<String>, i64) = sqlx::query_as(
+        r#"
+        SELECT display_name, preferred_username, profile_version
+        FROM identity_oidc_profile_claims
+        WHERE principal_id = $1
+        "#,
+    )
+    .bind(principal_id)
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        migrated_profile,
+        (
+            "Migration Profile".to_string(),
+            Some("migration-profile".to_string()),
+            0
+        )
+    );
 
     let applied_latest: i64 =
         sqlx::query_scalar("SELECT MAX(version) FROM _sqlx_migrations WHERE success")
             .fetch_one(&pool)
             .await?;
     assert_eq!(applied_latest, latest_version);
-
-    let (message_id, attempt_count, created, status): (String, i32, bool, String) = sqlx::query_as(
-        r#"
-            SELECT message_id, attempt_count, created_at IS NOT NULL, status::text
-            FROM email_messages
-            WHERE job_id = $1
-            "#,
-    )
-    .bind(old_job_id)
-    .fetch_one(&pool)
-    .await?;
-    assert_eq!(
-        message_id,
-        format!("<account-job-{old_job_id}@worker.nvbes.fr>")
-    );
-    assert_eq!(
-        (attempt_count, created, status.as_str()),
-        (0, true, "queued")
-    );
-
-    let compatible_job_id = Uuid::new_v4();
-    let compatible_message_id: String = sqlx::query_scalar(
-        r#"
-        INSERT INTO email_messages (
-            job_id, business_type, recipient_email, recipient_hash
-        )
-        VALUES ($1, 'n_minus_one_writer', 'old-writer@example.test', 'old-writer-hash')
-        RETURNING message_id
-        "#,
-    )
-    .bind(compatible_job_id)
-    .fetch_one(&pool)
-    .await
-    .context("the N-1 insert shape must remain valid after upgrade")?;
-    assert_eq!(
-        compatible_message_id,
-        format!("<account-job-{compatible_job_id}@worker.nvbes.fr>")
-    );
 
     pool.close().await;
     database.cleanup().await?;
@@ -242,6 +274,30 @@ async fn assert_all_migrations_applied(pool: &sqlx::PgPool) -> Result<()> {
     let applied: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM _sqlx_migrations WHERE success")
         .fetch_one(pool)
         .await?;
-    assert_eq!(applied, expected, "every Identity migration must be applied");
+    assert_eq!(
+        applied, expected,
+        "every Identity migration must be applied"
+    );
+    Ok(())
+}
+
+async fn assert_legacy_email_schema_removed(pool: &sqlx::PgPool) -> Result<()> {
+    for relation in ["email_messages", "email_events", "suppressed_emails"] {
+        let qualified_name = format!("public.{relation}");
+        let exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(&qualified_name)
+            .fetch_one(pool)
+            .await?;
+        assert!(
+            !exists,
+            "legacy email relation still exists: {qualified_name}"
+        );
+    }
+    let legacy_types: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM pg_type WHERE typname = ANY($1)")
+            .bind(vec!["email_event_type", "email_message_status"])
+            .fetch_one(pool)
+            .await?;
+    assert_eq!(legacy_types, 0, "legacy email enum types still exist");
     Ok(())
 }

@@ -227,27 +227,6 @@ impl AppConfig {
                 .map(|v| v == "true")
                 .unwrap_or(false),
             secret_manager_enabled,
-            email_provider: optional_env("NVBES_EMAIL_PROVIDER").unwrap_or_else(|| {
-                if optional_env("NVBES_SMTP_HOST").is_some() {
-                    "smtp".to_string()
-                } else {
-                    "mock".to_string()
-                }
-            }),
-            email_from_email: optional_env("NVBES_EMAIL_FROM_EMAIL"),
-            email_from_name: optional_env("NVBES_EMAIL_FROM_NAME"),
-            email_reply_to: optional_env("NVBES_EMAIL_REPLY_TO"),
-            smtp_host: optional_env("NVBES_SMTP_HOST"),
-            smtp_port: std::env::var("NVBES_SMTP_PORT")
-                .ok()
-                .and_then(|value| value.parse::<u16>().ok())
-                .unwrap_or(587),
-            smtp_username: optional_env("NVBES_SMTP_USERNAME"),
-            smtp_password: optional_env("NVBES_SMTP_PASSWORD"),
-            smtp_starttls: std::env::var("NVBES_SMTP_STARTTLS")
-                .ok()
-                .map(|v| v == "true")
-                .unwrap_or(true),
             otp_provider: optional_env("NVBES_OTP_PROVIDER").unwrap_or_else(|| {
                 if optional_env("NVBES_TWILIO_VERIFY_SERVICE_SID").is_some() {
                     "twilio_verify".to_string()

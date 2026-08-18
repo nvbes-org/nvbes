@@ -104,12 +104,12 @@ and `NVBES_ANALYTICS_ID_SALT` is set.
 
 ## Environment File
 
-If `.env` does not exist, `.devcontainer/post-create.sh` creates it from `.env.example` and adjusts service hostnames for container networking:
+`.devcontainer/post-create.sh` runs `pnpm env:sync`'s dependency-free backend to
+create or update `.env` from `.env.example` while preserving local values.
+Container-specific endpoints do not belong in the file:
 
 - PostgreSQL host: `postgres`
 - Redis host: `redis`
-
-The script does not overwrite an existing `.env`.
 
 When running inside the Dev Container, Compose sets `NVBES_DEVCONTAINER=true`. The shared environment loader then overrides database and Redis endpoints for container networking, so an existing host-oriented `.env` with `localhost` does not break `pnpm dev`.
 

@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -9,11 +9,6 @@ pub struct UserView {
     pub id: Uuid,
     pub email: String,
     pub display_name: String,
-    pub firstname: Option<String>,
-    pub lastname: Option<String>,
-    pub username: Option<String>,
-    pub birthdate: Option<NaiveDate>,
-    pub region: Option<String>,
     pub email_verified: bool,
     pub mfa_enabled: bool,
     pub created_at: DateTime<Utc>,
@@ -105,8 +100,6 @@ success_result!(LogoutResult);
 success_result!(ForgotPasswordResult);
 success_result!(ResetPasswordResult);
 success_result!(ChangePasswordResult);
-success_result!(DataExportResult);
-success_result!(DeleteAccountResult);
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct VerifyEmailResult {
@@ -135,7 +128,4 @@ pub struct EmailStepUpChallengeResult {
     pub expires_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct UpdateProfileResult {
-    pub user: UserView,
-}
+pub const DEFAULT_DISPLAY_NAME: &str = "User";

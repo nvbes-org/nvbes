@@ -33,18 +33,30 @@ pub async fn ensure_non_admin_workspace(
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username,
-          email_verified_at, status, created_at, updated_at
+          principal_id, email, email_verified_at, status, created_at, updated_at
         )
-        VALUES ($1, $2, 'Beta', 'E2E Owner', $3, NOW(), 'active', NOW(), NOW())
+        VALUES ($1, $2, NOW(), 'active', NOW(), NOW())
         "#,
     )
     .bind(owner_principal_id)
     .bind(owner_email)
-    .bind(format!("beta_e2e_owner_{}", workspace_id.simple()))
     .execute(&mut **tx)
     .await
     .context("Failed to create beta e2e owner user.")?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO identity_oidc_profile_claims (
+          principal_id, display_name, given_name, family_name, preferred_username
+        )
+        VALUES ($1, 'Beta E2E Owner', 'Beta', 'E2E Owner', $2)
+        "#,
+    )
+    .bind(owner_principal_id)
+    .bind(format!("beta_e2e_owner_{}", workspace_id.simple()))
+    .execute(&mut **tx)
+    .await
+    .context("Failed to create beta e2e owner OIDC profile projection.")?;
 
     sqlx::query(
         r#"

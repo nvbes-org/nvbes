@@ -48,7 +48,7 @@ function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, workspaceRoot, '');
   const envSources = [process.env, localEnv, rootEnv];
@@ -128,7 +128,7 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      ...observabilitySourceMapPlugins({ appName: 'identity-web', envSources }),
+      ...observabilitySourceMapPlugins({ appName: 'identity-web', command, envSources }),
       sriPlugin(),
     ].filter(Boolean),
     build: {

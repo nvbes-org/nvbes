@@ -1,5 +1,5 @@
 import { identityClient } from '@nvbes/identity-client';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useLocation } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   authorizeIdentitySession,
@@ -8,6 +8,7 @@ import {
   readPendingOAuthAuthorizeRequest,
 } from '../identity.oauth';
 import { syncTrackingConsent } from '../tracking-consent';
+import { accountWebUrl } from '../identity.account-links';
 
 let registerSessionProbe: Promise<boolean> | null = null;
 
@@ -31,7 +32,6 @@ function probeRegisterSession(): Promise<boolean> {
 }
 
 export function useRegisterPageBootstrap() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -64,7 +64,7 @@ export function useRegisterPageBootstrap() {
         return;
       }
 
-      void navigate({ to: '/security' });
+      window.location.replace(accountWebUrl('/profile'));
     };
 
     void check();
@@ -72,7 +72,7 @@ export function useRegisterPageBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, []);
 
   return {
     checkingAuth,

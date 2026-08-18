@@ -31,7 +31,7 @@ pub async fn get_profile(
 }
 
 #[utoipa::path(
-    patch,
+    put,
     path = "/api/v1/profile",
     tag = "profile",
     operation_id = "updateAccountProfile",

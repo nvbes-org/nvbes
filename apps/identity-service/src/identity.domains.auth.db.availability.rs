@@ -21,19 +21,3 @@ pub async fn registration_email_exists(
     .await
     .map_err(Into::into)
 }
-
-pub async fn registration_username_exists(db: &PgPool, username: &str) -> Result<bool, AppError> {
-    sqlx::query_scalar(
-        r#"
-        SELECT EXISTS (
-            SELECT 1
-            FROM users
-            WHERE lower(username) = lower($1)
-        )
-        "#,
-    )
-    .bind(username)
-    .fetch_one(db)
-    .await
-    .map_err(Into::into)
-}

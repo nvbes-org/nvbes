@@ -17,30 +17,34 @@ Dans le devcontainer, l’endpoint utilisé par les services est
 `http://host.docker.internal:18333` et SeaweedFS est disponible sur
 `localhost:18333` afin que les signed URLs soient accessibles au navigateur.
 
-## Emails avec MailHog
+## Emails transactionnels
 
-MailHog capture les emails envoyés par Account et Account Worker sans les
-transmettre à Internet.
+Le runtime global `email-worker` envoie les emails de développement vers
+Mailpit. Son interface est disponible sur `http://127.0.0.1:8025` et son port
+SMTP local est `127.0.0.1:11025`.
 
-```bash
-docker compose --profile infra -f infrastructure/local/docker-compose.yml up -d mailhog
-```
-
-- Interface et aperçu HTML : http://localhost:8025
-- SMTP local : `localhost:1025`
-
-La configuration de développement correspondante est dans `.env.example` :
-`NVBES_EMAIL_PROVIDER=smtp`, port `1025` et STARTTLS désactivé. Depuis un
-devcontainer, utilisez `host.docker.internal` comme hôte SMTP ; depuis un
-processus lancé directement sur la machine, `localhost` convient.
-
-Les tests unitaires des templates email vérifient le rendu HTML et
-l’échappement des valeurs injectées :
+Dans le devcontainer, l’interface est publiée sur
+`http://127.0.0.1:18025`; le port SMTP hôte reste `11025`.
 
 ```bash
-cargo test -p nvbes-account-service email --lib
+docker compose --profile infra -f infrastructure/local/docker-compose.yml up -d mailpit
 ```
 
-Les tokens et codes ne sont jamais écrits dans les logs. Pour les tests
-manuels et les tests navigateur locaux, récupérez le lien ou le code dans
-MailHog.
+Les services produits soumettent toujours leurs commandes au worker par gRPC
+sur le port HTTP/2 partagé `3040`; seul le worker se connecte à Mailpit. Le
+provider SMTP est refusé hors des environnements `development` et `test`. Les
+probes et le webhook HTTP utilisent ce même port.
+
+Le conteneur PostgreSQL crée `nvbes_email` à l’initialisation. Sur un volume
+local déjà existant, créez-la une seule fois avec
+`docker compose -f infrastructure/local/docker-compose.yml exec postgres createdb -U postgres nvbes_email`.
+
+La configuration locale complète est documentée dans `.env.example`. Les
+tests de rendu et d’échéance se lancent avec :
+
+```bash
+cargo test -p nvbes-email -p nvbes-email-worker
+```
+
+Les tokens, codes, destinataires et corps rendus ne sont jamais écrits dans
+les logs.

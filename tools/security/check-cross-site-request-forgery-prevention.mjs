@@ -94,7 +94,7 @@ function assertRegistry(registry) {
 }
 
 function assertImplementation() {
-  const cookies = readText('apps/account-service/src/identity.http.cookies.rs');
+  const cookies = readText('apps/identity-service/src/identity.http.cookies.rs');
   for (const needle of [
     'generate_csrf_token(session_token: &str, secret: &str)',
     'verify_csrf_token(csrf_token: &str, session_token: &str, secret: &str)',
@@ -109,7 +109,7 @@ function assertImplementation() {
     if (!cookies.includes(needle)) errors.push(`CSRF cookie implementation missing ${needle}`);
   }
 
-  const csrf = readText('apps/account-service/src/identity.http.middleware.csrf.rs');
+  const csrf = readText('apps/identity-service/src/identity.http.middleware.csrf.rs');
   for (const needle of [
     'csrf_guard',
     'is_mutating_method',
@@ -130,13 +130,14 @@ function assertImplementation() {
 }
 
 function assertLayeredDefenses() {
-  const origin = readText('apps/account-service/src/identity.http.middleware.origin.rs');
-  const cors = readText('apps/account-service/src/identity.http.cors.rs');
-  const login = readText('apps/account-service/src/identity.domains.auth.routes.login.rs');
+  const origin = readText('apps/identity-service/src/identity.http.middleware.origin.rs');
+  const cors = readText('apps/identity-service/src/identity.http.cors.rs');
+  const login = readText('apps/identity-service/src/identity.domains.auth.routes.login.rs');
   const stepUp = readText(
-    'apps/account-service/src/identity.domains.auth.routes.session_mgmt.step_up.rs',
+    'apps/identity-service/src/identity.domains.auth.routes.session_mgmt.step_up.rs',
   );
   const httpClient = readText('libs/ts/http-client/src/index.ts');
+  const httpRequestContext = readText('libs/ts/http-client/src/http.request-context.ts');
   const identityCsrf = readText('libs/ts/identity-sdk-web/src/csrf.ts');
   const verifiedFetch = readText('libs/ts/web-runtime/src/verified-fetch.ts');
   const verifiedFetchCsrf = readText('libs/ts/web-runtime/src/verified-fetch.csrf.ts');
@@ -174,12 +175,16 @@ function assertLayeredDefenses() {
     if (!stepUp.includes(needle)) errors.push(`Step-up CSRF rotation missing ${needle}`);
   }
   for (const needle of [
-    'credentials && MUTATING_METHODS.has',
+    'credentials && isMutatingMethod(method)',
     'readCsrfToken(authuser)',
     'X-CSRF-Token',
-    'X-Requested-With',
   ]) {
     if (!httpClient.includes(needle)) errors.push(`HTTP client CSRF behavior missing ${needle}`);
+  }
+  for (const needle of ['MUTATING_METHODS', 'X-Requested-With']) {
+    if (!httpRequestContext.includes(needle)) {
+      errors.push(`HTTP request context CSRF behavior missing ${needle}`);
+    }
   }
   for (const needle of [
     'readScopedCsrfToken',
@@ -208,8 +213,8 @@ function assertLayeredDefenses() {
 }
 
 function assertTests() {
-  const csrf = readText('apps/account-service/src/identity.http.middleware.csrf.rs');
-  const cookies = readText('apps/account-service/src/identity.http.cookies.rs');
+  const csrf = readText('apps/identity-service/src/identity.http.middleware.csrf.rs');
+  const cookies = readText('apps/identity-service/src/identity.http.cookies.rs');
   for (const needle of [
     'fetch_metadata_rejects_cross_site_requests',
     'fetch_metadata_rejects_no_cors_authenticated_requests',

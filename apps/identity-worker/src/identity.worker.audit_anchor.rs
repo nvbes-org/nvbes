@@ -60,8 +60,36 @@ impl AuditAnchorConfig {
     }
 }
 
+trait AuditAnchorExternal {
+    async fn sign(&self, digest: &[u8]) -> anyhow::Result<KmsSignResponse>;
+    async fn verify(&self, digest: &[u8], signature: &KmsSignResponse) -> anyhow::Result<()>;
+    async fn write(&self, object_key: &str, body: Vec<u8>) -> anyhow::Result<()>;
+}
+
+struct LiveAuditAnchorExternal<'a> {
+    config: &'a AuditAnchorConfig,
+}
+
+impl AuditAnchorExternal for LiveAuditAnchorExternal<'_> {
+    async fn sign(&self, digest: &[u8]) -> anyhow::Result<KmsSignResponse> {
+        sign_digest(self.config, digest).await
+    }
+
+    async fn verify(&self, digest: &[u8], signature: &KmsSignResponse) -> anyhow::Result<()> {
+        verify_signature(self.config, digest, signature).await
+    }
+
+    async fn write(&self, object_key: &str, body: Vec<u8>) -> anyhow::Result<()> {
+        write_worm_anchor(self.config, object_key, body).await
+    }
+}
+
 pub async fn run_once(db: &PgPool) -> anyhow::Result<()> {
     let config = AuditAnchorConfig::from_env()?;
+    run_once_with(db, &LiveAuditAnchorExternal { config: &config }).await
+}
+
+async fn run_once_with(db: &PgPool, external: &impl AuditAnchorExternal) -> anyhow::Result<()> {
     let snapshot = load_chain_snapshot(db).await?;
     let snapshot_bytes = serde_json::to_vec(&snapshot)?;
     let digest = Sha256::digest(&snapshot_bytes);
@@ -75,8 +103,8 @@ pub async fn run_once(db: &PgPool) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let signature = sign_digest(&config, &digest[..]).await?;
-    verify_signature(&config, &digest[..], &signature).await?;
+    let signature = external.sign(&digest[..]).await?;
+    external.verify(&digest[..], &signature).await?;
     let generated_at = Utc::now();
     let event_count = snapshot
         .tenant_chains
@@ -97,7 +125,9 @@ pub async fn run_once(db: &PgPool) -> anyhow::Result<()> {
         generated_at.format("%Y/%m/%d")
     );
 
-    write_worm_anchor(&config, &object_key, serde_json::to_vec(&anchor)?).await?;
+    external
+        .write(&object_key, serde_json::to_vec(&anchor)?)
+        .await?;
     persist_receipt(
         db,
         &digest_hex,
@@ -251,15 +281,5 @@ fn required_env(name: &str) -> anyhow::Result<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::required_env;
-
-    #[test]
-    fn missing_anchor_configuration_fails_closed() {
-        let name = "NVBES_TEST_MISSING_AUDIT_ANCHOR_VALUE";
-        unsafe {
-            std::env::remove_var(name);
-        }
-        assert!(required_env(name).is_err());
-    }
-}
+#[path = "identity.worker.audit_anchor.tests.rs"]
+mod tests;

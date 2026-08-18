@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use nvbes_observability::{WorkerJobContext, capture_worker_job_error, metrics::HttpMetrics};
-use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
+use nvbes_product_identity::email::jobs::JOB_EMAIL_SUBMIT;
 use nvbes_redis::worker_queue::QueuedJob;
 use tokio::time::{Instant as TokioInstant, MissedTickBehavior, interval_at};
 use tracing::Instrument;
@@ -15,7 +15,7 @@ use super::jobs::{
 
 const JOB_LEASE_HEARTBEAT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 
-pub(super) const WORKER_QUEUES: [&str; 2] = [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS];
+pub(super) const WORKER_QUEUES: [&str; 1] = [JOB_EMAIL_SUBMIT];
 
 pub(super) async fn claim_available_job(
     state: &AppState,
@@ -116,36 +116,5 @@ fn failed_job_outcome(attempts: u32, max_attempts: u32, retryable: bool) -> &'st
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{JOB_LEASE_HEARTBEAT_INTERVAL, WORKER_QUEUES, failed_job_outcome};
-    use nvbes_product_identity::email::jobs::{JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS};
-
-    #[test]
-    fn identity_worker_queues_exclude_account_and_billing_runtime() {
-        assert_eq!(WORKER_QUEUES, [JOB_EMAIL_SEND, JOB_EMAIL_WEBHOOK_PROCESS]);
-        for queue in WORKER_QUEUES {
-            assert!(
-                !queue.starts_with("billing."),
-                "identity-worker must not claim Billing queue {queue}"
-            );
-            assert!(
-                !queue.starts_with("account."),
-                "identity-worker must not claim Account queue {queue}"
-            );
-        }
-    }
-
-    #[test]
-    fn failed_job_outcome_matches_retry_budget() {
-        assert_eq!(failed_job_outcome(1, 3, true), "retry_scheduled");
-        assert_eq!(failed_job_outcome(3, 3, true), "dead_letter");
-        assert_eq!(failed_job_outcome(1, 3, false), "dead_letter");
-    }
-
-    #[test]
-    fn lease_heartbeat_precedes_stale_recovery_window() {
-        assert!(
-            JOB_LEASE_HEARTBEAT_INTERVAL.as_secs() * 3 < super::super::jobs::STALE_AFTER.as_secs()
-        );
-    }
-}
+#[path = "identity.worker.job_processor.tests.rs"]
+mod tests;

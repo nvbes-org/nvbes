@@ -36,7 +36,7 @@ impl EmailSender for TestCaptureEmailSender {
     async fn send_message(&self, message: &EmailMessage) -> Result<SendResult, EmailError> {
         let job_id = safe_job_id(required_header(message, JOB_ID_HEADER)?)?;
         let business_type = required_header(message, BUSINESS_TYPE_HEADER)?;
-        let provider_email_id = format!("<account-job-{job_id}@worker.nvbes.fr>");
+        let provider_email_id = format!("<account-job-{job_id}@notify.nvbes.eu>");
         let capture = Capture {
             business_type,
             html_body: message.html_body.as_deref(),

@@ -4,11 +4,13 @@
     "command": "node tools/migration/frontend-experience.mjs --write",
     "sources": [
       "package.json",
-      "apps/account-web/src/identity.router.tsx",
-      "apps/account-web/src/components/AccountLayout.tsx",
-      "apps/account-web/e2e/critical.spec.ts",
-      "apps/account-web/src/identity.universal-login.test.js",
-      "apps/account-web/src/pages/useUniversalLogin.test.js",
+      "scripts/test-e2e-critical.sh",
+      "scripts/test-identity-e2e-local.sh",
+      "apps/identity-web/src/identity.router.tsx",
+      "apps/identity-web/src/components/AuthPageShell.tsx",
+      "apps/identity-web/e2e/critical.spec.ts",
+      "apps/identity-web/src/identity.universal-login.test.js",
+      "apps/identity-web/src/pages/useUniversalLogin.test.js",
       "apps/cloud-web/src/drive.router.tsx",
       "apps/cloud-web/src/DriveAppLayout.tsx",
       "apps/cloud-web/src/DriveSharedLinksView.tsx",
@@ -32,77 +34,112 @@
     ],
     "targeted_tests": [
       "pnpm check:web",
-      "pnpm --dir apps/account-web test:e2e:critical",
+      "pnpm --dir apps/identity-web test:e2e:critical",
       "pnpm --dir apps/enterprise-web test"
     ]
   },
   "summary": {
-    "checks": 29,
-    "passed": 29,
+    "checks": 34,
+    "passed": 34,
     "failed": 0,
     "status": "passed"
   },
   "checks": [
     {
       "id": "root-check-web-enterprise-format",
-      "description": "Root web check formats Enterprise Web",
+      "description": "Root web check formats Identity and Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: format:check --projects=cloud-web,account-web,console-web,enterprise-web"
+      "pattern": "check:web: format:check --projects=cloud-web,account-web,identity-web,console-web,enterprise-web"
     },
     {
       "id": "root-check-web-enterprise-lint",
-      "description": "Root web check lints Enterprise Web",
+      "description": "Root web check lints Identity and Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: lint --projects=cloud-web,account-web,console-web,enterprise-web"
+      "pattern": "check:web: lint --projects=cloud-web,account-web,identity-web,console-web,enterprise-web"
     },
     {
       "id": "root-check-web-enterprise-typecheck",
-      "description": "Root web check typechecks Enterprise Web",
+      "description": "Root web check typechecks Identity and Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "check:web: typecheck --projects=cloud-web,account-web,console-web,enterprise-web"
+      "pattern": "check:web: typecheck --projects=cloud-web,account-web,identity-web,console-web,enterprise-web"
     },
     {
       "id": "lint-web-enterprise",
-      "description": "Root lint:web includes Enterprise Web",
+      "description": "Root lint:web includes Identity and Enterprise Web",
       "path": "package.json",
       "status": "passed",
-      "pattern": "lint:web: lint --projects=cloud-web,account-web,console-web,enterprise-web"
+      "pattern": "lint:web: lint --projects=cloud-web,account-web,identity-web,console-web,enterprise-web"
     },
     {
-      "id": "account-router",
-      "description": "Account Web declares routed login/account journeys",
-      "path": "apps/account-web/src/identity.router.tsx",
+      "id": "identity-router",
+      "description": "Identity Web declares routed authentication journeys",
+      "path": "apps/identity-web/src/identity.router.tsx",
       "status": "passed",
       "pattern": "createRouter"
     },
     {
-      "id": "account-main",
-      "description": "Account shell exposes a main landmark",
-      "path": "apps/account-web/src/components/AccountLayout.tsx",
+      "id": "identity-main",
+      "description": "Identity shell exposes a main landmark",
+      "path": "apps/identity-web/src/components/AuthPageShell.tsx",
       "status": "passed",
       "pattern": "<main"
     },
     {
-      "id": "account-critical-e2e",
-      "description": "Account Web has browser-level critical journey coverage",
-      "path": "apps/account-web/e2e/critical.spec.ts",
+      "id": "identity-critical-e2e",
+      "description": "Identity Web has browser-level critical journey coverage",
+      "path": "apps/identity-web/e2e/critical.spec.ts",
       "status": "passed",
       "pattern": "critical identity journeys"
     },
     {
-      "id": "account-universal-login-test",
-      "description": "Account Web tests universal login API behavior",
-      "path": "apps/account-web/src/identity.universal-login.test.js",
+      "id": "identity-critical-e2e-oauth-security",
+      "description": "Identity Web verifies PAR, consent and PKCE in the hosted OAuth journey",
+      "path": "apps/identity-web/e2e/critical.spec.ts",
+      "status": "passed",
+      "pattern": "hosted OAuth authorization enforces PAR, consent and PKCE"
+    },
+    {
+      "id": "identity-critical-e2e-service",
+      "description": "Identity Web seeds fixtures through Identity Service",
+      "path": "apps/identity-web/e2e/critical.spec.ts",
+      "status": "passed",
+      "pattern": "nvbes-identity-service"
+    },
+    {
+      "id": "identity-critical-e2e-runner",
+      "description": "Root critical E2E runner executes Identity Web",
+      "path": "scripts/test-e2e-critical.sh",
+      "status": "passed",
+      "pattern": "apps/identity-web test:e2e:critical"
+    },
+    {
+      "id": "identity-critical-e2e-local-command",
+      "description": "Root exposes the isolated Identity browser harness through Nx",
+      "path": "package.json",
+      "status": "passed",
+      "pattern": "test:e2e:critical:local: identity-web:test:e2e:critical:local"
+    },
+    {
+      "id": "identity-critical-e2e-local-harness",
+      "description": "Identity critical journeys start isolated infrastructure and runtimes",
+      "path": "scripts/test-identity-e2e-local.sh",
+      "status": "passed",
+      "pattern": "starting isolated PostgreSQL and Redis"
+    },
+    {
+      "id": "identity-universal-login-test",
+      "description": "Identity Web tests universal login API behavior",
+      "path": "apps/identity-web/src/identity.universal-login.test.js",
       "status": "passed",
       "pattern": "Universal Login API helpers"
     },
     {
-      "id": "account-universal-login-hook-test",
-      "description": "Account Web tests universal login hook state",
-      "path": "apps/account-web/src/pages/useUniversalLogin.test.js",
+      "id": "identity-universal-login-hook-test",
+      "description": "Identity Web tests universal login hook state",
+      "path": "apps/identity-web/src/pages/useUniversalLogin.test.js",
       "status": "passed",
       "pattern": "useUniversalLogin"
     },

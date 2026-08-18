@@ -30,8 +30,16 @@ impl Modify for AccountOAuthSecurity {
             ),
             ("account:legal:read", "Read Account consent and GPC state."),
             ("account:legal:write", "Grant or revoke Account consent."),
-            ("account:export", "Request and download Account-owned data."),
+            (
+                "account:export",
+                "Request and download the coordinated multi-product account export.",
+            ),
             ("account:delete", "Request coordinated Account closure."),
+            (
+                "account:session:read",
+                "Read active authentication sessions.",
+            ),
+            ("account:session:write", "Revoke authentication sessions."),
         ]);
         let components = openapi.components.get_or_insert_with(Components::new);
         components.add_security_scheme(
@@ -81,8 +89,12 @@ impl Modify for AccountOAuthSecurity {
         crate::consents_routes::revoke_consent,
         crate::privacy_routes::get_gpc_status,
         crate::privacy_routes::request_export,
+        crate::privacy_routes::get_latest_export,
         crate::privacy_routes::download_export,
         crate::closure_routes::request_closure,
+        crate::closure_routes::get_closure,
+        crate::sessions_routes::list_sessions,
+        crate::sessions_routes::revoke_session,
     ),
     modifiers(&AccountOAuthSecurity),
 )]
@@ -107,10 +119,14 @@ mod tests {
             "/api/v1/consents",
             "/api/v1/notifications",
             "/api/v1/preferences",
-            "/api/v1/privacy/export",
+            "/api/v1/privacy/exports",
+            "/api/v1/privacy/exports/latest",
+            "/api/v1/privacy/exports/{exportId}/document",
             "/api/v1/privacy/gpc",
             "/api/v1/profile",
             "/api/v1/profile/avatar",
+            "/api/v1/security/sessions",
+            "/api/v1/security/sessions/{sessionId}",
         ];
         assert_eq!(paths.len(), expected.len());
         assert!(expected.iter().all(|path| paths.contains_key(*path)));

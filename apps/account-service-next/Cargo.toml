@@ -16,12 +16,15 @@ anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
 nvbes-identity-sdk = { path = "../../libs/rust/identity-sdk-backend" }
+nvbes-product-account = { path = "../../libs/rust/products/account" }
 nvbes-storage = { path = "../../libs/rust/storage" }
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
 tokio.workspace = true
-tower-http.workspace = true
+tower-http = { workspace = true, features = ["trace"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["json"] }
 url = "2.5"

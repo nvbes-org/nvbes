@@ -1,11 +1,19 @@
 {
   "apis": [
     {
+      "name": "identity-service",
+      "surface": "identity",
+      "version": "0.1.0",
+      "document": "apps/identity-service/openapi.json",
+      "routeSource": "apps/identity-service/src",
+      "routeCoverage": "utoipa-paths"
+    },
+    {
       "name": "account-service",
       "surface": "account",
       "version": "0.1.0",
-      "document": "apps/account-service/openapi.json",
-      "routeSource": "apps/account-service/src",
+      "document": "apps/account-service-next/openapi.json",
+      "routeSource": "apps/account-service-next/src",
       "routeCoverage": "utoipa-paths"
     },
     {

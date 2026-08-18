@@ -6,8 +6,8 @@
 - repository_ready: true
 - live_blocking_items: 6
 - completion: no-go
-- backlog_open_tasks: 40
-- backlog_blocking_items: 178
+- backlog_open_tasks: 42
+- backlog_blocking_items: 184
 - decision: no-go
 
 ## Rules

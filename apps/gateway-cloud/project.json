@@ -1,0 +1,23 @@
+{
+  "name": "gateway-cloud",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/gateway-cloud/src",
+  "tags": ["scope:oss", "type:app", "domain:cloud", "layer:app"],
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo check --locked --package nvbes-gateway-cloud --all-targets",
+        "cwd": "."
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo test --locked --package nvbes-gateway-cloud",
+        "cwd": "."
+      }
+    }
+  }
+}

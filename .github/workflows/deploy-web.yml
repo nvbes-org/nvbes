@@ -1,0 +1,137 @@
+name: deploy web applications
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'apps/*-web/**'
+      - 'libs/ts/**'
+      - 'tools/ci/affected-applications.core.mjs'
+      - 'tools/ci/affected-applications.mjs'
+      - 'tools/ci/deployable-applications.json'
+      - 'tools/web-build/**'
+      - 'nx.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+      - 'vite.config.ts'
+      - '.github/workflows/deploy-web.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  detect-affected:
+    if: vars.CLOUDFLARE_PAGES_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      web: ${{ steps.affected.outputs.web }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-web.yml
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Detect affected web applications
+        id: affected
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          affected="$(node tools/ci/affected-applications.mjs \
+            --mode web \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA")"
+          echo "web=$(jq -c '.web' <<<"$affected")" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: detect-affected
+    if: needs.detect-affected.outputs.web != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    concurrency:
+      group: deploy-web-${{ matrix.project }}-production
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect-affected.outputs.web) }}
+    name: cloudflare pages / ${{ matrix.project }}
+    env:
+      CI: 'true'
+      NX_DAEMON: 'false'
+      NVBES_ENV: production
+      VITE_ACCOUNT_SERVICE_BASE_URL: ${{ vars.VITE_ACCOUNT_SERVICE_BASE_URL }}
+      VITE_BACKOFFICE_SERVICE_BASE_URL: ${{ vars.VITE_BACKOFFICE_SERVICE_BASE_URL }}
+      VITE_CLOUD_SERVICE_BASE_URL: ${{ vars.VITE_CLOUD_SERVICE_BASE_URL }}
+      VITE_DEVELOPER_SERVICE_BASE_URL: ${{ vars.VITE_DEVELOPER_SERVICE_BASE_URL }}
+      VITE_IDENTITY_SERVICE_BASE_URL: ${{ vars.VITE_IDENTITY_SERVICE_BASE_URL }}
+      VITE_NVBES_BUILD_ID: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-web.yml
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build production assets
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GRAFANA_CLOUD_STACK_ID: ${{ vars.GRAFANA_CLOUD_STACK_ID }}
+          GRAFANA_FARO_APP_ID: ${{ vars.GRAFANA_FARO_APP_ID }}
+          GRAFANA_FARO_SOURCEMAP_API_KEY: ${{ secrets.GRAFANA_FARO_SOURCEMAP_API_KEY }}
+          GRAFANA_FARO_SOURCEMAP_ENDPOINT: ${{ vars.GRAFANA_FARO_SOURCEMAP_ENDPOINT }}
+          GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED: ${{ vars.GRAFANA_FARO_SOURCEMAP_UPLOAD_ENABLED }}
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+          POSTHOG_CLI_HOST: ${{ vars.POSTHOG_CLI_HOST }}
+          POSTHOG_CLI_PROJECT_ID: ${{ vars.POSTHOG_CLI_PROJECT_ID }}
+          POSTHOG_SOURCEMAP_UPLOAD_ENABLED: ${{ vars.POSTHOG_SOURCEMAP_UPLOAD_ENABLED }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ matrix.observabilityProject }}
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_SOURCEMAP_UPLOAD_ENABLED: ${{ vars.SENTRY_SOURCEMAP_UPLOAD_ENABLED }}
+        run: pnpm exec nx run "${{ matrix.project }}:build"
+      - name: Deploy immutable commit to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          pnpm exec wrangler pages deploy "${{ matrix.root }}/dist"
+          --project-name "${{ matrix.pagesProject }}"
+          --branch main
+          --commit-hash "${{ github.sha }}"

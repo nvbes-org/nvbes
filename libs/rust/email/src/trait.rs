@@ -26,4 +26,12 @@ pub struct SendResult {
 #[async_trait]
 pub trait EmailSender: Send + Sync {
     async fn send_message(&self, message: &EmailMessage) -> Result<SendResult, EmailError>;
+
+    async fn send_message_before(
+        &self,
+        message: &EmailMessage,
+        _deliver_before: chrono::DateTime<chrono::Utc>,
+    ) -> Result<SendResult, EmailError> {
+        self.send_message(message).await
+    }
 }

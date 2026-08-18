@@ -66,7 +66,7 @@ export async function submitPasswordStep({
       navigateToVerifyEmail(
         result.user?.email ?? email,
         result.verification_resend_available_at ?? null,
-        result.user?.username?.trim() || null,
+        result.user?.display_name?.trim() || null,
       );
       return;
     }

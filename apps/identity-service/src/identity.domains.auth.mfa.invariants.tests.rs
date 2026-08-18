@@ -91,14 +91,13 @@ async fn seed_user(db: &sqlx::PgPool) -> (Uuid, Uuid) {
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username, password_hash, status
+          principal_id, email, password_hash, status
         )
-        VALUES ($1, $2, 'MFA', 'Invariant', $3, 'test-password-hash', 'active')
+        VALUES ($1, $2, 'test-password-hash', 'active')
         "#,
     )
     .bind(principal_id)
     .bind(format!("{principal_id}@example.test"))
-    .bind(format!("mfa-invariant-{principal_id}"))
     .execute(db)
     .await
     .expect("user should be inserted");

@@ -33,7 +33,6 @@ async fn test_config(pool: &PgPool) -> AppState {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string()),
         environment: "development".to_string(),
         app_name: "account-service-test".to_string(),
-        email_provider: "mock".to_string(),
         otp_provider: "mock".to_string(),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
@@ -95,15 +94,14 @@ async fn seed_login_subject(pool: &PgPool, email: &str, password: &str) -> (Uuid
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, firstname, lastname, username, password_hash,
+          principal_id, email, password_hash,
           email_verified_at, status, created_at, updated_at
         )
-        VALUES ($1, $2, 'Login', 'Tester', $3, $4, NOW(), 'active', $5, $5)
+        VALUES ($1, $2, $3, NOW(), 'active', $4, $4)
         "#,
     )
     .bind(principal_id)
     .bind(email)
-    .bind(format!("user-{}", principal_id))
     .bind(password_hash)
     .bind(now)
     .execute(pool)

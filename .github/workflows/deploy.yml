@@ -18,59 +18,60 @@ on:
         type: choice
         options:
           - all
-          - email-worker
           - identity-service
           - account-service
           - cloud-service
           - billing-service
+      email_worker_image_digest:
+        description: 'Digest sha256 de la release signee email-worker'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-${{ github.inputs.environment }}-${{ github.inputs.component }}
   cancel-in-progress: false
 
-jobs:
-  deploy-email-worker:
-    if: github.inputs.component == 'all' || github.inputs.component == 'email-worker'
-    runs-on: ubuntu-latest
-    environment: ${{ github.inputs.environment }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.17.0 --activate
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile --prefer-offline
-      - name: Deploy Cloudflare email-worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          SCALEWAY_SECRET_KEY: ${{ secrets.SCALEWAY_SECRET_KEY }}
-          SCALEWAY_PROJECT_ID: ${{ secrets.SCALEWAY_PROJECT_ID }}
-        run: |
-          cd apps/email-worker
-          pnpm deploy:${{ github.inputs.environment }}
+permissions:
+  actions: read
+  contents: read
 
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
   deploy-identity-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'identity-service'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: ${{ github.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Echo manual deployment status for identity-service
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy.yml
+      - name: Reject unconfigured identity-service deployment
         run: |
-          echo "Deploying identity-service to ${{ github.inputs.environment }}..."
+          echo "identity-service deployment is not wired to a target yet; refusing to report a false success" >&2
+          exit 1
 
   deploy-account-service:
     if: github.inputs.component == 'all' || github.inputs.component == 'account-service'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: ${{ github.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Echo manual deployment status for account-service
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy.yml
+      - name: Reject unconfigured account-service deployment
         run: |
-          echo "Deploying account-service to ${{ github.inputs.environment }}..."
+          echo "account-service deployment is not wired to a target yet; refusing to report a false success" >&2
+          exit 1

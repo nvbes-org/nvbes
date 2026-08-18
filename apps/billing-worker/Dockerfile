@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for billing-worker (Scaleway Serverless compatible)
-FROM rust:1.85-slim-bookworm@sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36 AS builder
+FROM rust:1.91.1-slim-bookworm@sha256:8514999d4786ef12efe89239e86b3d0a021b94b9d35108c8efe6c79ca7dc1a65 AS builder
 
 ARG SOURCE_DATE_EPOCH=0
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
@@ -14,8 +14,8 @@ WORKDIR /usr/src/nvbes
 # Install build dependencies
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
-      "deb https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb https://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
       > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
     && apt-get install -y --no-install-recommends \
@@ -27,6 +27,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 # Copy workspace manifests and source files
 COPY Cargo.toml Cargo.lock ./
 COPY apps ./apps
+COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
@@ -39,8 +40,8 @@ FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bb
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
-      "deb https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb https://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
       > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
     && apt-get install -y --no-install-recommends \

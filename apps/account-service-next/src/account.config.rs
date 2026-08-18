@@ -9,6 +9,7 @@ pub struct AccountConfig {
     pub identity_service_base_url: String,
     pub account_web_base_url: String,
     pub account_web_origin: String,
+    pub provisioning_token: String,
     pub environment: String,
     pub avatar_storage: AvatarStorageConfig,
 }
@@ -53,13 +54,30 @@ impl AccountConfig {
             identity_service_base_url,
             account_web_base_url,
             account_web_origin,
+            provisioning_token: provisioning_token(&environment)?,
             environment,
             avatar_storage,
         })
     }
 }
 
-fn avatar_storage_from_env(environment: &str) -> Result<AvatarStorageConfig, String> {
+fn provisioning_token(environment: &str) -> Result<String, String> {
+    match std::env::var("NVBES_ACCOUNT_PROVISIONING_TOKEN") {
+        Ok(value) if value.trim().len() >= 32 => Ok(value.trim().to_string()),
+        Ok(_) => Err("NVBES_ACCOUNT_PROVISIONING_TOKEN must contain at least 32 characters".into()),
+        Err(std::env::VarError::NotPresent) if matches!(environment, "development" | "test") => {
+            Ok("development-account-provisioning-token".to_string())
+        }
+        Err(std::env::VarError::NotPresent) => {
+            Err("NVBES_ACCOUNT_PROVISIONING_TOKEN is required".to_string())
+        }
+        Err(error) => Err(format!(
+            "NVBES_ACCOUNT_PROVISIONING_TOKEN could not be read: {error}"
+        )),
+    }
+}
+
+pub fn avatar_storage_from_env(environment: &str) -> Result<AvatarStorageConfig, String> {
     match required("NVBES_ACCOUNT_AVATAR_STORAGE_MODE")?.as_str() {
         "mock" if matches!(environment, "development" | "test") => Ok(AvatarStorageConfig::Mock),
         "mock" => Err(
@@ -146,7 +164,7 @@ fn origin(base_url: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{origin, required_url};
+    use super::{origin, provisioning_token, required_url};
 
     #[test]
     fn account_web_origin_is_exact() {
@@ -161,5 +179,11 @@ mod tests {
     fn base_urls_reject_credentials_and_queries() {
         assert!(required_url("URL", "https://user@example.com".to_string()).is_err());
         assert!(required_url("URL", "https://example.com?debug=1".to_string()).is_err());
+    }
+
+    #[test]
+    fn provisioning_token_is_strong_or_development_only() {
+        assert!(provisioning_token("development").is_ok());
+        assert!(provisioning_token("test").is_ok());
     }
 }

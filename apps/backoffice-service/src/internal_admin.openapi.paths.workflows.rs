@@ -39,15 +39,6 @@ pub(crate) fn endpoints<'a>() -> Vec<CriticalEndpoint<'a>> {
             "CommunicationsActionResult",
         ),
         e(
-            "/workspaces/{workspaceId}/admin/communications/webhooks/{eventId}/replay",
-            "replayWebhookEvent",
-            "communications",
-            "Replay a webhook event",
-            &["workspaceId", "eventId"],
-            "CriticalActionRequest",
-            "CommunicationsActionResult",
-        ),
-        e(
             "/workspaces/{workspaceId}/admin/communications/suppressions",
             "suppressEmail",
             "communications",

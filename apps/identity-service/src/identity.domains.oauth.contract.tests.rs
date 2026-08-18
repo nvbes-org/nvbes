@@ -56,7 +56,7 @@ fn openapi_includes_stable_introspection_fields() {
 }
 
 #[test]
-fn openapi_excludes_workspace_management_schema() {
+fn openapi_exposes_session_context_switch_without_workspace_management_routes() {
     let openapi = serde_json::from_str::<serde_json::Value>(
         &IdentityApiDoc::openapi()
             .to_json()
@@ -65,9 +65,14 @@ fn openapi_excludes_workspace_management_schema() {
     .expect("OpenAPI document should be valid JSON");
 
     assert!(
-        openapi["components"]["schemas"]
-            .get("WorkspaceView")
-            .is_none(),
-        "WorkspaceView should not be published by Account OpenAPI"
+        openapi["paths"]
+            .get("/auth/workspaces/{workspaceId}/switch")
+            .is_some()
     );
+    for path in ["/workspaces", "/workspaces/{workspaceId}"] {
+        assert!(
+            openapi["paths"].get(path).is_none(),
+            "workspace resource management leaked into Identity: {path}"
+        );
+    }
 }

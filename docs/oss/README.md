@@ -9,7 +9,7 @@ It is exported to `nvbes-oss/docs` and must not link to private blueprints, clou
 - Installation with Docker Compose.
 - Installation with Kubernetes and Helm.
 - Self-hosted administration.
-- Email delivery through `NVBES_EMAIL_PROVIDER=smtp`.
+- Transactional email submission through the global gRPC email runtime.
 - Product analytics core without a bundled proprietary backend.
 - Upgrade and backup procedures.
 - Troubleshooting.
@@ -27,6 +27,7 @@ Public OSS documentation uses the target service names:
 - `console-web`;
 - `enterprise-service`;
 - `enterprise-web`;
+- `email-worker`;
 - `gateway-cloud`.
 
 Do not document legacy runtime names in public OSS material. The OSS surface

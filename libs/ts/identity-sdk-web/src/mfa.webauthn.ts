@@ -13,6 +13,7 @@ import {
 } from './webauthn';
 import { stepUp, type StepUpPurpose } from './mfa.step-up';
 import {
+  authCredentials,
   authHeaders,
   handleMfaResponseError,
   jsonAuthHeaders,
@@ -34,7 +35,7 @@ export async function startWebAuthnRegistration(
   const response = await fetch(`${baseUrl}/auth/mfa/webauthn/register/start`, {
     method: 'POST',
     headers: jsonAuthHeaders(token),
-    credentials: 'include',
+    credentials: authCredentials(token),
     body: JSON.stringify({ label, kind }),
   });
   if (!response.ok) return handleMfaResponseError(response);
@@ -55,7 +56,7 @@ export async function finishWebAuthnRegistration(
   const response = await fetch(`${baseUrl}/auth/mfa/webauthn/register/finish`, {
     method: 'POST',
     headers: jsonAuthHeaders(token),
-    credentials: 'include',
+    credentials: authCredentials(token),
     body: JSON.stringify({ factor_id: factorId, reg: serializeCredential(credential) }),
   });
   if (!response.ok) return handleMfaResponseError(response);
@@ -80,7 +81,7 @@ export async function startWebAuthnAuthentication(
   const response = await fetch(`${baseUrl}/auth/mfa/webauthn/start`, {
     method: 'POST',
     headers: authHeaders(token, 'POST'),
-    credentials: 'include',
+    credentials: authCredentials(token),
   });
   if (!response.ok) return handleMfaResponseError(response);
 

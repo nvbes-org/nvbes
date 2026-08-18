@@ -1,7 +1,7 @@
 use axum::{Json, Router, extract::State, http::HeaderMap, routing::get};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, Row};
+use sqlx::Row;
 use uuid::Uuid;
 
 use crate::app::AppState;
@@ -76,24 +76,22 @@ async fn operations_center_route(
     headers: HeaderMap,
 ) -> Result<Json<OperationsCenterSnapshot>, AppError> {
     let actor_id = actor_principal_id(&headers)?;
-    Ok(Json(
-        load_operations_center(&state.db, &state.billing_grpc_endpoint, actor_id).await?,
-    ))
+    Ok(Json(load_operations_center(&state, actor_id).await?))
 }
 
 async fn load_operations_center(
-    db: &PgPool,
-    billing_grpc_endpoint: &str,
+    state: &AppState,
     actor_id: Uuid,
 ) -> Result<OperationsCenterSnapshot, AppError> {
     let billing = get_admin_operations_center(
-        billing_grpc_endpoint,
+        &state.billing_grpc_endpoint,
         BackofficeAccess {
             tenant_id: Uuid::nil(),
             actor_principal_id: actor_id,
         },
     )
     .await?;
+    let email = state.email_operations.snapshot(actor_id).await?;
     let metrics = sqlx::query(
         r#"
         SELECT
@@ -110,29 +108,21 @@ async fn load_operations_center(
             WHERE status = 'failed'
           ) AS failed_job_run_count,
           (
-            SELECT COUNT(*) FROM email_messages
-            WHERE status::text = 'queued'
-          ) AS queued_email_count,
-          (
-            SELECT COUNT(*) FROM email_messages
-            WHERE status::text IN ('bounced', 'complained', 'dropped')
-              AND updated_at >= NOW() - INTERVAL '24 hours'
-          ) AS dropped_email_count_24h,
-          (
             SELECT COUNT(*) FROM audit_events
             WHERE created_at >= NOW() - INTERVAL '24 hours'
           ) AS audit_events_24h
         "#,
     )
-    .fetch_one(db)
+    .fetch_one(&state.db)
     .await?;
 
-    Ok(snapshot_from_metrics(metrics, billing))
+    Ok(snapshot_from_metrics(metrics, billing, email))
 }
 
 fn snapshot_from_metrics(
     metrics: sqlx::postgres::PgRow,
     billing: BackofficeBillingOperationsSnapshot,
+    email: nvbes_email::proto::nvbes::email::v1::EmailOperationsSnapshot,
 ) -> OperationsCenterSnapshot {
     OperationsCenterSnapshot {
         provider_event_failure_count: billing.provider_event_failure_count,
@@ -146,8 +136,8 @@ fn snapshot_from_metrics(
         open_incident_count: metrics.get("open_incident_count"),
         scheduled_maintenance_window_count: metrics.get("scheduled_maintenance_window_count"),
         failed_job_run_count: metrics.get("failed_job_run_count"),
-        queued_email_count: metrics.get("queued_email_count"),
-        dropped_email_count_24h: metrics.get("dropped_email_count_24h"),
+        queued_email_count: email.queued_message_count,
+        dropped_email_count_24h: email.failed_message_count_24h,
         audit_events_24h: metrics.get("audit_events_24h"),
         recent_provider_failures: billing
             .recent_provider_failures

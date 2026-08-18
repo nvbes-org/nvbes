@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 #[path = "billing.worker.analytics.rs"]
 pub mod analytics;
 #[path = "billing.worker.email.rs"]
@@ -20,7 +18,7 @@ pub struct BillingWorkerState {
     pub config: nvbes_core::config::AppConfig,
     pub db: sqlx::PgPool,
     pub redis: nvbes_redis::RedisPool,
-    pub email: Arc<dyn nvbes_email::EmailSender>,
+    pub email: nvbes_email::EmailClient,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub product_analytics: nvbes_product_analytics::ProductAnalytics,
 }
@@ -30,7 +28,7 @@ impl BillingWorkerState {
         config: nvbes_core::config::AppConfig,
         db: sqlx::PgPool,
         redis: nvbes_redis::RedisPool,
-        email: Arc<dyn nvbes_email::EmailSender>,
+        email: nvbes_email::EmailClient,
         product_analytics: nvbes_product_analytics::ProductAnalytics,
     ) -> Self {
         Self {

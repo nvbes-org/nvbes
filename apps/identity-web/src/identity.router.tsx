@@ -1,8 +1,7 @@
 import { RouterErrorFallback } from '@nvbes/web-runtime';
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
+import { createRootRoute, createRouter, Outlet } from '@tanstack/react-router';
 
-import IdentityLayout from './components/IdentityLayout';
-import { createIdentityRoutes, createStandaloneRoutes } from './identity.router.routes';
+import { createStandaloneRoutes } from './identity.router.routes';
 import NotFoundPage from './pages/NotFoundPage';
 
 function IdentityRootLayout() {
@@ -19,18 +18,8 @@ export const rootRoute = createRootRoute({
   notFoundComponent: NotFoundPage,
 });
 
-export const identityRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  id: 'identity',
-  component: IdentityLayout,
-});
-
 const standaloneRoutes = createStandaloneRoutes(rootRoute);
-const identityRoutes = createIdentityRoutes(identityRoute);
-const routeTree = rootRoute.addChildren([
-  ...standaloneRoutes,
-  identityRoute.addChildren(identityRoutes),
-]);
+const routeTree = rootRoute.addChildren(standaloneRoutes);
 
 export const router = createRouter({
   routeTree,

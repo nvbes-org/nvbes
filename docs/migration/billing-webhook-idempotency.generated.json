@@ -3,8 +3,8 @@
   "generation": {
     "command": "node tools/migration/billing-webhook-idempotency.mjs --write",
     "sources": [
-      "apps/account-service/openapi.json",
-      "apps/account-service/src/identity.domains.mod.rs",
+      "apps/identity-service/openapi.json",
+      "apps/identity-service/src/identity.domains.mod.rs",
       "apps/billing-service/src/billing.domains.webhooks.rs",
       "libs/rust/billing/src/stripe_webhook_intake.rs",
       "libs/rust/billing/src/jobs.rs",
@@ -32,14 +32,14 @@
     {
       "id": "identity-openapi-no-psp-webhook",
       "description": "Identity OpenAPI no longer exposes PSP webhook routes",
-      "path": "apps/account-service/openapi.json",
+      "path": "apps/identity-service/openapi.json",
       "status": "passed",
       "pattern": "/webhooks/stripe"
     },
     {
       "id": "identity-router-no-billing-merge",
       "description": "Identity router no longer merges legacy billing routes",
-      "path": "apps/account-service/src/identity.domains.mod.rs",
+      "path": "apps/identity-service/src/identity.domains.mod.rs",
       "status": "passed",
       "pattern": ".merge(billing::routes::router(state))"
     },
@@ -150,10 +150,10 @@
     },
     {
       "id": "billing-email-job-type",
-      "description": "Billing email delivery has a dedicated queue",
+      "description": "Billing email submission has a dedicated integration queue",
       "path": "libs/rust/billing/src/jobs.rs",
       "status": "passed",
-      "pattern": "JOB_BILLING_EMAIL_SEND: &str = \"billing.email.send\""
+      "pattern": "JOB_BILLING_EMAIL_SUBMIT: &str = \"billing.integration.email.submit\""
     },
     {
       "id": "queue-idempotency-key",
@@ -213,10 +213,10 @@
     },
     {
       "id": "billing-email-domain-queue",
-      "description": "Billing email enqueue uses the Billing queue",
+      "description": "Billing email enqueue uses the Billing integration queue",
       "path": "apps/billing-worker/src/billing.worker.email.rs",
       "status": "passed",
-      "pattern": "queue: nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND.to_string()"
+      "pattern": "let queue = nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT"
     },
     {
       "id": "billing-email-no-identity-queue",
@@ -227,17 +227,17 @@
     },
     {
       "id": "billing-email-local-delivery",
-      "description": "Billing worker sends billing emails locally",
+      "description": "Billing worker submits commands through the shared email service",
       "path": "apps/billing-worker/src/billing.worker.email.delivery.rs",
       "status": "passed",
-      "pattern": "send_message(&message)"
+      "pattern": "state.email.send(command).await"
     },
     {
       "id": "billing-email-domain-header",
-      "description": "Billing email delivery is tagged as Billing domain",
-      "path": "apps/billing-worker/src/billing.worker.email.delivery.rs",
+      "description": "Billing email commands carry the Billing category",
+      "path": "apps/billing-worker/src/billing.worker.email.rs",
       "status": "passed",
-      "pattern": "\"X-Nvbes-Email-Domain\""
+      "pattern": "category: EmailCategory::Billing"
     },
     {
       "id": "mollie-worker-processes-domain",

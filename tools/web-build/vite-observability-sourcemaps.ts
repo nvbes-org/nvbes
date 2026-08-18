@@ -9,13 +9,19 @@ type EnvSource = Record<string, string | undefined>;
 
 type SourceMapPluginsOptions = {
   appName: string;
+  command: 'build' | 'serve';
   envSources: EnvSource[];
 };
 
 export function observabilitySourceMapPlugins({
   appName,
+  command,
   envSources,
 }: SourceMapPluginsOptions): PluginOption[] {
+  if (command !== 'build') {
+    return [];
+  }
+
   const release = releaseName(envSources);
 
   return [
@@ -66,6 +72,10 @@ function sentryPlugins(
   release: string | undefined,
   envSources: EnvSource[],
 ): PluginOption[] {
+  if (!envFlag('SENTRY_SOURCEMAP_UPLOAD_ENABLED', envSources)) {
+    return [];
+  }
+
   const config = completeConfig(
     'Sentry',
     {

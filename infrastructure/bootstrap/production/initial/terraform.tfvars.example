@@ -1,0 +1,4 @@
+scaleway_project_id    = "00000000-0000-0000-0000-000000000000"
+terraform_state_bucket = "nvbes-terraform-state-production-example"
+
+# scaleway_bootstrap_profile = "nvbes-production-bootstrap"

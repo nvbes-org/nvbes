@@ -1,4 +1,4 @@
-export const defaultNotificationPath = '/security';
+export const defaultNotificationPath = '/login';
 
 export function notificationUrl(value: unknown, origin: string): string {
   const expectedOrigin = new URL(origin).origin;

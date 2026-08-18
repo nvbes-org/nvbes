@@ -1,24 +1,12 @@
 import { z } from 'zod';
 import type { BotIntegritySignals, DeviceProfile } from '@nvbes/identity-sdk-web';
 import { identityHttpClient } from './identity.http';
-
-const SupportedRegionSchema = z.object({
-  country_code: z.string(),
-  data_region: z.string(),
-  legal_jurisdiction: z.string(),
-  primary_timezone: z.string(),
-  timezones: z.array(z.string()),
-  sub_region: z.string().nullable(),
-  display_name: z.string().nullable(),
-});
-
-const SupportedRegionsResultSchema = z.array(SupportedRegionSchema);
+import { browserTimeZone } from './identity.browser-timezone';
 
 const RegisterResultSchema = z.object({
   user: z
     .object({
       display_name: z.string().optional(),
-      username: z.string().nullable().optional(),
     })
     .optional(),
   verification_resend_available_at: z.string(),
@@ -30,8 +18,6 @@ const RegistrationAvailabilityResultSchema = z.object({
 
 export type RegisterResult = z.infer<typeof RegisterResultSchema>;
 export type RegistrationAvailabilityResult = z.infer<typeof RegistrationAvailabilityResultSchema>;
-export type RegistrationAvailabilityField = 'email' | 'username';
-export type SupportedRegion = z.infer<typeof SupportedRegionSchema>;
 
 const LoginIdentifierResultSchema = z.object({
   next_step: z.string(),
@@ -50,7 +36,6 @@ const LoginPasswordResultSchema = z.object({
       email: z.string().optional(),
       email_verified: z.boolean().optional(),
       mfa_enabled: z.boolean().optional(),
-      username: z.string().nullable().optional(),
     })
     .optional(),
   session_token: z.string().optional(),
@@ -70,7 +55,6 @@ export type WebauthnAuthStartResult = z.infer<typeof WebauthnAuthStartResultSche
 
 export type RegisterInput = {
   email: string;
-  username: string;
   password: string;
   legal_documents_accepted: boolean;
   marketing_emails_accepted: boolean;
@@ -107,10 +91,6 @@ async function withAuthRequestTimeout<T>(
   }
 }
 
-export function fetchSupportedRegions(): Promise<SupportedRegion[]> {
-  return identityHttpClient.get('/auth/regions', SupportedRegionsResultSchema);
-}
-
 export function submitRegister(
   input: RegisterInput,
   powNonce: string,
@@ -122,6 +102,7 @@ export function submitRegister(
       RegisterResultSchema,
       {
         ...input,
+        timezone: browserTimeZone(),
         pow_nonce: powNonce,
         pow_solution: powSolution,
       },
@@ -131,14 +112,13 @@ export function submitRegister(
 }
 
 export function fetchRegistrationAvailability(
-  field: RegistrationAvailabilityField,
-  value: string,
+  email: string,
   signal: AbortSignal,
 ): Promise<RegistrationAvailabilityResult> {
   return identityHttpClient.post(
     '/auth/registration/availability',
     RegistrationAvailabilityResultSchema,
-    { field, value },
+    { email },
     { signal },
   );
 }

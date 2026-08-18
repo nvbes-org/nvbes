@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+arguments=" $* "
+
+[[ "$arguments" == *" container container update 00000000-0000-4000-8000-000000000000 "* ]]
+[[ "$arguments" == *" command.0=/app/email-worker "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_EMAIL_DATABASE_URL=postgres://email:secret@example.invalid/email "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_EMAIL_PRODUCER_TOKENS=identity-service=identity-service-production-token "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_EMAIL_DATA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_EMAIL_RECIPIENT_HMAC_KEY=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE= "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_SCALEWAY_EMAIL_SECRET_KEY=test-scaleway-tem-secret "* ]]
+[[ "$arguments" == *" secret-environment-variables.NVBES_OBSERVABILITY_INTERNAL_TOKEN=production-observability-token-value "* ]]
+[[ "$arguments" == *" secret-environment-variables.SENTRY_DSN=https://public@example.invalid/1 "* ]]
+[[ "$arguments" == *" region=fr-par "* ]]
+[[ "$arguments" == *" --wait "* ]]

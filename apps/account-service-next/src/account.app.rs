@@ -23,6 +23,7 @@ pub struct AppState {
     pub db: PgPool,
     pub jwt_verifier: IdentityJwtVerifier,
     pub avatar_storage: Arc<dyn ObjectStore>,
+    pub identity_http: reqwest::Client,
 }
 
 impl AppState {
@@ -30,11 +31,15 @@ impl AppState {
         let jwt_verifier =
             IdentityJwtVerifier::new(&config.identity_service_base_url, ACCOUNT_AUDIENCE)?;
         let avatar_storage = build_avatar_storage(&config.avatar_storage).await;
+        let identity_http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()?;
         Ok(Self {
             config,
             db,
             jwt_verifier,
             avatar_storage,
+            identity_http,
         })
     }
 }
@@ -59,7 +64,7 @@ pub fn build_router(state: AppState) -> Router {
         .layer(cors)
 }
 
-async fn build_avatar_storage(config: &AvatarStorageConfig) -> Arc<dyn ObjectStore> {
+pub async fn build_avatar_storage(config: &AvatarStorageConfig) -> Arc<dyn ObjectStore> {
     match config {
         AvatarStorageConfig::Mock => Arc::new(MockObjectStore::new()),
         AvatarStorageConfig::S3 {

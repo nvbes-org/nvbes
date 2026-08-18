@@ -3,8 +3,8 @@
 ## Status
 
 - production_cutover: no-go
-- blocking_areas: 15
-- blocking_items: 135
+- blocking_areas: 16
+- blocking_items: 140
 - live_evidence_missing_requirements: 6
 - live_evidence_missing_items: 24
 
@@ -22,25 +22,25 @@
 
 | Area | Source | Total | Blocking | Proof |
 |---|---|---:|---:|---|
-| data | `docs/migration/data-map.generated.json` | 203 | 0 | `pnpm check:migration-data-map` |
-| secrets | `docs/migration/secret-map.generated.json` | 132 | 0 | `pnpm check:migration-secret-map` |
-| jobs | `docs/migration/job-map.generated.json` | 19 | 0 | `pnpm check:migration-job-map` |
-| resources | `docs/migration/resource-map.generated.json` | 44 | 0 | `pnpm check:migration-resource-map` |
-| target_structure | `docs/migration/target-structure.generated.json` | 56 | 0 | `pnpm check:migration-target-structure` |
+| data | `docs/migration/data-map.generated.json` | 237 | 0 | `pnpm check:migration-data-map` |
+| secrets | `docs/migration/secret-map.generated.json` | 249 | 0 | `pnpm check:migration-secret-map` |
+| jobs | `docs/migration/job-map.generated.json` | 16 | 0 | `pnpm check:migration-job-map` |
+| resources | `docs/migration/resource-map.generated.json` | 43 | 0 | `pnpm check:migration-resource-map` |
+| target_structure | `docs/migration/target-structure.generated.json` | 56 | 5 | `pnpm check:migration-target-structure` |
 | codegen | `docs/migration/codegen.generated.json` | 6 | 0 | `pnpm check:migration-codegen` |
 | supply_chain | `docs/migration/supply-chain.generated.json` | 5 | 0 | `pnpm check:migration-supply-chain` |
 | runtimes | `docs/migration/runtime-foundation.generated.json` | 4 | 0 | `pnpm check:migration-runtime-foundation` |
 | platform_primitives | `docs/migration/platform-primitives.generated.json` | 9 | 0 | `pnpm check:migration-platform-primitives` |
-| identity_register | `docs/migration/identity-register.generated.json` | 29 | 0 | `pnpm check:migration-identity-register` |
-| identity_login_session | `docs/migration/identity-login-session.generated.json` | 27 | 0 | `pnpm check:migration-identity-login-session` |
-| identity_mfa_webauthn | `docs/migration/identity-mfa-webauthn.generated.json` | 37 | 0 | `pnpm check:migration-identity-mfa-webauthn` |
+| identity_register | `docs/migration/identity-register.generated.json` | 26 | 0 | `pnpm check:migration-identity-register` |
+| identity_login_session | `docs/migration/identity-login-session.generated.json` | 23 | 0 | `pnpm check:migration-identity-login-session` |
+| identity_mfa_webauthn | `docs/migration/identity-mfa-webauthn.generated.json` | 36 | 0 | `pnpm check:migration-identity-mfa-webauthn` |
 | workspace_membership_roles | `docs/migration/workspace-membership-roles.generated.json` | 26 | 0 | `pnpm check:migration-workspace-membership-roles` |
 | workspace_last_owner | `docs/migration/workspace-last-owner.generated.json` | 17 | 0 | `pnpm check:migration-workspace-last-owner` |
 | drive_upload_download | `docs/migration/drive-upload-download.generated.json` | 48 | 0 | `pnpm check:migration-drive-upload-download` |
 | drive_share_revoke | `docs/migration/drive-share-revoke.generated.json` | 32 | 0 | `pnpm check:migration-drive-share-revoke` |
 | drive_quotas | `docs/migration/drive-quotas.generated.json` | 37 | 0 | `pnpm check:migration-drive-quotas` |
 | audit_append_only | `docs/migration/audit-append-only.generated.json` | 34 | 0 | `pnpm check:migration-audit-append-only` |
-| privacy_export_delete | `docs/migration/privacy-export-delete.generated.json` | 29 | 0 | `pnpm check:migration-privacy-export-delete` |
+| privacy_export_delete | `docs/migration/privacy-export-delete.generated.json` | 11 | 0 | `pnpm check:migration-privacy-export-delete` |
 | billing_entitlements | `docs/migration/billing-entitlements.generated.json` | 36 | 0 | `pnpm check:migration-billing-entitlements` |
 | billing_webhook_idempotency | `docs/migration/billing-webhook-idempotency.generated.json` | 46 | 0 | `pnpm check:migration-billing-webhook-idempotency` |
 | billing_multi_psp_continuity | `docs/migration/billing-multi-psp-continuity.generated.json` | 20 | 0 | `pnpm check:migration-billing-multi-psp-continuity` |
@@ -67,6 +67,7 @@
 
 ## Blockers
 
+- target_structure: 5 blocking item(s) in `docs/migration/target-structure.generated.json`; proof: `pnpm check:migration-target-structure`
 - phases: 3 blocking item(s) in `docs/migration/phase-ledger.generated.json`; proof: `node tools/migration/phase-ledger.mjs --strict`
 - risks: 1 blocking item(s) in `docs/migration/risk-register.generated.json`; proof: `node tools/migration/risk-register.mjs --strict`
 - gates: 5 blocking item(s) in `docs/migration/gate-evidence.generated.json`; proof: `node tools/migration/gate-evidence.mjs --strict`

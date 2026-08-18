@@ -4,9 +4,9 @@
 
 - objective: incomplete
 - requirements: 30
-- incomplete: 19
+- incomplete: 20
 - readiness: no-go
-- readiness_blocking_items: 135
+- readiness_blocking_items: 140
 - runtimes_go: 4/4
 - domains_go: 8/8
 - domain_dod_go: 64/64
@@ -33,7 +33,7 @@
 | contracts-versioned | blueprint:Criteres de Reussite | tous les contrats publics et internes sont versionnes | control-active | `contracts/`<br>`tools/contracts/checks.mjs` | `pnpm check:contracts` |
 | sdk-codegen | blueprint:Contrats | les contrats OpenAPI, Protobuf et events ont une couverture SDK TypeScript, Rust et Go | complete | `docs/migration/codegen.generated.json` | `pnpm check:codegen && node tools/migration/codegen.mjs --strict` |
 | data-reconciled | blueprint:Criteres de Reussite | toutes les donnees migrables sont reconciliees | blocked | `docs/migration/reconciliation.template.json`<br>`docs/migration/readiness-report.generated.json` | `node tools/migration/reconcile.mjs --env production --report docs/migration/reconciliation.<run>.json` |
-| target-monorepo-structure | blueprint:Structure Monorepo Cible | la structure monorepo cible existe pour les frontieres apps, libs, contracts, deploy, docs et tools | complete | `docs/migration/target-structure.generated.json` | `node tools/migration/target-structure.mjs --strict` |
+| target-monorepo-structure | blueprint:Structure Monorepo Cible | la structure monorepo cible existe pour les frontieres apps, libs, contracts, deploy, docs et tools | blocked | `docs/migration/target-structure.generated.json` | `node tools/migration/target-structure.mjs --strict` |
 | supply-chain-scans | blueprint:Fondation Technique | les scans secrets, licences, SBOM, dependances et containers sont actifs | complete | `docs/migration/supply-chain.generated.json`<br>`docs/migration/sbom.generated.json` | `pnpm check:supply-chain && node tools/migration/supply-chain.mjs --strict` |
 | phase-acceptance | blueprint:Phases de Reconstruction | chaque phase de reconstruction a owner, preuve et decision go | blocked | `docs/migration/phase-ledger.generated.json` | `node tools/migration/phase-ledger.mjs --strict` |
 | runtime-foundation | blueprint:Stack Cible | les fondations Rust, Go, TypeScript et Python existent et ont leurs checks CI | complete | `docs/migration/runtime-foundation.generated.json` | `node tools/migration/runtime-foundation.mjs --strict` |

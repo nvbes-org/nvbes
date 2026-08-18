@@ -19,21 +19,21 @@
 
 | Product | Check | Status | Path |
 |---|---|---:|---|
-| identity | pgcrypto digest extension | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | hash chain column | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | event hash column | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | hash chain function | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | hash partition | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | sha256 digest | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | previous hash included | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | insert hash trigger | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | insert trigger timing | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | mutation blocker function | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | update blocker trigger | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | update trigger timing | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | delete blocker trigger | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | delete trigger timing | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
-| identity | unique event hash index | passed | `apps/account-service/migrations/0001_initial_schema.sql` |
+| identity | pgcrypto digest extension | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | hash chain column | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | event hash column | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | hash chain function | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | hash partition | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | sha256 digest | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | previous hash included | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | insert hash trigger | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | insert trigger timing | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | mutation blocker function | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | update blocker trigger | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | update trigger timing | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | delete blocker trigger | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | delete trigger timing | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
+| identity | unique event hash index | passed | `apps/identity-service/migrations/0001_initial_schema.sql` |
 | drive | pgcrypto digest extension | passed | `apps/cloud-service/migrations/0001_initial_schema.sql` |
 | drive | hash chain column | passed | `apps/cloud-service/migrations/0001_initial_schema.sql` |
 | drive | event hash column | passed | `apps/cloud-service/migrations/0001_initial_schema.sql` |

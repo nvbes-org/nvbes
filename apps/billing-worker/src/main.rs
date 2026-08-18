@@ -39,9 +39,13 @@ async fn main() -> anyhow::Result<()> {
     let _profiling_guard =
         start_continuous_profiling(&config, "billing-worker").map_err(anyhow::Error::msg)?;
 
-    let db = nvbes_core::postgres_runtime::connect_pool(&config).await?;
+    let db = nvbes_billing_service::database::connect_pool(&config).await?;
+    nvbes_billing_service::database::run_migrations(&db).await?;
     let redis = nvbes_core::redis_runtime::require_redis_pool(&config).await?;
-    let email = build_email_sender(&config)?;
+    let email = nvbes_email::EmailClient::connect(nvbes_email::EmailClientConfig::from_env(
+        &config.environment,
+    )?)
+    .await?;
     let product_analytics = build_product_analytics(&config)?;
     let state =
         worker::BillingWorkerState::new(config.clone(), db, redis, email, product_analytics);
@@ -105,44 +109,4 @@ fn build_product_analytics(
         analytics_config,
         std::sync::Arc::new(sink),
     )?)
-}
-
-fn build_email_sender(
-    config: &AppConfig,
-) -> anyhow::Result<std::sync::Arc<dyn nvbes_email::EmailSender>> {
-    match config.email_provider.as_str() {
-        "smtp" => {
-            let host = config.smtp_host.clone().ok_or_else(|| {
-                anyhow::anyhow!("NVBES_SMTP_HOST is required when NVBES_EMAIL_PROVIDER=smtp")
-            })?;
-            if config.environment != "development" && config.email_from_email.is_none() {
-                anyhow::bail!(
-                    "NVBES_EMAIL_FROM_EMAIL is required outside development when SMTP email is enabled"
-                );
-            }
-            info!(
-                "Billing email sender: SMTP (host={host}, port={})",
-                config.smtp_port
-            );
-            Ok(std::sync::Arc::new(nvbes_email::SmtpEmailSender::new(
-                nvbes_email::SmtpEmailConfig {
-                    host,
-                    port: config.smtp_port,
-                    username: config.smtp_username.clone(),
-                    password: config.smtp_password.clone(),
-                    starttls: config.smtp_starttls,
-                },
-            )?))
-        }
-        "mock" => {
-            if config.environment != "development" {
-                anyhow::bail!(
-                    "Mock email sender is forbidden outside development. Configure NVBES_EMAIL_PROVIDER=smtp."
-                );
-            }
-            info!("Billing email sender: Mock (development mode)");
-            Ok(std::sync::Arc::new(nvbes_email::MockEmailSender::new()))
-        }
-        provider => anyhow::bail!("Unsupported NVBES_EMAIL_PROVIDER={provider}"),
-    }
 }

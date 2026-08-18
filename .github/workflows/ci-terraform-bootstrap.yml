@@ -1,0 +1,56 @@
+name: ci-terraform-bootstrap
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'infrastructure/bootstrap/**'
+      - 'infrastructure/modules/terraform-state-backend/**'
+      - '.github/workflows/ci-terraform-bootstrap.yml'
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'infrastructure/bootstrap/**'
+      - 'infrastructure/modules/terraform-state-backend/**'
+      - '.github/workflows/ci-terraform-bootstrap.yml'
+
+concurrency:
+  group: ci-terraform-bootstrap-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-terraform-bootstrap.yml
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+      - name: Check Terraform formatting
+        run: >-
+          terraform fmt -check -recursive infrastructure/bootstrap
+          infrastructure/modules/terraform-state-backend
+      - name: Validate remote bootstrap root
+        run: |
+          terraform -chdir=infrastructure/bootstrap/production init -backend=false -input=false
+          terraform -chdir=infrastructure/bootstrap/production validate
+      - name: Validate initial local bootstrap root
+        run: |
+          terraform -chdir=infrastructure/bootstrap/production/initial init -backend=false -input=false
+          terraform -chdir=infrastructure/bootstrap/production/initial validate

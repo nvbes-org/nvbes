@@ -26,8 +26,11 @@ Profiles/Pyroscope.
 
 ## Fichiers
 
+- `backend.tf`, `backend.hcl.example`: état Terraform distant sur Object
+  Storage Scaleway, avec verrouillage natif S3.
 - `main.tf`: réseau privé, base privée, origine Cloudflare-only, WAF managé,
-  egress contrôlé et archive d’audit WORM externe.
+- `../email-production` / `../../stacks/email/production`: stack produit email indépendante, avec son
+  propre état Terraform, son DNS/TEM et son observabilité.
 - `siem.tf`: import des six règles Loki dans Grafana Cloud et routage vers le
   contact point Security on-call.
 - `variables.tf`, `outputs.tf`, `terraform.tfvars.example`: contrat de
@@ -36,6 +39,14 @@ Profiles/Pyroscope.
 - `alloy.config.alloy`: pipeline metrics, traces, logs et profiles vers
   Grafana Cloud, avec dual-export traces/logs vers PostHog.
 - `observability.env.example`: variables requises, sans secret reel.
+
+## Stack email séparée
+
+L’infrastructure email n’appartient plus à cet état général. Elle vit dans
+`../email-production` (et `../../stacks/email/production`), avec l’état isolé
+`production/email/terraform.tfstate` et le workflow GitHub `deploy email`.
+Cette séparation garantit qu’un déploiement email ne peut pas modifier les
+Instances, la RDB partagée ou les autres produits.
 
 ## Secrets requis
 
@@ -175,12 +186,15 @@ curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
   "$NVBES_ACCOUNT_SERVICE_METRICS_TARGET/metrics" | head
 curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
   "$NVBES_CLOUD_WORKER_METRICS_TARGET/metrics" | head
+curl -fsS -H "Authorization: Bearer $NVBES_OBSERVABILITY_INTERNAL_TOKEN" \
+  "$NVBES_EMAIL_WORKER_METRICS_TARGET/metrics" | head
 ```
 
 Dans Grafana Cloud:
 
 - Metrics APIs: `http_requests_total{environment="production"}`
 - Metrics workers: `worker_queue_jobs_total{environment="production"}`
+- Metrics email: `email_messages_total{service="email-worker",environment="production"}`
 - Traces: service `nvbes-account-service` ou `nvbes-cloud-service`
 - PostHog Traces: evenement trace visible dans PostHog uniquement apres
   redaction et tail sampling Alloy.

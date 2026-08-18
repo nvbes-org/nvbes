@@ -15,8 +15,9 @@ pub fn account_export_cache_key(principal_id: Uuid) -> String {
 pub async fn build_account_export(
     db: &sqlx::PgPool,
     principal_id: Uuid,
+    email_activity: JsonValue,
 ) -> AccountResult<JsonValue> {
-    query::build_account_export(db, principal_id).await
+    query::build_account_export(db, principal_id, email_activity).await
 }
 
 pub async fn store_account_export(

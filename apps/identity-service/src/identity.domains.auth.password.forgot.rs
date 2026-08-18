@@ -132,9 +132,6 @@ async fn forgot_inner(
         )
         .await?;
 
-        let email_msg =
-            crate::email::templates::password_reset_email(config, &email, &email, &token)?;
-
         tx.commit().await?;
 
         if let Some((request_id, tenant_id)) = approved_review_id
@@ -146,18 +143,18 @@ async fn forgot_inner(
                 nvbes_redis::password_reset::take_password_reset_token(redis, &hashed_token).await;
             return Err(error);
         }
-        let enqueue_result = crate::email::jobs::enqueue_email_job_tx(
-            db,
+        let enqueue_result = crate::email::commands::enqueue(
             redis,
-            crate::email::jobs::EmailSendPayload {
-                to_email: email.clone(),
-                to_name: Some(display_name),
-                subject: email_msg.subject,
-                html_body: email_msg.html_body.unwrap_or_default(),
-                text_body: email_msg.text_body,
-                business_type: "password_reset".to_string(),
+            email.clone(),
+            Some(display_name.clone()),
+            format!("reset:{hashed_token}"),
+            nvbes_email::EmailTemplate::PasswordResetV1 {
+                user_name: display_name,
+                reset_url: crate::email::commands::password_reset_url(config, &token),
+                credential_expires_at: expires_at,
             },
-            &format!("reset:{hashed_token}"),
+            expires_at,
+            Some(principal_id),
         )
         .await;
         if let Err(error) = enqueue_result {

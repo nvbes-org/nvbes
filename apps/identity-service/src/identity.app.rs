@@ -14,13 +14,14 @@ pub struct AppState {
     pub jwt: crate::domains::auth::jwt::JwtService,
     pub observability: nvbes_observability::metrics::HttpMetrics,
     pub product_analytics: nvbes_product_analytics::ProductAnalytics,
-    pub email: std::sync::Arc<dyn nvbes_email::EmailSender>,
     pub otp_provider: std::sync::Arc<dyn crate::domains::auth::otp_provider::OtpProvider>,
     pub dpop_nonce: Option<std::sync::Arc<nvbes_dpop::DpopNonceStore>>,
     pub redis: nvbes_redis::RedisPool,
     pub rate_limiter: nvbes_core::limiter::RateLimiter,
     pub allowed_browser_origins: crate::http::cors::AllowedOriginRegistry,
     pub storage: std::sync::Arc<dyn nvbes_storage::ObjectStore>,
+    pub email_operations: nvbes_email::EmailOperationsClient,
+    pub identity_internal_token: String,
 }
 
 impl axum::extract::FromRef<AppState> for nvbes_observability::metrics::HttpMetrics {
@@ -102,13 +103,22 @@ impl AppState {
             jwt,
             observability: nvbes_observability::metrics::HttpMetrics::default(),
             product_analytics: build_product_analytics(config)?,
-            email: nvbes_product_identity::email::delivery::build_email_sender(config)?,
             otp_provider: build_otp_provider(config)?,
             dpop_nonce,
             redis,
             rate_limiter,
             allowed_browser_origins: crate::http::cors::AllowedOriginRegistry::default(),
             storage: nvbes_product_cloud::storage::build_storage(config).await,
+            email_operations: nvbes_email::EmailOperationsClient::from_environment(
+                &config.environment,
+            )
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?,
+            identity_internal_token: nvbes_core::http::internal_service::load_token(
+                "NVBES_IDENTITY_INTERNAL_TOKEN",
+                &config.environment,
+                "development-identity-internal-token",
+            )
+            .map_err(anyhow::Error::msg)?,
         };
 
         crate::database::ensure_default_oauth_clients_seeded(&state.db).await?;

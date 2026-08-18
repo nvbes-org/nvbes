@@ -48,7 +48,7 @@ function pluginList(plugin: unknown): PluginOption[] {
   return Array.isArray(plugin) ? (plugin as PluginOption[]) : [plugin as PluginOption];
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const localEnv = loadEnv(mode, process.cwd(), '');
   const rootEnv = loadEnv(mode, workspaceRoot, '');
   const envSources = [process.env, localEnv, rootEnv];
@@ -140,7 +140,7 @@ export default defineConfig(({ mode }) => {
             }),
           ]
         : []),
-      ...observabilitySourceMapPlugins({ appName: 'account-web', envSources }),
+      ...observabilitySourceMapPlugins({ appName: 'account-web', command, envSources }),
       sriPlugin(),
     ].filter(Boolean),
     build: {
@@ -199,6 +199,14 @@ export default defineConfig(({ mode }) => {
           replacement: path.resolve(__dirname, '../../libs/ts/account-client/src/index.ts'),
         },
         {
+          find: '@nvbes/http-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/http-client/src/index.ts'),
+        },
+        {
+          find: '@nvbes/identity-client',
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-client/src/index.ts'),
+        },
+        {
           find: '@nvbes/web-runtime/analytics',
           replacement: path.resolve(__dirname, '../../libs/ts/web-runtime/src/analytics.ts'),
         },
@@ -209,6 +217,10 @@ export default defineConfig(({ mode }) => {
         {
           find: /^@nvbes\/identity-sdk-web\/oauth$/,
           replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/oauth.ts'),
+        },
+        {
+          find: /^@nvbes\/identity-sdk-web$/,
+          replacement: path.resolve(__dirname, '../../libs/ts/identity-sdk-web/src/index.ts'),
         },
         {
           find: '@nvbes/web-ui',

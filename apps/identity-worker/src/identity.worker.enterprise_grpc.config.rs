@@ -82,46 +82,5 @@ fn normalized(value: Option<String>) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::EnterpriseGrpcConfig;
-
-    const VALID_TOKEN: &str = "identity-worker-enterprise-token-32";
-
-    #[test]
-    fn production_requires_https() {
-        let error = EnterpriseGrpcConfig::from_values(
-            "production",
-            Some("http://enterprise:3031".to_string()),
-            Some(VALID_TOKEN.to_string()),
-        )
-        .err()
-        .expect("plaintext endpoint should fail");
-
-        assert!(error.to_string().contains("must use https"));
-    }
-
-    #[test]
-    fn configured_endpoint_requires_a_strong_auth_token() {
-        let error = EnterpriseGrpcConfig::from_values(
-            "development",
-            Some("http://127.0.0.1:3031".to_string()),
-            Some("short".to_string()),
-        )
-        .err()
-        .expect("short token should fail");
-
-        assert!(error.to_string().contains("at least 32"));
-    }
-
-    #[test]
-    fn development_allows_authenticated_loopback_http() {
-        let config = EnterpriseGrpcConfig::from_values(
-            "development",
-            Some("http://127.0.0.1:3031".to_string()),
-            Some(VALID_TOKEN.to_string()),
-        )
-        .expect("development configuration should parse");
-
-        assert!(config.is_some());
-    }
-}
+#[path = "identity.worker.enterprise_grpc.config.tests.rs"]
+mod tests;

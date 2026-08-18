@@ -34,11 +34,6 @@ pub async fn verify_primary_credentials(
         SELECT
           u.principal_id,
           u.email,
-          u.firstname,
-          u.lastname,
-          u.username,
-          u.birthdate,
-          u.region,
           u.password_hash,
           u.email_verified_at,
           u.created_at,

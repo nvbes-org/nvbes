@@ -1,7 +1,7 @@
 scaleway_project_id         = "00000000-0000-0000-0000-000000000000"
 scaleway_production_profile = "nvbes-production"
 cloudflare_zone_id       = "00000000000000000000000000000000"
-base_domain              = "nvbes.example"
+base_domain              = "nvbes.eu"
 grafana_url              = "https://nvbes.grafana.net"
 grafana_loki_datasource_uid = "grafanacloud-logs"
 grafana_security_contact_point = "security-oncall"

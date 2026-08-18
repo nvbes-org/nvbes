@@ -1,5 +1,5 @@
 import { fetchPowChallenge, solvePowChallenge } from './pow';
-import { handleMfaResponseError, jsonAuthHeaders } from './mfa.transport';
+import { authCredentials, handleMfaResponseError, jsonAuthHeaders } from './mfa.transport';
 
 export type StepUpPurpose = 'password_change';
 
@@ -24,7 +24,7 @@ export async function stepUp(
   const response = await fetch(`${baseUrl}/auth/step-up`, {
     method: 'POST',
     headers: jsonAuthHeaders(token),
-    credentials: 'include',
+    credentials: authCredentials(token),
     body: JSON.stringify({
       pow_nonce: powChallenge.nonce,
       pow_solution: String(powSolution),
@@ -50,7 +50,7 @@ export async function requestEmailStepUpCode(
   const response = await fetch(`${baseUrl}/auth/step-up/email/request`, {
     method: 'POST',
     headers: jsonAuthHeaders(token),
-    credentials: 'include',
+    credentials: authCredentials(token),
     body: JSON.stringify({ purpose }),
   });
   if (!response.ok) return handleMfaResponseError(response);

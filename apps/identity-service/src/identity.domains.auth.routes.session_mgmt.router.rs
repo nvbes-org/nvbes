@@ -1,22 +1,19 @@
 use crate::app::AppState;
 use crate::http::middleware::jwt::account_access::{
-    self, AccountAccess, DELETE_SCOPE, EMAIL_READ_SCOPE, EMAIL_WRITE_SCOPE, EXPORT_SCOPE,
-    PREFERENCES_READ_SCOPE, PREFERENCES_WRITE_SCOPE, PROFILE_READ_SCOPE, PROFILE_WRITE_SCOPE,
-    SECURITY_WRITE_SCOPE, SESSION_READ_SCOPE, SESSION_WRITE_SCOPE,
+    self, AccountAccess, EMAIL_READ_SCOPE, EMAIL_WRITE_SCOPE, SECURITY_WRITE_SCOPE,
+    SESSION_READ_SCOPE, SESSION_WRITE_SCOPE,
 };
 use axum::{
     Router,
-    routing::{delete, get, patch, post, put},
+    routing::{delete, get, post},
 };
 
 use super::devices::{revoke_device, trust_device};
 use super::{
-    confirm_high_risk_session, forget_account_cookie, get_accounts, list_sessions, logout, me,
-    me_delete, me_email_delete, me_email_promote, me_email_resend_verification, me_emails_get,
-    me_emails_post, me_export, me_export_download, me_notifications_get, me_notifications_put,
-    me_preferences_get, me_preferences_put, me_update, profile::me_avatar,
-    profile::me_avatar_delete, profile::me_avatar_upload, revoke_all_other_sessions,
-    revoke_all_sessions, revoke_session, step_up, step_up::request_email_step_up,
+    confirm_high_risk_session, forget_account_cookie, get_accounts, list_sessions, logout,
+    me_email_delete, me_email_promote, me_email_resend_verification, me_emails_get, me_emails_post,
+    revoke_all_other_sessions, revoke_all_sessions, revoke_session, step_up,
+    step_up::request_email_step_up, switch_workspace::switch_workspace,
 };
 
 pub(super) fn router(state: &AppState) -> Router<AppState> {
@@ -95,38 +92,6 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
             ),
         )
         .route(
-            "/me",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PROFILE_READ_SCOPE),
-                get(me),
-            ),
-        )
-        .route(
-            "/me/avatar",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PROFILE_READ_SCOPE),
-                get(me_avatar),
-            ),
-        )
-        .route(
-            "/me/avatar",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PROFILE_WRITE_SCOPE),
-                post(me_avatar_upload).delete(me_avatar_delete),
-            ),
-        )
-        .route(
-            "/me",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PROFILE_WRITE_SCOPE),
-                patch(me_update),
-            ),
-        )
-        .route(
             "/me/emails",
             account_access::protected_method(
                 state,
@@ -167,55 +132,19 @@ pub(super) fn router(state: &AppState) -> Router<AppState> {
             ),
         )
         .route(
-            "/me/export",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(EXPORT_SCOPE),
-                post(me_export).get(me_export_download),
-            ),
-        )
-        .route(
-            "/me/delete",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(DELETE_SCOPE),
-                post(me_delete),
-            ),
-        )
-        .route(
-            "/me/preferences",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PREFERENCES_READ_SCOPE),
-                get(me_preferences_get),
-            ),
-        )
-        .route(
-            "/me/preferences",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PREFERENCES_WRITE_SCOPE),
-                put(me_preferences_put),
-            ),
-        )
-        .route(
-            "/me/notifications",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PREFERENCES_READ_SCOPE),
-                get(me_notifications_get),
-            ),
-        )
-        .route(
-            "/me/notifications",
-            account_access::protected_method(
-                state,
-                AccountAccess::OAuthScope(PREFERENCES_WRITE_SCOPE),
-                put(me_notifications_put),
-            ),
-        )
-        .route(
             "/step-up",
-            account_access::protected_method(state, AccountAccess::BrowserSession, post(step_up)),
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SECURITY_WRITE_SCOPE),
+                post(step_up),
+            ),
+        )
+        .route(
+            "/workspaces/{workspaceId}/switch",
+            account_access::protected_method(
+                state,
+                AccountAccess::OAuthScope(SESSION_WRITE_SCOPE),
+                post(switch_workspace),
+            ),
         )
 }

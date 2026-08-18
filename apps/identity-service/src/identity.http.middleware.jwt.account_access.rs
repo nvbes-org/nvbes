@@ -48,6 +48,7 @@ pub const SUPPORTED_ACCOUNT_SCOPES: &[&str] = &[
 #[derive(Clone, Copy, Debug)]
 pub enum AccountAccess {
     BrowserSession,
+    BrowserSessionOrOAuthScope(&'static str),
     OAuthScope(&'static str),
 }
 
@@ -111,7 +112,10 @@ fn validate_account_access(
     account_audience: &str,
 ) -> Result<Option<OAuthPolicyCheck>, AppError> {
     let (credential, required_scope) = match (&auth.credential_source, access) {
-        (CredentialSource::BrowserSession, AccountAccess::BrowserSession) => return Ok(None),
+        (
+            CredentialSource::BrowserSession,
+            AccountAccess::BrowserSession | AccountAccess::BrowserSessionOrOAuthScope(_),
+        ) => return Ok(None),
         (CredentialSource::BrowserSession, AccountAccess::OAuthScope(_)) => {
             return Err(AppError::unauthorized(
                 "account_bearer_token_required",
@@ -124,9 +128,11 @@ fn validate_account_access(
                 "This Identity operation requires a first-party browser session.",
             ));
         }
-        (CredentialSource::OAuthBearer(credential), AccountAccess::OAuthScope(required_scope)) => {
-            (credential, required_scope)
-        }
+        (
+            CredentialSource::OAuthBearer(credential),
+            AccountAccess::OAuthScope(required_scope)
+            | AccountAccess::BrowserSessionOrOAuthScope(required_scope),
+        ) => (credential, required_scope),
     };
 
     if credential.audience != account_audience {

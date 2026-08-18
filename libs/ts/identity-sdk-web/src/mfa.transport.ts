@@ -32,7 +32,10 @@ export class MfaError extends Error {
 
 export function authHeaders(token?: string, method = 'GET'): Headers {
   const headers = new Headers();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+    return createRequestHeaders(method, headers);
+  }
 
   const authuser = readCurrentAuthuser();
   if (authuser) headers.set('X-Auth-User', authuser);
@@ -49,6 +52,10 @@ export function jsonAuthHeaders(token?: string, method = 'POST'): Headers {
   const headers = authHeaders(token, method);
   headers.set('Content-Type', 'application/json');
   return headers;
+}
+
+export function authCredentials(token?: string): RequestCredentials {
+  return token ? 'omit' : 'include';
 }
 
 export async function handleMfaResponseError(response: Response): Promise<never> {

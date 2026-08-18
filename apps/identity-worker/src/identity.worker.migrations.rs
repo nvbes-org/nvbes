@@ -93,4 +93,62 @@ mod tests {
             runtime
         );
     }
+
+    #[test]
+    fn development_prefers_an_explicit_trimmed_migration_url() {
+        assert_eq!(
+            resolve_migration_database_url(
+                "development",
+                "postgres://runtime@db/identity",
+                Some("  postgres://migrator@db/identity  ".to_string()),
+            )
+            .expect("explicit development migrator"),
+            "postgres://migrator@db/identity"
+        );
+    }
+
+    #[test]
+    fn production_accepts_a_distinct_migrator_role() {
+        assert_eq!(
+            resolve_migration_database_url(
+                "production",
+                "postgres://runtime@db/identity",
+                Some("postgres://migrator@db/identity".to_string()),
+            )
+            .expect("dedicated migrator"),
+            "postgres://migrator@db/identity"
+        );
+    }
+
+    #[test]
+    fn blank_migration_url_is_treated_as_missing() {
+        assert!(
+            resolve_migration_database_url(
+                "production",
+                "postgres://runtime@db/identity",
+                Some("  ".to_string()),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn malformed_runtime_or_migration_urls_are_rejected() {
+        assert!(
+            resolve_migration_database_url(
+                "production",
+                "not a postgres URL",
+                Some("postgres://migrator@db/identity".to_string()),
+            )
+            .is_err()
+        );
+        assert!(
+            resolve_migration_database_url(
+                "production",
+                "postgres://runtime@db/identity",
+                Some("not a postgres URL".to_string()),
+            )
+            .is_err()
+        );
+    }
 }

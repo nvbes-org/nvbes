@@ -319,3 +319,7 @@ fn map_key(row: &sqlx::postgres::PgRow) -> OAuthClientKeyView {
         revoked_at: row.get("revoked_at"),
     }
 }
+
+#[cfg(test)]
+#[path = "identity.domains.oauth.clients.keys.tests.rs"]
+mod tests;

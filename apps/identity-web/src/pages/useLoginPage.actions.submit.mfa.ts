@@ -8,6 +8,7 @@ export function buildMfaSubmitAction(
     mfaMethod,
     totpCode,
     recoveryCode,
+    mfaWebauthnAbortRef,
     mutations,
     setError,
     setStep,
@@ -18,20 +19,30 @@ export function buildMfaSubmitAction(
 ): LoginFormHandler {
   return async (event) => {
     event.preventDefault();
-    await submitMfaStep({
-      loginStateToken,
-      sessionToken,
-      mfaMethod,
-      totpCode,
-      recoveryCode,
-      submitMfa: mutations.loginMfaMutation.mutateAsync,
-      startWebauthn: mutations.loginWebauthnStartMutation.mutateAsync,
-      setError,
-      setStep,
-      setLoginStateToken,
-      setSessionToken,
-      finishLogin,
-    });
+    const controller = mfaMethod === 'webauthn' ? new AbortController() : null;
+    mfaWebauthnAbortRef.current?.abort();
+    mfaWebauthnAbortRef.current = controller;
+    try {
+      await submitMfaStep({
+        loginStateToken,
+        sessionToken,
+        mfaMethod,
+        totpCode,
+        recoveryCode,
+        webauthnSignal: controller?.signal,
+        submitMfa: mutations.loginMfaMutation.mutateAsync,
+        startWebauthn: mutations.loginWebauthnStartMutation.mutateAsync,
+        setError,
+        setStep,
+        setLoginStateToken,
+        setSessionToken,
+        finishLogin,
+      });
+    } finally {
+      if (mfaWebauthnAbortRef.current === controller) {
+        mfaWebauthnAbortRef.current = null;
+      }
+    }
   };
 }
 
@@ -42,8 +53,11 @@ export function buildResetToIdentifierAction({
   resetMfaState,
   setError,
   setPassword,
+  mfaWebauthnAbortRef,
 }: SubmitActionOptions) {
   return () => {
+    mfaWebauthnAbortRef.current?.abort();
+    mfaWebauthnAbortRef.current = null;
     resetLoginFlow({
       setStep,
       setLoginStateToken,

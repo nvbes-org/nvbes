@@ -18,11 +18,11 @@ export const AccountProfileEnvelopeSchema = z.object({
 });
 
 export const AccountUpdateProfileInputSchema = z.object({
-  firstname: z.string().optional(),
-  lastname: z.string().optional(),
-  username: z.string().max(100).optional(),
-  birthdate: z.string().optional(),
-  region: z.string().optional(),
+  firstname: NullableStringSchema,
+  lastname: NullableStringSchema,
+  username: z.string().max(100).nullable(),
+  birthdate: NullableStringSchema,
+  region: NullableStringSchema,
 });
 
 export const AccountThemeSchema = z.enum(['system', 'light', 'dark']);
@@ -80,8 +80,95 @@ export const AccountGpcStatusSchema = z.object({
   gpc_opt_out_active: z.boolean(),
 });
 
+export const AccountSessionClientSchema = z.object({
+  browser: NullableStringSchema,
+  browser_version: z.number().nullable(),
+  os: NullableStringSchema,
+  os_version: NullableStringSchema,
+  device: NullableStringSchema,
+  device_type: z.string(),
+});
+
+export const AccountSessionSchema = z.object({
+  id: z.string(),
+  tenant_id: NullableStringSchema,
+  organization_id: NullableStringSchema,
+  workspace_id: NullableStringSchema,
+  workspace_region: NullableStringSchema,
+  created_at: z.string(),
+  last_seen_at: z.string(),
+  expires_at: z.string(),
+  revoked_at: NullableStringSchema,
+  ip: NullableStringSchema,
+  geo_country_code: NullableStringSchema,
+  user_agent: NullableStringSchema,
+  client: AccountSessionClientSchema.nullable(),
+  device_id: NullableStringSchema,
+  device_trust_level: NullableStringSchema,
+  device_trust_score: z.number().nullable(),
+  risk_score: z.number().nullable(),
+  risk_decision: NullableStringSchema,
+  risk_confirmed_at: NullableStringSchema,
+  current: z.boolean(),
+});
+
+export const AccountSessionsPageSchema = z.object({
+  sessions: z.array(AccountSessionSchema),
+  next_cursor: NullableStringSchema,
+  has_more: z.boolean(),
+});
+
 export const AccountSuccessSchema = z.object({
   success: z.literal(true),
+});
+
+export const AccountExportRequestSchema = z.object({
+  export_id: z.uuid(),
+  status: z.enum(['pending', 'processing', 'completed']),
+  requested_at: z.iso.datetime(),
+});
+
+export const AccountExportParticipantSchema = z.object({
+  participant: z.enum(['cloud', 'billing', 'identity', 'account']),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  attempts: z.number().int().nonnegative(),
+  completed_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+});
+
+export const AccountExportStatusSchema = z.object({
+  export_id: z.uuid(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed', 'expired']),
+  requested_at: z.iso.datetime(),
+  updated_at: z.iso.datetime(),
+  completed_at: z.iso.datetime().nullable(),
+  expires_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+  participants: z.array(AccountExportParticipantSchema),
+});
+
+export const AccountClosureSchema = z.object({
+  saga_id: z.uuid(),
+  status: z.enum(['pending', 'dispatching', 'completed']),
+  requested_at: z.iso.datetime(),
+});
+
+export const AccountClosureParticipantSchema = z.object({
+  participant: z.enum(['cloud', 'billing', 'identity', 'account']),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  attempts: z.number().int().nonnegative(),
+  completed_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+});
+
+export const AccountClosureStatusSchema = z.object({
+  saga_id: z.uuid(),
+  status: z.enum(['pending', 'dispatching', 'completed', 'failed', 'cancelled']),
+  requested_at: z.iso.datetime(),
+  updated_at: z.iso.datetime(),
+  completed_at: z.iso.datetime().nullable(),
+  last_error: NullableStringSchema,
+  participants: z.array(AccountClosureParticipantSchema),
 });
 
 export const EmptyResponseSchema = z.undefined();
@@ -98,3 +185,11 @@ export type AccountConsent = z.infer<typeof AccountConsentSchema>;
 export type AccountConsentInput = z.infer<typeof AccountConsentInputSchema>;
 export type AccountConsentHistory = z.infer<typeof AccountConsentHistorySchema>;
 export type AccountGpcStatus = z.infer<typeof AccountGpcStatusSchema>;
+export type AccountSession = z.infer<typeof AccountSessionSchema>;
+export type AccountSessionsPage = z.infer<typeof AccountSessionsPageSchema>;
+export type AccountExportRequest = z.infer<typeof AccountExportRequestSchema>;
+export type AccountExportParticipant = z.infer<typeof AccountExportParticipantSchema>;
+export type AccountExportStatus = z.infer<typeof AccountExportStatusSchema>;
+export type AccountClosure = z.infer<typeof AccountClosureSchema>;
+export type AccountClosureParticipant = z.infer<typeof AccountClosureParticipantSchema>;
+export type AccountClosureStatus = z.infer<typeof AccountClosureStatusSchema>;

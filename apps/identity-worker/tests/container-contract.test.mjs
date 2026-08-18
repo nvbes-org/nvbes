@@ -7,7 +7,7 @@ import {
 	compareVersions,
 	lockedPackageGraphSnapshot,
 	offlineMetadataMsrv,
-} from "./container-contract.lock.mjs";
+} from "../../../tools/container-contract/cargo-lock.mjs";
 
 const workspaceRoot = resolve(
 	dirname(fileURLToPath(import.meta.url)),
@@ -30,7 +30,7 @@ const mainSource = readFileSync(mainPath, "utf8");
 const lockResolution = {
 	msrv: "1.91.1",
 	packageGraphSha256:
-		"38b0fc85ee7489f68a574dfa031272d85863f692f7fc4504dd1124a745bf4c66",
+		"098383b91a088ff6bd9e65d040ad95e8b23ad02fdcca2005ef68039fb40b21f1",
 };
 
 const expectedCliModes = [

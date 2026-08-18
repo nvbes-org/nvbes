@@ -6,12 +6,13 @@ use crate::{
 };
 
 pub(crate) fn validate(input: UpdateProfileInput) -> Result<ValidatedProfileUpdate, AppError> {
-    let firstname = optional_text("firstname", input.firstname, 100)?;
-    let lastname = optional_text("lastname", input.lastname, 100)?;
-    let username = optional_text("username", input.username, 100)?;
-    let region = optional_text("region", input.region, 64)?;
+    let firstname = optional_text("firstname", input.firstname.0, 100)?;
+    let lastname = optional_text("lastname", input.lastname.0, 100)?;
+    let username = optional_text("username", input.username.0, 100)?;
+    let region = optional_text("region", input.region.0, 64)?;
     let birthdate = input
         .birthdate
+        .0
         .map(|value| parse_birthdate(&value))
         .transpose()?;
 
@@ -62,27 +63,27 @@ fn parse_birthdate(value: &str) -> Result<NaiveDate, AppError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::profile_models::UpdateProfileInput;
+    use crate::profile_models::{NullableProfileText, UpdateProfileInput};
 
     use super::validate;
 
     #[test]
     fn profile_text_is_trimmed_and_birthdate_is_validated() {
         let update = validate(UpdateProfileInput {
-            firstname: Some(" Ada ".to_string()),
-            lastname: None,
-            username: None,
-            birthdate: Some("1815-12-10".to_string()),
-            region: None,
+            firstname: NullableProfileText(Some(" Ada ".to_string())),
+            lastname: NullableProfileText(None),
+            username: NullableProfileText(None),
+            birthdate: NullableProfileText(Some("1815-12-10".to_string())),
+            region: NullableProfileText(None),
         });
         assert!(update.is_err());
 
         let update = validate(UpdateProfileInput {
-            firstname: Some(" Ada ".to_string()),
-            lastname: None,
-            username: None,
-            birthdate: Some("1990-12-10".to_string()),
-            region: None,
+            firstname: NullableProfileText(Some(" Ada ".to_string())),
+            lastname: NullableProfileText(None),
+            username: NullableProfileText(None),
+            birthdate: NullableProfileText(Some("1990-12-10".to_string())),
+            region: NullableProfileText(None),
         })
         .expect("valid profile");
         assert_eq!(update.firstname.as_deref(), Some("Ada"));

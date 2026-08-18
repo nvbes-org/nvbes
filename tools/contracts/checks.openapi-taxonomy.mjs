@@ -1,8 +1,18 @@
 export function checkOpenApiTaxonomy({ errors, manifest, readJson }) {
+  const identityApi = manifest.apis.find((api) => api.name === 'identity-service');
+  if (
+    identityApi?.surface !== 'identity' ||
+    identityApi?.document !== 'apps/identity-service/openapi.json'
+  ) {
+    errors.push(
+      'contracts/openapi/manifest.json: identity-service must describe the identity surface',
+    );
+  }
+
   const accountApi = manifest.apis.find((api) => api.name === 'account-service');
   if (
     accountApi?.surface !== 'account' ||
-    accountApi?.document !== 'apps/account-service/openapi.json'
+    accountApi?.document !== 'apps/account-service-next/openapi.json'
   ) {
     errors.push(
       'contracts/openapi/manifest.json: account-service must describe the account surface',

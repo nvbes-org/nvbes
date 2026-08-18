@@ -6,6 +6,7 @@ pub struct PrepareBetaE2eAccountInput {
     pub email: String,
     pub password: String,
     pub workspace_name: String,
+    pub privileged: bool,
 }
 
 pub async fn prepare_beta_e2e_account(
@@ -29,8 +30,10 @@ pub async fn prepare_beta_e2e_account(
     let tenant_id = account.tenant_id;
 
     account::normalize_beta_account(&mut tx, principal_id, &password_hash).await?;
-    account::ensure_owner_workspace(&mut tx, tenant_id, principal_id, &input.workspace_name)
-        .await?;
+    if input.privileged {
+        account::ensure_owner_workspace(&mut tx, tenant_id, principal_id, &input.workspace_name)
+            .await?;
+    }
 
     sqlx::query(
         r#"

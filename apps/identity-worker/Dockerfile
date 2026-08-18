@@ -14,8 +14,8 @@ WORKDIR /usr/src/nvbes
 # Install build dependencies
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
-      "deb https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb https://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
       > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
     && apt-get install -y --no-install-recommends \
@@ -27,6 +27,7 @@ RUN rm -f /etc/apt/sources.list.d/debian.sources \
 # Copy workspace manifests and source files
 COPY Cargo.toml Cargo.lock ./
 COPY apps ./apps
+COPY contracts ./contracts
 COPY libs ./libs
 COPY vendor ./vendor
 
@@ -39,8 +40,8 @@ FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bb
 ARG DEBIAN_SNAPSHOT=20260713T000000Z
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
     && printf '%s\n' \
-      "deb https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
-      "deb https://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
+      "deb http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}/ bookworm main" \
+      "deb http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}/ bookworm-security main" \
       > /etc/apt/sources.list \
     && apt-get -o Acquire::Check-Valid-Until=false update \
     && apt-get install -y --no-install-recommends \

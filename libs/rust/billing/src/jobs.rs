@@ -3,7 +3,7 @@ use thiserror::Error;
 
 pub const JOB_STRIPE_WEBHOOK_PROCESS: &str = "billing.stripe.webhook.process";
 pub const JOB_MOLLIE_WEBHOOK_PROCESS: &str = "billing.mollie.webhook.process";
-pub const JOB_BILLING_EMAIL_SEND: &str = "billing.email.send";
+pub const JOB_BILLING_EMAIL_SUBMIT: &str = "billing.integration.email.submit";
 const DEFAULT_MAX_ATTEMPTS: u32 = 5;
 
 #[derive(Debug, Error)]
@@ -71,6 +71,9 @@ mod tests {
             super::JOB_MOLLIE_WEBHOOK_PROCESS,
             "billing.mollie.webhook.process"
         );
-        assert_eq!(super::JOB_BILLING_EMAIL_SEND, "billing.email.send");
+        assert_eq!(
+            super::JOB_BILLING_EMAIL_SUBMIT,
+            "billing.integration.email.submit"
+        );
     }
 }

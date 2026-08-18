@@ -3,6 +3,11 @@ output "private_network_id" {
   value       = scaleway_vpc_private_network.main.id
 }
 
+output "registry_endpoint" {
+  description = "Private Scaleway Container Registry endpoint."
+  value       = scaleway_registry_namespace.main.endpoint
+}
+
 output "api_public_ip" {
   description = "API instance public IPv4 address."
   value       = scaleway_instance_ip.api.address

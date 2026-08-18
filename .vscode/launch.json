@@ -107,7 +107,7 @@
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
         "NVBES_API_PORT": "4002",
-        "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
+        "NVBES_DATABASE_URL": "${env:NVBES_CLOUD_DATABASE_URL}"
       },
       "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]
@@ -146,7 +146,7 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "NVBES_WORKSPACE_ROOT": "${workspaceFolder}",
-        "NVBES_DATABASE_URL": "${env:NVBES_DRIVE_DATABASE_URL}"
+        "NVBES_DATABASE_URL": "${env:NVBES_CLOUD_DATABASE_URL}"
       },
       "initCommands": ["settings set target.disable-aslr false"],
       "sourceLanguages": ["rust"]

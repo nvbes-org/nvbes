@@ -41,7 +41,7 @@ pub struct HostedClientDisplay {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "kind")]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum HostedLoginDecision {
     LoginRequired {
         login_url: String,
@@ -60,3 +60,7 @@ pub enum HostedLoginDecision {
         message: String,
     },
 }
+
+#[cfg(test)]
+#[path = "identity.domains.oauth.hosted.types.tests.rs"]
+mod tests;

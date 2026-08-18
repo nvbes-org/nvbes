@@ -94,8 +94,7 @@ fn build_message(message: &EmailMessage) -> Result<LettreMessage, EmailError> {
         } else if name.eq_ignore_ascii_case("message-id") {
             builder = builder.message_id(Some(value.clone()));
         } else if name.to_ascii_lowercase().starts_with("x-") {
-            let name = HeaderName::new_from_ascii(name.clone())
-                .map_err(|_| EmailError::Config("invalid custom email header name".to_string()))?;
+            let name = custom_header_name(name)?;
             builder = builder.raw_header(HeaderValue::new(name, value.clone()));
         } else {
             return Err(EmailError::Config(format!(
@@ -116,6 +115,37 @@ fn build_message(message: &EmailMessage) -> Result<LettreMessage, EmailError> {
     }
 }
 
+fn custom_header_name(value: &str) -> Result<HeaderName, EmailError> {
+    let valid = !value.is_empty()
+        && value.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric()
+                || matches!(
+                    byte,
+                    b'!' | b'#'
+                        | b'$'
+                        | b'%'
+                        | b'&'
+                        | b'\''
+                        | b'*'
+                        | b'+'
+                        | b'-'
+                        | b'.'
+                        | b'^'
+                        | b'_'
+                        | b'`'
+                        | b'|'
+                        | b'~'
+                )
+        });
+    if !valid {
+        return Err(EmailError::Config(
+            "invalid custom email header name".to_string(),
+        ));
+    }
+    HeaderName::new_from_ascii(value.to_string())
+        .map_err(|_| EmailError::Config("invalid custom email header name".to_string()))
+}
+
 fn header_value<'a>(message: &'a EmailMessage, expected: &str) -> Option<&'a str> {
     message
         .headers
@@ -129,7 +159,7 @@ fn effective_message_id(message: &EmailMessage) -> Option<String> {
         .map(String::from)
         .or_else(|| {
             header_value(message, "x-nvbes-email-job-id")
-                .map(|job_id| format!("<account-job-{job_id}@worker.nvbes.fr>"))
+                .map(|job_id| format!("<account-job-{job_id}@notify.nvbes.eu>"))
         })
 }
 
@@ -161,7 +191,7 @@ mod tests {
 
     #[test]
     fn smtp_serializes_stable_message_and_job_identifiers() {
-        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@worker.nvbes.fr>";
+        let message_id = "<account-job-00000000-0000-0000-0000-000000000001@notify.nvbes.eu>";
         let formatted = build_message(&message(vec![
             ("Message-ID".to_string(), message_id.to_string()),
             (
@@ -201,6 +231,54 @@ mod tests {
         let formatted = String::from_utf8(formatted).expect("message should be UTF-8");
 
         assert!(!formatted.contains("\r\nBcc: hidden@example.test"));
+    }
+
+    #[test]
+    fn smtp_builds_text_html_empty_and_reply_to_messages() {
+        for bodies in [
+            (Some("text".to_string()), None),
+            (None, Some("<p>html</p>".to_string())),
+            (None, None),
+        ] {
+            let mut value = message(Vec::new());
+            value.text_body = bodies.0;
+            value.html_body = bodies.1;
+            assert!(!build_message(&value).unwrap().formatted().is_empty());
+        }
+
+        let formatted = build_message(&message(vec![(
+            "Reply-To".to_string(),
+            "support@example.test".to_string(),
+        )]))
+        .unwrap()
+        .formatted();
+        assert!(
+            String::from_utf8(formatted)
+                .unwrap()
+                .contains("Reply-To: support@example.test")
+        );
+    }
+
+    #[test]
+    fn smtp_rejects_invalid_mailboxes_and_custom_header_names() {
+        let mut invalid_from = message(Vec::new());
+        invalid_from.from.email = "invalid".to_string();
+        assert_eq!(
+            build_message(&invalid_from).unwrap_err().safe_code(),
+            "email_address"
+        );
+
+        let invalid_reply_to = message(vec![("Reply-To".to_string(), "invalid".to_string())]);
+        assert_eq!(
+            build_message(&invalid_reply_to).unwrap_err().safe_code(),
+            "email_address"
+        );
+
+        let invalid_header = message(vec![("X-Bad\nName".to_string(), "value".to_string())]);
+        assert_eq!(
+            build_message(&invalid_header).unwrap_err().safe_code(),
+            "email_configuration"
+        );
     }
 }
 

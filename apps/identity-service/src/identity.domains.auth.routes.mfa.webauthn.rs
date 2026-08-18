@@ -160,13 +160,8 @@ pub(crate) async fn confirm_webauthn_enrollment(
         crate::domains::auth::mfa::get_factor(&state.db, auth.user_id, request.factor_id).await?;
 
     // Only discoverable passkeys can be offered before an account is identified.
-    if factor.kind.as_deref() == Some("passkey")
-        && let Ok(mut prefs) =
-            crate::domains::auth::db::fetch_user_preferences(&state.db, auth.user_id).await
-    {
-        prefs.skip_password = true;
-        let _ = crate::domains::auth::db::update_user_preferences(&state.db, auth.user_id, &prefs)
-            .await;
+    if factor.kind.as_deref() == Some("passkey") {
+        crate::domains::auth::db::enable_passwordless_login(&state.db, auth.user_id).await?;
     }
 
     Ok(Json(TotpConfirmResult {

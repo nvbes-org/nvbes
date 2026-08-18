@@ -22,6 +22,7 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `test-openapi-contract.sh`: smoke contractuel OpenAPI sur les routes publiques et proxifiées.
 - `test-openapi-contract-seeded-auth.sh`: smoke contractuel OpenAPI avec seed/login auth pour couvrir aussi une partie des routes protegées/stateful.
 - `test-e2e-critical.sh`: parcours critiques navigateur contre un environnement deploye.
+- `test-identity-e2e-local.sh`: démarre un environnement Identity hermétique local/CI, exécute les parcours critiques puis détruit les ressources isolées.
 - `test-smoke.sh`: checks rapides post-deploiement web/API.
 - `smoke-staging.sh`: wrapper staging qui lance le smoke public puis une acceptation Account authentifiée avec une identité synthétique.
 - `check-stripe-mappings.sh`: preflight staging pour valider les mappings Stripe actifs.
@@ -35,7 +36,7 @@ Scripts projet partages pour bootstrap local, checks et automatisations simples.
 - `dev-cloud-worker.sh`: lance le worker Cloud en isolation.
 - `dev-cloud-db-reset.sh`: recree la base Cloud locale `nvbes_cloud` quand les checksums SQLx dev ne correspondent plus.
 - `dev-worker.sh`: alias historique vers le worker Account.
-- `generate-openapi.sh`: regenere les specs OpenAPI Account, Developer, Cloud et Backoffice, puis republie les SDK generes.
+- `generate-openapi.sh`: regenere les specs OpenAPI Identity, Account, Developer, Cloud et Backoffice, puis republie les SDK generes.
 
 Variables attendues pour les tests deployes:
 
@@ -48,6 +49,8 @@ Variables attendues pour les tests deployes:
   Account autorisee a creer, migrer ou supprimer des ressources PostgreSQL;
   la base doit etre loopback, avoir un segment `test` exact et aucun segment
   production-like.
+- `NVBES_IDENTITY_TEST_DATABASE_URL` pour les tests SQL Identity Service et
+  Identity Worker; cette URL est validee par les memes garde-fous destructifs.
 
 Variables attendues par les gates:
 

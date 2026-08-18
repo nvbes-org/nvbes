@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { identityHttpClient } from './identity.http';
+import { browserTimeZone } from './identity.browser-timezone';
 
 export type ResendVerificationResponse = {
   success: boolean;
@@ -46,12 +47,14 @@ async function verifyEmailIdempotencyKey(token: string): Promise<string> {
 export async function resendVerificationEmail(email: string): Promise<ResendVerificationResponse> {
   return identityHttpClient.post('/auth/verify-email/resend', ResendVerificationResponseSchema, {
     email,
+    timezone: browserTimeZone(),
   });
 }
 
 export async function changeVerificationEmail(email: string): Promise<ResendVerificationResponse> {
   return identityHttpClient.post('/auth/verify-email/change', ResendVerificationResponseSchema, {
     email,
+    timezone: browserTimeZone(),
   });
 }
 

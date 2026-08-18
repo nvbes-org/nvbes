@@ -8,6 +8,21 @@ on:
       - 'apps/identity-worker/**'
       - 'apps/identity-web/**'
       - 'libs/rust/products/identity/**'
+      - 'libs/ts/identity-client/**'
+      - 'libs/ts/identity-sdk/**'
+      - 'libs/ts/identity-sdk-core/**'
+      - 'libs/ts/identity-sdk-web/**'
+      - 'scripts/generate-openapi.sh'
+      - 'scripts/test-e2e-critical.sh'
+      - 'scripts/test-identity-e2e-local.sh'
+      - 'scripts/test-identity-service*.sh'
+      - 'scripts/test-identity-worker.sh'
+      - 'infrastructure/local/identity-e2e.compose.yml'
+      - 'infrastructure/local/identity-e2e.init.sql'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/ci-identity.yml'
   pull_request:
     branches: ['main']
@@ -16,23 +31,189 @@ on:
       - 'apps/identity-worker/**'
       - 'apps/identity-web/**'
       - 'libs/rust/products/identity/**'
+      - 'libs/ts/identity-client/**'
+      - 'libs/ts/identity-sdk/**'
+      - 'libs/ts/identity-sdk-core/**'
+      - 'libs/ts/identity-sdk-web/**'
+      - 'scripts/generate-openapi.sh'
+      - 'scripts/test-e2e-critical.sh'
+      - 'scripts/test-identity-e2e-local.sh'
+      - 'scripts/test-identity-service*.sh'
+      - 'scripts/test-identity-worker.sh'
+      - 'infrastructure/local/identity-e2e.compose.yml'
+      - 'infrastructure/local/identity-e2e.init.sql'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/ci-identity.yml'
 
 concurrency:
   group: ci-identity-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
+
 jobs:
   check-identity-rust:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
+      NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_ENV: test
+      NVBES_IDENTITY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
+      NVBES_REDIS_URL: redis://127.0.0.1:6379/15
+      NX_DAEMON: false
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: nvbes_identity_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nvbes_identity_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate CI/CD security controls
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-identity.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Install xmlsec dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
-      - name: Cargo check identity-service
-        run: cargo check -p nvbes-identity-service -p nvbes-product-identity
-      - name: Cargo test identity-service
-        run: cargo test -p nvbes-identity-service -p nvbes-product-identity
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Check Identity Rust projects
+        run: pnpm exec nx run-many -t check --projects=identity-service,identity-worker
+      - name: Test Identity product crate
+        run: cargo test --locked --package nvbes-product-identity
+      - name: Test Identity Service
+        run: pnpm exec nx run identity-service:test
+      - name: Test Identity Worker
+        run: pnpm exec nx run identity-worker:test
+      - name: Validate Identity Worker container contract
+        run: pnpm exec nx run identity-worker:test-container-contract
+      - name: Validate Identity Service container contract
+        run: pnpm exec nx run identity-service:test-container-contract
+      - name: Validate Identity OpenAPI contract
+        run: pnpm exec nx run identity-service:test-contract
+
+  check-identity-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      NX_DAEMON: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate CI/CD security controls
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-identity.yml
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Validate Identity web packages
+        run: >-
+          pnpm exec nx run-many
+          -t format:check,lint,typecheck,test,build
+          --projects=identity-web,identity-client,identity-sdk,identity-sdk-web
+      - name: Validate generated Identity SDK core
+        run: pnpm exec nx run identity-sdk-core:check
+
+  test-identity-critical-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      NX_DAEMON: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Configure ephemeral Identity E2E path
+        run: echo "NVBES_IDENTITY_E2E_ARTIFACT_DIR=$RUNNER_TEMP/identity-e2e-runtime" >> "$GITHUB_ENV"
+      - name: Validate CI/CD security controls
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/ci-identity.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - name: Install xmlsec dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxmlsec1-dev libxmlsec1-openssl xmlsec1
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install Chromium
+        run: pnpm --dir apps/identity-web exec playwright install --with-deps chromium
+      - name: Run critical Identity browser journeys
+        run: pnpm exec nx run identity-web:test:e2e:critical:local
+      - name: Upload Identity E2E failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: identity-critical-e2e-${{ github.run_id }}
+          path: |
+            apps/identity-web/playwright-report/
+            apps/identity-web/test-results/
+            ${{ runner.temp }}/identity-e2e-runtime/
+          retention-days: 7
+          if-no-files-found: warn

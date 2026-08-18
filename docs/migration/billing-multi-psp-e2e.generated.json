@@ -105,10 +105,10 @@
     },
     {
       "id": "worker-email-dispatch",
-      "description": "Billing worker dispatches billing email jobs",
+      "description": "Billing worker dispatches billing email submission jobs",
       "path": "apps/billing-worker/src/billing.worker.jobs.rs",
       "status": "passed",
-      "pattern": "JOB_BILLING_EMAIL_SEND"
+      "pattern": "JOB_BILLING_EMAIL_SUBMIT"
     },
     {
       "id": "stripe-worker-processing",
@@ -154,10 +154,10 @@
     },
     {
       "id": "worker-email-queue",
-      "description": "Billing email uses the Billing worker queue",
+      "description": "Billing email uses the Billing integration queue",
       "path": "apps/billing-worker/src/billing.worker.email.rs",
       "status": "passed",
-      "pattern": "billing_email_uses_billing_worker_queue"
+      "pattern": "JOB_BILLING_EMAIL_SUBMIT"
     },
     {
       "id": "worker-analytics-module",
@@ -218,7 +218,7 @@
     {
       "id": "identity-no-psp-webhook-runtime",
       "description": "Account Service and worker do not own PSP webhook runtime",
-      "path": "apps/account-service/src + apps/account-worker/src",
+      "path": "apps/identity-service/src + apps/account-worker/src",
       "status": "passed",
       "pattern": "forbidden:/webhooks/stripe,/webhooks/mollie,billing.stripe.webhook.process,billing.mollie.webhook.process,process_stripe_webhook_job,process_mollie_webhook_job,handle_stripe_webhook_intake",
       "matches": []

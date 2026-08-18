@@ -10,6 +10,7 @@ function detailsByArea(area, sources) {
 	if (area === "phases") return pendingPhases(sources.phases);
 	if (area === "gates") return pendingGates(sources.gates, "gate");
 	if (area === "risks") return pendingRisks(sources.risks);
+	if (area === "target_structure") return missingTargetStructure(sources.targetStructure);
 	if (area === "reconciliation_template") return reconciliationTemplate(sources.reconciliation);
 	if (area === "live_evidence") return missingLiveEvidence(sources.liveEvidence);
 	if (markdownSource(area, sources)) return blockingMarkdownDecisionDetails(markdownSource(area, sources));
@@ -32,6 +33,12 @@ function pendingRisks(register) {
 	return (register?.risks ?? [])
 		.filter((risk) => risk.status !== "mitigated" && risk.status !== "accepted" && risk.status !== "removed")
 		.map((risk) => `${risk.id}: ${risk.status} ${risk.severity} risk owned by ${risk.owner} - ${risk.cutover_impact}`);
+}
+
+function missingTargetStructure(targetStructure) {
+	return (targetStructure?.entries ?? [])
+		.filter((entry) => entry.status !== "present")
+		.map((entry) => `${entry.path}: ${entry.status}`);
 }
 
 function reconciliationTemplate(reconciliation) {

@@ -132,7 +132,7 @@ function assertImplementation() {
 }
 
 function assertLayeredDefenses() {
-  const consent = readText('apps/account-web/src/pages/LoginPageConsent.tsx');
+  const consent = readText('apps/identity-web/src/pages/LoginPageConsent.tsx');
   for (const needle of [
     'sanitizeUrlForAttribute',
     'sanitizeStyleElementCss',

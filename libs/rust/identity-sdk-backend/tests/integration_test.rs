@@ -43,26 +43,6 @@ fn test_token_response_missing_refresh() {
 }
 
 #[test]
-fn test_register_input_serialization() {
-    let input = RegisterInput {
-        email: "test@nvbes.fr".to_string(),
-        password: "SecurePass123!".to_string(),
-        firstname: "Test".to_string(),
-        lastname: "User".to_string(),
-        username: "test-user".to_string(),
-        birthdate: None,
-        region: Some("FR".to_string()),
-        workspace_name: "Test Workspace".to_string(),
-    };
-
-    let json = serde_json::to_value(&input).unwrap();
-    assert_eq!(json["email"], "test@nvbes.fr");
-    assert_eq!(json["username"], "test-user");
-    assert_eq!(json["region"], "FR");
-    assert_eq!(json["workspace_name"], "Test Workspace");
-}
-
-#[test]
 fn test_user_view_deserialization() {
     let json = serde_json::json!({
         "id": "550e8400-e29b-41d4-a716-446655440000",

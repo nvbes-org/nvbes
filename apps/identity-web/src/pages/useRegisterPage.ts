@@ -19,51 +19,38 @@ export function useRegisterPage() {
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    setUsername,
-    username,
-    usernameValid,
   } = useRegisterPageState();
-  const { emailAvailability, usernameAvailability } = useRegisterPageAvailability({
+  const { emailAvailability } = useRegisterPageAvailability({
     email,
     emailValid,
-    username,
-    usernameValid,
   });
   const availabilityAllowsSubmit =
-    (emailAvailability === 'available' || emailAvailability === 'error') &&
-    (usernameAvailability === 'available' || usernameAvailability === 'error');
+    emailAvailability === 'available' || emailAvailability === 'error';
   const registrationCanSubmit = canSubmit && availabilityAllowsSubmit;
 
-  const { emailAlreadyExists, error, handleSubmit, loading, resetError, usernameTaken } =
-    useRegisterPageSubmit({
-      oauthRequest,
-      username,
-      email,
-      password,
-      canSubmit: registrationCanSubmit,
-      legalDocumentsAccepted,
-      marketingEmailsAccepted,
-      onSuccess: ({ accountName, email: successEmail, resendAvailableAt }) => {
-        void navigate({
-          to: '/verify',
-          state: (state) => ({
-            ...state,
-            accountName,
-            email: successEmail,
-            resendAvailableAt,
-          }),
-        });
-      },
-    });
+  const { emailAlreadyExists, error, handleSubmit, loading, resetError } = useRegisterPageSubmit({
+    oauthRequest,
+    email,
+    password,
+    canSubmit: registrationCanSubmit,
+    legalDocumentsAccepted,
+    marketingEmailsAccepted,
+    onSuccess: ({ accountName, email: successEmail, resendAvailableAt }) => {
+      void navigate({
+        to: '/verify',
+        state: (state) => ({
+          ...state,
+          accountName,
+          email: successEmail,
+          resendAvailableAt,
+        }),
+      });
+    },
+  });
 
   const handleEmailChange = (value: string) => {
     resetError();
     setEmail(value);
-  };
-
-  const handleUsernameChange = (value: string) => {
-    resetError();
-    setUsername(value);
   };
 
   return {
@@ -76,7 +63,6 @@ export function useRegisterPage() {
     error,
     handleEmailChange,
     handleSubmit,
-    handleUsernameChange,
     legalDocumentsAccepted,
     loading,
     marketingEmailsAccepted,
@@ -85,9 +71,5 @@ export function useRegisterPage() {
     setLegalDocumentsAccepted,
     setMarketingEmailsAccepted,
     setPassword,
-    username,
-    usernameTaken,
-    usernameAvailability,
-    usernameValid,
   };
 }

@@ -1,6 +1,10 @@
-# Software Bill of Materials
+# SBOM Coverage Manifest
 
-## Artifact
+## Status
+
+The repository SBOM gate covers Node.js, Rust, Go, Python and container manifests with no pending ecosystem.
+
+## Components
 
 `pnpm check:sbom` produces a real CycloneDX JSON SBOM at
 `.temp/security/nvbes.cdx.json`. The security workflow uploads that file as an

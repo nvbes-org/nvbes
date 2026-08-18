@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "nvbes Account Service",
-    "description": "Authentication, authorization, and identity management API",
+    "title": "nvbes Identity Service",
+    "description": "OAuth 2.1, OpenID Connect, authentication, and authorization server",
     "contact": {
       "name": "nvbes",
       "url": "https://nvbes.fr"
@@ -14,11 +14,11 @@
   },
   "servers": [
     {
-      "url": "https://account.nvbes.fr",
+      "url": "https://identity.nvbes.fr",
       "description": "Production"
     },
     {
-      "url": "http://localhost:8080",
+      "url": "http://localhost:4000",
       "description": "Development"
     }
   ],
@@ -553,15 +553,6 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -598,9 +589,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -622,15 +610,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -667,9 +646,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:security:write"
@@ -720,373 +696,6 @@
         "security": [
           {
             "browserSession": []
-          }
-        ]
-      }
-    },
-    "/auth/me": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me",
-        "responses": {
-          "200": {
-            "description": "Current user info",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MeResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:profile:read"
-            ]
-          }
-        ]
-      },
-      "patch": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_update",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProfileInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Profile updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateProfileResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Username already taken",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:profile:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/auth/me/avatar": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_avatar",
-        "responses": {
-          "307": {
-            "description": "Temporary redirect to the profile avatar"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Profile avatar not found"
-          },
-          "500": {
-            "description": "Storage error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:profile:read"
-            ]
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_avatar_upload",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AvatarUploadInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Profile avatar upload prepared",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AvatarUploadResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Unsupported avatar type or size",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Storage error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:profile:write"
-            ]
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_avatar_delete",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Profile avatar deleted"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Storage error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:profile:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/auth/me/delete": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_delete",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Account deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeleteAccountResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:delete"
-            ]
           }
         ]
       }
@@ -1142,9 +751,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:email:read"
             ]
@@ -1156,17 +762,6 @@
           "auth"
         ],
         "operationId": "me_emails_post",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1221,9 +816,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:email:write"
             ]
@@ -1245,15 +837,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -1301,9 +884,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:email:write"
             ]
@@ -1325,15 +905,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -1381,9 +952,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:email:write"
             ]
@@ -1405,15 +973,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -1461,324 +1020,8 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:email:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/auth/me/export": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_export_download",
-        "responses": {
-          "200": {
-            "description": "Prepared personal data export",
-            "content": {
-              "application/json": {}
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No prepared export available",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:export"
-            ]
-          }
-        ]
-      },
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_export",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Data export request recorded",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DataExportResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:export"
-            ]
-          }
-        ]
-      }
-    },
-    "/auth/me/notifications": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_notifications_get",
-        "responses": {
-          "200": {
-            "description": "Notification preferences",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserNotifications"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:preferences:read"
-            ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_notifications_put",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserNotifications"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Notifications updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserNotifications"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:preferences:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/auth/me/preferences": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_preferences_get",
-        "responses": {
-          "200": {
-            "description": "User preferences",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserPreferences"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:preferences:read"
-            ]
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "me_preferences_put",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UserPreferences"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Preferences updated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserPreferences"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:preferences:write"
             ]
           }
         ]
@@ -1835,9 +1078,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:read"
             ]
@@ -1859,15 +1099,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -1898,9 +1129,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -1914,17 +1142,6 @@
           "auth"
         ],
         "operationId": "generate_recovery_codes",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1969,9 +1186,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -1985,17 +1199,6 @@
           "auth"
         ],
         "operationId": "confirm_totp_enrollment",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2040,9 +1243,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -2056,17 +1256,6 @@
           "auth"
         ],
         "operationId": "begin_totp_enrollment",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2101,9 +1290,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -2117,17 +1303,6 @@
           "auth"
         ],
         "operationId": "confirm_webauthn_enrollment",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2172,9 +1347,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -2188,17 +1360,6 @@
           "auth"
         ],
         "operationId": "begin_webauthn_enrollment",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2233,9 +1394,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -2249,17 +1407,6 @@
           "auth"
         ],
         "operationId": "webauthn_auth_start",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "WebAuthn authentication challenge",
@@ -2284,9 +1431,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:security:write"
             ]
@@ -2300,17 +1444,6 @@
           "auth"
         ],
         "operationId": "change_password",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2364,9 +1497,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:security:write"
@@ -2477,54 +1607,6 @@
         "security": []
       }
     },
-    "/auth/region": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "region",
-        "responses": {
-          "200": {
-            "description": "Detected region from request headers",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegionResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/auth/regions": {
-      "get": {
-        "tags": [
-          "auth"
-        ],
-        "operationId": "supported_regions",
-        "responses": {
-          "200": {
-            "description": "Supported region catalog",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SupportedRegionResponse"
-                  }
-                }
-              }
-            }
-          },
-          "304": {
-            "description": "Supported region catalog not modified"
-          }
-        },
-        "security": []
-      }
-    },
     "/auth/register": {
       "post": {
         "tags": [
@@ -2563,7 +1645,7 @@
             }
           },
           "409": {
-            "description": "Email or username already exists",
+            "description": "Email already exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -2667,9 +1749,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:session:read"
             ]
@@ -2683,17 +1762,6 @@
           "auth"
         ],
         "operationId": "revoke_all_sessions",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "All sessions revoked",
@@ -2718,9 +1786,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:session:write"
             ]
@@ -2734,17 +1799,6 @@
           "auth"
         ],
         "operationId": "revoke_all_other_sessions",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Other sessions revoked",
@@ -2769,9 +1823,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:session:write"
             ]
@@ -2793,15 +1844,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -2839,9 +1881,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:session:write"
             ]
@@ -2863,15 +1902,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -2909,9 +1939,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:session:write"
             ]
@@ -2925,17 +1952,6 @@
           "auth"
         ],
         "operationId": "step_up",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -2970,7 +1986,9 @@
         },
         "security": [
           {
-            "browserSession": []
+            "oauth2": [
+              "account:security:write"
+            ]
           }
         ]
       }
@@ -2981,17 +1999,6 @@
           "auth"
         ],
         "operationId": "request_email_step_up",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3045,9 +2052,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:security:write"
@@ -3233,6 +2237,74 @@
         "security": []
       }
     },
+    "/auth/workspaces/{workspaceId}/switch": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "switch_workspace",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchWorkspaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace switched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchWorkspaceResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "account:session:write"
+            ]
+          }
+        ]
+      }
+    },
     "/authz/decision": {
       "post": {
         "tags": [
@@ -3298,242 +2370,6 @@
         ]
       }
     },
-    "/legal/consent": {
-      "post": {
-        "tags": [
-          "legal"
-        ],
-        "operationId": "grant_consent",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Consent successfully recorded",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserConsent"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:legal:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/legal/consent/revoke": {
-      "post": {
-        "tags": [
-          "legal"
-        ],
-        "operationId": "revoke_consent",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Consent successfully revoked"
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:legal:write"
-            ]
-          }
-        ]
-      }
-    },
-    "/legal/consents": {
-      "get": {
-        "tags": [
-          "legal"
-        ],
-        "operationId": "list_consents",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "Max results",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "description": "Opaque pagination cursor",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Consent history listed successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConsentHistoryResult"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:legal:read"
-            ]
-          }
-        ]
-      }
-    },
-    "/legal/gpc": {
-      "get": {
-        "tags": [
-          "legal"
-        ],
-        "operationId": "gpc_status",
-        "responses": {
-          "200": {
-            "description": "GPC status and auto-recording result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GpcStatusResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "browserSession": []
-          },
-          {
-            "oauth2": [
-              "account:legal:read"
-            ]
-          }
-        ]
-      }
-    },
     "/oauth/authorize": {
       "get": {
         "tags": [
@@ -3544,8 +2380,8 @@
           {
             "name": "response_type",
             "in": "query",
-            "description": "Response type",
-            "required": true,
+            "description": "Legacy response type; resolved from the pushed authorization request",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -3579,8 +2415,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Authorization code issued"
+          "303": {
+            "description": "Redirect to Identity login or the registered client callback"
           },
           "400": {
             "description": "Bad request",
@@ -3642,15 +2478,6 @@
               "type": "string",
               "format": "uuid"
             }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -3697,9 +2524,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:write"
             ]
@@ -3720,15 +2544,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -3796,9 +2611,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:write"
             ]
@@ -3846,9 +2658,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:read"
             ]
@@ -3860,17 +2669,6 @@
           "oauth"
         ],
         "operationId": "create_client",
-        "parameters": [
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3925,9 +2723,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:write"
             ]
@@ -3947,15 +2742,6 @@
             "in": "path",
             "description": "OAuth client ID",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
             "schema": {
               "type": "string"
             }
@@ -4014,9 +2800,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:oauth-clients:write"
@@ -4078,9 +2861,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:read"
             ]
@@ -4097,15 +2877,6 @@
             "name": "clientId",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
             "schema": {
               "type": "string"
             }
@@ -4165,9 +2936,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:write"
             ]
@@ -4197,15 +2965,6 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -4252,9 +3011,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:oauth-clients:write"
@@ -4333,9 +3089,6 @@
         },
         "security": [
           {
-            "browserSession": []
-          },
-          {
             "oauth2": [
               "account:oauth-clients:read"
             ]
@@ -4353,15 +3106,6 @@
             "in": "path",
             "description": "OAuth client ID",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-CSRF-Token",
-            "in": "header",
-            "description": "Required when authenticating with `browserSession`; send the value of the matching `__Host-csrf_token{_authuser}` cookie. OAuth bearer requests do not use this header.",
-            "required": false,
             "schema": {
               "type": "string"
             }
@@ -4420,9 +3164,6 @@
           }
         },
         "security": [
-          {
-            "browserSession": []
-          },
           {
             "oauth2": [
               "account:oauth-clients:write"
@@ -5160,37 +3901,6 @@
           }
         }
       },
-      "AvatarUploadInput": {
-        "type": "object",
-        "required": [
-          "content_type",
-          "size_bytes"
-        ],
-        "properties": {
-          "content_type": {
-            "type": "string"
-          },
-          "size_bytes": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "AvatarUploadResult": {
-        "type": "object",
-        "required": [
-          "upload_url",
-          "object_key"
-        ],
-        "properties": {
-          "object_key": {
-            "type": "string"
-          },
-          "upload_url": {
-            "type": "string"
-          }
-        }
-      },
       "BotGuardProof": {
         "type": "object",
         "description": "Client-side metadata attached to form submissions for enhanced\nsession integrity verification.",
@@ -5712,44 +4422,8 @@
         "properties": {
           "email": {
             "type": "string"
-          }
-        }
-      },
-      "ConsentHistoryResult": {
-        "type": "object",
-        "required": [
-          "consents",
-          "has_more"
-        ],
-        "properties": {
-          "consents": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserConsent"
-            }
           },
-          "has_more": {
-            "type": "boolean"
-          },
-          "next_cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
-      "ConsentRequest": {
-        "type": "object",
-        "required": [
-          "consent_type",
-          "document_version"
-        ],
-        "properties": {
-          "consent_type": {
-            "type": "string"
-          },
-          "document_version": {
+          "timezone": {
             "type": "string"
           }
         }
@@ -5963,17 +4637,6 @@
           }
         }
       },
-      "DataExportResult": {
-        "type": "object",
-        "required": [
-          "success"
-        ],
-        "properties": {
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
       "DecisionRequest": {
         "type": "object",
         "required": [
@@ -6025,17 +4688,6 @@
         "properties": {
           "decision": {
             "$ref": "#/components/schemas/WorkspaceDecision"
-          }
-        }
-      },
-      "DeleteAccountResult": {
-        "type": "object",
-        "required": [
-          "success"
-        ],
-        "properties": {
-          "success": {
-            "type": "boolean"
           }
         }
       },
@@ -6378,21 +5030,6 @@
           }
         }
       },
-      "GpcStatusResponse": {
-        "type": "object",
-        "required": [
-          "gpc_enabled",
-          "gpc_opt_out_active"
-        ],
-        "properties": {
-          "gpc_enabled": {
-            "type": "boolean"
-          },
-          "gpc_opt_out_active": {
-            "type": "boolean"
-          }
-        }
-      },
       "GpcWellKnownResponse": {
         "type": "object",
         "required": [
@@ -6577,6 +5214,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "audience": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "auth_time": {
             "type": [
@@ -6789,44 +5432,6 @@
         "properties": {
           "success": {
             "type": "boolean"
-          }
-        }
-      },
-      "MeResult": {
-        "type": "object",
-        "required": [
-          "user"
-        ],
-        "properties": {
-          "current_organization_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "current_tenant_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "current_workspace_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "current_workspace_region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "user": {
-            "$ref": "#/components/schemas/UserView"
           }
         }
       },
@@ -7553,23 +6158,11 @@
           }
         }
       },
-      "RegionResponse": {
-        "type": "object",
-        "properties": {
-          "region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
       "RegisterRequest": {
         "type": "object",
         "required": [
           "email",
           "password",
-          "username",
           "pow_nonce",
           "pow_solution"
         ],
@@ -7592,9 +6185,8 @@
           "pow_solution": {
             "type": "string"
           },
-          "username": {
-            "type": "string",
-            "maxLength": 100
+          "timezone": {
+            "type": "string"
           }
         }
       },
@@ -7614,24 +6206,13 @@
           }
         }
       },
-      "RegistrationAvailabilityField": {
-        "type": "string",
-        "enum": [
-          "email",
-          "username"
-        ]
-      },
       "RegistrationAvailabilityRequest": {
         "type": "object",
         "required": [
-          "field",
-          "value"
+          "email"
         ],
         "properties": {
-          "field": {
-            "$ref": "#/components/schemas/RegistrationAvailabilityField"
-          },
-          "value": {
+          "email": {
             "type": "string"
           }
         }
@@ -7670,6 +6251,9 @@
         ],
         "properties": {
           "email": {
+            "type": "string"
+          },
+          "timezone": {
             "type": "string"
           }
         }
@@ -8211,53 +6795,58 @@
           }
         }
       },
-      "SupportedRegionResponse": {
+      "SwitchWorkspaceRequest": {
         "type": "object",
         "required": [
-          "country_code",
-          "data_region",
-          "legal_jurisdiction",
-          "primary_timezone",
-          "timezones",
-          "hosting_strategy",
-          "is_european_exclusive"
+          "webauthn_response"
         ],
         "properties": {
-          "country_code": {
-            "type": "string"
-          },
-          "data_region": {
-            "type": "string"
-          },
-          "display_name": {
+          "password": {
             "type": [
               "string",
               "null"
             ]
           },
-          "hosting_strategy": {
-            "type": "string"
+          "recovery_code": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
-          "is_european_exclusive": {
+          "totp_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "webauthn_challenge_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "webauthn_response": {
+            "type": "object"
+          }
+        }
+      },
+      "SwitchWorkspaceResult": {
+        "type": "object",
+        "required": [
+          "workspace",
+          "session",
+          "stepped_up"
+        ],
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/SessionView"
+          },
+          "stepped_up": {
             "type": "boolean"
           },
-          "legal_jurisdiction": {
-            "type": "string"
-          },
-          "primary_timezone": {
-            "type": "string"
-          },
-          "sub_region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "timezones": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceView"
           }
         }
       },
@@ -8523,54 +7112,6 @@
         },
         "additionalProperties": false
       },
-      "UpdateProfileInput": {
-        "type": "object",
-        "properties": {
-          "birthdate": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date"
-          },
-          "firstname": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "lastname": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "username": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 100
-          }
-        }
-      },
-      "UpdateProfileResult": {
-        "type": "object",
-        "required": [
-          "user"
-        ],
-        "properties": {
-          "user": {
-            "$ref": "#/components/schemas/UserView"
-          }
-        }
-      },
       "UserAgentInfo": {
         "type": "object",
         "required": [
@@ -8613,80 +7154,6 @@
           }
         }
       },
-      "UserConsent": {
-        "type": "object",
-        "required": [
-          "id",
-          "principal_id",
-          "consent_type",
-          "document_version",
-          "granted_at"
-        ],
-        "properties": {
-          "consent_type": {
-            "type": "string"
-          },
-          "document_version": {
-            "type": "string"
-          },
-          "granted_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "ip_address": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "principal_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "revoked_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "UserNotifications": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "boolean"
-          },
-          "in_app": {
-            "type": "boolean"
-          },
-          "marketing_email": {
-            "type": "boolean"
-          },
-          "push": {
-            "type": "boolean"
-          }
-        }
-      },
-      "UserPreferences": {
-        "type": "object",
-        "properties": {
-          "language": {
-            "type": "string"
-          },
-          "skip_password": {
-            "type": "boolean"
-          },
-          "theme": {
-            "type": "string"
-          }
-        }
-      },
       "UserView": {
         "type": "object",
         "required": [
@@ -8698,13 +7165,6 @@
           "created_at"
         ],
         "properties": {
-          "birthdate": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -8718,36 +7178,12 @@
           "email_verified": {
             "type": "boolean"
           },
-          "firstname": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "lastname": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "mfa_enabled": {
             "type": "boolean"
-          },
-          "region": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "username": {
-            "type": [
-              "string",
-              "null"
-            ]
           }
         }
       },
@@ -8923,6 +7359,46 @@
           "Member",
           "Viewer"
         ]
+      },
+      "WorkspaceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "owner_principal_id",
+          "name",
+          "workspace_type",
+          "data_region",
+          "role"
+        ],
+        "properties": {
+          "data_region": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_principal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string"
+          },
+          "trial_ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "workspace_type": {
+            "type": "string"
+          }
+        }
       }
     },
     "securitySchemes": {

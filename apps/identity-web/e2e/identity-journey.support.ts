@@ -1,13 +1,54 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type BrowserContext, type Page } from '@playwright/test';
+
+export interface VirtualPasskeyAuthenticator {
+  setAutomaticPresence(enabled: boolean): Promise<void>;
+  dispose(): Promise<void>;
+}
+
+export async function installVirtualPasskeyAuthenticator(
+  context: BrowserContext,
+  page: Page,
+): Promise<VirtualPasskeyAuthenticator> {
+  const session = await context.newCDPSession(page);
+  await session.send('WebAuthn.enable', { enableUI: false });
+  const { authenticatorId } = await session.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+
+  return {
+    setAutomaticPresence: async (enabled) => {
+      await session.send('WebAuthn.setAutomaticPresenceSimulation', {
+        authenticatorId,
+        enabled,
+      });
+    },
+    dispose: async () => {
+      await session.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+      await session.send('WebAuthn.disable');
+      await session.detach();
+    },
+  };
+}
 
 export async function loginThroughBrowser(page: Page, email: string, password: string) {
+  await submitPrimaryCredentials(page, email, password);
+  await expect(page).toHaveURL(/\/profile\/?$/u);
+}
+
+export async function submitPrimaryCredentials(page: Page, email: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByRole('button', { name: 'Continuer' }).click();
   await expect(page.getByLabel('Mot de passe', { exact: true })).toBeVisible();
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page).toHaveURL(/\/security\/?$/u);
 }
 
 export function emailTextbox(page: Page) {

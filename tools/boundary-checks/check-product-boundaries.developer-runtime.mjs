@@ -9,27 +9,29 @@ function read(path, errors) {
 }
 
 export function checkDeveloperRuntimeBoundary(errors) {
-  const accountSource = 'apps/account-service/src';
-  for (const file of readdirSync(accountSource)) {
+  const identitySource = 'apps/identity-service/src';
+  for (const file of readdirSync(identitySource)) {
     if (file.startsWith('identity.domains.developer.')) {
-      errors.push(`${accountSource}/${file}: Account Service must not embed the Developer domain`);
+      errors.push(
+        `${identitySource}/${file}: Identity Service must not embed the Developer domain`,
+      );
     }
   }
 
-  const accountModules = read(`${accountSource}/identity.domains.mod.rs`, errors);
+  const identityModules = read(`${identitySource}/identity.domains.mod.rs`, errors);
   if (
-    accountModules.includes('domains.developer') ||
-    accountModules.includes('developer::router')
+    identityModules.includes('domains.developer') ||
+    identityModules.includes('developer::router')
   ) {
     errors.push(
-      `${accountSource}/identity.domains.mod.rs: Account Service must not mount Developer routes`,
+      `${identitySource}/identity.domains.mod.rs: Identity Service must not mount Developer routes`,
     );
   }
 
-  const accountOpenapiPath = 'apps/account-service/openapi.json';
-  const accountOpenapi = read(accountOpenapiPath, errors);
-  if (accountOpenapi.includes('"/developer/')) {
-    errors.push(`${accountOpenapiPath}: Account OpenAPI must not expose Developer routes`);
+  const identityOpenapiPath = 'apps/identity-service/openapi.json';
+  const identityOpenapi = read(identityOpenapiPath, errors);
+  if (identityOpenapi.includes('"/developer/')) {
+    errors.push(`${identityOpenapiPath}: Identity OpenAPI must not expose Developer routes`);
   }
 
   const developerOpenapiPath = 'apps/developer-service/openapi.json';

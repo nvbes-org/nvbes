@@ -67,3 +67,7 @@ fn request_context() -> RequestContext {
         }),
     }
 }
+
+#[cfg(test)]
+#[path = "identity.worker.enterprise_grpc.tests.rs"]
+mod tests;

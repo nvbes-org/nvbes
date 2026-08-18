@@ -21,13 +21,13 @@
 
 | Domain | Status | Source tables | Reconciliation |
 |---|---:|---:|---|
-| Identity | passed | 41 | checksum, orphan_check, row_count |
+| Identity | passed | 65 | checksum, orphan_check, row_count |
 | Workspace | passed | 23 | checksum, orphan_check, row_count |
-| Drive | passed | 18 | checksum, object_or_link_invariant, orphan_check, row_count |
-| Billing | passed | 97 | checksum, ledger_balance, orphan_check, row_count |
-| Audit | passed | 5 | checksum, orphan_check, row_count |
-| Privacy | passed | 5 | checksum, orphan_check, row_count |
-| Developer Platform | passed | 19 | checksum, orphan_check, row_count |
+| Drive | passed | 22 | checksum, object_or_link_invariant, orphan_check, row_count |
+| Billing | passed | 99 | checksum, ledger_balance, orphan_check, row_count |
+| Audit | passed | 8 | checksum, orphan_check, row_count |
+| Privacy | passed | 8 | checksum, orphan_check, row_count |
+| Developer Platform | passed | 20 | checksum, orphan_check, row_count |
 
 ## Evidence
 

@@ -76,18 +76,6 @@ export function replayEmailMessage(
   );
 }
 
-export function replayEmailWebhook(
-  credentials: AdminCredentials,
-  eventId: OperationPath<'replayWebhookEvent'>['eventId'],
-  body: OperationBody<'replayWebhookEvent'>,
-) {
-  return postJson<OperationBody<'replayWebhookEvent'>, OperationOk<'replayWebhookEvent'>>(
-    credentials,
-    `/workspaces/${credentials.workspaceId}/admin/communications/webhooks/${eventId}/replay`,
-    body,
-  );
-}
-
 export function suppressEmail(credentials: AdminCredentials, body: OperationBody<'suppressEmail'>) {
   return postJson<OperationBody<'suppressEmail'>, OperationOk<'suppressEmail'>>(
     credentials,

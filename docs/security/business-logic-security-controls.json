@@ -22,7 +22,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
               "includes": [
                 "detect_profile_from_country_code",
                 "country_code_to_data_region",
@@ -44,16 +44,16 @@
           "description": "Persist short-lived authentication state, require the expected next step, and consume challenges when they are completed.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.state.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.state.rs",
               "includes": ["next_step", "expected_step", "invalid_auth_step", "consume_state"]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.login_challenges.state.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.login_challenges.state.rs",
               "includes": [
                 "consumed_at.is_some()",
                 "expires_at <= chrono::Utc::now()",
                 "consume_challenge",
-                "delete_challenge"
+                "cache_take_json"
               ]
             }
           ]
@@ -88,7 +88,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.http.middleware.idempotency.rs",
+              "path": "apps/identity-service/src/identity.http.middleware.idempotency.rs",
               "includes": [
                 "IdempotencyClaim::InProgress",
                 "idempotency_request_in_progress",
@@ -96,7 +96,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.pow.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.pow.rs",
               "includes": [
                 "consumed_at",
                 "pow_nonce_consumed",
@@ -171,12 +171,12 @@
         {
           "id": "BLS_CTRL_006",
           "name": "Semantic registration and quota validation",
-          "description": "Validate legal acceptance, username normalization and length, backend-derived supported regions, and quota/spend-cap semantics server-side.",
+          "description": "Validate legal acceptance, backend-derived supported regions, and quota/spend-cap semantics server-side.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.routes.register.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.routes.register.rs",
               "includes": [
-                "normalize_username",
+                "registration_country_from_headers",
                 "region_detection_failed",
                 "legal_documents_required"
               ]
@@ -204,7 +204,7 @@
           "description": "Record auth, billing, and bot/security decisions so business-logic abuse is visible to investigation and alerting workflows.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.auth.audit.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.audit.rs",
               "includes": ["AuthAuditInput", "record_auth_event", "AuditRecordInput"]
             },
             {
@@ -216,7 +216,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.auth.bot_response.rs",
+              "path": "apps/identity-service/src/identity.domains.auth.bot_response.rs",
               "includes": ["identity_bot_guard_decisions_total", "record_decision", "apply_tarpit"]
             }
           ]

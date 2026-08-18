@@ -159,7 +159,7 @@ Avant production:
 
 Notes d'implementation:
 
-- La suite `pnpm test:e2e:critical` est deja branchee sur le parcours navigateur `account-web` via Playwright.
+- La suite `pnpm test:e2e:critical` est branchee sur les parcours navigateur critiques d'`identity-web` via Playwright.
 - `pnpm test:smoke` couvre les checks HTTP rapides actuellement implementes; les checks applicatifs listes plus haut restent a brancher si requis pour la gate.
 - L'extension de couverture E2E reste un sujet de contenu de test, pas un blocage de wiring release.
 

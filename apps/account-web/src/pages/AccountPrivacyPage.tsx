@@ -10,6 +10,7 @@ import { TrackingConsentToggle } from '@/components/TrackingConsentToggle';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AccountPrivacyExportActions } from '@/pages/AccountPrivacyPage.export';
 import {
   DEFAULT_CONSENT,
   TRACKING_CONSENT_CHANGED_EVENT,
@@ -129,43 +130,23 @@ export default function AccountPrivacyPage() {
 
 function PrivacyActions() {
   const [confirmation, setConfirmation] = useState('');
-  const exportMutation = useMutation({
-    mutationFn: () => accountClient.requestDataExport(),
-  });
   const closureMutation = useMutation({
     mutationFn: () => accountClient.closeAccount(),
   });
-  useAccountAuthenticationRecovery(exportMutation.error ?? closureMutation.error);
+  const closureQuery = useQuery({
+    queryKey: accountQueryKeys.closure,
+    queryFn: ({ signal }) => accountClient.getAccountClosure({ signal }),
+    enabled: closureMutation.isSuccess,
+    refetchInterval: (query) =>
+      query.state.data && ['completed', 'failed', 'cancelled'].includes(query.state.data.status)
+        ? false
+        : 1_000,
+  });
+  useAccountAuthenticationRecovery(closureMutation.error ?? closureQuery.error);
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-base font-semibold">Exporter mes données</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Prépare une archive téléchargeable de vos données Account.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={exportMutation.isPending || exportMutation.isSuccess}
-          onClick={() => exportMutation.mutate()}
-        >
-          {exportMutation.isPending
-            ? 'Demande en cours…'
-            : exportMutation.isSuccess
-              ? 'Export demandé'
-              : 'Demander un export'}
-        </Button>
-      </div>
-
-      {exportMutation.error ? (
-        <Alert variant="destructive">
-          <AlertTitle>Export impossible</AlertTitle>
-          <AlertDescription>{exportMutation.error.message}</AlertDescription>
-        </Alert>
-      ) : null}
+      <AccountPrivacyExportActions />
 
       <div className="space-y-3 border-t border-destructive/30 pt-6">
         <div>
@@ -199,15 +180,33 @@ function PrivacyActions() {
             <AlertDescription>{closureMutation.error.message}</AlertDescription>
           </Alert>
         ) : null}
-        {closureMutation.isSuccess ? (
+        {closureQuery.data?.status === 'failed' ? (
+          <Alert variant="destructive">
+            <AlertTitle>Fermeture interrompue</AlertTitle>
+            <AlertDescription>
+              {closureFailureMessage(closureQuery.data.last_error)}
+            </AlertDescription>
+          </Alert>
+        ) : closureMutation.isSuccess ? (
           <Alert>
             <AlertTitle>Demande enregistrée</AlertTitle>
-            <AlertDescription>La procédure de fermeture de compte a commencé.</AlertDescription>
+            <AlertDescription>
+              {closureQuery.data
+                ? `${closureQuery.data.participants.filter((step) => step.status === 'completed').length} étape(s) sur ${closureQuery.data.participants.length} terminée(s).`
+                : 'La procédure de fermeture de compte a commencé.'}
+            </AlertDescription>
           </Alert>
         ) : null}
       </div>
     </section>
   );
+}
+
+function closureFailureMessage(code: string | null): string {
+  if (code === 'cloud_closure_conflict' || code === 'billing_closure_conflict') {
+    return 'Transférez ou supprimez les espaces dont vous êtes propriétaire, puis relancez la fermeture.';
+  }
+  return 'La fermeture n’a pas pu être terminée. Réessayez ou contactez le support.';
 }
 
 function updateConsent(consent: CookieConsentState, category: 'analytics' | 'performance'): void {

@@ -17,6 +17,7 @@ pub enum BetaCliCommand {
     PrepareBetaE2eAccount {
         email: String,
         workspace_name: String,
+        privileged: bool,
     },
 }
 
@@ -30,6 +31,7 @@ pub fn parse_cli_command(args: &[String]) -> anyhow::Result<Option<BetaCliComman
         return Ok(Some(BetaCliCommand::PrepareBetaE2eAccount {
             email,
             workspace_name,
+            privileged: !args.iter().any(|arg| arg == "--non-privileged"),
         }));
     }
 
@@ -83,6 +85,7 @@ pub async fn run_cli_command(command: BetaCliCommand) -> anyhow::Result<()> {
         BetaCliCommand::PrepareBetaE2eAccount {
             email,
             workspace_name,
+            privileged,
         } => {
             let password = std::env::var("NVBES_BETA_SEED_PASSWORD")
                 .context("NVBES_BETA_SEED_PASSWORD is required for beta account seeding.")?;
@@ -93,6 +96,7 @@ pub async fn run_cli_command(command: BetaCliCommand) -> anyhow::Result<()> {
                     email,
                     password,
                     workspace_name,
+                    privileged,
                 },
             )
             .await?;

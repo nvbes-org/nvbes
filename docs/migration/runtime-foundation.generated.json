@@ -21,7 +21,8 @@
       "required_paths": [
         "Cargo.toml",
         "libs/rust",
-        "apps/account-service",
+        "apps/account-service-next",
+        "apps/identity-service",
         "apps/cloud-service"
       ],
       "required_commands": [
@@ -33,7 +34,8 @@
       "present_paths": [
         "Cargo.toml",
         "libs/rust",
-        "apps/account-service",
+        "apps/account-service-next",
+        "apps/identity-service",
         "apps/cloud-service"
       ],
       "configured_commands": [
@@ -44,7 +46,8 @@
       "evidence": [
         "path:Cargo.toml",
         "path:libs/rust",
-        "path:apps/account-service",
+        "path:apps/account-service-next",
+        "path:apps/identity-service",
         "path:apps/cloud-service",
         "command:pnpm check:api"
       ],

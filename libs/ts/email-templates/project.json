@@ -1,7 +1,0 @@
-{
-  "name": "email-templates",
-  "projectType": "library",
-  "root": "libs/ts/email-templates",
-  "sourceRoot": "libs/ts/email-templates/src",
-  "tags": ["scope:oss", "type:lib", "domain:shared", "layer:ui"]
-}

@@ -1,25 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MailPlus, MailX, RadioTower, ShieldCheck } from 'lucide-react';
+import { MailPlus, MailX, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  replayEmailMessage,
-  replayEmailWebhook,
-  suppressEmail,
-  unsuppressEmail,
-} from './backoffice-service.api';
+import { replayEmailMessage, suppressEmail, unsuppressEmail } from './backoffice-service.api';
 import { strongConfirmationCode } from './backoffice-service.strong-confirmation';
 import type { AdminCredentials, CommunicationsActionResult } from './backoffice-service.types';
 
-type CommunicationsActionKind = 'replay-email' | 'replay-webhook' | 'suppress' | 'unsuppress';
+type CommunicationsActionKind = 'replay-email' | 'suppress' | 'unsuppress';
 
 const confirmCodes: Record<CommunicationsActionKind, string> = {
   'replay-email': 'REPLAY EMAIL',
-  'replay-webhook': 'REPLAY WEBHOOK',
   suppress: 'SUPPRESS EMAIL',
   unsuppress: 'UNSUPPRESS EMAIL',
 };
@@ -34,17 +28,11 @@ export function CommunicationsActionsPanel({
   const queryClient = useQueryClient();
   const [action, setAction] = useState<CommunicationsActionKind>('replay-email');
   const [messageId, setMessageId] = useState('');
-  const [eventId, setEventId] = useState('');
   const [email, setEmail] = useState('');
   const [confirmCode, setConfirmCode] = useState('');
   const [reason, setReason] = useState('');
   const [result, setResult] = useState<CommunicationsActionResult | null>(null);
-  const expectedConfirmCode = expectedCommunicationsConfirmCode(
-    credentials,
-    action,
-    messageId,
-    eventId,
-  );
+  const expectedConfirmCode = expectedCommunicationsConfirmCode(credentials, action, messageId);
   const isReasonReady = reason.trim().length >= 12;
   const isConfirmationReady = confirmCode.trim() === expectedConfirmCode;
 
@@ -53,7 +41,6 @@ export function CommunicationsActionsPanel({
       executeCommunicationsAction(credentials, action, {
         confirmCode,
         email,
-        eventId,
         messageId,
         reason,
       }),
@@ -69,17 +56,11 @@ export function CommunicationsActionsPanel({
         <div>
           <h3 className="text-sm font-medium">Actions communications</h3>
           <p className="text-muted-foreground text-xs">
-            Replay email/webhook et suppression d'adresse avec audit.
+            Replay email et suppression d'adresse avec audit.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <ActionButton action="replay-email" current={action} label="Email" onSelect={setAction} />
-          <ActionButton
-            action="replay-webhook"
-            current={action}
-            label="Webhook"
-            onSelect={setAction}
-          />
           <ActionButton action="suppress" current={action} label="Suppress" onSelect={setAction} />
           <ActionButton
             action="unsuppress"
@@ -96,15 +77,6 @@ export function CommunicationsActionsPanel({
               disabled={disabled || mutation.isPending}
               onChange={(event) => setMessageId(event.target.value)}
               value={messageId}
-            />
-          </Field>
-        ) : null}
-        {action === 'replay-webhook' ? (
-          <Field label="Webhook event ID">
-            <Input
-              disabled={disabled || mutation.isPending}
-              onChange={(event) => setEventId(event.target.value)}
-              value={eventId}
             />
           </Field>
         ) : null}
@@ -164,7 +136,6 @@ export function CommunicationsActionsPanel({
 type CommunicationsActionPayload = {
   confirmCode: string;
   email: string;
-  eventId: string;
   messageId: string;
   reason: string;
 };
@@ -176,7 +147,6 @@ function executeCommunicationsAction(
 ) {
   const body = { confirm_code: payload.confirmCode, reason: payload.reason };
   if (action === 'replay-email') return replayEmailMessage(credentials, payload.messageId, body);
-  if (action === 'replay-webhook') return replayEmailWebhook(credentials, payload.eventId, body);
   const emailBody = { ...body, email: payload.email };
   if (action === 'suppress') return suppressEmail(credentials, emailBody);
   return unsuppressEmail(credentials, emailBody);
@@ -186,10 +156,8 @@ function expectedCommunicationsConfirmCode(
   credentials: AdminCredentials,
   action: CommunicationsActionKind,
   messageId: string,
-  eventId: string,
 ) {
   if (action === 'replay-email') return strongConfirmationCode(confirmCodes[action], messageId);
-  if (action === 'replay-webhook') return strongConfirmationCode(confirmCodes[action], eventId);
   return strongConfirmationCode(confirmCodes[action], credentials.workspaceId);
 }
 
@@ -228,7 +196,6 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
 
 function actionIcon(action: CommunicationsActionKind) {
   if (action === 'replay-email') return <MailPlus className="size-4" />;
-  if (action === 'replay-webhook') return <RadioTower className="size-4" />;
   if (action === 'suppress') return <MailX className="size-4" />;
   return <ShieldCheck className="size-4" />;
 }

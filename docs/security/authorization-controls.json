@@ -56,7 +56,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.authz.service.rs",
+              "path": "apps/identity-service/src/identity.domains.authz.service.rs",
               "includes": [
                 "pub async fn authorize_workspace_action",
                 "email_not_verified",
@@ -245,7 +245,7 @@
           "description": "Permit tenant management only to eligible identity roles inside the correct tenant context.",
           "evidence": [
             {
-              "path": "apps/account-service/src/identity.domains.authz.service.tenant.rs",
+              "path": "apps/identity-service/src/identity.domains.authz.service.tenant.rs",
               "includes": [
                 "ensure_tenant_management_access",
                 "ensure_tenant_context",
@@ -254,7 +254,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.authz.service.tenant.tests.rs",
+              "path": "apps/identity-service/src/identity.domains.authz.service.tenant.tests.rs",
               "includes": [
                 "tenant_management_is_limited_to_identity_admin_roles",
                 "test_resolve_admin_scope"
@@ -317,7 +317,7 @@
               ]
             },
             {
-              "path": "apps/account-service/src/identity.domains.authz.db.rs",
+              "path": "apps/identity-service/src/identity.domains.authz.db.rs",
               "includes": [
                 "pub async fn record_permission_denied",
                 "permission.denied",

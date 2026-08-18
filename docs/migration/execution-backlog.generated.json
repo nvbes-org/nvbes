@@ -5,8 +5,8 @@
     "strict_completion_command": "node tools/migration/execution-backlog.mjs --strict"
   },
   "status": {
-    "open_tasks": 40,
-    "blocking_items": 178,
+    "open_tasks": 42,
+    "blocking_items": 184,
     "readiness": "no-go",
     "completion": "incomplete",
     "live_evidence": "no-go",
@@ -362,6 +362,18 @@
       "status": "blocked"
     },
     {
+      "id": "complete-target-monorepo-structure",
+      "owner_role": "Migration lead",
+      "source": "blueprint:Structure Monorepo Cible",
+      "blocking_items": 1,
+      "blocking_details": [
+        "la structure monorepo cible existe pour les frontieres apps, libs, contracts, deploy, docs et tools"
+      ],
+      "next_action": "la structure monorepo cible existe pour les frontieres apps, libs, contracts, deploy, docs et tools",
+      "proof": "node tools/migration/target-structure.mjs --strict",
+      "status": "blocked"
+    },
+    {
       "id": "resolve-communication",
       "owner_role": "Support lead",
       "source": "docs/migration/communication-plan.md",
@@ -659,6 +671,22 @@
       ],
       "next_action": "resolve and sign snapshots decisions",
       "proof": "pnpm check:migration-snapshots -- --strict",
+      "status": "blocked"
+    },
+    {
+      "id": "resolve-target_structure",
+      "owner_role": "Migration lead",
+      "source": "docs/migration/target-structure.generated.json",
+      "blocking_items": 5,
+      "blocking_details": [
+        "apps/api: missing",
+        "apps/cloud: missing",
+        "apps/internal: missing",
+        "apps/public: missing",
+        "apps/workers: missing"
+      ],
+      "next_action": "resolve and sign target_structure decisions",
+      "proof": "node tools/migration/target-structure.mjs --strict",
       "status": "blocked"
     }
   ]

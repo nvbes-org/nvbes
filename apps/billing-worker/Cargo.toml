@@ -8,6 +8,7 @@ version.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
+nvbes-billing-service = { path = "../billing-service" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-email = { path = "../../libs/rust/email" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
@@ -17,7 +18,6 @@ nvbes-redis = { path = "../../libs/rust/redis" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sha2.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tracing.workspace = true

@@ -206,7 +206,7 @@ async fn smtp_delivers_a_complete_message_over_a_real_tcp_exchange() {
 
     assert_eq!(
         result.provider_email_id,
-        "<account-job-00000000-0000-0000-0000-000000000042@worker.nvbes.fr>"
+        "<account-job-00000000-0000-0000-0000-000000000042@notify.nvbes.eu>"
     );
     assert_eq!(transcript.commands.len(), 4);
     assert!(
@@ -240,12 +240,31 @@ async fn required_starttls_refuses_a_server_without_the_extension() {
     let transcript = server.await.expect("fake SMTP server task");
 
     assert_eq!(error.safe_code(), "email_smtp_transport");
+    assert_eq!(error.safe_summary(), "SMTP delivery failed");
     assert!(
         transcript
             .commands
             .iter()
             .all(|command| !command.starts_with("MAIL FROM:") && command != "DATA")
     );
+}
+
+#[tokio::test]
+async fn smtp_uses_the_provider_response_when_no_stable_id_is_supplied() {
+    let (port, server) = spawn_server(Scenario::Delivery).await;
+    let mut value = message();
+    value.headers.clear();
+
+    let result = timeout(
+        TEST_TIMEOUT,
+        sender(port, false, false).send_message(&value),
+    )
+    .await
+    .expect("SMTP client should finish")
+    .expect("SMTP delivery should succeed");
+    server.await.expect("fake SMTP server task");
+
+    assert!(result.provider_email_id.contains("queued as fake-42"));
 }
 
 #[tokio::test]

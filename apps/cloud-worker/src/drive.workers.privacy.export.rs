@@ -2,8 +2,6 @@ use serde_json::Value as JsonValue;
 use std::time::Duration;
 use uuid::Uuid;
 
-#[path = "drive.workers.privacy.export.account.rs"]
-mod account;
 #[path = "drive.workers.privacy.export.workspace.rs"]
 mod workspace;
 
@@ -11,21 +9,7 @@ use crate::db::Database;
 use crate::workers::logic;
 use nvbes_redis::worker_queue::QueuedJob;
 
-pub const JOB_PRIVACY_ACCOUNT_EXPORT: &str = "privacy.account_export";
 pub const JOB_PRIVACY_WORKSPACE_EXPORT: &str = "privacy.workspace_export";
-
-pub async fn export_account_data(
-    job: &QueuedJob,
-    database: &Database,
-    storage: &dyn nvbes_storage::ObjectStore,
-) -> anyhow::Result<JsonValue> {
-    let subject_user_id: Uuid = logic::payload_uuid(&job.payload, "subject_user_id")?;
-    let request_id: Uuid = logic::payload_uuid(&job.payload, "privacy_request_id")?;
-
-    mark_processing(database, request_id).await?;
-    let export = account::build(database, subject_user_id).await?;
-    store_export_result(database, storage, request_id, "drive-account", export).await
-}
 
 pub async fn export_workspace_data(
     job: &QueuedJob,

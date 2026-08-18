@@ -15,6 +15,12 @@ import AccountOAuthCallbackPage from './pages/AccountOAuthCallbackPage';
 import AccountPreferencesPage from './pages/AccountPreferencesPage';
 import AccountPrivacyPage from './pages/AccountPrivacyPage';
 import AccountProfilePage from './pages/AccountProfilePage';
+import AccountSessionsPage from './pages/AccountSessionsPage';
+import AccountSecurityPage from './pages/AccountSecurityPage';
+import AccountEmailsPage from './pages/AccountEmailsPage';
+import AccountConnectedAppsPage from './pages/AccountConnectedAppsPage';
+import AccountForgotPasswordPage from './pages/AccountForgotPasswordPage';
+import AccountResetPasswordPage from './pages/AccountResetPasswordPage';
 
 function RootLayout() {
   return (
@@ -64,6 +70,18 @@ const callbackRoute = createRoute({
   component: AccountOAuthCallbackPage,
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ACCOUNT_WEB_PATHS.forgotPassword,
+  component: AccountForgotPasswordPage,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ACCOUNT_WEB_PATHS.resetPassword,
+  component: AccountResetPasswordPage,
+});
+
 const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'account',
@@ -94,10 +112,45 @@ const privacyRoute = createRoute({
   component: AccountPrivacyPage,
 });
 
+const sessionsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: ACCOUNT_WEB_PATHS.sessions,
+  component: AccountSessionsPage,
+});
+
+const securityRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: ACCOUNT_WEB_PATHS.security,
+  component: AccountSecurityPage,
+});
+
+const emailsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: ACCOUNT_WEB_PATHS.emails,
+  component: AccountEmailsPage,
+});
+
+const connectedAppsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: ACCOUNT_WEB_PATHS.connectedApps,
+  component: AccountConnectedAppsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   callbackRoute,
-  protectedRoute.addChildren([profileRoute, preferencesRoute, notificationsRoute, privacyRoute]),
+  forgotPasswordRoute,
+  resetPasswordRoute,
+  protectedRoute.addChildren([
+    profileRoute,
+    preferencesRoute,
+    notificationsRoute,
+    privacyRoute,
+    sessionsRoute,
+    securityRoute,
+    emailsRoute,
+    connectedAppsRoute,
+  ]),
 ]);
 
 export const router = createRouter({

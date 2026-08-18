@@ -21,6 +21,7 @@ type SubmitMfaStepOptions = {
   mfaMethod: MfaMethod | null;
   totpCode: string;
   recoveryCode: string;
+  webauthnSignal?: AbortSignal;
   submitMfa: MfaMutateAsync;
   startWebauthn: WebauthnStartMutateAsync;
   setError: (value: string | null) => void;
@@ -36,6 +37,7 @@ export async function submitMfaStep({
   mfaMethod,
   totpCode,
   recoveryCode,
+  webauthnSignal,
   submitMfa,
   startWebauthn,
   setError,
@@ -75,6 +77,7 @@ export async function submitMfaStep({
       );
       const credential = await getWebAuthnCredential(options, {
         timeoutMs: WEBAUTHN_TIMEOUT_MS,
+        signal: webauthnSignal,
       });
       result = await submitMfa({
         stateToken: loginStateToken,
@@ -88,6 +91,9 @@ export async function submitMfaStep({
     }
     await finishLogin(result?.session_token ?? sessionToken);
   } catch (err) {
+    if (webauthnSignal?.aborted) {
+      return;
+    }
     if (isInvalidSignatureError(err)) {
       setLoginStateToken(null);
       setSessionToken(null);

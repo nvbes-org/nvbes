@@ -26,13 +26,14 @@ services:
       GIT_CONFIG_GLOBAL: /home/vscode/.config/git/config
       npm_config_store_dir: /workspaces/nvbes/pnpm-store
       PNPM_HOME: /usr/local/node/bin
-      NX_DAEMON: "false"
-      NVBES_DEVCONTAINER: "true"
+      NX_DAEMON: 'false'
+      NVBES_DEVCONTAINER: 'true'
       NVBES_ENV: development
       NVBES_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes
-      NVBES_DRIVE_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_drive
+      NVBES_CLOUD_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_cloud
+      NVBES_EMAIL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/nvbes_email
       NVBES_REDIS_URL: redis://:redis_dev@redis:6379
-      STORAGE_ENABLED: "true"
+      STORAGE_ENABLED: 'true'
       STORAGE_BUCKET: nvbes
       STORAGE_ENDPOINT: http://seaweedfs:8333
       STORAGE_PUBLIC_ENDPOINT: http://localhost:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}
@@ -40,13 +41,10 @@ services:
       STORAGE_ACCESS_KEY: nvbes
       STORAGE_SECRET_KEY: nvbes-dev-secret
       NVBES_EMAIL_PROVIDER: smtp
-      NVBES_SMTP_HOST: mailhog
-      NVBES_SMTP_PORT: "1025"
-      NVBES_SMTP_STARTTLS: "false"
+      NVBES_SMTP_HOST: mailpit
+      NVBES_SMTP_PORT: '1025'
+      NVBES_SMTP_STARTTLS: 'false'
       NVBES_API_BASE_URL: http://localhost:4000
-      NVBES_IDENTITY_API_BASE_URL: http://localhost:4000
-      NVBES_DRIVE_API_BASE_URL: http://localhost:4002
-      VITE_DRIVE_API_BASE_URL: /api
       NVBES_DRIVE_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4101
       NVBES_IDENTITY_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4102
       NVBES_BILLING_WORKER_METRICS_BIND_ADDR: 0.0.0.0:4104
@@ -57,8 +55,8 @@ services:
         condition: service_healthy
       seaweedfs:
         condition: service_started
-      mailhog:
-        condition: service_started
+      mailpit:
+        condition: service_healthy
     networks:
       - nvbes_dev
     mem_limit: 6g
@@ -67,8 +65,8 @@ services:
     logging: &limited-logging
       driver: json-file
       options:
-        max-size: "5m"
-        max-file: "2"
+        max-size: '5m'
+        max-file: '2'
 
   postgres:
     image: postgres:17-alpine
@@ -88,12 +86,12 @@ services:
       - -c
       - max_connections=50
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_POSTGRES_PORT:-15432}:5432"
+      - '127.0.0.1:${NVBES_DEVCONTAINER_POSTGRES_PORT:-15432}:5432'
     volumes:
       - nvbes_pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/10-init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d nvbes"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d nvbes']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -116,17 +114,17 @@ services:
       - --maxmemory-policy
       - volatile-lru
       - --save
-      - "60 1"
+      - '60 1'
       - --appendonly
-      - "yes"
+      - 'yes'
       - --appendfsync
-      - "everysec"
+      - 'everysec'
     volumes:
       - nvbes_redis_data:/data
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_REDIS_PORT:-16379}:6379"
+      - '127.0.0.1:${NVBES_DEVCONTAINER_REDIS_PORT:-16379}:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis_dev", "--raw", "ping"]
+      test: ['CMD', 'redis-cli', '-a', 'redis_dev', '--raw', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -142,15 +140,15 @@ services:
     container_name: nvbes-devcontainer-seaweedfs
     command:
       [
-        "server",
-        "-dir=/data",
-        "-s3",
-        "-s3.config=/etc/seaweedfs/s3.json",
-        "-s3.allowedOrigins=http://localhost:3001,http://127.0.0.1:3001,http://localhost:5173,http://127.0.0.1:5173",
+        'server',
+        '-dir=/data',
+        '-s3',
+        '-s3.config=/etc/seaweedfs/s3.json',
+        '-s3.allowedOrigins=http://localhost:3001,http://127.0.0.1:3001,http://localhost:5173,http://127.0.0.1:5173',
       ]
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}:8333"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_MASTER_PORT:-19333}:9333"
+      - '127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_PORT:-18333}:8333'
+      - '127.0.0.1:${NVBES_DEVCONTAINER_SEAWEEDFS_MASTER_PORT:-19333}:9333'
     volumes:
       - nvbes_seaweedfs_data:/data
       - ../infrastructure/local/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
@@ -161,14 +159,14 @@ services:
     pids_limit: 128
     logging: *limited-logging
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: nvbes-devcontainer-mailhog
+  mailpit:
+    image: axllent/mailpit:v1.30.6@sha256:7f33095f80e901f6ad08028f06ca284aa58fe84942be5496008d041d3b9f4d4d
+    container_name: nvbes-devcontainer-mailpit
     ports:
-      - "127.0.0.1:${NVBES_DEVCONTAINER_SMTP_PORT:-11025}:1025"
-      - "127.0.0.1:${NVBES_DEVCONTAINER_MAILHOG_PORT:-18025}:8025"
+      - '127.0.0.1:${NVBES_DEVCONTAINER_SMTP_PORT:-11025}:1025'
+      - '127.0.0.1:${NVBES_DEVCONTAINER_MAILPIT_PORT:-18025}:8025'
     environment:
-      MH_MAX_MESSAGES: "1000"
+      MP_MAX_MESSAGES: '1000'
     networks:
       - nvbes_dev
     mem_limit: 64m

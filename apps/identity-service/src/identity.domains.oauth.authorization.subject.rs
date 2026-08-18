@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn workspace_products_keep_the_existing_context_requirement() {
-        let error = ensure_required_context("cloud-web", None, None)
+        let error = ensure_required_context("cloud-web", Some(uuid::Uuid::new_v4()), None)
             .expect_err("Cloud authorization requires workspace context");
 
         assert_eq!(error.code, "workspace_context_required");

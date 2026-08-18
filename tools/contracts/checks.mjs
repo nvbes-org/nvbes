@@ -157,7 +157,12 @@ function checkBillingGrpcImplementation() {
     errors.push('apps/billing-service/src/billing.grpc.pb.rs: missing nvbes.billing.v1 include');
   }
 
-  const service = readFileSync('apps/billing-service/src/billing.grpc.service.rs', 'utf8');
+  const service = [
+    'apps/billing-service/src/billing.grpc.service.rs',
+    'apps/billing-service/src/billing.grpc.service.workspace.rs',
+  ]
+    .map((path) => readFileSync(path, 'utf8'))
+    .join('\n');
   checkBillingRpcRuntimeScope({
     errors,
     gatewaySource: readRustSource('apps/gateway-cloud/src'),

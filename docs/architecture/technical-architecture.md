@@ -168,7 +168,9 @@ Les workers gerent:
 - Nettoyage des liens expires.
 - Emails transactionnels.
 
-La V1 utilise une queue dediee pour les jobs; PostgreSQL ne doit pas servir de file de polling.
+Les jobs produits utilisent leurs queues dédiées. Le runtime email global est
+l’exception explicite : PostgreSQL y porte la commande durable, les leases et
+les retries, tandis que les produits ne font que soumettre en gRPC.
 
 Garanties requises:
 
@@ -195,16 +197,19 @@ Avant de considerer les procedures export/suppression RGPD comme valides, elles 
 Checklist minimale:
 
 1. Creer ou reutiliser un compte de test avec une boite de reception accessible.
-1. Appeler `POST /api/v1/auth/me/export`.
-1. Verifier qu'une privacy request est creee et qu'un job worker `privacy.account_export` est enfile.
-1. Verifier qu'un job email `email.send` est enfile avec `business_type = data_export`.
-1. Verifier que le worker consomme le job et le marque `succeeded`.
-1. Verifier la reception de l'email d'export et son destinataire.
-1. Rejouer l'operation si necessaire pour confirmer l'idempotence et l'absence de double envoi.
-1. Effectuer le step-up recent requis, puis appeler `POST /api/v1/auth/me/delete`.
-1. Verifier qu'une privacy request est creee et qu'un job worker `privacy.account_delete` est enfile.
-1. Verifier que le worker supprime les memberships et marque le user `deleted`.
-1. Verifier que les sessions sont revoquees et qu'aucune erreur worker/email n'apparait dans les logs.
-1. Tester les garde-fous: rate limit export, refus sans step-up recent, refus si le compte possede encore des workspaces, refus workspace sous legal hold.
+1. Appeler `POST /api/v1/privacy/exports` sur Account avec le scope `account:export`.
+1. Suivre `GET /api/v1/privacy/exports/latest` et verifier les checkpoints `cloud`, `billing`, `identity`, puis `account`.
+1. Verifier que chaque participant utilise `POST /internal/v1/account-exports` avec son token interne dedie.
+1. Verifier que le worker reprend au checkpoint exact apres un arret et applique le backoff borne.
+1. Telecharger `GET /api/v1/privacy/exports/{exportId}/document` une fois le statut `completed`.
+1. Verifier la presence des quatre produits et l'absence de mots de passe, secrets MFA, tokens, hashes de session et cles d'acces.
+1. Rejouer la demande pendant son execution pour confirmer qu'une seule saga active existe par principal.
+1. Appeler `POST /api/v1/closure` sur Account avec le scope `account:delete`.
+1. Suivre `GET /api/v1/closure` et vérifier les checkpoints `cloud`, `billing`, `identity`, puis `account`.
+1. Vérifier que Cloud retire les memberships et tombstone sa projection utilisateur.
+1. Vérifier que Billing retire sa projection utilisateur sans supprimer les écritures financières à conserver.
+1. Vérifier qu'Identity révoque sessions, credentials et autorisations Developer/Enterprise.
+1. Vérifier qu'Account purge finalement ses données et termine la saga.
+1. Tester les garde-fous: refus si le compte possède encore des workspaces, rejeu idempotent et reprise après crash entre deux checkpoints.
 
 Cette validation doit etre documentee dans le runbook d'exploitation si un comportement change dans la chaine RGPD.

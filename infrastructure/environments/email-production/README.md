@@ -1,0 +1,82 @@
+# Production email stack
+
+This Terraform root owns only the production email delivery system:
+
+- the dedicated scale-to-zero Serverless SQL database and its runtime/migrator
+  IAM identities;
+- the private Scaleway Container Registry containing verified deployment
+  images;
+- the explicit Serverless Job used to run SQLx migrations;
+- the TEM sender domain and Cloudflare SPF, DKIM, DMARC, and MX records;
+- SNS lifecycle events and the signed webhook subscription;
+- the SQS dispatch queue, DLQ, and trigger credentials;
+- the public scale-to-zero ingress and private IAM-protected dispatcher;
+- the daily retention trigger.
+
+Its remote state key is fixed to `production/email/terraform.tfstate`. The
+general production stack must never manage these resources. The
+`private_network_id` input is the only infrastructure dependency imported from
+the general stack, and grants the containers private egress only.
+
+## GitHub deployment
+
+Create a protected GitHub Environment named `production-email` with required
+reviewers. Configure these environment variables:
+
+- `BASE_DOMAIN` (`nvbes.eu`);
+- `CLOUDFLARE_ZONE_ID`;
+- `SCALEWAY_TEM_TERMS_ACCEPTED` (`true` only after review);
+- `SCW_PRIVATE_NETWORK_ID`;
+- `SCW_PROJECT_ID`;
+- `TERRAFORM_STATE_BUCKET` (shared state bucket created by `infrastructure/bootstrap/production`).
+
+Configure these environment secrets:
+
+- `CLOUDFLARE_API_TOKEN`, limited to DNS changes in the nvbes zone;
+- `EMAIL_DATA_ENCRYPTION_KEY`;
+- `EMAIL_PRODUCER_TOKENS`;
+- `EMAIL_RECIPIENT_HMAC_KEY`;
+- `EMAIL_SNS_CA_BUNDLE_PEM`;
+- `EMAIL_TERRAFORM_STATE_ACCESS_KEY` and
+  `EMAIL_TERRAFORM_STATE_SECRET_KEY`, limited to the email state object and its
+  lock file;
+- `SCALEWAY_EMAIL_SECRET_KEY`, limited to transactional email sending;
+- `SCW_ACCESS_KEY` and `SCW_SECRET_KEY`, attached to the production email
+  deployment identity. It needs the Terraform permissions for this stack,
+  `ContainerRegistryFullAccess` to mirror the image, and
+  `ServerlessJobsFullAccess` to launch and inspect migrations.
+
+Then run these GitHub Actions in order from `main`:
+
+1. `container release`, with application `email-worker`;
+2. `deploy email`.
+
+The deployment workflow resolves the commit image to its registry digest,
+verifies the release's keyless Cosign identity, creates the private image
+registry, mirrors only its `linux/amd64` image, signs that immutable private
+copy, applies the migration foundation plan, waits for the migration job to
+succeed, applies the complete email plan, and checks `/health/live`. It never
+accepts an image or Terraform target as user input. Scaleway Serverless never
+pulls the potentially private GHCR package directly.
+
+## First deployment and existing resources
+
+The shared Terraform state bucket (`TERRAFORM_STATE_BUCKET`) must already exist, be private, encrypted, versioned,
+and have S3 lockfile permissions (created via `infrastructure/bootstrap/production`).
+
+If any TEM, DNS, SNS, SQS, Serverless SQL, Container, IAM, Secret Manager, or
+Job resource already exists outside this state, import it before enabling the
+GitHub workflow. Never let the first apply recreate an existing resource.
+Because no production apply has been performed for the current email stack,
+the expected first deployment starts with an empty email state.
+
+For local read-only planning, copy `terraform.tfvars.example` outside version
+control, export provider and S3 credentials, then initialize with:
+
+```bash
+terraform init \
+  -backend-config=backend.ci.hcl \
+  -backend-config='bucket=<terraform-state-bucket>'
+```
+
+Never commit real variable values, backend credentials, plans, or state files.

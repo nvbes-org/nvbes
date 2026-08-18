@@ -3,7 +3,7 @@
   "generation": {
     "command": "node tools/migration/audit-append-only.mjs --write",
     "sources": [
-      "apps/account-service/migrations/0001_initial_schema.sql",
+      "apps/identity-service/migrations/0001_initial_schema.sql",
       "apps/cloud-service/migrations/0001_initial_schema.sql",
       "libs/rust/audit/src/lib.rs"
     ]
@@ -20,105 +20,105 @@
       "check": "pgcrypto digest extension",
       "status": "passed",
       "pattern": "CREATE EXTENSION IF NOT EXISTS pgcrypto",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "hash chain column",
       "status": "passed",
       "pattern": "previous_event_hash",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "event hash column",
       "status": "passed",
       "pattern": "event_hash",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "hash chain function",
       "status": "passed",
       "pattern": "CREATE OR REPLACE FUNCTION audit_events_set_hash()",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "hash partition",
       "status": "passed",
       "pattern": "tenant_id = NEW.tenant_id",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "sha256 digest",
       "status": "passed",
       "pattern": "'sha256'",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "previous hash included",
       "status": "passed",
       "pattern": "COALESCE(previous_hash, '')",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "insert hash trigger",
       "status": "passed",
       "pattern": "CREATE TRIGGER trg_audit_events_set_hash",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "insert trigger timing",
       "status": "passed",
       "pattern": "BEFORE INSERT ON audit_events",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "mutation blocker function",
       "status": "passed",
       "pattern": "CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "update blocker trigger",
       "status": "passed",
       "pattern": "CREATE TRIGGER trg_audit_events_prevent_update",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "update trigger timing",
       "status": "passed",
       "pattern": "BEFORE UPDATE ON audit_events",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "delete blocker trigger",
       "status": "passed",
       "pattern": "CREATE TRIGGER trg_audit_events_prevent_delete",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "delete trigger timing",
       "status": "passed",
       "pattern": "BEFORE DELETE ON audit_events",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "identity",
       "check": "unique event hash index",
       "status": "passed",
       "pattern": "idx_audit_events_event_hash",
-      "path": "apps/account-service/migrations/0001_initial_schema.sql"
+      "path": "apps/identity-service/migrations/0001_initial_schema.sql"
     },
     {
       "product": "drive",

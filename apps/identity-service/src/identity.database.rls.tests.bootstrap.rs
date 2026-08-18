@@ -15,7 +15,6 @@ pub async fn assert_existing_owner_bootstrap(database: &RlsTestDatabase) -> anyh
         environment: "development".to_string(),
         web_base_url: "http://localhost:3001".to_string(),
         api_base_url: "http://localhost:4000".to_string(),
-        email_provider: "mock".to_string(),
         otp_provider: "mock".to_string(),
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
