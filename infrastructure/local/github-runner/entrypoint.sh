@@ -10,8 +10,8 @@ if [ -z "$GITHUB_REPOSITORY_URL" ] || [ -z "$RUNNER_TOKEN" ]; then
   exit 1
 fi
 
-RUNNER_NAME="${RUNNER_NAME:-docker-runner-$(hostname)}"
-RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,linux,ARM64,docker}"
+RUNNER_NAME="nvbes-docker-$(hostname)-$(date +%s)"
+RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,linux,ARM64,docker,macOS}"
 
 if [ ! -f .runner ]; then
   echo "Configuring runner $RUNNER_NAME for $GITHUB_REPOSITORY_URL with labels $RUNNER_LABELS..."
