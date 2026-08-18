@@ -102,21 +102,14 @@ resource "scaleway_object_bucket_policy" "terraform_state" {
       ],
       [
         for stack, path in local.state_paths : {
-          Sid       = "ReadWrite${title(replace(stack, "-", " "))}State"
-          Effect    = "Allow"
-          Principal = { SCW = "application_id:${scaleway_iam_application.state[stack].id}" }
-          Action    = ["s3:GetObject", "s3:PutObject"]
-          Resource  = ["${scaleway_object_bucket.terraform_state.name}/${path.state}"]
-          Condition = local.tls_condition
-        }
-      ],
-      [
-        for stack, path in local.state_paths : {
-          Sid       = "Manage${title(replace(stack, "-", " "))}StateLock"
+          Sid       = "Manage${title(replace(stack, "-", " "))}StateAndLock"
           Effect    = "Allow"
           Principal = { SCW = "application_id:${scaleway_iam_application.state[stack].id}" }
           Action    = ["s3:DeleteObject", "s3:GetObject", "s3:PutObject"]
-          Resource  = ["${scaleway_object_bucket.terraform_state.name}/${path.lockfile}"]
+          Resource  = [
+            "${scaleway_object_bucket.terraform_state.name}/${path.state}",
+            "${scaleway_object_bucket.terraform_state.name}/${path.lockfile}",
+          ]
           Condition = local.tls_condition
         }
       ],

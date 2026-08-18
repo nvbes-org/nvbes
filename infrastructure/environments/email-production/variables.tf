@@ -14,8 +14,15 @@ variable "scaleway_zone" {
 }
 
 variable "private_network_id" {
-  description = "Existing production Private Network attached to email containers for egress."
+  description = "Optional production Private Network attached to email containers for private egress."
   type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.private_network_id == null || var.private_network_id == "" || can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.private_network_id))
+    error_message = "private_network_id must be a valid UUID or null/empty."
+  }
 }
 
 variable "cloudflare_zone_id" {

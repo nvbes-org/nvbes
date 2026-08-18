@@ -26,7 +26,7 @@ reviewers. Configure these environment variables:
 - `BASE_DOMAIN` (`nvbes.eu`);
 - `CLOUDFLARE_ZONE_ID`;
 - `SCALEWAY_TEM_TERMS_ACCEPTED` (`true` only after review);
-- `SCW_PRIVATE_NETWORK_ID`;
+- `SCW_PRIVATE_NETWORK_ID` (optional Private Network ID, leave empty if not used);
 - `SCW_PROJECT_ID`;
 - `TERRAFORM_STATE_BUCKET` (shared state bucket created by `infrastructure/bootstrap/production`).
 
