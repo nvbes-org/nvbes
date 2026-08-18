@@ -26,9 +26,11 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
     apt-get update && apt-get install -y docker-ce-cli docker-buildx-plugin docker-compose-plugin && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 24
+# Install Node.js 24 and pnpm / corepack
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs && \
+    npm install -g pnpm@11.18.0 corepack@latest && \
+    corepack enable && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Terraform
