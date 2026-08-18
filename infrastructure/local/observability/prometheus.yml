@@ -36,6 +36,13 @@ scrape_configs:
           service: 'account-worker'
           environment: 'development'
 
+  - job_name: 'email-worker'
+    static_configs:
+      - targets: ['host.docker.internal:3040']
+        labels:
+          service: 'email-worker'
+          environment: 'development'
+
   - job_name: 'grafana-stack'
     static_configs:
       - targets:

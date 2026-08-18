@@ -51,7 +51,7 @@ export const completedPhaseEvidence = {
       'docs/migration/identity-register.generated.json',
       'docs/migration/identity-login-session.generated.json',
       'docs/migration/identity-mfa-webauthn.generated.json',
-      'apps/account-service/openapi.json',
+      'apps/identity-service/openapi.json',
     ],
     decision: 'go',
     proof:
@@ -113,7 +113,7 @@ export const completedPhaseEvidence = {
     status: 'passed',
     evidence: [
       'docs/migration/frontend-experience.generated.json',
-      'apps/account-web/e2e/critical.spec.ts',
+      'apps/identity-web/e2e/critical.spec.ts',
       'apps/cloud-web/src/drive.router.tsx',
       'apps/console-web/src/developer.router.tsx',
       'apps/enterprise-web/src/enterprise.router.tsx',

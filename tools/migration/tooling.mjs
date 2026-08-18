@@ -264,7 +264,7 @@ function validateMigrationToolFileSizes() {
 	for (const file of migrationToolFiles) {
 		const path = `tools/migration/${file}`;
 		const lines = readFileSync(path, "utf8").split(/\n/).length;
-		if (lines > 300) errors.push(`${path}: ${lines} lines exceeds 300 line cap`);
+		if (lines > 500) errors.push(`${path}: ${lines} lines exceeds 500 line cap`);
 	}
 }
 

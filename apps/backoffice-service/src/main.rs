@@ -60,6 +60,8 @@ mod billing_grpc_operations;
 mod billing_grpc_platform;
 #[path = "internal_admin.billing.grpc.revenue.rs"]
 mod billing_grpc_revenue;
+#[path = "internal_admin.billing.grpc.snapshot.rs"]
+mod billing_grpc_snapshot;
 #[path = "internal_admin.billing_platform_center.rs"]
 mod billing_platform_center;
 #[path = "internal_admin.billing_platform_center.action_log.rs"]

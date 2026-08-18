@@ -2,9 +2,9 @@
 
 ## Status
 
-- entries: 248
+- entries: 249
 - pending: 0
-- keep: 185
+- keep: 186
 - rotate: 63
 - remove: 0
 - replace: 0
@@ -108,6 +108,7 @@
 | NVBES_EMAIL_FROM_EMAIL | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-from-email` |
 | NVBES_EMAIL_FROM_NAME | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-from-name` |
 | NVBES_EMAIL_GRPC_AUTH_TOKEN | Identity | rotate | Security lead | required-before-cutover | `deploy/oss/helm/nvbes#external-secret.nvbes-email-grpc-auth-token` |
+| NVBES_EMAIL_GRPC_BIND_ADDR | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-grpc-bind-addr` |
 | NVBES_EMAIL_GRPC_ENDPOINT | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-grpc-endpoint` |
 | NVBES_EMAIL_HTTP_BIND_ADDR | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-http-bind-addr` |
 | NVBES_EMAIL_LEDGER_RETENTION_DAYS | Email | keep | Platform lead | not-required | `deploy/oss/helm/nvbes#config.nvbes-email-ledger-retention-days` |

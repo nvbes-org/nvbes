@@ -7,22 +7,28 @@ on:
       - 'apps/email-worker/**'
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
       - 'infrastructure/environments/email-production/**'
+      - 'infrastructure/stacks/email/production/**'
       - 'tools/ci/email-deployment-contract.test.mjs'
       - '.github/workflows/deploy-email.yml'
       - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'apps/email-worker/**'
       - 'contracts/protobuf/nvbes/email/**'
       - 'libs/rust/email/**'
+      - 'libs/rust/observability/**'
       - 'libs/rust/adapters-cloud/email-scaleway/**'
       - 'infrastructure/environments/email-production/**'
+      - 'infrastructure/stacks/email/production/**'
       - 'tools/ci/email-deployment-contract.test.mjs'
       - '.github/workflows/deploy-email.yml'
       - '.github/workflows/ci-email-worker.yml'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: ci-email-worker-${{ github.head_ref || github.ref_name }}
@@ -86,6 +92,19 @@ jobs:
           -input=false
       - name: Validate isolated email Terraform stack
         run: terraform -chdir=infrastructure/environments/email-production validate
+      - name: Check email stacks Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/stacks/email/production
+      - name: Initialize email stacks Terraform providers
+        run: >-
+          terraform -chdir=infrastructure/stacks/email/production init
+          -backend=false
+          -input=false
+      - name: Validate email Terraform stack
+        run: terraform -chdir=infrastructure/stacks/email/production validate
+      - name: Test email Terraform deployment and rotation
+        run: >-
+          PATH="$PWD/infrastructure/stacks/email/production/tests/bin:$PATH"
+          terraform -chdir=infrastructure/stacks/email/production test
       - name: Check formatting
         run: cargo fmt --all --check
       - name: Test email contract and runtime

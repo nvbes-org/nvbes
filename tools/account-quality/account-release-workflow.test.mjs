@@ -165,6 +165,12 @@ function validateAccountReleaseWorkflow(source) {
 	assert.equal(job.env.NVBES_RELEASE_REF, expression("github.ref"));
 	assert.equal(job.env.NVBES_RELEASE_REF_NAME, expression("github.ref_name"));
 	assert.equal(job.env.NVBES_RELEASE_REF_TYPE, expression("github.ref_type"));
+	assert.ok(
+		Object.values(job.env).every(
+			(value) => !String(value).includes(expression("runner.temp")),
+		),
+		"runner context must not be used in job-level env",
+	);
 	assert.equal(
 		job.env.DATABASE_URL,
 		"postgres://postgres:postgres@127.0.0.1:5432/nvbes_test",
@@ -222,6 +228,26 @@ function validateAccountReleaseWorkflow(source) {
 		"persist-credentials": false,
 		ref: expression("github.ref"),
 	});
+	const pathConfiguration = namedStep(
+		job,
+		"Configure ephemeral Account release paths",
+	);
+	for (const assignment of [
+		"ACCOUNT_ACCEPTANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-release-evidence/acceptance-evidence.json",
+		"ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE=$RUNNER_TEMP/account-release-evidence/acceptance-evidence.sig",
+		"ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-release-trust/acceptance-public-key.pem",
+		"ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-release-trust/deployment-public-key.pem",
+		"ACCOUNT_RELEASE_EVIDENCE_ROOT=$RUNNER_TEMP/account-release-evidence",
+		"ACCOUNT_RELEASE_REPORT_ROOT=$RUNNER_TEMP/account-release-report",
+		"ACCOUNT_RELEASE_TRUST_ROOT=$RUNNER_TEMP/account-release-trust",
+		"NVBES_FAPI_CONFORMANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-release-evidence/fapi-conformance.json",
+	]) {
+		assert.ok(
+			pathConfiguration.run.includes(assignment),
+			`missing ephemeral path assignment ${assignment}`,
+		);
+	}
+	assert.match(pathConfiguration.run, />> "\$GITHUB_ENV"/u);
 	assert.equal(
 		namedStep(job, "Validate immutable Account RC tag").run,
 		"node tools/account-quality/verify-account-release-ref.mjs",

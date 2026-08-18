@@ -1,6 +1,6 @@
 # Annexes à l’Accord relatif au traitement de données à caractère personnel
 
-**Version rattachée à l’Accord : 2026-07-30**
+**Version rattachée à l’Accord : 2026-08-12**
 
 Les présentes annexes font partie intégrante de l’Accord de même version.
 
@@ -8,37 +8,37 @@ Les présentes annexes font partie intégrante de l’Accord de même version.
 
 ## A. Parties, contacts et qualification
 
-| Élément | Client | nvbes |
-| --- | --- | --- |
-| Identité complète | `[À COMPLÉTER]` | nvbes Cloud SAS — mentions à compléter |
-| Rôle | Responsable du traitement | Sous-traitant |
-| Contact protection des données | `[À COMPLÉTER]` | privacy@nvbes.cloud |
-| DPO | `[À COMPLÉTER]` | `[À COMPLÉTER OU NON DÉSIGNÉ]` |
-| Contact incident disponible en permanence | `[À COMPLÉTER]` | `[À COMPLÉTER]` |
+| Élément                                   | Client                    | nvbes                                  |
+| ----------------------------------------- | ------------------------- | -------------------------------------- |
+| Identité complète                         | `[À COMPLÉTER]`           | nvbes Cloud SAS — mentions à compléter |
+| Rôle                                      | Responsable du traitement | Sous-traitant                          |
+| Contact protection des données            | `[À COMPLÉTER]`           | privacy@nvbes.cloud                    |
+| DPO                                       | `[À COMPLÉTER]`           | `[À COMPLÉTER OU NON DÉSIGNÉ]`         |
+| Contact incident disponible en permanence | `[À COMPLÉTER]`           | `[À COMPLÉTER]`                        |
 
 ## B. Traitements confiés
 
-| Élément requis | Description contractuelle |
-| --- | --- |
-| Objet | Fourniture au Client de capacités professionnelles d’identité, d’administration de comptes et d’authentification au moyen de nvbes Account |
-| Durée | Durée du Contrat principal, augmentée des seuls délais de restitution, suppression ou conservation légale prévus par l’Accord |
-| Nature et opérations | Collecte, enregistrement, organisation, structuration, consultation, authentification, transmission autorisée, journalisation, hébergement, sauvegarde, export, restriction et suppression |
-| Finalités | Créer et administrer les identités désignées par le Client ; authentifier les utilisateurs ; appliquer les politiques d’accès configurées ; maintenir la sécurité ; exécuter les autorisations et fournir l’assistance convenue |
-| Fréquence | Continue pendant l’utilisation du Service |
-| Personnes concernées | Utilisateurs finaux, administrateurs et personnes invitées relevant du périmètre du Client |
-| Données d’identification | Identifiant, nom, prénom, nom d’utilisateur, adresse électronique, région et attributs de profil configurés |
-| Données d’authentification | Empreinte de mot de passe, clés publiques WebAuthn, facteurs MFA protégés, codes de récupération hachés et événements d’authentification |
-| Données techniques et de sécurité | IP, agent utilisateur, appareil, session, journaux, signaux et scores de risque |
-| Autorisations | Applications, permissions, portées, attributs transmis et historique de révocation |
-| Catégories particulières, article 9 | Aucune catégorie particulière n’est destinée à être traitée. Tout traitement exceptionnel doit être préalablement décrit, autorisé et assorti de garanties renforcées |
-| Données d’infraction, article 10 | Aucune, sauf avenant identifiant le fondement et les garanties |
-| Localisation principale | `[PAYS ET RÉGIONS À COMPLÉTER]` |
-| Format de restitution | JSON structuré et tout format supplémentaire convenu : `[À COMPLÉTER]` |
+| Élément requis                      | Description contractuelle                                                                                                                                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Objet                               | Fourniture au Client de capacités professionnelles d’identité, d’administration de comptes et d’authentification au moyen de nvbes Account                                                                                      |
+| Durée                               | Durée du Contrat principal, augmentée des seuls délais de restitution, suppression ou conservation légale prévus par l’Accord                                                                                                   |
+| Nature et opérations                | Collecte, enregistrement, organisation, structuration, consultation, authentification, transmission autorisée, journalisation, hébergement, sauvegarde, export, restriction et suppression                                      |
+| Finalités                           | Créer et administrer les identités désignées par le Client ; authentifier les utilisateurs ; appliquer les politiques d’accès configurées ; maintenir la sécurité ; exécuter les autorisations et fournir l’assistance convenue |
+| Fréquence                           | Continue pendant l’utilisation du Service                                                                                                                                                                                       |
+| Personnes concernées                | Utilisateurs finaux, administrateurs et personnes invitées relevant du périmètre du Client                                                                                                                                      |
+| Données d’identification            | Identifiant, nom, prénom, nom d’utilisateur, adresse électronique, région et attributs de profil configurés                                                                                                                     |
+| Données d’authentification          | Empreinte de mot de passe, clés publiques WebAuthn, facteurs MFA protégés, codes de récupération hachés et événements d’authentification                                                                                        |
+| Données techniques et de sécurité   | IP, agent utilisateur, appareil, session, journaux, signaux et scores de risque                                                                                                                                                 |
+| Autorisations                       | Applications, permissions, portées, attributs transmis et historique de révocation                                                                                                                                              |
+| Catégories particulières, article 9 | Aucune catégorie particulière n’est destinée à être traitée. Tout traitement exceptionnel doit être préalablement décrit, autorisé et assorti de garanties renforcées                                                           |
+| Données d’infraction, article 10    | Aucune, sauf avenant identifiant le fondement et les garanties                                                                                                                                                                  |
+| Localisation principale             | `[PAYS ET RÉGIONS À COMPLÉTER]`                                                                                                                                                                                                 |
+| Format de restitution               | JSON structuré et tout format supplémentaire convenu : `[À COMPLÉTER]`                                                                                                                                                          |
 
 ## C. Traitements autonomes de nvbes exclus de l’Accord
 
-| Finalité propre | Données | Base juridique | Durée |
-| --- | --- | --- | --- |
+| Finalité propre                       | Données         | Base juridique  | Durée           |
+| ------------------------------------- | --------------- | --------------- | --------------- |
 | `[À COMPLÉTER OU INDIQUER « AUCUN »]` | `[À COMPLÉTER]` | `[À COMPLÉTER]` | `[À COMPLÉTER]` |
 
 ## D. Instructions particulières
@@ -57,18 +57,18 @@ suivantes.
 Les paramètres ci-dessous sont complétés avec la baseline réellement déployée
 avant signature. Une mention générique ne vaut pas description contractuelle :
 
-| Paramètre de sécurité | Baseline contractuelle |
-| --- | --- |
-| Chiffrement en transit | `[PROTOCOLES, VERSIONS MINIMALES ET PÉRIMÈTRE]` |
-| Chiffrement au repos et gestion des clés | `[ALGORITHMES, PÉRIMÈTRE, KMS, ROTATION ET SÉPARATION]` |
-| Révision des accès privilégiés | `[FRÉQUENCE ET RESPONSABLE]` |
-| Conservation des journaux de sécurité | `[DURÉE ET PROTECTION CONTRE L’ALTÉRATION]` |
-| Analyse de vulnérabilités et tests d’intrusion | `[FRÉQUENCE ET PÉRIMÈTRE]` |
-| Remédiation des vulnérabilités | `[DÉLAIS CRITIQUE, ÉLEVÉ, MOYEN ET FAIBLE]` |
-| Sauvegardes | `[FRÉQUENCE, CHIFFREMENT, DURÉE ET TEST DE RESTAURATION]` |
-| Continuité | `[RPO, RTO ET FRÉQUENCE D’EXERCICE]` |
-| Suppression active et sauvegardes | Trente jours au plus pour les données actives et la rotation des sauvegardes |
-| Certifications et rapports indépendants | `[À COMPLÉTER OU INDIQUER « AUCUN »]` |
+| Paramètre de sécurité                          | Baseline contractuelle                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| Chiffrement en transit                         | `[PROTOCOLES, VERSIONS MINIMALES ET PÉRIMÈTRE]`                              |
+| Chiffrement au repos et gestion des clés       | `[ALGORITHMES, PÉRIMÈTRE, KMS, ROTATION ET SÉPARATION]`                      |
+| Révision des accès privilégiés                 | `[FRÉQUENCE ET RESPONSABLE]`                                                 |
+| Conservation des journaux de sécurité          | `[DURÉE ET PROTECTION CONTRE L’ALTÉRATION]`                                  |
+| Analyse de vulnérabilités et tests d’intrusion | `[FRÉQUENCE ET PÉRIMÈTRE]`                                                   |
+| Remédiation des vulnérabilités                 | `[DÉLAIS CRITIQUE, ÉLEVÉ, MOYEN ET FAIBLE]`                                  |
+| Sauvegardes                                    | `[FRÉQUENCE, CHIFFREMENT, DURÉE ET TEST DE RESTAURATION]`                    |
+| Continuité                                     | `[RPO, RTO ET FRÉQUENCE D’EXERCICE]`                                         |
+| Suppression active et sauvegardes              | Trente jours au plus pour les données actives et la rotation des sauvegardes |
+| Certifications et rapports indépendants        | `[À COMPLÉTER OU INDIQUER « AUCUN »]`                                        |
 
 ## 1. Gouvernance et personnel
 
@@ -136,12 +136,12 @@ avant signature. Une mention générique ne vaut pas description contractuelle :
 L’annexe doit être entièrement complétée avant la Date d’effet. Une catégorie
 générique de prestataires ne constitue pas une liste convenue.
 
-| Dénomination et adresse | Pays de traitement et d’accès | Prestation | Données concernées | Mécanisme de Transfert |
-| --- | --- | --- | --- | --- |
-| `[À COMPLÉTER]` | `[À COMPLÉTER]` | Hébergement et base de données | `[À COMPLÉTER]` | `[À COMPLÉTER OU SANS OBJET]` |
-| `[À COMPLÉTER]` | `[À COMPLÉTER]` | Réseau et sécurité | `[À COMPLÉTER]` | `[À COMPLÉTER OU SANS OBJET]` |
-| `[À COMPLÉTER]` | `[À COMPLÉTER]` | Communications transactionnelles | `[À COMPLÉTER]` | `[À COMPLÉTER OU SANS OBJET]` |
-| `[À COMPLÉTER]` | `[À COMPLÉTER]` | Observabilité et gestion d’incident | `[À COMPLÉTER]` | `[À COMPLÉTER OU SANS OBJET]` |
+| Dénomination et adresse                                                      | Pays de traitement et d’accès                                                                                                                      | Prestation                                                                                                      | Données concernées                                                                                                                                                                                  | Mécanisme de Transfert                                                                                                                 |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `[À COMPLÉTER]`                                                              | `[À COMPLÉTER]`                                                                                                                                    | Hébergement et base de données                                                                                  | `[À COMPLÉTER]`                                                                                                                                                                                     | `[À COMPLÉTER OU SANS OBJET]`                                                                                                          |
+| `[À COMPLÉTER]`                                                              | `[À COMPLÉTER]`                                                                                                                                    | Réseau et sécurité                                                                                              | `[À COMPLÉTER]`                                                                                                                                                                                     | `[À COMPLÉTER OU SANS OBJET]`                                                                                                          |
+| Scaleway SAS, 8 rue de la Ville-l’Évêque, 75008 Paris, RCS Paris 433 115 904 | France (`fr-par`) ; accès et traitement au sein de l’Union européenne pour TEM au 12 août 2026, sous réserve des documents contractuels en vigueur | Communications transactionnelles via Transactional Email (TEM) et remontée des événements via Topics and Events | Adresse et nom du destinataire, expéditeur, objet et corps, liens ou codes transactionnels, en-têtes et identifiants techniques, échéance, statuts, erreurs, rebonds, spam et listes de suppression | Sans objet tant que le traitement TEM demeure dans l’Union européenne ; surveillance du DPA et de la liste des sous-traitants Scaleway |
+| `[À COMPLÉTER]`                                                              | `[À COMPLÉTER]`                                                                                                                                    | Observabilité et gestion d’incident                                                                             | `[À COMPLÉTER]`                                                                                                                                                                                     | `[À COMPLÉTER OU SANS OBJET]`                                                                                                          |
 
 # Annexe IV — Registre des transferts internationaux
 
@@ -150,6 +150,6 @@ lorsque des clauses contractuelles types sont nécessaires, la conclusion
 séparée du texte non modifié de la décision d’exécution (UE) 2021/914 avec ses
 options et annexes. Le présent tableau ne constitue pas ces clauses.
 
-| Flux et données | Exportateur, rôle et pays | Importateur, rôle et pays | Garantie, référence et date | Module et options 2021/914 | Référence de l’évaluation et mesures supplémentaires |
-| --- | --- | --- | --- | --- | --- |
-| `[À COMPLÉTER OU « AUCUN »]` | `[À COMPLÉTER]` | `[À COMPLÉTER]` | `[ADÉQUATION, CCT OU AUTRE GARANTIE]` | `[MODULE ET OPTIONS, OU SANS OBJET]` | `[À COMPLÉTER OU SANS OBJET]` |
+| Flux et données              | Exportateur, rôle et pays | Importateur, rôle et pays | Garantie, référence et date           | Module et options 2021/914           | Référence de l’évaluation et mesures supplémentaires |
+| ---------------------------- | ------------------------- | ------------------------- | ------------------------------------- | ------------------------------------ | ---------------------------------------------------- |
+| `[À COMPLÉTER OU « AUCUN »]` | `[À COMPLÉTER]`           | `[À COMPLÉTER]`           | `[ADÉQUATION, CCT OU AUTRE GARANTIE]` | `[MODULE ET OPTIONS, OU SANS OBJET]` | `[À COMPLÉTER OU SANS OBJET]`                        |

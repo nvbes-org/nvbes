@@ -3,11 +3,11 @@ export const completedDomainEvidence = {
     owner: 'Identity lead',
     status: 'passed',
     implementation_evidence: [
-      'apps/account-service/src/identity.domains.auth.routes.register.rs',
-      'apps/account-service/src/identity.http.middleware.jwt.session_refresh.rs',
-      'apps/account-service/src/identity.domains.auth.sessions.mgmt.rs',
-      'apps/account-service/src/identity.domains.auth.routes.login.mfa_flow.rs',
-      'apps/account-service/openapi.json',
+      'apps/identity-service/src/identity.domains.auth.routes.register.rs',
+      'apps/identity-service/src/identity.http.middleware.jwt.session_refresh.rs',
+      'apps/identity-service/src/identity.domains.auth.sessions.mgmt.rs',
+      'apps/identity-service/src/identity.domains.auth.routes.login.mfa_flow.rs',
+      'apps/identity-service/openapi.json',
     ],
     migration_evidence: [
       'docs/migration/identity-register.generated.json',
@@ -24,8 +24,8 @@ export const completedDomainEvidence = {
     implementation_evidence: [
       'libs/rust/core/src/authz.policy.rs',
       'libs/rust/core/src/authz.policy.tests.rs',
-      'apps/account-service/src/identity.domains.authz.service.rs',
-      'apps/account-service/src/identity.domains.authz.db.rs',
+      'apps/identity-service/src/identity.domains.authz.service.rs',
+      'apps/identity-service/src/identity.domains.authz.db.rs',
     ],
     migration_evidence: [
       'docs/migration/workspace-membership-roles.generated.json',
@@ -80,7 +80,7 @@ export const completedDomainEvidence = {
     status: 'passed',
     implementation_evidence: [
       'libs/rust/audit/src/lib.rs',
-      'apps/account-service/src/identity.domains.auth.sessions.mgmt.rs',
+      'apps/identity-service/src/identity.domains.auth.sessions.mgmt.rs',
       'apps/cloud-service/src/drive.domains.share_links.observability.rs',
     ],
     migration_evidence: ['docs/migration/audit-append-only.generated.json'],
@@ -91,9 +91,9 @@ export const completedDomainEvidence = {
     owner: 'Privacy lead',
     status: 'passed',
     implementation_evidence: [
-      'apps/account-worker/src/identity.worker.jobs.process_data_export.rs',
-      'apps/account-service/src/identity.domains.auth.sessions.mgmt.rs',
-      'libs/rust/products/account/src/account.email.jobs.rs',
+      'apps/account-service-next/src/account.privacy.routes.rs',
+      'apps/identity-service/src/identity.domains.auth.account_export.rs',
+      'libs/rust/products/account/src/account.privacy.data_export.rs',
     ],
     migration_evidence: ['docs/migration/privacy-export-delete.generated.json'],
     decision: 'go',

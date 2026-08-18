@@ -3,14 +3,22 @@ use std::{
     time::Duration,
 };
 
-use axum::{Router, extract::State, response::IntoResponse, routing::get};
+use axum::{Router, extract::State, middleware, response::IntoResponse, routing::get};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 
 use crate::state::EmailWorkerState;
 
 pub fn router(state: EmailWorkerState) -> Router {
+    let auth = nvbes_core::http::internal_observability::InternalObservabilityConfig::new(
+        &state.config.environment,
+        state.config.observability_internal_token.as_deref(),
+    );
     Router::new()
         .route("/metrics", get(render))
+        .route_layer(middleware::from_fn_with_state(
+            auth,
+            nvbes_core::http::internal_observability::internal_observability_guard_with_config,
+        ))
         .with_state(state)
 }
 

@@ -43,7 +43,11 @@ identity. Do not supply a shared RDB URL. Configure the remaining runtime with:
 - `NVBES_EMAIL_RUNTIME_ROLE`, set to `ingress` or `dispatch` by Terraform;
 - `NVBES_EMAIL_SNS_TOPIC_ARN`;
 - `NVBES_EMAIL_SNS_CA_BUNDLE_PEM` containing the pinned Scaleway SNS trust
-  chain. A read-only file path remains supported outside Serverless Containers.
+  chain. A read-only file path (`NVBES_EMAIL_SNS_CA_BUNDLE_PATH`) remains supported outside Serverless Containers.
+- `SENTRY_DSN` for server-side error reporting and `SENTRY_RELEASE` for release
+  attribution; keep `SENTRY_TRACES_SAMPLE_RATE` between `0` and `1` (the
+  production default remains `0` until performance sampling is explicitly
+  budgeted).
 
 Mount secrets read-only. Product services receive only the gRPC endpoint and
 internal authentication token; they never receive provider or encryption
@@ -56,16 +60,22 @@ is rejected outside development and test.
 
 ## Metrics and alerts
 
-Scrape `GET /metrics` only through the private observability network. Do not
-publish that path through the public webhook listener route. The runtime emits
-command outcomes, provider latency, webhook outcomes, signature failures,
-expirations, suppressions, and retention activity. Alert on queue depth,
-oldest-message age, trigger failures, and DLQ depth using Scaleway MNQ metrics,
+Scrape `GET /metrics` only through the private observability network or with the
+dedicated internal bearer token. The runtime emits command outcomes, provider latency,
+webhook outcomes, signature failures, expirations, suppressions, and retention activity.
+Alert on queue depth, oldest-message age, trigger failures, and DLQ depth using Scaleway MNQ metrics,
 because querying PostgreSQL for those gauges would defeat idle scaling.
 
 Alerts cover stale queue age, elevated provider failures, and spam complaint
 rate. During staging rehearsals, exercise each alert and attach the evidence to
 the release packet.
+
+Validate Sentry after each environment is wired by running
+`nvbes-email-worker error-reporting-smoke`. The command returns a JSON event ID,
+monitor check-in ID, configuration state, and flush result without connecting
+to PostgreSQL or starting the delivery runtime. The running dispatcher also
+checks in to the `email-worker-dispatcher-heartbeat` Sentry monitor every five
+minutes.
 
 ## Deployment order
 
@@ -76,7 +86,7 @@ The production sender domain is the dedicated transactional subdomain
 `support@nvbes.eu` exists.
 
 Cloudflare remains authoritative for DNS, while
-`infrastructure/environments/email-production/email-provider.tf` is the sole
+`infrastructure/environments/email-production/email-provider.tf` (and `infrastructure/stacks/email/production/email-delivery.tf`) is the sole
 writer.
 Terraform registers `notify.nvbes.eu` in Scaleway TEM, publishes the exact SPF,
 DKIM, DMARC, and blackhole MX values returned by TEM, requests validation,

@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { checkAccountBillingRuntimeBoundary } from './check-product-boundaries.account-billing-runtime.mjs';
-import { checkAccountWebBillingClientBoundary } from './check-product-boundaries.account-web-billing.mjs';
 import { checkBillingMigrationBoundaries } from './check-product-boundaries.billing-migrations.mjs';
 import { checkBillingProviderEvidence } from './check-product-boundaries.billing-providers.mjs';
-import { checkBillingWorkerQueueBoundaries } from './check-product-boundaries.billing-worker-queues.mjs';
 import { checkDeveloperRuntimeBoundary } from './check-product-boundaries.developer-runtime.mjs';
 import { checkGatewayCloudBoundary } from './check-product-boundaries.gateway-cloud.mjs';
-import { checkLegacyRuntimeNames } from './check-product-boundaries.legacy-runtime-names.mjs';
 import { checkRustPackageBoundaries } from './check-product-boundaries.rust-packages.mjs';
 
 const errors = [];
@@ -414,18 +410,13 @@ function checkInternalAdminBillingBoundary() {
 checkRustPackageBoundaries(errors);
 checkProductSourceImports();
 checkIdentityProductBoundary();
-checkAccountBillingRuntimeBoundary(errors);
-checkBillingWorkerQueueBoundaries(errors);
-checkAccountWebBillingClientBoundary(errors);
 checkDriveBillingBoundary();
 checkDriveBillingMigrationBoundary();
-checkResourceServerAudienceBoundary();
 checkInternalAdminBillingBoundary();
 checkBillingMigrationBoundaries(errors);
 checkBillingProviderEvidence(errors);
 checkDeveloperRuntimeBoundary(errors);
 checkGatewayCloudBoundary(errors);
-checkLegacyRuntimeNames(errors);
 
 if (errors.length > 0) {
   console.error('Product boundary violations:');

@@ -206,7 +206,7 @@ function validateReport(report) {
       errors.push(`${outputPath}: summary.${field} must be ${value}`);
   }
   if (report.schema_version !== 1) errors.push(`${outputPath}: schema_version must be 1`);
-  if (report.generation?.command !== 'tools/migration/billing-multi-psp-continuity.mjs --write') {
+  if (report.generation?.command !== 'node tools/migration/billing-multi-psp-continuity.mjs --write') {
     errors.push(`${outputPath}: generation.command is invalid`);
   }
   if (!sameItems(report.generation?.sources, Object.values(sources))) {
@@ -275,7 +275,7 @@ function serializeMarkdown(data) {
     '',
     '```bash',
     'pnpm check:migration-billing-multi-psp-continuity',
-    'tools/migration/billing-multi-psp-continuity.mjs --write',
+    'node tools/migration/billing-multi-psp-continuity.mjs --write',
     '```',
     '',
   );
@@ -287,7 +287,7 @@ const summary = summarize(checks);
 const report = {
   schema_version: 1,
   generation: {
-    command: 'tools/migration/billing-multi-psp-continuity.mjs --write',
+    command: 'node tools/migration/billing-multi-psp-continuity.mjs --write',
     sources: Object.values(sources),
     targeted_tests: [
       'cargo test -p nvbes-billing provider_subscription --locked',
@@ -322,9 +322,9 @@ for (const [path, expected] of [
   [markdownPath, markdown],
 ]) {
   if (!existsSync(path))
-    errors.push(`${path}: missing; run tools/migration/billing-multi-psp-continuity.mjs --write`);
+    errors.push(`${path}: missing; run node tools/migration/billing-multi-psp-continuity.mjs --write`);
   else if (readFileSync(path, 'utf8') !== expected)
-    errors.push(`${path}: stale; run tools/migration/billing-multi-psp-continuity.mjs --write`);
+    errors.push(`${path}: stale; run node tools/migration/billing-multi-psp-continuity.mjs --write`);
 }
 
 if (errors.length > 0) {

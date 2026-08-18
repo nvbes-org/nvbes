@@ -2,7 +2,7 @@ use std::{ffi::OsString, path::PathBuf, sync::Mutex};
 
 use super::{
     DEVELOPMENT_DATA_KEY, DEVELOPMENT_HMAC_KEY, EmailWorkerConfig, database_url_from_env,
-    development_value, key, local_smtp, producers,
+    development_value, key, local_smtp, producers, validate_shared_bind_address,
 };
 
 static ENVIRONMENT_LOCK: Mutex<()> = Mutex::new(());
@@ -11,6 +11,7 @@ const VARIABLES: &[&str] = &[
     "NVBES_ENVIRONMENT",
     "NVBES_EMAIL_DATABASE_URL",
     "NVBES_EMAIL_HTTP_BIND_ADDR",
+    "NVBES_EMAIL_GRPC_BIND_ADDR",
     "NVBES_EMAIL_PRODUCER_TOKENS",
     "NVBES_EMAIL_DATA_ENCRYPTION_KEY",
     "NVBES_EMAIL_RECIPIENT_HMAC_KEY",
@@ -263,4 +264,13 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     std::fs::remove_file(ca_path).unwrap();
 
     assert!(development_value("production", DEVELOPMENT_DATA_KEY).is_none());
+}
+
+#[test]
+fn http_and_grpc_share_the_serverless_listener() {
+    let shared = "127.0.0.1:3040".parse().unwrap();
+    let separate = "127.0.0.1:3041".parse().unwrap();
+
+    assert!(validate_shared_bind_address(shared, shared).is_ok());
+    assert!(validate_shared_bind_address(shared, separate).is_err());
 }

@@ -117,6 +117,8 @@ resource "scaleway_mnq_sns_topic_subscription" "email_worker" {
   sns_endpoint = scaleway_mnq_sns.email_events.endpoint
   access_key   = scaleway_mnq_sns_credentials.email_events_terraform.access_key
   secret_key   = scaleway_mnq_sns_credentials.email_events_terraform.secret_key
+
+  depends_on = [terraform_data.email_worker_runtime]
 }
 
 resource "scaleway_tem_webhook" "email_events" {

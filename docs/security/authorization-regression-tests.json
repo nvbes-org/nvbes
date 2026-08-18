@@ -178,7 +178,7 @@
       "regressionRisk": "OpenAPI or gRPC contract changes remove authorization semantics without failing tests.",
       "evidence": [
         {
-          "path": "scripts/test-openapi-contract.mjs",
+          "path": "scripts/lib/openapi-probe-plan.mjs",
           "includes": ["POST /authz/decision", "SAFE_PROTECTED_MUTATING_OPERATIONS"]
         },
         {

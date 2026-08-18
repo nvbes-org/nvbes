@@ -6,8 +6,10 @@ Ce dossier contient l'infrastructure as code V1, les conventions d'environnement
 
 - `environments/development`: overlay OpenTofu/Terraform pour l'environnement development.
 - `environments/staging`: overlay OpenTofu/Terraform pour l'environnement staging.
-- `environments/production`: stack Terraform production, dont le domaine email
-  transactionnel TEM et ses enregistrements Cloudflare.
+- `bootstrap/production`: bucket de state, chiffrement et identités Terraform.
+- `environments/production`: infrastructure générale et observabilité production.
+- `stacks/email/production`: stack produit email et état indépendant.
+- `modules/terraform-state-backend`: bucket et accès de state réutilisables.
 - `modules/scaleway-v1`: socle Scaleway reutilisable.
 
 ## Cible V1 minimale

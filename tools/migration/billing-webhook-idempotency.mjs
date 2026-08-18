@@ -9,8 +9,8 @@ const outputPath = "docs/migration/billing-webhook-idempotency.generated.json";
 const markdownPath = "docs/migration/billing-webhook-idempotency.md";
 
 const sources = {
-	identityOpenapi: "apps/account-service/openapi.json",
-	identityDomainsRouter: "apps/account-service/src/identity.domains.mod.rs",
+	identityOpenapi: "apps/identity-service/openapi.json",
+	identityDomainsRouter: "apps/identity-service/src/identity.domains.mod.rs",
 	billingServiceRoutes: "apps/billing-service/src/billing.domains.webhooks.rs",
 	stripeIntake: "libs/rust/billing/src/stripe_webhook_intake.rs",
 	billingJobs: "libs/rust/billing/src/jobs.rs",
@@ -79,7 +79,7 @@ function buildChecks() {
 		textCheck("stripe-enqueue", sources.stripeIntake, "Stripe intake enqueues async processing", "enqueue_stripe_webhook_job(redis, payload_json, &event.id)"),
 		textCheck("stripe-job-type", sources.billingJobs, "Stripe webhook processing has a dedicated queue", 'JOB_STRIPE_WEBHOOK_PROCESS: &str = "billing.stripe.webhook.process"'),
 		textCheck("mollie-job-type", sources.billingJobs, "Mollie webhook processing has a dedicated queue", 'JOB_MOLLIE_WEBHOOK_PROCESS: &str = "billing.mollie.webhook.process"'),
-		textCheck("billing-email-job-type", sources.billingJobs, "Billing email delivery has a dedicated queue", 'JOB_BILLING_EMAIL_SEND: &str = "billing.email.send"'),
+		textCheck("billing-email-job-type", sources.billingJobs, "Billing email submission has a dedicated integration queue", 'JOB_BILLING_EMAIL_SUBMIT: &str = "billing.integration.email.submit"'),
 		textCheck("queue-idempotency-key", sources.billingJobs, "Queued webhook jobs use provider_event_id as idempotency key", "idempotency_key: Some(provider_event_id.to_string())"),
 		textCheck("worker-claims-runtime-queues", sources.workerDispatcher, "Billing worker claims Stripe, Mollie, and billing email queues", "const BILLING_QUEUES: [&str; 3]"),
 		textCheck("worker-dispatches-stripe", sources.workerDispatcher, "Billing worker dispatches Stripe webhook jobs", "stripe::process_stripe_webhook_job(state, job).await"),
@@ -88,10 +88,10 @@ function buildChecks() {
 		textCheck("stripe-worker-processes-domain", sources.stripeWorker, "Stripe worker calls billing-domain processing", "nvbes_billing::stripe_webhook_processing::process_stripe_event"),
 		textCheck("stripe-worker-publishes-workspace-update", sources.stripeWorker, "Stripe worker publishes Billing workspace updates", "publish_workspace_billing_updates(state, workspace_id).await"),
 		textCheck("stripe-worker-emails", sources.stripeWorker, "Stripe worker enqueues billing emails after processing", "enqueue_billing_email_for_stripe_event"),
-		textCheck("billing-email-domain-queue", sources.billingEmail, "Billing email enqueue uses the Billing queue", "queue: nvbes_billing::jobs::JOB_BILLING_EMAIL_SEND.to_string()"),
+		textCheck("billing-email-domain-queue", sources.billingEmail, "Billing email enqueue uses the Billing integration queue", "let queue = nvbes_billing::jobs::JOB_BILLING_EMAIL_SUBMIT"),
 		absentTextCheck("billing-email-no-identity-queue", sources.billingEmail, "Billing email enqueue does not use Identity email.send queue", '"email.send"'),
-		textCheck("billing-email-local-delivery", sources.billingEmailDelivery, "Billing worker sends billing emails locally", "send_message(&message)"),
-		textCheck("billing-email-domain-header", sources.billingEmailDelivery, "Billing email delivery is tagged as Billing domain", '"X-Nvbes-Email-Domain"'),
+		textCheck("billing-email-local-delivery", sources.billingEmailDelivery, "Billing worker submits commands through the shared email service", "state.email.send(command).await"),
+		textCheck("billing-email-domain-header", sources.billingEmail, "Billing email commands carry the Billing category", "category: EmailCategory::Billing"),
 		textCheck("mollie-worker-processes-domain", sources.mollieWorker, "Mollie worker calls billing-domain processing", "process_mollie_payment_update_tx"),
 		textCheck("mollie-worker-publishes-workspace-update", sources.mollieWorker, "Mollie worker publishes Billing workspace updates", "publish_workspace_billing_updates(state, workspace_id).await"),
 		textCheck("mollie-worker-emails", sources.mollieWorker, "Mollie worker enqueues billing emails after processing", "enqueue_billing_email_for_provider_payment"),

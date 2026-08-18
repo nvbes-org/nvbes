@@ -113,10 +113,12 @@ Une fois les trois runtimes demarres:
 curl --fail http://localhost:4000/health
 curl --fail http://localhost:4000/metrics
 curl --fail http://localhost:4102/metrics
+curl --fail http://localhost:3040/metrics
 curl --fail http://localhost:12345/-/ready
 ```
 
-Dans Grafana, ouvrir le dashboard `nvbes Account Observability`. Les requetes
+Dans Grafana, ouvrir les dashboards `nvbes Account Observability` et
+`nvbes Email and Communications`. Les requetes
 HTTP doivent apparaitre dans Prometheus, les traces dans Tempo, les logs
 backend et Faro dans Loki, et les profils `account-service`/`account-worker`
 dans Pyroscope.

@@ -211,8 +211,8 @@ pub async fn start_metrics_server(
     let router = Router::new()
         .route("/metrics", get(metrics_handler))
         .layer(middleware::from_fn_with_state(
-            config.clone(),
-            nvbes_core::http::internal_observability::internal_observability_guard,
+            nvbes_core::http::internal_observability::InternalObservabilityConfig::from(config),
+            nvbes_core::http::internal_observability::internal_observability_guard_with_config,
         ))
         .with_state(metrics);
 

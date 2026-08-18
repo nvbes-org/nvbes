@@ -141,7 +141,7 @@
 			"frameworks": ["NIST-SP-800-63-4", "OWASP-ASVS-5.0.0"],
 			"evidence": [
 				{
-					"path": "apps/account-service/src/identity.domains.auth.verification.rs",
+					"path": "apps/identity-service/src/identity.domains.auth.verification.rs",
 					"includes": [
 						"require_recent_step_up",
 						"Aal::Aal2",
@@ -159,7 +159,7 @@
 			"target": "Production activation is blocked until live evidence is signed in external-security-assurance.json",
 			"evidence": [
 				{
-					"path": "apps/account-service/src/identity.domains.auth.webauthn.assurance.rs",
+					"path": "apps/identity-service/src/identity.domains.auth.webauthn.assurance.rs",
 					"includes": [
 						"WebauthnAssurance",
 						"HardwareSecurityKey",
@@ -197,7 +197,7 @@
 			"frameworks": ["OAUTH-OIDC-FAPI"],
 			"evidence": [
 				{
-					"path": "apps/account-service/src/identity.domains.oauth.metadata.rs",
+					"path": "apps/identity-service/src/identity.domains.oauth.metadata.rs",
 					"includes": [
 						"require_pushed_authorization_requests",
 						"S256",
@@ -206,7 +206,7 @@
 					]
 				},
 				{
-					"path": "apps/account-service/src/identity.domains.oauth.validation.pkce.rs",
+					"path": "apps/identity-service/src/identity.domains.oauth.validation.pkce.rs",
 					"includes": ["PKCE code_challenge_method=S256 is required"]
 				}
 			]
@@ -221,7 +221,7 @@
 			"target": "Before enabling high_assurance clients in production",
 			"evidence": [
 				{
-					"path": "apps/account-service/src/identity.domains.oauth.profiles.rs",
+					"path": "apps/identity-service/src/identity.domains.oauth.profiles.rs",
 					"includes": [
 						"HighAssurance",
 						"private_key_jwt",

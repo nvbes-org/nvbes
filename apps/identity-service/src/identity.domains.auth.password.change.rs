@@ -12,7 +12,7 @@ use crate::http::error::AppError;
 
 pub async fn change(
     db: &PgPool,
-    _redis: &nvbes_redis::RedisPool,
+    redis: &nvbes_redis::RedisPool,
     config: &AppConfig,
     user_id: Uuid,
     current_session_id: Uuid,
@@ -88,6 +88,9 @@ pub async fn change(
         },
     )
     .await;
+
+    crate::domains::auth::sessions::revoke_all_others(db, redis, user_id, current_session_id)
+        .await?;
 
     Ok(ChangePasswordResult { success: true })
 }

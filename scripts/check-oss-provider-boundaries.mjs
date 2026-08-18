@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const policyPath = 'scripts/oss-provider-baseline.json';
@@ -133,6 +133,15 @@ function scan(path, results) {
 const findings = new Map();
 for (const source of manifest.include ?? []) {
   scan(source, findings);
+}
+
+if (process.argv.includes('--write')) {
+  writeFileSync(
+    policyPath,
+    `${JSON.stringify({ ...policy, knownProviderFiles: [...findings.keys()].sort() }, null, 2)}\n`,
+  );
+  console.log(`OSS provider baseline: ${findings.size} files synchronized`);
+  process.exit(0);
 }
 
 for (const path of knownProviderFiles) {

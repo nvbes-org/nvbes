@@ -23,25 +23,17 @@ jobs:
       name: production-account
       url: ${{ vars.NVBES_PRODUCTION_WEB_BASE_URL }}
     env:
-      ACCOUNT_ACCEPTANCE_EVIDENCE_FILE: ${{ runner.temp }}/account-release-evidence/acceptance-evidence.json
-      ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE: ${{ runner.temp }}/account-release-evidence/acceptance-evidence.sig
       ACCOUNT_PRODUCTION_DENIED_ORIGINS: ${{ vars.ACCOUNT_PRODUCTION_DENIED_ORIGINS }}
       ACCOUNT_ACCEPTANCE_TRUSTED_KEY_ID: ${{ vars.ACCOUNT_ACCEPTANCE_TRUSTED_KEY_ID }}
-      ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/account-release-trust/acceptance-public-key.pem
       ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_SHA256: ${{ vars.ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_SHA256 }}
       ACCOUNT_DEPLOYMENT_EXPECTED_COMPONENT_UIDS: ${{ vars.ACCOUNT_DEPLOYMENT_EXPECTED_COMPONENT_UIDS }}
       ACCOUNT_DEPLOYMENT_TRUSTED_KEY_ID: ${{ vars.ACCOUNT_DEPLOYMENT_TRUSTED_KEY_ID }}
-      ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/account-release-trust/deployment-public-key.pem
       ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_SHA256: ${{ vars.ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_SHA256 }}
-      ACCOUNT_RELEASE_EVIDENCE_ROOT: ${{ runner.temp }}/account-release-evidence
-      ACCOUNT_RELEASE_REPORT_ROOT: ${{ runner.temp }}/account-release-report
-      ACCOUNT_RELEASE_TRUST_ROOT: ${{ runner.temp }}/account-release-trust
       CI: 'true'
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_test
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
       NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_test
       NVBES_ENV: test
-      NVBES_FAPI_CONFORMANCE_EVIDENCE_FILE: ${{ runner.temp }}/account-release-evidence/fapi-conformance.json
       NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256: ${{ vars.NVBES_FAPI_CONFORMANCE_EVIDENCE_SHA256 }}
       NVBES_FAPI_HIGH_ASSURANCE_ENABLED: ${{ vars.NVBES_FAPI_HIGH_ASSURANCE_ENABLED }}
       NVBES_PRODUCTION_ALLOWED_ORIGINS: ${{ vars.NVBES_PRODUCTION_ALLOWED_ORIGINS }}
@@ -88,6 +80,18 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           ref: ${{ github.ref }}
+      - name: Configure ephemeral Account release paths
+        run: |
+          {
+            echo "ACCOUNT_ACCEPTANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-release-evidence/acceptance-evidence.json"
+            echo "ACCOUNT_ACCEPTANCE_EVIDENCE_SIGNATURE_FILE=$RUNNER_TEMP/account-release-evidence/acceptance-evidence.sig"
+            echo "ACCOUNT_ACCEPTANCE_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-release-trust/acceptance-public-key.pem"
+            echo "ACCOUNT_DEPLOYMENT_TRUSTED_PUBLIC_KEY_FILE=$RUNNER_TEMP/account-release-trust/deployment-public-key.pem"
+            echo "ACCOUNT_RELEASE_EVIDENCE_ROOT=$RUNNER_TEMP/account-release-evidence"
+            echo "ACCOUNT_RELEASE_REPORT_ROOT=$RUNNER_TEMP/account-release-report"
+            echo "ACCOUNT_RELEASE_TRUST_ROOT=$RUNNER_TEMP/account-release-trust"
+            echo "NVBES_FAPI_CONFORMANCE_EVIDENCE_FILE=$RUNNER_TEMP/account-release-evidence/fapi-conformance.json"
+          } >> "$GITHUB_ENV"
       - name: Validate immutable Account RC tag
         env:
           GH_API_URL: ${{ github.api_url }}

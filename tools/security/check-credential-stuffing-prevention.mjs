@@ -112,19 +112,19 @@ function assertImplementation() {
 
 function assertLayeredDefenses() {
   const verify = readText(
-    'apps/account-service/src/identity.domains.auth.sessions.create.verify.rs',
+    'apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs',
   );
   const stuffing = readText(
-    'apps/account-service/src/identity.domains.auth.credential_stuffing.rs',
+    'apps/identity-service/src/identity.domains.auth.credential_stuffing.rs',
   );
   const flow = readText(
-    'apps/account-service/src/identity.domains.auth.routes.login.identifier_flow.rs',
+    'apps/identity-service/src/identity.domains.auth.routes.login.identifier_flow.rs',
   );
   const guard = readText(
-    'apps/account-service/src/identity.domains.auth.routes.login.identifier_guard.rs',
+    'apps/identity-service/src/identity.domains.auth.routes.login.identifier_guard.rs',
   );
-  const exposed = readText('apps/account-service/src/identity.domains.auth.exposed_credentials.rs');
-  const throttle = readText('apps/account-service/src/identity.domains.auth.login.throttle.rs');
+  const exposed = readText('apps/identity-service/src/identity.domains.auth.exposed_credentials.rs');
+  const throttle = readText('apps/identity-service/src/identity.domains.auth.login.throttle.rs');
 
   for (const needle of [
     'record_failed_login',
@@ -142,7 +142,7 @@ function assertLayeredDefenses() {
   ]) {
     if (!stuffing.includes(needle)) errors.push(`account credential stuffing missing ${needle}`);
   }
-  for (const needle of ['risk_score > 0.0', 'ensure_primary_email_factor']) {
+  for (const needle of ['risk_score >= RISK_STEP_UP_THRESHOLD', 'resolve_mfa_challenge_methods']) {
     if (!flow.includes(needle)) errors.push(`MFA step-up missing ${needle}`);
   }
   for (const needle of [

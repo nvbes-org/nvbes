@@ -13,7 +13,7 @@ const sources = {
   criticalE2eRunner: 'scripts/test-e2e-critical.sh',
   criticalE2eLocalHarness: 'scripts/test-identity-e2e-local.sh',
   identityRouter: 'apps/identity-web/src/identity.router.tsx',
-  identityAccountLayout: 'apps/identity-web/src/components/IdentityLayout.tsx',
+  identityAccountLayout: 'apps/identity-web/src/components/AuthPageShell.tsx',
   identityCriticalE2e: 'apps/identity-web/e2e/critical.spec.ts',
   identityUniversalLoginTest: 'apps/identity-web/src/identity.universal-login.test.js',
   identityUniversalLoginHookTest: 'apps/identity-web/src/pages/useUniversalLogin.test.js',
@@ -128,10 +128,10 @@ function buildChecks() {
       'critical identity journeys',
     ),
     textCheck(
-      'identity-critical-e2e-phishing-resistant-mfa',
+      'identity-critical-e2e-oauth-security',
       sources.identityCriticalE2e,
-      'Identity Web verifies passkey, TOTP and recovery-code MFA journeys',
-      'passkey, TOTP and recovery codes',
+      'Identity Web verifies PAR, consent and PKCE in the hosted OAuth journey',
+      'hosted OAuth authorization enforces PAR, consent and PKCE',
     ),
     textCheck(
       'identity-critical-e2e-service',

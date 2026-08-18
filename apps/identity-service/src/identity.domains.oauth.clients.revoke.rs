@@ -7,7 +7,7 @@ use crate::http::error::AppError;
 /// Revoke an OAuth client.
 pub async fn revoke_client(
     db: &PgPool,
-    _redis: &nvbes_redis::RedisPool,
+    redis: &nvbes_redis::RedisPool,
     auth: &(impl OAuthManagementAuth + crate::domains::authz::TenantManagementAuth),
     client_id_str: &str,
 ) -> Result<RevokeOAuthClientResult, AppError> {
@@ -45,15 +45,40 @@ pub async fn revoke_client(
     let client_uuid: Uuid = client.get("id");
 
     sqlx::query(
-        "UPDATE oauth_consents SET revoked_at = NOW() WHERE client_id = $1 AND principal_id = $2 AND tenant_id = $3 AND revoked_at IS NULL",
+        "UPDATE oauth_clients SET revoked_at = NOW(), updated_at = NOW() WHERE id = $1 AND revoked_at IS NULL",
     )
     .bind(client_uuid)
-    .bind(OAuthManagementAuth::user_id(auth))
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE oauth_consents SET revoked_at = NOW() WHERE client_id = $1 AND tenant_id = $2 AND revoked_at IS NULL",
+    )
+    .bind(client_uuid)
     .bind(tenant_id)
     .execute(&mut *tx)
     .await?;
-    let tokens_revoked = 0;
-    let par_revoked = 0;
+
+    let tokens_revoked =
+        nvbes_redis::refresh_token::revoke_all_client_refresh_tokens(redis, client_uuid)
+            .await
+            .map_err(|error| {
+                AppError::internal("oauth_client_refresh_revoke_failed", error.to_string())
+            })?;
+    let par_revoked =
+        nvbes_redis::par::revoke_pushed_authorization_requests_for_client(redis, client_id_str)
+            .await
+            .map_err(|error| {
+                AppError::internal("oauth_client_par_revoke_failed", error.to_string())
+            })?;
+    let authorization_codes_revoked =
+        crate::domains::oauth::authorization_codes::revoke_authorization_codes_for_client(
+            redis,
+            client_id_str,
+        )
+        .await?;
+    let device_codes_revoked =
+        crate::domains::oauth::device_codes::revoke_device_codes_for_client(redis, client_id_str)
+            .await?;
 
     tx.commit().await?;
 
@@ -63,6 +88,8 @@ pub async fn revoke_client(
         client_uuid = %client_uuid,
         tokens_revoked = tokens_revoked,
         par_revoked = par_revoked,
+        authorization_codes_revoked = authorization_codes_revoked,
+        device_codes_revoked = device_codes_revoked,
         "OAuth client consent revoked"
     );
 

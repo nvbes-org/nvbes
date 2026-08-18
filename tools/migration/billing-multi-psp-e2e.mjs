@@ -82,7 +82,7 @@ function identityBoundaryCheck() {
 		"handle_stripe_webhook_intake",
 	];
 	const matches = [];
-	for (const path of rustFiles("apps/account-service/src").concat(rustFiles("apps/account-worker/src"))) {
+	for (const path of rustFiles("apps/identity-service/src").concat(rustFiles("apps/account-worker/src"))) {
 		const content = read(path);
 		for (const pattern of forbidden) {
 			if (content.includes(pattern)) matches.push(`${path}: ${pattern}`);
@@ -91,7 +91,7 @@ function identityBoundaryCheck() {
 	return {
 		id: "identity-no-psp-webhook-runtime",
 		description: "Account Service and worker do not own PSP webhook runtime",
-		path: "apps/account-service/src + apps/account-worker/src",
+		path: "apps/identity-service/src + apps/account-worker/src",
 		status: matches.length === 0 ? "passed" : "failed",
 		pattern: `forbidden:${forbidden.join(",")}`,
 		matches,
@@ -120,14 +120,14 @@ function buildChecks() {
 		textCheck("queue-mollie", sources.jobs, "Mollie webhook queue name is provider-scoped", 'JOB_MOLLIE_WEBHOOK_PROCESS: &str = "billing.mollie.webhook.process"'),
 		textCheck("worker-stripe-dispatch", sources.workerJobs, "Billing worker dispatches Stripe webhook jobs", "stripe::process_stripe_webhook_job"),
 		textCheck("worker-mollie-dispatch", sources.workerJobs, "Billing worker dispatches Mollie webhook jobs", "mollie::process_mollie_webhook_job"),
-		textCheck("worker-email-dispatch", sources.workerJobs, "Billing worker dispatches billing email jobs", "JOB_BILLING_EMAIL_SEND"),
+		textCheck("worker-email-dispatch", sources.workerJobs, "Billing worker dispatches billing email submission jobs", "JOB_BILLING_EMAIL_SUBMIT"),
 		textCheck("stripe-worker-processing", sources.stripeWorker, "Stripe worker processes Billing webhook events", "process_stripe_event"),
 		textCheck("stripe-worker-analytics", sources.stripeWorker, "Stripe worker captures Billing analytics", "capture_billing_webhook_analytics"),
 		textCheck("stripe-worker-email", sources.stripeWorker, "Stripe worker enqueues Billing email", "enqueue_billing_email_for_stripe_event"),
 		textCheck("mollie-worker-processing", sources.mollieWorker, "Mollie worker processes provider payment updates", "process_mollie_payment_update_tx"),
 		textCheck("mollie-worker-finalize", sources.mollieWorker, "Mollie worker finalizes initial subscriptions", "finalize_mollie_initial_subscription_tx"),
 		textCheck("mollie-worker-email", sources.mollieWorker, "Mollie worker enqueues Billing email", "enqueue_billing_email_for_provider_payment"),
-		textCheck("worker-email-queue", sources.workerEmail, "Billing email uses the Billing worker queue", "billing_email_uses_billing_worker_queue"),
+		textCheck("worker-email-queue", sources.workerEmail, "Billing email uses the Billing integration queue", "JOB_BILLING_EMAIL_SUBMIT"),
 		textCheck("worker-analytics-module", sources.workerAnalytics, "Billing worker owns Billing webhook analytics", "capture_billing_webhook_analytics"),
 		textCheck("worker-workspace-update-pubsub", sources.workerWorkspaceUpdates, "Billing worker publishes workspace update events after PSP webhooks", "publish_workspace_updated"),
 		textCheck("worker-workspace-plan-pubsub", sources.workerWorkspaceUpdates, "Billing worker publishes workspace plan update events after PSP webhooks", "publish_workspace_plan_updated"),

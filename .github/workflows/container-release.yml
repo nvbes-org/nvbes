@@ -196,6 +196,13 @@ jobs:
             --type cyclonedx \
             --certificate-identity "$CERTIFICATE_IDENTITY" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Publish immutable release reference
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_NAME: ${{ matrix.image }}
+        run: |
+          echo "### $IMAGE_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$IMAGE_DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload release SBOM
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

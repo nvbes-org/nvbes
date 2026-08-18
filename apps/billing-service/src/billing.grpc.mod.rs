@@ -38,5 +38,9 @@ pub mod service_admin_risk;
 pub mod service_admin_usage;
 #[path = "billing.grpc.conversions.rs"]
 pub mod service_conversions;
+#[path = "billing.grpc.service.runtime.rs"]
+mod service_runtime;
 #[path = "billing.grpc.status.rs"]
 pub mod service_status;
+#[path = "billing.grpc.service.workspace.rs"]
+mod service_workspace;

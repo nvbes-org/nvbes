@@ -124,15 +124,15 @@
       "countermeasures": ["DEFENSE_001", "DEFENSE_002", "DEFENSE_010"],
       "validation": [
         {
-          "path": "apps/account-service/src/identity.domains.auth.routes.login.identifier.rs",
+          "path": "apps/identity-service/src/identity.domains.auth.routes.login.identifier.rs",
           "includes": ["check_rate_limit"]
         },
         {
-          "path": "apps/account-service/src/identity.domains.auth.sessions.create.verify.rs",
-          "includes": ["check_rate_limit_pair", "risk_policy_blocked", "record_auth_event"]
+          "path": "apps/identity-service/src/identity.domains.auth.sessions.create.verify.rs",
+          "includes": ["record_failed_login", "successful_password_risk_score", "record_auth_event"]
         },
         {
-          "path": "apps/account-service/src/identity.domains.auth.bot_guard.tests.rs",
+          "path": "apps/identity-service/src/identity.domains.auth.bot_guard.tests.rs",
           "includes": ["bot_honeypot_triggered"]
         }
       ]
@@ -148,7 +148,7 @@
       "countermeasures": ["DEFENSE_002", "DEFENSE_010"],
       "validation": [
         {
-          "path": "apps/account-service/src/identity.domains.auth.routes.login.mfa.rs",
+          "path": "apps/identity-service/src/identity.domains.auth.routes.login.mfa.rs",
           "includes": ["check_rate_limit_pair", "record_auth_event", "mfa_failed"]
         },
         {
@@ -156,7 +156,7 @@
           "includes": ["sensitive_actions_require_step_up", "action_requires_step_up"]
         },
         {
-          "path": "apps/account-service/src/identity.domains.auth.mfa.recovery.rs",
+          "path": "apps/identity-service/src/identity.domains.auth.mfa.recovery.rs",
           "includes": ["risk_policy_blocked"]
         }
       ]
@@ -187,8 +187,8 @@
           ]
         },
         {
-          "path": "apps/account-service/src/identity.domains.enterprise.db.scope_reads.rs",
-          "includes": ["ensure_workspaces_belong", "invalid_workspace_scope"]
+          "path": "apps/enterprise-service/src/enterprise.grpc.user_access.db.rs",
+          "includes": ["ensure_workspaces_belong", "all workspace IDs must belong to the requested scope"]
         }
       ]
     },
@@ -203,11 +203,11 @@
       "countermeasures": ["DEFENSE_004", "DEFENSE_010"],
       "validation": [
         {
-          "path": "apps/account-service/src/identity.http.middleware.csrf.rs",
+          "path": "apps/identity-service/src/identity.http.middleware.csrf.rs",
           "includes": ["csrf_guard", "reject_cross_site_fetch_metadata", "cross_site_request"]
         },
         {
-          "path": "apps/account-service/src/identity.http.middleware.origin.rs",
+          "path": "apps/identity-service/src/identity.http.middleware.origin.rs",
           "includes": ["origin_guard"]
         },
         {
@@ -215,7 +215,7 @@
           "includes": ["AJAX security guardrails passed."]
         },
         {
-          "path": "libs/ts/http-client/src/index.ts",
+          "path": "libs/ts/http-client/src/http.request-context.ts",
           "includes": ["X-Requested-With", "XMLHttpRequest"]
         }
       ]
@@ -240,7 +240,7 @@
         },
         {
           "path": "apps/console-web/vite.config.ts",
-          "includes": ["X-Frame-Options", "frame-ancestors 'none'"]
+          "includes": ["X-Frame-Options", "'Content-Security-Policy': cspFor(mode)"]
         }
       ]
     },
@@ -311,7 +311,7 @@
           "includes": ["stripe-signature"]
         },
         {
-          "path": "apps/account-service/src/identity.domains.developer.webhooks.delivery.rs",
+          "path": "apps/developer-service/src/developer.webhooks.signature.rs",
           "includes": [
             "signature_timestamp_is_fresh",
             "classify_webhook_replay",
@@ -360,7 +360,7 @@
       "countermeasures": ["DEFENSE_010"],
       "validation": [
         {
-          "path": "apps/account-service/migrations/0001_initial_schema.sql",
+          "path": "apps/identity-service/migrations/0001_initial_schema.sql",
           "includes": ["CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()", "event_hash"]
         },
         {
@@ -389,7 +389,7 @@
         },
         {
           "path": "tools/security/sbom.mjs",
-          "includes": ["SBOM coverage: ok", "docs/migration/sbom.generated.json"]
+          "includes": ["CycloneDX SBOM: ok", ".temp/security/nvbes.cdx.json"]
         },
         {
           "path": "tools/security/check-containers.mjs",

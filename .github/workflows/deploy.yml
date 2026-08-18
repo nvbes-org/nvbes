@@ -22,6 +22,10 @@ on:
           - account-service
           - cloud-service
           - billing-service
+      email_worker_image_digest:
+        description: 'Digest sha256 de la release signee email-worker'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-${{ github.inputs.environment }}-${{ github.inputs.component }}

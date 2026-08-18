@@ -3,8 +3,8 @@
 ## Status
 
 - entries: 56
-- present: 56
-- missing: 0
+- present: 51
+- missing: 5
 
 ## Rules
 
@@ -17,11 +17,11 @@
 | Path | Status | Proof |
 |---|---:|---|
 | `apps` | present | `apps` |
-| `apps/api` | present | `apps/api` |
-| `apps/cloud` | present | `apps/cloud` |
-| `apps/internal` | present | `apps/internal` |
-| `apps/public` | present | `apps/public` |
-| `apps/workers` | present | `apps/workers` |
+| `apps/api` | missing | `apps/api` |
+| `apps/cloud` | missing | `apps/cloud` |
+| `apps/internal` | missing | `apps/internal` |
+| `apps/public` | missing | `apps/public` |
+| `apps/workers` | missing | `apps/workers` |
 | `contracts` | present | `contracts` |
 | `contracts/events` | present | `contracts/events` |
 | `contracts/openapi` | present | `contracts/openapi` |

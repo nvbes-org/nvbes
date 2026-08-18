@@ -207,8 +207,14 @@
               "includes": [
                 "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
                 "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
-                "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
                 "pnpm install --frozen-lockfile --prefer-offline"
+              ]
+            },
+            {
+              "path": ".github/workflows/ci-applications.yml",
+              "includes": [
+                "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+                "cargo check --locked --package"
               ]
             }
           ]
@@ -239,7 +245,7 @@
               "includes": [
                 "pnpm format:check",
                 "pnpm check:structure",
-                "pnpm exec nx run rust-workspace:check"
+                "pnpm check:nx-boundaries"
               ]
             }
           ]
@@ -286,6 +292,7 @@
     "docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9",
     "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
     "dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4",
+    "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
     "github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
     "github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
     "github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
@@ -293,6 +300,7 @@
     "hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e",
     "nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1",
     "opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4",
+    "scaleway/action-scw@2e34a1eb35cf3cac627f24643a101fea269cbd83",
     "sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac"
   ],
   "allowedSecrets": [
@@ -302,13 +310,18 @@
     "DAST_API_AUTHORIZATION",
     "DAST_BACKOFFICE_SESSION_COOKIE",
     "CLOUDFLARE_API_TOKEN",
+    "EMAIL_DATABASE_URL",
     "EMAIL_DATA_ENCRYPTION_KEY",
+    "EMAIL_OBSERVABILITY_INTERNAL_TOKEN",
     "EMAIL_PRODUCER_TOKENS",
     "EMAIL_RECIPIENT_HMAC_KEY",
+    "EMAIL_SCALEWAY_SECRET_KEY",
+    "EMAIL_SENTRY_DSN",
     "EMAIL_SNS_CA_BUNDLE_PEM",
     "EMAIL_TERRAFORM_STATE_ACCESS_KEY",
     "EMAIL_TERRAFORM_STATE_SECRET_KEY",
     "GRAFANA_FARO_SOURCEMAP_API_KEY",
+    "GRAFANA_SERVICE_ACCOUNT_TOKEN",
     "NVBES_STAGING_ACCOUNT_PASSWORD",
     "POSTHOG_CLI_API_KEY",
     "SCALEWAY_EMAIL_SECRET_KEY",

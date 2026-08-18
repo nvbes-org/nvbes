@@ -1,0 +1,32 @@
+scaleway_project_id = "00000000-0000-0000-0000-000000000000"
+cloudflare_zone_id  = "00000000000000000000000000000000"
+base_domain         = "nvbes.eu"
+
+# Set true only after reviewing and accepting Scaleway TEM terms.
+accept_scaleway_tem_terms = false
+
+# Supplied by the deployment workflow from a signed container release.
+email_worker_source_image = "ghcr.io/nvbes-org/nvbes-email-worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+email_worker_runtime_secret_version = 1
+
+grafana_url                       = "https://nvbes.grafana.net"
+grafana_prometheus_datasource_uid = "grafanacloud-prom"
+grafana_email_contact_point       = "platform-oncall"
+
+email_sentry_traces_sample_rate = 0
+email_sentry_dsn_rotation = {
+  active_slot     = "blue"
+  blue_version    = 1
+  green_version   = 0
+  retain_previous = true
+}
+
+# Supply only through CI or the shell environment:
+# TF_VAR_grafana_service_account_token
+# TF_VAR_email_sentry_dsn
+# TF_VAR_email_worker_database_url
+# TF_VAR_email_worker_producer_tokens
+# TF_VAR_email_worker_data_encryption_key
+# TF_VAR_email_worker_recipient_hmac_key
+# TF_VAR_email_worker_scaleway_secret_key
+# TF_VAR_email_worker_observability_internal_token

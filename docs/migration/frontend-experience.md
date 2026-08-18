@@ -24,9 +24,9 @@
 | Root web check typechecks Identity and Enterprise Web | passed | `package.json` |
 | Root lint:web includes Identity and Enterprise Web | passed | `package.json` |
 | Identity Web declares routed authentication journeys | passed | `apps/identity-web/src/identity.router.tsx` |
-| Identity shell exposes a main landmark | passed | `apps/identity-web/src/components/IdentityLayout.tsx` |
+| Identity shell exposes a main landmark | passed | `apps/identity-web/src/components/AuthPageShell.tsx` |
 | Identity Web has browser-level critical journey coverage | passed | `apps/identity-web/e2e/critical.spec.ts` |
-| Identity Web verifies passkey, TOTP and recovery-code MFA journeys | passed | `apps/identity-web/e2e/critical.spec.ts` |
+| Identity Web verifies PAR, consent and PKCE in the hosted OAuth journey | passed | `apps/identity-web/e2e/critical.spec.ts` |
 | Identity Web seeds fixtures through Identity Service | passed | `apps/identity-web/e2e/critical.spec.ts` |
 | Root critical E2E runner executes Identity Web | passed | `scripts/test-e2e-critical.sh` |
 | Root exposes the isolated Identity browser harness through Nx | passed | `package.json` |

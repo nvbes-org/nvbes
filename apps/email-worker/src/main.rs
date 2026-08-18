@@ -3,7 +3,6 @@ use nvbes_email::proto::nvbes::email::v1::{
     email_operations_service_server::EmailOperationsServiceServer,
 };
 use tokio::sync::watch;
-use tracing_subscriber::EnvFilter;
 
 #[path = "email.worker.grpc.auth.rs"]
 mod auth;
@@ -21,6 +20,8 @@ mod dispatch_db;
 mod dispatcher;
 #[path = "email.worker.metrics.rs"]
 mod email_metrics;
+#[path = "email.worker.error_reporting.rs"]
+mod error_reporting;
 #[path = "email.worker.grpc.operations.rs"]
 mod grpc_operations;
 #[path = "email.worker.grpc.service.rs"]
@@ -54,11 +55,11 @@ mod test_support;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
-
     let command: Vec<String> = std::env::args().skip(1).collect();
+    if matches!(command.as_slice(), [action] if action == "deployment-bootstrap") {
+        return run_deployment_bootstrap().await;
+    }
+
     if matches!(command.as_slice(), [action] if action == "migrate") {
         let db = database::connect(&config::database_url_from_env()?).await?;
         database::migrate(&db).await?;
@@ -67,6 +68,24 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = config::EmailWorkerConfig::from_env()?;
+    let _error_reporting_guard = error_reporting::init(&config);
+    nvbes_observability::install_safe_panic_hook();
+    nvbes_observability::init_tracing_with_config(
+        nvbes_observability::TracingConfig {
+            environment: &config.environment,
+            otlp_endpoint: config.otlp_endpoint.as_deref(),
+            otlp_authorization_header: config.otlp_authorization_header.as_deref(),
+        },
+        error_reporting::APP_NAME,
+    );
+    if matches!(command.as_slice(), [action] if action == "error-reporting-smoke") {
+        println!(
+            "{}",
+            serde_json::to_string(&error_reporting::smoke(&config))?
+        );
+        return Ok(());
+    }
+
     match command.as_slice() {
         [] => {}
         [action, message_id, actor, reason] if action == "release-suppression" => {
@@ -75,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
             return Ok(());
         }
         _ => anyhow::bail!(
-            "usage: nvbes-email-worker [migrate|release-suppression <message-id> <actor> <reason>]"
+            "usage: nvbes-email-worker [migrate|error-reporting-smoke|release-suppression <message-id> <actor> <reason>]"
         ),
     }
 
@@ -172,6 +191,23 @@ async fn release_suppression(
         anyhow::bail!("no active suppression was found for the message recipient");
     }
     tracing::info!(%message_id, actor, "email suppression released through audited procedure");
+    Ok(())
+}
+
+async fn run_deployment_bootstrap() -> anyhow::Result<()> {
+    let bind_addr: std::net::SocketAddr = std::env::var("NVBES_EMAIL_HTTP_BIND_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:3040".to_string())
+        .parse()
+        .map_err(|error| anyhow::anyhow!("NVBES_EMAIL_HTTP_BIND_ADDR is invalid: {error}"))?;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let router = axum::Router::new().route(
+        "/health/live",
+        axum::routing::get(|| async { axum::http::StatusCode::NO_CONTENT }),
+    );
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(process_shutdown_signal())
+        .await?;
     Ok(())
 }
 

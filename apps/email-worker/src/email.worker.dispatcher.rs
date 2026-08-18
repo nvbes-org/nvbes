@@ -13,7 +13,7 @@ use crate::{
     crypto::SealedValue,
     dispatch_attempt::FailureResolution,
     dispatch_db::{self, ClaimResult},
-    email_metrics,
+    email_metrics, error_reporting,
     state::EmailWorkerState,
 };
 
@@ -67,13 +67,40 @@ pub async fn dispatch_message(
         return Ok(DispatchOutcome::Acknowledged);
     }
 
-    let message = match materialize(state, &claim) {
+    dispatch_claim(state, &claim).await
+}
+
+#[tracing::instrument(
+    name = "email.delivery",
+    skip_all,
+    fields(
+        email.provider = state.config.provider.label(),
+        email.business_type = claim.template_name,
+        email.attempt = claim.attempt_count,
+        otel.status_code = tracing::field::Empty,
+    )
+)]
+async fn dispatch_claim(
+    state: &EmailWorkerState,
+    claim: &dispatch_db::ClaimedEmail,
+) -> anyhow::Result<DispatchOutcome> {
+    let message = match materialize(state, claim) {
         Ok(message) => message,
         Err(error) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
+            let policy = retry_policy(&claim.category, claim.attempt_count);
+            error_reporting::capture_delivery(
+                &state.config,
+                claim.id,
+                &claim.template_name,
+                claim.attempt_count.max(0) as u32,
+                policy.maximum_attempts.max(0) as u32,
+                error.as_ref(),
+            );
             tracing::error!(message_id = %claim.id, error = ?error, "stored email command is invalid");
             let _ = dispatch_db::complete_failure(
                 &state.db,
-                &claim,
+                claim,
                 "permanent_failure",
                 "stored_command_invalid",
                 1,
@@ -100,7 +127,7 @@ pub async fn dispatch_message(
         .await
     {
         Ok(result) => {
-            dispatch_db::complete_success(&state.db, &claim, &result.provider_email_id).await?;
+            dispatch_db::complete_success(&state.db, claim, &result.provider_email_id).await?;
             email_metrics::dispatch(
                 state.config.provider.label(),
                 &claim.template_name,
@@ -109,6 +136,7 @@ pub async fn dispatch_message(
             );
         }
         Err(error) => {
+            tracing::Span::current().record("otel.status_code", "ERROR");
             let policy = retry_policy(&claim.category, claim.attempt_count);
             let outcome = match error.failure_class() {
                 EmailFailureClass::Transient => "transient_failure",
@@ -124,7 +152,7 @@ pub async fn dispatch_message(
             );
             let resolution = dispatch_db::complete_failure(
                 &state.db,
-                &claim,
+                claim,
                 outcome,
                 error.safe_code(),
                 policy.maximum_attempts,
