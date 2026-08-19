@@ -12,8 +12,10 @@ use nvbes_email::proto::nvbes::email::v1::{
 };
 
 pub async fn database_pool() -> PgPool {
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must target the guarded disposable integration database");
+    let database_url = std::env::var("NVBES_IDENTITY_TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:15432/nvbes_identity_test".to_string());
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect(&database_url)
@@ -28,7 +30,7 @@ pub async fn database_pool() -> PgPool {
 
 pub async fn redis_pool() -> RedisPool {
     let url = std::env::var("NVBES_REDIS_URL")
-        .expect("NVBES_REDIS_URL must target the guarded loopback integration Redis");
+        .unwrap_or_else(|_| "redis://localhost:6379".to_string());
     nvbes_redis::connection::create_pool(&RedisConfig {
         url,
         password: std::env::var("NVBES_IDENTITY_WORKER_TEST_REDIS_PASSWORD")

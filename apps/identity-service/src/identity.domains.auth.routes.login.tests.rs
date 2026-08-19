@@ -34,6 +34,9 @@ async fn test_config(pool: &PgPool) -> AppState {
         environment: "development".to_string(),
         app_name: "account-service-test".to_string(),
         otp_provider: "mock".to_string(),
+        auth_session_ttl_hours: 24,
+        auth_session_idle_ttl_minutes: 60,
+        auth_step_up_ttl_minutes: 15,
         redis_url: std::env::var("NVBES_REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         redis_password: std::env::var("NVBES_REDIS_PASSWORD")

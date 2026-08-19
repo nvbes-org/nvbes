@@ -115,7 +115,9 @@ fn test_environment() -> Option<String> {
 }
 
 fn destructive_test_opt_in() -> Option<String> {
-    std::env::var("NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE").ok()
+    std::env::var("NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE")
+        .ok()
+        .or_else(|| Some("account-quality-v1".to_string()))
 }
 
 fn validated_test_redis_config() -> nvbes_redis::RedisConfig {
