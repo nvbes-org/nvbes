@@ -1,9 +1,35 @@
 services:
-  github-runner:
+  github-runner-1:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nvbes-github-runner
+    container_name: nvbes-github-runner-1
+    restart: unless-stopped
+    environment:
+      GITHUB_REPOSITORY_URL: https://github.com/nvbes-org/nvbes
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_LABELS: self-hosted,linux,ARM64,docker,macOS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  github-runner-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nvbes-github-runner-2
+    restart: unless-stopped
+    environment:
+      GITHUB_REPOSITORY_URL: https://github.com/nvbes-org/nvbes
+      RUNNER_TOKEN: ${RUNNER_TOKEN}
+      RUNNER_LABELS: self-hosted,linux,ARM64,docker,macOS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  github-runner-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nvbes-github-runner-3
     restart: unless-stopped
     environment:
       GITHUB_REPOSITORY_URL: https://github.com/nvbes-org/nvbes
