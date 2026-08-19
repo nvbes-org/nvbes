@@ -42,6 +42,7 @@
     "db:migrate:staging": "bash scripts/migrate-staging.sh",
     "dev:web": "bash scripts/dev-web.sh",
     "clean:caches": "bash scripts/clean-caches.sh",
+    "cache:manage": "bash scripts/cache-manager.sh",
     "build": "pnpm generate:email && pnpm generate:openapi && pnpm exec nx run-many -t build --projects=http-client,account-client,billing-client,identity-client,identity-sdk,identity-sdk-web,web-runtime,web-ui,cloud-web,account-web,identity-web,console-web,enterprise-web,backoffice-web && pnpm exec nx run rust-workspace:build",
     "generate:email": "pnpm exec nx run email-ui:generate",
     "generate:openapi": "bash scripts/generate-openapi.sh",
