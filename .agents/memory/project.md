@@ -5,10 +5,10 @@ Nx, and a Cargo workspace.
 
 ## Stable Boundaries
 
-- `apps/identity-api` and `apps/drive-api` are product APIs.
+- `apps/*-service` and `apps/gateway-cloud` are product APIs and gateways.
 - `apps/*-web` are React frontends.
 - `apps/*-worker` are async workers.
-- `libs/rust/*` contains shared Rust primitives and domain libraries.
+- `libs/rust/*` contains shared Rust primitives, adapters, and domain libraries.
 - `libs/ts/*` contains SDKs, clients, UI, and web runtime packages.
 
 ## Durable Rules

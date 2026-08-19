@@ -131,8 +131,8 @@
               ]
             },
             {
-              "path": ".github/workflows/password-hashing-benchmark.yml",
-              "includes": ["schedule:", "benchmark_argon2id_latency", "--release"]
+              "path": ".github/workflows-archive/password-hashing-benchmark.yml",
+              "includes": ["workflow_dispatch:", "benchmark_argon2id_latency", "--release"]
             }
           ]
         },
