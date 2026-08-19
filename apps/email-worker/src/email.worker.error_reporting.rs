@@ -1,9 +1,9 @@
 use std::error::Error;
 
 use nvbes_observability::{
-    ErrorReportingConfig, ErrorReportingGuard, WorkerJobContext,
-    WorkerOperationContext, capture_error_reporting_smoke,
-    capture_worker_job_error, capture_worker_operation_error, init_error_reporting_with_config,
+    ErrorReportingConfig, ErrorReportingGuard, WorkerJobContext, WorkerOperationContext,
+    capture_error_reporting_smoke, capture_worker_job_error, capture_worker_operation_error,
+    init_error_reporting_with_config,
 };
 use uuid::Uuid;
 

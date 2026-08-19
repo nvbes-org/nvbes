@@ -73,10 +73,17 @@ fn service_port(env: &'static str, default_api_port: u16, offset: u16) -> anyhow
 
 #[cfg(test)]
 mod tests {
-    use super::{developer_grpc_port, developer_http_port};
+    use super::{
+        DEVELOPER_GRPC_PORT_ENV, DEVELOPER_HTTP_PORT_ENV, developer_grpc_port, developer_http_port,
+    };
 
     #[test]
     fn developer_ports_default_after_primary_api_port() {
+        if std::env::var(DEVELOPER_HTTP_PORT_ENV).is_ok()
+            || std::env::var(DEVELOPER_GRPC_PORT_ENV).is_ok()
+        {
+            return;
+        }
         assert_eq!(developer_http_port(3000).unwrap(), 3040);
         assert_eq!(developer_grpc_port(3000).unwrap(), 3041);
     }

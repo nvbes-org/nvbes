@@ -20,6 +20,8 @@ if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   export NVBES_REDIS_PASSWORD=""
 fi
 
+export NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE="${NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE:-account-quality-v1}"
+
 log_step() {
   printf '\n==> %s\n' "$1"
 }

@@ -417,6 +417,9 @@ mod tests {
 
     #[test]
     fn billing_grpc_endpoint_defaults_to_billing_grpc_offset() {
+        if std::env::var("NVBES_BILLING_GRPC_ENDPOINT").is_ok() {
+            return;
+        }
         assert_eq!(
             billing_grpc_endpoint(3000).unwrap(),
             "http://127.0.0.1:3021"

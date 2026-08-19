@@ -145,7 +145,8 @@ async fn cloud_tenant_tables_force_rls_even_in_a_shared_schema() {
 
 async fn application_role_exists(pool: &sqlx::PgPool) -> bool {
     sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nvbes_app')",
+        "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nvbes_app')
+          AND to_regclass('public.storage_objects') IS NOT NULL",
     )
     .fetch_one(pool)
     .await

@@ -3,6 +3,8 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "paths": {
+      "@nvbes/web-runtime": ["../../libs/ts/web-runtime/src/index.ts"],
+      "@nvbes/web-ui": ["../../libs/ts/web-ui/src/index.ts"],
       "@/*": ["./src/*"]
     }
   },

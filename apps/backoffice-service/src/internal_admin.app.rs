@@ -35,10 +35,15 @@ impl AppState {
         {
             let billing_grpc_endpoint = crate::billing_grpc::billing_grpc_endpoint(config.api_port)
                 .unwrap_or_else(|_| "http://127.0.0.1:3021".to_string());
+            let env = if config.environment.is_empty() {
+                "test"
+            } else {
+                &config.environment
+            };
             Self {
                 privileged_identity:
                     crate::privileged_authentication::PrivilegedIdentityClient::from_environment(
-                        &config.environment,
+                        env,
                     )
                     .expect("test identity configuration must be valid"),
                 email_operations: crate::email_operations::test_gateway(),

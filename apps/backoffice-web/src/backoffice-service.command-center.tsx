@@ -249,7 +249,7 @@ function workItem(
   id: string,
   label: string,
   count: number | undefined,
-  severity: string,
+  severity: 'critical' | 'high' | 'medium',
   href: string,
   owner: string,
 ): CommandCenterWorkItem | null {

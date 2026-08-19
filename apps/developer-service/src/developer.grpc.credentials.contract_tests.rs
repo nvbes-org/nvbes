@@ -154,7 +154,33 @@ async fn client_secret_version_validation_accepts_only_live_versions() {
     }
 
     let fixture = seed_developer_fixture(&pool, "secret-validation").await;
+    let oauth_client_id = Uuid::new_v4();
     let client_id = format!("secret-validation-{}", fixture.tenant_id.simple());
+
+    sqlx::query(
+        r#"
+        INSERT INTO oauth_clients (
+          id,
+          client_id,
+          client_secret_hash,
+          name,
+          redirect_uris,
+          tenant_id,
+          owner_scope_type,
+          owner_scope_id,
+          client_type,
+          requires_admin_consent
+        )
+        VALUES ($1, $2, 'hash', 'Secret Validation Client', '{}', $3, 'tenant', $3, 'confidential', false)
+        "#,
+    )
+    .bind(oauth_client_id)
+    .bind(&client_id)
+    .bind(fixture.tenant_id)
+    .execute(&pool)
+    .await
+    .expect("oauth client should be seeded");
+
     let live_secret = "gxo_live_secret_1234567890";
     let revoked_secret = "gxo_revoked_secret_1234567890";
     let live_hash =

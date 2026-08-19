@@ -12,7 +12,41 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  ci-test-gate:
+    if: vars.CLOUDFLARE_PAGES_DEPLOY_ENABLED == 'true'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-web.yml
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Format check
+        run: pnpm format:check
+      - name: Structure check
+        run: pnpm check:structure
+      - name: Nx boundaries check
+        run: pnpm check:nx-boundaries
+      - name: "Pre-build: Web linting and checks"
+        run: pnpm lint:web
+
   detect-affected:
+    needs: [ci-test-gate]
     if: vars.CLOUDFLARE_PAGES_DEPLOY_ENABLED == 'true'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
@@ -51,7 +85,7 @@ jobs:
           echo "web=$(jq -c '.web' <<<"$affected")" >> "$GITHUB_OUTPUT"
 
   deploy:
-    needs: detect-affected
+    needs: [ci-test-gate, detect-affected]
     if: needs.detect-affected.outputs.web != '[]'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 30

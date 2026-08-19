@@ -93,7 +93,7 @@ pub(crate) async fn upsert_membership(
     sqlx::query(
         r#"
         INSERT INTO workspace_memberships (workspace_id, user_id, role, status, source)
-        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5::membership_source)
+        VALUES ($1, $2, $3::workspace_member_role, $4::workspace_member_status, $5)
         ON CONFLICT (workspace_id, user_id)
         DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status, source = EXCLUDED.source, updated_at = NOW()
         "#,
@@ -122,7 +122,7 @@ pub(crate) async fn update_membership(
         UPDATE workspace_memberships
         SET role = COALESCE($3::workspace_member_role, role),
             status = COALESCE($4::workspace_member_status, status),
-            source = COALESCE($5::membership_source, source),
+            source = COALESCE($5, source),
             updated_at = NOW()
         WHERE workspace_id = $1 AND user_id = $2
         "#,

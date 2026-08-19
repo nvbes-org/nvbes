@@ -10,20 +10,143 @@ concurrency:
 permissions:
   actions: read
   contents: read
-  id-token: write
-  packages: read
 
 defaults:
   run:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  ci-test-gate:
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-email.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt, clippy
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.18.0 --activate
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Format check
+        run: pnpm format:check
+      - name: Structure check
+        run: pnpm check:structure
+      - name: Nx boundaries check
+        run: pnpm check:nx-boundaries
+      - name: "Pre-build: Contracts & Codegen check"
+        run: pnpm check:contracts && pnpm check:codegen
+      - name: "Pre-build: Linting"
+        run: pnpm lint:web
+      - name: "Pre-build: Unit tests"
+        run: pnpm test:unit
+      - name: Validate email container contract
+        run: node --test apps/email-worker/tests/container-contract.test.mjs
+
+  build-scan-sign:
+    needs: [ci-test-gate]
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      packages: write
+      security-events: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: nvbes-org/nvbes-email-worker
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: CI/CD security gate
+        run: >-
+          node tools/security/check-ci-cd-security.mjs
+          --workflow .github/workflows/deploy-email.yml
+      - name: Set deterministic build metadata
+        run: |
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+          echo "LC_ALL=C" >> "$GITHUB_ENV"
+          echo "TZ=UTC" >> "$GITHUB_ENV"
+      - name: Authenticate to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build and push immutable image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: apps/email-worker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          build-args: |
+            SOURCE_DATE_EPOCH=${{ env.SOURCE_DATE_EPOCH }}
+            CARGO_PACKAGE=nvbes-email-worker
+            CARGO_BINARY=nvbes-email-worker
+            APPLICATION_PATH=apps/email-worker
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Block vulnerable release images
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: cyclonedx-json
+          output: sbom.json
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - name: Sign container image
+        run: |
+          cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+
   deploy-email:
+    needs: [ci-test-gate, build-scan-sign]
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
     environment:
       name: production-email
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      packages: read
     env:
       SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_PROJECT_ID }}
       SCW_DEFAULT_REGION: fr-par
@@ -76,7 +199,7 @@ jobs:
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
       - name: Verify signed release identity
         run: |
-          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/container-release.yml@refs/heads/main"
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy-email.yml@refs/heads/main"
           cosign verify "$SOURCE_EMAIL_IMAGE_DIGEST" \
             --certificate-identity "$certificate_identity" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
@@ -239,7 +362,7 @@ jobs:
           terraform -chdir="$STACK_ROOT" apply
           -lock-timeout=5m
           email-runtime.tfplan
-      - name: Post-deploy - Verify public email ingress health and readiness
+      - name: "Post-deploy: Verify public email ingress health and readiness"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}

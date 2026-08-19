@@ -74,7 +74,11 @@ test('every operation has a unique ID and an explicit valid security contract', 
     '/legal/consents',
     '/legal/gpc',
   ]) {
-    assert.equal(document.paths[path], undefined, `Account product API leaked into Identity: ${path}`);
+    assert.equal(
+      document.paths[path],
+      undefined,
+      `Account product API leaked into Identity: ${path}`,
+    );
   }
   const oauthClient = [{ oauthClientBasic: [] }, { oauthClientMtls: [] }];
   assert.deepEqual(document.paths['/oauth/introspect'].post.security, oauthClient);

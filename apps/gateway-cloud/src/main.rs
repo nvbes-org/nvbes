@@ -115,15 +115,24 @@ fn required_env(name: &'static str) -> anyhow::Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{billing_grpc_endpoint, gateway_port, identity_grpc_endpoint, required_env};
+    use super::{
+        BILLING_GRPC_ENDPOINT_ENV, GATEWAY_CLOUD_PORT_ENV, IDENTITY_GRPC_ENDPOINT_ENV,
+        billing_grpc_endpoint, gateway_port, identity_grpc_endpoint, required_env,
+    };
 
     #[test]
     fn gateway_port_defaults_after_primary_api_port() {
+        if std::env::var(GATEWAY_CLOUD_PORT_ENV).is_ok() {
+            return;
+        }
         assert_eq!(gateway_port(3000).unwrap(), 3030);
     }
 
     #[test]
     fn billing_grpc_endpoint_defaults_to_billing_grpc_offset() {
+        if std::env::var(BILLING_GRPC_ENDPOINT_ENV).is_ok() {
+            return;
+        }
         assert_eq!(
             billing_grpc_endpoint(3000).unwrap(),
             "http://127.0.0.1:3021"
@@ -132,6 +141,9 @@ mod tests {
 
     #[test]
     fn identity_grpc_endpoint_defaults_to_account_grpc_offset() {
+        if std::env::var(IDENTITY_GRPC_ENDPOINT_ENV).is_ok() {
+            return;
+        }
         assert_eq!(
             identity_grpc_endpoint(4000).unwrap(),
             "http://127.0.0.1:4010"

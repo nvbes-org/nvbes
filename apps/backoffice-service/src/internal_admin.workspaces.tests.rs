@@ -131,6 +131,7 @@ async fn workspace_lifecycle_schema_exists(pool: &PgPool) -> bool {
           AND to_regclass('public.principals') IS NOT NULL
           AND to_regclass('public.workspaces') IS NOT NULL
           AND to_regclass('public.audit_events') IS NOT NULL
+          AND to_regclass('public.internal_admin_operator_grants') IS NOT NULL
           AND EXISTS (
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = 'public'
@@ -166,6 +167,17 @@ async fn seed_tenant_actor_and_workspace(pool: &PgPool, actor_id: Uuid) -> (Uuid
     .execute(pool)
     .await
     .expect("actor should insert");
+
+    sqlx::query(
+        "INSERT INTO internal_admin_operator_grants (id, principal_id, role, status, granted_by_principal_id, reason)
+         VALUES ($1, $2, 'platform_admin', 'active', $2, 'test grant')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(Uuid::new_v4())
+    .bind(actor_id)
+    .execute(pool)
+    .await
+    .ok();
 
     sqlx::query(
         "INSERT INTO workspaces (id, tenant_id, name, workspace_type, plan_code, status)

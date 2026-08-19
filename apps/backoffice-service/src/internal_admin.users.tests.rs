@@ -143,7 +143,8 @@ async fn user_lifecycle_schema_exists(pool: &PgPool) -> bool {
         "SELECT to_regclass('public.tenants') IS NOT NULL
           AND to_regclass('public.principals') IS NOT NULL
           AND to_regclass('public.users') IS NOT NULL
-          AND to_regclass('public.audit_events') IS NOT NULL",
+          AND to_regclass('public.audit_events') IS NOT NULL
+          AND to_regclass('public.internal_admin_operator_grants') IS NOT NULL",
     )
     .fetch_one(pool)
     .await
@@ -179,8 +180,19 @@ async fn seed_tenant_actor_and_user(pool: &PgPool, actor_id: Uuid, target_id: Uu
     }
 
     sqlx::query(
-        "INSERT INTO users (principal_id, email, name, status, email_verified_at)
-         VALUES ($1, $2, 'Target User', 'active', NOW())",
+        "INSERT INTO internal_admin_operator_grants (id, principal_id, role, status, granted_by_principal_id, reason)
+         VALUES ($1, $2, 'platform_admin', 'active', $2, 'test grant')
+         ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(Uuid::new_v4())
+    .bind(actor_id)
+    .execute(pool)
+    .await
+    .ok();
+
+    sqlx::query(
+        "INSERT INTO users (principal_id, email, status, email_verified_at)
+         VALUES ($1, $2, 'active', NOW())",
     )
     .bind(target_id)
     .bind(email)

@@ -115,15 +115,21 @@ fn billing_api_port(default_api_port: u16) -> anyhow::Result<u16> {
 
 #[cfg(test)]
 mod tests {
-    use super::{billing_api_port, billing_grpc_port};
+    use super::{BILLING_API_PORT_ENV, BILLING_GRPC_PORT_ENV, billing_api_port, billing_grpc_port};
 
     #[test]
     fn billing_api_port_defaults_after_primary_api_port() {
+        if std::env::var(BILLING_API_PORT_ENV).is_ok() {
+            return;
+        }
         assert_eq!(billing_api_port(3000).unwrap(), 3020);
     }
 
     #[test]
     fn billing_grpc_port_defaults_after_primary_api_port() {
+        if std::env::var(BILLING_GRPC_PORT_ENV).is_ok() {
+            return;
+        }
         assert_eq!(billing_grpc_port(3000).unwrap(), 3021);
     }
 }

@@ -32,7 +32,7 @@ async fn policy_updates_round_trip_through_enterprise_store() {
         &pool,
         fixture.tenant_id,
         "mfa",
-        r#"{"policy":"required_admins"}"#,
+        r#"{"policy":"required_all"}"#,
     )
     .await
     .expect("mfa policy should be updated");
@@ -48,7 +48,7 @@ async fn policy_updates_round_trip_through_enterprise_store() {
         policy.policy_kind == "session" && policy.rules_json.contains("\"admin_session_ttl_hours\"")
     }));
     assert!(policy_set.policies.iter().any(|policy| {
-        policy.policy_kind == "mfa" && policy.rules_json.contains("required_admins")
+        policy.policy_kind == "mfa" && policy.rules_json.contains("required_all")
     }));
 
     cleanup_tenant(&pool, fixture.tenant_id).await;
@@ -94,7 +94,7 @@ async fn trust_center_derives_security_posture_from_enterprise_tables() {
             context: None,
             tenant_id: fixture.tenant_id.to_string(),
             domain_id: String::new(),
-            domain: "trust.example.test".to_string(),
+            domain: format!("trust-{}.example.test", fixture.tenant_id.simple()),
             sso_required: true,
             sso_provider_id: provider.provider_id.clone(),
             verification_token_hash: sha256("trust-token"),
@@ -206,17 +206,18 @@ fn privileged_authentication_context(
 
 #[test]
 fn policy_simulation_allows_owner_and_reports_step_up() {
+    let subject_id = uuid::Uuid::new_v4().to_string();
     let decision = policy_evaluation::evaluate_with_context(
         enterprise::EvaluatePolicyRequest {
             context: None,
             tenant_id: uuid::Uuid::new_v4().to_string(),
-            subject_principal_id: uuid::Uuid::new_v4().to_string(),
+            subject_principal_id: subject_id.clone(),
             action: "delete_workspace".to_string(),
             resource: "workspace".to_string(),
             attributes: policy_attributes([
                 ("workspace_id", uuid::Uuid::new_v4().to_string()),
                 ("subject_type", "user".to_string()),
-                ("subject_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_id", subject_id),
                 ("subject_label", "Owner".to_string()),
                 ("email_verified", "true".to_string()),
                 ("role", "owner".to_string()),
@@ -239,17 +240,18 @@ fn policy_simulation_allows_owner_and_reports_step_up() {
 
 #[test]
 fn policy_simulation_denies_unverified_user_before_role_policy() {
+    let subject_id = uuid::Uuid::new_v4().to_string();
     let decision = policy_evaluation::evaluate_with_context(
         enterprise::EvaluatePolicyRequest {
             context: None,
             tenant_id: uuid::Uuid::new_v4().to_string(),
-            subject_principal_id: uuid::Uuid::new_v4().to_string(),
+            subject_principal_id: subject_id.clone(),
             action: "view_files".to_string(),
             resource: "workspace".to_string(),
             attributes: policy_attributes([
                 ("workspace_id", uuid::Uuid::new_v4().to_string()),
                 ("subject_type", "user".to_string()),
-                ("subject_id", uuid::Uuid::new_v4().to_string()),
+                ("subject_id", subject_id),
                 ("subject_label", "Member".to_string()),
                 ("email_verified", "false".to_string()),
                 ("role", "owner".to_string()),

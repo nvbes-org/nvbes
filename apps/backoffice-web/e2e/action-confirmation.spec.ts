@@ -4,7 +4,6 @@ import {
   captureMutation,
   installCredentials,
   installMockApi,
-  openDetailFromGlobalSearch,
   type MutationPost,
 } from './action-confirmation.mock-api';
 

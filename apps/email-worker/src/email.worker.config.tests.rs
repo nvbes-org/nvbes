@@ -42,6 +42,7 @@ const VARIABLES: &[&str] = &[
     "NVBES_EMAIL_QUEUE_REGION",
     "NVBES_EMAIL_QUEUE_ENDPOINT",
     "NVBES_EMAIL_RUNTIME_ROLE",
+    "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
     "PORT",
 ];
 
@@ -229,6 +230,10 @@ fn environment_configuration_covers_supported_providers_and_guardrails() {
     );
 
     environment.set("NVBES_ENVIRONMENT", "production");
+    environment.set(
+        "NVBES_OBSERVABILITY_INTERNAL_TOKEN",
+        "01234567890123456789012345678901",
+    );
     environment.set(
         "NVBES_EMAIL_PRODUCER_TOKENS",
         "identity-service=01234567890123456789012345678901,backoffice-service=abcdefghijklmnopqrstuvwxyzABCDEF",

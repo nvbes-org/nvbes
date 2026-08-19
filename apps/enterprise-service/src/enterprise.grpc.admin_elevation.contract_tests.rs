@@ -32,6 +32,15 @@ async fn admin_elevation_records_audit_and_break_glass_usage() {
     .await
     .expect("break-glass account should be seeded");
 
+    sqlx::query(
+        "UPDATE tenant_memberships SET role = 'owner' WHERE tenant_id = $1 AND principal_id = $2",
+    )
+    .bind(fixture.tenant_id)
+    .bind(fixture.actor_id)
+    .execute(&pool)
+    .await
+    .expect("actor role should be updated to owner");
+
     let now = chrono::Utc::now();
     let response = admin_elevation::authorize_admin_elevation(
         &pool,

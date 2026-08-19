@@ -169,7 +169,8 @@ async fn wait_for_redis_ready(config: &nvbes_redis::RedisConfig) {
 }
 
 fn test_database_url() -> String {
-    let database_url = std::env::var("DATABASE_URL")
+    let database_url = std::env::var("NVBES_IDENTITY_TEST_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
         .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes_test".to_string());
     validate_test_database_url(
@@ -257,12 +258,13 @@ async fn validate_test_database_connection(pool: &PgPool) {
 }
 
 pub fn shared_test_pool() -> PgPool {
-    isolated_test_pool(1)
+    isolated_test_pool(10)
 }
 
 pub fn isolated_test_pool(max_connections: u32) -> PgPool {
     PgPoolOptions::new()
-        .max_connections(max_connections)
+        .max_connections(max_connections.max(10))
+        .acquire_timeout(Duration::from_secs(10))
         .connect_lazy(&test_database_url())
         .expect("valid pool")
 }

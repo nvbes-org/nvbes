@@ -115,7 +115,32 @@ async fn public_consent_screen_returns_display_without_actor_context() {
     }
 
     let fixture = seed_developer_fixture(&pool, "public-consent").await;
+    let oauth_client_id = Uuid::new_v4();
     let client_id = format!("public-consent-{}", fixture.tenant_id.simple());
+
+    sqlx::query(
+        r#"
+        INSERT INTO oauth_clients (
+          id,
+          client_id,
+          client_secret_hash,
+          name,
+          redirect_uris,
+          tenant_id,
+          owner_scope_type,
+          owner_scope_id,
+          client_type,
+          requires_admin_consent
+        )
+        VALUES ($1, $2, 'hash', 'Public Consent Client', '{}', $3, 'tenant', $3, 'confidential', false)
+        "#,
+    )
+    .bind(oauth_client_id)
+    .bind(&client_id)
+    .bind(fixture.tenant_id)
+    .execute(&pool)
+    .await
+    .expect("oauth client should be seeded");
 
     sqlx::query(
         r#"

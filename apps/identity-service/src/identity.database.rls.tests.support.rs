@@ -22,10 +22,11 @@ pub struct RlsTestDatabase {
 
 impl RlsTestDatabase {
     pub async fn create(schema: RlsSchema) -> anyhow::Result<Self> {
-        let source_url = std::env::var("DATABASE_URL")
+        let source_url = std::env::var("NVBES_IDENTITY_TEST_DATABASE_URL")
+            .or_else(|_| std::env::var("DATABASE_URL"))
             .or_else(|_| std::env::var("NVBES_DATABASE_URL"))
             .unwrap_or_else(|_| {
-                "postgres://postgres:postgres@localhost:5432/nvbes_test".to_string()
+                "postgres://postgres:postgres@localhost:15432/nvbes_test".to_string()
             });
         require_local_disposable_cluster(&source_url)?;
         let suffix = Uuid::new_v4().simple().to_string();

@@ -25,6 +25,11 @@ pub const INTERNAL_TOKEN: &str = "email-worker-internal-token-32-value";
 pub fn config(provider: ProviderConfig) -> EmailWorkerConfig {
     EmailWorkerConfig {
         environment: "test".to_string(),
+        sentry_dsn: None,
+        sentry_traces_sample_rate: 0.0,
+        otlp_endpoint: None,
+        otlp_authorization_header: None,
+        observability_internal_token: None,
         database_url: "postgres://unused/nvbes_email_test".to_string(),
         http_bind_addr: "127.0.0.1:0".parse::<SocketAddr>().unwrap(),
         producer_tokens: HashMap::from([

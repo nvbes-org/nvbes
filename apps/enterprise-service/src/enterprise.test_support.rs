@@ -171,6 +171,20 @@ async fn seed_principal(
     .execute(pool)
     .await
     .expect("tenant membership should be seeded");
+
+    sqlx::query(
+        r#"
+        INSERT INTO users (principal_id, email, status, email_verified_at, created_at, updated_at)
+        VALUES ($1, $2, 'active', NOW(), $3, $3)
+        ON CONFLICT (principal_id) DO NOTHING
+        "#,
+    )
+    .bind(principal_id)
+    .bind(format!("{}@example.test", principal_id.simple()))
+    .bind(now)
+    .execute(pool)
+    .await
+    .ok();
 }
 
 fn test_database_url() -> String {

@@ -85,9 +85,10 @@ async fn seed_owner_user(pool: &sqlx::PgPool, fixture: &crate::test_support::Ent
     sqlx::query(
         r#"
         INSERT INTO users (
-          principal_id, email, name, firstname, lastname, username, status, created_at, updated_at
+          principal_id, email, username, status, created_at, updated_at
         )
-        VALUES ($1, 'owner@example.test', 'Owner User', 'Owner', 'User', 'owner', 'active', $2, $2)
+        VALUES ($1, 'owner@example.test', 'owner', 'active', $2, $2)
+        ON CONFLICT (principal_id) DO UPDATE SET email = EXCLUDED.email
         "#,
     )
     .bind(fixture.actor_id)

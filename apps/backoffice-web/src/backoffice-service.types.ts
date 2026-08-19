@@ -112,7 +112,7 @@ export type PendingApprovalItem = {
   id: string;
   center: string;
   action: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
   status: string;
   tenant_id: string | null;
   tenant_name: string | null;
@@ -124,7 +124,7 @@ export type PendingApprovalItem = {
   requested_by: string | null;
   requested_at: string;
   expires_at: string | null;
-  required_role: BackofficeRole | string;
+  required_role: BackofficeRole;
   audit_hint: string;
 };
 
@@ -181,7 +181,7 @@ export type AuditEvidenceSnapshot = {
 
 export type AuditEvidenceAlert = {
   id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
   title: string;
   count: number;
   target_anchor: string;
@@ -189,7 +189,7 @@ export type AuditEvidenceAlert = {
 
 export type RuntimeMetricAlert = {
   id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
   title: string;
   metric_name: string;
   condition: string;
@@ -254,7 +254,7 @@ export type IdentityGovernanceSnapshot = {
 };
 
 export type OperatorRoleDistribution = {
-  role: BackofficeRole | string;
+  role: BackofficeRole;
   active_count: number;
 };
 
@@ -262,8 +262,8 @@ export type OperatorGrant = {
   principal_id: string;
   email: string | null;
   display_name: string | null;
-  role: BackofficeRole | string;
-  status: 'active' | 'revoked' | string;
+  role: BackofficeRole;
+  status: 'active' | 'revoked';
   granted_at: string;
   revoked_at: string | null;
   reason: string | null;
@@ -961,7 +961,7 @@ export type AuditEvidenceEvent = {
   ip: string | null;
   event_hash: string;
   previous_event_hash: string | null;
-  hash_chain_status: 'chain_head' | 'hash_anomaly' | 'linked' | string;
+  hash_chain_status: 'chain_head' | 'hash_anomaly' | 'linked';
   created_at: string;
 };
 
@@ -1173,7 +1173,7 @@ export type CommandCenterWorkItem = {
   id: string;
   label: string;
   count: number;
-  severity: 'critical' | 'high' | 'medium' | string;
+  severity: 'critical' | 'high' | 'medium';
   href: string;
   owner: string;
 };

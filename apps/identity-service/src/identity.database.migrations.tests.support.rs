@@ -119,6 +119,7 @@ impl Drop for EphemeralPostgresDatabase {
 
 pub fn migration_admin_url() -> Result<String> {
     let value = std::env::var("IDENTITY_MIGRATION_TEST_ADMIN_URL")
+        .or_else(|_| std::env::var("NVBES_IDENTITY_TEST_DATABASE_URL"))
         .or_else(|_| std::env::var("DATABASE_URL"))
         .or_else(|_| std::env::var("NVBES_IDENTITY_DATABASE_URL"))
         .context(

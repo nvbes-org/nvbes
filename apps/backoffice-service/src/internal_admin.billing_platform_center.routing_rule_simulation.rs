@@ -78,7 +78,7 @@ pub(crate) async fn simulate_routing_rule(
     })
 }
 
-fn matched_rule_from_grpc(
+pub(crate) fn matched_rule_from_grpc(
     value: crate::grpc_pb::nvbes::billing::v1::AdminBillingRoutingMatchedRule,
 ) -> Result<MatchedRoutingRule, AppError> {
     Ok(MatchedRoutingRule {
@@ -90,7 +90,7 @@ fn matched_rule_from_grpc(
     })
 }
 
-fn empty_to_none(value: String) -> Option<String> {
+pub(crate) fn empty_to_none(value: String) -> Option<String> {
     if value.trim().is_empty() {
         None
     } else {
