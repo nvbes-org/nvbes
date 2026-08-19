@@ -25,6 +25,8 @@ jobs:
     timeout-minutes: 30
     env:
       CI: "true"
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C debuginfo=0"
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
       NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE: account-quality-v1
       NVBES_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/nvbes_identity_test
@@ -68,6 +70,7 @@ jobs:
         with:
           toolchain: 1.91.1
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Enable pnpm
         run: |
           corepack enable
