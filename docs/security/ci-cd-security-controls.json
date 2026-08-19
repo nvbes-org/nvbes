@@ -115,7 +115,7 @@
               ]
             },
             {
-              "path": ".github/workflows/dast.yml",
+              "path": ".github/workflows-archive/dast.yml",
               "includes": [
                 "node tools/security/validate-dast-targets.mjs",
                 "node tools/account-quality/check-dast-authentication.mjs",
@@ -141,7 +141,7 @@
               ]
             },
             {
-              "path": ".github/workflows/account-acceptance-source.yml",
+              "path": ".github/workflows-archive/account-acceptance-source.yml",
               "includes": [
                 "name: account-acceptance-source",
                 "verify-account-release-ref.mjs",
@@ -152,7 +152,7 @@
               ]
             },
             {
-              "path": ".github/workflows/account-acceptance-ingest.yml",
+              "path": ".github/workflows-archive/account-acceptance-ingest.yml",
               "includes": [
                 "run.path !== \".github/workflows/account-acceptance-source.yml\"",
                 "prepare-account-acceptance-publication.mjs",
@@ -160,7 +160,7 @@
               ]
             },
             {
-              "path": ".github/workflows/account-release.yml",
+              "path": ".github/workflows-archive/account-release.yml",
               "includes": [
                 "name: production-account",
                 "verify-account-release-ref.mjs",
@@ -211,7 +211,7 @@
               ]
             },
             {
-              "path": ".github/workflows/ci-applications.yml",
+              "path": ".github/workflows-archive/ci-applications.yml",
               "includes": [
                 "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
                 "cargo check --locked --package"
