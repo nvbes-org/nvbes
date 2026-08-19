@@ -31,6 +31,37 @@ fn main()
 
     if !path_bindings.exists()
     {
+        if env::var_os("LIBCLANG_PATH").is_none() {
+            for llvm_dir in [
+                "/usr/lib/llvm-19/lib",
+                "/usr/lib/llvm-18/lib",
+                "/usr/lib/llvm-17/lib",
+                "/usr/lib/llvm-16/lib",
+                "/usr/lib/llvm-15/lib",
+                "/usr/lib/llvm-14/lib",
+                "/usr/lib/aarch64-linux-gnu",
+                "/usr/lib/x86_64-linux-gnu",
+                "/usr/local/opt/llvm/lib",
+                "/opt/homebrew/opt/llvm/lib",
+            ] {
+                let path = std::path::Path::new(llvm_dir);
+                if path.exists() {
+                    if let Ok(entries) = fs::read_dir(path) {
+                        if entries.filter_map(|e| e.ok()).any(|e| {
+                            let name = e.file_name();
+                            let s = name.to_string_lossy();
+                            s.starts_with("libclang.") || s.starts_with("libclang-")
+                        }) {
+                            unsafe {
+                                env::set_var("LIBCLANG_PATH", llvm_dir);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         PkgConfig::new()
             .probe("xmlsec1")
             .expect("Could not find xmlsec1 using pkg-config");

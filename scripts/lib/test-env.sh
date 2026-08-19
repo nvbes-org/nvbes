@@ -20,6 +20,15 @@ if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   export NVBES_REDIS_PASSWORD=""
 fi
 
+if [ -z "${LIBCLANG_PATH:-}" ]; then
+  for llvm_dir in /usr/lib/llvm-*/lib /usr/lib/*-linux-gnu /usr/lib/llvm-* /usr/local/opt/llvm/lib /opt/homebrew/opt/llvm/lib; do
+    if [ -d "$llvm_dir" ] && ls "$llvm_dir"/libclang* >/dev/null 2>&1; then
+      export LIBCLANG_PATH="$llvm_dir"
+      break
+    fi
+  done
+fi
+
 export NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE="${NVBES_ALLOW_DESTRUCTIVE_TEST_DATABASE:-account-quality-v1}"
 
 log_step() {
