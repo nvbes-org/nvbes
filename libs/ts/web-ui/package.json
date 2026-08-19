@@ -31,7 +31,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@types/node": "^25.8.0",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.14",
     "typescript": "catalog:",
     "vite-plus": "catalog:"
