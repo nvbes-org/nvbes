@@ -122,7 +122,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 90
     concurrency:
-      group: container-release-${{ matrix.image }}-${{ github.run_id }}
+      group: container-release-${{ github.workflow }}-${{ github.run_id }}
       cancel-in-progress: true
     permissions:
       actions: read
