@@ -10,7 +10,7 @@ if [ -z "$GITHUB_REPOSITORY_URL" ] || [ -z "$RUNNER_TOKEN" ]; then
   exit 1
 fi
 
-RUNNER_NAME="nvbes-docker-$(hostname)-$(date +%s)"
+RUNNER_NAME="nvbes-docker-$(hostname)-${RANDOM}"
 RUNNER_LABELS="${RUNNER_LABELS:-self-hosted,linux,ARM64,docker,macOS}"
 
 if [ ! -f .runner ]; then
