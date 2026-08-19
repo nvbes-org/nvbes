@@ -76,7 +76,7 @@ jobs:
     timeout-minutes: 90
     concurrency:
       group: container-release-${{ matrix.image }}-${{ github.ref_name }}
-      cancel-in-progress: false
+      cancel-in-progress: true
     permissions:
       actions: read
       attestations: write
