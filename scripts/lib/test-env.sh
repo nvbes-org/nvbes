@@ -21,11 +21,14 @@ if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
 fi
 
 if [ -z "${LIBCLANG_PATH:-}" ]; then
-  for llvm_dir in /usr/lib/llvm-*/lib /usr/lib/*-linux-gnu /usr/lib/llvm-* /usr/local/opt/llvm/lib /opt/homebrew/opt/llvm/lib; do
-    if [ -d "$llvm_dir" ] && ls "$llvm_dir"/libclang* >/dev/null 2>&1; then
-      export LIBCLANG_PATH="$llvm_dir"
-      break
+  if command -v apt-get >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+    if ! find /usr/lib /usr/local /opt -name "libclang.so*" 2>/dev/null | grep -q .; then
+      sudo apt-get update -qq && sudo apt-get install -y -qq libclang-dev clang libxmlsec1-dev libxmlsec1-openssl xmlsec1 || true
     fi
+  fi
+  for candidate in $(find /usr/lib /usr/local /opt -name "libclang.so*" -o -name "libclang.dylib" 2>/dev/null); do
+    export LIBCLANG_PATH="$(dirname "$candidate")"
+    break
   done
 fi
 
