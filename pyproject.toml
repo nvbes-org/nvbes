@@ -1,8 +1,0 @@
-[project]
-name = "nvbes-python-foundation"
-version = "0.1.0"
-description = "Python foundation for nvbes analytics, AI, OCR, and data-quality workloads."
-requires-python = ">=3.12"
-
-[tool.nvbes]
-runtime = "python"

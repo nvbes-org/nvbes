@@ -5,6 +5,10 @@ use super::remove_factor;
 #[tokio::test]
 async fn active_last_factor_cannot_be_removed() {
     let db = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&db).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&db).await;
     let _guard = crate::test_support::test_database_lock().lock().await;
     let (tenant_id, principal_id) = seed_user(&db).await;
@@ -34,6 +38,10 @@ async fn active_last_factor_cannot_be_removed() {
 #[tokio::test]
 async fn recovery_code_is_consumed_once_under_concurrency() {
     let db = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&db).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&db).await;
     let _guard = crate::test_support::test_database_lock().lock().await;
     let (tenant_id, principal_id) = seed_user(&db).await;

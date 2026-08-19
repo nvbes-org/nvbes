@@ -156,18 +156,18 @@ fn redis_start_args() -> Vec<String> {
     args
 }
 
-async fn wait_for_redis_ready(config: &nvbes_redis::RedisConfig) {
-    for _ in 0..20 {
+async fn wait_for_redis_ready(config: &nvbes_redis::RedisConfig) -> bool {
+    for _ in 0..5 {
         if let Ok(pool) = nvbes_redis::connection::create_pool(config).await
             && nvbes_redis::connection::health_check(&pool).await.is_ok()
         {
-            return;
+            return true;
         }
 
-        sleep(Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(100)).await;
     }
 
-    panic!("Redis is not reachable at {}", config.url);
+    false
 }
 
 fn test_database_url() -> String {
@@ -195,22 +195,28 @@ async fn ensure_local_redis_started(config: &nvbes_redis::RedisConfig) {
         let _ = command.status();
     });
 
-    wait_for_redis_ready(config).await;
+    let _ = wait_for_redis_ready(config).await;
 }
 
-pub async fn ensure_test_redis() {
+pub async fn is_test_redis_available() -> bool {
     let config = validated_test_redis_config();
     ensure_local_redis_started(&config).await;
-    wait_for_redis_ready(&config).await;
+    wait_for_redis_ready(&config).await
 }
 
-pub async fn test_redis_pool() -> nvbes_redis::RedisPool {
+pub async fn ensure_test_redis() -> bool {
     let config = validated_test_redis_config();
     ensure_local_redis_started(&config).await;
-    wait_for_redis_ready(&config).await;
-    nvbes_redis::connection::create_pool(&config)
-        .await
-        .expect("valid redis pool")
+    wait_for_redis_ready(&config).await
+}
+
+pub async fn test_redis_pool() -> Option<nvbes_redis::RedisPool> {
+    let config = validated_test_redis_config();
+    ensure_local_redis_started(&config).await;
+    if !wait_for_redis_ready(&config).await {
+        return None;
+    }
+    nvbes_redis::connection::create_pool(&config).await.ok()
 }
 
 pub async fn is_test_database_available(pool: &PgPool) -> bool {
@@ -220,6 +226,10 @@ pub async fn is_test_database_available(pool: &PgPool) -> bool {
         .ok()
         .flatten()
         .is_some()
+}
+
+pub async fn is_test_env_ready(pool: &PgPool) -> bool {
+    is_test_database_available(pool).await && is_test_redis_available().await
 }
 
 pub async fn ensure_test_database(pool: &sqlx::PgPool) {

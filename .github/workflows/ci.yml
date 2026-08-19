@@ -92,5 +92,7 @@ jobs:
         run: pnpm check:contracts && pnpm check:codegen
       - name: "Pre-build: Linting"
         run: pnpm lint:web
+      - name: "Pre-build: Setup test services (PostgreSQL & Redis)"
+        run: bash scripts/ci/setup-test-services.sh
       - name: "Pre-build: Unit tests"
         run: pnpm test:unit

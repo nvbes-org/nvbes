@@ -21,7 +21,7 @@ nvbes-scan = { path = "../../libs/rust/scan" }
 nvbes-storage = { path = "../../libs/rust/storage" }
 nvbes-tenancy = { path = "../../libs/rust/tenancy" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
-nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
+nvbes-analytics-posthog = { path = "../../libs/rust/adapters/analytics-posthog" }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }
 nvbes-product-account = { path = "../../libs/rust/products/account" }
 nvbes-product-cloud = { path = "../../libs/rust/products/cloud" }

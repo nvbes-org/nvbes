@@ -41,7 +41,14 @@ fn login_challenge_shape_keeps_factor_policy_fields() {
 #[tokio::test]
 async fn replace_challenge_prunes_expired_and_keeps_active_flow_unique() {
     let pool = test_pool();
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&pool).await;
     unsafe {
         env::set_var("NVBES_ENV", "development");
@@ -150,7 +157,14 @@ async fn replace_challenge_prunes_expired_and_keeps_active_flow_unique() {
 #[tokio::test]
 async fn failed_attempts_block_fetch_after_limit() {
     let pool = test_pool();
-    let redis = crate::test_support::test_redis_pool().await;
+    let Some(redis) = crate::test_support::test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&pool).await;
     let auth_state_id = create_state(&redis, None, "limit@example.com", "mfa", None, Vec::new())
         .await

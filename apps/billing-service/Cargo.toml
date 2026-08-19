@@ -14,7 +14,7 @@ axum.workspace = true
 base64.workspace = true
 chrono.workspace = true
 nvbes-billing = { path = "../../libs/rust/billing" }
-nvbes-analytics-posthog = { path = "../../libs/rust/adapters-cloud/analytics-posthog" }
+nvbes-analytics-posthog = { path = "../../libs/rust/adapters/analytics-posthog" }
 nvbes-core = { path = "../../libs/rust/core" }
 nvbes-observability = { path = "../../libs/rust/observability", features = ["otlp", "profiling"] }
 nvbes-product-analytics = { path = "../../libs/rust/product-analytics" }

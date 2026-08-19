@@ -44,11 +44,15 @@ nvbes/
 ├── libs/
 │   ├── rust/
 │   │   ├── core/           # Primitives partagées (config, auth, mfa)
+│   │   ├── adapters/       # Adaptateurs externes (Scaleway email, PostHog...)
 │   │   ├── audit/          # Audit append-only
 │   │   ├── billing/        # Logique billing partagée
 │   │   ├── email/          # Service email
 │   │   ├── identity-sdk-backend/ # SDK Rust standalone
 │   │   ├── observability/  # Métriques, tracing, sentry
+│   │   ├── platform/       # Primitives de plateforme
+│   │   ├── ports/          # Contrats et interfaces de ports
+│   │   ├── products/       # Modules produits partagés (account, cloud...)
 │   │   ├── region/         # Régions et résidence des données
 │   │   ├── scan/           # Scan engine
 │   │   ├── storage/        # Object storage
@@ -59,16 +63,15 @@ nvbes/
 │       ├── identity-sdk-web/   # SDK web (PKCE, WebAuthn, MFA)
 │       ├── http-client/        # Client HTTP TS valide runtime
 │       ├── identity-client/    # Client Identity TS typé
-│       └── web-runtime/        # Runtime React Query/Effect partagé
+│       ├── web-runtime/        # Runtime React Query/Effect partagé
+│       └── web-ui/             # Composants UI transverses
 └── infrastructure/         # Terraform/Ansible
 ```
 
 ## Repository instructions for agents
 
-- `.github/copilot-instructions.md` contient les règles générales du repo pour les agents GitHub/Copilot.
-- `.cursor/rules/core-workflow.mdc` contient les règles globales Cursor.
-- `.cursor/rules/rust-backend.mdc` couvre les conventions Rust.
-- `.cursor/rules/typescript-react.mdc` couvre les conventions TypeScript/React.
+- `AGENTS.md` contient les règles générales du repo pour les agents de développement.
+- `.codex/instructions.md` contient les instructions consolidées pour Codex.
 - Les règles les plus proches du code prennent priorité sur les règles globales quand il y a conflit.
 
 ## Conventions de nommage (dot-notation)

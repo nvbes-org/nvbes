@@ -25,6 +25,10 @@ fn closure_command_requires_the_exact_contract_version() {
 #[tokio::test]
 async fn closure_purges_credentials_and_is_replay_safe() {
     let db = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&db).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&db).await;
     let (tenant_id, principal_id, session_id) = seed_subject(&db).await;
     let command = command(principal_id);
@@ -93,6 +97,10 @@ async fn closure_purges_credentials_and_is_replay_safe() {
 #[tokio::test]
 async fn closure_rejects_event_identifier_collisions() {
     let db = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&db).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&db).await;
     let (tenant_id, principal_id, _) = seed_subject(&db).await;
     let first = command(principal_id);

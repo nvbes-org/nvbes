@@ -66,7 +66,7 @@ function errorsForProject(_name, meta) {
 	if (!type) errors.push("missing type tag");
 	if (!domain) errors.push("missing domain tag");
 	if (!layer) errors.push("missing layer tag");
-	if (scope && !["oss", "cloud", "internal"].includes(scope)) errors.push(`unsupported scope tag ${scope}`);
+	if (scope && !["product", "platform", "cloud", "internal", "oss"].includes(scope)) errors.push(`unsupported scope tag ${scope}`);
 	if (type && !["app", "lib", "workspace"].includes(type)) errors.push(`unsupported type tag ${type}`);
 	if (type === "app" && layer !== "app") errors.push("app projects must use layer:app");
 	if (type === "lib" && layer === "app") errors.push("library projects cannot use layer:app");
@@ -105,10 +105,7 @@ function addDependencyErrors(source, target, projectMeta, errors) {
 		return;
 	}
 	if (sourceType === "workspace") return;
-	if (sourceScope === "oss" && ["cloud", "internal"].includes(targetScope)) {
-		errors.push(`${source} cannot depend on ${targetScope} project ${target}`);
-	}
-	if (sourceScope === "cloud" && targetScope === "internal") {
+	if (sourceScope !== "internal" && targetScope === "internal") {
 		errors.push(`${source} cannot depend on internal project ${target}`);
 	}
 	if (sourceLayer === "core") {

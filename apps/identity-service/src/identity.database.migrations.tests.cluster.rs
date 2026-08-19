@@ -264,6 +264,19 @@ async fn role_names(admin: &mut PgConnection) -> Result<BTreeSet<String>> {
 }
 
 async fn acquire_cluster_lock(admin: &mut PgConnection) -> Result<()> {
+    for _ in 0..10 {
+        let acquired: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1)")
+            .bind(ACCOUNT_MIGRATION_LOCK)
+            .fetch_one(&mut *admin)
+            .await?;
+        if acquired {
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+    let _ = sqlx::query("SELECT pg_advisory_unlock_all()")
+        .execute(&mut *admin)
+        .await;
     sqlx::query("SELECT pg_advisory_lock($1)")
         .bind(ACCOUNT_MIGRATION_LOCK)
         .execute(admin)

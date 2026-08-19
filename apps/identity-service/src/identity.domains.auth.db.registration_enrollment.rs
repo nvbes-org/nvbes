@@ -116,6 +116,10 @@ mod tests {
     #[tokio::test]
     async fn enrollment_token_can_only_be_consumed_once() {
         let db = crate::test_support::shared_test_pool();
+        if !crate::test_support::is_test_database_available(&db).await {
+            eprintln!("skipping test: database not available");
+            return;
+        }
         crate::test_support::ensure_test_database(&db).await;
 
         let tenant_id = Uuid::new_v4();

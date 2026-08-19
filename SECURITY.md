@@ -17,13 +17,11 @@ Send reports to the private security contact configured for the project maintain
 
 Security reports are accepted for:
 
-- nvbes OSS application code;
-- deployment templates;
+- nvbes application services and workers;
+- deployment and infrastructure templates;
 - authentication and authorization flows;
 - storage, billing, audit and tenant-isolation behavior;
-- public SDKs and clients.
-
-Cloud-only infrastructure incidents are handled through private runbooks and are not exported to `nvbes-oss`.
+- public SDKs and frontend clients.
 
 The coordinated disclosure policy, safe harbor, response targets and bounty
 status are documented in

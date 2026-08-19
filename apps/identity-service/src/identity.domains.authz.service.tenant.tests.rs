@@ -20,6 +20,10 @@ fn tenant_management_is_limited_to_identity_admin_roles() {
 #[tokio::test]
 async fn test_resolve_admin_scope() {
     let pool = crate::test_support::shared_test_pool();
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     crate::test_support::ensure_test_database(&pool).await;
 
     let tenant_id = uuid::Uuid::new_v4();

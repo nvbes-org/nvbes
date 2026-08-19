@@ -160,6 +160,10 @@ async fn cleanup_tenant(pool: &PgPool, tenant_id: Uuid) {
 #[tokio::test]
 async fn challenge_pwd_allows_a_normal_first_device_without_an_mfa_factor() {
     let pool = test_pool();
+    if !crate::test_support::is_test_env_ready(&pool).await {
+        eprintln!("skipping test: database or redis not available");
+        return;
+    }
     let state = test_config(&pool).await;
     let email = format!("login-first-device-{}@example.com", Uuid::new_v4());
     let password = "Sup3rS3cret!";
@@ -199,6 +203,10 @@ async fn challenge_pwd_allows_a_normal_first_device_without_an_mfa_factor() {
 #[tokio::test]
 async fn challenge_pwd_returns_mfa_step_when_recovery_codes_are_configured() {
     let pool = test_pool();
+    if !crate::test_support::is_test_env_ready(&pool).await {
+        eprintln!("skipping test: database or redis not available");
+        return;
+    }
     let state = test_config(&pool).await;
     let email = format!("login-mfa-{}@example.com", Uuid::new_v4());
     let password = "Sup3rS3cret!";
@@ -242,6 +250,10 @@ async fn challenge_pwd_returns_mfa_step_when_recovery_codes_are_configured() {
 #[tokio::test]
 async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
     let pool = test_pool();
+    if !crate::test_support::is_test_env_ready(&pool).await {
+        eprintln!("skipping test: database or redis not available");
+        return;
+    }
     let state = test_config(&pool).await;
     let email = format!("login-mfa-finish-{}@example.com", Uuid::new_v4());
     let password = "Sup3rS3cret!";
@@ -294,6 +306,10 @@ async fn challenge_mfa_creates_aal2_session_and_sets_cookie() {
 #[tokio::test]
 async fn challenge_pwd_preserves_verified_webauthn_and_creates_aal2_session() {
     let pool = test_pool();
+    if !crate::test_support::is_test_env_ready(&pool).await {
+        eprintln!("skipping test: database or redis not available");
+        return;
+    }
     let state = test_config(&pool).await;
     let email = format!("login-passkey-password-{}@example.com", Uuid::new_v4());
     let password = "Sup3rS3cret!";

@@ -7,7 +7,7 @@ This app owns operator-only endpoints and must stay isolated from public product
 
 ## Boundary
 
-- Internal-only app, not exported to `nvbes-oss`.
+- Internal-only app.
 - Back-office routes are mounted here, never in customer-facing services.
 - HTTP access is protected by the shared internal token guard.
 - Audited mutations require `x-nvbes-actor-principal-id` so back-office actions remain attributable.

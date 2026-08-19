@@ -202,7 +202,10 @@ mod tests {
 
     #[tokio::test]
     async fn stores_and_loads_device_code_via_user_code() {
-        let redis = crate::test_support::test_redis_pool().await;
+        let Some(redis) = crate::test_support::test_redis_pool().await else {
+            eprintln!("skipping test: redis not available");
+            return;
+        };
         let code = CachedDeviceCode {
             device_code: format!("gxdc_{}", Uuid::new_v4().simple()),
             user_code: "ABCD-EFGH".to_string(),

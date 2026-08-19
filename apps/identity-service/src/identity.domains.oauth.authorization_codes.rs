@@ -163,7 +163,10 @@ mod tests {
 
     #[tokio::test]
     async fn stores_and_consumes_authorization_code() {
-        let redis = crate::test_support::test_redis_pool().await;
+        let Some(redis) = crate::test_support::test_redis_pool().await else {
+            eprintln!("skipping test: redis not available");
+            return;
+        };
         let code = CachedAuthorizationCode {
             code: format!("gxac_{}", Uuid::new_v4().simple()),
             client_id: format!("gxoc_{}", Uuid::new_v4().simple()),
@@ -219,7 +222,10 @@ mod tests {
 
     #[tokio::test]
     async fn revokes_authorization_codes_by_client() {
-        let redis = crate::test_support::test_redis_pool().await;
+        let Some(redis) = crate::test_support::test_redis_pool().await else {
+            eprintln!("skipping test: redis not available");
+            return;
+        };
         let client_id = format!("gxoc_{}", Uuid::new_v4().simple());
 
         for _ in 0..2 {

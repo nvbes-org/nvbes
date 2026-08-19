@@ -9,7 +9,7 @@ fn test_pool() -> PgPool {
     crate::test_support::shared_test_pool()
 }
 
-async fn test_redis_pool() -> nvbes_redis::RedisPool {
+async fn test_redis_pool() -> Option<nvbes_redis::RedisPool> {
     crate::test_support::test_redis_pool().await
 }
 
@@ -217,7 +217,10 @@ async fn seed_redis_subject(redis: &nvbes_redis::RedisPool) -> (Uuid, Uuid, Uuid
 
 #[tokio::test]
 async fn logout_state_revokes_current_session_and_refresh_token_only() {
-    let redis = test_redis_pool().await;
+    let Some(redis) = test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let (tenant_id, principal_id, session_id, other_session_id) = seed_redis_subject(&redis).await;
 
     revoke_logout_session_state(&redis, session_id, principal_id)
@@ -259,7 +262,14 @@ async fn logout_state_revokes_current_session_and_refresh_token_only() {
 #[tokio::test]
 async fn logout_revokes_current_session_and_refresh_token_only() {
     let pool = test_pool();
-    let redis = test_redis_pool().await;
+    let Some(redis) = test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
+    if !crate::test_support::is_test_database_available(&pool).await {
+        eprintln!("skipping test: database not available");
+        return;
+    }
     let (tenant_id, principal_id, session_id, other_session_id) = seed_subject(&pool, &redis).await;
 
     logout(&pool, &redis, session_id, principal_id)
@@ -298,7 +308,10 @@ async fn logout_revokes_current_session_and_refresh_token_only() {
 
 #[tokio::test]
 async fn list_sessions_is_paginated_and_stable() {
-    let redis = test_redis_pool().await;
+    let Some(redis) = test_redis_pool().await else {
+        eprintln!("skipping test: redis not available");
+        return;
+    };
     let tenant_id = Uuid::new_v4();
     let principal_id = Uuid::new_v4();
     let current_session_id = Uuid::new_v4();
