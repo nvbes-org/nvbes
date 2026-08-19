@@ -53,9 +53,9 @@ jobs:
         run: pnpm check:structure
       - name: Nx boundaries check
         run: pnpm check:nx-boundaries
-      - name: Pre-build: Contracts & Codegen check
+      - name: Pre-build - Contracts & Codegen check
         run: pnpm check:contracts && pnpm check:codegen
-      - name: Pre-build: Linting
+      - name: Pre-build - Linting
         run: pnpm lint:web
-      - name: Pre-build: Unit tests
+      - name: Pre-build - Unit tests
         run: pnpm test:unit
