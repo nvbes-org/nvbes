@@ -42,8 +42,9 @@ function checkProductSourceImports() {
     for (const file of walk(root)) {
       const content = readFileSync(file, 'utf8');
       const forbiddenPatterns = [
-        /libs\/rust\/adapters-(?:oss|cloud)\//,
-        /adapters[-_](?:oss|cloud)/,
+        /libs\/rust\/adapters\//,
+        /nvbes-analytics-posthog/,
+        /nvbes-email-scaleway/,
         /libs\/ts\/cloud-ui/,
         /from\s+["'][^"']*cloud-ui["']/,
         /from\s+["'][^"']*apps\//,

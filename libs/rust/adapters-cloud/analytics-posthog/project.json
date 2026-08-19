@@ -1,6 +1,0 @@
-{
-  "name": "analytics-posthog",
-  "projectType": "library",
-  "root": "libs/rust/adapters-cloud/analytics-posthog",
-  "tags": ["scope:cloud", "type:lib", "domain:shared", "layer:adapter"]
-}

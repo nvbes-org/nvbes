@@ -361,7 +361,7 @@
 			"target": "Before production go-live",
 			"evidence": [
 				{
-					"path": "docs/migration/backup-restore-manifest.md",
+					"path": "docs/operations/backup-restore-policy.md",
 					"includes": ["RPO", "RTO", "no-go"]
 				}
 			]

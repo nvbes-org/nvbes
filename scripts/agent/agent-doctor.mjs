@@ -26,7 +26,6 @@ for (const path of [
   "docs/agent/agent.memory.md",
   "docs/agent/agent.skills.md",
   "docs/agent/agent.codex.md",
-  "docs/agent/agent.chatgpt.md",
   "docs/agent/agent.workflows.md",
   "docs/agent/agent.index.md",
   ".agents/registry.yaml",

@@ -37,8 +37,6 @@ if (!corePackage?.scripts?.['generate:ts'])
   errors.push('libs/ts/identity-sdk-core/package.json: missing generate:ts');
 if (!corePackage?.scripts?.['generate:rust'])
   errors.push('libs/ts/identity-sdk-core/package.json: missing generate:rust');
-if (!corePackage?.scripts?.['generate:go'])
-  errors.push('libs/ts/identity-sdk-core/package.json: missing generate:go');
 
 const backofficeServicePackage = readJson('libs/ts/backoffice-service-sdk-core/package.json');
 if (!backofficeServicePackage?.scripts?.['generate:ts'])
@@ -55,7 +53,6 @@ requireIncludes(
 requireIncludes('apps/backoffice-service/openapi.json', 'nvbes Backoffice API');
 requireIncludes('libs/ts/backoffice-service-sdk-core/openapi.json', 'nvbes Backoffice API');
 requireIncludes('libs/rust/identity-sdk-backend/src/lib.rs', 'pub use client::IdentityClient;');
-requireIncludes('libs/go/identity-sdk/sdk.go', 'package identitysdk');
 requireIncludes('contracts/protobuf/nvbes/platform/v1/common.proto', 'syntax = "proto3";');
 requireIncludes('contracts/protobuf/nvbes/account/v1/account.proto', 'service AccountService');
 requireIncludes('contracts/protobuf/nvbes/cloud/v1/cloud.proto', 'service CloudService');

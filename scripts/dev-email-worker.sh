@@ -14,7 +14,7 @@ if cargo watch --version >/dev/null 2>&1; then
   exec cargo watch \
     --watch apps/email-worker \
     --watch libs/rust/email \
-    --watch libs/rust/adapters-cloud/email-scaleway \
+    --watch libs/rust/adapters/email-scaleway \
     --watch libs/ts/email-ui/src \
     --watch Cargo.toml \
     --watch Cargo.lock \
