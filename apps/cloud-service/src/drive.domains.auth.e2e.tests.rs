@@ -42,7 +42,7 @@ async fn response_error_code(response: axum::response::Response) -> String {
 #[tokio::test]
 async fn http_machine_token_from_identity_authorizes_drive_workspace_route() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;
@@ -90,7 +90,7 @@ async fn http_machine_token_from_identity_authorizes_drive_workspace_route() {
 #[tokio::test]
 async fn http_revoked_machine_client_is_rejected_by_drive_workspace_route() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;
@@ -127,7 +127,7 @@ async fn http_revoked_machine_client_is_rejected_by_drive_workspace_route() {
 #[tokio::test]
 async fn http_suspended_service_account_is_rejected_by_drive_workspace_route() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;
@@ -164,7 +164,7 @@ async fn http_suspended_service_account_is_rejected_by_drive_workspace_route() {
 #[tokio::test]
 async fn http_workspace_mismatch_is_rejected_by_drive_workspace_route() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;

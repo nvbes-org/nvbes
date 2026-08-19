@@ -74,7 +74,7 @@ async fn seed_public_api_network_range(
 #[tokio::test]
 async fn http_m2m_token_authorizes_public_api_me() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;
@@ -115,7 +115,7 @@ async fn http_m2m_token_authorizes_public_api_me() {
 #[tokio::test]
 async fn http_public_api_auth_rejects_m2m_token_from_blocked_network() {
     let _guard = test_lock().lock().await;
-    let pool = PgPool::connect_lazy(&test_database_url()).expect("valid pool");
+    let pool = test_pool();
     if !db_supports_current_schema(&pool).await {
         eprintln!("skipping test: local database is missing current identity/drive schema columns");
         return;

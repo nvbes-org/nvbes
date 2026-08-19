@@ -10,7 +10,7 @@ mod seed;
 mod token;
 
 pub(crate) use account_mock::{identity_state, spawn_identity_server};
-pub(crate) use env::{drive_app, test_database_url, test_lock};
+pub(crate) use env::{drive_app, test_database_url, test_lock, test_pool};
 pub(crate) use schema::{cleanup, db_supports_current_schema};
 pub(crate) use seed::seed_machine_workspace_context;
 pub(crate) use token::issue_machine_token;

@@ -8,6 +8,14 @@ pub(crate) fn test_database_url() -> String {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/nvbes".to_string())
 }
 
+pub(crate) fn test_pool() -> sqlx::PgPool {
+    sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(std::time::Duration::from_millis(500))
+        .connect_lazy(&test_database_url())
+        .expect("valid pool")
+}
+
 pub(crate) fn test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
