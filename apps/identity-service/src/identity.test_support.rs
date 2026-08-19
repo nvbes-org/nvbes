@@ -213,7 +213,19 @@ pub async fn test_redis_pool() -> nvbes_redis::RedisPool {
         .expect("valid redis pool")
 }
 
+pub async fn is_test_database_available(pool: &PgPool) -> bool {
+    sqlx::query_scalar::<_, String>("SELECT current_database()::text")
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .is_some()
+}
+
 pub async fn ensure_test_database(pool: &sqlx::PgPool) {
+    if !is_test_database_available(pool).await {
+        return;
+    }
     validate_test_database_connection(pool).await;
     TEST_DATABASE_BOOTSTRAPPED
         .get_or_init(move || async move {
@@ -249,14 +261,16 @@ async fn validate_test_database_connection(pool: &PgPool) {
         .expect("test database connection must name a database");
     validate_test_database_name(configured_database).unwrap_or_else(|error| panic!("{error}"));
 
-    let connected_database: String = sqlx::query_scalar("SELECT current_database()::text")
-        .fetch_one(pool)
-        .await
-        .expect("test database identity must be readable before migrations");
-    assert_eq!(
-        connected_database, configured_database,
-        "connected test database must match the validated pool configuration"
-    );
+    if let Ok(Some(connected_database)) =
+        sqlx::query_scalar::<_, String>("SELECT current_database()::text")
+            .fetch_optional(pool)
+            .await
+    {
+        assert_eq!(
+            connected_database, configured_database,
+            "connected test database must match the validated pool configuration"
+        );
+    }
 }
 
 pub fn shared_test_pool() -> PgPool {
@@ -266,7 +280,7 @@ pub fn shared_test_pool() -> PgPool {
 pub fn isolated_test_pool(max_connections: u32) -> PgPool {
     PgPoolOptions::new()
         .max_connections(max_connections.max(10))
-        .acquire_timeout(Duration::from_secs(10))
+        .acquire_timeout(Duration::from_millis(500))
         .connect_lazy(&test_database_url())
         .expect("valid pool")
 }

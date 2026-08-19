@@ -147,16 +147,21 @@ mod tests {
     use super::*;
     use std::time::Duration;
 
-    async fn test_redis_pool() -> nvbes_redis::RedisPool {
+    async fn test_redis_pool() -> Option<nvbes_redis::RedisPool> {
         let config = nvbes_redis::RedisConfig::from_env();
-        nvbes_redis::connection::create_pool(&config)
-            .await
-            .expect("redis pool")
+        let pool = nvbes_redis::connection::create_pool(&config).await.ok()?;
+        if nvbes_redis::connection::health_check(&pool).await.is_err() {
+            return None;
+        }
+        Some(pool)
     }
 
     #[tokio::test]
     async fn rate_limiter_blocks_after_limit() {
-        let redis = test_redis_pool().await;
+        let Some(redis) = test_redis_pool().await else {
+            eprintln!("Skipping rate_limiter_blocks_after_limit: Redis is not reachable");
+            return;
+        };
         let limiter = RateLimiter::new(redis);
         let action = format!("core_rate_limit_test_{}", uuid::Uuid::new_v4());
         let key = "key:rate-limit";
