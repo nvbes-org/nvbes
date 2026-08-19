@@ -1,18 +1,7 @@
 name: ci-terraform-bootstrap
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - 'infrastructure/bootstrap/**'
-      - 'infrastructure/modules/terraform-state-backend/**'
-      - '.github/workflows/ci-terraform-bootstrap.yml'
-  pull_request:
-    branches: ['main']
-    paths:
-      - 'infrastructure/bootstrap/**'
-      - 'infrastructure/modules/terraform-state-backend/**'
-      - '.github/workflows/ci-terraform-bootstrap.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ci-terraform-bootstrap-${{ github.head_ref || github.ref_name }}

@@ -1,21 +1,7 @@
 name: deploy web applications
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - 'apps/*-web/**'
-      - 'libs/ts/**'
-      - 'tools/ci/affected-applications.core.mjs'
-      - 'tools/ci/affected-applications.mjs'
-      - 'tools/ci/deployable-applications.json'
-      - 'tools/web-build/**'
-      - 'nx.json'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'tsconfig.base.json'
-      - 'vite.config.ts'
-      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
 
 permissions:
   actions: read

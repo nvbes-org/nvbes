@@ -1,10 +1,7 @@
 name: applications ci
 
 on:
-  push:
-    branches: ['main']
-  pull_request:
-    branches: ['main']
+  workflow_dispatch:
 
 concurrency:
   group: applications-ci-${{ github.head_ref || github.ref_name }}

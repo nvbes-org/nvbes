@@ -1,44 +1,7 @@
 name: ci-identity
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - 'apps/identity-service/**'
-      - 'apps/identity-worker/**'
-      - 'apps/identity-web/**'
-      - 'libs/rust/products/identity/**'
-      - 'libs/ts/identity-client/**'
-      - 'libs/ts/identity-sdk/**'
-      - 'libs/ts/identity-sdk-core/**'
-      - 'libs/ts/identity-sdk-web/**'
-      - 'scripts/generate-openapi.sh'
-      - 'scripts/test-e2e-critical.sh'
-      - 'scripts/test-identity-e2e-local.sh'
-      - 'scripts/test-identity-service*.sh'
-      - 'scripts/test-identity-worker.sh'
-      - 'infrastructure/local/identity-e2e.compose.yml'
-      - 'infrastructure/local/identity-e2e.init.sql'
-      - '.github/workflows/ci-identity.yml'
-  pull_request:
-    branches: ['main']
-    paths:
-      - 'apps/identity-service/**'
-      - 'apps/identity-worker/**'
-      - 'apps/identity-web/**'
-      - 'libs/rust/products/identity/**'
-      - 'libs/ts/identity-client/**'
-      - 'libs/ts/identity-sdk/**'
-      - 'libs/ts/identity-sdk-core/**'
-      - 'libs/ts/identity-sdk-web/**'
-      - 'scripts/generate-openapi.sh'
-      - 'scripts/test-e2e-critical.sh'
-      - 'scripts/test-identity-e2e-local.sh'
-      - 'scripts/test-identity-service*.sh'
-      - 'scripts/test-identity-worker.sh'
-      - 'infrastructure/local/identity-e2e.compose.yml'
-      - 'infrastructure/local/identity-e2e.init.sql'
-      - '.github/workflows/ci-identity.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ci-identity-${{ github.head_ref || github.ref_name }}

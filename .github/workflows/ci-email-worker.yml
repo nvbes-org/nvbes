@@ -1,34 +1,7 @@
 name: ci-email-worker
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - 'apps/email-worker/**'
-      - 'contracts/protobuf/nvbes/email/**'
-      - 'libs/rust/email/**'
-      - 'libs/rust/observability/**'
-      - 'libs/rust/adapters-cloud/email-scaleway/**'
-      - 'infrastructure/environments/email-production/**'
-      - 'infrastructure/stacks/email/production/**'
-      - 'tools/ci/email-deployment-contract.test.mjs'
-      - '.github/workflows/deploy-email.yml'
-      - '.github/workflows/ci-email-worker.yml'
-      - '.github/workflows/deploy.yml'
-  pull_request:
-    branches: ['main']
-    paths:
-      - 'apps/email-worker/**'
-      - 'contracts/protobuf/nvbes/email/**'
-      - 'libs/rust/email/**'
-      - 'libs/rust/observability/**'
-      - 'libs/rust/adapters-cloud/email-scaleway/**'
-      - 'infrastructure/environments/email-production/**'
-      - 'infrastructure/stacks/email/production/**'
-      - 'tools/ci/email-deployment-contract.test.mjs'
-      - '.github/workflows/deploy-email.yml'
-      - '.github/workflows/ci-email-worker.yml'
-      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ci-email-worker-${{ github.head_ref || github.ref_name }}
