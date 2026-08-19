@@ -302,17 +302,5 @@ __marimo__/
 *.idb
 *.pdb
 
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-*.dwo
-
-*.test
-
 go.work
 go.work.sum

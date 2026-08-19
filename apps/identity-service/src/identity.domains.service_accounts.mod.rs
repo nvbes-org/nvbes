@@ -1,0 +1,16 @@
+#[path = "identity.domains.service_accounts.audit.rs"]
+pub mod audit;
+#[path = "identity.domains.service_accounts.core.rs"]
+pub mod core;
+#[path = "identity.domains.service_accounts.oauth_clients.rs"]
+pub mod oauth_clients;
+#[path = "identity.domains.service_accounts.policy.rs"]
+pub mod policy;
+#[path = "identity.domains.service_accounts.routes.rs"]
+pub mod routes;
+#[path = "identity.domains.service_accounts.service.rs"]
+pub mod service;
+#[path = "identity.domains.service_accounts.types.rs"]
+pub mod types;
+#[path = "identity.domains.service_accounts.views.rs"]
+pub mod views;
