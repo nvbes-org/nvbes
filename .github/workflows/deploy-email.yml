@@ -239,14 +239,21 @@ jobs:
           terraform -chdir="$STACK_ROOT" apply
           -lock-timeout=5m
           email-runtime.tfplan
-      - name: Verify public email ingress health
+      - name: Post-deploy: Verify public email ingress health and readiness
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.EMAIL_TERRAFORM_STATE_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.EMAIL_TERRAFORM_STATE_SECRET_KEY }}
         run: |
           endpoint="$(terraform -chdir="$STACK_ROOT" output -raw email_worker_endpoint)"
+          echo "Probing liveness on ${endpoint}/health/live..."
           curl --fail --silent --show-error \
             --retry 12 \
             --retry-all-errors \
             --retry-delay 5 \
             "${endpoint}/health/live"
+          echo "Probing readiness on ${endpoint}/health/ready..."
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            "${endpoint}/health/ready"
