@@ -1,15 +1,13 @@
 name: container release
 
 on:
-  push:
-    branches:
-      - 'main'
   workflow_dispatch:
     inputs:
       application:
         description: Application image to release
         required: true
         type: choice
+        default: email-worker
         options:
           - account-service
           - account-worker
