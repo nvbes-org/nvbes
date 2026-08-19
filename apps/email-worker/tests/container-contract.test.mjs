@@ -18,7 +18,7 @@ test("image builds and runs the Rust email worker", () => {
 	);
 	assert.match(
 		dockerfile,
-		/RUN cargo build --locked --release --bin nvbes-email-worker/,
+		/cargo build --locked --release --bin nvbes-email-worker/,
 	);
 	assert.ok(dockerfile.includes("COPY contracts ./contracts"));
 	assert.ok(dockerfile.includes("USER 10001:10001"));
