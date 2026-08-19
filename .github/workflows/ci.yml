@@ -31,6 +31,10 @@ jobs:
         run: >-
           node tools/security/check-ci-cd-security.mjs
           --workflow .github/workflows/ci.yml
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+        with:
+          toolchain: 1.91.1
+          components: rustfmt, clippy
       - name: Enable pnpm
         run: |
           corepack enable
